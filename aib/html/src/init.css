@@ -1,0 +1,43 @@
+body{
+  font: 10pt Verdana,sans-serif;
+  color: navy;
+  }
+
+/* main screen headings - Task List/Menu/Favourites */
+.main_heading {
+  height: 18px;
+  text-align: center;
+  font-weight: bold;
+  padding: 5px;
+  border-bottom: 1px solid black;
+  }
+
+.form {
+   position: absolute;
+   border: 2px solid gray;
+   background: white;
+  }
+
+.form_header {
+  background-color: #C3D9FF;
+  font-weight: bold;
+  padding-left: 5px;
+  border-bottom: 1px solid gray;
+  cursor: default;
+  }
+
+.focus_background {
+  background: lightcyan;
+  }
+
+.readonly_background {
+  background: #CCFFCC;
+  }
+
+.error_background {
+  background: mistyrose;
+  }
+
+.blur_background {
+  background: transparent;
+  }

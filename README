@@ -1,0 +1,39 @@
+Welcome to AccInABox, a general business/accounting package written in Python.
+
+Requirements
+============
+
+It assumes that you have Python 3.4 or greater installed on your system.
+
+In order to use it, you need a database. There are three options -
+
+* For single-user or demonstration purposes, you can use the sqlite3 database
+    bundled with Python. Just create a directory to store your data, and supply
+    the full path to the directory when prompted by init.py (see below).
+
+* MS Sql Server 2005 or greater.
+    If you use this, you must install the package 'pyodbc'.
+
+* PostgreSQL version 9 or greater.
+    If you use this, you must install the package 'psycopg2'.
+
+In addition, you must install the package 'lxml'.
+
+Setup
+=====
+
+To start, run the program 'init.py'.
+
+It will ask you which database you are using. Depending on the answer,
+    it will ask for the information needed to connect to the database.
+
+The program runs a web server, which allows you to connect to it from any
+    internet browser. init.py will prompt you for a host address and port
+    number. The program will use this when starting the server.
+
+There will be a small delay while init.py populates the database with setup data.
+
+To run the program, run 'start.py'.
+
+To access it, connect to it using any browser. It will prompt you for a user id
+    and password. The defaults are 'admin' and 'admin'.
