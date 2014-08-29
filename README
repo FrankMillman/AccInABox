@@ -1,4 +1,13 @@
+AccInABox
+=========
+
 Welcome to AccInABox, a general business/accounting package written in Python.
+
+This name may need a bit of explanation. "Acc" is an accountant. "Box" 
+is the computer. You can set the system up with various rules and 
+parameters, and then leave your staff to operate it without supervision. The 
+program acts as your accountant, and will control what the staff can and 
+cannot do.
 
 Requirements
 ============
