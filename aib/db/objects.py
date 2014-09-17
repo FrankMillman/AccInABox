@@ -578,7 +578,7 @@ class DbObject:
 #           db.db_xml.table_hook(self, after_read)
 #?#
 
-    def init(self, display=True, preserve=[]):
+    def init(self, display=True, init_vals={}, preserve=[]):
         for fld in self.fields.values():
             # store existing data as 'prev' for data-entry '\' function
             if self.exists:
@@ -586,7 +586,13 @@ class DbObject:
 
             # 'preserve' not used at present
             if fld.col_name not in preserve:
-                fld._value = fld._orig = fld.get_dflt()  # None
+                fld._value = fld.get_dflt()
+                fld._orig = None
+
+            # col_name, value pairs to initialise db_obj with (cf ht.gui_tree)
+            # i.e. set initial value, do *not* set db_obj.dirty to True
+            if fld.col_name in init_vals:
+                fld._value = init_vals[fld.col_name]
 
             # if fld has foreign_key, init foreign db_obj
             if fld.foreign_key:
@@ -617,6 +623,8 @@ class DbObject:
     def restore(self,display=True):
         if not self.exists:
             self.init(display)
+            for caller, method in self.on_clean_func:  # frame methods
+                caller.session.request.db_events.append((caller, method))
         else:
             for fld in self.fields.values():
                 if fld._value != fld._orig:
