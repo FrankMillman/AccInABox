@@ -376,8 +376,8 @@ class Field:
                         obj._redisplay()
 
         if self.gui_subtype is not None:
-            form, subtype = self.gui_subtype
-            form.set_subtype(subtype, value)
+            frame, subtype = self.gui_subtype
+            frame.set_subtype(subtype, value)
 
     def set_readonly(self, state):
         for obj in self.gui_obj:
@@ -404,6 +404,9 @@ class Field:
     def set_val_from_sql(self, value):
         self._value = value
         self._orig = self._value  # see 'Date' - self._value is computed, so can't use value
+        if self.gui_subtype is not None:
+            frame, subtype = self.gui_subtype
+            frame.set_subtype(subtype, value)
 
     def set_val_from_xml(self, value):
         self._value = value
