@@ -20,8 +20,8 @@ def setup_menu_defns(context, conn):
     db_table.setval('long_descr', 'Menu definitions')
     db_table.setval('audit_trail', False)
     db_table.setval('table_hooks', etree.fromstring(
-        '<hooks><hook type="before_save"><increment_tree_seq/></hook>'
-        '<hook type="after_delete"><decrement_tree_seq/></hook></hooks>'))
+        '<hooks><hook type="before_save"><increment_seq args="parent_id"/></hook>'
+        '<hook type="after_delete"><decrement_seq args="parent_id"/></hook></hooks>'))
     db_table.setval('table_created', True)
     db_table.save()
     table_id = db_table.getval('row_id')
@@ -41,18 +41,28 @@ def setup_menu_defns(context, conn):
         'Parent', 'N', False, True, True, 0, 0, None, None, None, fkey, None))
     params.append(('seq', 'INT', 'Sequence', 'Sequence', 'Seq',
         'N', False, False, True, 0, 0, None, None, None, None, None))
-    choices = [False, False, []]
-    choices[2].append(['0', 'Root', [], []])
-    choices[2].append(['1', 'Menu', [], []])
-    choices[2].append(['2', 'Grid', [], []])
-    choices[2].append(['3', 'Form', [], []])
-    choices[2].append(['4', 'Report', [], []])
-    choices[2].append(['5', 'Process', [], []])
+    choices = [True, False, []]
+    choices[2].append(['0', 'Root', [['descr', True]], []])
+    choices[2].append(['1', 'Menu', [['descr', True]], []])
+    choices[2].append(['2', 'Grid',
+        [['descr', True], ['table_name', True], ['cursor_name', True]], []])
+    choices[2].append(['3', 'Form', [['descr', True], ['form_name', True]], []])
+    choices[2].append(['4', 'Report', [['descr', True]], []])
+    choices[2].append(['5', 'Process', [['descr', True]], []])
     params.append(('opt_type', 'TEXT', 'Type of option',
-        'Type of option', 'Type', 'N', False, False, True, 10, 0,
+        'Type of option', 'Type', 'N', False, False, False, 10, 0,
         None, None, None, None, choices))
-    params.append(('opt_data', 'TEXT', 'Option data',
-        'Option data', '', 'N', False, True, True, 0, 0, None, None,
+#   params.append(('opt_data', 'TEXT', 'Option data',
+#       'Option data', '', 'N', False, True, True, 0, 0, None, None,
+#       None, None, None))
+    params.append(('table_name', 'TEXT', 'Table name',
+        'Table name', '', 'N', False, True, True, 0, 0, None, None,
+        None, None, None))
+    params.append(('cursor_name', 'TEXT', 'Cursor name',
+        'Cursor name', '', 'N', False, True, True, 0, 0, None, None,
+        None, None, None))
+    params.append(('form_name', 'TEXT', 'Form name',
+        'Form name', '', 'N', False, True, True, 0, 0, None, None,
         None, None, None))
 
     db_column = db.api.get_db_object(context, '_sys', 'db_columns')
@@ -80,60 +90,96 @@ def setup_menu_defns(context, conn):
         db_column.setval('sql', None)
         db_column.save()
 
+    params = []
+    params.append(('children', 'INT', 'Children', 'Number of children', '',
+        'N', False, False, False, 0, 0,
+        'SELECT count(*) FROM {}.{} b WHERE b.parent_id = a.row_id'
+        .format('_sys', table_name)))
+    for seq, param in enumerate(params):
+        db_column.init()
+        db_column.setval('table_id', table_id)
+        db_column.setval('col_name', param[0])
+        db_column.setval('col_type', 'virt')
+        db_column.setval('seq', seq)
+        db_column.setval('data_type', param[1])
+        db_column.setval('short_descr', param[2])
+        db_column.setval('long_descr', param[3])
+        db_column.setval('col_head', param[4])
+        db_column.setval('key_field', param[5])
+        db_column.setval('generated', param[6])
+        db_column.setval('allow_null', param[7])
+        db_column.setval('allow_amend', param[8])
+        db_column.setval('max_len', param[9])
+        db_column.setval('db_scale', param[10])
+        db_column.setval('scale_ptr', None)
+        db_column.setval('dflt_val', None)
+        db_column.setval('col_chks', None)
+        db_column.setval('fkey', None)
+        db_column.setval('choices', None)
+        db_column.setval('sql', param[11])
+        db_column.save()
+
     db.setup_tables.setup_table(conn, '_sys', table_name)
 
 def setup_menus(context):
 
     root = '0'
     menu = '1'
-    grid = '3'
-    form = '4'
-    report = '5'
-    process = '6'
+    grid = '2'
+    form = '3'
+    report = '4'
+    process = '5'
 
-    def setup_menu(db_obj, descr, parent, seq, opt_type, opt_data=None):
+    db_obj = db.api.get_db_object(context, '_sys', 'sys_menu_defns')
+
+    def setup_menu(descr, parent, seq, opt_type, table_name=None,
+            cursor_name=None, form_name=None):
         db_obj.init()
         db_obj.setval('descr', descr)
         db_obj.setval('parent_id', parent)
         db_obj.setval('seq', seq)
         db_obj.setval('opt_type', opt_type)
-        db_obj.setval('opt_data', opt_data)
+#       db_obj.setval('opt_data', opt_data)
+        db_obj.setval('table_name', table_name)
+        db_obj.setval('cursor_name', cursor_name)
+        db_obj.setval('form_name', form_name)
         db_obj.save()
 
-    db_obj = db.api.get_db_object(context, '_sys', 'sys_menu_defns')
+    setup_menu('System Administration', None, 0, root)
 
-    setup_menu(db_obj, 'Menu root', None, 0, root)
-
-    setup_menu(db_obj, 'System setup', 1, 0, menu)
+    setup_menu('System setup', 1, 0, menu)
     menu_id = db_obj.getval('row_id')
 
-    setup_menu(db_obj, 'Table definitions', menu_id, 0, grid,
-        opt_data='db_tables, db_tables')
+    setup_menu('Table definitions', menu_id, 0, grid,
+#       opt_data='db_tables, db_tables')
+        table_name='db_tables', cursor_name='db_tables')
 
-    setup_menu(db_obj, 'User defined fields', menu_id, 1, menu)
+    setup_menu('Form definitions', menu_id, 1, grid,
+#       opt_data='sys_form_defns, form_list')
+        table_name='sys_form_defns', cursor_name='form_list')
 
-    setup_menu(db_obj, 'Form definitions', menu_id, 2, grid,
-        opt_data='sys_form_defns, form_list')
-
-    setup_menu(db_obj, 'Directories', 1, 1, menu)
+    setup_menu('Directories', 1, 1, menu)
     menu_id = db_obj.getval('row_id')
 
-    setup_menu(db_obj, 'Setup users', menu_id, 0, grid,
-        opt_data='dir_users, users')
+    setup_menu('Setup users', menu_id, 0, grid,
+#       opt_data='dir_users, users')
+        table_name='dir_users', cursor_name='users')
 
-    setup_menu(db_obj, 'Setup companies', menu_id, 1, form,
-        opt_data='company_setup')
+    setup_menu('Setup companies', menu_id, 1, form,
+#       opt_data='company_setup')
+        form_name='company_setup')
 
-    setup_menu(db_obj, 'Accounts receivable', 1, 2, menu)
+    setup_menu('Accounts receivable', 1, 2, menu)
     menu_id = db_obj.getval('row_id')
-    setup_menu(db_obj, 'AR setup', menu_id, 0, menu)
-    setup_menu(db_obj, 'AR transactions', menu_id, 1, menu)
+    setup_menu('AR setup', menu_id, 0, menu)
+    setup_menu('AR transactions', menu_id, 1, menu)
 
-    setup_menu(db_obj, 'Accounts payable', 1, 3, menu)
+    setup_menu('Accounts payable', 1, 3, menu)
     menu_id = db_obj.getval('row_id')
-    setup_menu(db_obj, 'AP setup', menu_id, 0, menu)
-    setup_menu(db_obj, 'AP transactions', menu_id, 1, menu)
+    setup_menu('AP setup', menu_id, 0, menu)
+    setup_menu('AP transactions', menu_id, 1, menu)
 
+"""
 def setup_menu_options(context, conn):
 
     table_name = 'sys_menu_options'
@@ -201,7 +247,9 @@ def setup_menu_options(context, conn):
         db_column.save()
 
     db.setup_tables.setup_table(conn, '_sys', table_name)
+"""
 
+"""
 def setup_options(context):
 
     def setup_menu_option(db_obj, menu, descr, seq, type, code):
@@ -230,3 +278,4 @@ def setup_options(context):
         'Setup users', 0, 'lv', 'dir_users, users')
     setup_menu_option(db_obj, menu_ids['dir_id'],
         'Setup companies', 1, 'f', 'company_setup')
+"""

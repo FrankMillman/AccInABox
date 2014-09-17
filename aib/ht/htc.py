@@ -39,6 +39,17 @@ class delwatcher:
 
 #----------------------------------------------------------------------------
 
+# cache to store menu_defn data object for each company
+db_session = db.api.start_db_session(1)
+class MenuDefns(dict):
+    def __missing__(self, company):
+        result = self[company] = db.api.get_db_object(
+            ht.htc, company, 'sys_menu_defns')
+        return result
+menu_defns = MenuDefns()
+
+#----------------------------------------------------------------------------
+
 class Session:
     """
     [None of this docstring applies now that we have moved to http - rewrite!]
@@ -133,27 +144,43 @@ class Session:
         #   set up user menu
         # send initial screen to user via task client -
         #   menu, active tasks, favourites
-        self.option_dict = {}  # mapping of menu_ids to options
+
+        mask = '{}_{}'
+#       self.option_dict = {}  # mapping of menu_ids to options
         client_menu = []  # build menu to send to client
-        menu_id_counter = itertools.count(1)
-        root_id = next(menu_id_counter)
-        client_menu.append((0, 'root', True, root_id))
+#       menu_id_counter = itertools.count(1)
+#       root_id = next(menu_id_counter)
+#       client_menu.append((0, 'root', True, root_id))
+        root_id = '_root'
+        client_menu.append((root_id, None, 'root', True))
         db_session = db.api.start_db_session(self.user_row_id)
         with db_session as conn:
             for company, comp_name, comp_admin in self.select_companies(conn):
 
                 first = True
+                waiting = False
                 for opt in self.select_options(conn, company):
-#                   descr, menu_type, level, _key, opt_type, opt_code = opt
-                    descr, opt_type, opt_data, _level = opt
+#                   descr, opt_type, opt_data, _level = opt
+#                   row_id, descr, opt_type, _level = opt
+                    row_id, parent_id, descr, opt_type = opt
 
                     if first:
-                        comp_id = next(menu_id_counter)
-                        client_menu.append((root_id, comp_name, True, comp_id))
-                        parent = [comp_id]
-                        parent_level = 0
+#                       comp_id = next(menu_id_counter)
+#                       client_menu.append((root_id, comp_name, True, comp_id))
+#                       parent = [comp_id]
+#                       first = False
+                        first_node_id = mask.format(company, row_id)
+                        #comp_id = next(menu_id_counter)
+                        #client_menu.append((company, root_id, comp_name, True))
                         first = False
+                        waiting = True
+                        continue
 
+                    if waiting:
+                        client_menu.append((first_node_id, root_id, comp_name, True))
+                        waiting = False
+
+                    """
                     if opt_type == '1':  #'menu':
                         menu_id = next(menu_id_counter)
                         parent = parent[:_level] + [menu_id]
@@ -161,7 +188,18 @@ class Session:
                     else:  # menu_type == 'opt'
                         opt_id = next(menu_id_counter)
                         client_menu.append((parent[_level-1], descr, False, opt_id))
-                        self.option_dict[opt_id] = (company, descr, opt_type, opt_data)
+#                       self.option_dict[opt_id] = (company, descr, opt_type, opt_data)
+                        self.option_dict[opt_id] = (company, row_id)
+                    """
+
+                    expandable = (opt_type in ('0', '1'))
+                    if parent_id is None:
+                        parent = company
+                    else:
+                        parent = mask.format(company, parent_id)
+                    client_menu.append((
+                        mask.format(company, row_id),
+                        parent, descr, bool(expandable)))
 
         session.request.reply.append(('start_menu', client_menu))
 
@@ -191,9 +229,15 @@ class Session:
 
     def select_options(self, conn, company):
 
-        cte = conn.tree_select(company, 'sys_menu_defns', 'row_id', 1, sort=True)
-        sql = ("{} SELECT descr, opt_type, opt_data, _level FROM temp "
-        "WHERE _level > 0 ORDER BY _key".format(cte))
+#       cte = conn.tree_select(company, 'sys_menu_defns', 'row_id', 1, sort=True)
+##      sql = ("{} SELECT descr, opt_type, opt_data, _level FROM temp "
+#       sql = ("{} SELECT row_id, descr, opt_type, _level FROM temp "
+#       "WHERE _level > 0 ORDER BY _key".format(cte))
+        sql = (
+            "SELECT row_id, parent_id, descr, opt_type "
+            "FROM {}.sys_menu_defns ORDER BY parent_id, seq"
+            .format(company)
+            )
         conn.cur.execute(sql)
         return conn.cur
 
@@ -265,7 +309,6 @@ class RequestHandler:
                             evt_id, args, len(messages)))
                 try:
                     yield from getattr(self, 'on_'+evt_id)(args)  # get method and call it
-                    #if self.db_events:  # why?
                     for caller, action in self.db_events:
                         yield from ht.form_xml.exec_xml(caller, action)
                     self.db_events.clear()
@@ -303,9 +346,9 @@ class RequestHandler:
         self.reply.append(('setup_form', gui))
 #       self.check_redisplay()
 
-    def start_frame(self, frame, set_frame_amended, set_focus):
+    def start_frame(self, frame_ref, set_frame_amended, set_focus):
         self.reply.append(('start_frame',
-            (frame.ref, set_frame_amended, set_focus)))
+            (frame_ref, set_frame_amended, set_focus)))
 
     def send_start_grid(self, ref, args):
         self.reply.append(('start_grid', (ref, args)))
@@ -390,22 +433,32 @@ class RequestHandler:
     @asyncio.coroutine
     def on_menuitem_selected(self, args):
         menu_id, = args
-        company, descr, option_type, option_data = self.session.option_dict[menu_id]
-        print('SELECTED {} TYPE={} ID={} COMPANY={}'.format(
-            descr, option_type, option_data, company))
-        if option_type == '3':  # grid
+#       company, descr, option_type, option_data = self.session.option_dict[menu_id]
+#       company, row_id = self.session.option_dict[menu_id]
+        company, row_id = menu_id.rsplit('_', 1)
+        menu_defn = menu_defns[company]
+        menu_defn.init()
+        menu_defn.setval('row_id', row_id)
+#       print('SELECTED {} TYPE={} ID={} COMPANY={}'.format(
+#           descr, option_type, option_data, company))
+        print('SELECTED', company, menu_defn)
+        opt_type = menu_defn.getval('opt_type')
+        if opt_type == '2':  # grid
             yield from ht.form.start_setupgrid(
-                self.session, company, option_data, self.session.user_row_id)
-        elif option_type == '4':  # form
-            form = ht.form.Form(company, option_data)
+#               self.session, company, option_data, self.session.user_row_id)
+                self.session, company, menu_defn.getval('table_name'),
+                menu_defn.getval('cursor_name'), self.session.user_row_id)
+        elif opt_type == '3':  # form
+#           form = ht.form.Form(company, option_data)
+            form = ht.form.Form(company, menu_defn.getval('form_name'))
             try:
                 yield from form.start_form(self.session, self.session.user_row_id)
             except AibError as err:
                 form.close_form()
                 raise
-        elif option_type == '5':  # report
+        elif opt_type == '4':  # report
             pass
-        elif option_type == '6':  # process
+        elif opt_type == '5':  # process
             pass
 #           bp.bpm.init_process(company, option_data,
 #               {'user_row_id': self.session.user_row_id})

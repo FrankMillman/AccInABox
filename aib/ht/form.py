@@ -46,6 +46,10 @@ A sub-form is treated exactly the same as a root form, except -
     - on the client, the 'invoking' form has all input disabled until
         the sub-form is completed
 """
+
+#----------------------------------------------------------------------------
+
+# cache to store form_defn data object for each company
 db_session = db.api.start_db_session(1)
 
 class FormDefns(dict):  # cache to store form_defn data object for each company
@@ -55,18 +59,11 @@ class FormDefns(dict):  # cache to store form_defn data object for each company
         return result
 form_defns = FormDefns()
 
-#form_defns = {}  # cache to store form_defn data object for each company
-#def get_form_defn(company):
-#    if company not in form_defns:
-#        form_defns[company] = (
-#            db.api.get_db_object(ht.form, company, 'sys_form_defns'))
-#    return form_defns[company]
-
 #----------------------------------------------------------------------------
 
 @asyncio.coroutine
-def start_setupgrid(session, company, option_data, user_row_id):
-    table_name, cursor_name = map(str.strip, option_data.split(','))
+def start_setupgrid(session, company, table_name, cursor_name, user_row_id):
+#   table_name, cursor_name = map(str.strip, option_data.split(','))
     form = Form(company, 'setup_grid')
 #   db_obj = db.api.get_db_object(form, company, table_name)
     try:
@@ -1338,7 +1335,7 @@ class Frame:
                 obj.set_readonly(False)
             set_frame_amended = True
         self.session.request.check_redisplay(redisplay=False)  # send any 'readonly' messages
-        self.session.request.start_frame(self, set_frame_amended, set_focus)
+        self.session.request.start_frame(self.ref, set_frame_amended, set_focus)
         #self.session.request.check_redisplay()  # send any 'redisplay' messages
 
     def return_to_grid(self):
