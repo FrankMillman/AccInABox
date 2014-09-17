@@ -6,14 +6,14 @@ import db.api
 from itertools import count
 audit_row_id = 1
 
-def init_company(context, conn, company):
+def init_company(context, conn, company, company_name):
     conn.create_company(company)
     create_db_tables(context, conn, company)
     setup_db_tables(context, conn, company)
     setup_db_columns(context, conn, company)
     setup_db_cursors(context, conn, company)
     setup_forms(context, conn, company)
-    setup_menus(context, conn, company)
+    setup_menus(context, conn, company, company_name)
 
 def create_db_tables(context, conn, company):
     conn.cur.execute(
@@ -130,7 +130,7 @@ def setup_forms(context, conn, company):
 
     db.setup_tables.setup_table(conn, company, table_name)
 
-def setup_menus(context, conn, company):
+def setup_menus(context, conn, company, company_name):
     table_name = 'sys_menu_defns'
     db_table = db.api.get_db_object(context, company, 'db_tables')
     db_table.setval('table_name', table_name)
@@ -141,16 +141,40 @@ def setup_menus(context, conn, company):
 
     db.setup_tables.setup_table(conn, company, table_name)
 
-    table_name = 'sys_menu_options'
-    db_table = db.api.get_db_object(context, company, 'db_tables')
-    db_table.setval('table_name', table_name)
-    db_table.setval('audit_trail', False)
-    db_table.setval('defn_company', '_sys')
-    db_table.setval('table_created', True)
-    db_table.save()
+#   table_name = 'sys_menu_options'
+#   db_table = db.api.get_db_object(context, company, 'db_tables')
+#   db_table.setval('table_name', table_name)
+#   db_table.setval('audit_trail', False)
+#   db_table.setval('defn_company', '_sys')
+#   db_table.setval('table_created', True)
+#   db_table.save()
 
-    db.setup_tables.setup_table(conn, company, table_name)
+#   db.setup_tables.setup_table(conn, company, table_name)
 
+    root = '0'
+    menu = '1'
+    grid = '2'
+    form = '3'
+    report = '4'
+    process = '5'
+
+    db_obj = db.api.get_db_object(context, company, 'sys_menu_defns')
+
+    def setup_menu(descr, parent, seq, opt_type, table_name=None,
+            cursor_name=None, form_name=None):
+        db_obj.init()
+        db_obj.setval('descr', descr)
+        db_obj.setval('parent_id', parent)
+        db_obj.setval('seq', seq)
+        db_obj.setval('opt_type', opt_type)
+        db_obj.setval('table_name', table_name)
+        db_obj.setval('cursor_name', cursor_name)
+        db_obj.setval('form_name', form_name)
+        db_obj.save()
+
+    setup_menu(company_name, None, 0, root)
+
+    """
     menu_ids = {}
 
     def setup_menu(db_obj, descr, parent, seq):
@@ -203,3 +227,4 @@ def setup_menus(context, conn, company):
         'Setup users', 0, 'lv', 'dir_users, users')
     setup_menu_option(db_obj, menu_ids['dir_id'],
         'Setup companies', 1, 'f', 'company_setup')
+    """

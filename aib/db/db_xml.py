@@ -123,7 +123,8 @@ def pyfunc(db_obj, xml):
 def create_company(db_obj, xml):
     with db_obj.context.db_session as conn:
 #       conn.create_company(db_obj.getval('company_id'))
-        init_company(db_obj.context, conn, db_obj.getval('company_id'))
+        init_company(db_obj.context, conn,
+            db_obj.getval('company_id'), db_obj.getval('company_name'))
 
 def add_column(db_obj, xml):
     with db_obj.context.db_session as conn:
@@ -228,127 +229,6 @@ def decrement_seq(db_obj, xml):  # called 'after_delete'
                 params.append(db_obj.getfld(arg).getval())
 
         conn.cur.execute(sql, params)
-
-def increment_tree_seq(db_obj, xml):  # called 'before_save'
-    # [TO BE TESTED!]
-    seq = db_obj.getfld('seq')
-    orig_seq = seq.get_orig()
-    new_seq = seq.getval()
-    if new_seq == orig_seq:
-        return
-
-    parent_id = db_obj.getval('parent_id')
-    with db_obj.context.db_session as conn:
-        if db_obj.exists:
-            if new_seq > orig_seq:
-                sql = (
-                    'UPDATE {}.{} SET seq = (seq-1) WHERE parent_id = {} '
-                    'AND seq > {} AND seq <= {}'.format(
-                    db_obj.data_company, db_obj.table_name,
-                    conn.param_style, conn.param_style, conn.param_style)
-                    )
-                params = (parent_id, orig_seq, new_seq)
-            else:
-                sql = (
-                    'UPDATE {}.{} SET seq = (seq+1) WHERE parent_id = {} '
-                    'AND seq >= {} AND seq < {}'.format(
-                    db_obj.data_company, db_obj.table_name,
-                    conn.param_style, conn.param_style, conn.param_style)
-                    )
-                params = (parent_id, new_seq, orig_seq)
-        else:
-            sql = (
-                'UPDATE {}.{} SET seq = (seq+1) WHERE parent_id = {} '
-                'AND seq >= {}'.format(db_obj.data_company, 
-                db_obj.table_name, conn.param_style, conn.param_style)
-                )
-            params = (parent_id, new_seq)
-
-        conn.cur.execute(sql, params)
-
-def decrement_tree_seq(db_obj, xml):  # called 'after_delete'
-    with db_obj.context.db_session as conn:
-        sql = (
-            'UPDATE {}.{} SET seq = (seq-1) WHERE parent_id = {} AND seq > {}'
-                .format(db_obj.data_company, db_obj.table_name,
-                conn.param_style, conn.param_style)
-            )
-        params = (db_obj.getval('parent_id'), db_obj.getval('seq'))
-
-        conn.cur.execute(sql)
-
-"""
-def increment_fields_seq(db_obj, xml):
-    seq = db_obj.getfld('seq')
-    new_seq = seq.getval()
-    orig_seq = seq.get_orig()
-    if new_seq == orig_seq:
-        return
-    type_id = db_obj.getval('type_id')
-    if db_obj.exists:
-        if new_seq > orig_seq:
-            sql = (
-                'UPDATE {}.{} SET seq = (seq-1) WHERE type_id = {} '
-                'AND seq > {} AND seq <= {}'.format(
-                db_obj.data_company, db_obj.table_name,
-                type_id, orig_seq, new_seq)
-                )
-        else:
-            sql = (
-                'UPDATE {}.{} SET seq = (seq+1) WHERE type-id = {} '
-                'AND seq >= {} AND seq < {}'.format(
-                db_obj.data_company, db_obj.table_name,
-                type-id, new_seq, orig_seq)
-                )
-    else:
-        sql = (
-            'UPDATE {}.{} SET seq = (seq+1) WHERE type_id = {} AND seq >= {}'
-            .format(db_obj.data_company, db_obj.table_name,
-            type_id, new_seq)
-            )
-    with db_obj.context.db_session as conn:
-        conn.cur.execute(sql)
-"""
-
-"""
-def increment_fields_display_seq(db_obj, xml):
-    seq = db_obj.getfld('display_seq')
-    new_seq = seq.getval()
-    orig_seq = seq.get_orig()
-    if new_seq == orig_seq:
-        return
-    type_id = db_obj.getval('type_id')
-
-    if new_seq is None:
-        sql = (
-            'UPDATE {}.{} SET display_seq = '
-            '(display_seq - 1) WHERE type_id = {} and '
-            'display_seq > {}'.format(db_obj.data_company,
-            db_obj.table_name, type_id, orig_seq))
-    elif orig_seq is None:
-        sql = (
-            'UPDATE {}.{} SET display_seq = '
-            '(display_seq + 1) WHERE type_id = {} and '
-            'display_seq >= {}'.format(db_obj.data_company,
-            db_obj.table_name, type_id, new_seq))
-    elif new_seq > orig_seq:
-        sql = (
-            'UPDATE {}.{} SET display_seq = '
-            '(display_seq - 1) WHERE type_id = {} and '
-            'display_seq > {} and display_seq <= {}'.format(
-            db_obj.data_company, db_obj.table_name, type_id,
-            orig_seq, new_seq))
-    else:
-        sql = (
-            'UPDATE {}.{} SET display_seq = '
-            '(display_seq + 1) WHERE type_id = {} and '
-            'display_seq >= {} and display_seq < {}'.format(
-            db_obj.data_company, db_obj.table_name, type_id,
-            new_seq, orig_seq))
-
-    with db_obj.context.db_session as conn:
-        conn.cur.execute(sql)
-"""
 
 def setup_disp_name(db_obj, xml):
     choices = db_obj.getval('choices')
