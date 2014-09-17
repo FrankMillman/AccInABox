@@ -38,7 +38,10 @@ import ht.htc
 #sys.stdout = open('/dev/null', 'w')
 #sys.stdout = open('nul', 'w')
 
-def main():
+program_version_info = (0, 1, 1)
+datamodel_version_info = (0, 1, 1)
+
+def start():
     if len(sys.argv) == 2:
         cfg_name = sys.argv[1]
     else:
@@ -49,6 +52,8 @@ def main():
 
     db.api.config_connection(cfg['DbParams'])
     db.api.config_cursor(cfg['DbParams'])
+
+    check_versions()
 
 #   from wf.wfe import restart_active_processes
 #   bp.bpm.restart_active_processes()
@@ -78,5 +83,49 @@ def excepthook(type, value, traceback):
 sys.excepthook = excepthook
 """
 
+def check_versions():
+
+    def s_to_t(s):  # convert string '0.1.1' to tuple(0, 1, 1)
+        return tuple(map(int, s.split('.')))
+
+    def t_to_s(t):  # convert tuple(0, 1, 1) to string '0.1.1'
+        return '.'.join(map(str, t))
+
+    progver_fn = os.path.join(os.path.dirname(__file__), 'program_version')
+    try:
+        current_program_version = open(progver_fn).read()
+    except FileNotFoundError:
+        current_program_version = '0.1.0'
+    current_program_version_info = s_to_t(current_program_version)
+
+    dataver_fn = os.path.join(os.path.dirname(__file__), 'datamodel_version')
+    try:
+        current_datamodel_version = open(dataver_fn).read()
+    except FileNotFoundError:
+        current_datamodel_version = '0.1.0'
+    current_datamodel_version_info = s_to_t(current_datamodel_version)
+
+    if (
+        program_version_info < current_program_version_info or
+        datamodel_version_info < current_datamodel_version_info
+        ):
+        sys.exit('Houston we have a problem!')
+
+    if program_version_info > current_program_version_info:
+        new_program_version = t_to_s(program_version_info)
+        open(progver_fn, 'w').write(new_program_version)
+
+    if datamodel_version_info > current_datamodel_version_info:
+        print()
+        ans = input('Database has changed - ok to upgrade? ')
+        if ans.lower() != 'y':
+            sys.exit('Upgrade cancelled')
+        global db_session  # must be global - retrieved from __main__
+        db_session = db.api.start_db_session(1)
+        from upgrade_datamodel import upgrade_datamodel
+        upgrade_datamodel(db_session, current_datamodel_version_info, datamodel_version_info)
+        new_datamodel_version = t_to_s(datamodel_version_info)
+        open(dataver_fn, 'w').write(new_datamodel_version)
+
 if __name__ == '__main__':
-    main()
+    start()
