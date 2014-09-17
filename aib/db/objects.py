@@ -1268,7 +1268,9 @@ class DbTable:
 
         table = 'db_columns'
         cols = Column.names
-        where = [('WHERE', '', 'table_id', '=', table_id, '')]
+        where = []
+        where.append(('WHERE', '', 'table_id', '=', table_id, ''))
+        where.append(('AND', '', 'deleted_id', '=', 0, ''))
         order = ['col_type', 'seq']
 
         with context.db_session as conn:
