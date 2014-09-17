@@ -89,7 +89,7 @@ def init(self, pos):
         conn = sqlite3.connect(':memory:',
             detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
     else:
-        conn = sqlite3.connect('{0}/base'.format(self.database),
+        conn = sqlite3.connect('{0}/_base'.format(self.database),
             detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
     conn.create_function('subfield', 3, subfield)
     conn.create_function('repeat', 2, repeat)
@@ -144,6 +144,7 @@ def create_company(self, company):
 
 def exec_sql(self, sql, params=None):
     # search for occurrences of {company}.{table}, and attach company
+    """
     if sql.lower().startswith('select'):
         from_pos = sql.lower().find('from ')
         if from_pos != -1:
@@ -170,6 +171,11 @@ def exec_sql(self, sql, params=None):
         dot = sql.find('.')
         company = sql[12:dot].strip()  # skip 'delete from '
         self.attach_company(company)
+    """
+    for word in sql.split():
+        if '.' in word:
+            company = word.split('.')[0]
+            self.attach_company(company)
     return self._exec_sql(sql, params)
 
 def simple_select(self, company, table_name, cols, where='', order=''):
