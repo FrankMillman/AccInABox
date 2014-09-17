@@ -161,6 +161,21 @@ def increment_seq(db_obj, xml):  # called 'before_save'
 
     args = xml.get('args')  # e.g. 'table_id, col_type'
     with session as conn:
+
+        if not db_obj.exists and new_seq == -1:  # append node
+            sql = "SELECT COALESCE(MAX(seq), -1) FROM {} ".format(table_name)
+            params = []
+            if args is not None:
+                for pos, arg in enumerate(args.split(',')):
+                    arg = arg.strip()
+                    test = 'AND' if pos else 'WHERE'
+                    sql += ' {} {} = {}'.format(test, arg, conn.param_style)
+                    params.append(db_obj.getfld(arg).getval())
+            conn.cur.execute(sql, params)
+            seq = conn.cur.fetchone()[0] + 1
+            db_obj.setval('seq', seq)
+            return
+
         if db_obj.exists:
             if new_seq > orig_seq:
                 sql = (
