@@ -30,6 +30,8 @@ function on_load() {
   menu_hdng.appendChild(menu_text);
   menu_div.appendChild(menu_hdng);
   document.body.appendChild(menu_div);
+  // store menu_div.height for tree.js, so it knows when to overflow
+  menu_div.height = menu_div.offsetHeight - menu_hdng.offsetHeight;
 
   favr_div = document.createElement('div');
   favr_div.style.background = 'pink';

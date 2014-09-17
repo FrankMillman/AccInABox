@@ -50,8 +50,6 @@ function setup_form(args) {
         form.root_id = root_id;
         form.form_id = form_id;
 
-        form.frame = null;
-
         form.disable_count = 0;
         form.obj_dict = {};
         form.css_classes = [];
@@ -949,10 +947,11 @@ function setup_form(args) {
 
   var help_msg = document.createElement('div');
   page.appendChild(help_msg);
+  help_msg.appendChild(document.createTextNode(''));
   help_msg.style.clear = 'left';
   help_msg.style.padding = '10px';
   help_msg.style.height = '18px';
-  form.help_msg = help_msg;
+  form.help_msg = help_msg.firstChild;
 
   frame.page.end_page();
 

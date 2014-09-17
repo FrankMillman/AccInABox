@@ -477,7 +477,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //        else
 //          grid.highlighted_cell.className = 'focus_background';
 //        };
-//      grid.frame.form.help_msg.innerHTML = grid.obj_list[grid.active_col].help_msg;
+//      grid.frame.form.help_msg.data = grid.obj_list[grid.active_col].help_msg;
 //      };
     };
   grid.got_focus = function() {
@@ -503,10 +503,10 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //      if (grid.highlighted_cell === null)
 //        grid.cell_set_focus(grid.first_subset_row, 0);
 //      else
-//        grid.frame.form.help_msg.innerHTML = grid.obj_list[grid.active_col].help_msg;
+//        grid.frame.form.help_msg.data = grid.obj_list[grid.active_col].help_msg;
 
       grid.highlight_active_cell()
-      grid.frame.form.help_msg.innerHTML = grid.obj_list[grid.active_col].help_msg;
+      grid.frame.form.help_msg.data = grid.obj_list[grid.active_col].help_msg;
 
 //      }
 //    else {
@@ -1106,7 +1106,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //    else
 //      col_span.style.borderLeft = border;
 
-      grid.frame.form.help_msg.innerHTML = grid.obj_list[grid.active_col].help_msg;
+      grid.frame.form.help_msg.data = grid.obj_list[grid.active_col].help_msg;
       };
     };
 
@@ -1146,7 +1146,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
         };
       grid.highlighted_row = row;
       };
-    grid.frame.form.help_msg.innerHTML = grid.obj_list[0].help_msg;
+    grid.frame.form.help_msg.data = grid.obj_list[0].help_msg;
     };
 
   grid.get_active_cell = function() {

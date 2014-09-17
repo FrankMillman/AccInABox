@@ -38,17 +38,8 @@ function got_focus(new_focus) {
 
 //  if (new_focus_form.disable_count) return;
 
-  // next bit seems dodgy!
-  // if validation fails, we set focus on invalid field - focus_from_server is set to true
-  // then we display error message
-  // when error box is dismissed, we return focus to the invalid field
-  // this is the only time that current_focus === new_focus and focus_from_server is true
-  // therefore this is the only time that we reset focus_from_server to false
-  // there could be other occasions when focus_from_server is true
-  // we need a more reliable way to reset it
   if (new_focus_form.current_focus === new_focus) {
-    if (new_focus_form.focus_from_server)
-      new_focus_form.focus_from_server = false;
+    new_focus_form.focus_from_server = false;
     return;
     };
   if (new_focus.disabled)
@@ -72,17 +63,18 @@ function got_focus(new_focus) {
   new_focus_form.current_focus = new_focus;
   new_focus_form.setting_focus = new_focus;  // IE workaround
   if (new_focus_form.help_msg)
-    new_focus_form.help_msg.innerHTML = new_focus.help_msg;
+    new_focus_form.help_msg.data = new_focus.help_msg;
 
 // if focus_from_server === true, should we call 'got_focus'?
 // it sends 'got focus' back to the server, which we don't want
 // change it and see what happens! [2013-08-23]
 
-  new_focus.got_focus();
 //  if (new_focus_form.focus_from_server)
 //    new_focus_form.focus_from_server = false;
 //  else
 //    new_focus.got_focus();
+  new_focus.got_focus();
+  new_focus_form.focus_from_server = false;
 
   if (new_focus.active_frame !== new_focus.frame.form.active_frame) {
 

@@ -1364,12 +1364,14 @@ AibChoice.prototype.create_dropdown = function(choice) {
   setTimeout(function() {dropdown.focus()}, 0);
   return dropdown;
   };
-AibChoice.prototype.handle_escape = function(choice) {
-  pos = choice.data.indexOf(choice.form_value);
-  if (pos === -1)
-    pos = 0;
-  this.after_selection(choice, pos);
-  };
+// what is this for? [2014-09-12]
+// it prevents esc bubbling up to form
+//AibChoice.prototype.handle_escape = function(choice) {
+//  pos = choice.data.indexOf(choice.form_value);
+//  if (pos === -1)
+//    pos = 0;
+//  this.after_selection(choice, pos);
+//  };
 AibChoice.prototype.onkey = function(choice, e) {
   if (choice.disable_count)
     return;
@@ -1445,12 +1447,12 @@ AibChoice.prototype.set_value_from_server = function(choice, value) {
 
   choice.current_value = value;
   choice.ndx = choice.data.indexOf(value);
-  value = choice.values[choice.ndx]
+  var dsp_value = choice.values[choice.ndx];
 
   if (inp.style.display === 'none')
-    dsp.text.data = value;
+    dsp.text.data = dsp_value;
   else
-    inp.innerHTML = html_esc(value);
+    inp.innerHTML = html_esc(dsp_value);
 
 /*
   // none of this is necessary, provided that we ensure that
@@ -1479,6 +1481,8 @@ AibChoice.prototype.set_value_from_server = function(choice, value) {
 */
 
   choice.form_value = value;
+  choice.callback(choice.current_value);
+
   };
 AibChoice.prototype.cell_data_changed = function(cell) {
   var grid = cell.grid;

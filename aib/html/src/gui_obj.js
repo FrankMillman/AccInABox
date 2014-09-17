@@ -1079,6 +1079,7 @@ function create_button(frame, json_elem) {
   button.active_frame = frame;
   button.ref = json_elem.ref;
   button.help_msg = json_elem.help_msg;
+  if (button.help_msg === '') button.help_msg = '\xa0';
   button.title = button.help_msg;
   button.mouse_down = false;
   button.has_focus = false;
@@ -1254,6 +1255,7 @@ function create_button(frame, json_elem) {
       button.style.color = 'darkgrey';  //'#b8b8b8';
       button.disable_count = 1;
       if (button.has_focus) {
+        button.style.background = button.bg_disabled;
         var pos = button.pos + 1;
         while (button.frame.obj_list[pos].offsetHeight === 0)
           pos += 1;  // look for next available object
@@ -1263,6 +1265,8 @@ function create_button(frame, json_elem) {
     else {
       button.style.color = 'navy';  //'black';  //'#101010';
       button.disable_count = 0;
+      if (button.has_focus)
+        button.style.background = button.bg_focus;
       };
 //  button.disabled = state;
     };
