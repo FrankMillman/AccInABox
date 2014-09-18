@@ -209,6 +209,14 @@ def do_navigate(caller, xml):
     yield from caller.do_navigate()
 
 @asyncio.coroutine
+def update_node(caller, xml):
+    yield from caller.tree.update_node()
+
+@asyncio.coroutine
+def delete_node(caller, xml):
+    yield from caller.tree.on_req_delete_node()
+
+@asyncio.coroutine
 def change_button(caller, xml):
     """
     #<change_button btn_id="b_pwd" attr="enable" value="true"/>
@@ -364,6 +372,10 @@ def pyfunc(caller, xml):
 @asyncio.coroutine
 def return_to_grid(caller, xml):
     caller.return_to_grid()
+
+@asyncio.coroutine
+def return_to_tree(caller, xml):
+    caller.return_to_tree()
 
 @asyncio.coroutine
 def ask(caller, xml):

@@ -1,173 +1,103 @@
-import os
-import __main__
-from lxml import etree
-parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
+import asyncio
 
 import db.api
 import ht.gui_objects
 import ht.templates
+import ht.form
+from errors import AibError
+from start import log, debug
+
+def log_func(func):
+    def wrapper(*args, **kwargs):
+        if debug:
+            log.write('*{}.{}({}, {})\n\n'.format(
+                func.__module__, func.__name__,
+                ', '.join(str(arg) for arg in args),
+                kwargs))
+        return func(*args, **kwargs)
+    return wrapper
 
 #----------------------------------------------------------------------------
 
 class GuiTree:
-    def __init__(self, form, gui, element, ref):
+    def __init__(self, parent, gui, element):
         self.must_validate = True
         self.readonly = False
+        self.parent_type = 'tree'
 
-        obj_name, col_name = element.get('source').split()
-        db_obj = form.data_objects[obj_name]
-        xml = db_obj.get_val(col_name)
+        self.data_objects = parent.data_objects
+        self.obj_name = element.get('data_object')
+        self.db_obj = parent.data_objects[self.obj_name]
+        self.parent = parent
+        self.form = parent.form
+        self.session = parent.session
+        self.form_active = None
+        self.grid_frame = None
 
-        self.session = form.session
-        self.root_id = form.root_id
-        self.form_id = form.form_id
-        self.form = form
+        ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
+        self.pos = pos
 
-class GuiXmlTree:
+        with self.form.db_session as conn:
+#           cte = conn.tree_select(
+#               self.form.company, self.db_obj.table_name, 'row_id', 1, sort=True)
+#           rows = "row_id, parent_id, descr, opt_type in ('0', '1')"
+#           sql = ("{} SELECT {} FROM temp ORDER BY _key".format(cte, rows))
+            sql = (
+                "SELECT row_id, COALESCE(parent_id, 0), descr, opt_type in ('0', '1') "
+                "FROM {}.{} ORDER BY COALESCE(parent_id, 0), seq"
+                .format(self.form.company, self.db_obj.table_name)
+                )
+            
+            conn.cur.execute(sql)
+            tree_data = list(conn.cur)
 
-    xs_types = {
-        'xs:string': 'text',
-        'xs:integer': 'num',
-        'xs:boolean': 'bool'
-        }
+        gui.append(('tree', {
+            'ref': self.ref,
+            'lng': element.get('lng'),
+            'height': element.get('height'),
+            'toolbar': element.get('toolbar') == 'true',
+            'tree_data': tree_data}))
 
-    def __init__(self, form, gui, element, ref):
-        self.must_validate = True
-        self.readonly = False
+    @asyncio.coroutine
+    def on_active(self, node_id):
+        self.db_obj.init()
+        self.db_obj.setval('row_id', node_id)
+        yield from self.tree_frame.restart_frame(set_focus=False)
 
-        self.session = form.session
-        self.root_id = form.root_id
-        self.form_id = form.form_id
-        self.form = form
-        self.ref = ref
+    @asyncio.coroutine
+    def on_req_insert_node(self, parent_id, seq):
+        if not parent_id:
+            raise AibError(head='Error', body='Cannot create new root')
+        self.db_obj.init(init_vals={'parent_id': parent_id, 'seq': seq})
+        #self.db_obj.setval('parent_id', parent_id)
+        #self.db_obj.setval('seq', seq)
+        self.session.request.send_insert_node(self.ref, parent_id, seq, -1)
+        yield from self.tree_frame.restart_frame()
 
-        obj_name, col_name = element.get('source').split('.')
-        db_obj = form.data_objects[obj_name]
-        #xml = db_obj.fields.get_item(col_name).getval()
-        xml = db_obj.getfld(col_name).getval()
+    @asyncio.coroutine
+    def on_req_delete_node(self, node_id=None):
+        if node_id is None:
+            pass  # deleting the node that is being inserted
+        else:
+            self.db_obj.init()
+            self.db_obj.setval('row_id', node_id)
+            if not self.db_obj.getval('parent_id'):
+                raise AibError(head='Error', body='Cannot delete root node')
+            if self.db_obj.getval('children'):
+                raise AibError(head='Error', body='Cannot delete node with children')
+            self.db_obj.delete()
+        self.session.request.send_delete_node(self.ref, node_id)
 
-        xsd_path = element.get('xsd')
-        xsd = etree.parse(os.path.join(os.path.dirname(__main__.__file__),
-            xsd_path), parser=parser)
-
-        root_id = element.get('root')
-
-        xs = '{http://www.w3.org/2001/XMLSchema}'
-        xsdict = {}
-        self.build_xsdict(xs, xsd, xsdict, root_id)
-
-        help_msg = 'Enter details of form'
-
-        gui.append(('xml_tree', {'xml': xml, 'xsd': xsdict,
-            'help_msg': help_msg, 'ref': ref}))
-
-    def validate(self, temp_data):
+    @asyncio.coroutine
+    def on_move_node(self, node_id, parent_id, seq):
         pass
 
-    def build_xsdict(self, xs, xsd, xsdict, elem_name, group=False):
-        if elem_name in xsdict:
-            return
-        xsdict[elem_name] = None  # placeholder to avoid recursion
-
-        elem_list = []
-        if group:
-            elem = xsd.find(xs+"group[@name='{}']".format(elem_name))
-            appinfo = []
-            sub_elements = elem[0]
-        else:
-            elem = xsd.find(xs+"element[@name='{}']".format(elem_name))
-            annotation = elem.find(xs+'annotation')
-            if annotation is not None:
-                appinfo = annotation.find(xs+'appinfo')
-            else:
-                appinfo = []
-            complexType = elem.find(xs+'complexType')
-            if complexType is not None and len(complexType):
-                sub_elements = complexType[0]  # skip complexType
-            else:
-                sub_elements = None
-        if sub_elements is not None:
-            if sub_elements.tag == xs+'sequence':
-                elem_list.append('$seq')
-                for sub_elem in sub_elements.iterchildren():
-                    if sub_elem.tag == xs+'element':
-                        tup = (
-                            '$elem',
-                            sub_elem.get('ref'),
-                            sub_elem.get('minOccurs', '1'),
-                            sub_elem.get('maxOccurs', '1')
-                            )
-                        elem_list.append(tup)
-                        self.build_xsdict(xs, xsd, xsdict, sub_elem.get('ref'))
-                    elif sub_elem.tag == xs+'choice':
-                        choice = [
-                            '$choice',
-                            sub_elem.get('minOccurs', '1'),
-                            sub_elem.get('maxOccurs', '1')
-                            ]
-                        tup = []
-                        for sub_sub in sub_elem.findall(xs+'element'):
-                            if sub_sub.get('ref') is not None:
-                                tup.append(sub_sub.get('ref'))
-                                self.build_xsdict(xs, xsd, xsdict, sub_sub.get('ref'))
-                        choice.append(tuple(tup))
-                        elem_list.append(tuple(choice))
-                    elif sub_elem.tag == xs+'group':
-                        tup = (
-                            '$group',
-                            sub_elem.get('ref'),
-                            sub_elem.get('minOccurs', '1'),
-                            sub_elem.get('maxOccurs', '1')
-                            )
-                        elem_list.append(tup)
-                        self.build_xsdict(xs, xsd, xsdict, sub_elem.get('ref'), group=True)
-            elif sub_elements.tag == xs+'choice':
-                choice = ['$choice',
-                    sub_elements.get('minOccurs', '1'),
-                    sub_elements.get('maxOccurs', '1')]
-                tup = []
-                for sub_elem in sub_elements.findall(xs+'element'):
-                    if sub_elem.get('ref') is not None:
-                        tup.append(sub_elem.get('ref'))
-                        self.build_xsdict(xs, xsd, xsdict, sub_elem.get('ref'))
-                choice.append(tuple(tup))
-                elem_list.append(tuple(choice))
-            elif sub_elements.tag == xs+'group':
-                elem_list.append(('$group',
-                    sub_elements.get('ref'),
-                    sub_elements.get('minOccurs', '1'),
-                    sub_elements.get('maxOccurs', '1')))
-                self.build_xsdict(xs, xsd, xsdict, sub_elements.get('ref'), group=True)
-
-#       attr_list = []
-#       for attr in elem.findall(xs+'attribute'):
-#           attr_name = attr.get('name')
-#           attr_reqd = attr.get('use') == 'required'
-#           simple_type = attr.find(xs+'simpleType')
-#           if simple_type is not None:
-#               if simple_type.find(xs+'restriction') is not None:
-#                   choices = ['$choice']  # literal followed by actual choices
-#                   for choice in simple_type.find(xs+'restriction').findall(xs+'enumeration'):
-#                       choices.append(choice.get('value'))
-#               attr_type = choices
-#           else:
-#               attr_type = self.xs_types[attr.get('type', 'xs:string')]
-#           attr_list.append((attr_name, attr_reqd, attr_type))
-        gui = []
-        for app_elem in appinfo:
-            if app_elem.tag == 'row':
-                gui.append(('row', None))
-            elif app_elem.tag == 'col':
-                gui.append(('col', None))
-            elif app_elem.tag == 'statictext':
-                label=app_elem.get('value'); span=1; align='left'
-                gui.append(('statictext',
-                    {'label':label, 'span':span, 'align':align}))
-            elif app_elem.tag == 'input':
-                attr_name = app_elem.get('attr')
-                lng = app_elem.get('lng')
-                gui.append(('input',
-                    {'type':app_elem.get('type'), 'attr':app_elem.get('attr'),
-                    'lng': app_elem.get('lng'), 'password': ''}))
-        xsdict[elem_name] = [elem_list, gui]
+    @asyncio.coroutine
+    def update_node(self):  # called from frame_methods after save
+        self.session.request.send_update_node(
+            self.ref,  # tree_ref
+            self.db_obj.getval('row_id'),  # node_id
+            self.db_obj.getval('descr'),  # text
+            self.db_obj.getval('opt_type') in ('0', '1')  # expandable
+            )

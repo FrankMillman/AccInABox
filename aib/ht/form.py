@@ -226,14 +226,6 @@ class Form:
         self.setup_mem_objects(form_defn.find('mem_objects'))
         self.setup_input_attr(input_params)
 
-#       for rule in form_defn.find('rules').findall('vld_rule'):
-#       rules = form_defn.find('rules')
-#       if rules is not None:
-#           for rule in rules.findall('vld_rule'):
-#               obj_name, fld_name = rule.get('fld_name').split('.')
-#               fld = self.data_objects[obj_name].getfld(fld_name)
-#               fld.vld_rules.append((self, rule))
-
         self.grids = []
         yield from self.setup_form(form_defn, title)
         del self.grids
@@ -533,14 +525,6 @@ class Form:
                     subtype_fld = db_obj.getfld(col_name)
                     subtype_fld.gui_subtype = None
 
-#           for rule in self.form_defn.find('rules').findall('vld_rule'):
-            rules = self.form_defn.find('rules')
-            if rules is not None:
-                for rule in rules.findall('vld_rule'):
-                    obj_name, fld_name = rule.get('fld_name').split('.')
-                    fld = self.data_objects[obj_name].getfld(fld_name)
-                    fld.vld_rules.remove((self, rule))
-
             self.obj_dict = None
 
         del self.root.form_list[-1]
@@ -592,20 +576,27 @@ class Form:
 #       return self.root.db_session
 
 class Frame:
-    def __init__(self, form, frame_xml, ctrl_grid, gui, grid_frame=False):
+    def __init__(self, form, frame_xml, ctrl_grid, gui,
+            grid_frame=False, tree=None):
 
         if ctrl_grid is None:
             ctrl_grid_ref = None
         else:
             ctrl_grid_ref = ctrl_grid.ref
 
-        self.parent_type = 'grid_frame' if grid_frame else 'frame'
+        if grid_frame:
+            frame_type = 'grid_frame'
+        elif tree is not None:
+            frame_type = 'tree_frame'
+        else:
+            frame_type = 'frame'
+        self.parent_type = frame_type
+        self.tree = tree  # either None or a reference to the Tree object
 
         ref, pos = form.add_obj(form, self)
         self.ref = ref  # used when sending 'start_frame'
 #       frame_pos = pos
-        gui.append(('grid_frame' if grid_frame else 'frame',
-            {'ref': ref, 'ctrl_grid_ref': ctrl_grid_ref}))
+        gui.append((frame_type, {'ref': ref, 'ctrl_grid_ref': ctrl_grid_ref}))
 
 #       frame_xml = form_defn.find('frame')
 #       frame = Frame(self, frame_xml, frame_ref, self.ctrl_grid, gui)
@@ -870,11 +861,15 @@ class Frame:
                 frame = Frame(self.form, element, grid, gui, grid_frame=True)
                 gui.append(('grid_frame_end', None))
                 grid.grid_frame = frame
+            elif element.tag == 'tree':
+                self.tree = ht.gui_tree.GuiTree(self, gui, element)
+            elif element.tag == 'tree_frame':
+                self.tree.tree_frame = Frame(self.form, element, None, gui, tree=self.tree)
+                gui.append(('tree_frame_end', None))
             elif element.tag == 'subtype_panel':
                 subtype = element.get('subtype')
-                self.setup_subtype(element, subtype, gui)
-            # do we use 'dummy'?
-            # maybe to force some action 'after', such as 'save header'?
+                lng = int(element.get('lng', '120'))
+                self.setup_subtype(element, subtype, lng, gui)
             elif element.tag == 'dummy':
                 gui_obj = ht.gui_objects.GuiDummy(self, gui)
 
@@ -1003,7 +998,7 @@ class Frame:
                 self.methods[method_name] = method
 #               print('METH', self, method_name, etree.tostring(method, encoding=str))
 
-    def setup_subtype(self, element, subtype, gui):
+    def setup_subtype(self, element, subtype, lng, gui):
         obj_name, col_name = subtype.split('.')
         db_obj = self.data_objects[obj_name]
         subtype_fld = db_obj.fields[col_name]
@@ -1055,8 +1050,6 @@ class Frame:
                 reverse = False
                 if data_type == 'BOOL':
                     lng = None
-                else:
-                    lng = 120  # hard-coded for now!
                 choices = None
                 lkup = None
                 pwd = ''
@@ -1075,9 +1068,6 @@ class Frame:
             gui.append(('end_subtype', None))
 
     def set_subtype(self, subtype, value):
-
-        if value == '':
-            print('INIT SUBTYPE')
 
         # 'hide' all gui objects for active_subtype
         # 'unhide' all gui objects for new subtype
@@ -1341,3 +1331,6 @@ class Frame:
     def return_to_grid(self):
         self.session.request.send_cell_set_focus(
             self.ctrl_grid.ref, self.ctrl_grid.current_row, 0)
+
+    def return_to_tree(self):
+        self.session.request.send_set_focus(self.tree.ref)

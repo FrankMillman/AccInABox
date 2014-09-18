@@ -414,6 +414,17 @@ class RequestHandler:
         self.reply.append(('set_subtype',
             (form.ref, subtype, value)))
 
+    def send_insert_node(self, tree_ref, parent_id, seq, node_id):
+        self.reply.append(('insert_node',
+            (tree_ref, parent_id, seq, node_id)))
+
+    def send_update_node(self, tree_ref, node_id, text, expandable):
+        self.reply.append(('update_node',
+            (tree_ref, node_id, text, expandable)))
+
+    def send_delete_node(self, tree_ref, node_id):
+        self.reply.append(('delete_node', (tree_ref, node_id)))
+
     def send_end_form(self, form):
         if form:  # else form terminated before form created
             self.check_redisplay()  # must do this first
@@ -574,6 +585,24 @@ class RequestHandler:
         grid = self.session.get_obj(grid_ref)
         grid.inserted = inserted
         yield from grid.start_row(row, display=True)
+
+    @asyncio.coroutine
+    def on_treeitem_active(self, args):
+        tree_ref, row_id = args
+        tree = self.session.get_obj(tree_ref)
+        yield from tree.on_active(row_id)
+
+    @asyncio.coroutine
+    def on_req_insert_node(self, args):
+        tree_ref, parent_id, seq = args
+        tree = self.session.get_obj(tree_ref)
+        yield from tree.on_req_insert_node(parent_id, seq)
+
+    @asyncio.coroutine
+    def on_req_delete_node(self, args):
+        tree_ref, node_id = args
+        tree = self.session.get_obj(tree_ref)
+        yield from tree.on_req_delete_node(node_id)
 
     @asyncio.coroutine
     def on_answer(self, args):
