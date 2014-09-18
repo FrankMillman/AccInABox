@@ -104,6 +104,7 @@ def setup_forms(context):
     create_form(db_obj, 'company_setup', 'Company setup')
     create_form(db_obj, 'cursor_grid', 'Db cursor setup - grid view')
     create_form(db_obj, 'cursor_form', 'Db cursor setup - form view')
+    create_form(db_obj, 'menu_setup', 'Menu setup')
 
 def create_form(db_obj, form_name, title):
     form_module = importlib.import_module('.forms.{}'.format(form_name), 'init')
