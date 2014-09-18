@@ -378,6 +378,9 @@ function process_response(response_text) {
         case 'move_row': move_row(msg_args); break;
         case 'insert_row': insert_row(msg_args); break;
         case 'delete_row': delete_row(msg_args); break;
+        case 'insert_node': insert_node(msg_args); break;
+        case 'update_node': update_node(msg_args); break;
+        case 'delete_node': delete_node(msg_args); break;
         case 'set_subtype': set_subtype(msg_args); break;
         case 'exception': exception(msg_args); break;
         default: debug3('UNKNOWN ' + msg_type + ': ' + msg_args);

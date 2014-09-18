@@ -247,6 +247,24 @@ function delete_row(args) {
   grid.delete_row(args[1]);
   };
 
+function insert_node(args) {
+  var tree_ref=args[0], parent_id=args[1], seq=args[2], node_id=args[3];
+  var tree = get_obj(tree_ref);
+  tree.insert_node(parent_id, seq, node_id);
+  };
+
+function update_node(args) {
+  var tree_ref=args[0], node_id=args[1], text=args[2], expandable=args[3];
+  var tree = get_obj(tree_ref);
+  tree.update_node(node_id, text, expandable);
+  };
+
+function delete_node(args) {
+  var tree_ref=args[0], node_id=args[1];
+  var tree = get_obj(tree_ref);
+  tree.delete_node(node_id);
+  };
+
 function set_subtype(args) {
   var frame_ref = args[0], subtype_name = args[1], subtype_id = args[2];
   var frame = get_obj(frame_ref);

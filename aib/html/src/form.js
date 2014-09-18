@@ -909,6 +909,100 @@ function setup_form(args) {
         var vbox = save_vbox.pop();
         break;
         };
+      case 'tree': {
+        var box = document.createElement('div');
+        box.style.marginTop = '10px';
+        if (vbox !== null)
+          vbox.appendChild(box)
+        else {
+          if (block.childNodes.length)
+            box.style.marginLeft = '10px';
+          block.appendChild(box);
+          box.style[cssFloat] = 'left';
+          };
+        box.style.width = elem[1].lng + 'px';
+        box.style.height = elem[1].height + 'px';
+        box.style.border = '1px solid grey';
+        // store box.height for tree.js, so it knows when to overflow
+        box.height = box.offsetHeight;
+
+        var toolbar=elem[1].toolbar, tree_data = elem[1].tree_data, hide_root=false;
+        for (var j=0, lng=tree_data.length; j<lng; j++) {
+          var arg = tree_data[j];
+          var node_id=arg[0], parent_id=arg[1], text=arg[2], expandable=arg[3];
+          if (j === 0) {
+            var tree = create_tree(box, frame, toolbar, hide_root);
+            tree.ref = elem[1].ref
+            frame.obj_list.push(tree);
+            frame.form.obj_dict[tree.ref] = tree;
+            };
+          tree.add_node(parent_id, node_id, expandable, text, (j===0));
+          };
+        tree.onselected = function(node) {
+          };
+        tree.onactive = function(node) {
+          var args = [tree.ref, node.node_id];
+          send_request('treeitem_active', args);
+          };
+        tree.write();
+
+        break;
+        };
+      case 'tree_frame': {
+        save_pages.push(page);
+        save_frames.push(frame);
+        save_blocks.push(block);
+
+        var page = create_page();
+        page.style.border = '1px solid darkslategrey';
+        page.style.marginTop = '10px';
+        if (vbox !== null)
+          vbox.appendChild(page)
+        else {
+          if (block.childNodes.length)
+            page.style.marginLeft = '10px';
+          block.appendChild(page)
+          page.style[cssFloat] = 'left';
+          };
+
+        save_vbox.push(vbox);
+        vbox = null;
+
+        var frame = {}  // new Object()
+        frame.type = 'tree_frame';
+        frame.obj_list = [];
+        frame.subtypes = {};  //new Object();
+
+        frame.ref = elem[1].ref;
+        frame.form = form;
+        frame.page = page;
+        page.frame = frame;
+        form.obj_dict[frame.ref] = frame;
+        frame.frame_amended = false;
+        frame.send_focus_msg = true;  // can be over-ridden in 'start_frame'
+
+//        frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
+//        frame.ctrl_grid.grid_frame = frame;
+//        frame.ctrl_grid.active_frame = frame;  // override grid's active_frame
+//        frame.ctrl_grid.parentNode.style.border = '1px solid transparent';
+        frame.ctrl_grid = null;
+        tree.tree_frame = frame;
+
+        frame.set_value_from_server = function(value) {
+          this.frame_amended = value;
+//          this.ctrl_grid.row_amended = value;
+          };
+
+        break;
+        };
+      case 'tree_frame_end': {
+        frame.page.end_page();
+        var page = save_pages.pop();
+        var frame = save_frames.pop();
+        var block = save_blocks.pop();
+        var vbox = save_vbox.pop();
+        break;
+        };
       case 'start_subtype': {
         subtype_name = elem[1];
         var subtype = {};  //new Object();
