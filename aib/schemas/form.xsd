@@ -168,6 +168,8 @@
       <xs:element ref="nb_end"/>
       <xs:element ref="grid"/>
       <xs:element ref="grid_frame"/>
+      <xs:element ref="tree"/>
+      <xs:element ref="tree_frame"/>
       <xs:element ref="subtype_panel"/>
     </xs:choice>
   </xs:group>
@@ -299,7 +301,25 @@
         <xs:element ref="frame_methods" minOccurs="0"/>
       </xs:sequence>
       <xs:attribute name="main_object"/>
-      <xs:attribute name="split"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="tree">
+    <xs:complexType>
+      <xs:attribute name="data_object" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="height" type="xs:integer"/>
+      <xs:attribute name="toolbar" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="tree_frame">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="toolbar" minOccurs="0"/>
+        <xs:element ref="body"/>
+        <xs:element ref="button_row" minOccurs="0"/>
+        <xs:element ref="frame_methods" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="main_object"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="subtype_panel">
@@ -308,6 +328,7 @@
         <xs:element ref="subtype_body" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
       <xs:attribute name="subtype" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="subtype_body">

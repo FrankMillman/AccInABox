@@ -16,6 +16,8 @@ def upgrade_datamodel(db_session, old_version, new_version):
     print('update {} to {}'.format(old_version, new_version))
     if old_version < (0, 1, 1):
         upgrade_0_1_1(db_session)
+    if old_version < (0, 1, 2):
+        upgrade_0_1_2(db_session)
 
 def upgrade_0_1_1(db_session):
     print('upgrading to 0.1.1')
@@ -153,3 +155,39 @@ def upgrade_0_1_1(db_session):
             "(descr, parent_id, seq, opt_type, table_name, cursor_name, form_name) "
             "VALUES ({})".format(', '.join([conn.param_style] * 7))
             , params)
+
+def upgrade_0_1_2(db_session):
+    print('upgrading to 0.1.2')
+    with db_session as conn:
+        db_session.transaction_active = True
+
+        # insert new form definition 'menu_setup'
+        form_name = 'menu_setup'
+
+        form_module = importlib.import_module('.forms.{}'.format(form_name), 'init')
+        xml = getattr(form_module, form_name)
+        xml = xml[1:]  # strip leading '\n'
+        xml = xml.replace('`', '&quot;')
+        xml = xml.replace('<<', '&lt;')
+        xml = xml.replace('>>', '&gt;')
+
+        form_defn = db.api.get_db_object(__main__, '_sys', 'sys_form_defns')
+        form_defn.setval('form_name', form_name)
+        form_defn.setval('title', 'Menu Setup')
+        form_defn.setval('form_xml', etree.fromstring(xml, parser=parser))
+        form_defn.save()
+
+        menu_defn = db.api.get_db_object(__main__, '_sys', 'sys_menu_defns')
+        menu_defn.select_row(keys={'descr': 'System setup'})
+        if menu_defn.exists:
+            parent_id = menu_defn.getval('row_id')
+        else:  # user has changed menu setup
+            parent_id = 1  # append to root
+
+        menu_defn.init()
+        menu_defn.setval('descr', 'Menu definitions')
+        menu_defn.setval('parent_id', parent_id)
+        menu_defn.setval('seq', -1)
+        menu_defn.setval('opt_type', '3')  # form definition
+        menu_defn.setval('form_name', 'menu_setup')
+        menu_defn.save()

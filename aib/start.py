@@ -39,7 +39,7 @@ import ht.htc
 #sys.stdout = open('nul', 'w')
 
 program_version_info = (0, 1, 1)
-datamodel_version_info = (0, 1, 1)
+datamodel_version_info = (0, 1, 2)
 
 def start():
     if len(sys.argv) == 2:
