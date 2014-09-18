@@ -38,8 +38,7 @@ import ht.htc
 #sys.stdout = open('/dev/null', 'w')
 #sys.stdout = open('nul', 'w')
 
-program_version_info = (0, 1, 1)
-datamodel_version_info = (0, 1, 2)
+from releases import program_version_info, datamodel_version_info
 
 def start():
     if len(sys.argv) == 2:

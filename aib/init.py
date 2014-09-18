@@ -39,6 +39,12 @@ def get_config():
     with open(cfg_fname, 'w') as cfg_file:
         cfg.write(cfg_file)
 
+    from releases import program_version_info, datamodel_version_info
+    with open('program_version', 'w') as version_file:
+        version_file.write('.'.join(map(str, program_version_info)))
+    with open('datamodel_version', 'w') as version_file:
+        version_file.write('.'.join(map(str, datamodel_version_info)))
+
     return cfg
 
 def get_ms_params():
