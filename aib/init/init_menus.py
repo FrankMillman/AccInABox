@@ -3,6 +3,14 @@ from json import dumps
 import db.api
 import db.setup_tables
 
+# menu option types
+ROOT = '0'
+MENU = '1'
+GRID = '2'
+FORM = '3'
+REPORT = '4'
+PROCESS = '5'
+
 menu_ids = {}
 
 def init_menus(context, conn):
@@ -123,13 +131,6 @@ def setup_menu_defns(context, conn):
 
 def setup_menus(context):
 
-    root = '0'
-    menu = '1'
-    grid = '2'
-    form = '3'
-    report = '4'
-    process = '5'
-
     db_obj = db.api.get_db_object(context, '_sys', 'sys_menu_defns')
 
     def setup_menu(descr, parent, seq, opt_type, table_name=None,
@@ -144,35 +145,35 @@ def setup_menus(context):
         db_obj.setval('form_name', form_name)
         db_obj.save()
 
-    setup_menu('System Administration', None, 0, root)
+    setup_menu('System Administration', None, 0, ROOT)
 
-    setup_menu('System setup', 1, 0, menu)
+    setup_menu('System setup', 1, 0, MENU)
     menu_id = db_obj.getval('row_id')
 
-    setup_menu('Table definitions', menu_id, 0, grid,
+    setup_menu('Table definitions', menu_id, 0, GRID,
         table_name='db_tables', cursor_name='db_tables')
 
-    setup_menu('Form definitions', menu_id, 1, grid,
+    setup_menu('Form definitions', menu_id, 1, GRID,
         table_name='sys_form_defns', cursor_name='form_list')
 
-    setup_menu('Menu definitions', menu_id, 2, form,
+    setup_menu('Menu definitions', menu_id, 2, FORM,
         form_name='menu_setup')
 
-    setup_menu('Directories', 1, 1, menu)
+    setup_menu('Directories', 1, 1, MENU)
     menu_id = db_obj.getval('row_id')
 
-    setup_menu('Setup users', menu_id, 0, grid,
+    setup_menu('Setup users', menu_id, 0, GRID,
         table_name='dir_users', cursor_name='users')
 
-    setup_menu('Setup companies', menu_id, 1, form,
+    setup_menu('Setup companies', menu_id, 1, FORM,
         form_name='company_setup')
 
-    setup_menu('Accounts receivable', 1, 2, menu)
+    setup_menu('Accounts receivable', 1, 2, MENU)
     menu_id = db_obj.getval('row_id')
-    setup_menu('AR setup', menu_id, 0, menu)
-    setup_menu('AR transactions', menu_id, 1, menu)
+    setup_menu('AR setup', menu_id, 0, MENU)
+    setup_menu('AR transactions', menu_id, 1, MENU)
 
-    setup_menu('Accounts payable', 1, 3, menu)
+    setup_menu('Accounts payable', 1, 3, MENU)
     menu_id = db_obj.getval('row_id')
-    setup_menu('AP setup', menu_id, 0, menu)
-    setup_menu('AP transactions', menu_id, 1, menu)
+    setup_menu('AP setup', menu_id, 0, MENU)
+    setup_menu('AP transactions', menu_id, 1, MENU)

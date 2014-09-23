@@ -445,9 +445,13 @@ class DbObject:
                         src = fld.foreign_key['true_src']
                         col_name = src.col_name
                         value = src._value
+                if value is None:
+                    eq = 'IS'
+                else:
+                    eq = '='
 #           cols_vals.append(('a.{}'.format(col_name), value))
             where.append(
-                (test, '', col_name, '=', value, '') )
+                (test, '', col_name, eq, value, '') )
 #               {'test': test, 'lbr': '', 'col_name': col_name,
 #                   'op': '=', 'expr': value, 'rbr': ''} )
             test = 'AND'  # in case there is more than one

@@ -238,7 +238,7 @@ class Session:
             "FROM {}.sys_menu_defns ORDER BY parent_id, seq"
             .format(company)
             )
-        conn.cur.execute(sql)
+        db.api.exec_sql(conn, sql)
         return conn.cur
 
 dummy_id_counter = itertools.count(1)
