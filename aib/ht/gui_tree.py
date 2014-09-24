@@ -24,6 +24,7 @@ class GuiTree:
         self.must_validate = True
         self.readonly = False
         self.parent_type = 'tree'
+        self.tree_frame = None  # over-ridden if tree_frame exists
 
         self.data_objects = parent.data_objects
         self.obj_name = element.get('data_object')
@@ -43,14 +44,21 @@ class GuiTree:
 #               self.form.company, self.db_obj.table_name, 'row_id', 1, sort=True)
 #           rows = "row_id, parent_id, descr, opt_type in ('0', '1')"
 #           sql = ("{} SELECT {} FROM temp ORDER BY _key".format(cte, rows))
-            sql = (
-                "SELECT row_id, COALESCE(parent_id, 0), descr, opt_type in ('0', '1') "
-                "FROM {}.{} ORDER BY COALESCE(parent_id, 0), seq"
-                .format(self.form.company, self.db_obj.table_name)
-                )
-            
-            conn.cur.execute(sql)
-            tree_data = list(conn.cur)
+
+#           sql = (
+#               "SELECT row_id, COALESCE(parent_id, 0), descr, opt_type in ('0', '1') "
+#               "FROM {}.{} ORDER BY COALESCE(parent_id, 0), seq"
+#               .format(self.form.company, self.db_obj.table_name)
+#               )
+#           conn.cur.execute(sql)
+
+            select_cols = ['row_id', 'parent_num', 'descr', 'expandable']
+            where = []
+            order = [('parent_num', False), ('seq', False)]
+            tree_data = list(
+                conn.full_select(self.db_obj, select_cols, where, order))
+
+#           tree_data = list(cur)
 
         gui.append(('tree', {
             'ref': self.ref,
@@ -63,7 +71,8 @@ class GuiTree:
     def on_active(self, node_id):
         self.db_obj.init()
         self.db_obj.setval('row_id', node_id)
-        yield from self.tree_frame.restart_frame(set_focus=False)
+        if self.tree_frame is not None:
+            yield from self.tree_frame.restart_frame(set_focus=False)
 
     @asyncio.coroutine
     def on_req_insert_node(self, parent_id, seq):
@@ -73,7 +82,8 @@ class GuiTree:
         #self.db_obj.setval('parent_id', parent_id)
         #self.db_obj.setval('seq', seq)
         self.session.request.send_insert_node(self.ref, parent_id, seq, -1)
-        yield from self.tree_frame.restart_frame()
+        if self.tree_frame is not None:
+            yield from self.tree_frame.restart_frame()
 
     @asyncio.coroutine
     def on_req_delete_node(self, node_id=None):
@@ -99,5 +109,5 @@ class GuiTree:
             self.ref,  # tree_ref
             self.db_obj.getval('row_id'),  # node_id
             self.db_obj.getval('descr'),  # text
-            self.db_obj.getval('opt_type') in ('0', '1')  # expandable
+            self.db_obj.getval('expandable')
             )

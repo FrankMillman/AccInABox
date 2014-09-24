@@ -188,14 +188,15 @@ class Field:
         """
         print()
         print('-'*20)
-        print('From: db_object_fields.py - recalc', self.col_name)
+        print('From: db.object_fields.py - recalc', self.col_name)
         print()
         print(sql)
         print()
         """
         for dep in self.deps:
             fld = self.db_obj.getfld(dep[2:])  # remove 'a.' prefix
-            val = fld.getstringval()
+#           val = fld.getstringval()
+            val = fld.val_to_str()
             if val == 'None':
                 sql = sql.replace('= '+dep, 'is null', 1)  # only replace first occurrence
                 sql = sql.replace(dep, 'null', 1)  # syntax for function call (no leading =)
@@ -346,11 +347,12 @@ class Field:
             for caller, method in self.db_obj.on_amend_func:
                 caller.session.request.db_events.append((caller, method))
 
-        if self.db_obj.exists:
+        if True:  #self.db_obj.exists:
             # should we only do this if db_obj exists?
             # we will execute the sql when the row is SELECTed
             # NEEDS MORE THOUGHT [24/06/2010]
             for fld in self.flds_to_recalc:
+                print(self.col_name, 'recalc', fld.col_name)
                 fld.recalc()
 
         if display:
@@ -386,8 +388,8 @@ class Field:
     def getval(self):
         return self._value
 
-    def getstringval(self):
-        return repr(self._value)  # None will return 'None'
+#   def getstringval(self):
+#       return repr(self._value)  # None will return 'None'
 
     def get_orig(self):
         return self._orig
@@ -930,7 +932,10 @@ class DateTime(Field):
     def check_length(self, value):
         pass
 
-    def getstringval(self):
+#   def getstringval(self):
+#       return str(self._value)[:19]
+
+    def val_to_str(self):
         return str(self._value)[:19]
 
     def str_to_val(self, value):

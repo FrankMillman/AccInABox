@@ -100,9 +100,15 @@ def setup_menu_defns(context, conn):
 
     params = []
     params.append(('children', 'INT', 'Children', 'Number of children', '',
-        'N', False, False, False, 0, 0,
+        'N', False, False, True, 0, 0,
         'SELECT count(*) FROM {}.{} b WHERE b.parent_id = a.row_id'
         .format('_sys', table_name)))
+    params.append(('expandable', 'BOOL', 'Expandable?', 'Is this node expandable?', '',
+        'N', False, False, True, 0, 0,
+        "SELECT a.opt_type IN ('0', '1')"))
+    params.append(('parent_num', 'INT', 'Parent numeric id', 'Parent id - change null to 0', '',
+        'N', False, False, True, 0, 0,
+        "SELECT COALESCE(a.parent_id, 0)"))
     for seq, param in enumerate(params):
         db_column.init()
         db_column.setval('table_id', table_id)

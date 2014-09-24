@@ -27,6 +27,11 @@ def obj_exists(ctx, obj, value, xml):
     return target_record.exists
 
 @asyncio.coroutine
+def init_obj(ctx, obj, value, xml):
+    obj_name = xml.get('obj_name')
+    ctx.data_objects.get(obj_name).init()
+
+@asyncio.coroutine
 def select_row(ctx, obj, value, xml):
     """
     <select_row obj_name="dir_user" key="user_row_id" value="var.user"/>
@@ -110,4 +115,7 @@ def ask(ctx, obj, value, xml):
     yield from on_answer(ctx, obj, value, answer)
 
 def error(ctx, obj, value, xml):
-    raise AibError(head=xml.get('head') or None, body=xml.get('body') or None)
+    raise AibError(
+        head=xml.get('head') or None,
+        body=xml.get('body').replace('$value', value) or None
+        )

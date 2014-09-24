@@ -18,6 +18,8 @@ def upgrade_datamodel(db_session, old_version, new_version):
         upgrade_0_1_1(db_session)
     if old_version < (0, 1, 2):
         upgrade_0_1_2(db_session)
+    if old_version < (0, 1, 3):
+        upgrade_0_1_3(db_session)
 
 def upgrade_0_1_1(db_session):
     print('upgrading to 0.1.1')
@@ -191,3 +193,11 @@ def upgrade_0_1_2(db_session):
         menu_defn.setval('opt_type', '3')  # form definition
         menu_defn.setval('form_name', 'menu_setup')
         menu_defn.save()
+
+def upgrade_0_1_3(db_session):
+    print('upgrading to 0.1.3')
+    with db_session as conn:
+        db_session.transaction_active = True
+
+        # add 'expandable' to sys_menu_defns virt columns
+        # add 'parent_num' to sys_menu_defns virt columns
