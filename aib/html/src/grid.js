@@ -1360,7 +1360,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
         if (grid.inserted === 1 && !grid.row_amended)
           grid.confirm_req('Yes');  // no confirmation required
         else {
-          args = [null, 'Delete?', 'Sure you want to delete row?',
+          var cell = grid.grid_rows[grid.active_row-grid.first_grid_row].grid_cols[0];
+          args = [null, 'Delete?',
+            "Sure you want to delete '" + cell.current_value + "'?",
             ['Yes', 'No'], 'No', 'No', grid.confirm_req]
           ask_question(args);
           };
