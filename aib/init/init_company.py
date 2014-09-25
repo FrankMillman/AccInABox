@@ -339,11 +339,11 @@ def setup_table_perms(context, conn, company):
     fkey.append(False)
     params.append(('table_id', 'INT', 'Table id', 'Table id',
         'Table id', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
-    params.append(('insert_disallowed', 'BOOL', 'Insert dis-allowed?', 'Insert dis-allowed?',
+    params.append(('ins_disallowed', 'BOOL', 'Insert disallowed?', 'Insert disallowed?',
         'Ins?', 'N', False, False, True, 0, 0, None, None, None, None, None))
-    params.append(('update_disallowed', 'BOOL', 'Update dis-allowed?', 'Update dis-allowed?',
+    params.append(('upd_disallowed', 'BOOL', 'Update disallowed?', 'Update disallowed?',
         'Upd?', 'N', False, False, True, 0, 0, None, None, None, None, None))
-    params.append(('delete_disallowed', 'BOOL', 'Delete dis-allowed?', 'Delete dis-allowed?',
+    params.append(('del_disallowed', 'BOOL', 'Delete disallowed?', 'Delete disallowed?',
         'Del?', 'N', False, False, True, 0, 0, None, None, None, None, None))
 
     db_column = db.api.get_db_object(context, company, 'db_columns')

@@ -1,7 +1,7 @@
 from collections import defaultdict
 import importlib
 
-from db.connection import _get_connection
+import db.connection
 from errors import AibError
 
 def config_cursor(db_params):
@@ -51,9 +51,11 @@ class Cursor:
             self.close()
 
         if self.db_obj.mem_obj:
-            self.conn = self.db_obj.context.mem_session.conn
+#           self.conn = self.db_obj.context.mem_session.conn
+            session = self.db_obj.context.mem_session
+            self.conn = db.connection._get_mem_connection(session.mem_id)
         else:
-            self.conn = _get_connection()  # must keep connection until cursor closed
+            self.conn = db.connection._get_connection()
         self.cur = self.conn.cursor()
 
         sql, params = self.build_sql(where, order, param)

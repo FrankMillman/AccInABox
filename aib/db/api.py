@@ -37,12 +37,12 @@ def start_db_session(user_row_id):
     """
     return db.connection.DbSession(user_row_id)
 
-def start_mem_session(user_row_id):
+def start_mem_session(mem_id, user_row_id):
     """
     Create an instance of :class:`~db.connection.MemSession`,
     and return it to the caller.
     """
-    return db.connection.MemSession(user_row_id)
+    return db.connection.MemSession(mem_id, user_row_id)
 
 def get_db_object(db_session, active_company, table_name, parent=None):
     return db.objects.get_db_object(

@@ -547,16 +547,19 @@ def setup_db_cursors(context, conn):
 def setup_dir_companies(context, conn):
     table_name = 'dir_companies'
 
+    del_chks = []
+    del_chks.append(('CHECK', '', 'company_id', '!=', '"_sys"', ''))
+
     table_hooks = '<hooks>'
     table_hooks += '<hook type="after_insert"><create_company/></hook>'
     table_hooks += '</hooks>'
 
-    params = (4, table_name, 'Companies', 'Directory of companies', False,
+    params = (4, table_name, 'Companies', 'Directory of companies', False, dumps(del_chks),
         gzip.compress(table_hooks.encode('utf-8')), True)
     conn.cur.execute(
         "INSERT INTO _sys.db_tables (created_id, table_name, short_descr, "
-        "long_descr, audit_trail, table_hooks, table_created) "
-        "VALUES ({})".format(', '.join([conn.param_style] * 7))
+        "long_descr, audit_trail, del_chks, table_hooks, table_created) "
+        "VALUES ({})".format(', '.join([conn.param_style] * 8))
         , params)
     conn.cur.execute('SELECT row_id FROM _sys.db_tables WHERE table_name = {}'
         .format(conn.param_style), [table_name])

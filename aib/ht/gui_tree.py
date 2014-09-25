@@ -40,25 +40,11 @@ class GuiTree:
         self.pos = pos
 
         with self.form.db_session as conn:
-#           cte = conn.tree_select(
-#               self.form.company, self.db_obj.table_name, 'row_id', 1, sort=True)
-#           rows = "row_id, parent_id, descr, opt_type in ('0', '1')"
-#           sql = ("{} SELECT {} FROM temp ORDER BY _key".format(cte, rows))
-
-#           sql = (
-#               "SELECT row_id, COALESCE(parent_id, 0), descr, opt_type in ('0', '1') "
-#               "FROM {}.{} ORDER BY COALESCE(parent_id, 0), seq"
-#               .format(self.form.company, self.db_obj.table_name)
-#               )
-#           conn.cur.execute(sql)
-
             select_cols = ['row_id', 'parent_num', 'descr', 'expandable']
             where = []
             order = [('parent_num', False), ('seq', False)]
             tree_data = list(
                 conn.full_select(self.db_obj, select_cols, where, order))
-
-#           tree_data = list(cur)
 
         gui.append(('tree', {
             'ref': self.ref,

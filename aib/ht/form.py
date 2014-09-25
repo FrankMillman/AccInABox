@@ -92,7 +92,7 @@ class Root:
         self.session = session
         self.user_row_id = user_row_id
         self.save_user = None  # to store current user on change_user
-        #self.db_session = db.api.start_db_session(user_row_id)
+        self.db_session = db.api.start_db_session(user_row_id)
         #self.data_objects = {}
 
 class Form:
@@ -178,8 +178,9 @@ class Form:
 #       self.session = session
 
         #self.data_objects = self.root.data_objects
-        self.db_session = db.api.start_db_session(self.user_row_id)
-        self.mem_session = db.api.start_mem_session(self.user_row_id)
+        #self.db_session = db.api.start_db_session(self.user_row_id)
+        #self.mem_session = db.api.start_mem_session(self.user_row_id)
+        self.mem_session = db.api.start_mem_session(id(self), self.user_row_id)
 
         if self.inline is not None:  # form defn is passed in as parameter
             form_defn = self.form_defn = self.inline
@@ -527,6 +528,8 @@ class Form:
 
             self.obj_dict = None
 
+            self.mem_session.close()
+
         del self.root.form_list[-1]
 
         if self.parent is None:
@@ -571,9 +574,9 @@ class Form:
 #   def set_db_session(self, value):
 #       self.root.db_session = value
 #   db_session = property(get_db_session, set_db_session)
-#   @property
-#   def db_session(self):
-#       return self.root.db_session
+    @property
+    def db_session(self):
+        return self.root.db_session
 
 class Frame:
     def __init__(self, form, frame_xml, ctrl_grid, gui,
@@ -1310,6 +1313,11 @@ class Frame:
     @log_func
     @asyncio.coroutine
     def restart_frame(self, set_focus=True):
+        for grid in self.grids:
+            # close any open cursors [2014-09-25]
+            # in on_start_form we may manually create the table
+            # if cursor is open, it needs a cursor_row, but we don't have one
+            grid.db_obj.close_cursor()
         for method in self.on_start_form:
             yield from ht.form_xml.exec_xml(self, method)
         for grid in self.grids:

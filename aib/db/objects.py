@@ -279,6 +279,12 @@ class DbObject:
         # called from ht.gui_grid.start_row()
         self.cursor_row = cursor_row
 
+    def close_cursor(self):
+        if self.cursor is not None:
+            self.cursor.close()
+            self.cursor_row = None
+            self.cursor = None
+
     def add_clean_func(self, callback):
         self.on_clean_func.append(callback)
 
@@ -415,9 +421,10 @@ class DbObject:
 
         if self.mem_obj:
             session = self.context.mem_session
-            conn = self.context.mem_session.conn
+#           conn = self.context.mem_session.conn
+            conn = db.connection._get_mem_connection(session.mem_id)
         else:
-            session = self.context.db_session
+#           session = self.context.db_session
             conn = db.connection._get_connection()
         conn.cur = conn.cursor()
 
@@ -857,9 +864,12 @@ class DbObject:
         if not self.exists:
             raise IOError('No current row - cannot delete')
 
-        for del_chk in self.db_table.del_chks:
+#       for del_chk in self.db_table.del_chks:
+#           # will raise AibError on fail
+#           chk_constraint(self, del_chk)
+        if self.db_table.del_chks:
             # will raise AibError on fail
-            chk_constraint(self, del_chk)
+            chk_constraint(self, self.db_table.del_chks)
 
         self.restore(display=False)  # remove unsaved changes, to ensure valid audit trail
 

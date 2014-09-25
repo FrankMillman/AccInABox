@@ -49,6 +49,9 @@ def config_connection(db_params):
 
 connection_list = []
 connections_active = []
+mem_conn_dict = {}
+#mem_conn_list = []
+#mem_conn_active = []
 connection_lock = threading.Lock()
 
 def _get_connection():
@@ -68,8 +71,43 @@ def _add_connections(n):
         connection_list.append(conn)
         connections_active.append(False)
 
+def _get_mem_connection(mem_id):
+    with connection_lock:
+        if not mem_id in mem_conn_dict:
+            mem_conn_dict[mem_id] = ([], [])  # conn_list, conn_active
+        mem_conn = mem_conn_dict[mem_id]
+        mem_conn_list = mem_conn[0]
+        mem_conn_active = mem_conn[1]
+        try: # look for an inactive connection
+            pos = mem_conn_active.index(False)
+        except ValueError:   # if not found, create 10 more
+            pos = len(mem_conn_active)
+            _add_mem_connections(2, mem_id, mem_conn)
+        conn = mem_conn_list[pos]
+        mem_conn_active[pos] = True
+    return conn
+
+def _add_mem_connections(n, mem_id, mem_conn):
+    mem_conn_list = mem_conn[0]
+    mem_conn_active = mem_conn[1]
+    for _ in range(n):
+        conn = MemConn(len(mem_conn_list), mem_id)
+        mem_conn_list.append(conn)
+        mem_conn_active.append(False)
+
 def _release_connection(pos):  # make connection available for reuse
     connections_active[pos] = False
+
+def _release_mem_conn(mem_id, pos):  # make connection available for reuse
+    mem_conn = mem_conn_dict[mem_id]
+    mem_conn_active = mem_conn[1]
+    mem_conn_active[pos] = False
+
+def _close_mem_connections(mem_id):
+    mem_conn = mem_conn_dict[mem_id]
+    mem_conn_list = mem_conn[0]
+    for conn in mem_conn_list:
+        conn.conn.close()  # actually close connection
 
 def close_all_connections():
     """
@@ -439,11 +477,39 @@ class Conn:
 #-----------------------------------------------------------------------------
 
 class DbConn(Conn):
+    def __init__(self, pos):
+        """
+        Create an instance of DbConn.
+
+        :param integer pos: The position in the connection pool. It is stored
+                            as an attribute, and used as an argument when
+                            returning the connection to the pool, so that the
+                            pool knows which connection it refers to.
+        :rtype: None
+        """
+        self.init(pos)
+        self.pos = pos
+
     def release(self):  # return connection to connection pool
         _release_connection(self.pos)
 
 class MemConn(Conn):
-    pass  # cannot release MemConn connection
+    def __init__(self, pos, mem_id):
+        """
+        Create an instance of DbConn.
+
+        :param integer pos: The position in the connection pool. It is stored
+                            as an attribute, and used as an argument when
+                            returning the connection to the pool, so that the
+                            pool knows which connection it refers to.
+        :rtype: None
+        """
+        self.init(pos, mem_id)
+        self.pos = pos
+        self.mem_id = mem_id
+
+    def release(self):  # return connection to connection pool
+        _release_mem_conn(self.mem_id, self.pos)
 
 #-----------------------------------------------------------------------------
 
@@ -515,22 +581,56 @@ class MemSession:
     """
     A context manager for a :memory: database.
     """
-    def __init__(self, user_row_id):
+    def __init__(self, mem_id, user_row_id):
+
+        self.mem_id = mem_id
         self.user_row_id = user_row_id
-        self.conn = MemConn()
-        self.conn.cur = self.conn.cursor()
+#       self.conn = MemConn()
+#       self.conn.cur = self.conn.cursor()
+        self.conn = None
+        self.no_connections = 0
         self.transaction_active = False
 
+#   def __enter__(self):
+#       self.conn.timestamp = datetime.now()
+#       return self.conn
+
     def __enter__(self):
-        self.conn.timestamp = datetime.now()
+        if self.conn is None:
+            self.conn = _get_mem_connection(self.mem_id)
+            self.conn.cur = self.conn.cursor()
+            # all updates in same transaction use same timestamp
+            self.conn.timestamp = datetime.now()
+        self.no_connections += 1
         return self.conn
+
+#   def __exit__(self, type, exc, tb):
+#       if type is not None:  # an exception occurred
+#           if self.transaction_active:
+#               self.conn.rollback()
+#               self.transaction_active = False
+#           return  # will reraise exception
+#       if self.transaction_active:
+#           self.conn.commit()
+#           self.transaction_active = False
 
     def __exit__(self, type, exc, tb):
         if type is not None:  # an exception occurred
             if self.transaction_active:
                 self.conn.rollback()
                 self.transaction_active = False
+            self.conn.release()  # return connection to pool
+            self.conn = None
+            self.no_connections = 0
             return  # will reraise exception
-        if self.transaction_active:
-            self.conn.commit()
-            self.transaction_active = False
+        self.no_connections -= 1
+        if not self.no_connections:
+            if self.transaction_active:
+                self.conn.commit()
+                self.transaction_active = False
+            self.conn.cur.close()
+            self.conn.release()  # return connection to pool
+            self.conn = None
+
+    def close(self):
+        _close_mem_connections(self.mem_id)

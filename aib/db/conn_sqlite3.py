@@ -84,10 +84,11 @@ def convert_bool(s):
     return bool(int(s))
 sqlite3.register_converter('BOOL', convert_bool)
 
-def init(self, pos):
+def init(self, pos, mem_id=None):
     if self.database == ':memory:':
-        conn = sqlite3.connect(':memory:',
-            detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
+#       conn = sqlite3.connect(':memory:',
+        conn = sqlite3.connect('file:{}?mode=memory&cache=shared'.format(mem_id),
+            detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False, uri=True)
     else:
         conn = sqlite3.connect('{0}/_base'.format(self.database),
             detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)

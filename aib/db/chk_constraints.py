@@ -23,7 +23,15 @@ from errors import AibError
 # note - if we do this, *this* function will not change
 #        the caller will loop through the checks and call this for each one
 
-def chk_constraint(field, constraint, value=None):
+def chk_constraint(ctx, constraint, value=None):
+    try:
+        db_obj = ctx.db_obj
+        fld = ctx
+        descr = ctx.col_defn.short_descr
+    except AttributeError:
+        db_obj = ctx
+        fld = None
+        descr = db_obj.db_table.short_descr
     new_check = []
     for test, lbr, src, chk, tgt, rbr in constraint:
         if test in ('and', 'or'):
@@ -31,16 +39,16 @@ def chk_constraint(field, constraint, value=None):
         if lbr == '(':
             new_check.append(lbr)
         if src == '$value':
-            src = value
+            src_val = value
         else:
-            src = field.record.getval(src)
+            src_val = db_obj.getval(src)
         if tgt == '':
             tgt_val = None
         else:
             tgt_val = literal_eval(tgt)
         chk, err = CHKS[chk]
         try:
-            result = chk(src, tgt_val)
+            result = chk(src_val, tgt_val)
         except ValueError as e:
             result = False
             err = e.args[0]
@@ -48,7 +56,8 @@ def chk_constraint(field, constraint, value=None):
             errmsg = err
             if '$src' in errmsg:
                 errmsg = errmsg.split('$src')
-                errmsg.insert(1, "'{}'".format(src))
+#               errmsg.insert(1, "'{}'".format(src))
+                errmsg.insert(1, '{}'.format(db_obj.getfld(src).col_name))
                 errmsg = ''.join(errmsg)
             if '$tgt' in errmsg:
                 errmsg = errmsg.split('$tgt')
@@ -61,11 +70,12 @@ def chk_constraint(field, constraint, value=None):
     try:
         result = eval(' '.join(new_check))
         if result is False:
-            raise AibError(head=field.col_defn.short_descr, body=errmsg)
+            raise AibError(head=descr, body=errmsg)
     except SyntaxError:  # e.g. unmatched brackets
         errmsg = 'constraint {} is invalid'.format(constraint)
-        raise AibError(head=field.col_defn.short_descr, body=errmsg)
+        raise AibError(head=descr, body=errmsg)
 
+"""
 def chk_constraint2(fld, constraint, value):
     constraint = loads(constraint)
     c_type = constraint[0]
@@ -100,6 +110,7 @@ def chk_constraint2(fld, constraint, value):
     elif c_type == 'expr':  # type = any
         # use the full 'constraint' mechanism above
         pass
+"""
 
 def enum(value, args):
     # [['enum', ['aaa', 'bbb', 'ccc']]
@@ -168,31 +179,31 @@ def nexist(value, args):
 
     if chk_val == '$value':
         chk_val = value
-    with field.record.db_session as conn:
+    with db_obj.db_session as conn:
         conn.cur.execute(
             'SELECT COUNT(*) FROM {}.{} WHERE {} = {}'
-            .format(company, field.record.data_table, field.col_name,
+            .format(company, db_obj.data_table, fld.col_name,
             conn.param_style) , chk_val)
     return conn.cur.fetchone()[0] == 0
 
 CHKS = {
-    '=': (operator.eq, 'Value $src must equal $tgt'),
-    '!=': (operator.ne, 'Value $src must not equal $tgt'),
-    '<': (operator.lt, 'Value $src must be less than $tgt'),
-    '>': (operator.gt, 'Value $src must be greater than $tgt'),
-    '<=': (operator.le, 'Value $src must be less than or equal to $tgt'),
-    '>=': (operator.ge, 'Value $src must greater than or equal to $tgt'),
-    'is': (operator.is_, 'Value $src must be $tgt'),
-    'is not': (operator.is_not, 'Value $src must not be $tgt'),
-    'in': (lambda x,y: x in y, 'Value $src must be one of $tgt'),
-#   'in': (enum,  'Value must be one of $tgt'),
-    'not in': (lambda x,y: x not in y, 'Value $src must not be one of $tgt'),
+    '=': (operator.eq, '$src must equal $tgt'),
+    '!=': (operator.ne, '$src must not equal $tgt'),
+    '<': (operator.lt, '$src must be less than $tgt'),
+    '>': (operator.gt, '$src must be greater than $tgt'),
+    '<=': (operator.le, '$src must be less than or equal to $tgt'),
+    '>=': (operator.ge, '$src must greater than or equal to $tgt'),
+    'is': (operator.is_, '$src must be $tgt'),
+    'is not': (operator.is_not, '$src must not be $tgt'),
+    'in': (lambda x,y: x in y, '$src must be one of $tgt'),
+#   'in': (enum,  'must be one of $tgt'),
+    'not in': (lambda x,y: x not in y, '$src must not be one of $tgt'),
     'matches': (lambda x,y: bool(re.match(y+'$', x)),  'Value must match the pattern $tgt'),
 #   'matches': (pattern,  'Value must match the pattern $tgt'),
-    'cdv': (cdv,  'Value $src fails the check digit test $tgt'),
-    'nospace': (nospace,  'Value $src may not contain spaces'),
+    'cdv': (cdv,  '$src fails the check digit test $tgt'),
+    'nospace': (nospace,  '$src may not contain spaces'),
 #   'is xml': (is_xml, ''),
-    'nexist': (nexist, 'Value $src must not exist on $tgt')
+    'nexist': (nexist, '$src must not exist on $tgt')
     }
 
 #--------------------------------------------------------------------

@@ -26,10 +26,11 @@ def create_cursor(self, sql, params):
 
     self.cur.close()
     del self.cur
-    if self.db_obj.mem_obj:
-        del self.conn  # don't close it! there is only one connection to :memory:
-    else:
-        self.conn.release()
+#   if self.db_obj.mem_obj:
+#       del self.conn  # don't close it! there is only one connection to :memory:
+#   else:
+#       self.conn.release()
+    self.conn.release()
 
 # TO BE TESTED
 def insert_row(self, row_no):

@@ -352,7 +352,6 @@ class Field:
             # we will execute the sql when the row is SELECTed
             # NEEDS MORE THOUGHT [24/06/2010]
             for fld in self.flds_to_recalc:
-                print(self.col_name, 'recalc', fld.col_name)
                 fld.recalc()
 
         if display:

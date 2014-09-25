@@ -1201,3 +1201,81 @@ def dump_cur_flds(caller, xml):
     for _ in all_seq:
         sequence.append([fld.get_val_for_sql() for fld in cur_seq.select_cols[2:]])
     db_cur.setval('sequence', sequence)
+
+def load_table_perms(caller, xml):
+    # called from roles_setup 'on_start_form'
+    role = caller.data_objects['role']
+    table = caller.data_objects['table']
+    perms = caller.data_objects['perms']
+    perm_view = caller.data_objects['perm_view']
+    perm_orig = caller.data_objects['perm_orig']
+
+    perm_orig.delete_all()
+    if role.exists:
+        all_perms = perms.select_many(where=[], order=[])
+        for _ in all_perms:
+            perm_orig.init()
+            perm_orig.setval('table_id', perms.getval('table_id'))
+            perm_orig.setval('data_row_id', perms.getval('row_id'))
+            perm_orig.setval('ins_disallowed', perms.getval('ins_disallowed'))
+            perm_orig.setval('upd_disallowed', perms.getval('upd_disallowed'))
+            perm_orig.setval('del_disallowed', perms.getval('del_disallowed'))
+            perm_orig.save()
+
+    all_tables = table.select_many(where=[], order=[('table_name', False)])
+    for _ in all_tables:
+        table_id = table.getval('row_id')
+        perm_view.init()
+        perm_view.setval('table_id', table_id)
+        perm_view.setval('table_name', table.getval('table_name'))
+        perm_view.setval('descr', table.getval('short_descr') or 'None')
+        table_id = table.getval('row_id')
+        perm_orig.init()
+        perm_orig.setval('table_id', table_id)
+        if perm_orig.exists:
+            perm_view.setval('ins_disallowed', perm_orig.getval('ins_disallowed'))
+            perm_view.setval('upd_disallowed', perm_orig.getval('upd_disallowed'))
+            perm_view.setval('del_disallowed', perm_orig.getval('del_disallowed'))
+        perm_view.save()
+
+def dump_table_perms(caller, xml):
+    # called from roles_setup 'do_save'
+    role = caller.data_objects['role']
+    table = caller.data_objects['table']
+    perms = caller.data_objects['perms']
+    perm_view = caller.data_objects['perm_view']
+    perm_orig = caller.data_objects['perm_orig']
+
+    all_permview = perm_view.select_many(where=[], order=[])
+    for _ in all_permview:
+        perm_orig.init()
+        perm_orig.setval('table_id', perm_view.getval('table_id'))
+        if (
+                perm_view.getval('ins_disallowed')
+                    != perm_orig.getval('ins_disallowed')
+                or
+                perm_view.getval('upd_disallowed')
+                    != perm_orig.getval('upd_disallowed')
+                or
+                perm_view.getval('del_disallowed')
+                    != perm_orig.getval('del_disallowed')
+                ):
+            # perms have changed - either delete or update
+            perms.init()
+            perms.setval('row_id', perm_orig.getval('data_row_id'))
+            if (
+                    not perm_view.getval('ins_disallowed')
+                    and
+                    not perm_view.getval('upd_disallowed')
+                    and
+                    not perm_view.getval('del_disallowed')
+                    ):
+                perms.delete()
+            else:
+                if not perms.exists:
+                    perms.setval('role_id', role.getval('row_id'))
+                    perms.setval('table_id', perm_view.getval('table_id'))
+                perms.setval('ins_disallowed', perm_view.getval('ins_disallowed'))
+                perms.setval('upd_disallowed', perm_view.getval('upd_disallowed'))
+                perms.setval('del_disallowed', perm_view.getval('del_disallowed'))
+                perms.save()
