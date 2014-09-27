@@ -234,8 +234,8 @@ class Session:
 #       sql = ("{} SELECT row_id, descr, opt_type, _level FROM temp "
 #       "WHERE _level > 0 ORDER BY _key".format(cte))
         sql = (
-            "SELECT row_id, parent_id, descr, opt_type "
-            "FROM {}.sys_menu_defns ORDER BY parent_id, seq"
+            "SELECT row_id, COALESCE(parent_id, 0), descr, opt_type "
+            "FROM {}.sys_menu_defns ORDER BY COALESCE(parent_id, 0), seq"
             .format(company)
             )
         db.api.exec_sql(conn, sql)
@@ -449,7 +449,7 @@ class RequestHandler:
         company, row_id = menu_id.rsplit('_', 1)
         menu_defn = menu_defns[company]
         menu_defn.init()
-        menu_defn.setval('row_id', row_id)
+        menu_defn.setval('row_id', int(row_id))
 #       print('SELECTED {} TYPE={} ID={} COMPANY={}'.format(
 #           descr, option_type, option_data, company))
         print('SELECTED', company, menu_defn)
