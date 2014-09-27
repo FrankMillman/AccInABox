@@ -242,8 +242,8 @@ def setup_roles(context, conn, company, company_name):
     params = []
     params.append(('children', 'INT', 'Children', 'Number of children', '',
         'N', False, False, True, 0, 0,
-        'SELECT count(*) FROM {{company}}.{} b WHERE b.parent_id = a.row_id'
-        .format(table_name)))
+        'SELECT count(*) FROM {}.{} b WHERE b.parent_id = a.row_id'
+        .format(company, table_name)))
     params.append(('expandable', 'BOOL', 'Expandable?', 'Is this node expandable?', '',
         'N', False, False, True, 0, 0, "SELECT a.delegate"))
     params.append(('parent_num', 'INT', 'Parent numeric id', 'Parent id - change null to 0', '',
