@@ -332,6 +332,7 @@ class Conn:
                 alias = 'a'
             if fld.sql:
                 sql = fld.sql.replace('$fx_', self.func_prefix)
+                sql = fld.sql.replace('{company}', db_obj.data_company)
                 columns.append('({}) as {}'.format(sql, fld.col_name))
             else:
                 columns.append('{}.{}'.format(alias, fld.col_name))
@@ -364,6 +365,7 @@ class Conn:
 
                 if fld.sql:
                     sql = fld.sql.replace('$fx_', self.func_prefix)
+                    sql = fld.sql.replace('{company}', db_obj.data_company)
                     col = '({})'.format(sql)
                 elif fld.col_defn.data_type == 'TEXT':
                     col = 'LOWER({}.{})'.format(alias, fld.col_name)

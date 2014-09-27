@@ -364,7 +364,10 @@ class DbObject:
         fld.recalc()
 
     def setup_virtual(self, col_defn, field):
-        sql = col_defn.sql.replace('{company}', self.data_company)
+# don't do this here, do it in object_fields.recalc()
+# reason - if company ends with 'a', it finds 'a.' and gets confused
+#       sql = col_defn.sql.replace('{company}', self.data_company)
+        sql = col_defn.sql
 
         if 'a.' not in sql:  # no dependencies on this table
             # if several, could build up statement and do one execute at end
