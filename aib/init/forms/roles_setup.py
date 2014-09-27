@@ -31,9 +31,6 @@ roles_setup = """
       <mem_col col_name="table_id" data_type="INT" short_descr="Table id"
         long_descr="Table id" col_head="" key_field="A" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"/>
-      <mem_col col_name="data_row_id" data_type="INT" short_descr="Data row id"
-        long_descr="Data row id" col_head="" key_field="N" allow_null="false"
-        allow_amend="false" max_len="0" db_scale="0"/>
       <mem_col col_name="ins_disallowed" data_type="BOOL" short_descr="Insert disallowed?"
         long_descr="Insert disallowed?" col_head="Ins?" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>

@@ -89,6 +89,8 @@ def init(self, pos, mem_id=None):
 #       conn = sqlite3.connect(':memory:',
         conn = sqlite3.connect('file:{}?mode=memory&cache=shared'.format(mem_id),
             detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False, uri=True)
+        cur = conn.cursor()
+        cur.execute("pragma read_uncommitted = on")  # http://www.sqlite.org/sharedcache.html
     else:
         conn = sqlite3.connect('{0}/_base'.format(self.database),
             detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
@@ -342,6 +344,7 @@ def delete_all(self, db_obj):
 
     sql = "delete from {}".format(table_name)
     self.cur.execute(sql)
+    self.commit()
 
 def convert_string(self, string, db_scale=None):
     # sqlite3 requires fkey to reference unqualified table name

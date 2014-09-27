@@ -434,8 +434,9 @@ class DbObject:
             self.on_row_selected(row, display=False)
             yield None  # throw-away value
 
-        if not self.mem_obj:
-            conn.release()
+#       if not self.mem_obj:
+#           conn.release()
+        conn.release()
 
     def select_row(self, keys, display=True, debug=False):
 #       cols_vals = []
@@ -595,10 +596,12 @@ class DbObject:
             if self.exists:
                 fld._prev = fld._value
 
+            fld._orig = None
+
             # 'preserve' not used at present
             if fld.col_name not in preserve:
                 fld._value = fld.get_dflt()
-                fld._orig = None
+#               fld._orig = None
 
             # col_name, value pairs to initialise db_obj with (cf ht.gui_tree)
             # i.e. set initial value, do *not* set db_obj.dirty to True
@@ -613,7 +616,8 @@ class DbObject:
                         tgt_field.db_obj.init()
 
             if fld.fkey_parent is not None:
-                fld._value = fld._orig = fld.fkey_parent._value
+#               fld._value = fld._orig = fld.fkey_parent._value
+                fld._value = fld.fkey_parent._value
 
 #           if not fld.col_defn.allow_amend:
 #               for obj in fld.gui_obj:
