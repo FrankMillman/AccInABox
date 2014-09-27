@@ -104,10 +104,12 @@ def _release_mem_conn(mem_id, pos):  # make connection available for reuse
     mem_conn_active[pos] = False
 
 def _close_mem_connections(mem_id):
-    mem_conn = mem_conn_dict[mem_id]
-    mem_conn_list = mem_conn[0]
-    for conn in mem_conn_list:
-        conn.conn.close()  # actually close connection
+    if mem_id in mem_conn_dict:
+        mem_conn = mem_conn_dict[mem_id]
+        mem_conn_list = mem_conn[0]
+        for conn in mem_conn_list:
+            conn.conn.close()  # actually close connection
+        del mem_conn_dict[mem_id]
 
 def close_all_connections():
     """
