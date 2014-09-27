@@ -184,7 +184,7 @@ class Field:
         self.flds_to_recalc.append(fld)
 
     def recalc(self):
-        sql = self.sql
+        sql = self.sql.replace('{company}', self.db_obj.data_company)
         """
         print()
         print('-'*20)
