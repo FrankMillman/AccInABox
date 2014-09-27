@@ -599,17 +599,19 @@ class DbObject:
             if self.exists:
                 fld._prev = fld._value
 
-            fld._orig = None
-
             # 'preserve' not used at present
             if fld.col_name not in preserve:
                 fld._value = fld.get_dflt()
-#               fld._orig = None
+                fld._orig = None
 
             # col_name, value pairs to initialise db_obj with (cf ht.gui_tree)
             # i.e. set initial value, do *not* set db_obj.dirty to True
+            # debatable whether it should set fld._orig [2014-09-27]
+            # it comes into play if we call restore()
+            # should it restore the initial values? I think yes
+            # if yes, they must be stored in fld._orig, else they are lost
             if fld.col_name in init_vals:
-                fld._value = init_vals[fld.col_name]
+                fld._value = fld._orig = init_vals[fld.col_name]
 
             # if fld has foreign_key, init foreign db_obj
             if fld.foreign_key:
@@ -639,32 +641,27 @@ class DbObject:
         self.dirty = False
 
     def restore(self,display=True):
-        if not self.exists:
-            self.init(display)
-            for caller, method in self.on_clean_func:  # frame methods
-                caller.session.request.db_events.append((caller, method))
-        else:
-            for fld in self.fields.values():
-                if fld._value != fld._orig:
+        for fld in self.fields.values():
+            if fld._value != fld._orig:
 
-                    # if fld has foreign_key, restore foreign db_obj
-                    if fld.foreign_key and fld.foreign_key['true_src'] is None:
-                        tgt_field = fld.foreign_key['tgt_field']
-                        if not fld._orig:
-                            tgt_field.db_obj.init()
-                        else:
-                            tgt_field.db_obj.init(display=False)
-                            tgt_field.read_row(fld._orig, display)
+                # if fld has foreign_key, restore foreign db_obj
+                if fld.foreign_key and fld.foreign_key['true_src'] is None:
+                    tgt_field = fld.foreign_key['tgt_field']
+                    if not fld._orig:
+                        tgt_field.db_obj.init()
+                    else:
+                        tgt_field.db_obj.init(display=False)
+                        tgt_field.read_row(fld._orig, display)
 
-                    # check for 'accum' fields here - subtract _value, add _orig
-                    fld._value = fld._orig
+                # check for 'accum' fields here - subtract _value, add _orig
+                fld._value = fld._orig
 
-                    if display:
-                        for obj in fld.gui_obj:
-                            obj._redisplay()
-                        if fld.gui_subtype is not None:
-                            form, subtype = fld.gui_subtype
-                            form.set_subtype(subtype, fld._value)
+                if display:
+                    for obj in fld.gui_obj:
+                        obj._redisplay()
+                    if fld.gui_subtype is not None:
+                        form, subtype = fld.gui_subtype
+                        form.set_subtype(subtype, fld._value)
 
 #       for callback in self.on_clean_func:  # frame method
 #           callback.on_clean(self)
