@@ -270,7 +270,7 @@ def setup_disp_name(db_obj, xml):
         vdict.setval('col_head', 'Display name')
         vdict.setval('key_field', 'N')
         vdict.setval('generated', True)
-        vdict.setval('allow_null', False)
+        vdict.setval('allow_null', True)
         vdict.setval('allow_amend', True)
         vdict.setval('max_len', 0)
         vdict.setval('db_scale', 0)
