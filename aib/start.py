@@ -38,8 +38,6 @@ import ht.htc
 #sys.stdout = open('/dev/null', 'w')
 #sys.stdout = open('nul', 'w')
 
-from releases import program_version_info, datamodel_version_info
-
 def start():
     if len(sys.argv) == 2:
         cfg_name = sys.argv[1]
@@ -83,6 +81,8 @@ sys.excepthook = excepthook
 """
 
 def check_versions():
+
+    from releases import program_version_info, datamodel_version_info
 
     def s_to_t(s):  # convert string '0.1.1' to tuple(0, 1, 1)
         return tuple(map(int, s.split('.')))
