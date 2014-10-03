@@ -1009,7 +1009,7 @@ class Frame:
         # self.subtype_records = dict - key=subtype name, value=list, of which -
         #   1st element = active subtype (used to hide/show objects when active subtype changes)
         #   2nd element = dict - key=subtype value, value=list of gui objects for subtype
-        self.subtype_records[subtype] = ['', {'': []}]
+        self.subtype_records[subtype] = [None, {None: []}]
 
         subtype_gui = []  # build up the gui elements needed in a separate array
         subtype_gui.append(('panel',

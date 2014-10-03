@@ -633,7 +633,7 @@ class DbObject:
                     obj._redisplay()
                 if fld.gui_subtype is not None:
                     form, subtype = fld.gui_subtype
-                    form.set_subtype(subtype, '')
+                    form.set_subtype(subtype, None)
 
         self.exists = False
         for after_init in self.after_init_xml:
