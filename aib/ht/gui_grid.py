@@ -731,7 +731,8 @@ class GuiGrid:
             title = self.db_obj.table_name
             question = 'Do you want to save the changes to {}?'.format(
 #               self.obj_list[0].fld.getstringval())
-                self.obj_list[0].fld.val_to_str())
+#               self.obj_list[0].fld.val_to_str())
+                repr(self.obj_list[0].fld.val_to_str()))
             answers = ['Yes', 'No', 'Cancel']
             default = 'No'
             escape = 'Cancel'

@@ -196,7 +196,8 @@ class Field:
         for dep in self.deps:
             fld = self.db_obj.getfld(dep[2:])  # remove 'a.' prefix
 #           val = fld.getstringval()
-            val = fld.val_to_str()
+#           val = fld.val_to_str()
+            val = repr(fld.val_to_str())
             if val == 'None':
                 sql = sql.replace('= '+dep, 'is null', 1)  # only replace first occurrence
                 sql = sql.replace(dep, 'null', 1)  # syntax for function call (no leading =)
