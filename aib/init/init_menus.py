@@ -105,7 +105,7 @@ def setup_menu_defns(context, conn):
         .format(table_name)))
     params.append(('expandable', 'BOOL', 'Expandable?', 'Is this node expandable?', '',
         'N', False, False, True, 0, 0,
-        "SELECT a.opt_type IN ('0', '1')"))
+        "SELECT CASE WHEN a.opt_type in ('0', '1') THEN 1 ELSE 0 END"))
     params.append(('parent_num', 'INT', 'Parent numeric id', 'Parent id - change null to 0', '',
         'N', False, False, True, 0, 0,
         "SELECT COALESCE(a.parent_id, 0)"))
