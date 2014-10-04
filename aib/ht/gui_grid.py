@@ -549,7 +549,7 @@ class GuiGrid:
 
             title = self.db_obj.table_name
             question = 'Sure you want to delete {}?'.format(
-                self.obj_list[0].fld.getstringval())
+                repr(self.obj_list[0].fld.get_val()))
             ans = 'Yes'
             answers.append(ans)
             callbacks[ans] = (self.delete_row, row)
@@ -730,9 +730,7 @@ class GuiGrid:
 
             title = self.db_obj.table_name
             question = 'Do you want to save the changes to {}?'.format(
-#               self.obj_list[0].fld.getstringval())
-#               self.obj_list[0].fld.val_to_str())
-                repr(self.obj_list[0].fld.val_to_str()))
+                repr(self.obj_list[0].fld.get_val()))
             answers = ['Yes', 'No', 'Cancel']
             default = 'No'
             escape = 'Cancel'

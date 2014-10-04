@@ -195,9 +195,7 @@ class Field:
         """
         for dep in self.deps:
             fld = self.db_obj.getfld(dep[2:])  # remove 'a.' prefix
-#           val = fld.getstringval()
-#           val = fld.val_to_str()
-            val = repr(fld.val_to_str())
+            val = repr(fld.getval())
             if val == 'None':
                 sql = sql.replace('= '+dep, 'is null', 1)  # only replace first occurrence
                 sql = sql.replace(dep, 'null', 1)  # syntax for function call (no leading =)
@@ -270,6 +268,8 @@ class Field:
 #       print('setval {}.{} "{}" -> "{}" [{}]'.format(
 #           self.table_name, self.col_name, self._value, value,
 #           self.value_changed(value)))
+
+        self.check_val(value)  # will raise AibError on error
 
         if not db_obj.permissions_set:
             #don't set if keyfield - we are only reading the db_obj
@@ -388,9 +388,6 @@ class Field:
     def getval(self):
         return self._value
 
-#   def getstringval(self):
-#       return repr(self._value)  # None will return 'None'
-
     def get_orig(self):
         return self._orig
 
@@ -404,11 +401,14 @@ class Field:
         return self._value
 
     def set_val_from_sql(self, value):
-        self._value = value
+        self._value = self.get_val_from_sql(value)
         self._orig = self._value  # see 'Date' - self._value is computed, so can't use value
         if self.gui_subtype is not None:
             frame, subtype = self.gui_subtype
             frame.set_subtype(subtype, value)
+
+    def get_val_from_sql(self, value):
+        return value
 
     def set_val_from_xml(self, value):
         self._value = value
@@ -478,6 +478,9 @@ class Text(Field):
 
     def get_dflt(self):
         return self.col_defn.dflt_val
+
+    def check_val(self, value):
+        pass
 
     def _setval(self, value):
         self._value = value
@@ -642,6 +645,12 @@ class StringXml(Xml):
     def __init__(self, db_obj, col_defn):
         Xml.__init__(self, db_obj, col_defn)
 
+    def check_val(self, value):
+        if value is not None:
+            if not isinstance(value, etree._Element):
+                errmsg = 'Not a valid etree Element'
+                raise AibError(head=self.col_defn.short_descr, body=errmsg)
+
     def _setval(self, value):
         if value is None:
             self._value = None
@@ -723,6 +732,14 @@ class Integer(Field):
         else:
             return int(self.col_defn.dflt_val)
 
+    def check_val(self, value):
+        if value is not None:
+            try:
+                int(value)
+            except ValueError:
+                errmsg = 'Not a valid integer'
+                raise AibError(head=self.col_defn.short_descr, body=errmsg)
+
     def _setval(self, value):
         if value is None:
             self._value = None
@@ -787,6 +804,12 @@ class Decimal(Field):
         else:
             return D(self.col_defn.dflt_val)
 
+    def check_val(self, value):
+        if value is not None:
+            if not isinstance(value, D):
+                errmsg = 'Not a valid Decimal type'
+                raise AibError(head=self.col_defn.short_descr, body=errmsg)
+
     def _setval(self, value):
         if value is None:
             self._value = None
@@ -840,6 +863,13 @@ class Decimal(Field):
 class Date(Field):
     def __init__(self,db_obj,col_defn):
         Field.__init__(self, db_obj, col_defn)
+
+    def check_val(self,value):
+        if value is not None:
+           if not isinstance(value, dt):
+               if not isinstance(value, dtm):
+                    errmsg = 'Not a valid date'
+                    raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     def _setval(self,value):
         self._value = value
@@ -926,14 +956,14 @@ class DateTime(Field):
         else:
             return None
 
+    def check_val(self, value):
+        pass
+
     def _setval(self,value):
         self._value = value
 
     def check_length(self, value):
         pass
-
-#   def getstringval(self):
-#       return str(self._value)[:19]
 
     def val_to_str(self):
         return str(self._value)[:19]
@@ -1003,6 +1033,9 @@ class Boolean(Field):
         elif dflt_val.lower() == 'false':
             return False
 
+    def check_val(self, value):
+        pass
+
     def _setval(self, value):
         self._value = bool(value)
 
@@ -1028,6 +1061,9 @@ class Boolean(Field):
             return ''
         else:
             return str(int(self._prev))
+
+    def get_val_from_sql(self, value):
+        return bool(value)
 
     def get_val_for_xml(self):
         if self._value is None:
