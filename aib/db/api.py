@@ -30,19 +30,19 @@ def config_cursor(db_params):
     """
     db.cursor.config_cursor(db_params)
 
-def start_db_session(user_row_id):
+def start_db_session():
     """
     Create an instance of :class:`~db.connection.DbSession`,
     and return it to the caller.
     """
-    return db.connection.DbSession(user_row_id)
+    return db.connection.DbSession()
 
-def start_mem_session(mem_id, user_row_id):
+def start_mem_session(mem_id):
     """
     Create an instance of :class:`~db.connection.MemSession`,
     and return it to the caller.
     """
-    return db.connection.MemSession(mem_id, user_row_id)
+    return db.connection.MemSession(mem_id)
 
 def get_db_object(db_session, active_company, table_name, parent=None):
     return db.objects.get_db_object(

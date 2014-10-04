@@ -50,7 +50,7 @@ A sub-form is treated exactly the same as a root form, except -
 #----------------------------------------------------------------------------
 
 # cache to store form_defn data object for each company
-db_session = db.api.start_db_session(1)
+db_session = db.api.start_db_session()
 
 class FormDefns(dict):  # cache to store form_defn data object for each company
     def __missing__(self, company):
@@ -62,13 +62,13 @@ form_defns = FormDefns()
 #----------------------------------------------------------------------------
 
 @asyncio.coroutine
-def start_setupgrid(session, company, table_name, cursor_name, user_row_id):
+def start_setupgrid(session, company, table_name, cursor_name):
 #   table_name, cursor_name = map(str.strip, option_data.split(','))
     form = Form(company, 'setup_grid')
 #   db_obj = db.api.get_db_object(form, company, table_name)
     try:
         yield from form.start_form(
-            session, user_row_id, db_obj=table_name, cursor=cursor_name,
+            session, db_obj=table_name, cursor=cursor_name,
             formdefn_company='_sys')
     except AibError as err:
         form.close_form()
@@ -84,20 +84,18 @@ class delwatcher:
         print('*** form', self.name, 'deleted ***')
 
 class Root:
-    def __init__(self, session, user_row_id):
+    def __init__(self, session):
         self.ref = session.add_root(self)
         self.form_list = []  # list of forms for this root
         # the following are common to all forms under this root
         # see 'property' methods at end of Form definition
         self.session = session
-        self.user_row_id = user_row_id
-        self.save_user = None  # to store current user on change_user
-        self.db_session = db.api.start_db_session(user_row_id)
+        self.db_session = db.api.start_db_session()
         #self.data_objects = {}
 
 class Form:
     def __init__(self, company, form_name, parent=None, data_inputs=None,
-        callback=None, ctrl_grid=None, caller_id=None, inline=None):
+        callback=None, ctrl_grid=None, inline=None):
         """
         Initialise a new form.
         
@@ -121,7 +119,6 @@ class Form:
         self.form_name = form_name
         self.callback = callback
         self.ctrl_grid = ctrl_grid
-        self.caller_id = caller_id
         self.inline = inline
 
         self.table_name = None
@@ -163,14 +160,11 @@ class Form:
     @log_func
     @asyncio.coroutine
     def start_form(self, session,
-            user_row_id=None,  # user_row_id only required if 'root'
             db_obj=None,   # can be passed in if formview/listview/sub_form
             cursor=None,   # can be passed in if formview/listview
             formdefn_company=None):
         if self.parent is None:
-            if user_row_id is None:
-                raise AibError(head=self.form_name, body='User id is required')
-            self.root = Root(session, user_row_id)
+            self.root = Root(session)
         else:
             self.root = self.parent.form.root
         self.ref = '{}_{}'.format(self.root.ref, len(self.root.form_list))
@@ -178,20 +172,14 @@ class Form:
 #       self.session = session
 
         #self.data_objects = self.root.data_objects
-        #self.db_session = db.api.start_db_session(self.user_row_id)
-        #self.mem_session = db.api.start_mem_session(self.user_row_id)
-        self.mem_session = db.api.start_mem_session(id(self), self.user_row_id)
+        #self.db_session = db.api.start_db_session()
+        self.mem_session = db.api.start_mem_session(id(self))
 
         if self.inline is not None:  # form defn is passed in as parameter
             form_defn = self.form_defn = self.inline
             title = self.form_name
             self.data_objects = self.parent.data_objects
         else:  # read form_defn from 'sys_form_defns'
-            #form_defn = get_form_defn(self.company)
- #          if '.' in self.form_name:
- #              formdefn_company, form_name = self.form_name.split('.')
- #          else:
- #              form_name = self.form_name
             if formdefn_company is None:
                 formdefn_company = self.company
             form_defn = form_defns[formdefn_company]
@@ -550,24 +538,6 @@ class Form:
     @property
     def session(self):
         return self.root.session
-
-#   def get_user_row_id(self):
-#       return self.root.user_row_id
-#   def set_user_row_id(self, value):
-#       self.root.user_row_id = value
-#   user_row_id = property(get_user_row_id, set_user_row_id)
-    @property
-    def user_row_id(self):
-        return self.root.user_row_id
-
-#   def get_save_user(self):
-#       return self.root.save_user
-#   def set_save_user(self, value):
-#       self.root.save_user = value
-#   save_user = property(get_save_user, set_save_user)
-    @property
-    def save_user(self):
-        return self.root.save_user
 
 #   def get_db_session(self):
 #       return self.root.db_session

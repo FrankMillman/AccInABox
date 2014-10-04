@@ -4,7 +4,8 @@ import db.setup_tables
 import db.api
 
 from itertools import count
-audit_row_id = 1
+USER_ROW_ID = 1  # used in db updates
+audit_row_id = 1  # used as 'created_id' in db_columns
 
 def init_database(context, conn):
     conn.create_functions()
@@ -171,9 +172,9 @@ def create_db_columns(context, conn):
         )
 
 def setup_db_tables(context, conn):
-    global audit_row_id
     seq_counter = count()
     seq = seq_counter.__next__
+    global audit_row_id
     audit_row_counter = count(start=audit_row_id)
     arc = audit_row_counter.__next__
     table_name = 'db_tables'
@@ -187,7 +188,7 @@ def setup_db_tables(context, conn):
         .format(conn.param_style), [table_name])
     table_id = conn.cur.fetchone()[0]
 
-    params = (table_id, 1, conn.timestamp, 'add')
+    params = (table_id, USER_ROW_ID, conn.timestamp, 'add')
     conn.cur.execute(
         "INSERT INTO _sys.db_tables_audit_xref (data_row_id, user_row_id, date_time, type) "
         "VALUES ({})".format(', '.join([conn.param_style] * 4))
@@ -263,7 +264,7 @@ def setup_db_tables(context, conn):
     audit_row_counter = count(start=audit_row_id)  # reset to beginning
     audit_params = []
     for param in params:
-        audit_params.append((next(audit_row_counter), 1, conn.timestamp, 'add'))
+        audit_params.append((next(audit_row_counter), USER_ROW_ID, conn.timestamp, 'add'))
     conn.cur.executemany(
         "INSERT INTO _sys.db_columns_audit_xref (data_row_id, user_row_id, date_time, type) "
         "VALUES ({})".format(', '.join([conn.param_style] * 4))
@@ -271,9 +272,9 @@ def setup_db_tables(context, conn):
     audit_row_id = next(audit_row_counter)  # set up for next table
 
 def setup_db_columns(context, conn):
-    global audit_row_id
     seq_counter = count()
     seq = seq_counter.__next__
+    global audit_row_id
     audit_row_counter = count(start=audit_row_id)
     arc = audit_row_counter.__next__
     table_name = 'db_columns'
@@ -298,7 +299,7 @@ def setup_db_columns(context, conn):
         .format(conn.param_style), [table_name])
     table_id = conn.cur.fetchone()[0]
 
-    params = (table_id, 1, conn.timestamp, 'add')
+    params = (table_id, USER_ROW_ID, conn.timestamp, 'add')
     conn.cur.execute(
         "INSERT INTO _sys.db_tables_audit_xref (data_row_id, user_row_id, date_time, type) "
         "VALUES ({})".format(', '.join([conn.param_style] * 4))
@@ -404,7 +405,7 @@ def setup_db_columns(context, conn):
     audit_row_counter = count(start=audit_row_id)  # reset to beginning
     audit_params = []
     for param in params:
-        audit_params.append((next(audit_row_counter), 1, conn.timestamp, 'add'))
+        audit_params.append((next(audit_row_counter), USER_ROW_ID, conn.timestamp, 'add'))
     conn.cur.executemany(
         "INSERT INTO _sys.db_columns_audit_xref (data_row_id, user_row_id, date_time, type) "
         "VALUES ({})".format(', '.join([conn.param_style] * 4))
@@ -424,7 +425,7 @@ def setup_db_cursors(context, conn):
         .format(conn.param_style), [table_name])
     table_id = conn.cur.fetchone()[0]
 
-    params = (table_id, 1, conn.timestamp, 'add')
+    params = (table_id, USER_ROW_ID, conn.timestamp, 'add')
     conn.cur.execute(
         "INSERT INTO _sys.db_tables_audit_xref (data_row_id, user_row_id, date_time, type) "
         "VALUES ({})".format(', '.join([conn.param_style] * 4))
@@ -565,7 +566,7 @@ def setup_dir_companies(context, conn):
         .format(conn.param_style), [table_name])
     table_id = conn.cur.fetchone()[0]
 
-    params = (table_id, 1, conn.timestamp, 'add')
+    params = (table_id, USER_ROW_ID, conn.timestamp, 'add')
     conn.cur.execute(
         "INSERT INTO _sys.db_tables_audit_xref (data_row_id, user_row_id, date_time, type) "
         "VALUES ({})".format(', '.join([conn.param_style] * 4))

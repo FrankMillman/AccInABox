@@ -37,7 +37,7 @@ NEG_DISPLAY = 'r'  # d=default, r=minus sign on right, b=angle brackets
 DATE_INPUT = '%d-%m-%Y'
 DATE_DISPLAY = '%a %d %b %Y'
 
-db_session = db.api.start_db_session(1)
+db_session = db.api.start_db_session()
 
 class DbCursors(dict):  # cache to store db_cursors data object for each company
     def __missing__(self, company):

@@ -90,7 +90,9 @@ def setup_db(cfg):
     db.api.config_connection(cfg['DbParams'])
 
     global db_session  # must be global - retrieved from __main__
-    db_session = db.api.start_db_session(1)
+    db_session = db.api.start_db_session()
+    global user_row_id  # must be global - retrieved from __main__
+    user_row_id = 1
     with db_session as conn:
         db_session.transaction_active = True
         init.init_db.init_database(__main__, conn)

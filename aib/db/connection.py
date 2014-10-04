@@ -543,14 +543,10 @@ class DbSession:
       * check if a transaction is active - if yes, call commit()
       * return the connection to the connection pool
     """
-    def __init__(self, user_row_id):
-        self.user_row_id = user_row_id
+    def __init__(self):
         self.conn = None
         self.no_connections = 0
         self.transaction_active = False
-
-    def change_userid(self, user_row_id):
-        self.user_row_id = user_row_id
 
     def __enter__(self):
         if self.conn is None:
@@ -585,10 +581,9 @@ class MemSession:
     """
     A context manager for a :memory: database.
     """
-    def __init__(self, mem_id, user_row_id):
+    def __init__(self, mem_id):
 
         self.mem_id = mem_id
-        self.user_row_id = user_row_id
 #       self.conn = MemConn()
 #       self.conn.cur = self.conn.cursor()
         self.conn = None

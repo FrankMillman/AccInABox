@@ -40,7 +40,7 @@ class delwatcher:
 #----------------------------------------------------------------------------
 
 # cache to store menu_defn data object for each company
-db_session = db.api.start_db_session(1)
+db_session = db.api.start_db_session()
 class MenuDefns(dict):
     def __missing__(self, company):
         result = self[company] = db.api.get_db_object(
@@ -68,6 +68,7 @@ class Session:
         logger.info('{} connected'.format(session_key))
         self.session_key = session_key
         self.user_row_id = user_row_id
+        self.save_user = None  # to store current user on change_user
 
         self.active_roots = {}  # active roots for this session
         self.root_id = itertools.count()  # seq id for roots created in this session
@@ -95,41 +96,15 @@ class Session:
         form = root.form_list[next(ref)]
         return form.obj_dict[next(ref)]
 
-    def on_login(self, session, temp_id, state, output_params):
+    def on_login(self, session, state, output_params):
         if state == 'completed':
-            user_row_id = output_params['user_row_id']
-#           if user_row_id in ht.htc.active_users:  # does anyone care?
-#               raise AibError(head='Login', body='Already logged in')
-#           active_users[user_row_id] = self
-#           del active_users[self.user_row_id]
-            self.user_row_id = user_row_id
-
-# DO WE NEED THESE?
-#           self.user_row_id = dir_user.getval('user_row_id')
-#           self.sys_admin = dir_user.getval('sys_admin')
-            self.sys_admin = True
-
-#           dir_user.db_session.change_userid(user_row_id)
-
-            # notify htm that user logged in
-
+            # [TO DO] notify htm that user logged in
             self.after_login(session)
-
         else:
             self.request.send_close_program()
             self.close()
 
-    def on_login2(self, dir_user):  # called from ht.htm.try_login
-        user_row_id = dir_user.getval('row_id')
-        active_users[user_row_id] = self
-        del active_users[self.user_row_id]
-        self.user_row_id = user_row_id
-        self.user_id = dir_user.getval('user_id')
-        self.sys_admin = dir_user.getval('sys_admin')
-        dir_user.db_session.change_userid(user_row_id)
-
     def close(self):
-#       del active_users[self.user_row_id]
         for root in list(self.active_roots.values()):
             for form in root.form_list:
                 form.close_form()
@@ -153,7 +128,7 @@ class Session:
 #       client_menu.append((0, 'root', True, root_id))
         root_id = '_root'
         client_menu.append((root_id, None, 'root', True))
-        db_session = db.api.start_db_session(self.user_row_id)
+        db_session = db.api.start_db_session()
         with db_session as conn:
             for company, comp_name, comp_admin in self.select_companies(conn):
 
@@ -201,7 +176,14 @@ class Session:
                         mask.format(company, row_id),
                         parent, descr, bool(expandable)))
 
-        session.request.reply.append(('start_menu', client_menu))
+        if len(client_menu) > 1:
+            session.request.reply.append(('start_menu', client_menu))
+        else:
+            raise AibError(
+                head='Login',
+                body='Sorry, no options available for {}'.format(
+                    self.dir_user.getval('user_id'))
+                )
 
     def select_companies(self, conn):
         if self.sys_admin:
@@ -241,6 +223,13 @@ class Session:
         db.api.exec_sql(conn, sql)
         return conn.cur
 
+def on_login_ok(caller, xml):
+#   called from login_form on entry of valid user_id and password
+    session = caller.session
+    dir_user = session.dir_user = caller.data_objects['dir_user']
+    session.user_row_id = dir_user.getval('row_id')
+    session.sys_admin = dir_user.getval('sys_admin')
+
 dummy_id_counter = itertools.count(1)
 class RequestHandler:
     def __init__(self):
@@ -265,9 +254,8 @@ class RequestHandler:
         company = '_sys'
         form_name = 'login_form'
 
-        form = ht.form.Form(company, form_name, callback=(session.on_login,),
-            caller_id=user_row_id)
-        yield from form.start_form(session, user_row_id)
+        form = ht.form.Form(company, form_name, callback=(session.on_login,))
+        yield from form.start_form(session)
 
         reply = dumps(self.reply)
 #       response = aiohttp.Response(writer, 200)
@@ -458,12 +446,12 @@ class RequestHandler:
             yield from ht.form.start_setupgrid(
 #               self.session, company, option_data, self.session.user_row_id)
                 self.session, company, menu_defn.getval('table_name'),
-                menu_defn.getval('cursor_name'), self.session.user_row_id)
+                menu_defn.getval('cursor_name'))
         elif opt_type == '3':  # form
 #           form = ht.form.Form(company, option_data)
             form = ht.form.Form(company, menu_defn.getval('form_name'))
             try:
-                yield from form.start_form(self.session, self.session.user_row_id)
+                yield from form.start_form(self.session)
             except AibError as err:
                 form.close_form()
                 raise

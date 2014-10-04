@@ -326,9 +326,10 @@ def assign(caller, xml):
             <source hash="sha1">pwd_var.pwd1</source>
             <target>pwd_var.password</target>
             """
+            # blank password is None - change to '' before hashing
             hash_method = getattr(hashlib, hash_type)
             value_to_assign = hash_method(
-                value_to_assign.encode('utf-8')).hexdigest()
+                (value_to_assign or '').encode('utf-8')).hexdigest()
 
 #-------------------------------
 # source could be an expression!
@@ -469,8 +470,7 @@ def end_form(caller, xml):
             log.write('RETURN {} {} {}\n\n'.format(state, return_params, form.callback))
             yield from form.callback[0](form.parent, state, return_params, *form.callback[1:])
         else:  # return to calling process(?)
-            form.callback[0](caller.session, form.caller_id, state,
-                return_params, *form.callback[1:])
+            form.callback[0](caller.session, state, return_params, *form.callback[1:])
             form.callback = None  # remove circular reference
 #       del frame.session.active_roots[frame.root_id]
 #       frame.root = None  # remove circular reference

@@ -120,7 +120,9 @@ def check_versions():
         if ans.lower() != 'y':
             sys.exit('Upgrade cancelled')
         global db_session  # must be global - retrieved from __main__
-        db_session = db.api.start_db_session(1)
+        db_session = db.api.start_db_session()
+        global user_row_id  # must be global - retrieved from __main__
+        user_row_id = 1
         from upgrade_datamodel import upgrade_datamodel
         upgrade_datamodel(db_session, current_datamodel_version_info, datamodel_version_info)
         new_datamodel_version = t_to_s(datamodel_version_info)

@@ -62,9 +62,7 @@ login_form = """
   </mem_objects>
 
   <input_params/>
-  <output_params>
-    <output_param name="user_row_id" type="data_attr" source="dir_user.row_id"/>
-  </output_params>
+  <output_params/>
 
   <rules>
 <!--
@@ -180,6 +178,7 @@ login_form = """
             <</change_button>>
             <<set_readonly target=`var.user` state=`true`/>>
             <<set_readonly target=`var.pwd` state=`true`/>>
+            <<pyfunc name=`ht.htc.on_login_ok`/>>
           <</action>>
         "
       />
