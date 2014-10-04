@@ -240,7 +240,7 @@ def insert_row(self, db_obj, cols, vals, generated_flds):
             table_name, cols, self.param_style))
 
         self.cur.execute(sql,
-            (data_row_id, db_obj.context.session.user_row_id, self.timestamp))
+            (data_row_id, db_obj.context.user_row_id, self.timestamp))
         xref_row_id = self.cur.lastrowid
 
         db_obj.setval('created_id', xref_row_id)
@@ -296,7 +296,7 @@ def update_row(self, db_obj, cols, vals):
             "({2}, {2}, {2}, {2}, 'chg')".format(
             table_name, cols, self.param_style))
         self.cur.execute(sql, (data_row_id, audit_row_id,
-            db_obj.context.session.user_row_id, self.timestamp))
+            db_obj.context.user_row_id, self.timestamp))
 
 def delete_row(self, db_obj):
     db_table = db_obj.db_table
@@ -314,7 +314,7 @@ def delete_row(self, db_obj):
                 "({2}, {2}, {2}, 'del')".format(
             table_name, cols, self.param_style))
         self.cur.execute(sql,
-            (data_row_id, db_obj.context.session.user_row_id, self.timestamp))
+            (data_row_id, db_obj.context.user_row_id, self.timestamp))
         xref_row_id = self.cur.lastrowid
         db_obj.setval('deleted_id', xref_row_id)
         sql = (

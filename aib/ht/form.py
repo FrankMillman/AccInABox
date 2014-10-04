@@ -530,23 +530,17 @@ class Form:
 
 #   [2013-10-08] Make shared properties read-only (only implement getters)
 
-#   def get_session(self):
-#       return self.root.session
-#   def set_session(self, value):
-#       self.root.session = value
-#   session = property(get_session, set_session)
     @property
     def session(self):
         return self.root.session
 
-#   def get_db_session(self):
-#       return self.root.db_session
-#   def set_db_session(self, value):
-#       self.root.db_session = value
-#   db_session = property(get_db_session, set_db_session)
     @property
     def db_session(self):
         return self.root.db_session
+
+    @property
+    def user_row_id(self):
+        return self.session.user_row_id
 
 class Frame:
     def __init__(self, form, frame_xml, ctrl_grid, gui,
