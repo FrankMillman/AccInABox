@@ -121,60 +121,27 @@ class Session:
         #   menu, active tasks, favourites
 
         mask = '{}_{}'
-#       self.option_dict = {}  # mapping of menu_ids to options
         client_menu = []  # build menu to send to client
-#       menu_id_counter = itertools.count(1)
-#       root_id = next(menu_id_counter)
-#       client_menu.append((0, 'root', True, root_id))
         root_id = '_root'
         client_menu.append((root_id, None, 'root', True))
         db_session = db.api.start_db_session()
         with db_session as conn:
             for company, comp_name, comp_admin in self.select_companies(conn):
+                comp_menu = []
+                comp_menu.append((
+                    mask.format(company, 1),  # root row_id is always 1
+                    root_id, comp_name, True))
 
-                first = True
-                waiting = False
                 for opt in self.select_options(conn, company):
-#                   descr, opt_type, opt_data, _level = opt
-#                   row_id, descr, opt_type, _level = opt
                     row_id, parent_id, descr, opt_type = opt
-
-                    if first:
-#                       comp_id = next(menu_id_counter)
-#                       client_menu.append((root_id, comp_name, True, comp_id))
-#                       parent = [comp_id]
-#                       first = False
-                        first_node_id = mask.format(company, row_id)
-                        #comp_id = next(menu_id_counter)
-                        #client_menu.append((company, root_id, comp_name, True))
-                        first = False
-                        waiting = True
-                        continue
-
-                    if waiting:
-                        client_menu.append((first_node_id, root_id, comp_name, True))
-                        waiting = False
-
-                    """
-                    if opt_type == '1':  #'menu':
-                        menu_id = next(menu_id_counter)
-                        parent = parent[:_level] + [menu_id]
-                        client_menu.append((parent[_level-1], descr, True, menu_id))
-                    else:  # menu_type == 'opt'
-                        opt_id = next(menu_id_counter)
-                        client_menu.append((parent[_level-1], descr, False, opt_id))
-#                       self.option_dict[opt_id] = (company, descr, opt_type, opt_data)
-                        self.option_dict[opt_id] = (company, row_id)
-                    """
-
                     expandable = (opt_type in ('0', '1'))
-                    if parent_id is None:
-                        parent = company
-                    else:
-                        parent = mask.format(company, parent_id)
-                    client_menu.append((
-                        mask.format(company, row_id),
-                        parent, descr, bool(expandable)))
+                    comp_menu.append((
+                        mask.format(company, row_id),  #  node_id
+                        mask.format(company, parent_id),  # parent_id
+                        descr, bool(expandable)))
+
+                if len(comp_menu) > 1:
+                    client_menu.extend(comp_menu)
 
         if len(client_menu) > 1:
             session.request.reply.append(('start_menu', client_menu))
@@ -190,9 +157,6 @@ class Session:
             sql = (
                 "SELECT company_id, company_name, 1 "
                 "FROM _sys.dir_companies "
-# ->
-#               "WHERE company_id = '_sys' "
-# ->
                 "ORDER BY company_id"
                 )
         else:
@@ -200,9 +164,6 @@ class Session:
                 "SELECT a.company_id, b.company_name, a.comp_admin "
                 "FROM _sys.dir_users_companies a, _sys.dir_companies b "
                 "WHERE a.company_id = b.company_id "
-# ->
-#               "AND a.company_id = '_sys' "
-# ->
                 "AND a.user_row_id = {} "
                 "ORDER BY a.company_id"
                 .format(self.user_row_id)
@@ -210,14 +171,11 @@ class Session:
         return list(db.api.exec_sql(conn, sql))
 
     def select_options(self, conn, company):
-
-#       cte = conn.tree_select(company, 'sys_menu_defns', 'row_id', 1, sort=True)
-##      sql = ("{} SELECT descr, opt_type, opt_data, _level FROM temp "
-#       sql = ("{} SELECT row_id, descr, opt_type, _level FROM temp "
-#       "WHERE _level > 0 ORDER BY _key".format(cte))
         sql = (
-            "SELECT row_id, COALESCE(parent_id, 0), descr, opt_type "
-            "FROM {}.sys_menu_defns ORDER BY COALESCE(parent_id, 0), seq"
+            "SELECT row_id, parent_id, descr, opt_type "
+            "FROM {}.sys_menu_defns "
+            "WHERE parent_id IS NOT NULL "
+            "ORDER BY parent_id, seq"
             .format(company)
             )
         db.api.exec_sql(conn, sql)
