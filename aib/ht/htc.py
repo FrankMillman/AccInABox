@@ -96,14 +96,6 @@ class Session:
         form = root.form_list[next(ref)]
         return form.obj_dict[next(ref)]
 
-    def on_login(self, session, state, output_params):
-        if state == 'completed':
-            # [TO DO] notify htm that user logged in
-            self.after_login(session)
-        else:
-            self.request.send_close_program()
-            self.close()
-
     def close(self):
         for root in list(self.active_roots.values()):
             for form in root.form_list:
@@ -111,33 +103,38 @@ class Session:
         logger.info('{} closed'.format(self.session_key))
         del sessions[self.session_key]
 
-    def after_login(self, session):  # called from login process if login ok
+    def on_login(self, session, state, output_params):
+        # callback from login_form - see get_login() below
+        if state != 'completed':
+            self.request.send_close_program()
+            self.close()
+            return
+
         # [TODO] get active tasks for this user from human_task_manager
 
         # search _sys.dir_users_companies for companies
         # for each company -
         #   set up user menu
-        # send initial screen to user via task client -
+        # send initial screen to client -
         #   menu, active tasks, favourites
 
-        mask = '{}_{}'
         client_menu = []  # build menu to send to client
         root_id = '_root'
         client_menu.append((root_id, None, 'root', True))
         db_session = db.api.start_db_session()
         with db_session as conn:
-            for company, comp_name, comp_admin in self.select_companies(conn):
+            for company, comp_name, comp_admin in list(self.select_companies(conn)):
                 comp_menu = []
                 comp_menu.append((
-                    mask.format(company, 1),  # root row_id is always 1
+                    '{}_{}'.format(company, 1),  # root row_id is always 1
                     root_id, comp_name, True))
 
                 for opt in self.select_options(conn, company):
                     row_id, parent_id, descr, opt_type = opt
                     expandable = (opt_type in ('0', '1'))
                     comp_menu.append((
-                        mask.format(company, row_id),  #  node_id
-                        mask.format(company, parent_id),  # parent_id
+                        '{}_{}'.format(company, row_id),  #  node_id
+                        '{}_{}'.format(company, parent_id),  # parent_id
                         descr, bool(expandable)))
 
                 if len(comp_menu) > 1:
@@ -168,7 +165,7 @@ class Session:
                 "ORDER BY a.company_id"
                 .format(self.user_row_id)
                 )
-        return list(db.api.exec_sql(conn, sql))
+        return db.api.exec_sql(conn, sql)
 
     def select_options(self, conn, company):
         sql = (
@@ -178,8 +175,7 @@ class Session:
             "ORDER BY parent_id, seq"
             .format(company)
             )
-        db.api.exec_sql(conn, sql)
-        return conn.cur
+        return db.api.exec_sql(conn, sql)
 
 def on_login_ok(caller, xml):
 #   called from login_form on entry of valid user_id and password
