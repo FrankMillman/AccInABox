@@ -315,6 +315,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     col_span.style.textAlign = 'center';
     col_span.style.fontWeight = 'bold';
     col_span.appendChild(document.createTextNode(col_defn.head));
+    col_span.title = col_defn.help_msg;
     grid_head.appendChild(col_span);
     };
   grid.grid_height += 19;  // col_span height (18) + col_span border (1)
