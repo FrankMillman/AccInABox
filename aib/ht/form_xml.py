@@ -35,9 +35,11 @@ def exec_xml(caller, elem):  # caller can be frame or grid
 #           yield from exec_dbevents(caller)
 
 @asyncio.coroutine
-def after_input(obj):
+def after_input(obj, prev_value):
+    obj.parent._prev_value = prev_value
     for xml in obj.after_input:
         yield from globals()[xml.tag](obj.parent, xml)
+    del obj.parent._prev_value
 
 """
 @asyncio.coroutine
@@ -91,6 +93,14 @@ def data_changed(caller, xml):
     db_obj = caller.data_objects[obj_name]
     return caller.data_changed(db_obj)
 """
+
+def fld_changed(caller, xml):
+    # assume this is only called from after_input()
+    # _prev_value has been set up in after_input()
+    dbobj_name, fld_name = xml.get('name').split('.')
+    dbobj = caller.data_objects[dbobj_name]
+    fld = dbobj.getfld(fld_name)
+    return fld.getval() != caller._prev_value
 
 def data_changed(caller, xml):
     return caller.data_changed()

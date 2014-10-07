@@ -79,10 +79,11 @@ class GuiCtrl:
             del temp_data[self.ref]
         else:  # not in temp_data - use current value
             value = self.fld.getval()
+        prev_value = self.fld.getval()
         yield from self.fld.setval_async(value)  # can raise AibError
 
         if self.after_input is not None:  # steps to perform after input
-            yield from ht.form_xml.after_input(self)
+            yield from ht.form_xml.after_input(self, prev_value)
 
     def _redisplay(self):  # must only be called from db module
         if self.pwd:
