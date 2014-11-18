@@ -50,8 +50,9 @@ class Cursor:
         if self.cursor_active:
             self.close()
 
+        self.db_obj.check_perms(0)  # 0 = SELECT
+
         if self.db_obj.mem_obj:
-#           self.conn = self.db_obj.context.mem_session.conn
             session = self.db_obj.context.mem_session
             self.conn = db.connection._get_mem_connection(session.mem_id)
         else:

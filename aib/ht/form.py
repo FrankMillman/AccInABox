@@ -51,6 +51,7 @@ A sub-form is treated exactly the same as a root form, except -
 
 # cache to store form_defn data object for each company
 db_session = db.api.start_db_session()
+sys_admin = True  # only used to read form definitions
 
 class FormDefns(dict):  # cache to store form_defn data object for each company
     def __missing__(self, company):
@@ -542,6 +543,14 @@ class Form:
     def user_row_id(self):
         return self.session.user_row_id
 
+    @property
+    def sys_admin(self):
+        return self.session.sys_admin
+
+    @property
+    def perms(self):
+        return self.session.perms
+
 class Frame:
     def __init__(self, form, frame_xml, ctrl_grid, gui,
             grid_frame=False, tree=None):
@@ -835,7 +844,7 @@ class Frame:
                 gui.append(('tree_frame_end', None))
             elif element.tag == 'subtype_panel':
                 subtype = element.get('subtype')
-                lng = int(element.get('lng', '120'))
+                lng = int(element.get('lng', '120'))  # field length 120 if not specified
                 self.setup_subtype(element, subtype, lng, gui)
             elif element.tag == 'dummy':
                 gui_obj = ht.gui_objects.GuiDummy(self, gui)

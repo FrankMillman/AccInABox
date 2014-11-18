@@ -729,7 +729,7 @@ function setup_choice(json_elem) {
       if (subtype === undefined) return;
       if (subtype._active_box !== subtype_id) {
         subtype[subtype._active_box].style.display = 'none';
-        subtype[subtype_id].style.display = 'inline-block';
+        subtype[subtype_id].style.display = 'block';
         subtype._active_box = subtype_id;
         };
       };

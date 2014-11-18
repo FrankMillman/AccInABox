@@ -178,7 +178,8 @@ def exec_sql(self, sql, params=None):
     for word in sql.split():
         if '.' in word:
             company = word.split('.')[0]
-            self.attach_company(company)
+            if len(company) > 1:  # to avoid a.col_name, ...
+                self.attach_company(company)
     return self._exec_sql(sql, params)
 
 def simple_select(self, company, table_name, cols, where='', order=''):

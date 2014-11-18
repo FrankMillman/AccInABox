@@ -448,7 +448,15 @@ function setup_form(args) {
           if (block.childNodes.length && subtype_name === null)
             box.style.marginLeft = '10px';
           block.appendChild(box);
-          box.style[cssFloat] = 'left';
+          // if a subtype panel, there are > 1 but only one is visible
+          // for some reason, if they are floated, it prevents the following
+          //    block from having a top margin
+          // avoiding the float fixes it, but I think it means that you cannot
+          //    have a subtype panel side-by-side with another panel
+          // if this is required, experiment with another layer, with the
+          //    outer layer floated, and the inner one with multiple divs
+          if (subtype_name === null)
+            box.style[cssFloat] = 'left';
           };
 
         var panel = document.createElement('span');
@@ -1032,7 +1040,7 @@ function setup_form(args) {
             subtype_box.style.display = 'none';
             };
           };
-        subtype[subtype._active_box].style.display = 'inline-block';
+        subtype[subtype._active_box].style.display = 'block';
         subtype_name = null;
         break;
         };

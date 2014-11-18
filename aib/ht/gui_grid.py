@@ -37,7 +37,11 @@ NEG_DISPLAY = 'r'  # d=default, r=minus sign on right, b=angle brackets
 DATE_INPUT = '%d-%m-%Y'
 DATE_DISPLAY = '%a %d %b %Y'
 
+#----------------------------------------------------------------------------
+
+# cache to store db_cursor data object for each company
 db_session = db.api.start_db_session()
+sys_admin = True  # only used to read cursor definitions
 
 class DbCursors(dict):  # cache to store db_cursors data object for each company
     def __missing__(self, company):
@@ -45,13 +49,6 @@ class DbCursors(dict):  # cache to store db_cursors data object for each company
             ht.gui_grid, company, 'db_cursors')
         return result
 db_cursors = DbCursors()
-
-#db_cursors = {}  # cache to store db_cursors data object for each company
-#def get_db_cursors(company):
-#    if company not in db_cursors:
-#        db_cursors[company] = (
-#            db.api.get_db_object(ht.gui_grid, company, 'db_cursors'))
-#    return db_cursors[company]
 
 #----------------------------------------------------------------------------
 
@@ -68,6 +65,8 @@ class GuiGrid:
         self.data_objects = parent.data_objects
         self.obj_name = element.get('data_object')
         self.db_obj = parent.data_objects[self.obj_name]
+        self.db_obj.check_perms(0)  # 0 = SELECT
+
         #self.db_obj.init()   # in case form closed and re-opened (why?)
         self.parent = parent
         self.form = parent.form
@@ -286,6 +285,10 @@ class GuiGrid:
                     validations = etree.fromstring(validation, parser=parser)
                     for vld in validations.findall('validation'):
                         fld.vld_rules.append((self, vld))
+
+                if after is not None:
+                    gui_obj.after_input = etree.fromstring(
+                        after, parser=parser)
 
             gui_obj.grid = self
 
@@ -730,7 +733,7 @@ class GuiGrid:
 
             title = self.db_obj.table_name
             question = 'Do you want to save the changes to {}?'.format(
-                repr(self.obj_list[0].fld.get_val()))
+                repr(self.obj_list[0].fld.getval()))
             answers = ['Yes', 'No', 'Cancel']
             default = 'No'
             escape = 'Cancel'

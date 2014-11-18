@@ -5,7 +5,6 @@ This module contains classes that represent the following database objects -
 * :class:`~db.objects.MemObject` - a subclass of DbObject that exists only in memory
 """
 
-import sqlite3
 from json import loads
 from lxml import etree
 import gzip
@@ -15,7 +14,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 import db.object_fields
-import db.object_setup
 import db.templates
 import db.cursor
 import db.connection
@@ -92,6 +90,14 @@ def get_db_table(context, active_company, table_name):
                 raise RuntimeError('More than one row found')
                 # should never happen - table_name is primary key
 
+    # table_id is the row_id of the entry in db_tables
+    # if defn_company is not None, we read in the actual definition from
+    #   db_tables in defn_company
+    # BUT
+    # we want to store the original table_id on the DbTable instance,
+    #   as it is used for checking permissions
+    orig_tableid = table_id
+
     if data_company is None:
         data_company = active_company
         read_only = False
@@ -118,8 +124,9 @@ def get_db_table(context, active_company, table_name):
                     # should never happen - table_name is primary key
 
     tables_open[table_key] = DbTable(
-        context, table_id, table_name, short_descr, audit_trail, upd_chks, del_chks,
-            table_hooks, defn_company, data_company, read_only, default_cursor, form_xml)
+        context, orig_tableid, table_id, table_name, short_descr, audit_trail,
+            upd_chks, del_chks, table_hooks, defn_company, data_company,
+            read_only, default_cursor, form_xml)
     return tables_open[table_key]
 
 #-----------------------------------------------------------------------------
@@ -133,8 +140,6 @@ class DbObject:
 
 #   logger.warning('DbObject in db.objects')
 
-    set_permissions = db.object_setup.set_permissions
-
     def __init__(self, context, data_company, db_table, parent=None):
         self.context = context
         self.data_company = data_company
@@ -145,8 +150,6 @@ class DbObject:
         self.exists = False
         self.dirty = False
         self.where = None
-        self.permissions_set = False
-        self.enabled = True
         self.cursor = None
         self.cursor_row = None
         self.virt_list = []
@@ -172,15 +175,26 @@ class DbObject:
         if parent is None:
             self.parent = None
         else:  # parent must be an existing DbRecord, of which this is a child
-            try:
-                parent_name, parent_pkey, fkey_colname = db_table.parent_params
-            except TypeError:  # parent_params is None
+# can have > 1 parent e.g. dir_users_companies
+#           try:
+#               parent_name, parent_pkey, fkey_colname = db_table.parent_params
+#           except TypeError:  # parent_params is None
+#               raise AibError(head='Error',
+#                   body='{} is not a child table'.format(self.table_name))
+#           if parent.table_name != parent_name:
+#               raise AibError(head='Error',
+#                   body='{} is not a parent of {}'.format(
+#                       parent.table_name, self.table_name))
+            if not db_table.parent_params:
                 raise AibError(head='Error',
                     body='{} is not a child table'.format(self.table_name))
-            if parent.table_name != parent_name:
+            for parent_name, parent_pkey, fkey_colname in db_table.parent_params:
+                if parent.table_name == parent_name:
+                    break
+            else:
                 raise AibError(head='Error',
                     body='{} is not a parent of {}'.format(
-                        parent.table_name, self.table_name))
+                    parent.table_name, self.table_name))
             self.parent = (fkey_colname,
                 parent.getfld(parent_pkey))  # used in setup_fkey(), start_grid()
             parent.children[self.table_name] = self
@@ -364,9 +378,6 @@ class DbObject:
         fld.recalc()
 
     def setup_virtual(self, col_defn, field):
-# don't do this here, do it in object_fields.recalc()
-# reason - if company name ends with 'a', it sees 'a.' and gets confused
-#       sql = col_defn.sql.replace('{company}', self.data_company)
         sql = col_defn.sql
 
         if 'a.' not in sql:  # no dependencies on this table
@@ -404,6 +415,8 @@ class DbObject:
         self.exists = True
 
     def select_many(self, where, order):
+
+        self.check_perms(0)  # 0 = SELECT
 
         if where:
             test = 'AND'
@@ -557,8 +570,7 @@ class DbObject:
 #   def on_select_failed(self, cols_vals, display):
     def on_select_failed(self, display):
         # assume we are trying to create a new db_obj
-        if not self.enabled or not self.insert_ok:
-            raise AibError(head=self.table_name, body='Insert not allowed')
+        self.check_perms(1)  # 1 = INSERT
 
         #
         # assert self.dirty is True  # remove when satisfied
@@ -812,9 +824,7 @@ class DbObject:
                     fld.setval(value)  # can raise AibError
 
     def insert(self, conn):
-#       if not self.enabled or not self.insert_ok:
-#           g.errmsg = (self.name, 'Insert not allowed')
-#           raise IOError(g.errmsg)
+        self.check_perms(1)  # 1 = INSERT
 
         cols = []
         vals = []
@@ -829,6 +839,8 @@ class DbObject:
         conn.insert_row(self, cols, vals, generated_flds)
 
     def update(self, conn):
+        self.check_perms(2)  # 2 = UPDATE
+
         # read in current row with lock, for optimistic concurrency control
         cols = ', '.join([fld.col_name for fld in self.flds_to_update])
         if self.mem_obj:
@@ -864,9 +876,12 @@ class DbObject:
 #           self.context.transaction_active = False
 
     def delete(self):
+        self.check_perms(3)  # 3 = DELETE
 
         if not self.exists:
-            raise IOError('No current row - cannot delete')
+            raise AibError(
+                head='Delete',
+                body='No current row - cannot delete')
 
 #       for del_chk in self.db_table.del_chks:
 #           # will raise AibError on fail
@@ -898,26 +913,27 @@ class DbObject:
         #   in blanking out the next row after they all move up one
         self.init(display=False)
 
-    # the rest of this class uses property() to ensure that self.insert_ok
-    # and self.delete_ok are initialised when required
-
-    def get_insert_ok(self):
-        if not self.permissions_set:
-            self.set_permissions(first=True)
-#           self.setup_fkeys()
-        return self.__insert_ok
-    def set_insert_ok(self, value):
-        self.__insert_ok = value
-    insert_ok = property(get_insert_ok, set_insert_ok)
-
-    def get_delete_ok(self):
-        if not self.permissions_set:
-            self.set_permissions(first=True)
-#           self.setup_fkeys()
-        return self.__delete_ok
-    def set_delete_ok(self, value):
-        self.__delete_ok = value
-    delete_ok = property(get_delete_ok, set_delete_ok)
+    def check_perms(self, perm_type):
+        if self.mem_obj:
+            pass  # no restrictions on in-memory objects
+        elif self.context.sys_admin:
+            pass  # system administrator
+        elif self.context.perms[self.data_company] == '_admin_':
+            pass  # company administrator
+        else:
+            ok = False
+            table_id = self.db_table.orig_tableid
+            if table_id in self.context.perms[self.data_company]:
+                # a tuple of (select_ok?, insert_ok?, update_ok?, delete_ok?)
+                if self.context.perms[self.data_company][table_id][perm_type]:
+                    ok = True
+            if not ok:
+                perm_types = ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
+                raise AibError(
+                    head='{} {}.{}'.format(
+                        perm_types[perm_type], self.data_company, self.table_name),
+                    body='Permission denied'
+                    )
 
 #-----------------------------------------------------------------------------
 
@@ -1250,9 +1266,10 @@ class MemObject(DbObject):
 
 class DbTable:
 
-    def __init__(self, context, table_id, table_name, short_descr,
+    def __init__(self, context, orig_tableid, table_id, table_name, short_descr,
             audit_trail, upd_chks, del_chks, table_hooks, defn_company,
             data_company, read_only, default_cursor, form_xml):
+        self.orig_tableid = orig_tableid
         self.table_id = table_id
         self.table_name = table_name
         self.short_descr = short_descr
@@ -1275,8 +1292,9 @@ class DbTable:
         else:
             self.form_xml = etree.fromstring(gzip.decompress(form_xml))
 
-        self.parent_params = None  # if fkey has 'child=True', set to
-                                   #   (parent_name, parent_pkey, fkey_colname)
+        self.parent_params = []  # if fkey has 'child=True', append
+                                 #   (parent_name, parent_pkey, fkey_colname)
+                                 # can have > 1 parent e.g. dir_users_companies
 
         # set up data dictionary
         self.col_list = []  # maintain sorted list of column names
@@ -1312,11 +1330,11 @@ class DbTable:
                 if col.fkey is not None:
                     col.fkey = loads(col.fkey)
                     if col.fkey[FK_CHILD]:
-                        self.parent_params = (
+                        self.parent_params.append((
                             col.fkey[FK_TARGET_TABLE],
                             col.fkey[FK_TARGET_COLUMN],
                             col.col_name
-                            )
+                            ))
 
                 # if a sub_type, set up list of subtype columns
                 if col.choices is not None:
@@ -1389,7 +1407,7 @@ class Column:
         self.table_keys = []
 
     def __str__(self):
-        descr = ['Column {}.{}:'.format(self.table_id, self.col_name)]
+        descr = ['Column {}.{}:'.format(self.table_name, self.col_name)]
         for name in self.names:
             descr.append('{}={};'.format(name, repr(getattr(self, name))))
         return ' '.join(descr)

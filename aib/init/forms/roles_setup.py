@@ -10,35 +10,41 @@ roles_setup = """
     <mem_obj name="perm_view" descr="Full list of table permissions" parent="role">
       <mem_col col_name="table_id" data_type="INT" short_descr="Table id"
         long_descr="Table id" col_head="" key_field="A" allow_null="false"
-        allow_amend="false" max_len="15" db_scale="0"/>
+        allow_amend="false" max_len="0" db_scale="0"/>
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
         long_descr="Table name" col_head="Table" key_field="N" allow_null="false"
         allow_amend="false" max_len="15" db_scale="0"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
         long_descr="Description" col_head="Description" key_field="N" allow_null="false"
         allow_amend="false" max_len="30" db_scale="0"/>
-      <mem_col col_name="ins_disallowed" data_type="BOOL" short_descr="Insert disallowed?"
-        long_descr="Insert disallowed?" col_head="Ins?" key_field="N" allow_null="false"
+      <mem_col col_name="sel_allowed" data_type="BOOL" short_descr="Select allowed?"
+        long_descr="Select allowed?" col_head="Sel?" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
-      <mem_col col_name="upd_disallowed" data_type="BOOL" short_descr="Update disallowed?"
-        long_descr="Update disallowed?" col_head="Upd?" key_field="N" allow_null="false"
+      <mem_col col_name="ins_allowed" data_type="BOOL" short_descr="Insert allowed?"
+        long_descr="Insert allowed?" col_head="Ins?" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
-      <mem_col col_name="del_disallowed" data_type="BOOL" short_descr="Delete disallowed?"
-        long_descr="Delete disallowed?" col_head="Del?" key_field="N" allow_null="false"
+      <mem_col col_name="upd_allowed" data_type="BOOL" short_descr="Update allowed?"
+        long_descr="Update allowed?" col_head="Upd?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
+      <mem_col col_name="del_allowed" data_type="BOOL" short_descr="Delete allowed?"
+        long_descr="Delete allowed?" col_head="Del?" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
     </mem_obj>
     <mem_obj name="perm_orig" descr="Dictionary of current permissions">
       <mem_col col_name="table_id" data_type="INT" short_descr="Table id"
         long_descr="Table id" col_head="" key_field="A" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"/>
-      <mem_col col_name="ins_disallowed" data_type="BOOL" short_descr="Insert disallowed?"
-        long_descr="Insert disallowed?" col_head="Ins?" key_field="N" allow_null="false"
+      <mem_col col_name="sel_allowed" data_type="BOOL" short_descr="Select allowed?"
+        long_descr="Select allowed?" col_head="Sel?" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
-      <mem_col col_name="upd_disallowed" data_type="BOOL" short_descr="Update disallowed?"
-        long_descr="Update disallowed?" col_head="Upd?" key_field="N" allow_null="false"
+      <mem_col col_name="ins_allowed" data_type="BOOL" short_descr="Insert allowed?"
+        long_descr="Insert allowed?" col_head="Ins?" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
-      <mem_col col_name="del_disallowed" data_type="BOOL" short_descr="Delete disallowed?"
-        long_descr="Delete disallowed?" col_head="Del?" key_field="N" allow_null="false"
+      <mem_col col_name="upd_allowed" data_type="BOOL" short_descr="Update allowed?"
+        long_descr="Update allowed?" col_head="Upd?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
+      <mem_col col_name="del_allowed" data_type="BOOL" short_descr="Delete allowed?"
+        long_descr="Delete allowed?" col_head="Del?" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
     </mem_obj>
   </mem_objects>
@@ -89,9 +95,29 @@ roles_setup = """
             <cur_columns>
               <cur_col col_name="table_name" lng="120" readonly="true"/>
               <cur_col col_name="descr" lng="160" readonly="true"/>
-              <cur_col col_name="ins_disallowed" lng="40"/>
-              <cur_col col_name="upd_disallowed" lng="40"/>
-              <cur_col col_name="del_disallowed" lng="40"/>
+              <cur_col col_name="sel_allowed" lng="40" after="
+                <<action>>
+                  <<case>>
+                    <<fld_changed name=`perm_view.sel_allowed`>>
+                      <<assign>>
+                        <<source>>perm_view.sel_allowed<</source>>
+                        <<target>>perm_view.ins_allowed<</target>>
+                      <</assign>>
+                      <<assign>>
+                        <<source>>perm_view.sel_allowed<</source>>
+                        <<target>>perm_view.upd_allowed<</target>>
+                      <</assign>>
+                      <<assign>>
+                        <<source>>perm_view.sel_allowed<</source>>
+                        <<target>>perm_view.del_allowed<</target>>
+                      <</assign>>
+                    <</fld_changed>>
+                  <</case>>
+                <</action>>
+              "/>
+              <cur_col col_name="ins_allowed" lng="40"/>
+              <cur_col col_name="upd_allowed" lng="40"/>
+              <cur_col col_name="del_allowed" lng="40"/>
             </cur_columns>
             <cur_filter/>
             <cur_sequence/>

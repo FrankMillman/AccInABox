@@ -1202,6 +1202,93 @@ def dump_cur_flds(caller, xml):
         sequence.append([fld.get_val_for_sql() for fld in cur_seq.select_cols[2:]])
     db_cur.setval('sequence', sequence)
 
+def load_user_comps(caller, xml):
+    # called from user_formview 'on_start_form'
+    user = caller.data_objects['db_obj']
+    comp = caller.data_objects['company']
+    user_comps = caller.data_objects['user_comps']
+    user_comp_orig = caller.data_objects['user_comp_orig']
+    user_comp_view = caller.data_objects['user_comp_view']
+
+    if not user_comp_view.exists:
+        # set up company ids and names up front
+        all_comps = comp.select_many(where=[], order=[('company_id', False)])
+        for _ in all_comps:
+            user_comp_view.init()
+            user_comp_view.setval('company_id', comp.getval('company_id'))
+            user_comp_view.setval('company_name', comp.getval('company_name'))
+            user_comp_view.save()
+
+    # we need to store orig at start, to compare at end to see what changed
+    user_comp_orig.delete_all()  # initialise
+    if user.exists and not user.getval('sys_admin'):
+        all_user_comps = user_comps.select_many(where=[], order=[])
+        for _ in all_user_comps:
+            user_comp_orig.init()
+            user_comp_orig.setval('company_id', user_comps.getval('company_id'))
+            user_comp_orig.setval('comp_admin', user_comps.getval('comp_admin'))
+            user_comp_orig.save()
+
+    all_views = user_comp_view.select_many(where=[], order=[])
+    for _ in all_views:
+        if user.getval('sys_admin'):
+            user_comp_view.setval('access_allowed', True)
+            user_comp_view.setval('comp_admin', True)
+        else:
+            user_comp_orig.init()
+            user_comp_orig.setval('company_id', user_comp_view.getval('company_id'))
+            if user_comp_orig.exists:
+                user_comp_view.setval('access_allowed', True)
+                user_comp_view.setval('comp_admin', user_comp_orig.getval('comp_admin'))
+            else:
+                user_comp_view.setval('access_allowed', False)
+                user_comp_view.setval('comp_admin', False)
+        user_comp_view.save()
+    # user_comp_view is a child of user
+    # user_comp_view.setval() sets user_comp_view to dirty, and so also sets user to dirty
+    # two problems -
+    #   it calls on_amend(), which sets save/return buttons to amended state
+    #   on escape, it asks if we want to save changes
+    # setting user.dirty to False solves the second one, but not the first
+    # calling user.restore() seems to work
+    user.restore(display=False)
+
+def dump_user_comps(caller, xml):
+    # called from user_formview 'do_save'
+    user = caller.data_objects['db_obj']
+    comp = caller.data_objects['company']
+    user_comps = caller.data_objects['user_comps']
+    user_comp_orig = caller.data_objects['user_comp_orig']
+    user_comp_view = caller.data_objects['user_comp_view']
+
+    if (user.getval('sys_admin') and
+            user.getval('sys_admin') == user.get_orig('sys_admin')):
+        return  # no changes
+
+    all_views = user_comp_view.select_many(where=[], order=[])
+    for _ in all_views:
+        user_comp_orig.init()
+        user_comp_orig.setval('company_id', user_comp_view.getval('company_id'))
+        if (
+                user_comp_view.getval('access_allowed')
+                    != user_comp_orig.getval('access_allowed')
+                or
+                user_comp_view.getval('comp_admin')
+                    != user_comp_orig.getval('comp_admin')
+                ):
+            user_comps.init()
+            user_comps.setval('company_id', user_comp_view.getval('company_id'))
+            if user_comp_view.getval('access_allowed'):
+                user_comps.setval('comp_admin', user_comp_view.getval('comp_admin'))
+                user_comps.save()
+            else:
+                user_comps.delete()
+
+            # in case we change again without moving off row
+            user_comp_orig.setval('access_allowed', user_comp_view.getval('access_allowed'))
+            user_comp_orig.setval('comp_admin', user_comp_view.getval('comp_admin'))
+            user_comp_orig.save()
+
 def load_table_perms(caller, xml):
     # called from roles_setup 'on_start_form'
     role = caller.data_objects['role']
@@ -1221,29 +1308,39 @@ def load_table_perms(caller, xml):
             perm_view.setval('descr', table.getval('short_descr') or 'None')
             perm_view.save()
 
+    # we need to store orig at start, to compare at end to see what changed
     perm_orig.delete_all()  # initialise
     if role.exists:  # read permissions from db, populate perm_orig
         all_perms = perms.select_many(where=[], order=[])
         for _ in all_perms:
             perm_orig.init()
             perm_orig.setval('table_id', perms.getval('table_id'))
-            perm_orig.setval('ins_disallowed', perms.getval('ins_disallowed'))
-            perm_orig.setval('upd_disallowed', perms.getval('upd_disallowed'))
-            perm_orig.setval('del_disallowed', perms.getval('del_disallowed'))
+            perm_orig.setval('sel_allowed', perms.getval('sel_allowed'))
+            perm_orig.setval('ins_allowed', perms.getval('ins_allowed'))
+            perm_orig.setval('upd_allowed', perms.getval('upd_allowed'))
+            perm_orig.setval('del_allowed', perms.getval('del_allowed'))
             perm_orig.save()
 
     all_views = perm_view.select_many(where=[], order=[('table_name', False)])
     for _ in all_views:
-        perm_orig.init()
-        perm_orig.setval('table_id', perm_view.getval('table_id'))
-        if perm_orig.exists:
-            perm_view.setval('ins_disallowed', perm_orig.getval('ins_disallowed'))
-            perm_view.setval('upd_disallowed', perm_orig.getval('upd_disallowed'))
-            perm_view.setval('del_disallowed', perm_orig.getval('del_disallowed'))
+        if role.getval('parent_id') is None:  # company administrator
+            perm_view.setval('sel_allowed', True)
+            perm_view.setval('ins_allowed', True)
+            perm_view.setval('upd_allowed', True)
+            perm_view.setval('del_allowed', True)
         else:
-            perm_view.setval('ins_disallowed', False)
-            perm_view.setval('upd_disallowed', False)
-            perm_view.setval('del_disallowed', False)
+            perm_orig.init()
+            perm_orig.setval('table_id', perm_view.getval('table_id'))
+            if perm_orig.exists:
+                perm_view.setval('sel_allowed', perm_orig.getval('sel_allowed'))
+                perm_view.setval('ins_allowed', perm_orig.getval('ins_allowed'))
+                perm_view.setval('upd_allowed', perm_orig.getval('upd_allowed'))
+                perm_view.setval('del_allowed', perm_orig.getval('del_allowed'))
+            else:
+                perm_view.setval('sel_allowed', False)
+                perm_view.setval('ins_allowed', False)
+                perm_view.setval('upd_allowed', False)
+                perm_view.setval('del_allowed', False)
         perm_view.save()
     # perm_view is a child of role
     # perm_view.setval() sets perm_view to dirty, and so also sets role to dirty
@@ -1256,33 +1353,50 @@ def load_table_perms(caller, xml):
 
 def dump_table_perms(caller, xml):
     # called from roles_setup 'do_save'
+    role = caller.data_objects['role']
     perms = caller.data_objects['perms']
     perm_view = caller.data_objects['perm_view']
     perm_orig = caller.data_objects['perm_orig']
+
+    if role.getval('parent_id') is None:  # company administrator
+        return  # no permissions necessary
 
     all_permview = perm_view.select_many(where=[], order=[])
     for _ in all_permview:
         perm_orig.init()
         perm_orig.setval('table_id', perm_view.getval('table_id'))
         if (
-                perm_view.getval('ins_disallowed')
-                    != perm_orig.getval('ins_disallowed')
+                perm_view.getval('sel_allowed')
+                    != perm_orig.getval('sel_allowed')
                 or
-                perm_view.getval('upd_disallowed')
-                    != perm_orig.getval('upd_disallowed')
+                perm_view.getval('ins_allowed')
+                    != perm_orig.getval('ins_allowed')
                 or
-                perm_view.getval('del_disallowed')
-                    != perm_orig.getval('del_disallowed')
+                perm_view.getval('upd_allowed')
+                    != perm_orig.getval('upd_allowed')
+                or
+                perm_view.getval('del_allowed')
+                    != perm_orig.getval('del_allowed')
                 ):
             perms.init()
             perms.setval('table_id', perm_view.getval('table_id'))
-            perms.setval('ins_disallowed', perm_view.getval('ins_disallowed'))
-            perms.setval('upd_disallowed', perm_view.getval('upd_disallowed'))
-            perms.setval('del_disallowed', perm_view.getval('del_disallowed'))
-            perms.save()
+            if (
+                    perm_view.getval('sel_allowed') or
+                    perm_view.getval('ins_allowed') or
+                    perm_view.getval('upd_allowed') or
+                    perm_view.getval('del_allowed')
+                    ):
+                perms.setval('sel_allowed', perm_view.getval('sel_allowed'))
+                perms.setval('ins_allowed', perm_view.getval('ins_allowed'))
+                perms.setval('upd_allowed', perm_view.getval('upd_allowed'))
+                perms.setval('del_allowed', perm_view.getval('del_allowed'))
+                perms.save()
+            else:
+                perms.delete()
 
             # in case we change again without moving off row
-            perm_orig.setval('ins_disallowed', perm_view.getval('ins_disallowed'))
-            perm_orig.setval('upd_disallowed', perm_view.getval('upd_disallowed'))
-            perm_orig.setval('del_disallowed', perm_view.getval('del_disallowed'))
+            perm_orig.setval('sel_allowed', perm_view.getval('sel_allowed'))
+            perm_orig.setval('ins_allowed', perm_view.getval('ins_allowed'))
+            perm_orig.setval('upd_allowed', perm_view.getval('upd_allowed'))
+            perm_orig.setval('del_allowed', perm_view.getval('del_allowed'))
             perm_orig.save()

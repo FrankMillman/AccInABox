@@ -779,7 +779,7 @@ def setup_dir_users_companies(context, conn):
     fkey.append('row_id')
     fkey.append('user_id')
     fkey.append('user_id')
-    fkey.append(False)
+    fkey.append(True)
     params.append(('user_row_id', 'INT', 'User row id',
         'User row id', 'User', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
     fkey = []
@@ -787,7 +787,7 @@ def setup_dir_users_companies(context, conn):
     fkey.append('company_id')
     fkey.append(None)
     fkey.append(None)
-    fkey.append(False)
+    fkey.append(True)
     params.append(('company_id', 'TEXT', 'Company id',
         'Company id', 'Company', 'A', False, False, False, 15, 0, None, None, None, fkey, None))
     params.append(('comp_admin', 'BOOL', 'Company administrator',

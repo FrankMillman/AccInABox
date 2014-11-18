@@ -270,7 +270,7 @@ function set_subtype(args) {
   var frame = get_obj(frame_ref);
   var subtype = frame.subtypes[subtype_name];
   subtype[subtype._active_box].style.display = 'none';
-  subtype[subtype_id].style.display = 'inline-block';
+  subtype[subtype_id].style.display = 'block';
   subtype._active_box = subtype_id;
   };
 

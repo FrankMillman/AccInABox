@@ -1,4 +1,4 @@
-menu = null;  // initialise
+menu = null;  // initialise - must be global
 function start_menu(args) {
   var menu_obj = {};  //new Object();
 
@@ -9,7 +9,7 @@ function start_menu(args) {
     var arg = args[i];
     var node_id=arg[0], parent_id=arg[1], text=arg[2], expandable=arg[3];
     if (i === 0)
-      var menu = create_tree(menu_div, null, toolbar, hide_root);
+      menu = create_tree(menu_div, null, toolbar, hide_root);
     menu.add_node(parent_id, node_id, expandable, text, (i===0));
     };
   menu.onselected = function(node) {

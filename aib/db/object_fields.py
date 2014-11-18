@@ -199,6 +199,10 @@ class Field:
             if val == 'None':
                 sql = sql.replace('= '+dep, 'is null', 1)  # only replace first occurrence
                 sql = sql.replace(dep, 'null', 1)  # syntax for function call (no leading =)
+            elif val == 'True':
+                sql = sql.replace(dep, '1')
+            elif val == 'False':
+                sql = sql.replace(dep, '0')
             else:
 #               sql = sql.replace(dep, val, 1)  # only replace first occurrence
                 sql = sql.replace(dep, val)  # replace all occurrences
@@ -270,12 +274,6 @@ class Field:
 #           self.value_changed(value)))
 
         self.check_val(value)  # will raise AibError on error
-
-        if not db_obj.permissions_set:
-            #don't set if keyfield - we are only reading the db_obj
-            if col_defn.key_field == 'N':
-                db_obj.set_permissions(first=True)
-#               db_obj.setup_fkeys()
 
         if not col_defn.allow_null:
             if value in (None, ''):

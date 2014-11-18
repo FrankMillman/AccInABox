@@ -117,5 +117,5 @@ def ask(ctx, obj, value, xml):
 def error(ctx, obj, value, xml):
     raise AibError(
         head=xml.get('head') or None,
-        body=xml.get('body').replace('$value', value) or None
+        body=xml.get('body').replace('$value', value or '') or None
         )

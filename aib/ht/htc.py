@@ -41,6 +41,8 @@ class delwatcher:
 
 # cache to store menu_defn data object for each company
 db_session = db.api.start_db_session()
+sys_admin = True  # only used to read menu definitions
+
 class MenuDefns(dict):
     def __missing__(self, company):
         result = self[company] = db.api.get_db_object(
@@ -69,6 +71,12 @@ class Session:
         self.session_key = session_key
         self.user_row_id = user_row_id
         self.save_user = None  # to store current user on change_user
+        # during the login process, the only database activity available is
+        #   to allow the user to change his own password
+        # therefore it is safe to set sys_admin to True
+        # once logged in, on_login() is called, which sets
+        #   sys_admin to the user's own value
+        self.sys_admin = True
 
         self.active_roots = {}  # active roots for this session
         self.root_id = itertools.count()  # seq id for roots created in this session
@@ -118,12 +126,24 @@ class Session:
         # send initial screen to client -
         #   menu, active tasks, favourites
 
+        self.sys_admin = self.dir_user.getval('sys_admin')
+
+        self.perms = {}  # key=company, value=permissions
+
         client_menu = []  # build menu to send to client
         root_id = '_root'
         client_menu.append((root_id, None, 'root', True))
         db_session = db.api.start_db_session()
         with db_session as conn:
             for company, comp_name, comp_admin in list(self.select_companies(conn)):
+
+                if self.sys_admin:
+                    pass
+                elif comp_admin:
+                    self.perms[company] = '_admin_'  # allow full permissions
+                else:
+                    self.setup_permissions(conn, company)
+
                 comp_menu = []
                 comp_menu.append((
                     '{}_{}'.format(company, 1),  # root row_id is always 1
@@ -135,7 +155,7 @@ class Session:
                     comp_menu.append((
                         '{}_{}'.format(company, row_id),  #  node_id
                         '{}_{}'.format(company, parent_id),  # parent_id
-                        descr, bool(expandable)))
+                        descr, expandable))
 
                 if len(comp_menu) > 1:
                     client_menu.extend(comp_menu)
@@ -167,6 +187,28 @@ class Session:
                 )
         return db.api.exec_sql(conn, sql)
 
+    def setup_permissions(self, conn, company):
+        # user can have more than one role
+        # roles could have differing permissions on the same table
+        # allowed is true/false -> cast to 0/1
+        # selecting max(...) ensures that if *any* of the roles give
+        #   permission, then the user is granted permission
+        self.perms[company] = {}  # key=table_id, value=permissions
+        sql = (
+            "SELECT a.table_id, "
+            "MAX(CAST( a.sel_allowed AS INT )), MAX(CAST( a.ins_allowed AS INT )), "
+            "MAX(CAST( a.upd_allowed AS INT )), MAX(CAST( a.del_allowed AS INT )) "
+            "FROM {0}.adm_table_perms a "
+            "LEFT JOIN {0}.adm_users_roles b ON b.role_id = a.role_id "
+            "WHERE a.deleted_id = 0 AND b.user_row_id = {1} "
+            "GROUP BY a.table_id"
+            .format(company, self.user_row_id)
+            )
+        cur = db.api.exec_sql(conn, sql)
+        for table_id, select_ok, insert_ok, update_ok, delete_ok in cur:
+            self.perms[company][table_id] = (
+                select_ok, insert_ok, update_ok, delete_ok)
+
     def select_options(self, conn, company):
         sql = (
             "SELECT row_id, parent_id, descr, opt_type "
@@ -182,7 +224,7 @@ def on_login_ok(caller, xml):
     session = caller.session
     dir_user = session.dir_user = caller.data_objects['dir_user']
     session.user_row_id = dir_user.getval('row_id')
-    session.sys_admin = dir_user.getval('sys_admin')
+#   session.sys_admin = dir_user.getval('sys_admin')
 
 dummy_id_counter = itertools.count(1)
 class RequestHandler:

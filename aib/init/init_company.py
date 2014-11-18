@@ -1,4 +1,13 @@
-import gzip
+import os
+import __main__
+import importlib
+from lxml import etree
+schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
+parser = etree.XMLParser(
+    schema=etree.XMLSchema(file=os.path.join(schema_path, 'form.xsd')),
+    attribute_defaults=True, remove_comments=True, remove_blank_text=True)
+#parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
+
 from json import dumps
 from lxml import etree
 import db.setup_tables
@@ -25,6 +34,22 @@ def init_company(context, conn, company, company_name):
     setup_menus(context, conn, company, company_name)
     setup_roles(context, conn, company, company_name)
     setup_table_perms(context, conn, company)
+    setup_dir_users(context, conn, company)
+    setup_users_roles(context, conn, company)
+
+def create_form(db_obj, form_name, title):
+    form_module = importlib.import_module('.forms.{}'.format(form_name), 'init')
+    form_defn = getattr(form_module, form_name)
+
+    db_obj.init()
+    db_obj.setval('form_name', form_name)
+    db_obj.setval('title', title)
+    xml = form_defn[1:]  # strip leading '\n'
+    xml = xml.replace('`', '&quot;')
+    xml = xml.replace('<<', '&lt;')
+    xml = xml.replace('>>', '&gt;')
+    db_obj.setval('form_xml', etree.fromstring(xml, parser=parser))
+    db_obj.save()
 
 def create_db_tables(context, conn, company):
     conn.cur.execute(
@@ -339,11 +364,13 @@ def setup_table_perms(context, conn, company):
     fkey.append(False)
     params.append(('table_id', 'INT', 'Table id', 'Table id',
         'Table id', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
-    params.append(('ins_disallowed', 'BOOL', 'Insert disallowed?', 'Insert disallowed?',
+    params.append(('sel_allowed', 'BOOL', 'Select allowed?', 'Select allowed?',
+        'Sel?', 'N', False, False, True, 0, 0, None, None, None, None, None))
+    params.append(('ins_allowed', 'BOOL', 'Insert allowed?', 'Insert allowed?',
         'Ins?', 'N', False, False, True, 0, 0, None, None, None, None, None))
-    params.append(('upd_disallowed', 'BOOL', 'Update disallowed?', 'Update disallowed?',
+    params.append(('upd_allowed', 'BOOL', 'Update allowed?', 'Update allowed?',
         'Upd?', 'N', False, False, True, 0, 0, None, None, None, None, None))
-    params.append(('del_disallowed', 'BOOL', 'Delete disallowed?', 'Delete disallowed?',
+    params.append(('del_allowed', 'BOOL', 'Delete allowed?', 'Delete allowed?',
         'Del?', 'N', False, False, True, 0, 0, None, None, None, None, None))
 
     db_column = db.api.get_db_object(context, company, 'db_columns')
@@ -372,3 +399,78 @@ def setup_table_perms(context, conn, company):
         db_column.save()
 
     db.setup_tables.setup_table(conn, company, table_name)
+
+def setup_dir_users(context, conn, company):
+    table_name = 'dir_users'
+    params = (1, table_name, True, '_sys', '_sys', True, True)
+    conn.cur.execute(
+        "INSERT INTO {}.db_tables "
+        "(created_id, table_name, audit_trail, defn_company, "
+        "data_company, read_only, table_created) "
+        "VALUES ({})".format(company, ', '.join([conn.param_style] * 7))
+        , params)
+
+def setup_users_roles(context, conn, company):
+    table_name = 'adm_users_roles'
+    db_table = db.api.get_db_object(context, company, 'db_tables')
+    db_table.setval('table_name', table_name)
+    db_table.setval('short_descr', 'User roles')
+    db_table.setval('long_descr', 'Mapping of user-id to one or more roles')
+    db_table.setval('audit_trail', True)
+    db_table.setval('table_created', True)
+    db_table.save()
+    table_id = db_table.getval('row_id')
+
+    params = []
+    params.append(('row_id', 'AUTO', 'Row id',
+        'Row id', 'Row', 'Y', True, False, False, 0, 0, None, None, None, None, None))
+    params.append(('created_id', 'INT', 'Created id',
+        'Created row id', 'Created', 'N', True, False, True, 0, 0, None, '0', None, None, None))
+    params.append(('deleted_id', 'INT', 'Deleted id',
+        'Deleted row id', 'Deleted', 'N', True, False, True, 0, 0, None, '0', None, None, None))
+    fkey = []
+    fkey.append('_sys.dir_users')
+    fkey.append('row_id')
+    fkey.append('user_id')
+    fkey.append('user_id')
+    fkey.append(True)
+    params.append(('user_row_id', 'INT', 'User row id', 'User row id',
+        'User row id', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
+    fkey = []
+    fkey.append('adm_roles')
+    fkey.append('row_id')
+    fkey.append('role')
+    fkey.append('role')
+    fkey.append(True)
+    params.append(('role_id', 'INT', 'Role id', 'Role id',
+        'Role id', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
+
+    db_column = db.api.get_db_object(context, company, 'db_columns')
+    for seq, param in enumerate(params):
+        db_column.init()
+        db_column.setval('table_id', table_id)
+        db_column.setval('col_name', param[0])
+        db_column.setval('col_type', 'sys')
+        db_column.setval('seq', seq)
+        db_column.setval('data_type', param[1])
+        db_column.setval('short_descr', param[2])
+        db_column.setval('long_descr', param[3])
+        db_column.setval('col_head', param[4])
+        db_column.setval('key_field', param[5])
+        db_column.setval('generated', param[6])
+        db_column.setval('allow_null', param[7])
+        db_column.setval('allow_amend', param[8])
+        db_column.setval('max_len', param[9])
+        db_column.setval('db_scale', param[10])
+        db_column.setval('scale_ptr', param[11])
+        db_column.setval('dflt_val', param[12])
+        db_column.setval('col_chks', param[13])
+        db_column.setval('fkey', param[14])
+        db_column.setval('choices', param[15])
+        db_column.setval('sql', None)
+        db_column.save()
+
+    db.setup_tables.setup_table(conn, company, table_name)
+
+    db_obj = db.api.get_db_object(context, company, 'sys_form_defns')
+    create_form(db_obj, 'roles_setup', 'Role setup')

@@ -237,6 +237,8 @@ class Conn:
     def full_select(self, db_obj, col_names, where, order=None,
             limit=0, lock=False, param=None, debug=False):
 
+        db_obj.check_perms(0)  # 0 = SELECT
+
 #       if db_obj.db_table.audit_trail:
 #           if where:
 #               where.append(('AND', '', 'deleted_id', '=', 0, ''))
