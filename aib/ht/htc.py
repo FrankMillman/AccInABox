@@ -99,7 +99,7 @@ class Session:
         return root_id
 
     def get_obj(self, ref):
-        ref = map(int, ref.split('_'))  # returns a 'map' object
+        ref = (int(_) for _ in ref.split('_'))  # returns a 'generator' object
         root = self.active_roots[next(ref)]
         form = root.form_list[next(ref)]
         return form.obj_dict[next(ref)]
@@ -803,7 +803,7 @@ def handle_client(client_reader, client_writer):
         if not header.rstrip():
             break
 #       print('Header "{}"'.format(header))
-        key, val = map(str.strip, header.rstrip().decode().lower().split(':', 1))
+        key, val = (_.strip() for _ in header.rstrip().decode().lower().split(':', 1))
 
     try:
         method, path, version = req_line.decode().split(' ')

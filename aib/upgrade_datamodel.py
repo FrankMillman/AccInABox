@@ -12,14 +12,14 @@ parser = etree.XMLParser(
 import db.api
 import db.setup_tables
 
-def upgrade_datamodel(db_session, old_version, new_version):
+def upgrade_datamodel(db_session, old_version, new_version, company='_sys'):
     print('update {} to {}'.format(old_version, new_version))
     if old_version < (0, 1, 1):
         upgrade_0_1_1(db_session)
     if old_version < (0, 1, 2):
         upgrade_0_1_2(db_session)
     if old_version < (0, 1, 3):
-        upgrade_0_1_3(db_session)
+        upgrade_0_1_3(db_session, company)
 
 def upgrade_0_1_1(db_session):
     print('upgrading to 0.1.1')
@@ -194,10 +194,186 @@ def upgrade_0_1_2(db_session):
         menu_defn.setval('form_name', 'menu_setup')
         menu_defn.save()
 
-def upgrade_0_1_3(db_session):
+def upgrade_0_1_3(db_session, company):
     print('upgrading to 0.1.3')
     with db_session as conn:
         db_session.transaction_active = True
 
-        # add 'expandable' to sys_menu_defns virt columns
-        # add 'parent_num' to sys_menu_defns virt columns
+        # upd db_columns.dir_users.display_name - allow_null -> True
+        sql = (
+            'SELECT row_id FROM {}.db_tables WHERE table_name = {}'
+            .format(company, conn.param_style)
+            )
+        cur = conn.exec_sql(sql, ['dir_users'])
+        table_id = cur.fetchone()[0]
+        sql = (
+            'UPDATE {0}.db_columns SET allow_null = {1} '
+            'WHERE table_id = {1} AND col_name={1}'
+            .format(company, conn.param_style)
+            )
+        params = ['1', table_id, 'display_name']
+        conn.exec_sql(sql, params)
+
+        # upd db_columns.sys_menu_defns.children - allow_amend -> True
+        # upd db_columns.sys_menu_defns.children - sql - '_sys' -> '{company}'
+        sql = (
+            'SELECT row_id FROM {}.db_tables WHERE table_name = {}'
+            .format(company, conn.param_style)
+            )
+        cur = conn.exec_sql(sql, ['sys_menu_defns'])
+        table_id = cur.fetchone()[0]
+        sql = (
+            'UPDATE {0}.db_columns SET allow_amend = {1}, sql={1} '
+            'WHERE table_id = {1} AND col_name={1}'
+            .format(company, conn.param_style)
+            )
+        params = [
+            '1',
+            'SELECT count(*) FROM {company}.sys_menu_defns b '
+            'WHERE b.parent_id = a.row_id',
+            table_id, 'children']
+        conn.exec_sql(sql, params)
+
+        # add db_columns.sys_menu_defns.expandable
+        # add db_columns.sys_menu_defns.parent_num
+        params = []
+        params.append(('expandable', 'BOOL', 'Expandable?', 'Is this node expandable?', '',
+            'N', False, False, True, 0, 0,
+            "SELECT CASE WHEN a.opt_type in ('0', '1') THEN 1 ELSE 0 END"))
+        params.append(('parent_num', 'INT', 'Parent numeric id', 'Parent id - change null to 0', '',
+            'N', False, False, True, 0, 0,
+            "SELECT COALESCE(a.parent_id, 0)"))
+        db_column = db.api.get_db_object(__main__, company, 'db_columns')
+        for seq, param in enumerate(params):
+            db_column.init()
+            db_column.setval('table_name', 'sys_menu_defns')
+            db_column.setval('col_name', param[0])
+            db_column.setval('col_type', 'virt')
+            db_column.setval('seq', seq+1)
+            db_column.setval('data_type', param[1])
+            db_column.setval('short_descr', param[2])
+            db_column.setval('long_descr', param[3])
+            db_column.setval('col_head', param[4])
+            db_column.setval('key_field', param[5])
+            db_column.setval('generated', param[6])
+            db_column.setval('allow_null', param[7])
+            db_column.setval('allow_amend', param[8])
+            db_column.setval('max_len', param[9])
+            db_column.setval('db_scale', param[10])
+            db_column.setval('scale_ptr', None)
+            db_column.setval('dflt_val', None)
+            db_column.setval('col_chks', None)
+            db_column.setval('fkey', None)
+            db_column.setval('choices', None)
+            db_column.setval('sql', param[11])
+            db_column.save()
+
+        # add del_chk to dir_companies (company_id != '_sys')
+        sql = (
+            'UPDATE {0}.db_tables SET del_chks = {1} WHERE table_name = {1}'
+            .format(company, conn.param_style)
+            )
+        del_chks = []
+        del_chks.append(('CHECK', '', 'company_id', '!=', '"_sys"', ''))
+        params = [dumps(del_chks), 'dir_companies']
+        conn.exec_sql(sql, params)
+        sql = (
+            'SELECT row_id FROM {}.db_tables WHERE table_name = {}'
+            .format(company, conn.param_style)
+            )
+        cur = conn.exec_sql(sql, ['dir_companies'])
+        table_id = cur.fetchone()[0]
+        sql = (
+            'SELECT audit_row_id FROM {0}.db_tables_audit_xref '
+            'WHERE data_row_id = {1} AND type = {1}'
+            .format(company, conn.param_style)
+            )
+        params = [table_id, 'chg']
+        cur = conn.exec_sql(sql, params)
+        audit_row_id = cur.fetchone()[0]
+        sql = (
+            'UPDATE {0}.db_tables_audit SET del_chks = {1} WHERE row_id = {1}'
+            .format(company, conn.param_style)
+            )
+        params = [dumps(del_chks), audit_row_id]
+        conn.exec_sql(sql, params)
+
+        # replace amended form definition 'login_form'
+        form_name = 'login_form'
+
+        form_module = importlib.import_module('.forms.{}'.format(form_name), 'init')
+        xml = getattr(form_module, form_name)
+        xml = xml[1:]  # strip leading '\n'
+        xml = xml.replace('`', '&quot;')
+        xml = xml.replace('<<', '&lt;')
+        xml = xml.replace('>>', '&gt;')
+
+        xml = etree.fromstring(xml, parser=parser)
+        xml = gzip.compress(etree.tostring(xml))
+
+        sql = (
+            'UPDATE {0}.sys_form_defns SET form_xml = {1} WHERE form_name = {1}'
+            .format(company, conn.param_style)
+            )
+        params = [xml, form_name]
+        conn.exec_sql(sql, params)
+
+        # upd db_columns.dir_users_companies.user_row_id.fkey - child -> True
+        # upd db_columns.dir_users_companies.company_id.fkey - child -> True
+        sql = (
+            'SELECT row_id FROM {}.db_tables WHERE table_name = {}'
+            .format(company, conn.param_style)
+            )
+        cur = conn.exec_sql(sql, ['dir_users_companies'])
+        table_id = cur.fetchone()[0]
+        sql = (
+            'UPDATE {0}.db_columns SET fkey = {1} '
+            'WHERE table_id = {1} AND col_name={1}'
+            .format(company, conn.param_style)
+            )
+        fkey = []
+        fkey.append('dir_users')
+        fkey.append('row_id')
+        fkey.append('user_id')
+        fkey.append('user_id')
+        fkey.append(True)
+        params = [dumps(fkey), table_id, 'user_row_id']
+        conn.exec_sql(sql, params)
+        sql = (
+            'UPDATE {0}.db_columns SET fkey = {1} '
+            'WHERE table_id = {1} AND col_name={1}'
+            .format(company, conn.param_style)
+            )
+        fkey = []
+        fkey.append('dir_companies')
+        fkey.append('company_id')
+        fkey.append(None)
+        fkey.append(None)
+        fkey.append(True)
+        params = [dumps(fkey), table_id, 'company_id']
+        conn.exec_sql(sql, params)
+
+        # upd db_tables.dir_users.form_xml
+        form_name = 'user_formview'
+
+        form_module = importlib.import_module('.forms.{}'.format(form_name), 'init')
+        xml = getattr(form_module, form_name)
+        xml = xml[1:]  # strip leading '\n'
+        xml = xml.replace('`', '&quot;')
+        xml = xml.replace('<<', '&lt;')
+        xml = xml.replace('>>', '&gt;')
+
+        xml = etree.fromstring(xml, parser=parser)
+        xml = gzip.compress(etree.tostring(xml))
+
+        sql = (
+            'UPDATE {0}.db_tables SET form_xml = {1} WHERE table_name = {1}'
+            .format(company, conn.param_style)
+            )
+        params = [xml, 'dir_users']
+        conn.exec_sql(sql, params)
+
+        # upd dir_users_companies schema - foreign key (user_row_id) add ON DELETE CASCADE
+        # upd dir_users_companies schema - foreign key (company_id) add ON DELETE CASCADE
+        #
+        # above two not updated = not easy, not important

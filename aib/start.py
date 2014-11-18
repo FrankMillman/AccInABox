@@ -85,10 +85,10 @@ def check_versions():
     from releases import program_version_info, datamodel_version_info
 
     def s_to_t(s):  # convert string '0.1.1' to tuple(0, 1, 1)
-        return tuple(map(int, s.split('.')))
+        return tuple(int(_) for _ in s.split('.'))
 
     def t_to_s(t):  # convert tuple(0, 1, 1) to string '0.1.1'
-        return '.'.join(map(str, t))
+        return '.'.join(str(_) for _ in t)
 
     progver_fn = os.path.join(os.path.dirname(__file__), 'program_version')
     try:
@@ -119,10 +119,11 @@ def check_versions():
         ans = input('Database has changed - ok to upgrade? ')
         if ans.lower() != 'y':
             sys.exit('Upgrade cancelled')
-        global db_session  # must be global - retrieved from __main__
+        # the following must be global, as they are retrieved from __main__
+        global db_session, user_row_id, sys_admin
         db_session = db.api.start_db_session()
-        global user_row_id  # must be global - retrieved from __main__
         user_row_id = 1
+        sys_admin = True
         from upgrade_datamodel import upgrade_datamodel
         upgrade_datamodel(db_session, current_datamodel_version_info, datamodel_version_info)
         new_datamodel_version = t_to_s(datamodel_version_info)

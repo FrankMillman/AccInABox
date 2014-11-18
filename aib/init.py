@@ -39,12 +39,6 @@ def get_config():
     with open(cfg_fname, 'w') as cfg_file:
         cfg.write(cfg_file)
 
-    from releases import program_version_info, datamodel_version_info
-    with open('program_version', 'w') as version_file:
-        version_file.write('.'.join(map(str, program_version_info)))
-    with open('datamodel_version', 'w') as version_file:
-        version_file.write('.'.join(map(str, datamodel_version_info)))
-
     return cfg
 
 def get_ms_params():
@@ -89,10 +83,11 @@ def get_htc_params():
 def setup_db(cfg):
     db.api.config_connection(cfg['DbParams'])
 
-    global db_session  # must be global - retrieved from __main__
+    # the following must be global, as they are retrieved from __main__
+    global db_session, user_row_id, sys_admin
     db_session = db.api.start_db_session()
-    global user_row_id  # must be global - retrieved from __main__
     user_row_id = 1
+    sys_admin = True
     with db_session as conn:
         db_session.transaction_active = True
         init.init_db.init_database(__main__, conn)
@@ -102,3 +97,9 @@ def setup_db(cfg):
 if __name__ == '__main__':
     cfg = get_config()
     setup_db(cfg)
+
+    from releases import program_version_info, datamodel_version_info
+    with open('program_version', 'w') as version_file:
+        version_file.write('.'.join(str(_) for _ in program_version_info))
+    with open('datamodel_version', 'w') as version_file:
+        version_file.write('.'.join(str(_) for _ in datamodel_version_info))

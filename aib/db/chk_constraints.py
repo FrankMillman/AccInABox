@@ -100,7 +100,7 @@ def chk_constraint2(fld, constraint, value):
     elif c_type == 'cdv':  # type = TEXT
         # [['cdv', '137137', 10]  weights, modulo - string must be 7 digits
         base, chkdig = value[:-1], value[-1]
-        tot = sum(map(operator.mul, zip(base, c_args[1])))
+        tot = sum(operator.mul(b, w) for b, w in zip(base, c_args[1]))
         mod = tot % c_args[2]
         if mod != chkdig:
             raise ValueError('Value fails check digit verification')
@@ -122,7 +122,7 @@ def pattern(value, args):
 def cdv(value, args):
     weights, cdv_mod = args
     base, chkdig = value[:-1], value[-1]
-    tot = sum(map(operator.mul, zip(base, weights)))
+    tot = sum(operator.mul(b, w) for b, w in zip(base, weights))
     mod = tot % cdv_mod
     return mod == chkdig
 

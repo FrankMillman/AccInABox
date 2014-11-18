@@ -64,7 +64,7 @@ form_defns = FormDefns()
 
 @asyncio.coroutine
 def start_setupgrid(session, company, table_name, cursor_name):
-#   table_name, cursor_name = map(str.strip, option_data.split(','))
+#   table_name, cursor_name = (_.strip() for _ in option_data.split(','))
     form = Form(company, 'setup_grid')
 #   db_obj = db.api.get_db_object(form, company, table_name)
     try:

@@ -896,7 +896,7 @@ class Date(Field):
         else:
             try:
                 # assumes value is 'yyyy-mm-dd'
-                return dt(*map(int, value.split('-')))
+                return dt(*(int(_) for _ in value.split('-')))
             except ValueError:
                 raise AibError(head=self.col_defn.short_descr,
                     body='"{}" is not a valid date'.format(value))
