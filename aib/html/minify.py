@@ -57,13 +57,13 @@ with gzip.open('init.gz', 'wb') as fn:
                         lines.append(line)
                     else:
                         """
-                        iFirst_src = '../images/first.bmp';
+                        iFirst_src = 'images/first.bmp';
                         """
                         pos += 6
                         new_line = []
                         new_line.append(line[:pos])
                         new_line.append(b"'data:image/bmp;base64,")
-                        path = line[pos:][4:-3]
+                        path = line[pos:].rstrip()[1:-2]  # strip ' and ;
                         src = open(path, 'rb').read()
                         new_line.append(b64(src))
                         new_line.append(b"';")
