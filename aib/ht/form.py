@@ -754,9 +754,10 @@ class Frame:
                 lkup = False
                 if fld.foreign_key is not None:
                     if element.get('lookup') != 'false':  # default to 'true'
-                        if fld.foreign_key == {}:  # not yet set up
-                            fld.setup_fkey()
-                        lkup = True  # tell client to set up 'lookup' button
+                        if element.get('readonly') != 'true':  # default to 'true'
+                            if fld.foreign_key == {}:  # not yet set up
+                                fld.setup_fkey()
+                            lkup = True  # tell client to set up 'lookup' button
                 password = (element.get('pwd') == 'true')
                 if password:
                     pwd = str(randint(10000000, 99999999))  # random 8 digits
