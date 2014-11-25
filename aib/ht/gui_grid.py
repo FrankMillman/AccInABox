@@ -176,7 +176,7 @@ class GuiGrid:
                         cur_fil.get('lbr'),
                         cur_fil.get('col_name'),
                         cur_fil.get('op'),
-                        cur_fil.get('expr'),
+                        cur_fil.get('expr').replace('$company', self.form.company),
                         cur_fil.get('rbr')]
                     self.cursor_filter.append(fil)
             self.cursor_sequence = []
@@ -461,7 +461,7 @@ class GuiGrid:
             gui_row = []
             for pos in self.grid_cols:
                 fld = self.obj_list[pos].fld
-                value = fld.val_to_str(fld.set_val_from_sql(cursor_row[pos]))
+                value = fld.val_to_str(fld.get_val_from_sql(cursor_row[pos]))
                 gui_row.append(value)
             gui_rows.append(gui_row)
 
