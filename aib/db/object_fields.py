@@ -361,9 +361,10 @@ class Field:
             if self.foreign_key['true_src']:  # this field is an alt_source
                 # we have changed alt source, now change true source
                 true_src = self.foreign_key['true_src']
-# next 2 lines - does it make a difference?
-#               true_src.setval(true_src.foreign_key['tgt_field']._value)
-                true_src._value = true_src.foreign_key['tgt_field']._value
+#               true_src._value = true_src.foreign_key['tgt_field']._value
+                # must call setval(...) here!
+                # if true_src has table_keys, we must call read_row()
+                true_src.setval(true_src.foreign_key['tgt_field']._value)
                 if display:
                     for obj in true_src.gui_obj:
                         obj._redisplay()

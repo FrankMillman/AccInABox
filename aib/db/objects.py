@@ -51,6 +51,8 @@ def get_fkey_object(context, table_name, src_obj, src_colname):
         src_colname = src_colname[-1]  # take the last one
     src_fld = src_obj.fields[src_colname]
     fk_object = src_fld.get_fk_object()
+    if '.' in table_name:
+        table_name = table_name.split('.')[1]
     if fk_object.table_name != table_name:
         raise AibError(head='Error',
             body='{} is not a foreign key for {}'.format(src_colname, table_name))
@@ -61,10 +63,16 @@ def get_mem_object(context, active_company, table_name, parent=None):
     return MemObject(context, active_company, db_table, parent)
 
 def get_db_table(context, active_company, table_name):
-    if active_company is None:  # ':memory:' table
-        table_key = table_name.lower()
+    if '.' in table_name:
+        db_company, table_name = table_name.split('.')
     else:
-        table_key = '{}.{}'.format(active_company.lower(), table_name.lower())
+        db_company = active_company
+
+    if db_company is None:  # ':memory:' table
+        table_key = table_name.lower()
+        print('*** DOES THIS HAPPEN? *** "{}"'.format(table_name))
+    else:
+        table_key = '{}.{}'.format(db_company.lower(), table_name.lower())
     if table_key in tables_open:
         return tables_open[table_key]
 
@@ -79,7 +87,7 @@ def get_db_table(context, active_company, table_name):
             # next line only works if exactly one row is selected
             ((table_id, table_name, short_descr, audit_trail, upd_chks, del_chks,
                 table_hooks, defn_company, data_company, read_only, default_cursor, form_xml),
-                 ) = conn.simple_select(active_company, table, cols, where)
+                 ) = conn.simple_select(db_company, table, cols, where)
         except ValueError as e:
             if str(e).startswith('need'):
                 # need more than 0 values to unpack = no rows selected
@@ -99,11 +107,11 @@ def get_db_table(context, active_company, table_name):
     orig_tableid = table_id
 
     if data_company is None:
-        data_company = active_company
+        data_company = db_company
         read_only = False
 
     if defn_company is None:
-        defn_company = active_company
+        defn_company = db_company
     else:
         with context.db_session as conn:
             try:
@@ -189,6 +197,8 @@ class DbObject:
                 raise AibError(head='Error',
                     body='{} is not a child table'.format(self.table_name))
             for parent_name, parent_pkey, fkey_colname in db_table.parent_params:
+                if '.' in parent_name:
+                    parent_name = parent_name.split('.')[1]
                 if parent.table_name == parent_name:
                     break
             else:
