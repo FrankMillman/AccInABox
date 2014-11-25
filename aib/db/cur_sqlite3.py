@@ -32,19 +32,17 @@ def create_cursor(self, sql, params):
 #       self.conn.release()
     self.conn.release()
 
-# TO BE TESTED
 def insert_row(self, row_no):
     row_no = self.find_gap(row_no)  # where to insert new row
+    self.db_obj.cursor_row = row_no
     self.rows.insert(row_no,
         [self.db_obj.getval(col_name) for col_name in self.col_names])
     self.no_rows += 1
 
-# TO BE TESTED
 def update_row(self, row_no):
     self.rows[row_no] = [
         self.db_obj.getval(col_name) for col_name in self.col_names]
 
-# TO BE TESTED
 def delete_row(self, row_no):
     del self.rows[row_no]
     self.no_rows -= 1
