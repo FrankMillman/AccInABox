@@ -82,11 +82,20 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 
         if (col_defn.lkup) {
           input.expander = function() {  // press Space or click ButtonTop
-            var args = [input.ref];
+            var grid = input.grid;
+            if (!grid.row_amended) {
+              var args = [grid.ref, grid.active_row, grid.inserted];
+              send_request('start_row', args);
+              };
+            var args = [this.ref, this.value];
             send_request('req_lookup', args);
             };
           input.lookdown = function() {  // press Shift+Enter or click ButtonBottom
-            var args = [input.ref];
+            if (!grid.row_amended) {
+              var args = [grid.ref, grid.active_row, grid.inserted];
+              send_request('start_row', args);
+              };
+            var args = [this.ref];
             send_request('req_lookdown', args);
             };
           var btn_lng = 18;
