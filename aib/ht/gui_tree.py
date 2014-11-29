@@ -43,8 +43,12 @@ class GuiTree:
             select_cols = ['row_id', 'parent_num', 'descr', 'expandable']
             where = []
             order = [('parent_num', False), ('seq', False)]
-            tree_data = list(
-                conn.full_select(self.db_obj, select_cols, where, order))
+#           tree_data = list(
+#               conn.full_select(self.db_obj, select_cols, where, order))
+            # pyodbc returns a pyodbc.Row object, which cannot be JSON'd!
+            # this turns each row into a regular tuple
+            tree_data = [tuple(_) for _ in
+                conn.full_select(self.db_obj, select_cols, where, order)]
 
         gui.append(('tree', {
             'ref': self.ref,

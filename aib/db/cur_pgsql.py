@@ -57,9 +57,6 @@ def get_rows(self, from_row, to_row):
 
 def close(self):
     if self.cursor_active:
-        if self.debug:
-            print('commit')
-        self.conn.commit()
         self.cur.close()
         self.conn.release()
         self.no_rows = 0

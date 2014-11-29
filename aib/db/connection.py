@@ -164,12 +164,6 @@ class Conn:
         self.init(pos)
         self.pos = pos
 
-    def commit(self):
-        self.conn.commit()
-
-    def rollback(self):
-        self.conn.rollback()
-
     def exec_sql(self, sql, params=None):
         sql = sql.replace('$fx_', self.func_prefix)
         if params is None:
@@ -228,7 +222,7 @@ class Conn:
         try:
             self.cur.execute(sql, params)
         except self.exception as err:
-            self.conn.rollback()
+#           self.conn.rollback()  # debatable - we already rollback on exception
             logger.debug('ERROR {}'.format(err))  #[self.msg_pos]))
 #           return iter([])  # or 'raise'?
             raise
@@ -258,7 +252,7 @@ class Conn:
             self.cur.execute(sql, params)
         except self.exception as err:
             print(sql, params)
-            self.conn.rollback()
+#           self.conn.rollback()  # debatable - we already rollback on exception
             logger.debug('ERROR {}'.format(err.args[self.msg_pos]))
 #           return iter([])  # or 'raise'?
             raise
@@ -318,20 +312,61 @@ class Conn:
 #           ['({}) as {}'.format(col.sql, col.col_name) if col.sql is not None
 #               else 'a.{}'.format(col.col_name)
 #               for col in cols])
-        columns = []
-        for col_name in col_names:
-            if '.' in col_name:
-                src_colname, tgt_colname = col_name.split('.')
+
+        def get_fld_alias(col_name):
+            if '>' in col_name:
+                src_colname, tgt_colname = col_name.split('>')
                 src_fld = db_obj.getfld(src_colname)
                 tgt_fld = src_fld.foreign_key['tgt_field']
                 tgt_rec = tgt_fld.db_obj
                 fld = tgt_rec.getfld(tgt_colname)
                 if src_colname not in self.joins:
-                    self.build_join(db_obj, src_colname)
+                    self.build_join(db_obj, src_colname, tgt_fld)
                 alias = self.joins[src_colname]
             else:
                 fld = db_obj.getfld(col_name)
-                alias = 'a'
+                if fld.col_defn.col_type == 'alt':
+                    src_fld = fld.foreign_key['true_src']
+                    col_name = src_fld.col_name
+#                   tgt_fld = src_fld.foreign_key['tgt_field']
+#                   tgt_rec = tgt_fld.db_obj
+#                   fld = tgt_rec.getfld(tgt_colname)
+#                   fld = tgt_fld
+                    if col_name not in self.joins:
+                        tgt_fld = src_fld.foreign_key['tgt_field']
+                        self.build_join(db_obj, col_name, tgt_fld)
+                    alias = self.joins[col_name]
+                else:
+                    alias = 'a'
+            return fld, alias
+
+        columns = []
+        for col_name in col_names:
+            """
+            if '.' in col_name:
+                src_colname, tgt_colname = col_name.split('.')
+                src_fld = db_obj.getfld(src_colname)
+                tgt_fld = src_fld.foreign_key['tgt_field']
+                tgt_rec = tgt_fld.db_obj
+#               fld = tgt_rec.getfld(tgt_colname)
+                fld = tgt_fld
+                if src_colname not in self.joins:
+                    self.build_join(db_obj, src_colname, tgt_fld)
+                alias = self.joins[src_colname]
+            else:
+                fld = db_obj.getfld(col_name)
+                if fld.col_defn.col_type == 'alt':
+                    tgt_fld = fld.foreign_key['tgt_field']
+                    tgt_rec = tgt_fld.db_obj
+#                   fld = tgt_rec.getfld(tgt_colname)
+                    fld = tgt_fld
+                    if col_name not in self.joins:
+                        self.build_join(db_obj, col_name, tgt_fld)
+                    alias = self.joins[col_name]
+                else:
+                    alias = 'a'
+            """
+            fld, alias = get_fld_alias(col_name)
             if fld.sql:
                 sql = fld.sql.replace('$fx_', self.func_prefix)
                 sql = sql.replace('{company}', db_obj.data_company)
@@ -352,18 +387,22 @@ class Conn:
 
             for test, lbr, col_name, op, expr, rbr in where:
 
+                """
                 if '.' in col_name:
                     src_colname, tgt_colname = col_name.split('.')
                     src_fld = db_obj.getfld(src_colname)
                     tgt_fld = src_fld.foreign_key['tgt_field']
                     tgt_rec = tgt_fld.db_obj
-                    fld = tgt_rec.getfld(tgt_colname)
+#                   fld = tgt_rec.getfld(tgt_colname)
+                    fld = tgt_fld
                     if src_colname not in self.joins:
-                        self.build_join(db_obj, src_colname)
+                        self.build_join(db_obj, src_colname, tgt_fld)
                     alias = self.joins[src_colname]
                 else:
                     fld = db_obj.getfld(col_name)
                     alias = 'a'
+                """
+                fld, alias = get_fld_alias(col_name)
 
                 if fld.sql:
                     sql = fld.sql.replace('$fx_', self.func_prefix)
@@ -441,18 +480,22 @@ class Conn:
                 order_clause += '{}{}, '.format(order_by, desc)
                 """
 
+                """
                 if '.' in col_name:
                     src_colname, tgt_colname = col_name.split('.')
                     src_fld = db_obj.getfld(src_colname)
                     tgt_fld = src_fld.foreign_key['tgt_field']
                     tgt_rec = tgt_fld.db_obj
-                    fld = tgt_rec.getfld(tgt_colname)
+#                   fld = tgt_rec.getfld(tgt_colname)
+                    fld = tgt_fld
                     if src_colname not in self.joins:
-                        self.build_join(db_obj, src_colname)
+                        self.build_join(db_obj, src_colname, tgt_fld)
                     alias = self.joins[src_colname]
                 else:
                     fld = db_obj.getfld(col_name)
                     alias = 'a'
+                """
+                fld, alias = get_fld_alias(col_name)
                 if fld.sql:
                     order_list.append('({}){}'.format(fld.sql, desc))
                 else:
@@ -465,19 +508,19 @@ class Conn:
 
         return sql, params
 
-    def build_join(self, db_obj, src_colname):
+    def build_join(self, db_obj, src_colname, tgt_fld):
 
-        src_fld = self.db_obj.getfld(src_colname)
-        tgt_fld = src_fld.foreign_key['tgt_field']
+#       src_fld = db_obj.getfld(src_colname)
+#       tgt_fld = src_fld.foreign_key['tgt_field']
         tgt_table = tgt_fld.db_obj.table_name
 
-        data_company = db_obj.data_company
+        data_company = tgt_fld.db_obj.data_company
 
 #       assume only single keys for now
         alias = chr(98+len(self.joins))  # b,c,d ...
         test = '{}.{} = a.{} '.format(alias, tgt_fld.col_name, src_colname)
         self.tablenames += ' LEFT JOIN {}.{} {} ON {}'.format(
-            data_company, tgt_table, join_alias, test)
+            data_company, tgt_table, alias, test)
         self.joins[src_colname] = alias
 
 #-----------------------------------------------------------------------------
@@ -496,7 +539,8 @@ class DbConn(Conn):
         self.init(pos)
         self.pos = pos
 
-    def release(self):  # return connection to connection pool
+    def release(self, rollback=False):  # return connection to connection pool
+        self.conn.rollback() if rollback else self.conn.commit()
         _release_connection(self.pos)
 
 class MemConn(Conn):
@@ -514,7 +558,8 @@ class MemConn(Conn):
         self.pos = pos
         self.mem_id = mem_id
 
-    def release(self):  # return connection to connection pool
+    def release(self, rollback=False):  # return connection to connection pool
+        self.conn.rollback() if rollback else self.conn.commit()
         _release_mem_conn(self.mem_id, self.pos)
 
 #-----------------------------------------------------------------------------
@@ -541,14 +586,11 @@ class DbSession:
 
     * decrement 'no_connections'
     * if the number of connections becomes zero -
-
-      * check if a transaction is active - if yes, call commit()
       * return the connection to the connection pool
     """
     def __init__(self):
         self.conn = None
         self.no_connections = 0
-        self.transaction_active = False
 
     def __enter__(self):
         if self.conn is None:
@@ -561,20 +603,15 @@ class DbSession:
 
     def __exit__(self, type, exc, tb):
         if type is not None:  # an exception occurred
-            if self.transaction_active:
-                self.conn.rollback()
-                self.transaction_active = False
-            self.conn.release()  # return connection to pool
+            self.conn.cur.close()
+            self.conn.release(rollback=True)  # rollback, return connection to pool
             self.conn = None
             self.no_connections = 0
             return  # will reraise exception
         self.no_connections -= 1
         if not self.no_connections:
-            if self.transaction_active:
-                self.conn.commit()
-                self.transaction_active = False
             self.conn.cur.close()
-            self.conn.release()  # return connection to pool
+            self.conn.release()  # commit, return connection to pool
             self.conn = None
 
 #----------------------------------------------------------------------------
@@ -590,11 +627,6 @@ class MemSession:
 #       self.conn.cur = self.conn.cursor()
         self.conn = None
         self.no_connections = 0
-        self.transaction_active = False
-
-#   def __enter__(self):
-#       self.conn.timestamp = datetime.now()
-#       return self.conn
 
     def __enter__(self):
         if self.conn is None:
@@ -605,33 +637,18 @@ class MemSession:
         self.no_connections += 1
         return self.conn
 
-#   def __exit__(self, type, exc, tb):
-#       if type is not None:  # an exception occurred
-#           if self.transaction_active:
-#               self.conn.rollback()
-#               self.transaction_active = False
-#           return  # will reraise exception
-#       if self.transaction_active:
-#           self.conn.commit()
-#           self.transaction_active = False
-
     def __exit__(self, type, exc, tb):
         if type is not None:  # an exception occurred
-            if self.transaction_active:
-                self.conn.rollback()
-                self.transaction_active = False
-            self.conn.release()  # return connection to pool
+            self.conn.cur.close()
+            self.conn.release(rollback=True)  # rollback, return connection to pool
             self.conn = None
             self.no_connections = 0
             return  # will reraise exception
         self.no_connections -= 1
         if not self.no_connections:
-            if self.transaction_active:
-                self.conn.commit()
-                self.transaction_active = False
             self.conn.cur.close()
-            self.conn.release()  # return connection to pool
+            self.conn.release()  # commit, return connection to pool
             self.conn = None
 
-    def close(self):
+    def close(self):  # called from ht.form.close_form()
         _close_mem_connections(self.mem_id)

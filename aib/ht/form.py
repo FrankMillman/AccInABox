@@ -501,6 +501,7 @@ class Form:
                         db_obj.remove_amend_func(grid)
                     for db_obj in grid.on_read_dict:
                         db_obj.remove_read_func(grid)
+                    grid.db_obj.close_cursor()
 
                 for db_obj in frame.on_clean_set:
                     db_obj.remove_clean_func(frame)

@@ -237,17 +237,18 @@ class GuiGrid:
                 self.grid_cols.append(i)  # to xref cursor col to grid col
 
             self.col_names.append(col_name)
-            if '.' in col_name:
-                #obj_name, col_name = col_name.split('.')
-                #data_obj = self.data_objects[obj_name]
-                #fld = data_obj.getfld(col_name)
-                src_colname, tgt_colname = col_name.split('.')
-                src_fld = self.db_obj.getfld(src_colname)
-                tgt_fld = src_fld.foreign_key['tgt_field']
-                tgt_rec = tgt_fld.db_obj
-                fld = tgt_rec.getfld(tgt_colname)
-            else:
-                fld = self.db_obj.getfld(col_name)
+#           if '>' in col_name:
+#               #obj_name, col_name = col_name.split('.')
+#               #data_obj = self.data_objects[obj_name]
+#               #fld = data_obj.getfld(col_name)
+#               src_colname, tgt_colname = col_name.split('>')
+#               src_fld = self.db_obj.getfld(src_colname)
+#               tgt_fld = src_fld.foreign_key['tgt_field']
+#               tgt_rec = tgt_fld.db_obj
+#               fld = tgt_rec.getfld(tgt_colname)
+#           else:
+#               fld = self.db_obj.getfld(col_name)
+            fld = self.db_obj.getfld(col_name)
 
             ##redisp_ref = (self.ref, ref)
             #redisp_ref = (self.ref, grid_ref)
@@ -478,7 +479,8 @@ class GuiGrid:
             (self.no_rows, first_row, gui_rows, append_row, start_row))
 
         if self.grid_frame is not None:
-            yield from self.start_row(first_row, display=True)
+            if self.no_rows or append_row:
+                yield from self.start_row(first_row, display=True)
 
     @asyncio.coroutine
     def on_req_rows(self, first_row, last_row):
@@ -600,7 +602,7 @@ class GuiGrid:
 
     @asyncio.coroutine
     def on_selected(self, row):
-        yield from self.start_row(row)
+        yield from self.start_row(row, display=True)
         self.session.request.send_end_form(self.form)
         self.form.close_form()
         parent = self.form.parent
@@ -788,6 +790,7 @@ class GuiGrid:
         if self.inserted:
             self.no_rows += 1
             new_row = self.db_obj.cursor_row
+            self.session.request.check_redisplay()  # must do this first
             if new_row != self.current_row or self.inserted == -1:
                 self.session.request.send_move_row(self.ref, self.current_row, new_row)
             if new_row != self.current_row:

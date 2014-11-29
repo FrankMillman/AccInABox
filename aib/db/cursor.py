@@ -348,7 +348,7 @@ class Cursor:
 #       g.debug = 1
         rowno = self.start(search_str)
 #       g.debug = 0
-#       print('findGap', current_row, search_str, rowno, self.pos, self.row_data)
+#       print('find_gap', current_row, search_str, rowno, self.pos, self.row_data)
         if self.row_data[self.pos] == search_str:
             for key in self.key_cols:
                 if self.row_data[key[0]] > key[1]._value:
@@ -365,9 +365,11 @@ class Cursor:
         done = 0
         while not done:
             rowno -= 1
-            if rowno < 1:
-                rowno = 1
+#           if rowno < 1:
+#               rowno = 1
+            if rowno == 1:
                 done = 1
+                break
             self._fetch_row(rowno)
             for key in self.key_cols:
                 if self.row_data[key[0]] < self.db_obj.getval(key[1]):
@@ -380,9 +382,11 @@ class Cursor:
         done = 0
         while not done:
             rowno += 1
-            if rowno > self.no_rows:
-                rowno = self.no_rows
+#           if rowno > self.no_rows:
+#               rowno = self.no_rows
+            if rowno == self.no_rows:
                 done = 1
+                break
             self._fetch_row(rowno)
             for key in self.key_cols:
                 if self.row_data[key[0]] > self.db_obj.getval(key[1]):

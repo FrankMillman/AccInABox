@@ -89,7 +89,6 @@ def setup_db(cfg):
     user_row_id = 1
     sys_admin = True
     with db_session as conn:
-        db_session.transaction_active = True
         init.init_db.init_database(__main__, conn)
         init.init_forms.init_forms(__main__, conn)
         init.init_menus.init_menus(__main__, conn)

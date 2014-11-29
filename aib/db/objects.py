@@ -334,27 +334,28 @@ class DbObject:
                 self.on_read_func.remove(callback)
 
     def getfld(self, col_name):
-        if '.' in col_name:  # how is this used? [2013-05-10]
-            src_col, tgt_col = col_name.split('.')
+        if '>' in col_name:
+            src_col, tgt_col = col_name.split('>')
             src_fld = self.fields[src_col]
-            return src_fld.foreign_key['tgt_field']
+            tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
+            return tgt_rec.fields[tgt_col]
         return self.fields[col_name]
 
     def getval(self, col_name):
-        if '.' in col_name:
-            src_col, tgt_col = col_name.split('.')
+        if '>' in col_name:
+            src_col, tgt_col = col_name.split('>')
             src_fld = self.fields[src_col]
             tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
-            return tgt_rec.getval(tgt_col)
+            return tgt_rec.fields[tgt_col].getval()
         fld = self.fields[col_name]
         return fld.getval()
 
     def get_orig(self, col_name):
-        if '.' in col_name:
-            src_col, tgt_col = col_name.split('.')
+        if '>' in col_name:
+            src_col, tgt_col = col_name.split('>')
             src_fld = self.fields[src_col]
             tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
-            return tgt_rec.get_orig(tgt_col)
+            return tgt_rec.fields[tgt_col].get_orig()
         fld = self.fields[col_name]
         return fld.get_orig()
 
@@ -736,7 +737,6 @@ class DbObject:
         else:
             session = self.context.db_session
         with session as conn:
-            session.transaction_active = True
 
             if self.exists:  # update row
                 for before_update in self.before_update_xml:
@@ -881,9 +881,6 @@ class DbObject:
                 vals.append(fld.get_val_for_sql())
         if len(cols):  # there is something to update
             conn.update_row(self, cols, vals)
-#       else:  # do NOT do this - could be part of a larger transaction
-#           conn.rollback()  # release lock
-#           self.context.transaction_active = False
 
     def delete(self):
         self.check_perms(3)  # 3 = DELETE
@@ -907,7 +904,6 @@ class DbObject:
         else:
             session = self.context.db_session
         with session as conn:
-            session.transaction_active = True
             for before_delete in self.before_delete_xml:
                 db.db_xml.table_hook(self, before_delete)
             conn.delete_row(self)

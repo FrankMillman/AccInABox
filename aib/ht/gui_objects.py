@@ -143,14 +143,15 @@ class GuiTextCtrl(GuiCtrl):
             parent=self.parent, data_inputs=data_inputs,
             callback=(self.on_selected,))
         yield from sub_form.start_form(self.parent.session,
-            db_obj=tgt_obj, cursor=tgt_obj.db_table.default_cursor)
+            db_obj=tgt_obj, cursor=tgt_obj.db_table.default_cursor,
+            formdefn_company='_sys')
 
     @asyncio.coroutine
     def on_selected(self, caller, state, output_params):
         if state == 'completed':
             tgt_fld = self.fld.foreign_key['tgt_field']
             if tgt_fld.db_obj.exists:
-                self.fld.setval(tgt_fld.getval())
+                yield from self.fld.setval_async(tgt_fld.getval())
 
     @asyncio.coroutine
     def on_req_lookdown(self):  # user selected 'lookdown'

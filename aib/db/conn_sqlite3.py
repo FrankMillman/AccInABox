@@ -343,9 +343,8 @@ def delete_all(self, db_obj):
     if not db_obj.mem_obj:
         return  # can only delete all from mem_obj
 
-    sql = "delete from {}".format(table_name)
+    sql = "DELETE FROM {}".format(table_name)
     self.cur.execute(sql)
-    self.commit()
 
 def convert_string(self, string, db_scale=None):
     # sqlite3 requires fkey to reference unqualified table name
