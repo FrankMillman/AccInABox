@@ -211,6 +211,7 @@ def setup_roles(context, conn, company, company_name):
     db_table.setval('table_hooks', etree.fromstring(
         '<hooks><hook type="before_save"><increment_seq args="parent_id"/></hook>'
         '<hook type="after_delete"><decrement_seq args="parent_id"/></hook></hooks>'))
+    db_table.setval('default_cursor', 'role_list')
     db_table.setval('table_created', True)
     db_table.save()
     table_id = db_table.getval('row_id')
@@ -224,7 +225,7 @@ def setup_roles(context, conn, company, company_name):
         'Deleted row id', 'Deleted', 'N', True, False, True, 0, 0, None, '0', None, None, None))
     params.append(('role', 'TEXT', 'Role', 'Role code',
         'Role', 'A', False, False, False, 15, 0, None, None, None, None, None))
-    params.append(('descr', 'TEXT', 'Description', 'description',
+    params.append(('descr', 'TEXT', 'Description', 'Description',
         'Description', 'N', False, False, True, 30, 0, None, None, None, None, None))
     fkey = []
     fkey.append(table_name)
@@ -300,6 +301,21 @@ def setup_roles(context, conn, company, company_name):
 
     db.setup_tables.setup_table(conn, company, table_name)
 
+    db_cursor = db.api.get_db_object(context, company, 'db_cursors')
+    db_cursor.setval('table_name', table_name)
+    db_cursor.setval('cursor_name', 'role_list')
+    db_cursor.setval('descr', 'List of roles')
+    columns = []
+    columns.append(('role', 80, False, False, False, None, None))
+    columns.append(('descr', 150, True, False, False, None, None))
+    db_cursor.setval('columns', columns)
+    filter = []
+    db_cursor.setval('filter', filter)
+    sequence = []
+    sequence.append(('role', False))
+    db_cursor.setval('sequence', sequence)
+    db_cursor.save()
+
     db_obj = db.api.get_db_object(context, company, 'adm_roles')
     db_obj.setval('role', 'admin')
     db_obj.setval('descr', 'Company adminstrator')
@@ -329,6 +345,9 @@ def setup_roles(context, conn, company, company_name):
 
     setup_menu('Setup roles', menu_id, -1, FORM,
         form_name='roles_setup')
+
+    setup_menu('Set up users roles', menu_id, -1, FORM,
+        form_name='users_roles')
 
 def setup_table_perms(context, conn, company):
     table_name = 'adm_table_perms'
@@ -400,8 +419,20 @@ def setup_table_perms(context, conn, company):
 
     db.setup_tables.setup_table(conn, company, table_name)
 
+    db_obj = db.api.get_db_object(context, company, 'sys_form_defns')
+    create_form(db_obj, 'roles_setup', 'Role setup')
+
 def setup_dir_users(context, conn, company):
     table_name = 'dir_users'
+    params = (1, table_name, True, '_sys', '_sys', True, True)
+    conn.cur.execute(
+        "INSERT INTO {}.db_tables "
+        "(created_id, table_name, audit_trail, defn_company, "
+        "data_company, read_only, table_created) "
+        "VALUES ({})".format(company, ', '.join([conn.param_style] * 7))
+        , params)
+
+    table_name = 'dir_users_companies'
     params = (1, table_name, True, '_sys', '_sys', True, True)
     conn.cur.execute(
         "INSERT INTO {}.db_tables "
@@ -473,4 +504,4 @@ def setup_users_roles(context, conn, company):
     db.setup_tables.setup_table(conn, company, table_name)
 
     db_obj = db.api.get_db_object(context, company, 'sys_form_defns')
-    create_form(db_obj, 'roles_setup', 'Role setup')
+    create_form(db_obj, 'users_roles', 'Set up users roles')

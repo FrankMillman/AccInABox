@@ -400,6 +400,8 @@ function create_grid_cell(col_span, col_defn, first, last) {
           var cell = this.parentNode.parentNode.firstChild;
           var grid = cell.grid;
           if (grid.frame.form.disable_count) return false;
+          if (!grid.has_focus)
+            grid.focus();
           if (cell.grid.get_active_cell() === cell)
             cell.input.expander();
           else {

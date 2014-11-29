@@ -179,6 +179,8 @@ AibText.prototype.set_prev_from_server = function(text, value) {
   };
 AibText.prototype.cell_data_changed = function(cell) {
   var grid = cell.grid;
+  if (!grid.subset_data.length)
+    return false;
   var subset_row = grid.first_grid_row - grid.first_subset_row + cell.grid_row;
   return cell.current_value !== grid.subset_data[subset_row][cell.grid_col];
   };

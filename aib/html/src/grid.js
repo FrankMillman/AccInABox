@@ -86,14 +86,17 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
             if (!grid.row_amended) {
               var args = [grid.ref, grid.active_row, grid.inserted];
               send_request('start_row', args);
+              grid.row_amended = true;
               };
             var args = [this.ref, this.value];
             send_request('req_lookup', args);
             };
           input.lookdown = function() {  // press Shift+Enter or click ButtonBottom
+            var grid = input.grid;
             if (!grid.row_amended) {
               var args = [grid.ref, grid.active_row, grid.inserted];
               send_request('start_row', args);
+              grid.row_amended = true;
               };
             var args = [this.ref];
             send_request('req_lookdown', args);
@@ -810,7 +813,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       if ( (new_row < grid.first_grid_row) ||
           (new_row >= (grid.first_grid_row+grid.num_grid_rows)) )
         grid.first_grid_row = (new_row - Math.round(grid.num_grid_rows/2));
-    };
+
+      };
 
     grid.draw_grid();
     grid.inserted = 0;
@@ -958,7 +962,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     if (grid.grid_frame !== null)
       grid.highlight_active_row();
     if (send_start_row) {
-      if (grid.grid_frame !== null) {
+      if (grid.grid_frame !== null && grid.total_rows() > 0) {
         if (grid.inserted)  // -1=appended row  1=inserted row
           grid.grid_frame.frame_amended = true;
         else
@@ -1225,7 +1229,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
   grid.handle_enter = function() {
     if (grid.lkup_select_ok)
       grid.send_selected()
-    else if (grid.active_row < grid.num_data_rows)
+    else if (grid.active_row < grid.total_rows())
       grid.req_cell_focus(grid.active_row+1, grid.active_col, true);
     };
 
@@ -1292,10 +1296,11 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
           (grid.active_col === 0) && (!grid.row_amended))
         grid.tab_to_ctrl(1)  //  move to next control on form
 
-      // if not growable and on last cell and tab, move to next control
-      else if (!grid.growable && (grid.active_row === grid.num_data_rows-1) &&
-          (grid.active_col === grid.num_cols-1))
-        grid.tab_to_ctrl(1)  //  move to next control on form
+// move next 4 lines to below grid_frame
+//    // if not growable and on last cell and tab, move to next control
+//    else if (!grid.growable && (grid.active_row === grid.num_data_rows-1) &&
+//        (grid.active_col === grid.num_cols-1))
+//      grid.tab_to_ctrl(1)  //  move to next control on form
 
       // if not on last cell in row, try move to next cell
       else if (grid.active_col < (grid.num_cols-1))
@@ -1330,6 +1335,11 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //        start_frame([grid.grid_frame.ref, grid.row_amended, true]);
 //        grid.has_focus = false;  // not elegant!
         }
+
+      // if not growable and on last cell and tab, move to next control
+      else if (!grid.growable && (grid.active_row === grid.num_data_rows-1) &&
+          (grid.active_col === grid.num_cols-1))
+        grid.tab_to_ctrl(1)  //  move to next control on form
 
       // on last cell in row - req move to next row, send 'save = true' to server
       else

@@ -13,7 +13,7 @@ roles_setup = """
         allow_amend="false" max_len="0" db_scale="0"/>
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
         long_descr="Table name" col_head="Table" key_field="N" allow_null="false"
-        allow_amend="false" max_len="15" db_scale="0"/>
+        allow_amend="false" max_len="20" db_scale="0"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
         long_descr="Description" col_head="Description" key_field="N" allow_null="false"
         allow_amend="false" max_len="30" db_scale="0"/>
@@ -93,7 +93,7 @@ roles_setup = """
           <block/>
           <grid data_object="perm_view" growable="false" num_grid_rows="5">
             <cur_columns>
-              <cur_col col_name="table_name" lng="120" readonly="true"/>
+              <cur_col col_name="table_name" lng="140" readonly="true"/>
               <cur_col col_name="descr" lng="160" readonly="true"/>
               <cur_col col_name="sel_allowed" lng="40" after="
                 <<action>>
