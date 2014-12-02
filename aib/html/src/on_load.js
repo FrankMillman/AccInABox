@@ -49,7 +49,18 @@ function on_load() {
   favr_div.id = 'debug3';
   document.body.appendChild(favr_div);
 
-  window_id = Math.random();
+//  window_id = Math.random();
+  var ca = document.cookie.split(';');
+  var name = 'session_id=';
+  for(var i=0; i<ca.length; i++) {
+    var c = ca[i];
+    while (c.charAt(0)==' ') c = c.substring(1);  // strip leading spaces
+    if (c.indexOf(name) != -1) {
+      session_id = c.substring(name.length,c.length);
+      break;
+      };
+    };
+  document.cookie = "session_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC";
   //var randomnumber=Math.floor(Math.random()*11)  // from 0-10
   //Math.floor((Math.random()*100)+1); // from 1-100
   //Math.random().toString(36).substring(2, 9);  // from 2 to 8

@@ -14,6 +14,7 @@ import asyncio
 from urllib.parse import unquote
 from json import loads, dumps
 import itertools
+import random
 
 import logging
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ sessions = {}  # key=session_id, value=session instance
 
 class delwatcher:
     def __init__(self, obj):
-        self.name = obj.session_key
+        self.name = obj.session_id
         print('*** session', self.name, 'created ***')
     def __del__(self):
         print('*** session', self.name, 'deleted ***')
@@ -66,9 +67,9 @@ class Session:
       method depending on msg_type.
     """
 
-    def __init__(self, session_key, user_row_id):
-        logger.info('{} connected'.format(session_key))
-        self.session_key = session_key
+    def __init__(self, session_id, user_row_id):
+        logger.info('{} connected'.format(session_id))
+        self.session_id = session_id
         self.user_row_id = user_row_id
         self.save_user = None  # to store current user on change_user
         # during the login process, the only database activity available is
@@ -108,8 +109,8 @@ class Session:
         for root in list(self.active_roots.values()):
             for form in root.form_list:
                 form.close_form()
-        logger.info('{} closed'.format(self.session_key))
-        del sessions[self.session_key]
+        logger.info('{} closed'.format(self.session_id))
+        del sessions[self.session_id]
 
     def on_login(self, session, state, output_params):
         # callback from login_form - see get_login() below
@@ -226,7 +227,6 @@ def on_login_ok(caller, xml):
     session.user_row_id = dir_user.getval('row_id')
 #   session.sys_admin = dir_user.getval('sys_admin')
 
-dummy_id_counter = itertools.count(1)
 class RequestHandler:
     def __init__(self):
         self.reply = []
@@ -237,21 +237,34 @@ class RequestHandler:
 
     @asyncio.coroutine
     def get_login(self, writer, request):
-        session_key, message, rnd = request
+        session_id, message, rnd = request
 
-        # allocate dummy user id until logged on
-        user_row_id = -next(dummy_id_counter)  # negative id indicates dummy id
+#       # allocate dummy user id until logged on
+#       user_row_id = -next(dummy_id_counter)  # negative id indicates dummy id
+#
+#       # start new session to manage interaction with client
+#       session = self.session = Session(session_id, user_row_id)
+#       sessions[session_id] = session
+#       session.request = self
 
-        # start new session to manage interaction with client
-        session = self.session = Session(session_key, user_row_id)
-        sessions[session_key] = session
-        session.request = self
+        if session_id not in sessions:  # dangling client
+            print('ERROR - invalid session_id')
+            reply = dumps([('close_program', None)])  # tell it to stop 'ticking'
+            response = Response(writer, 200)
+            response.add_header('Content-type', 'text/html')
+            response.add_header('Transfer-Encoding', 'chunked')
+            response.send_headers()
+            response.write(reply)
+            response.write_eof()
+            return
+        self.session = sessions[session_id]
+        self.session.request = self
 
         company = '_sys'
         form_name = 'login_form'
 
-        form = ht.form.Form(company, form_name, callback=(session.on_login,))
-        yield from form.start_form(session)
+        form = ht.form.Form(company, form_name, callback=(self.session.on_login,))
+        yield from form.start_form(self.session)
 
         reply = dumps(self.reply)
 #       response = aiohttp.Response(writer, 200)
@@ -265,8 +278,8 @@ class RequestHandler:
     @asyncio.coroutine
 #   def handle_request(self, reader, writer, transport, _request_handler, request):
     def handle_request(self, writer, request):
-        session_key, messages, rnd = request
-        if session_key not in sessions:  # dangling client
+        session_id, messages, rnd = request
+        if session_id not in sessions:  # dangling client
             reply = dumps([('close_program', None)])  # tell it to stop 'ticking'
 #           response = aiohttp.Response(writer, 200)
             response = Response(writer, 200)
@@ -277,7 +290,7 @@ class RequestHandler:
             response.write_eof()
             return
 
-        self.session = sessions[session_key]
+        self.session = sessions[session_id]
         self.session.request = self
 #       self.reader = reader
         self.writer = writer
@@ -656,7 +669,7 @@ class CheckSessions(threading.Thread):
                     #session.close()  # assume connection is lost
                     sessions_to_close.append(session)  # assume connection is lost
             for session in sessions_to_close:
-                print('CLOSING', session.session_key)
+                print('CLOSING', session.session_id)
                 session.close()
             session = None  # to enable garbage collection
             sessions_to_close = None  # to enable garbage collection
@@ -667,6 +680,7 @@ class CheckSessions(threading.Thread):
 
 #----------------------------------------------------------------------------
 
+dummy_id_counter = itertools.count(1)
 def send_js(srv, path, dev):
 
 #   response = aiohttp.Response(srv.writer, 200)
@@ -679,6 +693,16 @@ def send_js(srv, path, dev):
             fname = 'init.gz'
             response.add_header('Content-type', 'text/html')
             response.add_header('Content-encoding', 'gzip')
+        session_id = str(random.SystemRandom().random())
+        response.add_header('Set-Cookie', 'session_id={};'.format(session_id))
+
+        # allocate dummy user id until logged on
+        user_row_id = -next(dummy_id_counter)  # negative id indicates dummy id
+
+        # start new session to manage interaction with client
+        session = Session(session_id, user_row_id)
+        sessions[session_id] = session
+
     else:
         fname = path
         if fname.endswith('.js'):

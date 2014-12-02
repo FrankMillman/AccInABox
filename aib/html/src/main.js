@@ -337,7 +337,7 @@ function send_message(url, message) {
     };
 
   var rnd = Math.random();
-  var msg = url + '?' + JSON.stringify([window_id, message, rnd]);
+  var msg = url + '?' + JSON.stringify([session_id, message, rnd]);
   xmlhttp.open('GET', msg, true);
   xmlhttp.send(null);
   };
