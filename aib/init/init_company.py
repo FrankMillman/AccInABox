@@ -34,7 +34,6 @@ def init_company(context, conn, company, company_name):
     setup_menus(context, conn, company, company_name)
     setup_roles(context, conn, company, company_name)
     setup_table_perms(context, conn, company)
-    setup_dir_users(context, conn, company)
     setup_users_roles(context, conn, company)
 
 def create_form(db_obj, form_name, title):
@@ -421,25 +420,6 @@ def setup_table_perms(context, conn, company):
 
     db_obj = db.api.get_db_object(context, company, 'sys_form_defns')
     create_form(db_obj, 'roles_setup', 'Role setup')
-
-def setup_dir_users(context, conn, company):
-    table_name = 'dir_users'
-    params = (1, table_name, True, '_sys', '_sys', True, True)
-    conn.cur.execute(
-        "INSERT INTO {}.db_tables "
-        "(created_id, table_name, audit_trail, defn_company, "
-        "data_company, read_only, table_created) "
-        "VALUES ({})".format(company, ', '.join([conn.param_style] * 7))
-        , params)
-
-    table_name = 'dir_users_companies'
-    params = (1, table_name, True, '_sys', '_sys', True, True)
-    conn.cur.execute(
-        "INSERT INTO {}.db_tables "
-        "(created_id, table_name, audit_trail, defn_company, "
-        "data_company, read_only, table_created) "
-        "VALUES ({})".format(company, ', '.join([conn.param_style] * 7))
-        , params)
 
 def setup_users_roles(context, conn, company):
     table_name = 'adm_users_roles'
