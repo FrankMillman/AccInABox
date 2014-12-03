@@ -237,7 +237,7 @@ class RequestHandler:
 
     @asyncio.coroutine
     def get_login(self, writer, request):
-        session_id, message, rnd = request
+        session_id, message = request
 
 #       # allocate dummy user id until logged on
 #       user_row_id = -next(dummy_id_counter)  # negative id indicates dummy id
@@ -278,7 +278,7 @@ class RequestHandler:
     @asyncio.coroutine
 #   def handle_request(self, reader, writer, transport, _request_handler, request):
     def handle_request(self, writer, request):
-        session_id, messages, rnd = request
+        session_id, messages = request
         if session_id not in sessions:  # dangling client
             reply = dumps([('close_program', None)])  # tell it to stop 'ticking'
 #           response = aiohttp.Response(writer, 200)
@@ -821,6 +821,7 @@ def handle_client(client_reader, client_writer):
     if not req_line:
         return
 #   print('Req line "{}"'.format(req_line))
+    headers = {}
     while True:
         header = yield from asyncio.wait_for(client_reader.readline(),
                                        timeout=10.0)
@@ -828,22 +829,30 @@ def handle_client(client_reader, client_writer):
             break
 #       print('Header "{}"'.format(header))
         key, val = (_.strip() for _ in header.rstrip().decode().lower().split(':', 1))
+        headers[key] = val
 
     try:
         method, path, version = req_line.decode().split(' ')
     except ValueError:
         print('***', req_line, '***')
         raise
-#   print('method = {!r}; path = {!r}; version = {!r}'.format(method, path, version))
+    if method == 'POST':
+#       print('method = {!r}; path = {!r}; version = {!r}'.format(method, path, version))
+
+        lng = int(headers['content-length'])
+        args = yield from asyncio.wait_for(client_reader.read(lng),
+                                       timeout=10.0)
+#       print('HDRS =', headers)
+#       print('ARGS =', args)
 
     if path.startswith('/send_req'):
-        path, args = path.split('?')
-        args = loads(unquote(args))
+#       path, args = path.split('?')
+        args = loads(unquote(args.decode()))
         request_handler = RequestHandler()
         yield from request_handler.handle_request(client_writer, args)
     elif path.startswith('/get_login'):
-        path, args = path.split('?')
-        args = loads(unquote(args))
+#       path, args = path.split('?')
+        args = loads(unquote(args.decode()))
         request_handler = RequestHandler()
         yield from request_handler.get_login(client_writer, args)
     elif path.startswith('/dev'):

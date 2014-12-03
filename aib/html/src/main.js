@@ -336,10 +336,12 @@ function send_message(url, message) {
       process_response(xmlhttp.responseText);
     };
 
-  var rnd = Math.random();
-  var msg = url + '?' + JSON.stringify([session_id, message, rnd]);
-  xmlhttp.open('GET', msg, true);
-  xmlhttp.send(null);
+  //var rnd = Math.random();
+  //var msg = url + '?' + JSON.stringify([session_id, message, rnd]);
+  //xmlhttp.open('GET', msg, true);
+  //xmlhttp.send(null);
+  xmlhttp.open('POST', url, true);
+  xmlhttp.send(JSON.stringify([session_id, message]));
   };
 
 function process_response(response_text) {
