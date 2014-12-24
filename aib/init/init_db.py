@@ -17,8 +17,8 @@ def init_database(context, conn):
     conn.create_functions()
     conn.create_company('_sys')
     # next function is external as it can be called when creating any company
-    import init_new.create_dbtbls_dbcols
-    init_new.create_dbtbls_dbcols.create_dbtbls_dbcols(context, conn, '_sys')
+    import init.create_dbtbls_dbcols
+    init.create_dbtbls_dbcols.create_dbtbls_dbcols(context, conn, '_sys')
     setup_db_tables(context, conn)
     setup_db_columns(context, conn)
 
@@ -328,7 +328,7 @@ def setup_other_tables(context, conn):
         setup_cursor(db_tbl, db_cur, table_name)
 
 def setup_table(db_tbl, db_col, table_name):
-    module = importlib.import_module('.tables.{}'.format(table_name), 'init_new')
+    module = importlib.import_module('.tables.{}'.format(table_name), 'init')
 
     tbl = getattr(module, 'table')
     db_tbl.init()
@@ -399,7 +399,7 @@ def setup_table(db_tbl, db_col, table_name):
         db_col.save()
 
 def setup_cursor(db_tbl, db_cur, table_name):
-    module = importlib.import_module('.tables.{}'.format(table_name), 'init_new')
+    module = importlib.import_module('.tables.{}'.format(table_name), 'init')
 
     cursors = getattr(module, 'cursors')
     for cur in cursors:
@@ -439,7 +439,7 @@ def setup_forms(context):
     parser = etree.XMLParser(
         schema=etree.XMLSchema(file=os.path.join(schema_path, 'form.xsd')),
         attribute_defaults=True, remove_comments=True, remove_blank_text=True)
-    form_path = os.path.join(os.path.dirname(__main__.__file__), 'init_new', 'forms')
+    form_path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'forms')
     db_obj = db.api.get_db_object(context, '_sys', 'sys_form_defns')
     db_table = db.api.get_db_object(context, '_sys', 'db_tables')
 

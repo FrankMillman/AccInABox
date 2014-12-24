@@ -9,9 +9,7 @@ from configparser import ConfigParser
 from collections import OrderedDict as OD
 
 import db.api
-import init_new.init_db
-#import init_new.init_forms
-#import init_new.init_menus
+import init.init_db
 
 def get_config():
     print()
@@ -89,9 +87,7 @@ def setup_db(cfg):
     user_row_id = 1
     sys_admin = True
     with db_session as conn:
-        init_new.init_db.init_database(__main__, conn)
-#       init_new.init_forms.init_forms(__main__, conn)
-#       init_new.init_menus.init_menus(__main__, conn)
+        init.init_db.init_database(__main__, conn)
 
 if __name__ == '__main__':
     cfg = get_config()
