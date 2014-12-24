@@ -65,12 +65,10 @@ form_defns = FormDefns()
 @asyncio.coroutine
 def start_setupgrid(session, company, table_name, cursor_name):
 #   table_name, cursor_name = (_.strip() for _ in option_data.split(','))
-    form = Form(company, 'setup_grid')
-#   db_obj = db.api.get_db_object(form, company, table_name)
+    form = Form(company, '_sys.setup_grid')
     try:
         yield from form.start_form(
-            session, db_obj=table_name, cursor=cursor_name,
-            formdefn_company='_sys')
+            session, db_obj=table_name, cursor=cursor_name)
     except AibError as err:
         form.close_form()
         raise
@@ -181,18 +179,26 @@ class Form:
             title = self.form_name
             self.data_objects = self.parent.data_objects
         else:  # read form_defn from 'sys_form_defns'
-            if formdefn_company is None:
+#           if formdefn_company is None:
+#               formdefn_company = self.company
+#           form_defn = form_defns[formdefn_company]
+#           form_defn.init()
+#           form_defn.select_row({'form_name': self.form_name})
+#           if not form_defn.exists:
+#               if db_obj is not None:
+#                   if db_obj.db_table.defn_company != formdefn_company:
+#                       form_defn = form_defns[db_obj.db_table.defn_company]
+#                       form_defn.init()
+#                       form_defn.select_row({'form_name': self.form_name})
+            if '.' in self.form_name:
+                formdefn_company, self.form_name = self.form_name.split('.')
+            else:
                 formdefn_company = self.company
             form_defn = form_defns[formdefn_company]
             form_defn.init()
             form_defn.select_row({'form_name': self.form_name})
             if not form_defn.exists:
-                if db_obj is not None:
-                    if db_obj.db_table.defn_company != formdefn_company:
-                        form_defn = form_defns[db_obj.db_table.defn_company]
-                        form_defn.init()
-                        form_defn.select_row({'form_name': self.form_name})
-            if not form_defn.exists:
+                del self.root.form_list[-1]
                 raise AibError(head='Form {}'.format(self.form_name),
                     body='Form does not exist')
             title = form_defn.getval('title')
@@ -214,7 +220,7 @@ class Form:
         self.setup_input_obj(input_params)
         self.setup_db_objects(form_defn.find('db_objects'))
         self.setup_mem_objects(form_defn.find('mem_objects'))
-        self.setup_input_attr(input_params)
+        yield from self.setup_input_attr(input_params)
 
         self.grids = []
         yield from self.setup_form(form_defn, title)
@@ -247,6 +253,7 @@ class Form:
         get history
     """
 
+    """
     def setup_formview(self, db_obj, form_defn):
         # substitute form elements from table's custom form definition
         #
@@ -337,6 +344,7 @@ class Form:
 
         for inline_form in custom_form.findall('inline_form'):
             form_defn.append(inline_form)
+    """
 
     def setup_input_obj(self, input_params):
         if input_params is None:
@@ -354,10 +362,15 @@ class Form:
                         raise
 
     def setup_db_objects(self, db_objects):
+        # if fkeys is True, only set up objects with fkey
+        # if fkeys is False, only set up objects without fkey
+        # reason - can have a db_obj with fkey to a mem_obj
         if db_objects is None:
             return  # can happen with inline form
         for obj_xml in db_objects:
             obj_name = obj_xml.get('name')
+            if obj_name in self.data_objects:
+                continue  # passed in as parameter
             db_parent = obj_xml.get('parent')
             if db_parent is not None:
                 db_parent = self.data_objects[db_parent]
@@ -423,6 +436,7 @@ class Form:
                     col_defn.get('sql')
                     )
 
+    @asyncio.coroutine
     def setup_input_attr(self, input_params):
         if input_params is None:
             return  # can happen with inline form
@@ -454,7 +468,7 @@ class Form:
                         func_name = target
                         module_name, func_name = func_name.rsplit('.', 1)
                         module = importlib.import_module(module_name)
-                        getattr(module, func_name)(self, value)
+                        yield from getattr(module, func_name)(self, value)
 
                 except KeyError:
                     if required:
@@ -466,9 +480,10 @@ class Form:
 
 #       if self.ctrl_grid is not None:
 #           title += ' - form view'
-        if self.table_name is not None:
-            title = title.replace('-', '- {} - '.format(
-                self.data_objects['db_obj'].db_table.short_descr))
+
+#       if self.table_name is not None:
+#           title = title.replace('-', '- {} - '.format(
+#               self.data_objects['db_obj'].db_table.short_descr))
 
         if self.parent is None:
             gui.append(('root', {'root_id': self.root.ref}))
@@ -484,7 +499,12 @@ class Form:
 #           obj = self.obj_dict[obj_id]
 #           print(obj_id, obj.ref, getattr(obj, 'pos', None), obj)
 
-        yield from frame.restart_frame()
+        try:
+            yield from frame.restart_frame()
+        except AibError:
+            self.session.request.send_end_form(self)
+            self.close_form()
+            raise
         
     def close_form(self):
         if hasattr(self, 'form_defn'):  # form has been started
@@ -591,7 +611,7 @@ class Frame:
         self.btn_dict = {}
         self.last_vld = -1
         self.temp_data = {}
-        self.grids = []  # list of grids created for this form
+        self.grids = []  # list of grids created for this frame
         self.flds_notified = []  # list of db fields notified for redisplay
 
         self.on_start_form = []
@@ -755,7 +775,7 @@ class Frame:
                 lkup = False
                 if fld.foreign_key is not None:
                     if element.get('lookup') != 'false':  # default to 'true'
-                        if element.get('readonly') != 'true':  # default to 'true'
+                        if element.get('readonly') != 'true':  # default to 'false'
                             if fld.foreign_key == {}:  # not yet set up
                                 fld.setup_fkey()
                             lkup = True  # tell client to set up 'lookup' button
@@ -815,8 +835,17 @@ class Frame:
                 fld.notify_form(gui_obj)
                 self.flds_notified.append((fld, gui_obj))
             elif element.tag == 'button':
-                button = ht.gui_objects.GuiButton(self, gui, element)
-                self.btn_dict[element.get('id')] = button
+                btn_label = element.get('btn_label')
+                lng = element.get('lng')
+                enabled = (element.get('btn_enabled') == 'true')
+                must_validate = (element.get('btn_validate') == 'true')
+                default = (element.get('btn_default') == 'true')
+                help_msg = element.get('help_msg', '')
+                btn_action = etree.fromstring(
+                    element.get('btn_action'), parser=parser)
+                button = ht.gui_objects.GuiButton(self, gui, btn_label, lng,
+                    enabled, must_validate, default, help_msg, btn_action)
+                self.btn_dict[element.get('btn_id')] = button
             elif element.tag == 'nb_start':
                 gui.append(('nb_start', None))
                 nb_firstpage = True
@@ -884,8 +913,17 @@ class Frame:
 #               template = getattr(ht.templates, template_name)  # class
 #               xml = getattr(template, btn_id)  # class attribute
 #               btn = etree.fromstring(xml, parser=parser)
-            button = ht.gui_objects.GuiButton(self, button_list, btn)
-#           self.btn_dict[btn_id] = button
+            btn_label = btn.get('btn_label')
+            lng = btn.get('lng')
+            enabled = (btn.get('btn_enabled') == 'true')
+            must_validate = (btn.get('btn_validate') == 'true')
+            default = (btn.get('btn_default') == 'true')
+            help_msg = btn.get('help_msg', '')
+            btn_action = etree.fromstring(
+                btn.get('btn_action'), parser=parser)
+            button = ht.gui_objects.GuiButton(self, button_list, btn_label,
+                lng, enabled, must_validate, default, help_msg, btn_action)
+            self.btn_dict[btn_id] = button
         if button_list:
             gui.append(('button_row', button_list))
 
@@ -1117,26 +1155,28 @@ class Frame:
 
     @asyncio.coroutine
     def do_navigate(self):
+        grid = self.ctrl_grid
         nav_type = self.nav_type  # set up in on_navigate() above
-        self.ctrl_grid.inserted = 0  # initialise
+        grid.inserted = 0  # initialise
         if nav_type == 'first':
             new_row = 0
         elif nav_type == 'prev':
-            new_row = self.ctrl_grid.current_row - 1
+            new_row = grid.current_row - 1
         elif nav_type == 'next':
-            new_row = self.ctrl_grid.current_row + 1
-            if new_row == self.ctrl_grid.no_rows:
-                self.ctrl_grid.inserted = -1
+            new_row = grid.current_row + 1
+            if new_row == grid.no_rows:
+                grid.inserted = -1
         elif nav_type == 'last':
-            if self.ctrl_grid.growable:
-                new_row = self.ctrl_grid.no_rows
-                self.ctrl_grid.inserted = -1
+            if grid.growable:
+                new_row = grid.no_rows
+                grid.inserted = -1
             else:
-                new_row = self.ctrl_grid.no_rows - 1
+                new_row = grid.no_rows - 1
         self.session.request.check_redisplay()  # redisplay row before cell_set_focus
-        self.session.request.send_cell_set_focus(self.ctrl_grid.ref, new_row, 0)
-        yield from self.ctrl_grid.start_row(new_row, display=True)
-        if self.ctrl_grid.grid_frame is None:  # else it is started automatically
+        first_col_obj = grid.obj_list[grid.grid_cols[0]]
+        self.session.request.send_cell_set_focus(grid.ref, new_row, first_col_obj.ref)
+        yield from grid.start_row(new_row, display=True)
+        if grid.grid_frame is None:  # else it is started automatically
             yield from self.restart_frame()
 
     @log_func
@@ -1248,7 +1288,15 @@ class Frame:
                 if isinstance(obj, ht.gui_grid.GuiGrid):
                     yield from obj.validate(save)
                 else:
-                    yield from obj.validate(self.temp_data)
+                    if obj.after_input is not None:  # steps to perform after input
+                        obj.fld._before_input = obj.fld.getval()
+                        yield from obj.validate(self.temp_data)  # can raise AibError
+                        self.last_vld = i
+                        yield from ht.form_xml.after_input(obj)
+                    else:
+                        yield from obj.validate(self.temp_data)  # can raise AibError
+                        self.last_vld = i
+
             except AibError as err:
                 if err.head is not None:
                     if type(obj) != ht.gui_grid.GuiGrid:
@@ -1261,7 +1309,7 @@ class Frame:
                     print()
                 raise
 
-            self.last_vld = i
+#           self.last_vld = i
 
     @asyncio.coroutine
     def validate_all(self, save=False):
@@ -1312,8 +1360,9 @@ class Frame:
         #self.session.request.check_redisplay()  # send any 'redisplay' messages
 
     def return_to_grid(self):
-        self.session.request.send_cell_set_focus(
-            self.ctrl_grid.ref, self.ctrl_grid.current_row, 0)
+        grid = self.ctrl_grid
+        first_col_obj = grid.obj_list[grid.grid_cols[0]]
+        self.session.request.send_cell_set_focus(grid.ref, grid.current_row, first_col_obj.ref)
 
     def return_to_tree(self):
         self.session.request.send_set_focus(self.tree.ref)

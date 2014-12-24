@@ -55,6 +55,7 @@ db_cursors = DbCursors()
 class GuiGrid:
     def __init__(self, parent, gui, element):
         self.current_row = None
+        self.btn_dict = {}
         self.last_vld = -1
         self.obj_list = []
         self.temp_data = {}
@@ -65,7 +66,7 @@ class GuiGrid:
         self.data_objects = parent.data_objects
         self.obj_name = element.get('data_object')
         self.db_obj = parent.data_objects[self.obj_name]
-        self.db_obj.check_perms(0)  # 0 = SELECT
+        self.db_obj.check_perms('select')
 
         #self.db_obj.init()   # in case form closed and re-opened (why?)
         self.parent = parent
@@ -146,26 +147,25 @@ class GuiGrid:
         cur_columns = element.find('cur_columns')
         if cur_columns is not None:  # cursor parameters part of form defn
             columns = []
-            for cur_col in cur_columns.findall('cur_col'):
-#               col = {}
-#               col['col_name'] = cur_col.get('col_name')
-#               col['lng'] = int(cur_col.get('lng'))
-#               col['expand'] = cur_col.get('expand') == 'true'
-#               col['readonly'] = cur_col.get('readonly') == 'true'
-#               col['reverse'] = cur_col.get('reverse') == 'true'
-#               col['lkup_ok'] = cur_col.get('lkup_ok') != 'false'
-#               col['choice_ok'] = cur_col.get('choice_ok') != 'false'
-#               col['validation'] = cur_col.get('validation')
-                col = [
-                    cur_col.get('col_name'),
-                    int(cur_col.get('lng')),
-                    cur_col.get('expand') == 'true',
-                    cur_col.get('readonly') == 'true',
-                    cur_col.get('reverse') == 'true',
-#                   cur_col.get('lkup_ok') != 'false',
-#                   cur_col.get('choice_ok') != 'false',
-                    cur_col.get('validation'),
-                    cur_col.get('after')]
+#           for cur_col in cur_columns.findall('cur_col'):
+            for cur_col in cur_columns.iterchildren():
+                if cur_col.tag == 'cur_col':
+                    col = [
+                        'cur_col',
+                        cur_col.get('col_name'),
+                        int(cur_col.get('lng')),
+                        cur_col.get('expand') == 'true',
+                        cur_col.get('readonly') == 'true',
+                        cur_col.get('reverse') == 'true',
+                        cur_col.get('validation'),
+                        cur_col.get('after')]
+                elif cur_col.tag == 'cur_btn':
+                    col = [
+                        'cur_btn',
+                        cur_col.get('btn_label'),
+                        cur_col.get('btn_id'),
+                        cur_col.get('lng'),
+                        cur_col.get('btn_action')]
                 columns.append(col)
             self.cursor_filter = []
             cur_filter = element.find('cur_filter')
@@ -183,9 +183,6 @@ class GuiGrid:
             cur_sequence = element.find('cur_sequence')
             if cur_sequence is not None:
                 for cur_seq in cur_sequence.findall('cur_seq'):
-#                   seq = {}
-#                   seq['col_name'] = cur_seq.get('col_name')
-#                   seq['desc'] = cur_seq.get('desc') == 'true'
                     seq = [
                         cur_seq.get('col_name'),
                         cur_seq.get('desc') == 'true']
@@ -213,7 +210,9 @@ class GuiGrid:
             if not db_cursor.exists:
                 raise AibError(head=db_obj.table_name,
                     body='Cursor {} does not exist'.format(cursor_name))
-            columns = db_cursor.getval('columns')
+#           columns = db_cursor.getval('columns')
+            columns = [
+                ['cur_col'] + col for col in db_cursor.getval('columns')]
             self.cursor_filter = db_cursor.getval('filter')
             self.cursor_sequence = db_cursor.getval('sequence')
 
@@ -228,43 +227,26 @@ class GuiGrid:
         gui_cols = []
         # we only create a grid column if lng is not 0
         # grid_cols is a list of the 'pos' of each cursor column
-        self.grid_cols = []
+        self.data_cols = []  # excludes where type = 'cur_btn'
+        self.grid_cols = []  # excludes where lng = 0
         expand_col = 0  # expand first column unless over-ridden
-        for i, (col_name, lng, expand, readonly, reverse, #lkup_ok, choice_ok,
-                validation, after) in enumerate(columns):
+#       for i, (col_name, lng, expand, readonly, reverse, #lkup_ok, choice_ok,
+#               validation, after) in enumerate(columns):
+        for i, col_defn in enumerate(columns):
+            if col_defn[0] == 'cur_col':
+                (col_name, lng, expand, readonly, reverse,
+                    validation, after) = col_defn[1:]
 
-            if lng:
-                self.grid_cols.append(i)  # to xref cursor col to grid col
+                data_col = len(self.data_cols)
+                self.data_cols.append(i)
+                if lng:
+#                   self.grid_cols.append(i)  # to xref cursor col to grid col
+                    self.grid_cols.append(data_col)  # to xref cursor col to grid col
+                data_col += 1
 
-            self.col_names.append(col_name)
-#           if '>' in col_name:
-#               #obj_name, col_name = col_name.split('.')
-#               #data_obj = self.data_objects[obj_name]
-#               #fld = data_obj.getfld(col_name)
-#               src_colname, tgt_colname = col_name.split('>')
-#               src_fld = self.db_obj.getfld(src_colname)
-#               tgt_fld = src_fld.foreign_key['tgt_field']
-#               tgt_rec = tgt_fld.db_obj
-#               fld = tgt_rec.getfld(tgt_colname)
-#           else:
-#               fld = self.db_obj.getfld(col_name)
-            fld = self.db_obj.getfld(col_name)
+                self.col_names.append(col_name)
+                fld = self.db_obj.getfld(col_name)
 
-            ##redisp_ref = (self.ref, ref)
-            #redisp_ref = (self.ref, grid_ref)
-            if False:  #readonly:  # 'display only' column
-                gui_obj = ht.gui_objects.GuiDisplay(self, fld)
-                choices = None
-                if fld.choices is not None:
-                    if not readonly:  #choice_ok:
-                        choices = fld.choices
-                gui_cols.append(('display', {'type': 'text', 'lng': lng,
-                    'maxlen': fld.col_defn.max_len, 'ref': gui_obj.ref,
-                    'help_msg': fld.col_defn.long_descr,
-                    'head': fld.col_defn.col_head,
-                    'password': '', 'readonly': readonly, 'lkup': False,
-                    'choices': choices}))
-            else:
                 gui_ctrl = ht.gui_objects.gui_ctrls[fld.col_defn.data_type]
                 pwd = ''
                 lkup = False
@@ -291,29 +273,43 @@ class GuiGrid:
                     gui_obj.after_input = etree.fromstring(
                         after, parser=parser)
 
-            gui_obj.grid = self
+                gui_obj.grid = self
 
-            fld.notify_form(gui_obj)
-            parent.flds_notified.append((fld, gui_obj))
+                fld.notify_form(gui_obj)
+                parent.flds_notified.append((fld, gui_obj))
 
-            if expand:
-                expand_col = i;
+                if expand:
+                    expand_col = i;
+
+            elif col_defn[0] == 'cur_btn':
+                btn_label, btn_id, lng, btn_action = col_defn[1:]
+                enabled = True
+                must_validate = True
+                default = False
+                help_msg = ''
+                btn_action = etree.fromstring(btn_action, parser=parser)
+                button = ht.gui_objects.GuiButton(self, gui_cols, btn_label,
+                    lng, enabled, must_validate, default, help_msg, btn_action)
+                self.btn_dict[btn_id] = button
+                button.grid = self
 
         num_grid_rows = int(element.get('num_grid_rows', 10))  # default to 10
         self.growable = (element.get('growable') == 'true')
         self.form_name = element.get('form_name')
 
+        """
         # each element in gui_cols is a tuple of ('input' or 'display', col_defn)
         # the client does not need the first element of the tuple, as it uses
         #   the col_defn attribute 'readonly' to distinguish between the two
         # therefore we strip off the first element and just send a list of col_defns
         col_defns = [col[1] for col in gui_cols]
+        """
         gui.append(('grid',
             {'ref':self.ref, 'growable':self.growable,
                 'num_grid_rows': num_grid_rows, 'expand_col': expand_col,
                 'colspan': element.get('colspan'),
                 'rowspan': element.get('rowspan')},
-            col_defns))
+            gui_cols)) #col_defns))
 
         toolbar = element.find('toolbar')
         if toolbar is not None:
@@ -459,12 +455,12 @@ class GuiGrid:
 
         gui_rows = []
         for cursor_row in self.cursor.fetch_rows(first_row, last_row):
-            gui_row = []
-            for pos in self.grid_cols:
+            data_row = []
+            for i, pos in enumerate(self.data_cols):
                 fld = self.obj_list[pos].fld
-                value = fld.val_to_str(fld.get_val_from_sql(cursor_row[pos]))
-                gui_row.append(value)
-            gui_rows.append(gui_row)
+                value = fld.val_to_str(fld.get_val_from_sql(cursor_row[i]))
+                data_row.append(value)
+            gui_rows.append([data_row[pos] for pos in self.grid_cols])
 
         self.current_row = None
         self.inserted = 0  # 0=existing row  -1=appended row  1=inserted row
@@ -487,14 +483,19 @@ class GuiGrid:
         with cursor_lock:  # not sure why this is necessary [2014-01-06]
             gui_rows = []
             for cursor_row in self.cursor.fetch_rows(first_row, last_row):
-                gui_row = []
-                for pos in self.grid_cols:
+#               gui_row = []
+#               for pos in self.grid_cols:
+#                   fld = self.obj_list[pos].fld
+#                   value = fld.val_to_str(cursor_row[pos])
+#                   gui_row.append(value)
+#               gui_rows.append(gui_row)
+                data_row = []
+                for i, pos in enumerate(self.data_cols):
                     fld = self.obj_list[pos].fld
-                    value = fld.val_to_str(cursor_row[pos])
-                    gui_row.append(value)
-                gui_rows.append(gui_row)
-#           from json import dumps
-#           print('sending', first_row, last_row, len(gui_rows), len(dumps(gui_rows)))
+                    value = fld.val_to_str(fld.get_val_from_sql(cursor_row[i]))
+                    data_row.append(value)
+                gui_rows.append([data_row[pos] for pos in self.grid_cols])
+
             append_row = False
             if self.growable:
                 if last_row == self.no_rows:
@@ -590,11 +591,13 @@ class GuiGrid:
                 self.db_obj.delete()
                 self.no_rows -= 1
             except AibError as err:
-                self.session.request.send_cell_set_focus(self.ref, row, 0)
+                first_col_obj = self.obj_list[self.grid_cols[0]]
+                self.session.request.send_cell_set_focus(self.ref, row, first_col_obj.ref)
                 raise
 
         self.session.request.send_delete_row(self.ref, row)
-        self.session.request.send_cell_set_focus(self.ref, row, 0)
+        first_col_obj = self.obj_list[self.grid_cols[0]]
+        self.session.request.send_cell_set_focus(self.ref, row, first_col_obj.ref)
         self.inserted = 0
         self.current_row = None
         if self.form_active:
@@ -623,15 +626,20 @@ class GuiGrid:
             assert self.current_row == row, 'row={} current_row={}'.format(
                 row, self.current_row)
 
-        form_name = self.form_name if self.form_name else 'setup_form'
+        form_name = (self.form_name if self.form_name
+            else self.db_obj.db_table.setup_form)
+
+        data_inputs = {}  # input parameters to be passed to sub-form
+        data_inputs['db_obj'] = self.db_obj
 
         sub_form = ht.form.Form(self.form.company, form_name,
-            parent=self, ctrl_grid=self,
+            parent=self, ctrl_grid=self, data_inputs=data_inputs,
             callback=(self.return_from_formview,))
         try:
-            yield from sub_form.start_form(self.session, db_obj=self.db_obj)
+            yield from sub_form.start_form(self.session)
         except AibError as err:
-            self.session.request.send_cell_set_focus(self.ref, row, 0)
+            first_col_obj = self.obj_list[self.grid_cols[0]]
+            self.session.request.send_cell_set_focus(self.ref, row, first_col_obj.ref)
             sub_form.close_form()
             raise
 
@@ -673,12 +681,16 @@ class GuiGrid:
 #           obj.ref, row, repr(value),
 #           self.current_row, self.growable, self.no_rows))
 
+        if self.current_row is None:
+            if self.growable and (row == self.no_rows):
+                self.inserted = -1
+            yield from self.start_row(row)
 #       if value != obj.fld.val_to_str():
         if value is not None:  # if None, value was not changed on client
-            if self.current_row is None:
-                if self.growable and (row == self.no_rows):
-                    self.inserted = -1
-                yield from self.start_row(row)
+#           if self.current_row is None:
+#               if self.growable and (row == self.no_rows):
+#                   self.inserted = -1
+#               yield from self.start_row(row)
             self.temp_data[obj.ref] = value
         self.set_last_vld(obj)
 
@@ -697,8 +709,8 @@ class GuiGrid:
             yield from self.validate_data(obj.pos)
         else:
             yield from self.end_current_row(save)
-        obj_col = self.grid_cols.index(obj.pos)
-        self.session.request.send_cell_set_focus(self.ref, row, obj_col)
+#       obj_col = self.grid_cols.index(obj.pos)
+        self.session.request.send_cell_set_focus(self.ref, row, obj.ref)
 
     @log_func
     def data_changed(self):
@@ -752,7 +764,7 @@ class GuiGrid:
 
     @asyncio.coroutine
     def cancel_end_row(self):
-        self.session.request.send_cell_set_focus(self.ref, self.current_row, -1)
+        self.session.request.send_cell_set_focus(self.ref, self.current_row, None)
         raise AibError(head=None, body=None)  # do not process more messages in this batch
 
     def reset_current_row(self):
@@ -782,7 +794,9 @@ class GuiGrid:
             self.db_obj.save()
         except AibError as err:
             if err.head is not None:
-                self.session.request.send_cell_set_focus(self.ref, self.current_row, 0)
+                first_col_obj = self.obj_list[self.grid_cols[0]]
+                self.session.request.send_cell_set_focus(
+                    self.ref, self.current_row, first_col_obj.ref)
             raise
         if debug:
             log.write('SAVED {}\n\n'.format(self.db_obj))
@@ -794,11 +808,13 @@ class GuiGrid:
             if new_row != self.current_row or self.inserted == -1:
                 self.session.request.send_move_row(self.ref, self.current_row, new_row)
             if new_row != self.current_row:
-                self.session.request.send_cell_set_focus(self.ref, new_row, 0)
+                first_col_obj = self.obj_list[self.grid_cols[0]]
+                self.session.request.send_cell_set_focus(
+                    self.ref, new_row, first_col_obj.ref)
             self.inserted = 0
             self.current_row = new_row
 
-        if self.form_active is None:  # else we are still on same row
+        if self.form_active is None and self.grid_frame is None:  # else we are still on same row
             self.reset_current_row()
 
 #   def do_restore(self):
@@ -827,19 +843,27 @@ class GuiGrid:
             obj = self.obj_list[i]
 
             try:
-                yield from obj.validate(self.temp_data)  # can raise AibError
+                if obj.after_input is not None:  # steps to perform after input
+                    obj.fld._before_input = obj.fld.getval()
+                    yield from obj.validate(self.temp_data)  # can raise AibError
+                    self.last_vld = i
+                    yield from ht.form_xml.after_input(obj)
+                else:
+                    yield from obj.validate(self.temp_data)  # can raise AibError
+                    self.last_vld = i
+
             except AibError as err:
                 if err.head is not None:
-                    obj_col = self.grid_cols.index(obj.pos)
+#                   obj_col = self.grid_cols.index(obj.pos)
                     self.session.request.send_cell_set_focus(self.ref,
-                        self.current_row, obj_col, err_flag=True)
+                        self.current_row, obj.ref, err_flag=True)
                     print('-'*20)
                     print(err.head)
                     print(err.body)
                     print('-'*20)
                 raise
 
-            self.last_vld = i
+#           self.last_vld = i
 
     @asyncio.coroutine
     def validate_all(self, save=False):
@@ -852,7 +876,9 @@ class GuiGrid:
         print('RESTORED', self.temp_data)
         for obj_ref in self.temp_data:
             self.session.request.obj_to_reset.append(obj_ref)
-        self.session.request.send_cell_set_focus(self.ref, self.current_row, 0)
+        first_col_obj = self.obj_list[self.grid_cols[0]]
+        self.session.request.send_cell_set_focus(
+            self.ref, self.current_row, first_col_obj.ref)
         self.session.request.obj_to_redisplay.append((self.ref, False))  # reset row_amended
         self.temp_data = {}
         if self.grid_frame is not None:
@@ -870,7 +896,9 @@ class GuiGrid:
         new_row = self.db_obj.cursor_row
         print('REPOS', self.current_row, '->', new_row)
         self.session.request.send_delete_row(self.ref, self.current_row)
-        self.session.request.send_cell_set_focus(self.ref, new_row, 0)
+        first_col_obj = self.obj_list[self.grid_cols[0]]
+        self.session.request.send_cell_set_focus(
+            self.ref, new_row, first_col_obj.ref)
         self.inserted = 0
         self.last_vld = len(self.obj_list)
         if self.form_active is not None:

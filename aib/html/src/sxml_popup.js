@@ -2,7 +2,7 @@ function sxml_popup(sxml) {
 
   popup.sxml = sxml;
 
-  popup.readonly = (sxml.disable_count > 0);
+  popup.readonly = sxml.readonly;
   popup.caption.data = 'Xml';
 
   popup.text.value = sxml.value;

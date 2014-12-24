@@ -1,5 +1,4 @@
-form_setup_gui = """
-<form name="form_setup_gui">
+<form name="setup_form_gui">
 
   <db_objects/>
 
@@ -241,8 +240,6 @@ form_setup_gui = """
     <output_param name="form_xml" type="data_attr" source="form.form_xml"/>
   </output_params>
 
-  <rules/>
-
   <frame main_object="form">
     <toolbar/>
     <body>
@@ -477,4 +474,3 @@ form_setup_gui = """
     </frame_methods>
   </frame>
 </form>
-"""

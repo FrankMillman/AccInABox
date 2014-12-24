@@ -1,4 +1,3 @@
-chg_pwd_form = """
 <form name="chg_pwd_form">
 
   <db_objects/>
@@ -20,14 +19,6 @@ chg_pwd_form = """
   <output_params>
     <output_param name="password" type="data_attr" source="pwd_var.password"/>
   </output_params>
-
-  <rules>
-<!--
-    <vld_rule fld_name="pwd_var.pwd2" errmsg="Passwords do not match">
-      <vld_compare src="$value" op="eq" tgt="pwd_var.pwd1"/>
-    </vld_rule>
--->
-  </rules>
 
   <frame>
     <toolbar/>
@@ -143,4 +134,3 @@ chg_pwd_form = """
     </frame_methods>
   </frame>
 </form>
-"""

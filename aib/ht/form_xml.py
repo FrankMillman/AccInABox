@@ -13,42 +13,23 @@ def on_click(caller, btn):  # caller can be frame or grid
     for xml in btn.xml:
         if debug: log.write('CLICK {} {}\n\n'.format(caller, xml.tag))
         yield from globals()[xml.tag](caller, xml)
-# what is this doing here??
-#       if caller.session.request.db_events:
-#           yield from exec_dbevents(caller)
 
 @asyncio.coroutine
 def on_answer(caller, elem):
     for xml in elem:
         yield from globals()[xml.tag](caller, xml)
-# what is this doing here??
-#       if caller.session.request.db_events:
-#           yield from exec_dbevents(caller)
 
 @asyncio.coroutine
 def exec_xml(caller, elem):  # caller can be frame or grid
     for xml in elem:
         if debug: log.write('EXEC {} {}\n\n'.format(caller, xml.tag))
         yield from globals()[xml.tag](caller, xml)
-# what is this doing here??
-#       if caller.session.request.db_events:
-#           yield from exec_dbevents(caller)
 
 @asyncio.coroutine
-def after_input(obj, prev_value):
-    obj.parent._prev_value = prev_value
+def after_input(obj):
     for xml in obj.after_input:
+        obj.parent._after_input = obj
         yield from globals()[xml.tag](obj.parent, xml)
-    del obj.parent._prev_value
-
-"""
-@asyncio.coroutine
-def exec_dbevents(caller):
-    db_events = caller.session.request.db_events[:]
-    caller.session.request.db_events.clear()
-    for sub_caller, action in db_events:
-        yield from exec_xml(sub_caller, action)
-"""
 
 #----------------------------------------------------------------------
 # the following functions are called via their xml.tag, using globals()
@@ -61,9 +42,6 @@ def case(caller, xml):
             for step in child:
                 if debug: log.write('STEP {} {}\n\n'.format(caller, step.tag))
                 yield from globals()[step.tag](caller, step)
-# what is this doing here??
-#               if caller.session.request.db_events:
-#                   yield from exec_dbevents(caller)
             break
 
 def obj_exists(caller, xml):
@@ -96,11 +74,11 @@ def data_changed(caller, xml):
 
 def fld_changed(caller, xml):
     # assume this is only called from after_input()
-    # _prev_value has been set up in after_input()
+    # _before_input has been set up before calling after_input()
     dbobj_name, fld_name = xml.get('name').split('.')
     dbobj = caller.data_objects[dbobj_name]
     fld = dbobj.getfld(fld_name)
-    return fld.getval() != caller._prev_value
+    return fld.getval() != fld._before_input
 
 def data_changed(caller, xml):
     return caller.data_changed()
@@ -361,9 +339,6 @@ def call(caller, xml):
     for xml in method:
         if debug: log.write('CALL {} {}\n\n'.format(caller, xml.tag))
         yield from globals()[xml.tag](caller, xml)
-# what is this doing here??
-#       if caller.session.request.db_events:
-#           yield from exec_dbevents(caller)
 
 @asyncio.coroutine
 def pyfunc(caller, xml):
@@ -372,13 +347,10 @@ def pyfunc(caller, xml):
     if '.' in func_name:
         module_name, func_name = func_name.rsplit('.', 1)
         module = importlib.import_module(module_name)
-        getattr(module, func_name)(caller, xml)
+        yield from getattr(module, func_name)(caller, xml)
     else:
         log.write('WHY NOT CALL {} DIRECTLY?\n\n'.format(func_name))
         yield from globals()[func_name](caller, xml)
-# what is this doing here??
-#   if caller.session.request.db_events:
-#       yield from exec_dbevents(caller)
 
 @asyncio.coroutine
 def return_to_grid(caller, xml):
@@ -467,7 +439,7 @@ def end_form(caller, xml):
                     func_name = source
                     module_name, func_name = func_name.rsplit('.', 1)
                     module = importlib.import_module(module_name)
-                    value = getattr(module, func_name)(form)
+                    value = yield from getattr(module, func_name)(form)
             else:
                 value = None
             return_params[name] = value
@@ -508,12 +480,6 @@ def return_from_subform(caller, state, output_params, calling_xml):
         "return[@state='{}']".format(state))
     for xml in callback:
         yield from globals()[xml.tag](caller, xml)
-# what is this doing here??
-#       if caller.session.request.db_events:
-#           yield from exec_dbevents(caller)
-
-#def close_program(caller, xml):
-#    caller.session.send_close_program()
 
 """
 def form_view(frame, xml):

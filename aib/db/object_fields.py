@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 import db.objects
 from db.chk_constraints import chk_constraint
 from db.validation_xml import check_rule
-from errors import AibError
+from errors import AibError, AibPerms
 
 debug = 0
 
@@ -42,7 +42,6 @@ class Field:
         self.sql = col_defn.sql
         self.gui_obj = []  # gui_objects to be notified of changes
         self.gui_subtype = None  # if set by form, notify gui on change
-        self.viewable = True
         self.vld_rules = []
         self.flds_to_recalc = []
         self.fkey_parent = None
@@ -338,6 +337,15 @@ class Field:
             chk_constraint(self, col_defn.col_chks, value)
 
     def continue_setval(self, value, display):
+
+        try:
+            self.db_obj.check_perms('setval', self.col_defn.row_id)
+        except AibPerms:
+            raise AibPerms(
+                head='Amend {}.{}'.format(self.table_name, self.col_name),
+                body='Permission denied'
+                )
+
         self._setval(value)  # will raise AibError on error
 
         # if we get here, all validations have passed
@@ -491,12 +499,16 @@ class Text(Field):
             return value
 
     def val_to_str(self, value=None):
-        if value is None:
-            value = self._value
-        if value is None:
-            return ''
-        else:
-            return value
+        try:
+            self.db_obj.check_perms('view', self.col_defn.row_id)
+            if value is None:
+                value = self._value
+            if value is None:
+                return ''
+            else:
+                return value
+        except AibPerms:
+            return '*'
 
     def prev_to_str(self):
         if self._prev is None:
@@ -694,11 +706,15 @@ class StringXml(Xml):
         self._orig = self._value
 
     def val_to_str(self, value=None):
-        if value is None:
-            value = self._value
-        if value is None:
-            return ''
-        return etree.tostring(value, encoding=str, pretty_print=True)
+        try:
+            self.db_obj.check_perms('view', self.col_defn.row_id)
+            if value is None:
+                value = self._value
+            if value is None:
+                return ''
+            return etree.tostring(value, encoding=str, pretty_print=True)
+        except AibPerms:
+            return '*'
 
     def concurrency_check(self):
         if self._curr_val is None:
@@ -763,12 +779,16 @@ class Integer(Field):
                 raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     def val_to_str(self, value=None):
-        if value is None:
-            value = self._value
-        if value is None:
-            return ''
-        else:
-            return str(value)
+        try:
+            self.db_obj.check_perms('view', self.col_defn.row_id)
+            if value is None:
+                value = self._value
+            if value is None:
+                return ''
+            else:
+                return str(value)
+        except AibPerms:
+            return '*'
 
     def prev_to_str(self):
         if self._prev is None:
@@ -842,9 +862,13 @@ class Decimal(Field):
                     body='Cannot exceed {} decimals'.format(scale))
 
     def val_to_str(self, value=None):
-        if value is None:
-            value = self._value
-        return self._format_output(value)
+        try:
+            self.db_obj.check_perms('view', self.col_defn.row_id)
+            if value is None:
+                value = self._value
+            return self._format_output(value)
+        except AibPerms:
+            return '*'
 
     def prev_to_str(self):
         return _format_output(self._prev)
@@ -903,14 +927,18 @@ class Date(Field):
                     body='"{}" is not a valid date'.format(value))
 
     def val_to_str(self, value=None):
-        if value is None:
-            value = self._value
-        elif isinstance(value, dtm):
-            value = dt(value.year, value.month, value.day)
-        if value is None:
-            return ''
-        else:
-            return value.isoformat()  # 'yyyy-mm-dd'  [same as str(value)]
+        try:
+            self.db_obj.check_perms('view', self.col_defn.row_id)
+            if value is None:
+                value = self._value
+            elif isinstance(value, dtm):
+                value = dt(value.year, value.month, value.day)
+            if value is None:
+                return ''
+            else:
+                return value.isoformat()  # 'yyyy-mm-dd'  [same as str(value)]
+        except AibPerms:
+            return '*'
 
     def prev_to_str(self):
         if self._prev is None:
@@ -965,7 +993,11 @@ class DateTime(Field):
         pass
 
     def val_to_str(self):
-        return str(self._value)[:19]
+        try:
+            self.db_obj.check_perms('view', self.col_defn.row_id)
+            return str(self._value)[:19]
+        except AibPerms:
+            return '*'
 
     def str_to_val(self, value):
         if value == '':
@@ -1048,12 +1080,16 @@ class Boolean(Field):
             return bool(int(value))
 
     def val_to_str(self, value=None):
-        if value is None:
-            value = self._value
-        if value is None:
-            return ''
-        else:
-            return str(int(value))
+        try:
+            self.db_obj.check_perms('view', self.col_defn.row_id)
+            if value is None:
+                value = self._value
+            if value is None:
+                return ''
+            else:
+                return str(int(value))
+        except AibPerms:
+            return '*'
 
     def prev_to_str(self):
         if self._prev is None:

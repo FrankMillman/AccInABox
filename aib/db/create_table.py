@@ -5,7 +5,7 @@ from errors import AibError
 
 #-----------------------------------------------------------------------------
 
-def setup_table(conn, company_id, table_name):
+def create_table(conn, company_id, table_name):
     conn.cur.execute(
         "SELECT * FROM {}.db_tables WHERE table_name = {}"
         .format(company_id, conn.param_style), (table_name,))
@@ -22,12 +22,6 @@ def setup_table(conn, company_id, table_name):
         "AND a.deleted_id = 0 order by a.col_type, a.seq"
         .format(defn_comp, defn_comp, conn.param_style), (table_name,))
     db_columns = conn.cur.fetchall()
-
-    create_table(conn, company_id, table_defn, db_columns)
-
-#-----------------------------------------------------------------------------
-
-def create_table(conn, company_id, table_defn, db_columns):
 
     cols = []
     pkeys = []

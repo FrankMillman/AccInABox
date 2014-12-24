@@ -1,10 +1,8 @@
-setup_grid = """
 <form name="setup_grid">
   <db_objects/>
   <mem_objects/>
   <input_params/>
   <output_params/>
-  <rules/>
   <frame main_object="db_obj">
     <toolbar/>
     <body>
@@ -18,4 +16,3 @@ setup_grid = """
     <frame_methods template="Setup_Grid"/>
   </frame>
 </form>
-"""

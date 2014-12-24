@@ -17,7 +17,7 @@ function AibCtrl() {};
 AibCtrl.prototype.onfocus = function(ctrl) {
   var inp = ctrl.childNodes[0];
   var dsp = ctrl.childNodes[1];
-  if (ctrl.disable_count) {
+  if (ctrl.readonly) {
 
 //    if (ctrl.tabIndex === -1) {
     if (dsp.style.display === 'none') {
@@ -61,9 +61,9 @@ AibCtrl.prototype.set_cell_value_from_server = function(grid, row, col, value) {
     cell.aib_obj.set_cell_value_lost_focus(cell, value);
     };
   };
-AibCtrl.prototype.set_disabled = function(ctrl, state) {
+AibCtrl.prototype.set_readonly = function(ctrl, state) {
   var dsp = ctrl.childNodes[1];
-  if (state)  // set to disabled
+  if (state)  // set to readonly
     dsp.style.color = 'grey';
   else  // set to enabled
     dsp.style.color = null;  //'navy';
@@ -77,7 +77,7 @@ AibText.prototype = new AibCtrl();
 AibText.prototype.after_got_focus = function(text) {
   var inp = text.childNodes[0];
   var dsp = text.childNodes[1];
-  if (text.disable_count) {
+  if (text.readonly) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -90,7 +90,7 @@ AibText.prototype.after_got_focus = function(text) {
     setInsertionPoint(inp, 0);  //inp.value.length);
   };
 AibText.prototype.before_lost_focus = function(text) {
-  if (text.disable_count)
+  if (text.readonly)
     return true;
   var inp = text.childNodes[0];
   if (text.multi_line === true)
@@ -104,7 +104,7 @@ AibText.prototype.before_lost_focus = function(text) {
 AibText.prototype.after_lost_focus = function(text) {
   var inp = text.childNodes[0];
   var dsp = text.childNodes[1];
-  if (text.disable_count) {
+  if (text.readonly) {
     dsp.style.border = '1px solid darkgrey';
     dsp.style.background = 'transparent';
     if (dsp.txt !== undefined)
@@ -253,7 +253,7 @@ AibNum.prototype = new AibCtrl();
 AibNum.prototype.after_got_focus = function(num) {
   var inp = num.childNodes[0];
   var dsp = num.childNodes[1];
-  if (num.disable_count) {
+  if (num.readonly) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -261,7 +261,7 @@ AibNum.prototype.after_got_focus = function(num) {
   setInsertionPoint(inp, 0, inp.value.length);
   };
 AibNum.prototype.before_lost_focus = function(num) {
-  if (num.disable_count)
+  if (num.readonly)
     return true;
   var inp = num.childNodes[0];
   num.current_value = inp.value;
@@ -457,7 +457,7 @@ AibDate.prototype = new AibCtrl();
 AibDate.prototype.after_got_focus = function(date) {
   var inp = date.childNodes[0];
   var dsp = date.childNodes[1];
-  if (date.disable_count) {
+  if (date.readonly) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -471,7 +471,7 @@ AibDate.prototype.after_got_focus = function(date) {
     date.pos = 0;
   };
 AibDate.prototype.before_lost_focus = function(date) {
-  if (date.disable_count)
+  if (date.readonly)
     return true;
   var inp = date.childNodes[0];
   date.valid = true;
@@ -605,7 +605,7 @@ AibDate.prototype.test_literal = function(date, pos) {
   return false;
   };
 AibDate.prototype.show_cal = function(date) {
-  if (date.disable_count)
+  if (date.readonly)
     return;
   show_cal(date, date.current_value, this.after_cal);
   date.selected = false;
@@ -950,7 +950,7 @@ AibBool.prototype.after_got_focus = function(bool) {
   bool.style.border = '1px solid black';
   if (bool.frame.form.focus_from_server)
     bool.className = 'error_background'
-  else if (bool.disable_count)
+  else if (bool.readonly)
     bool.className = 'readonly_background';
   else
     bool.className = 'focus_background';
@@ -963,7 +963,7 @@ AibBool.prototype.after_lost_focus = function(bool) {
   bool.style.border = '1px solid darkgrey';
   bool.has_focus = false;
   };
-AibBool.prototype.set_disabled = function(bool, state) {
+AibBool.prototype.set_readonly = function(bool, state) {
   if (state) {
     bool.style.color = 'grey';
 //    bool.style.background = '#f0f0f0';
@@ -979,7 +979,7 @@ AibBool.prototype.set_disabled = function(bool, state) {
 /*
 AibBool.prototype.onclick = function(bool) {
   if (bool.frame.form.disable_count) return false;
-  if (bool.disable_count) return false;
+  if (bool.readonly) return false;
 //  if (bool.frame.form.current_focus !== bool) {
 //    if (bool.has_focus)
 //      got_focus(bool);  // call lost_focus(), got_focus()
@@ -999,7 +999,7 @@ AibBool.prototype.onclick = function(bool) {
   };
 */
 AibBool.prototype.ondownkey = function(bool, e) {
-  if (bool.disable_count)
+  if (bool.readonly)
     return;
   if (e.keyCode === 32)
     this.chkbox_change(bool);
@@ -1177,7 +1177,7 @@ AibChoice.prototype = new AibCtrl();
 AibChoice.prototype.after_got_focus = function(choice) {
   var inp = choice.childNodes[0];
   var dsp = choice.childNodes[1];
-  if (choice.disable_count) {
+  if (choice.readonly) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -1375,7 +1375,7 @@ AibChoice.prototype.create_dropdown = function(choice) {
 //  this.after_selection(choice, pos);
 //  };
 AibChoice.prototype.onkey = function(choice, e) {
-  if (choice.disable_count)
+  if (choice.readonly)
     return;
   if (e.keyCode === 32) {  // space
     choice.on_selection = this.after_selection;
@@ -1525,7 +1525,7 @@ AibChoice.prototype.get_cell_value_for_server = function(cell) {
   };
 AibChoice.prototype.grid_create_dropdown = function(cell) {
   choice = cell.input;
-  if (choice.readonly || !choice.allow_amend)
+  if (choice.readonly || !(choice.allow_amend || cell.grid.inserted))
     return;
   cell.parentNode.appendChild(choice);
   choice.cell = cell;
@@ -1559,7 +1559,7 @@ AibSpin.prototype = new AibCtrl();
 AibSpin.prototype.after_got_focus = function(spin) {
   var inp = spin.childNodes[0];
   var dsp = spin.childNodes[1];
-  if (spin.disable_count) {
+  if (spin.readonly) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -1571,7 +1571,7 @@ AibSpin.prototype.before_lost_focus = function(spin) {
 AibSpin.prototype.after_lost_focus = function(spin) {
   var inp = spin.childNodes[0];
   var dsp = spin.childNodes[1];
-  if (spin.disable_count) {
+  if (spin.readonly) {
     dsp.style.border = '1px solid darkgrey';
     dsp.style.background = 'transparent';
     dsp.txt.style.background = '#f5f5f5';  // very light grey
@@ -1678,7 +1678,7 @@ AibSxml.prototype.after_got_focus = function(sxml) {
   if (sxml.frame.form.focus_from_server)
     //sxml.className = 'error_background'
     sxml.style.background = sxml.bg_error;
-  else if (sxml.disable_count)
+  else if (sxml.readonly)
     sxml.style.background = sxml.bg_disabled;
   else
     sxml.style.background = sxml.bg_focus;
@@ -1692,7 +1692,7 @@ AibSxml.prototype.after_lost_focus = function(sxml) {
   sxml.style.border = '1px solid darkgrey';
   sxml.has_focus = false;
   };
-AibSxml.prototype.set_disabled = function(sxml, state) {
+AibSxml.prototype.set_readonly = function(sxml, state) {
   if (state) {
     sxml.style.color = 'grey';
     }

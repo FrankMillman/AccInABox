@@ -77,21 +77,21 @@ class GuiCtrl:
         if self.ref in temp_data:  # user has entered a value
             value = self.fld.str_to_val(temp_data[self.ref])
             del temp_data[self.ref]
-        else:  # not in temp_data - use current value
+        else:  # not in temp_data - get current value, or if None, default value
             value = self.fld.getval()
+            if value is None:
+                value = self.fld.get_dflt()
         prev_value = self.fld.getval()
         yield from self.fld.setval_async(value)  # can raise AibError
 
-        if self.after_input is not None:  # steps to perform after input
-            yield from ht.form_xml.after_input(self, prev_value)
+#       if self.after_input is not None:  # steps to perform after input
+#           self.fld._prev_value = prev_value
+#           yield from ht.form_xml.after_input(self)
 
     def _redisplay(self):  # must only be called from db module
         if self.pwd:
             return  # do not send password back to client
-        if self.fld.viewable:
-            value = self.fld.val_to_str()  # prepare value for display
-        else:
-            value = '*'  # do not display value on client
+        value = self.fld.val_to_str()  # prepare value for display
         if hasattr(self.parent, 'current_row'):  # grid object
             if self.parent.current_row is None:
                 return  # entered in grid, then repos to existing row!
@@ -157,10 +157,13 @@ class GuiTextCtrl(GuiCtrl):
     def on_req_lookdown(self):  # user selected 'lookdown'
         tgt_obj = self.fld.foreign_key['tgt_field'].db_obj
         if tgt_obj.exists:
-            form_name = 'setup_form'
+#           form_name = 'setup_form'
+            form_name = tgt_obj.db_table.setup_form
+            data_inputs = {}  # input parameters to be passed to sub-form
+            data_inputs['db_obj'] = tgt_obj
             sub_form = ht.form.Form(self.parent.form.company,
-                form_name, parent=self.parent)
-            yield from sub_form.start_form(self.parent.session, db_obj=tgt_obj)
+                form_name, parent=self.parent, data_inputs=data_inputs)
+            yield from sub_form.start_form(self.parent.session)
 
 class GuiNumCtrl(GuiCtrl):
     def __init__(self, parent, fld, reverse, readonly, choices, fkey,
@@ -231,6 +234,7 @@ class GuiDisplay:
         self.col_name = fld.col_defn.col_name
         self.must_validate = True
         self.hidden = False  # for 'subtype' gui objects
+        self.after_input = None
 #       fld.notify_form(self)
 #       if fld._value:
 #           self._redisplay(fld._value)
@@ -251,10 +255,7 @@ class GuiDisplay:
     def _redisplay(self):
         if self.hidden:
             return  # do not send hidden objects back to client
-        if self.fld.viewable:
-            value = self.fld.val_to_str()  # prepare value for display
-        else:
-            value = '*'  # do not display value on client
+        value = self.fld.val_to_str()  # prepare value for display
         if hasattr(self.parent, 'current_row'):  # grid object
             value = (self.parent.current_row, value)
         self.parent.session.request.obj_to_redisplay.append((self.ref, value))
@@ -292,30 +293,36 @@ class GuiDummy:  # dummy field to force validation of last real field
         for rule in self.vld_rules:  # 'rule' is a tuple of (ctx, xml)
             yield from check_rule(self, 'Dummy', rule, None)
 
-        if self.after_input is not None:  # steps to perform after input
-            yield from ht.form_xml.after_input(self)
+#       if self.after_input is not None:  # steps to perform after input
+#           yield from ht.form_xml.after_input(self)
 
 class GuiButton:
-    def __init__(self, parent, gui, element):
+#   def __init__(self, parent, gui, element):
+    def __init__(self, parent, gui, btn_label, lng, enabled,
+            must_validate, default, help_msg, btn_action):
 #       self.root_id = form.root_id
 #       self.form_id = form.form_id
         self.parent = parent
 #       self.xml = element
-        self.xml = etree.fromstring(element.get('btn_action'), parser=parser)
+#       self.xml = etree.fromstring(element.get('btn_action'), parser=parser)
+        self.xml = btn_action
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
         self.pos = pos
 
-        self.enabled = (element.get('btn_enabled') == 'true')
-        self.must_validate = (element.get('btn_validate') == 'true')
-        self.default = (element.get('btn_default') == 'true')
-        self.label = element.get('btn_label')
+#       self.enabled = (element.get('btn_enabled') == 'true')
+#       self.must_validate = (element.get('btn_validate') == 'true')
+#       self.default = (element.get('btn_default') == 'true')
+#       self.label = element.get('btn_label')
+#       help_msg = element.get('help_msg', '')
+        self.after_input = None
+        self.enabled = enabled
+        self.must_validate = must_validate
+        self.default = default
+        self.label = btn_label
         self.show = True
-        help_msg = element.get('help_msg', '')
-        gui.append(('button', {'label':self.label,
-            'lng':element.get('lng'), 'ref':self.ref,
+        gui.append(('button', {'label':self.label, 'lng':lng, 'ref':self.ref,
             'enabled':self.enabled, 'default':self.default, 'help_msg':help_msg}))
-        parent.btn_dict[element.get('btn_id')] = self
 
     def __str__(self):
         return "Button: '{}'".format(self.label)

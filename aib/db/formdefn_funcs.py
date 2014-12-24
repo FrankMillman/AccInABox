@@ -71,6 +71,8 @@ All the above has changed - to be documented!
 
 """
 
+import asyncio
+
 from lxml import etree
 parser = etree.XMLParser(remove_blank_text=True)
 
@@ -81,7 +83,7 @@ xsd_parser = etree.XMLParser(
     schema=etree.XMLSchema(file=os.path.join(schema_path, 'form.xsd')),
     attribute_defaults=True, remove_comments=True, remove_blank_text=True)
 
-from errors import AibError
+from errors import AibError, AibPerms
 from start import log, debug
 
 """
@@ -99,6 +101,7 @@ def load_form_xml(db_obj, xml):
     load_form_vars(db_obj, form_xml)
 """
 
+@asyncio.coroutine
 def init_xml(caller, xml):
     # called from sys_form_defns.form_view after form_name if db_obj does not exist
     form_defn = caller.data_objects['db_obj']
@@ -118,6 +121,7 @@ def init_xml(caller, xml):
 
     form_defn.setval('form_xml', form_xml)
 
+@asyncio.coroutine
 def load_db_objects(caller, xml):
     # called from form_setup_dbobj 'on_start_form'
     form = caller.data_objects['form']
@@ -156,6 +160,7 @@ def load_db_objects(caller, xml):
 
     form.save()  # to trigger 'on_clean' method
 
+@asyncio.coroutine
 def restore_db_objects(caller, xml):
     # called from form_setup_dbobj 'do_restore'
     form = caller.data_objects['form']
@@ -175,6 +180,7 @@ def restore_db_objects(caller, xml):
     caller.restart_frame()
     form.restore()
 
+@asyncio.coroutine
 def dump_db_objects(caller, xml):
     # called from form_setup_dbobj 'do_save'
     dbobj = caller.data_objects['dbobj']
@@ -199,6 +205,7 @@ def dump_db_objects(caller, xml):
 
     save_xml(caller, 'db_objects', dbobjs_xml)
 
+@asyncio.coroutine
 def load_mem_objects(caller, xml):
     # called from form_setup_memobj 'on_start_form'
     form = caller.data_objects['form']
@@ -237,6 +244,7 @@ def load_mem_objects(caller, xml):
 
     form.save()  # to trigger 'on_clean' method
 
+@asyncio.coroutine
 def restore_mem_objects(caller, xml):
     # called from form_setup_memobj 'do_restore'
     form = caller.data_objects['form']
@@ -257,6 +265,7 @@ def restore_mem_objects(caller, xml):
     form.restore()
     load_mem_objects(caller, xml)
 
+@asyncio.coroutine
 def dump_mem_objects(caller, xml):
     # called from form_setup_memobj 'do_save'
     memobj = caller.data_objects['memobj']
@@ -296,6 +305,70 @@ def dump_mem_objects(caller, xml):
     for caller, method in form.on_clean_func:  # frame methods
         caller.session.request.db_events.append((caller, method))
 
+@asyncio.coroutine
+def load_ioparams(caller, xml):
+    # called from setup_form_ioparams 'on_start_form'
+    form = caller.data_objects['form']
+
+    form_xml = form.getval('form_xml')
+    if form_xml is not None:
+        inputs = caller.data_objects['inputs']
+        for input_xml in form_xml.find('input_params'):
+            inputs.init(display=False)
+            inputs.set_val_from_xml('name', input_xml.get('name'))
+            inputs.set_val_from_xml('type', input_xml.get('type'))
+            inputs.set_val_from_xml('target', input_xml.get('target'))
+            inputs.set_val_from_xml('required', input_xml.get('required'))
+            inputs.save()
+
+        outputs = caller.data_objects['outputs']
+        for output_xml in form_xml.find('output_params'):
+            outputs.init(display=False)
+            outputs.set_val_from_xml('name', output_xml.get('name'))
+            outputs.set_val_from_xml('type', output_xml.get('type'))
+            outputs.set_val_from_xml('source', output_xml.get('source'))
+            outputs.save()
+
+    form.save()  # to trigger 'on_clean' method
+
+@asyncio.coroutine
+def restore_ioparams(caller, xml):
+    # called from setup_form_ioparams 'do_restore'
+    form = caller.data_objects['form']
+    inputs = caller.data_objects['inputs']
+    inputs.delete_all()
+    outputs = caller.data_objects['outputs']
+    outputs.delete_all()
+
+    caller.restart_frame()
+    form.restore()
+
+@asyncio.coroutine
+def dump_ioparams(caller, xml):
+    # called from setup_form_ioparams 'do_save'
+
+    inputs = caller.data_objects['inputs']
+    inputs_xml = etree.Element('input_params')
+    all_inputs = inputs.select_many(where=[], order=[('row_id', False)])
+    for _ in all_inputs:
+        input_xml = etree.SubElement(inputs_xml, 'input_param')
+        input_xml.set('name', inputs.get_val_for_xml('name'))
+        input_xml.set('type', inputs.get_val_for_xml('type'))
+        input_xml.set('target', inputs.get_val_for_xml('target'))
+        input_xml.set('required', inputs.get_val_for_xml('required'))
+    save_xml(caller, 'input_params', inputs_xml)
+
+    outputs = caller.data_objects['outputs']
+    outputs_xml = etree.Element('output_params')
+    all_outputs = outputs.select_many(where=[], order=[('row_id', False)])
+    for _ in all_outputs:
+        output_xml = etree.SubElement(outputs_xml, 'output_param')
+        output_xml.set('name', outputs.get_val_for_xml('name'))
+        output_xml.set('type', outputs.get_val_for_xml('type'))
+        output_xml.set('source', outputs.get_val_for_xml('source'))
+    save_xml(caller, 'output_params', outputs_xml)
+
+"""
 def load_input_params(caller, xml):
     # called from form_setup_inputs 'on_start_form'
     form = caller.data_objects['form']
@@ -389,7 +462,9 @@ def load_rules(caller, xml):
             rules.save()
 
     form.save()  # to trigger 'on_clean' method
+"""
 
+@asyncio.coroutine
 def load_frame(caller, xml):
     # called from form_setup_frame 'on_start_form'
     form = caller.data_objects['form']
@@ -469,6 +544,7 @@ def load_frame(caller, xml):
 
     form.save()  # to trigger 'on_clean' method
 
+@asyncio.coroutine
 def restore_frame(caller, xml):
     # called from form_setup_frame 'do_restore'
     form = caller.data_objects['form']
@@ -490,6 +566,7 @@ def restore_frame(caller, xml):
     caller.restart_frame()
     form.restore()
 
+@asyncio.coroutine
 def dump_frame(caller, xml):
     # called from form_setup_frame 'do_save'
     toolbar = caller.data_objects['toolbar']
@@ -837,7 +914,6 @@ def dump_data_objects(db_obj, form_xml):
 #   for pos in range(cursor.no_rows):
 #       dbobj.select_row_from_cursor(pos, display=False)
     all_dbobj = dbobj.select_many(where=[], order=[('row_id', False)])
-#   while next(all_dbobj):
     for _ in all_dbobj:
         dbobj_xml = etree.SubElement(db_objects, 'db_obj')
         dbobj_xml.set('name', dbobj.get_val_for_xml('name'))
@@ -852,7 +928,6 @@ def dump_data_objects(db_obj, form_xml):
 #           for pos in range(cursor.no_rows):
 #               dbhooks.select_row_from_cursor(pos, display=False)
             all_dbhooks = dbhooks.select_many(where=[], order=[('row_id', False)])
-#           while next(all_dbhooks):
             for _ in all_dbhooks:
                 if first:
                     dbhooks_xml = etree.SubElement(dbobj_xml, 'hooks')
@@ -871,7 +946,6 @@ def dump_data_objects(db_obj, form_xml):
 #   for pos in range(cursor.no_rows):
 #       memobj.select_row_from_cursor(pos, display=False)
     all_memobj = memobj.select_many(where=[], order=[('row_id', False)])
-#   while next(all_memobj):
     for _ in all_memobj:
         memobj_xml = etree.SubElement(mem_objects, 'mem_obj')
         memobj_xml.set('name', memobj.get_val_for_xml('name'))
@@ -894,7 +968,6 @@ def dump_data_objects(db_obj, form_xml):
 #       for pos in range(cursor.no_rows):
 #           memcol.select_row_from_cursor(pos, display=False)
         all_memcol = memcol.select_many(where=[], order=[('row_id', False)])
-#       while next(all_memcol):
         for _ in all_memcol:
             memcol_xml = etree.SubElement(memobj_xml, 'mem_col')
             memcol_xml.set('col_name', memcol.get_val_for_xml('col_name'))
@@ -1039,6 +1112,7 @@ def dump_frame2(db_obj, form_xml):
             methods_xml.append(etree.fromstring(methods.get_val_for_xml('method')))
 """
 
+@asyncio.coroutine
 def load_choices_xml(form, input_param):
     # called from 'choices' input_param
     print('LOAD choices', input_param)
@@ -1094,6 +1168,7 @@ def load_choices_xml(form, input_param):
             disp_names.setval('seq', seq)
             disp_names.save()
 
+@asyncio.coroutine
 def dump_choices_xml(form):
     # called from 'choices' output_param
     print('DUMP choices')
@@ -1141,9 +1216,10 @@ def dump_choices_xml(form):
 
     return output_param
 
+@asyncio.coroutine
 def load_cur_flds(caller, xml):
     # called from cursor_setup 'on_start_form'
-    db_cur = caller.data_objects['db_obj']
+    db_cur = caller.data_objects['db_cur']
     cur_col = caller.data_objects['column']
     cur_filter = caller.data_objects['filter']
     cur_seq = caller.data_objects['sequence']
@@ -1177,9 +1253,10 @@ def load_cur_flds(caller, xml):
         cur_seq.setval('seq', pos)
         cur_seq.save()
 
+@asyncio.coroutine
 def dump_cur_flds(caller, xml):
     # called from cursor_setup 'do_save'
-    db_cur = caller.data_objects['db_obj']
+    db_cur = caller.data_objects['db_cur']
     cur_col = caller.data_objects['column']
     cur_filter = caller.data_objects['filter']
     cur_seq = caller.data_objects['sequence']
@@ -1202,9 +1279,10 @@ def dump_cur_flds(caller, xml):
         sequence.append([fld.get_val_for_sql() for fld in cur_seq.select_cols[2:]])
     db_cur.setval('sequence', sequence)
 
+@asyncio.coroutine
 def load_user_comps(caller, xml):
-    # called from user_formview 'on_start_form'
-    user = caller.data_objects['db_obj']
+    # called from setup_user 'on_start_form'
+    user = caller.data_objects['user']
     comp = caller.data_objects['company']
     user_comps = caller.data_objects['user_comps']
     user_comp_orig = caller.data_objects['user_comp_orig']
@@ -1213,11 +1291,14 @@ def load_user_comps(caller, xml):
     if not user_comp_view.exists:
         # set up company ids and names up front
         all_comps = comp.select_many(where=[], order=[('company_id', False)])
-        for _ in all_comps:
-            user_comp_view.init()
-            user_comp_view.setval('company_id', comp.getval('company_id'))
-            user_comp_view.setval('company_name', comp.getval('company_name'))
-            user_comp_view.save()
+        try:
+            for _ in all_comps:
+                user_comp_view.init()
+                user_comp_view.setval('company_id', comp.getval('company_id'))
+                user_comp_view.setval('company_name', comp.getval('company_name'))
+                user_comp_view.save()
+        except AibPerms:
+            return  # this user has no permissions on dir_companies
 
     # we need to store orig at start, to compare at end to see what changed
     user_comp_orig.delete_all()  # initialise
@@ -1253,9 +1334,10 @@ def load_user_comps(caller, xml):
     # calling user.restore() seems to work
     user.restore(display=False)
 
+@asyncio.coroutine
 def dump_user_comps(caller, xml):
-    # called from user_formview 'do_save'
-    user = caller.data_objects['db_obj']
+    # called from setup_user 'do_save'
+    user = caller.data_objects['user']
     comp = caller.data_objects['company']
     user_comps = caller.data_objects['user_comps']
     user_comp_orig = caller.data_objects['user_comp_orig']
@@ -1289,114 +1371,332 @@ def dump_user_comps(caller, xml):
             user_comp_orig.setval('comp_admin', user_comp_view.getval('comp_admin'))
             user_comp_orig.save()
 
+@asyncio.coroutine
 def load_table_perms(caller, xml):
-    # called from roles_setup 'on_start_form'
+    # called from setup_roles 'on_start_form'
     role = caller.data_objects['role']
-    table = caller.data_objects['table']
-    perms = caller.data_objects['perms']
-    perm_view = caller.data_objects['perm_view']
-    perm_orig = caller.data_objects['perm_orig']
+    db_table = caller.data_objects['db_table']
+    tbl_perms = caller.data_objects['tbl_perms']
+    tbl_view = caller.data_objects['tbl_view']
+    tbl_orig = caller.data_objects['tbl_orig']
 
-    if not perm_view.exists:
+    if not tbl_view.exists:
         # set up table names and descriptions up front
-        all_tables = table.select_many(where=[], order=[('table_name', False)])
+        all_tables = db_table.select_many(where=[], order=[('table_name', False)])
         for _ in all_tables:
-            table_id = table.getval('row_id')
-            perm_view.init()
-            perm_view.setval('table_id', table_id)
-            perm_view.setval('table_name', table.getval('table_name'))
-            perm_view.setval('descr', table.getval('short_descr') or 'None')
-            perm_view.save()
+            table_id = db_table.getval('row_id')
+            tbl_view.init()
+            tbl_view.setval('table_id', table_id)
+            tbl_view.setval('table_name', db_table.getval('table_name'))
+            tbl_view.setval('descr', db_table.getval('short_descr') or 'None')
+            tbl_view.save()
 
     # we need to store orig at start, to compare at end to see what changed
-    perm_orig.delete_all()  # initialise
-    if role.exists:  # read permissions from db, populate perm_orig
-        all_perms = perms.select_many(where=[], order=[])
-        for _ in all_perms:
-            perm_orig.init()
-            perm_orig.setval('table_id', perms.getval('table_id'))
-            perm_orig.setval('sel_allowed', perms.getval('sel_allowed'))
-            perm_orig.setval('ins_allowed', perms.getval('ins_allowed'))
-            perm_orig.setval('upd_allowed', perms.getval('upd_allowed'))
-            perm_orig.setval('del_allowed', perms.getval('del_allowed'))
-            perm_orig.save()
+    tbl_orig.delete_all()  # initialise
+    if role.exists:  # read permissions from db, populate tbl_orig
+        # tbl_perms is a child of role, so it only selects for this role
+        all_tbl_perms = tbl_perms.select_many(where=[], order=[])
+        for _ in all_tbl_perms:
+            tbl_orig.init()
+            tbl_orig.setval('table_id', tbl_perms.getval('table_id'))
+            tbl_orig.setval('sel_ok', tbl_perms.getval('sel_ok'))
+            tbl_orig.setval('ins_ok', tbl_perms.getval('ins_ok'))
+            tbl_orig.setval('upd_ok', tbl_perms.getval('upd_ok'))
+            tbl_orig.setval('del_ok', tbl_perms.getval('del_ok'))
+            tbl_orig.save()
 
-    all_views = perm_view.select_many(where=[], order=[('table_name', False)])
-    for _ in all_views:
+    all_tbl_views = tbl_view.select_many(where=[], order=[])
+    for _ in all_tbl_views:
         if role.getval('parent_id') is None:  # company administrator
-            perm_view.setval('sel_allowed', True)
-            perm_view.setval('ins_allowed', True)
-            perm_view.setval('upd_allowed', True)
-            perm_view.setval('del_allowed', True)
+            tbl_view.setval('sel_ok', True)
+            tbl_view.setval('ins_ok', True)
+            tbl_view.setval('upd_ok', True)
+            tbl_view.setval('del_ok', True)
+            tbl_view.setval('sel_dsp', 'Y')
+            tbl_view.setval('ins_dsp', 'Y')
+            tbl_view.setval('upd_dsp', 'Y')
+            tbl_view.setval('del_dsp', 'Y')
         else:
-            perm_orig.init()
-            perm_orig.setval('table_id', perm_view.getval('table_id'))
-            if perm_orig.exists:
-                perm_view.setval('sel_allowed', perm_orig.getval('sel_allowed'))
-                perm_view.setval('ins_allowed', perm_orig.getval('ins_allowed'))
-                perm_view.setval('upd_allowed', perm_orig.getval('upd_allowed'))
-                perm_view.setval('del_allowed', perm_orig.getval('del_allowed'))
+            tbl_orig.init()
+            tbl_orig.setval('table_id', tbl_view.getval('table_id'))
+            if tbl_orig.exists:
+                sel_ok = tbl_orig.getval('sel_ok')
+                tbl_view.setval('sel_ok', sel_ok)
+                if sel_ok is True:
+                    tbl_view.setval('sel_dsp', 'Y')
+                elif sel_ok is False:
+                    tbl_view.setval('sel_dsp', 'N')
+                else:  # must be dict of columns allowed
+                    tbl_view.setval('sel_dsp', 'C')
+                ins_ok = tbl_orig.getval('ins_ok')
+                tbl_view.setval('ins_ok', ins_ok)
+                if ins_ok is True:
+                    tbl_view.setval('ins_dsp', 'Y')
+                else:  # must be False
+                    tbl_view.setval('ins_dsp', 'N')
+                upd_ok = tbl_orig.getval('upd_ok')
+                tbl_view.setval('upd_ok', upd_ok)
+                if upd_ok is True:
+                    tbl_view.setval('upd_dsp', 'Y')
+                elif upd_ok is False:
+                    tbl_view.setval('upd_dsp', 'N')
+                else:  # must be dict of columns allowed
+                    tbl_view.setval('upd_dsp', 'C')
+                del_ok = tbl_orig.getval('del_ok')
+                tbl_view.setval('del_ok', del_ok)
+                if del_ok is True:
+                    tbl_view.setval('del_dsp', 'Y')
+                else:  # must be False
+                    tbl_view.setval('del_dsp', 'N')
             else:
-                perm_view.setval('sel_allowed', False)
-                perm_view.setval('ins_allowed', False)
-                perm_view.setval('upd_allowed', False)
-                perm_view.setval('del_allowed', False)
-        perm_view.save()
-    # perm_view is a child of role
-    # perm_view.setval() sets perm_view to dirty, and so also sets role to dirty
-    # two problems -
-    #   it calls on_amend(), which sets save/return buttons to amended state
-    #   on escape, it asks if we want to save changes
-    # setting role.dirty to False solves the second one, but not the first
-    # calling role.restore() seems to work
+                tbl_view.setval('sel_ok', False)
+                tbl_view.setval('ins_ok', False)
+                tbl_view.setval('upd_ok', False)
+                tbl_view.setval('del_ok', False)
+                tbl_view.setval('sel_dsp', 'N')
+                tbl_view.setval('ins_dsp', 'N')
+                tbl_view.setval('upd_dsp', 'N')
+                tbl_view.setval('del_dsp', 'N')
+        tbl_view.save()
+    # tbl_view is a child of role
+    # tbl_view.setval() sets tbl_view to dirty, and so also sets role to dirty
+    # calling role.restore() resets it to clean
     role.restore(display=False)
 
+@asyncio.coroutine
 def dump_table_perms(caller, xml):
-    # called from roles_setup 'do_save'
+    # called from setup_roles 'do_save'
     role = caller.data_objects['role']
-    perms = caller.data_objects['perms']
-    perm_view = caller.data_objects['perm_view']
-    perm_orig = caller.data_objects['perm_orig']
+    tbl_perms = caller.data_objects['tbl_perms']
+    tbl_view = caller.data_objects['tbl_view']
+    tbl_orig = caller.data_objects['tbl_orig']
 
     if role.getval('parent_id') is None:  # company administrator
         return  # no permissions necessary
 
-    all_permview = perm_view.select_many(where=[], order=[])
-    for _ in all_permview:
-        perm_orig.init()
-        perm_orig.setval('table_id', perm_view.getval('table_id'))
-        if (
-                perm_view.getval('sel_allowed')
-                    != perm_orig.getval('sel_allowed')
-                or
-                perm_view.getval('ins_allowed')
-                    != perm_orig.getval('ins_allowed')
-                or
-                perm_view.getval('upd_allowed')
-                    != perm_orig.getval('upd_allowed')
-                or
-                perm_view.getval('del_allowed')
-                    != perm_orig.getval('del_allowed')
-                ):
-            perms.init()
-            perms.setval('table_id', perm_view.getval('table_id'))
+    all_tbl_views = tbl_view.select_many(where=[], order=[])
+    for _ in all_tbl_views:
+        tbl_orig.init()
+        tbl_orig.setval('table_id', tbl_view.getval('table_id'))
+        if tbl_orig.exists:
             if (
-                    perm_view.getval('sel_allowed') or
-                    perm_view.getval('ins_allowed') or
-                    perm_view.getval('upd_allowed') or
-                    perm_view.getval('del_allowed')
+                    tbl_view.getval('sel_ok')
+                        != tbl_orig.getval('sel_ok')
+                    or
+                    tbl_view.getval('ins_ok')
+                        != tbl_orig.getval('ins_ok')
+                    or
+                    tbl_view.getval('upd_ok')
+                        != tbl_orig.getval('upd_ok')
+                    or
+                    tbl_view.getval('del_ok')
+                        != tbl_orig.getval('del_ok')
                     ):
-                perms.setval('sel_allowed', perm_view.getval('sel_allowed'))
-                perms.setval('ins_allowed', perm_view.getval('ins_allowed'))
-                perms.setval('upd_allowed', perm_view.getval('upd_allowed'))
-                perms.setval('del_allowed', perm_view.getval('del_allowed'))
-                perms.save()
+                tbl_perms.init()
+                tbl_perms.setval('table_id', tbl_view.getval('table_id'))
+                if (
+                        tbl_view.getval('sel_ok') or
+                        tbl_view.getval('ins_ok') or
+                        tbl_view.getval('upd_ok') or
+                        tbl_view.getval('del_ok')
+                        ):
+                    tbl_perms.setval('sel_ok', tbl_view.getval('sel_ok'))
+                    tbl_perms.setval('ins_ok', tbl_view.getval('ins_ok'))
+                    tbl_perms.setval('upd_ok', tbl_view.getval('upd_ok'))
+                    tbl_perms.setval('del_ok', tbl_view.getval('del_ok'))
+                    tbl_perms.save()
+                    # in case we change again without moving off row
+                    tbl_orig.setval('sel_ok', tbl_view.getval('sel_ok'))
+                    tbl_orig.setval('ins_ok', tbl_view.getval('ins_ok'))
+                    tbl_orig.setval('upd_ok', tbl_view.getval('upd_ok'))
+                    tbl_orig.setval('del_ok', tbl_view.getval('del_ok'))
+                    tbl_orig.save()
+                else:
+                    tbl_perms.delete()
+                    tbl_orig.delete()  # in case we change again without moving off row
             else:
-                perms.delete()
+                if (
+                        tbl_view.getval('sel_ok') or
+                        tbl_view.getval('ins_ok') or
+                        tbl_view.getval('upd_ok') or
+                        tbl_view.getval('del_ok')
+                        ):
+                    tbl_perms.init()
+                    tbl_perms.setval('table_id', tbl_view.getval('table_id'))
+                    tbl_perms.setval('sel_ok', tbl_view.getval('sel_ok'))
+                    tbl_perms.setval('ins_ok', tbl_view.getval('ins_ok'))
+                    tbl_perms.setval('upd_ok', tbl_view.getval('upd_ok'))
+                    tbl_perms.setval('del_ok', tbl_view.getval('del_ok'))
+                    tbl_perms.save()
+                    # in case we change again without moving off row
+                    tbl_orig.setval('sel_ok', tbl_view.getval('sel_ok'))
+                    tbl_orig.setval('ins_ok', tbl_view.getval('ins_ok'))
+                    tbl_orig.setval('upd_ok', tbl_view.getval('upd_ok'))
+                    tbl_orig.setval('del_ok', tbl_view.getval('del_ok'))
+                    tbl_orig.save()
 
-            # in case we change again without moving off row
-            perm_orig.setval('sel_allowed', perm_view.getval('sel_allowed'))
-            perm_orig.setval('ins_allowed', perm_view.getval('ins_allowed'))
-            perm_orig.setval('upd_allowed', perm_view.getval('upd_allowed'))
-            perm_orig.setval('del_allowed', perm_view.getval('del_allowed'))
-            perm_orig.save()
+@asyncio.coroutine
+def load_col_perms(caller, xml):
+    # called from setup_roles.grid_frame 'on_start_form'
+    role = caller.data_objects['role']
+    tbl_view = caller.data_objects['tbl_view']
+    db_col = caller.data_objects['db_col']
+    col_view = caller.data_objects['col_view']
+
+    sel_ok = tbl_view.getval('sel_ok')
+    upd_ok = tbl_view.getval('upd_ok')
+
+    col_view.delete_all()
+    # set up column names and descriptions up front, for current table
+
+    # this is the correct filter for upd_ok, as only these are amendable
+    """
+    filter = [
+        ['WHERE', '', 'table_id', '=', tbl_view.getval('table_id'), ''],
+        ['AND', '', 'col_type', '!=', 'virt', ''],
+        ['AND', '', 'generated', '=', False, ''],
+        ['AND', '', 'allow_amend', '=', True, ''],
+        ]
+    """
+    # but as this is used for sel_ok as well as upd_ok, all columns must appear
+    filter = [
+        ['WHERE', '', 'table_id', '=', tbl_view.getval('table_id'), ''],
+        ]
+
+    all_cols = db_col.select_many(where=filter, order=[('col_type', False), ('seq', False)])
+    for _ in all_cols:
+        col_id = db_col.getval('row_id')
+
+        init_vals = {}
+        init_vals['col_id'] = col_id
+        init_vals['table_id'] = db_col.getval('table_id')
+        init_vals['col_name'] = db_col.getval('col_name')
+        init_vals['descr'] = db_col.getval('short_descr')
+        if sel_ok is True:
+            col_sel_ok = True
+        elif sel_ok is False:
+            col_sel_ok = False
+        else:  # must be dictionary of permitted columns
+            col_sel_ok = str(col_id) in sel_ok
+        init_vals['sel_ok'] = col_sel_ok
+        if upd_ok is True:
+            col_upd_ok = True
+        elif upd_ok is False:
+            col_upd_ok = False
+        else:  # must be dictionary of permitted columns
+            col_upd_ok = str(col_id) in upd_ok
+        init_vals['upd_ok'] = col_upd_ok
+
+        col_view.init(init_vals=init_vals)
+        col_view.save()
+
+@asyncio.coroutine
+def check_sel_ok(caller, xml):
+    # called from setup_roles.sel_dsp.after_input
+    tbl_view = caller.data_objects['tbl_view']
+    col_view = caller.data_objects['col_view']
+    old_val = tbl_view.getfld('sel_dsp')._before_input
+    new_val = tbl_view.getval('sel_dsp')
+    if new_val == 'N':
+        for row in range(col_view.cursor.no_rows):
+            col_view.set_cursor_row(row)
+            col_view.select_row_from_cursor(row, display=True)
+
+            col_view.setval('sel_ok', False)
+            col_view.save()
+        col_view.getfld('sel_ok').set_readonly(True)
+    elif new_val == 'Y':
+        for row in range(col_view.cursor.no_rows):
+            col_view.set_cursor_row(row)
+            col_view.select_row_from_cursor(row, display=True)
+
+            col_view.setval('sel_ok', True)
+            col_view.save()
+        col_view.getfld('sel_ok').set_readonly(True)
+    else:  # must be 'C'
+        col_view.getfld('sel_ok').set_readonly(False)
+
+    for grid in caller.grids:
+        yield from grid.start_grid()
+
+@asyncio.coroutine
+def check_upd_ok(caller, xml):
+    # called from setup_roles.upd_dsp.after_input
+    tbl_view = caller.data_objects['tbl_view']
+    col_view = caller.data_objects['col_view']
+    old_val = tbl_view.getfld('upd_dsp')._before_input
+    new_val = tbl_view.getval('upd_dsp')
+    if new_val == 'N':
+        for row in range(col_view.cursor.no_rows):
+            col_view.set_cursor_row(row)
+            col_view.select_row_from_cursor(row, display=True)
+
+            col_view.setval('upd_ok', False)
+            col_view.save()
+        col_view.getfld('upd_ok').set_readonly(True)
+    elif new_val == 'Y':
+        for row in range(col_view.cursor.no_rows):
+            col_view.set_cursor_row(row)
+            col_view.select_row_from_cursor(row, display=True)
+
+            col_view.setval('upd_ok', True)
+            col_view.save()
+        col_view.getfld('upd_ok').set_readonly(True)
+    else:  # must be 'C'
+        col_view.getfld('upd_ok').set_readonly(False)
+
+    for grid in caller.grids:
+        yield from grid.start_grid()
+
+@asyncio.coroutine
+def dump_col_perms(caller, xml):
+    # called from setup_roles.grid_frame 'do_save'
+    role = caller.data_objects['role']
+    tbl_view = caller.data_objects['tbl_view']
+    col_view = caller.data_objects['col_view']
+
+    if role.getval('parent_id') is None:  # company administrator
+        return  # no permissions necessary
+
+    check_sel = False
+    check_upd = False
+    
+    if tbl_view.getval('sel_dsp') == 'Y':
+        tbl_view.setval('sel_ok', True)
+    elif tbl_view.getval('sel_dsp') == 'N':
+        tbl_view.setval('sel_ok', False)
+    else:  # must be 'C'
+        tbl_view.setval('sel_ok', {})
+        check_sel = True
+    if tbl_view.getval('ins_dsp') == 'Y':
+        tbl_view.setval('ins_ok', True)
+    else:  # must be 'N'
+        tbl_view.setval('ins_ok', False)
+    if tbl_view.getval('upd_dsp') == 'Y':
+        tbl_view.setval('upd_ok', True)
+    elif tbl_view.getval('upd_dsp') == 'N':
+        tbl_view.setval('upd_ok', False)
+    else:  # must be 'C'
+        tbl_view.setval('upd_ok', {})
+        check_upd = True
+    if tbl_view.getval('del_dsp') == 'Y':
+        tbl_view.setval('del_ok', True)
+    else:  # must be 'N'
+        tbl_view.setval('del_ok', False)
+
+    if not check_sel and not check_upd:
+        return
+
+    all_col_views = col_view.select_many(where=[], order=[])
+    for _ in all_col_views:
+        col_id = str(col_view.getval('col_id'))
+        if check_sel:
+            if col_view.getval('sel_ok'):
+                sel_ok = tbl_view.getval('sel_ok')
+                sel_ok[col_id] = None
+                tbl_view.setval('sel_ok', sel_ok)
+        if check_upd:
+            if col_view.getval('upd_ok'):
+                upd_ok = tbl_view.getval('upd_ok')
+                upd_ok[col_id] = None
+                tbl_view.setval('upd_ok', upd_ok)

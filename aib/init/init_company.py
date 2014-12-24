@@ -10,7 +10,7 @@ parser = etree.XMLParser(
 
 from json import dumps
 from lxml import etree
-import db.setup_tables
+import db.create_table
 import db.api
 
 from itertools import count
@@ -141,7 +141,7 @@ def setup_db_columns(context, conn, company):
     db_table.setval('table_created', True)
     db_table.save()
 
-    db.setup_tables.setup_table(conn, company, table_name)
+    db.create_table.create_table(conn, company, table_name)
 
 def setup_db_cursors(context, conn, company):
     table_name = 'db_cursors'
@@ -152,7 +152,7 @@ def setup_db_cursors(context, conn, company):
     db_table.setval('table_created', True)
     db_table.save()
 
-    db.setup_tables.setup_table(conn, company, table_name)
+    db.create_table.create_table(conn, company, table_name)
 
 def setup_forms(context, conn, company):
     table_name = 'sys_form_defns'
@@ -163,7 +163,7 @@ def setup_forms(context, conn, company):
     db_table.setval('table_created', True)
     db_table.save()
 
-    db.setup_tables.setup_table(conn, company, table_name)
+    db.create_table.create_table(conn, company, table_name)
 
 def setup_menus(context, conn, company, company_name):
     table_name = 'sys_menu_defns'
@@ -174,7 +174,7 @@ def setup_menus(context, conn, company, company_name):
     db_table.setval('table_created', True)
     db_table.save()
 
-    db.setup_tables.setup_table(conn, company, table_name)
+    db.create_table.create_table(conn, company, table_name)
 
     db_obj = db.api.get_db_object(context, company, 'sys_menu_defns')
 
@@ -226,12 +226,13 @@ def setup_roles(context, conn, company, company_name):
         'Role', 'A', False, False, False, 15, 0, None, None, None, None, None))
     params.append(('descr', 'TEXT', 'Description', 'Description',
         'Description', 'N', False, False, True, 30, 0, None, None, None, None, None))
-    fkey = []
-    fkey.append(table_name)
-    fkey.append('row_id')
-    fkey.append(None)
-    fkey.append(None)
-    fkey.append(False)
+#   fkey = []
+#   fkey.append(table_name)
+#   fkey.append('row_id')
+#   fkey.append(None)
+#   fkey.append(None)
+#   fkey.append(False)
+    fkey = [table_name, 'row_id', None, None, False]
     params.append(('parent_id', 'INT', 'Parent id', 'Parent id',
         'Parent', 'N', False, True, True, 0, 0, None, None, None, fkey, None))
     params.append(('seq', 'INT', 'Sequence', 'Sequence', 'Seq',
@@ -298,7 +299,7 @@ def setup_roles(context, conn, company, company_name):
         db_column.setval('sql', param[11])
         db_column.save()
 
-    db.setup_tables.setup_table(conn, company, table_name)
+    db.create_table.create_table(conn, company, table_name)
 
     db_cursor = db.api.get_db_object(context, company, 'db_cursors')
     db_cursor.setval('table_name', table_name)
@@ -366,20 +367,22 @@ def setup_table_perms(context, conn, company):
         'Created row id', 'Created', 'N', True, False, True, 0, 0, None, '0', None, None, None))
     params.append(('deleted_id', 'INT', 'Deleted id',
         'Deleted row id', 'Deleted', 'N', True, False, True, 0, 0, None, '0', None, None, None))
-    fkey = []
-    fkey.append('adm_roles')
-    fkey.append('row_id')
-    fkey.append('role')
-    fkey.append('role')
-    fkey.append(True)
+#   fkey = []
+#   fkey.append('adm_roles')
+#   fkey.append('row_id')
+#   fkey.append('role')
+#   fkey.append('role')
+#   fkey.append(True)
+    fkey = ['adm_roles', 'row_id', 'role', 'role', True]
     params.append(('role_id', 'INT', 'Role id', 'Role id',
         'Role id', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
-    fkey = []
-    fkey.append('db_tables')
-    fkey.append('row_id')
-    fkey.append('table_name')
-    fkey.append('table_name')
-    fkey.append(False)
+#   fkey = []
+#   fkey.append('db_tables')
+#   fkey.append('row_id')
+#   fkey.append('table_name')
+#   fkey.append('table_name')
+#   fkey.append(False)
+    fkey = ['db_tables', 'row_id', 'table_name', 'table_name', True]
     params.append(('table_id', 'INT', 'Table id', 'Table id',
         'Table id', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
     params.append(('sel_allowed', 'BOOL', 'Select allowed?', 'Select allowed?',
@@ -416,7 +419,7 @@ def setup_table_perms(context, conn, company):
         db_column.setval('sql', None)
         db_column.save()
 
-    db.setup_tables.setup_table(conn, company, table_name)
+    db.create_table.create_table(conn, company, table_name)
 
     db_obj = db.api.get_db_object(context, company, 'sys_form_defns')
     create_form(db_obj, 'roles_setup', 'Role setup')
@@ -439,20 +442,22 @@ def setup_users_roles(context, conn, company):
         'Created row id', 'Created', 'N', True, False, True, 0, 0, None, '0', None, None, None))
     params.append(('deleted_id', 'INT', 'Deleted id',
         'Deleted row id', 'Deleted', 'N', True, False, True, 0, 0, None, '0', None, None, None))
-    fkey = []
-    fkey.append('_sys.dir_users')
-    fkey.append('row_id')
-    fkey.append('user_id')
-    fkey.append('user_id')
-    fkey.append(True)
+#   fkey = []
+#   fkey.append('_sys.dir_users')
+#   fkey.append('row_id')
+#   fkey.append('user_id')
+#   fkey.append('user_id')
+#   fkey.append(True)
+    fkey = ['_sys.dir_users', 'row_id', 'user_id', 'user_id', True]
     params.append(('user_row_id', 'INT', 'User row id', 'User row id',
         'User row id', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
-    fkey = []
-    fkey.append('adm_roles')
-    fkey.append('row_id')
-    fkey.append('role')
-    fkey.append('role')
-    fkey.append(True)
+#   fkey = []
+#   fkey.append('adm_roles')
+#   fkey.append('row_id')
+#   fkey.append('role')
+#   fkey.append('role')
+#   fkey.append(True)
+    fkey = ['adm_roles', 'row_id', 'role', 'role', True]
     params.append(('role_id', 'INT', 'Role id', 'Role id',
         'Role id', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
 
@@ -481,7 +486,7 @@ def setup_users_roles(context, conn, company):
         db_column.setval('sql', None)
         db_column.save()
 
-    db.setup_tables.setup_table(conn, company, table_name)
+    db.create_table.create_table(conn, company, table_name)
 
     db_obj = db.api.get_db_object(context, company, 'sys_form_defns')
     create_form(db_obj, 'users_roles', 'Set up users roles')

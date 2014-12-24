@@ -1,8 +1,7 @@
-cursor_form = """
 <form name="cursor_form">
   <db_objects/>
   <mem_objects>
-    <mem_obj name="column" descr="Cursor columns" parent="db_obj" hooks="
+    <mem_obj name="column" descr="Cursor columns" parent="db_cur" hooks="
         <<hooks>>
           <<hook type=`before_save`>><<increment_seq/>><</hook>>
           <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
@@ -33,7 +32,7 @@ cursor_form = """
         long_descr="Action to take after input" col_head="After" key_field="N"
         allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
-    <mem_obj name="filter" descr="Cursor filter" parent="db_obj" hooks="
+    <mem_obj name="filter" descr="Cursor filter" parent="db_cur" hooks="
         <<hooks>>
           <<hook type=`before_save`>><<increment_seq/>><</hook>>
           <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
@@ -61,7 +60,7 @@ cursor_form = """
         long_descr="Right bracket (if required)" col_head=")" key_field="N"
         allow_null="true" allow_amend="true" max_len="1" db_scale="0"/>
     </mem_obj>
-    <mem_obj name="sequence" descr="Cursor sequence" parent="db_obj" hooks="
+    <mem_obj name="sequence" descr="Cursor sequence" parent="db_cur" hooks="
         <<hooks>>
           <<hook type=`before_save`>><<increment_seq/>><</hook>>
           <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
@@ -80,10 +79,10 @@ cursor_form = """
   </mem_objects>
   <input_params>
     <!-- input_param name="db_table" type="data_obj" target="db_table" required="true"/ -->
+    <input_param name="db_obj" type="data_obj" target="db_cur" required="true"/>
   </input_params>
   <output_params/>
-  <rules/>
-  <frame main_object="db_obj">
+  <frame main_object="db_cur">
     <toolbar template="Setup_Form"/>
     <body>
       <block/>
@@ -92,11 +91,11 @@ cursor_form = """
       <col/>
       <text value="Name:"/>
       <col/>
-      <input fld="db_obj.cursor_name" lng="160"/>
+      <input fld="db_cur.cursor_name" lng="160"/>
       <col/>
       <text value="Description:"/>
       <col/>
-      <input fld="db_obj.descr" lng="250"/>
+      <input fld="db_cur.descr" lng="250"/>
       <block/>
       <string value="Columns:" lng="75"/>
       <grid data_object="column" growable="true" num_grid_rows="3">
@@ -190,7 +189,7 @@ cursor_form = """
           <method name="do_save" action="
             <<action>>
               <<pyfunc name=`db.formdefn_funcs.dump_cur_flds`/>>
-              <<save_obj obj_name=`db_obj`/>>
+              <<save_obj obj_name=`db_cur`/>>
             <</action>>
           "/>
         </frame_methods>
@@ -228,16 +227,15 @@ cursor_form = """
       <method name="do_save" action="
         <<action>>
           <<pyfunc name=`db.formdefn_funcs.dump_cur_flds`/>>
-          <<save_obj obj_name=`db_obj`/>>
+          <<save_obj obj_name=`db_cur`/>>
         <</action>>
       "/>
       <method name="do_restore" action="
         <<action>>
-          <<restore_obj obj_name=`db_obj`/>>
+          <<restore_obj obj_name=`db_cur`/>>
           <<pyfunc name=`db.formdefn_funcs.load_cur_flds`/>>
         <</action>>
       "/>
     </frame_methods>
   </frame>
 </form>
-"""

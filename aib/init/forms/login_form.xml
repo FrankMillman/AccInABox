@@ -1,4 +1,3 @@
-login_form = """
 <form name="login_form">
 
   <db_objects>
@@ -63,17 +62,6 @@ login_form = """
 
   <input_params/>
   <output_params/>
-
-  <rules>
-<!--
-    <vld_rule fld_name="var.pwd" errmsg="Invalid login">
-      <vld_select data_object="dir_user" key="user_id" value="var.user"/>
-    </vld_rule>
-    <vld_rule fld_name="var.pwd" errmsg="Invalid login">
-      <vld_hash method="sha1" src="$value" tgt="dir_user.password"/>
-    </vld_rule>
--->
-  </rules>
 
   <frame>
     <toolbar/>
@@ -241,4 +229,3 @@ login_form = """
     </frame_methods>
   </frame>
 </form>
-"""

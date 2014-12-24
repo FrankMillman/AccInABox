@@ -50,7 +50,7 @@ class Cursor:
         if self.cursor_active:
             self.close()
 
-        self.db_obj.check_perms(0)  # 0 = SELECT
+        self.db_obj.check_perms('select')
 
         if self.db_obj.mem_obj:
             session = self.db_obj.context.mem_session

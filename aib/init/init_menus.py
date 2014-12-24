@@ -1,7 +1,7 @@
 from lxml import etree
 from json import dumps
 import db.api
-import db.setup_tables
+import db.create_table
 
 # menu option types
 ROOT = '0'
@@ -16,8 +16,6 @@ menu_ids = {}
 def init_menus(context, conn):
     setup_menu_defns(context, conn)
     setup_menus(context)
-#   setup_menu_options(context, conn)
-#   setup_options(context)
 
 def setup_menu_defns(context, conn):
 
@@ -39,12 +37,13 @@ def setup_menu_defns(context, conn):
         'Y', True, False, False, 0, 0, None, None, None, None, None))
     params.append(('descr', 'TEXT', 'Description', 'Menu description',
         'Description', 'N', False, False, True, 30, 0, None, None, None, None, None))
-    fkey = []
-    fkey.append(table_name)
-    fkey.append('row_id')
-    fkey.append(None)
-    fkey.append(None)
-    fkey.append(False)
+#   fkey = []
+#   fkey.append(table_name)
+#   fkey.append('row_id')
+#   fkey.append(None)
+#   fkey.append(None)
+#   fkey.append(False)
+    fkey = [table_name, 'row_id', None, None, False]
     params.append(('parent_id', 'INT', 'Parent id', 'Parent id',
         'Parent', 'N', False, True, True, 0, 0, None, None, None, fkey, None))
     params.append(('seq', 'INT', 'Sequence', 'Sequence', 'Seq',
@@ -133,7 +132,7 @@ def setup_menu_defns(context, conn):
         db_column.setval('sql', param[11])
         db_column.save()
 
-    db.setup_tables.setup_table(conn, '_sys', table_name)
+    db.create_table.create_table(conn, '_sys', table_name)
 
 def setup_menus(context):
 

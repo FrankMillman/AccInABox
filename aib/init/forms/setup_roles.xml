@@ -1,0 +1,303 @@
+<form name="setup_roles">
+
+  <db_objects>
+    <db_obj name="role" table_name="adm_roles"/>
+    <db_obj name="db_table" table_name="db_tables"/>
+    <db_obj name="db_col" table_name="db_columns"/>
+    <db_obj name="tbl_perms" table_name="adm_table_perms" parent="role"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="tbl_view" descr="List of table permissions" parent="role">
+      <mem_col col_name="table_id" data_type="INT" short_descr="Table id"
+        long_descr="Table id" col_head="" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
+        long_descr="Table name" col_head="Table" key_field="N" allow_null="false"
+        allow_amend="false" max_len="20" db_scale="0"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
+        long_descr="Description" col_head="Description" key_field="N" allow_null="false"
+        allow_amend="false" max_len="30" db_scale="0"/>
+      <mem_col col_name="sel_ok" data_type="JSON" short_descr="Select ok?"
+        long_descr="Select ok?" col_head="Sel?" key_field="N" allow_null="true"
+        allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="ins_ok" data_type="JSON" short_descr="Insert ok?"
+        long_descr="Insert ok?" col_head="Ins?" key_field="N" allow_null="true"
+        allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="upd_ok" data_type="JSON" short_descr="Update ok?"
+        long_descr="Update ok?" col_head="Upd?" key_field="N" allow_null="true"
+        allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="del_ok" data_type="JSON" short_descr="Delete ok?"
+        long_descr="Delete ok?" col_head="Del?" key_field="N" allow_null="true"
+        allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="sel_dsp" data_type="TEXT" short_descr="Select ok?"
+        long_descr="Select allowed?  Y/N/Specify column names" col_head="S" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="N"
+        choices="[false, false,
+          [[`Y`, `Yes`,  [], []], [`C`, `Col`, [], []], [`N`, `No`, [], []]]]"/>
+      <mem_col col_name="ins_dsp" data_type="TEXT" short_descr="Insert ok?"
+        long_descr="Insert allowed? Y/N" col_head="I" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="N"
+        choices="[false, false,
+          [[`Y`, `Yes`,  [], []], [`N`, `No`, [], []]]]"/>
+      <mem_col col_name="upd_dsp" data_type="TEXT" short_descr="Update ok?"
+        long_descr="Update allowed? Y/N/Specify column names" col_head="U" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="N"
+        choices="[false, false,
+          [[`Y`, `Yes`,  [], []], [`C`, `Col`, [], []], [`N`, `No`, [], []]]]"/>
+      <mem_col col_name="del_dsp" data_type="TEXT" short_descr="Delete ok?"
+        long_descr="Delete allowed? Y/N" col_head="D" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="N"
+        choices="[false, false,
+          [[`Y`, `Yes`,  [], []], [`N`, `No`, [], []]]]"/>
+    </mem_obj>
+    <mem_obj name="tbl_orig" descr="Current table permissions">
+      <mem_col col_name="table_id" data_type="INT" short_descr="Table id"
+        long_descr="Table id" col_head="" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="sel_ok" data_type="JSON" short_descr="Select ok?"
+        long_descr="Select ok?" col_head="Sel?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="ins_ok" data_type="JSON" short_descr="Insert ok?"
+        long_descr="Insert ok?" col_head="Ins?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="upd_ok" data_type="JSON" short_descr="Update ok?"
+        long_descr="Update ok?" col_head="Upd?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="del_ok" data_type="JSON" short_descr="Delete ok?"
+        long_descr="Delete ok?" col_head="Del?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0"/>
+    </mem_obj>
+    <mem_obj name="col_view" descr="List of column permissions" parent="tbl_view">
+      <mem_col col_name="table_id" data_type="INT" short_descr="Table id"
+        long_descr="Table id" col_head="" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`tbl_view`, `table_id`, null, null, true]"/>
+      <mem_col col_name="col_id" data_type="INT" short_descr="Column id"
+        long_descr="Column id" col_head="" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="Column" key_field="N" allow_null="false"
+        allow_amend="false" max_len="20" db_scale="0"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
+        long_descr="Description" col_head="Description" key_field="N" allow_null="false"
+        allow_amend="false" max_len="30" db_scale="0"/>
+      <mem_col col_name="sel_ok" data_type="BOOL" short_descr="Select ok?"
+        long_descr="Select ok?" col_head="Sel?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
+      <mem_col col_name="upd_ok" data_type="BOOL" short_descr="Update ok?"
+        long_descr="Update ok?" col_head="Upd?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
+    </mem_obj>
+  </mem_objects>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="role">
+    <toolbar/>
+    <body>
+      <block/>
+      <tree data_object="role" lng="250" height="350" toolbar="true"/>
+      <tree_frame main_object="role">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Role:"/>
+          <input fld="role.role" lng="80" validation="
+          <<validations>>
+            <<validation>>
+              <<case>>
+                <<obj_exists obj_name=`role`>>
+                  <<init_obj obj_name=`role`/>>
+                  <<error head=`Role code` body=`'$value' already exists`/>>
+                <</obj_exists>>
+              <</case>>
+            <</validation>>
+          <</validations>>
+            "/>
+          <col/>
+          <label value="Description:"/>
+          <input fld="role.descr" lng="150"/>
+          <col/>
+          <label value="Can delegate?"/>
+          <input fld="role.delegate"/>
+          <block/>
+          <grid data_object="tbl_view" growable="false" num_grid_rows="16">
+            <cur_columns>
+              <cur_col col_name="table_name" lng="140" readonly="true"/>
+              <cur_col col_name="sel_dsp" lng="20" readonly="true"
+              />
+<!--
+              after="
+                <<action>>
+                  <<case>>
+                    <<fld_changed name=`tbl_view.sel_ok`>>
+                      <<assign>>
+                        <<source>>tbl_view.sel_ok<</source>>
+                        <<target>>tbl_view.ins_ok<</target>>
+                      <</assign>>
+                      <<assign>>
+                        <<source>>tbl_view.sel_ok<</source>>
+                        <<target>>tbl_view.upd_ok<</target>>
+                      <</assign>>
+                      <<assign>>
+                        <<source>>tbl_view.sel_ok<</source>>
+                        <<target>>tbl_view.del_ok<</target>>
+                      <</assign>>
+                    <</fld_changed>>
+                  <</case>>
+                <</action>>
+              "
+-->
+              <cur_col col_name="ins_dsp" lng="20" readonly="true"/>
+              <cur_col col_name="upd_dsp" lng="20" readonly="true"/>
+              <cur_col col_name="del_dsp" lng="20" readonly="true"/>
+            </cur_columns>
+            <cur_filter/>
+            <cur_sequence/>
+            <grid_methods template="Setup_Grid"/>
+          </grid>
+          <grid_frame main_object="tbl_view">
+            <body>
+              <block/>
+              <panel/>
+              <row/>
+              <col colspan="2"/>
+              <input fld="tbl_view.table_name" lng="150" readonly="true"/>
+              <col colspan="2"/>
+              <input fld="tbl_view.descr" lng="150" readonly="true"/>
+              <row/>
+              <col/>
+              <label value="Select?"/>
+              <col/>
+              <label value="Insert?"/>
+              <col/>
+              <label value="Update?"/>
+              <col/>
+              <label value="Delete?"/>
+              <row/>
+              <col/>
+              <input fld="tbl_view.sel_dsp" lng="40" after="
+                <<action>>
+                  <<case>>
+                    <<fld_changed name=`tbl_view.sel_dsp`>>
+                      <<pyfunc name=`db.formdefn_funcs.check_sel_ok`/>>
+                    <</fld_changed>>
+                  <</case>>
+                <</action>>
+              "/>
+              <col/>
+              <input fld="tbl_view.ins_dsp" lng="40"/>
+              <col/>
+              <input fld="tbl_view.upd_dsp" lng="40" after="
+                <<action>>
+                  <<case>>
+                    <<fld_changed name=`tbl_view.upd_dsp`>>
+                      <<pyfunc name=`db.formdefn_funcs.check_upd_ok`/>>
+                    <</fld_changed>>
+                  <</case>>
+                <</action>>
+              "/>
+              <col/>
+              <input fld="tbl_view.del_dsp" lng="40"/>
+              <block/>
+              <grid data_object="col_view" growable="false" num_grid_rows="8">
+                <cur_columns>
+                  <cur_col col_name="col_name" lng="140" readonly="true"/>
+                  <cur_col col_name="sel_ok" lng="40" after="
+                    <<action>>
+                      <<case>>
+                        <<fld_changed name=`col_view.sel_ok`>>
+                          <<call method=`do_save`/>>
+                        <</fld_changed>>
+                      <</case>>
+                    <</action>>
+                  "/>
+                  <cur_col col_name="upd_ok" lng="40" after="
+                    <<action>>
+                      <<case>>
+                        <<fld_changed name=`col_view.upd_ok`>>
+                          <<call method=`do_save`/>>
+                        <</fld_changed>>
+                      <</case>>
+                    <</action>>
+                  "/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence/>
+                <grid_methods template="Setup_Grid"/>
+              </grid>
+            </body>
+            <button_row validate="true" template="Grid_Frame"/>
+            <frame_methods template="Grid_Frame">
+              <method name="on_start_form" action="
+                <<action>>
+                  <<pyfunc name=`db.formdefn_funcs.load_col_perms`/>>
+                <</action>>
+              "/>
+              <method name="do_save" action="
+                <<action>>
+                  <<pyfunc name=`db.formdefn_funcs.dump_col_perms`/>>
+                  <<save_obj obj_name=`tbl_view`/>>
+                <</action>>
+              "/>
+            </frame_methods>
+          </grid_frame>
+        </body>
+        <button_row validate="true" template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame">
+          <method name="on_start_form" action="
+            <<action>>
+              <<pyfunc name=`db.formdefn_funcs.load_table_perms`/>>
+            <</action>>
+          "/>
+          <method name="do_save" action="
+            <<action>>
+              <<save_obj obj_name=`role`/>>
+              <<pyfunc name=`db.formdefn_funcs.dump_table_perms`/>>
+              <<update_node/>>
+            <</action>>
+          "/>
+        </frame_methods>
+      </tree_frame>
+    </body>
+    <button_row validate="false">
+<!--
+      <button btn_id="btn_ok" btn_label="Ok" lng="60"
+        btn_enabled="true" btn_validate="true" btn_default="true"
+        btn_action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      <button btn_id="btn_can" btn_label="Cancel" lng="60"
+        btn_enabled="true" btn_validate="false" btn_default="false"
+        btn_action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+-->
+    </button_row>
+    <frame_methods>
+      <method name="on_req_close" action="
+        <<action>>
+         <<call method=`do_cancel`/>>
+        <</action>>
+      "/>
+      <method name="on_req_cancel" action="
+        <<action>>
+          <<call method=`do_cancel`/>>
+        <</action>>
+      "/>
+      <method name="do_cancel" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

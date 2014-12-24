@@ -138,12 +138,12 @@ class Session:
         with db_session as conn:
             for company, comp_name, comp_admin in list(self.select_companies(conn)):
 
-                if self.sys_admin:
-                    pass
-                elif comp_admin:
-                    self.perms[company] = '_admin_'  # allow full permissions
-                else:
-                    self.setup_permissions(conn, company)
+#               if self.sys_admin:
+#                   pass
+#               elif comp_admin:
+#                   self.perms[company] = '_admin_'  # allow full permissions
+#               else:
+#                   self.setup_permissions(conn, company)
 
                 comp_menu = []
                 comp_menu.append((
@@ -188,6 +188,7 @@ class Session:
                 )
         return db.api.exec_sql(conn, sql)
 
+    """
     def setup_permissions(self, conn, company):
         # user can have more than one role
         # roles could have differing permissions on the same table
@@ -195,10 +196,19 @@ class Session:
         # selecting max(...) ensures that if *any* of the roles give
         #   permission, then the user is granted permission
         self.perms[company] = {}  # key=table_id, value=permissions
+#       sql = (
+#           "SELECT a.table_id, "
+#           "MAX(CAST( a.sel_allowed AS INT )), MAX(CAST( a.ins_allowed AS INT )), "
+#           "MAX(CAST( a.upd_allowed AS INT )), MAX(CAST( a.del_allowed AS INT )) "
+#           "FROM {0}.adm_table_perms a "
+#           "LEFT JOIN {0}.adm_users_roles b ON b.role_id = a.role_id "
+#           "WHERE a.deleted_id = 0 AND b.user_row_id = {1} "
+#           "GROUP BY a.table_id"
+#           .format(company, self.user_row_id)
+#           )
         sql = (
             "SELECT a.table_id, "
-            "MAX(CAST( a.sel_allowed AS INT )), MAX(CAST( a.ins_allowed AS INT )), "
-            "MAX(CAST( a.upd_allowed AS INT )), MAX(CAST( a.del_allowed AS INT )) "
+            "MAX(a.all_ok), MAX(a.ins_ok), MAX(a.del_ok), MAX(a.upd_ok) , MAX(a.view_ok) "
             "FROM {0}.adm_table_perms a "
             "LEFT JOIN {0}.adm_users_roles b ON b.role_id = a.role_id "
             "WHERE a.deleted_id = 0 AND b.user_row_id = {1} "
@@ -206,9 +216,25 @@ class Session:
             .format(company, self.user_row_id)
             )
         cur = db.api.exec_sql(conn, sql)
-        for table_id, select_ok, insert_ok, update_ok, delete_ok in cur:
+        for table_id, all_ok, ins_ok, del_ok, upd_ok, view_ok in cur:
             self.perms[company][table_id] = (
-                select_ok, insert_ok, update_ok, delete_ok)
+                all_ok, ins_ok, del_ok, upd_ok, view_ok, {})
+        sql = (
+            "SELECT c.table_id, a.column_id, "
+            "MAX(CAST(a.upd_ok AS INT)), MAX(CAST(a.view_ok AS INT)) "
+            "FROM {0}.adm_column_perms a "
+            "LEFT JOIN {0}.adm_users_roles b ON b.role_id = a.role_id "
+            "LEFT JOIN {0}.db_columns c ON c.row_id = a.column_id "
+            "WHERE a.deleted_id = 0 AND b.user_row_id = {1} "
+            "GROUP BY a.column_id"
+            .format(company, self.user_row_id)
+            )
+        for table_id, column_id, upd_ok, view_ok in cur:
+            # self.perms is a dict - look up 'company'
+            # self.perms[company[table_id] is a tuple - get 5th element
+            # 5th element is a dictionary - update with column permissions
+            self.perms[company][table_id][5][column_id] = (upd_ok, view_ok)
+    """
 
     def select_options(self, conn, company):
         sql = (
@@ -220,6 +246,7 @@ class Session:
             )
         return db.api.exec_sql(conn, sql)
 
+@asyncio.coroutine
 def on_login_ok(caller, xml):
 #   called from login_form on entry of valid user_id and password
     session = caller.session
@@ -395,8 +422,8 @@ class RequestHandler:
 #       self._request_handler = None
 #       self.transport.close()
 
-    def send_cell_set_focus(self, grid_ref, row, col, err_flag=False):
-        self.reply.append(('cell_set_focus', (grid_ref, row, col, err_flag)))
+    def send_cell_set_focus(self, grid_ref, row, col_ref, err_flag=False):
+        self.reply.append(('cell_set_focus', (grid_ref, row, col_ref, err_flag)))
 
     def send_move_row(self, grid_ref, old_row, new_row):
         self.reply.append(('move_row', (grid_ref, old_row, new_row)))
@@ -459,11 +486,7 @@ class RequestHandler:
         elif opt_type == '3':  # form
 #           form = ht.form.Form(company, option_data)
             form = ht.form.Form(company, menu_defn.getval('form_name'))
-            try:
-                yield from form.start_form(self.session)
-            except AibError as err:
-                form.close_form()
-                raise
+            yield from form.start_form(self.session)
         elif opt_type == '4':  # report
             pass
         elif opt_type == '5':  # process
@@ -550,6 +573,12 @@ class RequestHandler:
         ref, row, save = args
         obj = self.session.get_obj(ref)
         yield from obj.grid.on_cell_req_focus(obj, row, save)
+
+    @asyncio.coroutine
+    def on_req_save_row(self, args):
+        ref, = args
+        grid = self.session.get_obj(ref)
+        yield from grid.end_current_row(save=True)
 
     @asyncio.coroutine
     def on_req_insert_row(self, args):
@@ -761,6 +790,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
 """
 
 import email.utils
+CHUNK = 8192
 class Response:
     def __init__(self, writer, status):
         self.writer = writer
@@ -785,8 +815,8 @@ class Response:
     def write(self, data):
         CRLF = b'\r\n'
         write = self.writer.write
-        for start in range(0, len(data), 8192):
-            chunk = data[start:start+8192]
+        for start in range(0, len(data), CHUNK):
+            chunk = data[start:start+CHUNK]
             write(hex(len(chunk))[2:].encode() + CRLF)
             write(chunk.encode() + CRLF)
         write(b'0\r\n\r\n')
@@ -794,11 +824,11 @@ class Response:
     def write_file(self, fd):
         CRLF = b'\r\n'
         write = self.writer.write
-        chunk = fd.read(8192)
+        chunk = fd.read(CHUNK)
         while chunk:
             write(hex(len(chunk))[2:].encode() + CRLF)
             write(chunk + CRLF)
-            chunk = fd.read(8192)
+            chunk = fd.read(CHUNK)
         write(b'0\r\n\r\n')
 
     def write_eof(self):

@@ -10,7 +10,7 @@ parser = etree.XMLParser(
     attribute_defaults=True, remove_comments=True, remove_blank_text=True)
 
 import db.api
-import db.setup_tables
+import db.create_table
 
 def upgrade_datamodel(db_session, old_version, new_version, company='_sys'):
     print('update {} to {}'.format(old_version, new_version))
@@ -20,6 +20,8 @@ def upgrade_datamodel(db_session, old_version, new_version, company='_sys'):
         upgrade_0_1_2(db_session)
     if old_version < (0, 1, 3):
         upgrade_0_1_3(db_session, company)
+    if old_version < (0, 1, 4):
+        upgrade_0_1_4(db_session)
 
 def upgrade_0_1_1(db_session):
     print('upgrading to 0.1.1')
@@ -134,7 +136,7 @@ def upgrade_0_1_1(db_session):
             )
         conn.exec_sql(sql)
 
-        db.setup_tables.setup_table(conn, '_sys', 'sys_menu_defns')
+        db.create_table.create_table(conn, '_sys', 'sys_menu_defns')
 
         params = []
         params.append(('System Administration' ,None, 0, '0', None, None, None))
@@ -374,3 +376,12 @@ def upgrade_0_1_3(db_session, company):
         # upd dir_users_companies schema - foreign key (company_id) add ON DELETE CASCADE
         #
         # above two not updated = not easy, not important
+
+def upgrade_0_1_4(db_session):
+    print()
+    print('Database model has changed too much to be updated.')
+    print()
+    print('Please delete the database and recreate it, then run init.py')
+    print()
+    import sys
+    sys.exit(0)

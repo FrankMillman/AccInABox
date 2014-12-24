@@ -1,16 +1,17 @@
-roles_setup = """
-<form name="roles_setup">
+<form name="setup_roles">
 
   <db_objects>
     <db_obj name="role" table_name="adm_roles"/>
-    <db_obj name="table" table_name="db_tables"/>
-    <db_obj name="perms" table_name="adm_table_perms" parent="role"/>
+    <db_obj name="db_table" table_name="db_tables" fkey="tbl_view.table_id"/>
+    <db_obj name="tbl_perms" table_name="adm_table_perms" parent="role"/>
+    <db_obj name="col_perms" table_name="adm_column_perms" parent="role"/>
   </db_objects>
   <mem_objects>
-    <mem_obj name="perm_view" descr="Full list of table permissions" parent="role">
+    <mem_obj name="tbl_view" descr="List of table permissions" parent="role">
       <mem_col col_name="table_id" data_type="INT" short_descr="Table id"
         long_descr="Table id" col_head="" key_field="A" allow_null="false"
-        allow_amend="false" max_len="0" db_scale="0"/>
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`db_tables`, `row_id`, null, null, false]"/>
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
         long_descr="Table name" col_head="Table" key_field="N" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"/>
@@ -30,7 +31,7 @@ roles_setup = """
         long_descr="Delete allowed?" col_head="Del?" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
     </mem_obj>
-    <mem_obj name="perm_orig" descr="Dictionary of current permissions">
+    <mem_obj name="tbl_orig" descr="Current table permissions">
       <mem_col col_name="table_id" data_type="INT" short_descr="Table id"
         long_descr="Table id" col_head="" key_field="A" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"/>
@@ -47,12 +48,42 @@ roles_setup = """
         long_descr="Delete allowed?" col_head="Del?" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
     </mem_obj>
+    <mem_obj name="col_view" descr="List of column permissions" parent="tbl_view">
+      <mem_col col_name="table_id" data_type="INT" short_descr="Table id"
+        long_descr="Table id" col_head="" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`tbl_view`, `table_id`, null, null, true]"/>
+      <mem_col col_name="col_id" data_type="INT" short_descr="Column id"
+        long_descr="Column id" col_head="" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="Column" key_field="N" allow_null="false"
+        allow_amend="false" max_len="20" db_scale="0"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
+        long_descr="Description" col_head="Description" key_field="N" allow_null="false"
+        allow_amend="false" max_len="30" db_scale="0"/>
+      <mem_col col_name="view_allowed" data_type="BOOL" short_descr="View allowed?"
+        long_descr="View allowed?" col_head="View?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
+      <mem_col col_name="upd_allowed" data_type="BOOL" short_descr="Update allowed?"
+        long_descr="Update allowed?" col_head="Upd?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
+    </mem_obj>
+    <mem_obj name="col_orig" descr="Current column permissions">
+      <mem_col col_name="col_id" data_type="INT" short_descr="Column id"
+        long_descr="Column id" col_head="" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="view_allowed" data_type="BOOL" short_descr="View allowed?"
+        long_descr="View allowed?" col_head="View?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
+      <mem_col col_name="upd_allowed" data_type="BOOL" short_descr="Update allowed?"
+        long_descr="Update allowed?" col_head="Upd?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
+    </mem_obj>
   </mem_objects>
 
   <input_params/>
   <output_params/>
-
-  <rules/>
 
   <frame main_object="role">
     <toolbar/>
@@ -91,25 +122,25 @@ roles_setup = """
           <col/>
           <input fld="role.delegate"/>
           <block/>
-          <grid data_object="perm_view" growable="false" num_grid_rows="5">
+          <grid data_object="tbl_view" growable="false" num_grid_rows="5">
             <cur_columns>
               <cur_col col_name="table_name" lng="140" readonly="true"/>
               <cur_col col_name="descr" lng="160" readonly="true"/>
               <cur_col col_name="sel_allowed" lng="40" after="
                 <<action>>
                   <<case>>
-                    <<fld_changed name=`perm_view.sel_allowed`>>
+                    <<fld_changed name=`tbl_view.sel_allowed`>>
                       <<assign>>
-                        <<source>>perm_view.sel_allowed<</source>>
-                        <<target>>perm_view.ins_allowed<</target>>
+                        <<source>>tbl_view.sel_allowed<</source>>
+                        <<target>>tbl_view.ins_allowed<</target>>
                       <</assign>>
                       <<assign>>
-                        <<source>>perm_view.sel_allowed<</source>>
-                        <<target>>perm_view.upd_allowed<</target>>
+                        <<source>>tbl_view.sel_allowed<</source>>
+                        <<target>>tbl_view.upd_allowed<</target>>
                       <</assign>>
                       <<assign>>
-                        <<source>>perm_view.sel_allowed<</source>>
-                        <<target>>perm_view.del_allowed<</target>>
+                        <<source>>tbl_view.sel_allowed<</source>>
+                        <<target>>tbl_view.del_allowed<</target>>
                       <</assign>>
                     <</fld_changed>>
                   <</case>>
@@ -118,6 +149,24 @@ roles_setup = """
               <cur_col col_name="ins_allowed" lng="40"/>
               <cur_col col_name="upd_allowed" lng="40"/>
               <cur_col col_name="del_allowed" lng="40"/>
+              <cur_btn btn_label="Col perms" btn_id="col_perms" lng="80" btn_action="
+                <<action>>
+                  <<sub_form form_name=`setup_col_perms`>>
+                    <<call_params>>
+                      <<!--call_param name=`table_id` type=`data_attr` source=`tbl_view.table_id`/-->>
+                      <<call_param name=`role` type=`data_obj` source=`role`/>>
+                      <<call_param name=`db_table` type=`data_obj` source=`db_table`/>>
+                      <<call_param name=`col_view` type=`data_obj` source=`col_view`/>>
+                      <<call_param name=`col_orig` type=`data_obj` source=`col_orig`/>>
+                    <</call_params>>
+                    <<return_params/>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</sub_form>>
+                <</action>>
+              "/>
             </cur_columns>
             <cur_filter/>
             <cur_sequence/>
@@ -178,4 +227,3 @@ roles_setup = """
     </frame_methods>
   </frame>
 </form>
-"""

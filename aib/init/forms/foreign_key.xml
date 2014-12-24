@@ -1,4 +1,3 @@
-foreign_key = """
 <form name="foreign_key">
 
   <db_objects/>
@@ -29,8 +28,6 @@ foreign_key = """
   <output_params>
     <output_param name="fkey" type="data_list" source="fkey_flds"/>
   </output_params>
-
-  <rules/>
 
   <frame main_object="fkey_flds">
     <toolbar/>
@@ -92,4 +89,3 @@ foreign_key = """
     </frame_methods>
   </frame>
 </form>
-"""

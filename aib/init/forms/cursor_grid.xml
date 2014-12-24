@@ -1,4 +1,3 @@
-cursor_grid = """
 <form name="cursor_grid">
   <db_objects>
     <db_obj name="db_cur" table_name="db_cursors" parent="db_table"/>
@@ -8,7 +7,6 @@ cursor_grid = """
     <input_param name="db_table" type="data_obj" target="db_table" required="true"/>
   </input_params>
   <output_params/>
-  <rules/>
   <frame main_object="db_cur">
     <toolbar/>
     <body>
@@ -60,4 +58,3 @@ cursor_grid = """
     </frame_methods>
   </frame>
 </form>
-"""

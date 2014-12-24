@@ -9,7 +9,7 @@ import asyncio
 from init.init_company import init_company
 
 import db.api
-from db.setup_tables import setup_table
+import db.create_table
 
 def table_hook(db_obj, elem):
     for xml in elem:
@@ -331,11 +331,12 @@ def setup_audit_cols(caller, xml):
         db_column.setval('sql', None)
         db_column.save()
 
-# called from table_formview
+# called from setup_table
 @asyncio.coroutine
 def create_table(caller, xml):
     db_obj = caller.data_objects['db_obj']
     if db_obj.getval('data_company') is not None:
         return  # using table set up in another company
     with db_obj.context.db_session as conn:
-        setup_table(conn, db_obj.data_company, db_obj.getval('table_name'))
+        create_table.create_table(conn, db_obj.data_company,
+            db_obj.getval('table_name'))

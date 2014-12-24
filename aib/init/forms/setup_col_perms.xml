@@ -1,0 +1,59 @@
+<form name="setup_col_perms">
+
+  <db_objects>
+    <db_obj name="db_col" table_name="db_columns" parent="db_table"/>
+  </db_objects>
+  <mem_objects/>
+
+  <input_params>
+    <!--input_param name="table_id" type="data_attr" target="col_view.table_id" required="true"/-->
+    <input_param name="role" type="data_obj" target="role" required="true"/>
+    <input_param name="db_table" type="data_obj" target="db_table" required="true"/>
+    <input_param name="col_view" type="data_obj" target="col_view" required="true"/>
+    <input_param name="col_orig" type="data_obj" target="col_orig" required="true"/>
+  </input_params>
+
+  <output_params/>
+
+  <frame main_object="col_view">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <text value="Role:"/>
+      <col/>
+      <display fld="role.descr" lng="160"/>
+      <row/>
+      <col/>
+      <text value="Table:"/>
+      <col/>
+      <display fld="db_table.short_descr" lng="250"/>
+      <block/>
+      <grid data_object="col_view" growable="false" num_grid_rows="10">
+        <cur_columns>
+          <cur_col col_name="col_name" lng="140" readonly="true"/>
+          <cur_col col_name="descr" lng="160" readonly="true"/>
+          <cur_col col_name="view_allowed" lng="40"/>
+          <cur_col col_name="upd_allowed" lng="40"/>
+        </cur_columns>
+        <cur_filter>
+<!--
+          <cur_fil test="where" lbr="" col_name="table_id" op="=" expr="db_table.row_id" rbr=""/>
+-->
+        </cur_filter>
+        <cur_sequence/>
+        <grid_methods template="Setup_Grid"/>
+      </grid>
+    </body>
+    <button_row validate="true" template="Setup_Form"/>
+    <frame_methods template="Setup_Form">
+      <method name="on_start_form" action="
+        <<action>>
+          <<pyfunc name=`db.formdefn_funcs.load_col_perms`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

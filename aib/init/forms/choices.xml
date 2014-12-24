@@ -1,4 +1,3 @@
-choices = """
 <form name="choices">
 
   <db_objects/>
@@ -87,8 +86,6 @@ choices = """
   <output_params>
     <output_param name="choices" type="pyfunc" source="db.formdefn_funcs.dump_choices_xml"/>
   </output_params>
-
-  <rules/>
 
   <frame main_object="choice_flds">
     <toolbar/>
@@ -244,4 +241,3 @@ choices = """
     </frame_methods>
   </frame>
 </form>
-"""

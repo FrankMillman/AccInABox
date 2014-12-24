@@ -9,7 +9,7 @@ parser = etree.XMLParser(
 #parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
 
 import db.api
-import db.setup_tables
+import db.create_table
 
 def init_forms(context, conn):
     setup_form_defns(context, conn)
@@ -68,7 +68,7 @@ def setup_form_defns(context, conn):
         db_column.setval('sql', None)
         db_column.save()
 
-    db.setup_tables.setup_table(conn, '_sys', table_name)
+    db.create_table.create_table(conn, '_sys', table_name)
 
     db_cursor = db.api.get_db_object(context, '_sys', 'db_cursors')
     db_cursor.setval('table_name', table_name)

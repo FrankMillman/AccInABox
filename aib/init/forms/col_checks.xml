@@ -1,4 +1,3 @@
-col_checks = """
 <form name="col_checks">
 
   <db_objects/>
@@ -32,8 +31,6 @@ col_checks = """
   <output_params>
     <output_param name="col_chks" type="data_array" source="check_array"/>
   </output_params>
-
-  <rules/>
 
   <frame main_object="check_array">
     <toolbar/>
@@ -81,4 +78,3 @@ col_checks = """
     </frame_methods>
   </frame>
 </form>
-"""

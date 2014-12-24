@@ -67,7 +67,11 @@ function on_load() {
   send_message('get_login', null, false);
 
   tick = setInterval(
-    function() {send_message('send_req', [['tick', null]], true)},
+    function() {send_message('send_req', [['tick', null]])},
       10000);  // send 'tick' every 10 seconds
+
+  window.onbeforeunload = function() {
+    return 'This will close the program. Are you sure?';
+    };
 
   };

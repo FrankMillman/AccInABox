@@ -231,7 +231,7 @@ class Conn:
     def full_select(self, db_obj, col_names, where, order=None,
             limit=0, lock=False, param=None, debug=False):
 
-        db_obj.check_perms(0)  # 0 = SELECT
+        db_obj.check_perms('select')
 
 #       if db_obj.db_table.audit_trail:
 #           if where:
@@ -421,7 +421,7 @@ class Conn:
                     expr = '?'
                 elif expr.lower() == 'null':
                     pass  # don't parameterise 'null'
-                elif expr.startswith("c'"):  # expr is a column name
+                elif expr.startswith('c"'):  # expr is a column name
                     expr = expr[2:-1]  # strip leading "c'" and trailing "'"
                     if '.' in expr:  # can be col_name or fkey_col.target_col
                         join_column, expr = expr.split('.')

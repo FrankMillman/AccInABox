@@ -1,29 +1,41 @@
+import os
+import __main__
+import importlib
 import gzip
 from json import dumps
-import db.setup_tables
+from lxml import etree
+from itertools import count
+
+import db.create_table
 import db.api
 
-from itertools import count
 USER_ROW_ID = 1  # used in db updates
 audit_row_id = 1  # used as 'created_id' in db_columns
 
 def init_database(context, conn):
+
     conn.create_functions()
     conn.create_company('_sys')
-    create_db_tables(context, conn)
-    create_db_columns(context, conn)
+    # next function is external as it can be called when creating any company
+    import init_new.create_dbtbls_dbcols
+    init_new.create_dbtbls_dbcols.create_dbtbls_dbcols(context, conn, '_sys')
     setup_db_tables(context, conn)
     setup_db_columns(context, conn)
-    setup_db_cursors(context, conn)
-    setup_dir_companies(context, conn)
-    setup_dir_users(context, conn)
-    setup_dir_users_companies(context, conn)
+
+    setup_other_tables(context, conn)
+    setup_fkeys(context)
+    setup_forms(context)
+    setup_menus(context)
 
     conn.cur.execute(
         "INSERT INTO _sys.dir_companies (company_id, company_name) "
         "VALUES ({})".format(', '.join([conn.param_style] * 2))
         , ('_sys', 'System Administration')
         )
+
+    dir_comp = db.api.get_db_object(context, '_sys', 'dir_companies')
+    dir_comp.setval('company_id', '_sys')
+    dir_comp.setval('company_name', 'System Administration')
 
     dir_user = db.api.get_db_object(context, '_sys', 'dir_users')
     dir_user.setval('user_id', 'admin')
@@ -33,143 +45,13 @@ def init_database(context, conn):
     dir_user.setval('user_type', 'admin')
     dir_user.save()
 
-def create_db_tables(context, conn):
-    conn.cur.execute(
-        conn.convert_string(
-            "CREATE TABLE _sys.db_tables ("
-            "row_id AUTO, "
-            "created_id INT NOT NULL DEFAULT 0, "
-            "deleted_id INT NOT NULL DEFAULT 0, "
-            "table_name TEXT NOT NULL, "
-            "short_descr TEXT, "
-            "long_descr TEXT, "
-            "audit_trail BOOL NOT NULL, "
-            "upd_chks JSON, "
-            "del_chks JSON, "
-            "table_hooks XML, "
-            "defn_company TEXT, "
-            "data_company TEXT, "
-            "read_only BOOL, "
-            "table_created BOOL NOT NULL, "
-            "default_cursor TEXT,"
-            "form_xml XML)"
-            )
-        )
-
-    conn.cur.execute(
-        conn.create_index('_sys', 'db_tables', audit_trail=True, ndx_cols=['table_name'])
-        )
-
-    conn.cur.execute(
-        conn.convert_string(
-            "CREATE TABLE _sys.db_tables_audit ("
-            "row_id AUTO, "
-            "created_id INT NOT NULL DEFAULT 0, "
-            "deleted_id INT NOT NULL DEFAULT 0, "
-            "table_name TEXT NOT NULL, "
-            "short_descr TEXT, "
-            "long_descr TEXT, "
-            "audit_trail BOOL, "
-            "upd_chks JSON, "
-            "del_chks JSON, "
-            "table_hooks XML, "
-            "defn_company TEXT, "
-            "data_company TEXT, "
-            "read_only BOOL, "
-            "table_created BOOL NOT NULL, "
-            "default_cursor TEXT,"
-            "form_xml XML)"
-            )
-        )
-
-    conn.cur.execute(
-        conn.convert_string(
-            "CREATE TABLE _sys.db_tables_audit_xref ("
-            "row_id AUTO, "
-            "data_row_id INT NOT NULL, "
-            "audit_row_id INT, "
-            "user_row_id INT NOT NULL, "
-            "date_time DTM NOT NULL, "
-            "type CHAR(3) CHECK (LOWER(type) IN ('add', 'chg', 'del')))"
-            )
-        )
-
-def create_db_columns(context, conn):
-    conn.cur.execute(
-        conn.convert_string(
-            "CREATE TABLE _sys.db_columns ("
-            "row_id AUTO, "
-            "created_id INT NOT NULL DEFAULT 0, "
-            "deleted_id INT NOT NULL DEFAULT 0, "
-            "table_id INT NOT NULL, "
-            "col_name TEXT NOT NULL, "
-            "col_type TEXT NOT NULL, "
-            "seq INT NOT NULL, "
-            "data_type TEXT NOT NULL, "
-            "short_descr TEXT NOT NULL, "
-            "long_descr TEXT NOT NULL, "
-            "col_head TEXT NOT NULL, "
-            "key_field TEXT NOT NULL DEFAULT 'N', "
-            "generated BOOL NOT NULL DEFAULT '0', "
-            "allow_null BOOL NOT NULL DEFAULT '0', "
-            "allow_amend BOOL NOT NULL DEFAULT '0', "
-            "max_len INT NOT NULL, "
-            "db_scale INT NOT NULL, "
-            "scale_ptr TEXT, "
-            "dflt_val TEXT, "
-            "col_chks JSON, "
-            "fkey JSON, "
-            "choices JSON, "
-            "sql TEXT, "
-            "FOREIGN KEY (table_id) REFERENCES :_sys.:db_tables ON DELETE CASCADE)"
-            )
-        )
-
-    conn.cur.execute(
-        conn.create_index('_sys', 'db_columns', audit_trail=True,
-            ndx_cols=['table_id', 'col_name'])
-        )
-
-    conn.cur.execute(
-        conn.convert_string(
-            "CREATE TABLE _sys.db_columns_audit ("
-            "row_id AUTO, "
-            "created_id INT NOT NULL DEFAULT 0, "
-            "deleted_id INT NOT NULL DEFAULT 0, "
-            "table_id INT NOT NULL, "
-            "col_name TEXT NOT NULL, "
-            "col_type TEXT NOT NULL, "
-            "seq INT NOT NULL, "
-            "data_type TEXT NOT NULL, "
-            "short_descr TEXT NOT NULL, "
-            "long_descr TEXT NOT NULL, "
-            "col_head TEXT NOT NULL, "
-            "key_field TEXT NOT NULL DEFAULT 'N', "
-            "generated BOOL NOT NULL DEFAULT '0', "
-            "allow_null BOOL NOT NULL DEFAULT '0', "
-            "allow_amend BOOL NOT NULL DEFAULT '0', "
-            "max_len INT NOT NULL, "
-            "db_scale INT NOT NULL, "
-            "scale_ptr TEXT, "
-            "dflt_val TEXT, "
-            "col_chks JSON, "
-            "fkey JSON, "
-            "choices JSON, "
-            "sql TEXT)"
-            )
-        )
-
-    conn.cur.execute(
-        conn.convert_string(
-            "CREATE TABLE _sys.db_columns_audit_xref ("
-            "row_id AUTO, "
-            "data_row_id INT NOT NULL, "
-            "audit_row_id INT, "
-            "user_row_id INT NOT NULL, "
-            "date_time DTM NOT NULL, "
-            "type CHAR(3) CHECK (LOWER(type) IN ('add', 'chg', 'del')))"
-            )
-        )
+    adm_role = db.api.get_db_object(context, '_sys', 'adm_roles')
+    adm_role.setval('role', 'admin')
+    adm_role.setval('descr', 'System adminstrator')
+    adm_role.setval('parent_id', None)
+    adm_role.setval('seq', -1)
+    adm_role.setval('delegate', True)
+    adm_role.save()
 
 def setup_db_tables(context, conn):
     seq_counter = count()
@@ -178,11 +60,11 @@ def setup_db_tables(context, conn):
     audit_row_counter = count(start=audit_row_id)
     arc = audit_row_counter.__next__
     table_name = 'db_tables'
-    params = (1, table_name, 'Db tables', 'Database tables', True, True, 'db_tables')
+    params = (1, table_name, 'Db tables', 'Database tables', True, True)
     conn.cur.execute(
         "INSERT INTO _sys.db_tables (created_id, table_name, short_descr, "
-        "long_descr, audit_trail, table_created, default_cursor) "
-        "VALUES ({})".format(', '.join([conn.param_style] * 7))
+        "long_descr, audit_trail, table_created) "
+        "VALUES ({})".format(', '.join([conn.param_style] * 6))
         , params)
     conn.cur.execute('SELECT row_id FROM _sys.db_tables WHERE table_name = {}'
         .format(conn.param_style), [table_name])
@@ -214,6 +96,15 @@ def setup_db_tables(context, conn):
     params.append((arc(), table_id, 'audit_trail', 'sys', seq(), 'BOOL', 'Audit trail?',
         'Full audit trail? (Y/N)', 'Audit?', 'N', False, False, False, 0, 0, None,
         'true', None, None, None, None))
+    params.append((arc(), table_id, 'table_created', 'sys', seq(), 'BOOL', 'Table created?',
+        'Has table been created in database?', 'Created?', 'N', False, False, True,
+        0, 0, None, None, None, None, None, None))
+    params.append((arc(), table_id, 'default_cursor', 'sys', seq(), 'TEXT', 'Default cursor',
+        'Default cursor', 'Cursor', 'N', False, True, True,
+        0, 0, None, None, None, None, None, None))
+    params.append((arc(), table_id, 'setup_form', 'sys', seq(), 'TEXT', 'Setup form name',
+        'Setup form name', 'Form', 'N', False, True, True,
+        0, 0, None, None, None, None, None, None))
     params.append((arc(), table_id, 'upd_chks', 'sys', seq(), 'JSON', 'Update checks',
         'Checks before insert/update', 'Upd chks', 'N', False, True, True, 0, 0, None,
         None, None, None, None, None))
@@ -222,35 +113,20 @@ def setup_db_tables(context, conn):
         None, None, None, None, None))
     params.append((arc(), table_id, 'table_hooks', 'sys', seq(), 'XML', 'Table hooks',
         'Table hooks', 'Hooks', 'N', False, True, True, 0, 0, None, None, None, None, None, None))
-    fkey = []
-    fkey.append('_sys.dir_companies')
-    fkey.append('company_id')
-    fkey.append(None)
-    fkey.append(None)
-    fkey.append(False)
+    fkey = dumps(
+        ['_sys.dir_companies', 'company_id', None, None, False])
+    fkey = None  # can only set this up after dir_companies created
     params.append((arc(), table_id, 'defn_company', 'sys', seq(), 'TEXT', 'Defn company',
         'Company containing table definition', 'Defn', 'N', False, True, True, 0, 0, None,
-        None, None, dumps(fkey), None, None))
-    fkey = []
-    fkey.append('_sys.dir_companies')
-    fkey.append('company_id')
-    fkey.append(None)
-    fkey.append(None)
-    fkey.append(False)
+        None, None, fkey, None, None))
+    fkey = dumps(
+        ['_sys.dir_companies', 'company_id', None, None, False])
+    fkey = None  # can only set this up after dir_companies created
     params.append((arc(), table_id, 'data_company', 'sys', seq(), 'TEXT', 'Data company',
         'Company containing table data', 'Data', 'N', False, True, True, 0, 0, None,
-        None, None, dumps(fkey), None, None))
+        None, None, fkey, None, None))
     params.append((arc(), table_id, 'read_only', 'sys', seq(), 'BOOL', 'Read only?',
         'Can we write to table in another company?', 'Read only?', 'N', False, True, True,
-        0, 0, None, None, None, None, None, None))
-    params.append((arc(), table_id, 'table_created', 'sys', seq(), 'BOOL', 'Table created?',
-        'Has table been created in database?', 'Created?', 'N', False, False, True,
-        0, 0, None, None, None, None, None, None))
-    params.append((arc(), table_id, 'default_cursor', 'sys', seq(), 'TEXT', 'Default cursor',
-        'Default cursor', 'Cursor', 'N', False, True, True,
-        0, 0, None, None, None, None, None, None))
-    params.append((arc(), table_id, 'form_xml', 'sys', seq(), 'XML', 'Setup form definition',
-        'Setup form definition', 'Form', 'N', False, True, True,
         0, 0, None, None, None, None, None, None))
 
     conn.cur.executemany(
@@ -312,38 +188,43 @@ def setup_db_columns(context, conn):
         'Created row id', 'Created', 'N', True, False, True, 0, 0, None, '0', None, None, None, None))
     params.append((arc(), table_id, 'deleted_id', 'sys', seq(), 'INT', 'Deleted id',
         'Deleted row id', 'Deleted', 'N', True, False, True, 0, 0, None, '0', None, None, None, None))
-    fkey = []
-    fkey.append('db_tables')
-    fkey.append('row_id')
-    fkey.append('table_name')
-    fkey.append('table_name')
-    fkey.append(True)
+    fkey = ['db_tables', 'row_id', 'table_name', 'table_name', True]
     params.append((arc(), table_id, 'table_id', 'sys', seq(), 'INT', 'Table id',
         'Table id', 'Table', 'A', False, False, False, 0, 0, None, None, None,
         dumps(fkey), None, None))
     params.append((arc(), table_id, 'col_name', 'sys', seq(), 'TEXT', 'Column name',
         'Column name', 'Column', 'A', False, False, False, 15, 0, None, None, None, None, None, None))
-    choices = [False, False, []]
-    choices[2].append(['sys', 'System column', [], []])  # choice, descr, subtype, dispname
-    choices[2].append(['virt', 'Virtual column', [], []])
-    choices[2].append(['user', 'User-defined column', [], []])
+    choices = [
+        False,  # use sub_types?
+        False,  # use display_names?
+        [
+            ['sys', 'System column', [], []],
+            ['virt', 'Virtual column', [], []],
+            ['user', 'User-defined column', [], []],
+            ]
+        ]
     params.append((arc(), table_id, 'col_type', 'sys', seq(), 'TEXT', 'Column type',
         'Column type', 'Type', 'N', False, False, False, 5, 0, None, None, None, None,
         dumps(choices), None))
     params.append((arc(), table_id, 'seq', 'sys', seq(), 'INT', 'Seq',
         'Position for display', 'Seq', 'N', False, False, True, 0, 0, None, None, None, None, None, None))
-    choices = [False, False, []]
-    choices[2].append(['TEXT', 'Text', [], []])
-    choices[2].append(['INT', 'Integer', [], []])
-    choices[2].append(['DEC', 'Decimal', [], []])
-    choices[2].append(['DTE', 'Date', [], []])
-    choices[2].append(['DTM', 'Date-time', [], []])
-    choices[2].append(['BOOL', 'True/False', [], []])
-    choices[2].append(['AUTO', 'Auto-generated key', [], []])
-    choices[2].append(['JSON', 'Json', [], []])
-    choices[2].append(['XML', 'Xml', [], []])
-    choices[2].append(['FXML', 'Form definition', [], []])
-    choices[2].append(['PXML', 'Process definition', [], []])
+    choices = [
+        False,   # use sub_types?
+        False,  # use display_names?
+        [
+            ['TEXT', 'Text', [], []],
+            ['INT', 'Integer', [], []],
+            ['DEC', 'Decimal', [], []],
+            ['DTE', 'Date', [], []],
+            ['DTM', 'Date-time', [], []],
+            ['BOOL', 'True/False', [], []],
+            ['AUTO', 'Auto-generated key', [], []],
+            ['JSON', 'Json', [], []],
+            ['XML', 'Xml', [], []],
+            ['FXML', 'Form definition', [], []],
+            ['PXML', 'Process definition', [], []],
+            ]
+        ]
     params.append((arc(), table_id, 'data_type', 'sys', seq(), 'TEXT', 'Data type',
         'Data type', 'Type', 'N', False, False, False, 5, 0, None, None, None, None, 
        dumps(choices), None))
@@ -355,10 +236,15 @@ def setup_db_columns(context, conn):
     params.append((arc(), table_id, 'col_head', 'sys', seq(), 'TEXT', 'Column heading',
         'Column heading for reports and grids', 'Col head',  'N', False, True, True, 15, 0,
         None, None, None, None, None, None))
-    choices = [False, False, []]
-    choices[2].append(['Y', 'Primary key', [], []])
-    choices[2].append(['A', 'Alternate key', [], []])
-    choices[2].append(['N', 'Not a key', [], []])
+    choices = [
+        False,  # use sub_types?
+        False,  # use display_names?
+        [
+            ['Y', 'Primary key', [], []],
+            ['A', 'Alternate key', [], []],
+            ['N', 'Not a key', [], []],
+            ]
+        ]
     params.append((arc(), table_id, 'key_field', 'sys', seq(), 'TEXT', 'Key field',
         'Y=primary key, A=alternate key, N=not key field', 'Key?', 'N',
         False, False, False, 1, 0, None, None, None, None, dumps(choices), None))
@@ -375,7 +261,7 @@ def setup_db_columns(context, conn):
     params.append((arc(), table_id, 'db_scale', 'sys', seq(), 'INT', 'Decimal places in database',
         'Number of decimal places as defined in database', 'Db scale', 'N', False, False, False,
         0, 0, None, None, None, None, None, None))
-    params.append((arc(), table_id, 'scale_ptr', 'sys', seq(), 'TEXT', 'Parameter for number of decimals',
+    params.append((arc(), table_id, 'scale_ptr', 'sys', seq(), 'TEXT', 'Parameter for no of decimals',
         'Virtual column to return number of decimals allowed', 'Scale ptr', 'N', False, True, True, 15, 0, None,
         None, None, None, None, None))
     params.append((arc(), table_id, 'dflt_val', 'sys', seq(), 'TEXT', 'Default definition',
@@ -412,411 +298,257 @@ def setup_db_columns(context, conn):
         , audit_params)
     audit_row_id = next(audit_row_counter)  # set up for next table
 
-def setup_db_cursors(context, conn):
-    table_name = 'db_cursors'
-    params = (3, table_name, 'Cursor definitions',
-        'Database cursor definitions', False, True)
-    conn.cur.execute(
-        "INSERT INTO _sys.db_tables "
-        "(created_id, table_name, short_descr, long_descr, audit_trail, table_created) "
-        "VALUES ({})".format(', '.join([conn.param_style] * 6))
-        , params)
-    conn.cur.execute('SELECT row_id FROM _sys.db_tables WHERE table_name = {}'
-        .format(conn.param_style), [table_name])
-    table_id = conn.cur.fetchone()[0]
+def setup_other_tables(context, conn):
+    db_tbl = db.api.get_db_object(context, '_sys', 'db_tables')
+    db_col = db.api.get_db_object(context, '_sys', 'db_columns')
+    tables = [
+        'db_cursors',
+        'dir_companies',
+        'dir_users',
+        'dir_users_companies',
+        'sys_form_defns',
+        'sys_menu_defns',
+        'adm_roles',
+        'adm_table_perms',
+        'adm_users_roles',
+        ]
+    for table_name in tables:
+        setup_table(db_tbl, db_col, table_name)
+        db.create_table.create_table(conn, '_sys', table_name)
 
-    params = (table_id, USER_ROW_ID, conn.timestamp, 'add')
-    conn.cur.execute(
-        "INSERT INTO _sys.db_tables_audit_xref (data_row_id, user_row_id, date_time, type) "
-        "VALUES ({})".format(', '.join([conn.param_style] * 4))
-        , params)
+    db_cur = db.api.get_db_object(context, '_sys', 'db_cursors')
+    tables = [
+        'db_tables',
+        'dir_companies',
+        'dir_users',
+        'sys_form_defns',
+        'adm_roles',
+        ]
+    for table_name in tables:
+        setup_cursor(db_tbl, db_cur, table_name)
 
-    params = []
-    fkey = []
-    fkey.append('db_tables')
-    fkey.append('row_id')
-    fkey.append('table_name')
-    fkey.append('table_name')
-    fkey.append(True)
-    params.append(('table_id', 'INT', 'Table id', 'Table id', 'Table', 'Y',
-        False, False, False, 0, 0, None, None, None, fkey, None))
-    params.append(('cursor_name', 'TEXT', 'Cursor name', 'Cursor name', 'Cursor', 'Y',
-        False, False, False, 20, 0, None, None, None, None, None))
-    params.append(('descr', 'TEXT', 'Description', 'Description', 'Description', 'N',
-        False, False, True, 30, 0, None, None, None, None, None))
-    params.append(('columns', 'JSON', 'Columns', 'Columns', 'Columns', 'N',
-        False, False, True, 0, 0, None, None, None, None, None))
-    params.append(('filter', 'JSON', 'Filter', 'Filter', 'Filter', 'N',
-        False, False, True, 0, 0, None, None, None, None, None))
-    params.append(('sequence', 'JSON', 'Sequence', 'Sequence', 'Sequence', 'N',
-        False, False, True, 0, 0, None, None, None, None, None))
+def setup_table(db_tbl, db_col, table_name):
+    module = importlib.import_module('.tables.{}'.format(table_name), 'init_new')
 
-    db_column = db.api.get_db_object(context, '_sys', 'db_columns')
-    for seq, param in enumerate(params):
-        db_column.init()
-        db_column.setval('table_id', table_id)
-        db_column.setval('col_name', param[0])
-        db_column.setval('col_type', 'sys')
-        db_column.setval('seq', seq)
-        db_column.setval('data_type', param[1])
-        db_column.setval('short_descr', param[2])
-        db_column.setval('long_descr', param[3])
-        db_column.setval('col_head', param[4])
-        db_column.setval('key_field', param[5])
-        db_column.setval('generated', param[6])
-        db_column.setval('allow_null', param[7])
-        db_column.setval('allow_amend', param[8])
-        db_column.setval('max_len', param[9])
-        db_column.setval('db_scale', param[10])
-        db_column.setval('scale_ptr', param[11])
-        db_column.setval('dflt_val', param[12])
-        db_column.setval('col_chks', param[13])
-        db_column.setval('fkey', param[14])
-        db_column.setval('choices', param[15])
-        db_column.setval('sql', None)
-        db_column.save()
+    tbl = getattr(module, 'table')
+    db_tbl.init()
+    db_tbl.setval('table_name', table_name)
+    db_tbl.setval('short_descr', tbl['short_descr'])
+    db_tbl.setval('long_descr', tbl['long_descr'])
+    db_tbl.setval('audit_trail', tbl['audit_trail'])
+    db_tbl.setval('table_created', tbl['table_created'])
+    db_tbl.setval('default_cursor', tbl['default_cursor'])
+    db_tbl.setval('setup_form', tbl['setup_form'])
+    db_tbl.setval('upd_chks', tbl['upd_chks'])
+    db_tbl.setval('del_chks', tbl['del_chks'])
+    db_tbl.setval('table_hooks', tbl['table_hooks'])
+    db_tbl.setval('defn_company', tbl['defn_company'])
+    db_tbl.setval('data_company', tbl['data_company'])
+    db_tbl.save()
 
-    db.setup_tables.setup_table(conn, '_sys', table_name)
+    table_id = db_tbl.getval('row_id')
 
-    db_cursor = db.api.get_db_object(context, '_sys', table_name)
-    db_cursor.setval('table_name', 'db_tables')
-    db_cursor.setval('cursor_name', 'db_tables')
-    db_cursor.setval('descr', 'Database tables')
-    columns = []
-    columns.append(('table_name', 160, False, False, False, None, None))
-    columns.append(('short_descr', 250, True, False, False, None, None))
-    columns.append(('defn_company', 80, False, True, False, None, None))
-    columns.append(('table_created', 80, False, True, False, None, None))
-    db_cursor.setval('columns', columns)
-    filter = []
-    db_cursor.setval('filter', filter)
-    sequence = []
-    sequence.append(('table_name', False))
-    db_cursor.setval('sequence', sequence)
-    db_cursor.save()
+    cols = getattr(module, 'cols')
+    for seq, col in enumerate(cols):
+        db_col.init()
+        db_col.setval('table_id', table_id)
+        db_col.setval('col_name', col['col_name'])
+        db_col.setval('col_type', 'sys')
+        db_col.setval('seq', seq)
+        db_col.setval('data_type', col['data_type'])
+        db_col.setval('short_descr', col['short_descr'])
+        db_col.setval('long_descr', col['long_descr'])
+        db_col.setval('col_head', col['col_head'])
+        db_col.setval('key_field', col['key_field'])
+        db_col.setval('generated', col['generated'])
+        db_col.setval('allow_null', col['allow_null'])
+        db_col.setval('allow_amend', col['allow_amend'])
+        db_col.setval('max_len', col['max_len'])
+        db_col.setval('db_scale', col['db_scale'])
+        db_col.setval('scale_ptr', col['scale_ptr'])
+        db_col.setval('dflt_val', col['dflt_val'])
+        db_col.setval('col_chks', col['col_chks'])
+        db_col.setval('fkey', col['fkey'])
+        db_col.setval('choices', col['choices'])
+        db_col.setval('sql', None)
+        db_col.save()
 
-    """
-    db_cursor.init()    
-    db_cursor.setval('table_name', 'db_columns')
-    db_cursor.setval('cursor_name', 'sys_cols')
-    db_cursor.setval('descr', 'System columns')
-    columns = []
-    columns.append(('col_name', 160, False, False, False, None, None))
-    columns.append(('short_descr', 300, True, False, False, None, None))
-    db_cursor.setval('columns', columns)
-    filter = []
-    filter.append(('WHERE', '', 'col_type', '=', 'sys', ''))
-    db_cursor.setval('filter', filter)
-    sequence = []
-    sequence.append(('seq', False))
-    db_cursor.setval('sequence', sequence)
-    db_cursor.save()
+    virts = getattr(module, 'virt')
+    for seq, virt in enumerate(virts):
+        db_col.init()
+        db_col.setval('table_id', table_id)
+        db_col.setval('col_name', virt['col_name'])
+        db_col.setval('col_type', 'virt')
+        db_col.setval('seq', seq)
+        db_col.setval('data_type', virt['data_type'])
+        db_col.setval('short_descr', virt['short_descr'])
+        db_col.setval('long_descr', virt['long_descr'])
+        db_col.setval('col_head', virt['col_head'])
+        db_col.setval('key_field', 'N')
+        db_col.setval('generated', False)
+        db_col.setval('allow_null', True)
+        db_col.setval('allow_amend', True)
+        db_col.setval('max_len', 0)
+        db_col.setval('db_scale', 0)
+        db_col.setval('scale_ptr', virt.get('scale_ptr'))  # else None
+        db_col.setval('dflt_val', None)
+        db_col.setval('col_chks', None)
+        db_col.setval('fkey', None)
+        db_col.setval('choices', None)
+        db_col.setval('sql', virt['sql'])
+        db_col.save()
 
-    db_cursor.init()
-    db_cursor.setval('table_name', 'db_columns')
-    db_cursor.setval('cursor_name', 'virt_cols')
-    db_cursor.setval('descr', 'Virtual columns')
-    columns = []
-    columns.append(('col_name', 160, False, False, False, None, None))
-    columns.append(('short_descr', 300, True, False, False, None, None))
-    db_cursor.setval('columns', columns)
-    filter = []
-    filter.append(('WHERE', '', 'col_type', '=', 'virt', ''))
-    db_cursor.setval('filter', filter)
-    sequence = []
-    sequence.append(('seq', False))
-    db_cursor.setval('sequence', sequence)
-    db_cursor.save()
+def setup_cursor(db_tbl, db_cur, table_name):
+    module = importlib.import_module('.tables.{}'.format(table_name), 'init_new')
 
-    db_cursor.init()    
-    db_cursor.setval('table_name', 'db_columns')
-    db_cursor.setval('cursor_name', 'user_cols')
-    db_cursor.setval('descr', 'User columns')
-    columns = []
-    columns.append(('col_name', 160, False, False, False, None, None))
-    columns.append(('short_descr', 300, True, False, False, None, None))
-    db_cursor.setval('columns', columns)
-    filter = []
-    filter.append(('WHERE', '', 'col_type', '=', 'user', ''))
-    db_cursor.setval('filter', filter)
-    sequence = []
-    sequence.append(('seq', False))
-    db_cursor.setval('sequence', sequence)
-    db_cursor.save()
-    """
+    cursors = getattr(module, 'cursors')
+    for cur in cursors:
+        db_cur.init()
+        db_cur.setval('table_name', table_name)
+        db_cur.setval('cursor_name', cur['cursor_name'])
+        db_cur.setval('descr', cur['descr'])
+        db_cur.setval('columns', cur['columns'])
+        db_cur.setval('filter', cur['filter'])
+        db_cur.setval('sequence', cur['sequence'])
+        db_cur.save()
 
-def setup_dir_companies(context, conn):
-    table_name = 'dir_companies'
+        if cur['default']:
+            db_tbl.init()
+            db_tbl.setval('table_name', table_name)
+            db_tbl.setval('default_cursor', cur['cursor_name'])
+            db_tbl.save()
 
-    del_chks = []
-    del_chks.append(('CHECK', '', 'company_id', '!=', '"_sys"', ''))
+def setup_fkeys(context):
+    # can only do this after dir_companies has been set up
+    db_col = db.api.get_db_object(context, '_sys', 'db_columns')
+    db_col.init()
+    db_col.setval('table_name', 'db_tables')
+    db_col.setval('col_name', 'defn_company')
+    db_col.setval('fkey', ['_sys.dir_companies', 'company_id', None, None, False])
+    db_col.save()
 
-    table_hooks = '<hooks>'
-    table_hooks += '<hook type="after_insert"><create_company/></hook>'
-    table_hooks += '</hooks>'
+    db_col = db.api.get_db_object(context, '_sys', 'db_columns')
+    db_col.init()
+    db_col.setval('table_name', 'db_tables')
+    db_col.setval('col_name', 'data_company')
+    db_col.setval('fkey', ['_sys.dir_companies', 'company_id', None, None, False])
+    db_col.save()
 
-    params = (4, table_name, 'Companies', 'Directory of companies', False, dumps(del_chks),
-        gzip.compress(table_hooks.encode('utf-8')), True)
-    conn.cur.execute(
-        "INSERT INTO _sys.db_tables (created_id, table_name, short_descr, "
-        "long_descr, audit_trail, del_chks, table_hooks, table_created) "
-        "VALUES ({})".format(', '.join([conn.param_style] * 8))
-        , params)
-    conn.cur.execute('SELECT row_id FROM _sys.db_tables WHERE table_name = {}'
-        .format(conn.param_style), [table_name])
-    table_id = conn.cur.fetchone()[0]
-
-    params = (table_id, USER_ROW_ID, conn.timestamp, 'add')
-    conn.cur.execute(
-        "INSERT INTO _sys.db_tables_audit_xref (data_row_id, user_row_id, date_time, type) "
-        "VALUES ({})".format(', '.join([conn.param_style] * 4))
-        , params)
-
-    params = []
-    params.append(('company_id', 'TEXT', 'Company id',
-        'Company id', 'Company', 'Y', False, False, False, 15, 0, None, None, None, None, None))
-    params.append(('company_name', 'TEXT', 'Company name',
-        'Company name', 'Name', 'N', False, False, True, 30, 0, None, None, None, None, None))
-
-    db_column = db.api.get_db_object(context, '_sys', 'db_columns')
-    for seq, param in enumerate(params):
-        db_column.init()
-        db_column.setval('table_id', table_id)
-        db_column.setval('col_name', param[0])
-        db_column.setval('col_type', 'sys')
-        db_column.setval('seq', seq)
-        db_column.setval('data_type', param[1])
-        db_column.setval('short_descr', param[2])
-        db_column.setval('long_descr', param[3])
-        db_column.setval('col_head', param[4])
-        db_column.setval('key_field', param[5])
-        db_column.setval('generated', param[6])
-        db_column.setval('allow_null', param[7])
-        db_column.setval('allow_amend', param[8])
-        db_column.setval('max_len', param[9])
-        db_column.setval('db_scale', param[10])
-        db_column.setval('scale_ptr', param[11])
-        db_column.setval('dflt_val', param[12])
-        db_column.setval('col_chks', param[13])
-        db_column.setval('fkey', param[14])
-        db_column.setval('choices', param[15])
-        db_column.setval('sql', None)
-        db_column.save()
-
-    db.setup_tables.setup_table(conn, '_sys', table_name)
-
-    db_cursor = db.api.get_db_object(context, '_sys', 'db_cursors')
-    db_cursor.setval('table_name', table_name)
-    db_cursor.setval('cursor_name', 'companies')
-    db_cursor.setval('descr', 'Companies')
-    columns = []
-    columns.append(('company_id', 100, False, False, False, None, None))
-    columns.append(('company_name', 260, True, False, False, None, None))
-    db_cursor.setval('columns', columns)
-    filter = []
-    db_cursor.setval('filter', filter)
-    sequence = []
-    sequence.append(('company_id', False))
-    db_cursor.setval('sequence', sequence)
-    db_cursor.save()
-
+def setup_forms(context):
+    schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
+    parser = etree.XMLParser(
+        schema=etree.XMLSchema(file=os.path.join(schema_path, 'form.xsd')),
+        attribute_defaults=True, remove_comments=True, remove_blank_text=True)
+    form_path = os.path.join(os.path.dirname(__main__.__file__), 'init_new', 'forms')
+    db_obj = db.api.get_db_object(context, '_sys', 'sys_form_defns')
     db_table = db.api.get_db_object(context, '_sys', 'db_tables')
-    db_table.setval('table_name', table_name)
-    db_table.setval('default_cursor', 'companies')
-    db_table.save()
 
-def setup_dir_users(context, conn):
-    table_name = 'dir_users'
-    db_table = db.api.get_db_object(context, '_sys', 'db_tables')
-    db_table.setval('table_name', table_name)
-    db_table.setval('short_descr', 'Users')
-    db_table.setval('long_descr', 'Directory of users')
-    db_table.setval('audit_trail', True)
-    db_table.setval('table_created', True)
-    db_table.save()
-    table_id = db_table.getval('row_id')
+    def setup_form(form_name, title, table_name=None):
+        xml = open('{}/{}.xml'.format(form_path, form_name)).read()
+        db_obj.init()
+        db_obj.setval('form_name', form_name)
+        db_obj.setval('title', title)
+        xml = xml.replace('`', '&quot;')
+        xml = xml.replace('<<', '&lt;')
+        xml = xml.replace('>>', '&gt;')
+        db_obj.setval('form_xml', etree.fromstring(xml, parser=parser))
+        db_obj.save()
 
-    params = []
-    params.append(('row_id', 'AUTO', 'Row id', 'Row id', 'Row', 'Y',
-        True, False, False, 0, 0, None, None, None, None, None))
-    params.append(('created_id', 'INT', 'Created id',
-        'Created row id', 'Created', 'N', True, False, True, 0, 0, None, '0', None, None, None))
-    params.append(('deleted_id', 'INT', 'Deleted id',
-        'Deleted row id', 'Deleted', 'N', True, False, True, 0, 0, None, '0', None, None, None))
-    params.append(('user_id', 'TEXT', 'User id',
-        'User id', 'User', 'A', False, False, False, 15, 0, None, None, None, None, None))
-    params.append(('password', 'TEXT', 'Password',
-        'Password', 'Password', 'N', False, False, True, 0, 0, None, None, None, None, None))
-    params.append(('sys_admin', 'BOOL', 'Sys admin',
-        'Is user a system administrator?', 'Sys', 'N', False, False, True, 0, 0,
-        None, None, None, None, None))
-#   sub_types = {}
-#   sub_types['admin'] = 'System adminstrator', [], []
+        if table_name is not None:
+            db_table.init()
+            db_table.setval('table_name', table_name)
+            db_table.setval('setup_form', form_name)
+            db_table.save()
 
-    """
-    {"use_subtypes":true, "use_displaynames":true, "choice":[
-        {"code":"admin", "descr":"System administrator",
-            "subtype_columns":[], "displaynames":[]},
-        {"code":"ind", "descr":"Individual",
-            "subtype_columns":[
-                {"col_name":"first_name", "required":true},
-                {"col_name":"surname", "required":true}
-            ], "displaynames":[
-                {"col_name":"first_name", "separator":" "},
-                {"col_name":"surname", "separator":""}
-            ]
-        },
-        {"code":"comp", "descr":"Company",
-            "subtype_columns":[
-                {"col_name":"comp_name", "required":true},
-                {"col_name":"reg_no", "required":true},
-                {"col_name":"vat_no", "required":false}
-            ], "displaynames":[
-                {"col_name":"comp_name", "separator":""}
-            ]
-        }
-    ]}
+    setup_form('setup_grid', 'Setup - grid view')
+    setup_form('grid_lookup', 'Lookup - grid view')
+    setup_form('login_form', 'Login')
+    setup_form('chg_pwd_form', 'Change password')
+    setup_form('setup_form', 'Setup form definitions', table_name='sys_form_defns')
+    setup_form('setup_form_dbobj', 'Setup form dbobj definitions')
+    setup_form('setup_form_memobj', 'Setup form memobj definitions')
+#   setup_form('setup_form_inputs', 'Setup form input parameters')
+#   setup_form('setup_form_outputs', 'Setup form output parameters')
+    setup_form('setup_form_ioparams', 'Setup form i/o parameters')
+    setup_form('setup_form_gui', 'Setup form gui definition')
+    setup_form('col_checks', 'Column checks')
+    setup_form('foreign_key', 'Foreign key')
+    setup_form('choices', 'Choices')
+    setup_form('dbcols_sys', 'Db columns - sys')
+    setup_form('setup_company', 'Company setup')
+    setup_form('cursor_grid', 'Db cursor setup - grid view')
+    setup_form('cursor_form', 'Db cursor setup - form view')
+    setup_form('menu_setup', 'Menu setup')
+    setup_form('setup_user', 'Setup users', table_name='dir_users')
+    setup_form('setup_table', 'Setup database tables', table_name='db_tables')
+    setup_form('setup_table_dbcols', 'Setup database columns')
+    setup_form('setup_roles', 'Role setup')
+    setup_form('users_roles', 'Set up users roles')
 
-    or
+def setup_menus(context):
+    # menu option types
+    ROOT = '0'
+    MENU = '1'
+    GRID = '2'
+    FORM = '3'
+    REPORT = '4'
+    PROCESS = '5'
 
-    {"use_subtypes":true, "use_displaynames":true, "choice":[
-       {"code":"admin", "descr":"System administrator",
-            "subtype_columns":[], "displaynames":[]},
-       {"code":"ind", "descr":"Individual",
-           "subtype_columns":[
-               ["first_name", "required"],
-               ["surname", "required"]
-           ], "displaynames":[
-               ["first_name", " "]
-               ["surname", ""]
-           ]
-       },
-       {"code":"comp", "descr":"Company",
-           "subtype_columns":[
-               ["comp_name", "required"]
-               ["reg_no", "required"]
-               ["vat_no", "optional"]
-           ], "displaynames":[
-               ["comp_name", ""]
-           ]
-       }
-    ]}
+    menu_ids = {}
 
-    """
+    db_obj = db.api.get_db_object(context, '_sys', 'sys_menu_defns')
 
-    choices = [True, True, []]  # use sub_types, use display_names, list of choices
-    choices[2].append(['admin', 'System administrator', [], []])
-    params.append(('user_type', 'TEXT', 'User type', 'User type', 'Type',
-        'N', False, False, False, 12, 0, None, None, None, None, choices))
+    def setup_menu(descr, parent, seq, opt_type, table_name=None,
+            cursor_name=None, form_name=None):
+        db_obj.init()
+        db_obj.setval('descr', descr)
+        db_obj.setval('parent_id', parent)
+        db_obj.setval('seq', seq)
+        db_obj.setval('opt_type', opt_type)
+        db_obj.setval('table_name', table_name)
+        db_obj.setval('cursor_name', cursor_name)
+        db_obj.setval('form_name', form_name)
+        db_obj.save()
 
-    db_column = db.api.get_db_object(context, '_sys', 'db_columns')
-    for seq, param in enumerate(params):
-        db_column.init()
-        db_column.setval('table_id', table_id)
-        db_column.setval('col_name', param[0])
-        db_column.setval('col_type', 'sys')
-        db_column.setval('seq', seq)
-        db_column.setval('data_type', param[1])
-        db_column.setval('short_descr', param[2])
-        db_column.setval('long_descr', param[3])
-        db_column.setval('col_head', param[4])
-        db_column.setval('key_field', param[5])
-        db_column.setval('generated', param[6])
-        db_column.setval('allow_null', param[7])
-        db_column.setval('allow_amend', param[8])
-        db_column.setval('max_len', param[9])
-        db_column.setval('db_scale', param[10])
-        db_column.setval('scale_ptr', param[11])
-        db_column.setval('dflt_val', param[12])
-        db_column.setval('col_chks', param[13])
-        db_column.setval('fkey', param[14])
-        db_column.setval('choices', param[15])
-        db_column.setval('sql', None)
-        db_column.save()
+    setup_menu('System Administration', None, -1, ROOT)
+    root_id = 1
 
-    db.setup_tables.setup_table(conn, '_sys', table_name)
+    setup_menu('System setup', root_id, -1, MENU)
+    menu_id = db_obj.getval('row_id')
 
-    db_cursor = db.api.get_db_object(context, '_sys', 'db_cursors')
-    db_cursor.setval('table_name', table_name)
-    db_cursor.setval('cursor_name', 'users')
-    db_cursor.setval('descr', 'Users')
-    columns = []
-    columns.append(('user_id', 100, False, False, False, None, None))
-    columns.append(('display_name', 260, True, True, False, None, None))
-    db_cursor.setval('columns', columns)
-    filter = []
-    db_cursor.setval('filter', filter)
-    sequence = []
-    sequence.append(('user_id', False))
-    db_cursor.setval('sequence', sequence)
-    db_cursor.save()
+    setup_menu('Table definitions', menu_id, -1, GRID,
+        table_name='db_tables', cursor_name='db_tables')
 
-    db_table = db.api.get_db_object(context, '_sys', 'db_tables')
-    db_table.setval('table_name', table_name)
-    db_table.setval('default_cursor', 'users')
-    db_table.save()
+    setup_menu('Form definitions', menu_id, -1, GRID,
+        table_name='sys_form_defns', cursor_name='form_list')
 
-def setup_dir_users_companies(context, conn):
-    table_name = 'dir_users_companies'
-    db_table = db.api.get_db_object(context, '_sys', 'db_tables')
-    db_table.setval('table_name', table_name)
-    db_table.setval('short_descr', 'Users/companies')
-    db_table.setval('long_descr', 'Mapping of users to companies')
-    db_table.setval('audit_trail', True)
-    db_table.setval('table_created', True)
-    db_table.save()
-    table_id = db_table.getval('row_id')
+    setup_menu('Menu definitions', menu_id, -1, FORM,
+        form_name='menu_setup')
 
-    params = []
-    params.append(('row_id', 'AUTO', 'Row id',
-        'Row id', 'Row', 'Y', True, False, False, 0, 0, None, None, None, None, None))
-    params.append(('created_id', 'INT', 'Created id',
-        'Created row id', 'Created', 'N', True, False, True, 0, 0, None, '0', None, None, None))
-    params.append(('deleted_id', 'INT', 'Deleted id',
-        'Deleted row id', 'Deleted', 'N', True, False, True, 0, 0, None, '0', None, None, None))
-    fkey = []
-    fkey.append('dir_users')
-    fkey.append('row_id')
-    fkey.append('user_id')
-    fkey.append('user_id')
-    fkey.append(True)
-    params.append(('user_row_id', 'INT', 'User row id',
-        'User row id', 'User', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
-    fkey = []
-    fkey.append('dir_companies')
-    fkey.append('company_id')
-    fkey.append(None)
-    fkey.append(None)
-    fkey.append(True)
-    params.append(('company_id', 'TEXT', 'Company id',
-        'Company id', 'Company', 'A', False, False, False, 15, 0, None, None, None, fkey, None))
-    params.append(('comp_admin', 'BOOL', 'Company administrator',
-        'Is user a company adminstrator?', 'Admin', 'N', False, False, True, 0, 0, None,
-        None, None, None, None))
+    setup_menu('Administration', root_id, -1, MENU)
+    menu_id = db_obj.getval('row_id')
 
-    db_column = db.api.get_db_object(context, '_sys', 'db_columns')
-    for seq, param in enumerate(params):
-        db_column.init()
-        db_column.setval('table_id', table_id)
-        db_column.setval('col_name', param[0])
-        db_column.setval('col_type', 'sys')
-        db_column.setval('seq', seq)
-        db_column.setval('data_type', param[1])
-        db_column.setval('short_descr', param[2])
-        db_column.setval('long_descr', param[3])
-        db_column.setval('col_head', param[4])
-        db_column.setval('key_field', param[5])
-        db_column.setval('generated', param[6])
-        db_column.setval('allow_null', param[7])
-        db_column.setval('allow_amend', param[8])
-        db_column.setval('max_len', param[9])
-        db_column.setval('db_scale', param[10])
-        db_column.setval('scale_ptr', param[11])
-        db_column.setval('dflt_val', param[12])
-        db_column.setval('col_chks', param[13])
-        db_column.setval('fkey', param[14])
-        db_column.setval('choices', param[15])
-        db_column.setval('sql', None)
-        db_column.save()
+    setup_menu('Setup roles', menu_id, -1, FORM,
+        form_name='setup_roles')
 
-    db.setup_tables.setup_table(conn, '_sys', table_name)
+    setup_menu('Set up users roles', menu_id, -1, FORM,
+        form_name='users_roles')
+
+    setup_menu('Directories', root_id, -1, MENU)
+    menu_id = db_obj.getval('row_id')
+
+    setup_menu('Setup users', menu_id, -1, GRID,
+        table_name='dir_users', cursor_name='users')
+
+    setup_menu('Setup companies', menu_id, -1, FORM,
+        form_name='setup_company')
+
+#   setup_menu('Accounts receivable', root_id, -1, MENU)
+#   menu_id = db_obj.getval('row_id')
+#   setup_menu('AR setup', menu_id, -1, MENU)
+#   setup_menu('AR transactions', menu_id, -1, MENU)
+
+#   setup_menu('Accounts payable', root_id, -1, MENU)
+#   menu_id = db_obj.getval('row_id')
+#   setup_menu('AP setup', menu_id, -1, MENU)
+#   setup_menu('AP transactions', menu_id, -1, MENU)

@@ -127,10 +127,12 @@ function set_readonly(args) {
   for (var i=0, l=args.length; i<l; i++) {
     var ref = args[i][0], state = args[i][1];
     var obj = get_obj(ref);
-    if (state === false)
-      enable_obj(obj)
-    else
-      disable_obj(obj)
+//    if (state === false)
+//      enable_obj(obj)
+//    else
+//      disable_obj(obj)
+    obj.readonly = state;
+    obj.set_readonly(state);
     };
   };
 
@@ -175,8 +177,12 @@ function recv_prev(args) {
   };
 
 function cell_set_focus(args) {
-  var grid_ref = args[0], row = args[1], col = args[2], err_flag=args[3];
+  var grid_ref = args[0], row = args[1], col_ref = args[2], err_flag=args[3];
   var grid = get_obj(grid_ref);
+  if (col_ref === null)
+    var col = grid.active_col;
+  else
+    var col = get_obj(col_ref).col;
   if (!grid.has_focus)
     grid.focus();
   grid.focus_from_server = true;
@@ -192,7 +198,7 @@ function start_frame(args) {
     frame.form.tabdir = 1;  // in case 'dummy' gets focus
     for (var i=0, l=frame.obj_list.length; i<l; i++) {
       var obj = frame.obj_list[i];
-      //if (obj.disable_count || obj.display || !obj.offsetHeight)
+      //if (obj.readonly || obj.display || !obj.offsetHeight)
       if (obj.display || !obj.offsetHeight)
         continue;  // look for the next obj
       else

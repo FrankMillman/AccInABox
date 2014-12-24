@@ -1,5 +1,4 @@
-form_setup_dbobj = """
-<form name="form_setup_dbobj">
+<form name="setup_form_dbobj">
 
   <db_objects/>
   <mem_objects>
@@ -69,8 +68,6 @@ form_setup_dbobj = """
   <output_params>
     <output_param name="form_xml" type="data_attr" source="form.form_xml"/>
   </output_params>
-
-  <rules/>
 
   <frame main_object="form">
     <toolbar/>
@@ -174,4 +171,3 @@ form_setup_dbobj = """
     </frame_methods>
   </frame>
 </form>
-"""

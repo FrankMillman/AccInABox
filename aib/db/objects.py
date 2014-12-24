@@ -19,7 +19,7 @@ import db.cursor
 import db.connection
 import db.db_xml
 from db.chk_constraints import chk_constraint
-from errors import AibError
+from errors import AibError, AibPerms
 
 # should 'tables_open' be in db.objects or ht.htc.Session()
 # if server is long-running, the former would prevent changes being picked up
@@ -79,14 +79,14 @@ def get_db_table(context, active_company, table_name):
     table = 'db_tables'
     cols = ['row_id', 'table_name', 'short_descr', 'audit_trail', 'upd_chks',
         'del_chks', 'table_hooks', 'defn_company', 'data_company', 'read_only',
-        'default_cursor', 'form_xml']
+        'default_cursor', 'setup_form']
     where = [('WHERE', '', 'table_name', '=', table_name, '')]
 
     with context.db_session as conn:
         try:
             # next line only works if exactly one row is selected
             ((table_id, table_name, short_descr, audit_trail, upd_chks, del_chks,
-                table_hooks, defn_company, data_company, read_only, default_cursor, form_xml),
+                table_hooks, defn_company, data_company, read_only, default_cursor, setup_form),
                  ) = conn.simple_select(db_company, table, cols, where)
         except ValueError as e:
             if str(e).startswith('need'):
@@ -119,7 +119,7 @@ def get_db_table(context, active_company, table_name):
                 # NB don't overwrite defn_company or data_company [2014-07-25]
                 (
                 (table_id, table_name, short_descr, audit_trail, upd_chks, del_chks,
-                table_hooks, defn_company2, data_company2, read_only, default_cursor, form_xml),
+                table_hooks, defn_company2, data_company2, read_only, default_cursor, setup_form),
                 ) = conn.simple_select(defn_company, table, cols, where)
             except ValueError as e:
                 if str(e).startswith('need'):
@@ -134,7 +134,7 @@ def get_db_table(context, active_company, table_name):
     tables_open[table_key] = DbTable(
         context, orig_tableid, table_id, table_name, short_descr, audit_trail,
             upd_chks, del_chks, table_hooks, defn_company, data_company,
-            read_only, default_cursor, form_xml)
+            read_only, default_cursor, setup_form)
     return tables_open[table_key]
 
 #-----------------------------------------------------------------------------
@@ -337,7 +337,8 @@ class DbObject:
         if '>' in col_name:
             src_col, tgt_col = col_name.split('>')
             src_fld = self.fields[src_col]
-            tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
+#           tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
+            tgt_rec = src_fld.get_fk_object()
             return tgt_rec.fields[tgt_col]
         return self.fields[col_name]
 
@@ -345,7 +346,8 @@ class DbObject:
         if '>' in col_name:
             src_col, tgt_col = col_name.split('>')
             src_fld = self.fields[src_col]
-            tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
+#           tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
+            tgt_rec = src_fld.get_fk_object()
             return tgt_rec.fields[tgt_col].getval()
         fld = self.fields[col_name]
         return fld.getval()
@@ -354,17 +356,19 @@ class DbObject:
         if '>' in col_name:
             src_col, tgt_col = col_name.split('>')
             src_fld = self.fields[src_col]
-            tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
+#           tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
+            tgt_rec = src_fld.get_fk_object()
             return tgt_rec.fields[tgt_col].get_orig()
         fld = self.fields[col_name]
         return fld.get_orig()
 
     def get_prev(self, col_name):
-        if '.' in col_name:
-            src_col, tgt_col = col_name.split('.')
+        if '>' in col_name:
+            src_col, tgt_col = col_name.split('>')
             src_fld = self.fields[src_col]
-            tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
-            return tgt_rec.get_prev(tgt_col)
+#           tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
+            tgt_rec = src_fld.get_fk_object()
+            return tgt_rec.fields[tgt_col].get_prev()
         fld = self.fields[col_name]
         return fld.get_prev()
 
@@ -425,9 +429,9 @@ class DbObject:
             self.setval(key, keys[key], display)
         self.exists = True
 
-    def select_many(self, where, order):
+    def select_many(self, where, order, debug=False):
 
-        self.check_perms(0)  # 0 = SELECT
+        self.check_perms('select')
 
         if where:
             test = 'AND'
@@ -456,7 +460,7 @@ class DbObject:
         conn.cur = conn.cursor()
 
         select_cols = [fld.col_name for fld in self.select_cols]
-        cur = conn.full_select(self, select_cols, where, order)
+        cur = conn.full_select(self, select_cols, where, order, debug=debug)
         for row in cur:
             self.on_row_selected(row, display=False)
             yield None  # throw-away value
@@ -581,7 +585,7 @@ class DbObject:
 #   def on_select_failed(self, cols_vals, display):
     def on_select_failed(self, display):
         # assume we are trying to create a new db_obj
-        self.check_perms(1)  # 1 = INSERT
+        self.check_perms('insert')
 
         #
         # assert self.dirty is True  # remove when satisfied
@@ -834,7 +838,7 @@ class DbObject:
                     fld.setval(value)  # can raise AibError
 
     def insert(self, conn):
-        self.check_perms(1)  # 1 = INSERT
+        self.check_perms('insert')
 
         cols = []
         vals = []
@@ -849,7 +853,7 @@ class DbObject:
         conn.insert_row(self, cols, vals, generated_flds)
 
     def update(self, conn):
-        self.check_perms(2)  # 2 = UPDATE
+        self.check_perms('update')
 
         # read in current row with lock, for optimistic concurrency control
         cols = ', '.join([fld.col_name for fld in self.flds_to_update])
@@ -883,7 +887,7 @@ class DbObject:
             conn.update_row(self, cols, vals)
 
     def delete(self):
-        self.check_perms(3)  # 3 = DELETE
+        self.check_perms('delete')
 
         if not self.exists:
             raise AibError(
@@ -919,27 +923,108 @@ class DbObject:
         #   in blanking out the next row after they all move up one
         self.init(display=False)
 
-    def check_perms(self, perm_type):
+    def check_perms(self, perm_type, col_id=None):
         if self.mem_obj:
-            pass  # no restrictions on in-memory objects
-        elif self.context.sys_admin:
-            pass  # system administrator
-        elif self.context.perms[self.data_company] == '_admin_':
-            pass  # company administrator
-        else:
-            ok = False
-            table_id = self.db_table.orig_tableid
-            if table_id in self.context.perms[self.data_company]:
-                # a tuple of (select_ok?, insert_ok?, update_ok?, delete_ok?)
-                if self.context.perms[self.data_company][table_id][perm_type]:
+            return  # no restrictions on in-memory objects
+
+        if self.context.sys_admin:
+            return  # system administrator
+
+        if self.data_company not in self.context.perms:
+            self.setup_perms()
+            print(self.context.perms)
+
+        if self.context.perms[self.data_company] == '_admin_':
+            return  # company administrator
+
+        ok = False
+        table_id = self.db_table.orig_tableid
+        if table_id in self.context.perms[self.data_company]:
+            if perm_type == 'select':
+                perm = self.context.perms[self.data_company][table_id][0]
+                if perm is not False:
                     ok = True
-            if not ok:
-                perm_types = ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
-                raise AibError(
-                    head='{} {}.{}'.format(
-                        perm_types[perm_type], self.data_company, self.table_name),
-                    body='Permission denied'
-                    )
+            elif perm_type == 'view':
+                perm = self.context.perms[self.data_company][table_id][0]
+                if perm is True:
+                    ok = True
+                elif isinstance(perm, dict):
+                    if str(col_id) in perm:
+                        ok = True
+            elif perm_type == 'insert':
+                if self.context.perms[self.data_company][table_id][1]:
+                    ok = True
+            elif perm_type == 'update':
+                perm = self.context.perms[self.data_company][table_id][2]
+                if perm is not False:
+                    ok = True
+            elif perm_type == 'setval':
+                perm = self.context.perms[self.data_company][table_id][2]
+                if perm is True:
+                    ok = True
+                elif isinstance(perm, dict):
+                    if str(col_id) in perm:
+                        ok = True
+            elif perm_type == 'delete':
+                if self.context.perms[self.data_company][table_id][3]:
+                    ok = True
+        if not ok:
+            raise AibPerms(
+                head='{} {}.{}'.format(perm_type, self.data_company, self.table_name),
+                body='Permission denied'
+                )
+
+    def setup_perms(self):
+
+        company = self.data_company
+        user_row_id = self.context.user_row_id
+        perms = self.context.perms
+
+        with self.context.db_session as conn:
+
+            # user can have more than one role
+            # roles could have differing permissions on the same table
+            # read in all roles for this user
+            # if *any* permission is True for this table, set it to True
+            # else if permission is a dict of permitted columns
+            #   update the dictionary so it includes all permitted columns
+            # else set it to False
+            perms[company] = {}  # key=table_id, value=permissions
+
+            sql = (
+                "SELECT table_id, sel_ok, ins_ok, upd_ok, del_ok "
+                " FROM {0}.adm_table_perms a "
+                "LEFT JOIN {0}.adm_users_roles b ON b.role_id = a.role_id "
+                "WHERE a.deleted_id = 0 AND b.user_row_id = {1}"
+                .format(company, user_row_id)
+                )
+            conn.cur = db.api.exec_sql(conn, sql)
+            for table_id, sel_new, ins_new, upd_new, del_new in conn.cur:
+                sel_new, ins_new, upd_new, del_new = [
+                    loads(_) for _ in (sel_new, ins_new, upd_new, del_new)]
+                if table_id in perms[company]:
+                    sel_now, ins_now, upd_now, del_now = perms[company][table_id]
+                    if sel_new is True:
+                        sel_now = True
+                    elif isinstance(sel_new, dict):
+                        if sel_now is False:
+                            sel_now = sel_new
+                        else:
+                            sel_now.update(sel_new)
+                    if ins_new is True:
+                        ins_now = True
+                    if upd_new is True:
+                        upd_now = True
+                    elif isinstance(upd_new, dict):
+                        if upd_now is False:
+                            upd_now = upd_new
+                        else:
+                            upd_now.update(upd_new)
+                    if del_new is True:
+                        del_now = True
+                    perms[company][table_id] = (sel_now, ins_now, upd_now, del_now)
+                else:
+                    perms[company][table_id] = (sel_new, ins_new, upd_new, del_new)
 
 #-----------------------------------------------------------------------------
 
@@ -1160,7 +1245,7 @@ class MemObject(DbObject):
         cols = [col for col in self.select_cols if not col.col_defn.generated]
         array = []
         all_dbobj = self.select_many(where=[], order=[('row_id', False)])
-        while next(all_dbobj):
+        for _ in all_dbobj:
             array.append([fld.get_val_for_sql() for fld in cols])
         return array
 
@@ -1274,7 +1359,7 @@ class DbTable:
 
     def __init__(self, context, orig_tableid, table_id, table_name, short_descr,
             audit_trail, upd_chks, del_chks, table_hooks, defn_company,
-            data_company, read_only, default_cursor, form_xml):
+            data_company, read_only, default_cursor, setup_form):
         self.orig_tableid = orig_tableid
         self.table_id = table_id
         self.table_name = table_name
@@ -1293,10 +1378,11 @@ class DbTable:
         self.data_company = data_company
         self.read_only = read_only
         self.default_cursor = default_cursor
-        if form_xml is None:
-            self.form_xml = None
-        else:
-            self.form_xml = etree.fromstring(gzip.decompress(form_xml))
+#       if form_xml is None:
+#           self.form_xml = None
+#       else:
+#           self.form_xml = etree.fromstring(gzip.decompress(form_xml))
+        self.setup_form = setup_form
 
         self.parent_params = []  # if fkey has 'child=True', append
                                  #   (parent_name, parent_pkey, fkey_colname)

@@ -256,7 +256,7 @@ function setup_form(args) {
             };
           };
 
-        document.body.onkeyup = function(e) {
+        document.onkeyup = function(e) {
           if (!e) e=window.event;
           if (e.keyCode === 13) {  // user released Enter
             if (!ignore_enter) {  // never true - document.body!

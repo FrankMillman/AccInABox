@@ -1,11 +1,11 @@
-user_formview = """
-<form name="">
+<form name="setup_user">
   <db_objects>
+    <db_obj name="user" table_name="dir_users"/>
     <db_obj name="company" table_name="dir_companies"/>
-    <db_obj name="user_comps" table_name="dir_users_companies" parent="db_obj"/>
+    <db_obj name="user_comps" table_name="dir_users_companies" parent="user"/>
   </db_objects>
   <mem_objects>
-    <mem_obj name="user_comp_view" descr="Full list of user/companies" parent="db_obj">
+    <mem_obj name="user_comp_view" descr="Full list of user/companies" parent="user">
       <mem_col col_name="company_id" data_type="TEXT" short_descr="Company id"
         long_descr="Company id" col_head="Company" key_field="A" allow_null="false"
         allow_amend="false" max_len="15" db_scale="0"/>
@@ -31,11 +31,12 @@ user_formview = """
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
     </mem_obj>
   </mem_objects>
-  <input_params/>
+  <input_params>
+    <input_param name="db_obj" type="data_obj" target="user" required="false"/>
+  </input_params>
   <output_params/>
-  <rules/>
-  <frame>
-    <toolbar/>
+  <frame main_object="user">
+    <toolbar template="Setup_Form"/>
     <body>
       <block/>
       <panel/>
@@ -43,20 +44,20 @@ user_formview = """
       <col/>
       <label value="User Id:"/>
       <col/>
-      <input fld="db_obj.user_id" lng="60"/>
-      <display fld="db_obj.display_name" lng="160"/>
+      <input fld="user.user_id" lng="60"/>
+      <display fld="user.display_name" lng="160"/>
       <row/>
       <col/>
       <label value="User type:"/>
       <col/>
-      <input fld="db_obj.user_type" lng="160"/>
+      <input fld="user.user_type" lng="160"/>
       <row/>
       <col/>
       <label value="Sys Admin?"/>
       <col/>
-      <input fld="db_obj.sys_admin"/>
+      <input fld="user.sys_admin"/>
       <block/>
-      <subtype_panel subtype="db_obj.user_type"/>
+      <subtype_panel subtype="user.user_type"/>
       <block/>
       <grid data_object="user_comp_view" growable="false" num_grid_rows="5">
         <cur_columns>
@@ -85,29 +86,14 @@ user_formview = """
         <grid_methods template="Setup_Grid"/>
       </grid>
     </body>
-    <button_row validate="true">
-<!--
-      <button btn_id="btn_pwd" btn_label="Change password" btn_enabled="false"
-          btn_validate="true" btn_default="false">
-        <sub_form form_name="chg_pwd_form">
-          <call_params/>
-          <return_params>
-            <return_param name="password" type="data_attr" target="db_obj.password"/>
-          </return_params>
-          <on_return>
-            <return state="completed"/>
-            <return state="cancelled"/>
-          </on_return>
-        </sub_form>
-      </button>
--->
+    <button_row validate="true" template="Setup_Form">
       <button btn_id="btn_pwd" btn_label="Change password" btn_enabled="false"
           btn_validate="true" btn_default="false" btn_action="
         <<action>>
           <<sub_form form_name=`chg_pwd_form`>>
             <<call_params/>>
             <<return_params>>
-              <<return_param name=`password` type=`data_attr` target=`db_obj.password`/>>
+              <<return_param name=`password` type=`data_attr` target=`user.password`/>>
             <</return_params>>
             <<on_return>>
               <<return state=`completed`/>>
@@ -117,12 +103,12 @@ user_formview = """
         <</action>>
         "/>
     </button_row>
-    <frame_methods>
+    <frame_methods template="Setup_Form">
       <method name="on_start_form" action="
         <<action>>
           <<pyfunc name=`db.formdefn_funcs.load_user_comps`/>>
           <<case>>
-            <<obj_exists obj_name=`db_obj`>>
+            <<obj_exists obj_name=`user`>>
               <<change_button>>
                 <<btn_enabled btn_id=`btn_pwd` state=`true`/>>
               <</change_button>>
@@ -137,11 +123,10 @@ user_formview = """
       "/>
       <method name="do_save" action="
         <<action>>
-          <<save_obj obj_name=`db_obj`/>>
+          <<save_obj obj_name=`user`/>>
           <<pyfunc name=`db.formdefn_funcs.dump_user_comps`/>>
         <</action>>
       "/>
     </frame_methods>
   </frame>
 </form>
-"""
