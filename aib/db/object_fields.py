@@ -339,7 +339,7 @@ class Field:
     def continue_setval(self, value, display):
 
         try:
-            self.db_obj.check_perms('setval', self.col_defn.row_id)
+            self.db_obj.check_perms('amend', self.col_defn.row_id)
         except AibPerms:
             raise AibPerms(
                 head='Amend {}.{}'.format(self.table_name, self.col_name),

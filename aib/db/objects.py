@@ -958,7 +958,7 @@ class DbObject:
                 perm = self.context.perms[self.data_company][table_id][2]
                 if perm is not False:
                     ok = True
-            elif perm_type == 'setval':
+            elif perm_type == 'amend':
                 perm = self.context.perms[self.data_company][table_id][2]
                 if perm is True:
                     ok = True
