@@ -8,6 +8,7 @@ schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
 parser = etree.XMLParser(
     schema=etree.XMLSchema(file=os.path.join(schema_path, 'form.xsd')),
     attribute_defaults=True, remove_comments=True, remove_blank_text=True)
+form_path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'forms')
 
 import db.api
 import db.create_table
@@ -22,6 +23,23 @@ def upgrade_datamodel(db_session, old_version, new_version, company='_sys'):
         upgrade_0_1_3(db_session, company)
     if old_version < (0, 1, 4):
         upgrade_0_1_4(db_session)
+    if old_version < (0, 1, 5):
+        upgrade_0_1_5(db_session, company)
+
+# replace amended form definitions
+def upd_form_defn(conn, company, form_name):
+    xml = open('{}/{}.xml'.format(form_path, form_name)).read()
+    xml = xml.replace('`', '&quot;')
+    xml = xml.replace('<<', '&lt;')
+    xml = xml.replace('>>', '&gt;')
+    xml = etree.fromstring(xml, parser=parser)
+    xml = gzip.compress(etree.tostring(xml))
+    sql = (
+        'UPDATE {0}.sys_form_defns SET form_xml = {1} WHERE form_name = {1}'
+        .format(company, conn.param_style)
+        )
+    params = [xml, form_name]
+    conn.exec_sql(sql, params)
 
 def upgrade_0_1_1(db_session):
     print('upgrading to 0.1.1')
@@ -385,3 +403,11 @@ def upgrade_0_1_4(db_session):
     print()
     import sys
     sys.exit(0)
+
+def upgrade_0_1_5(db_session, company):
+    print('upgrading to 0.1.5')
+    with db_session as conn:
+
+        form_names = ('setup_user', 'setup_roles')
+        for form_name in form_names:
+            upd_form_defn(conn, company, form_name)
