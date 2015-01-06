@@ -1,5 +1,3 @@
-#import ceODBC
-#import pypyodbc as pyodbc
 import pyodbc
 from datetime import datetime
 
@@ -24,16 +22,16 @@ def customise(DbConn, db_params):
 
 def init(self, pos):
     conn = pyodbc.connect(
-#   conn = ceODBC.connect(
-        'driver={0};server={1};database={2};uid={3};pwd={4}'.format
-        ('sql server', '(local)', self.database, self.user, self.pwd))
+#       'driver={0};server={1};database={2};uid={3};pwd={4}'.format
+#       ('sql server', '(local)', self.database, self.user, self.pwd))
+        driver='sql server', server='(local)', database=self.database,
+        user=self.user, password=self.pwd)
     self.conn = conn
     self.cursor = conn.cursor
     self.param_style = '?'
     self.func_prefix = 'dbo.'
     self.concat = '+'
     self.repeat = 'replicate'
-#   self.exception = ceODBC.Error
     self.exception = pyodbc.DatabaseError
     self.msg_pos = 0
     # SQL Server 2000/2005 does not have a Date type - apparently 2008 does

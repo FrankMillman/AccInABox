@@ -8,7 +8,7 @@ function create_cell_input(grid) {
   input.style.padding = '1px';
   input.style.font = '10pt Verdana,sans-serif';
   input.style.color = 'navy';
-  input.grid = grid;
+//  input.grid = grid;
 
   input.get_val = function() {
     return this.value;
@@ -18,10 +18,10 @@ function create_cell_input(grid) {
     return getCaret(this);
     };
 
-  input.set_readonly = function(state) {
-    input.readonly = state;
-    input.aib_obj.set_readonly(input, state);
-    };
+//  input.set_readonly = function(state) {
+//    input.readonly = state;
+//    input.aib_obj.set_readonly(input, state);
+//    };
 
   input.set_value_from_server = function(args) {
     if (this.grid.active_row === -1)  // grid not yet set up
@@ -223,12 +223,13 @@ function create_grid_input(col_span, col_defn, cell) {
       var cell = chkbox.parentNode;
       var grid = cell.grid;
       if (grid.frame.form.disable_count) return false;
-      if (cell.input.readonly) return false;
+//      if (cell.input.readonly) return false;
+      if (!cell.input.get_amendable()) return false;
       if (grid.active_cell === cell)
         cell.aib_obj.grid_chkbox_change(cell, grid.active_row);
       else {
         callbacks.push([chkbox, chkbox.afterclick, cell]);
-        grid.req_cell_focus(grid.first_grid_row + cell.grid_row, cell.grid_col, false);
+        grid.req_cell_focus(grid.first_grid_row + cell.grid_row, cell.grid_col);
         };
       e.cancelBubble = true;
       return false;  // prevent bubble up to cell.onclick()
@@ -288,7 +289,7 @@ function create_grid_input(col_span, col_defn, cell) {
         cell.aib_obj.grid_popup(cell, grid.active_row);
       else {
         callbacks.push([sxml, sxml.afterclick, cell]);
-        grid.req_cell_focus(grid.first_grid_row + cell.grid_row, cell.grid_col, false);
+        grid.req_cell_focus(grid.first_grid_row + cell.grid_row, cell.grid_col);
         };
       e.cancelBubble = true;
       return false;  // prevent bubble up to cell.onclick()
@@ -401,7 +402,7 @@ function create_grid_input(col_span, col_defn, cell) {
             cell.input.expander();
           else {
             callbacks.push([lkup, lkup.afterclick, cell]);
-            grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col, false);
+            grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
             };
           };
         lkup.afterclick = function(cell) {
@@ -431,7 +432,7 @@ function create_grid_input(col_span, col_defn, cell) {
             cell.input.lookdown();
           else {
             callbacks.push([lkdn, lkdn.afterclick, cell]);
-            grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col, false);
+            grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
             };
           };
         lkdn.afterclick = function(cell) {
@@ -484,7 +485,7 @@ function create_grid_input(col_span, col_defn, cell) {
           }
         else {
           callbacks.push([btn, btn.afterclick, cell]);
-          grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col, false);
+          grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
           };
         };
       btn.afterclick = function(cell) {
@@ -533,7 +534,7 @@ function create_grid_input(col_span, col_defn, cell) {
           cell.aib_obj.grid_create_dropdown(cell);
         else {
           callbacks.push([btn, btn.afterclick, cell]);
-          grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col, false);
+          grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
           };
         };
       btn.afterclick = function(cell) {
@@ -598,7 +599,7 @@ function create_grid_button(col_span, col_defn, cell) {
       button.afterclick(cell);
     else {
       callbacks.push([button, button.afterclick, cell]);
-      grid.req_cell_focus(grid.first_grid_row + cell.grid_row, cell.grid_col, false);
+      grid.req_cell_focus(grid.first_grid_row + cell.grid_row, cell.grid_col);
       };
     e.cancelBubble = true;
     return false;  // prevent bubble up to cell.onclick()

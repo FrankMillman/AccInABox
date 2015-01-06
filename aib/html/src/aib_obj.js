@@ -17,7 +17,7 @@ function AibCtrl() {};
 AibCtrl.prototype.onfocus = function(ctrl) {
   var inp = ctrl.childNodes[0];
   var dsp = ctrl.childNodes[1];
-  if (ctrl.readonly) {
+  if (!ctrl.get_amendable()) {
 
 //    if (ctrl.tabIndex === -1) {
     if (dsp.style.display === 'none') {
@@ -26,9 +26,9 @@ AibCtrl.prototype.onfocus = function(ctrl) {
       ctrl.tabIndex = 0;
       ctrl.focus();
       };
-    dsp.style.background = '#CCFFCC';
+    dsp.style.background = '#CCFFCC';  // light green
     if (dsp.txt !== undefined)
-      dsp.txt.style.background = '#B4EEB4';
+      dsp.txt.style.background = '#B4EEB4';  // slightly darker green
 
     if (ctrl.frame.form.current_focus === ctrl)
       ctrl.aib_obj.after_got_focus(ctrl)
@@ -61,13 +61,13 @@ AibCtrl.prototype.set_cell_value_from_server = function(grid, row, col, value) {
     cell.aib_obj.set_cell_value_lost_focus(cell, value);
     };
   };
-AibCtrl.prototype.set_readonly = function(ctrl, state) {
-  var dsp = ctrl.childNodes[1];
-  if (state)  // set to readonly
-    dsp.style.color = 'grey';
-  else  // set to enabled
-    dsp.style.color = null;  //'navy';
-  };
+//AibCtrl.prototype.set_readonly = function(ctrl, state) {
+//  var dsp = ctrl.childNodes[1];
+//  if (state)  // set to readonly
+//    dsp.style.color = 'grey';
+//  else  // set to enabled
+//    dsp.style.color = '';  // reset to CSS value
+//  };
 
 ////////////////////
 //  AibText       //
@@ -77,7 +77,7 @@ AibText.prototype = new AibCtrl();
 AibText.prototype.after_got_focus = function(text) {
   var inp = text.childNodes[0];
   var dsp = text.childNodes[1];
-  if (text.readonly) {
+  if (!text.get_amendable()) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -90,7 +90,7 @@ AibText.prototype.after_got_focus = function(text) {
     setInsertionPoint(inp, 0);  //inp.value.length);
   };
 AibText.prototype.before_lost_focus = function(text) {
-  if (text.readonly)
+  if (!text.get_amendable())
     return true;
   var inp = text.childNodes[0];
   if (text.multi_line === true)
@@ -104,13 +104,13 @@ AibText.prototype.before_lost_focus = function(text) {
 AibText.prototype.after_lost_focus = function(text) {
   var inp = text.childNodes[0];
   var dsp = text.childNodes[1];
-  if (text.readonly) {
+//  if (text.readonly) {
     dsp.style.border = '1px solid darkgrey';
     dsp.style.background = 'transparent';
     if (dsp.txt !== undefined)
       dsp.txt.style.background = '#f5f5f5';  // very light grey
-    return;
-    };
+//    return;
+//    };
   if (text.password !== '')
     dsp.text.data = repeat('x', text.current_value.length);
   else
@@ -253,7 +253,7 @@ AibNum.prototype = new AibCtrl();
 AibNum.prototype.after_got_focus = function(num) {
   var inp = num.childNodes[0];
   var dsp = num.childNodes[1];
-  if (num.readonly) {
+  if (!num.get_amendable()) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -261,7 +261,7 @@ AibNum.prototype.after_got_focus = function(num) {
   setInsertionPoint(inp, 0, inp.value.length);
   };
 AibNum.prototype.before_lost_focus = function(num) {
-  if (num.readonly)
+  if (!num.get_amendable())
     return true;
   var inp = num.childNodes[0];
   num.current_value = inp.value;
@@ -457,7 +457,7 @@ AibDate.prototype = new AibCtrl();
 AibDate.prototype.after_got_focus = function(date) {
   var inp = date.childNodes[0];
   var dsp = date.childNodes[1];
-  if (date.readonly) {
+  if (!date.get_amendable()) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -471,7 +471,7 @@ AibDate.prototype.after_got_focus = function(date) {
     date.pos = 0;
   };
 AibDate.prototype.before_lost_focus = function(date) {
-  if (date.readonly)
+  if (!date.get_amendable())
     return true;
   var inp = date.childNodes[0];
   date.valid = true;
@@ -605,7 +605,7 @@ AibDate.prototype.test_literal = function(date, pos) {
   return false;
   };
 AibDate.prototype.show_cal = function(date) {
-  if (date.readonly)
+  if (!date.get_amendable())
     return;
   show_cal(date, date.current_value, this.after_cal);
   date.selected = false;
@@ -950,7 +950,7 @@ AibBool.prototype.after_got_focus = function(bool) {
   bool.style.border = '1px solid black';
   if (bool.frame.form.focus_from_server)
     bool.className = 'error_background'
-  else if (bool.readonly)
+  else if (!bool.get_amendable())
     bool.className = 'readonly_background';
   else
     bool.className = 'focus_background';
@@ -963,23 +963,23 @@ AibBool.prototype.after_lost_focus = function(bool) {
   bool.style.border = '1px solid darkgrey';
   bool.has_focus = false;
   };
-AibBool.prototype.set_readonly = function(bool, state) {
-  if (state) {
-    bool.style.color = 'grey';
-//    bool.style.background = '#f0f0f0';
-    }
-  else {
-    bool.style.color = null;  //'navy';
-//    bool.style.background = '';
-    // reset so that it gets background from className
-    // works with Chrome, not with IE8
-//    bool.className = 'blur_background';
-    };
-  };
+//AibBool.prototype.set_readonly = function(bool, state) {
+//  if (state) {
+//    bool.style.color = 'grey';
+////    bool.style.background = '#f0f0f0';
+//    }
+//  else {
+//    bool.style.color = null;  //'navy';
+////    bool.style.background = '';
+//    // reset so that it gets background from className
+//    // works with Chrome, not with IE8
+////    bool.className = 'blur_background';
+//    };
+//  };
 /*
 AibBool.prototype.onclick = function(bool) {
   if (bool.frame.form.disable_count) return false;
-  if (bool.readonly) return false;
+  if (!bool.get_amendable()) return false;
 //  if (bool.frame.form.current_focus !== bool) {
 //    if (bool.has_focus)
 //      got_focus(bool);  // call lost_focus(), got_focus()
@@ -999,7 +999,7 @@ AibBool.prototype.onclick = function(bool) {
   };
 */
 AibBool.prototype.ondownkey = function(bool, e) {
-  if (bool.readonly)
+  if (!bool.get_amendable())
     return;
   if (e.keyCode === 32)
     this.chkbox_change(bool);
@@ -1177,7 +1177,7 @@ AibChoice.prototype = new AibCtrl();
 AibChoice.prototype.after_got_focus = function(choice) {
   var inp = choice.childNodes[0];
   var dsp = choice.childNodes[1];
-  if (choice.readonly) {
+  if (!choice.get_amendable()) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -1366,16 +1366,8 @@ AibChoice.prototype.create_dropdown = function(choice) {
   setTimeout(function() {dropdown.focus()}, 0);
   return dropdown;
   };
-// what is this for? [2014-09-12]
-// it prevents esc bubbling up to form
-//AibChoice.prototype.handle_escape = function(choice) {
-//  pos = choice.data.indexOf(choice.form_value);
-//  if (pos === -1)
-//    pos = 0;
-//  this.after_selection(choice, pos);
-//  };
 AibChoice.prototype.onkey = function(choice, e) {
-  if (choice.readonly)
+  if (!choice.get_amendable())
     return;
   if (e.keyCode === 32) {  // space
     choice.on_selection = this.after_selection;
@@ -1415,27 +1407,19 @@ AibChoice.prototype.data_changed = function(choice) {
     return (choice.current_value !== choice.form_value);
   };
 AibChoice.prototype.reset_value = function(choice) {
-  debug3('does this ever get called?');
-//  value = choice.form_value;
-//  pos = choice.data.indexOf(value);
-//  if (pos !== choice.ndx) {
-//    choice.ndx = pos;
-//    if (pos !== -1) {
-//      choice.current_value = choice.data[pos];
-//      choice.innerHTML = choice.values[pos]
-//      }
-//    else {
-//      choice.current_value = '';
-//      choice.innerHTML = '';
-//      };
-//    };
-//  //if (value !== -1)
-//  //  choice.innerHTML = choice.values[value]
-//  //else
-//  //  choice.innerHTML = '';
-//  choice.current_value = value;
-//  choice.ndx = pos;
-//  choice.focus();
+  var inp = choice.childNodes[0];
+  var dsp = choice.childNodes[1];
+  value = choice.form_value;
+  pos = choice.data.indexOf(value);
+  if (pos !== choice.ndx) {
+    choice.ndx = pos;
+    var dsp_value = choice.values[choice.ndx];
+    if (inp.style.display === 'none')
+      dsp.text.data = dsp_value;
+    else
+      inp.innerHTML = html_esc(dsp_value);
+    choice.current_value = value;
+    };
   };
 AibChoice.prototype.get_value_for_server = function(choice) {
   //return choice.data[choice.current_value];
@@ -1507,10 +1491,11 @@ AibChoice.prototype.set_cell_value_lost_focus = function(cell, value) {
   cell.current_value = value;
   pos = cell.input.data.indexOf(value);
   cell.pos = pos;
-  if (pos === -1)
-    value = '';
-  else
-    value = cell.input.values[pos];
+//  if (pos === -1)
+//    value = '';
+//  else
+//    value = cell.input.values[pos];
+  value = cell.input.values[pos];
 //  if (!(/\S/.test(value)))  // if cannot find a non-whitespace character
 //    value = '\xa0';  // replace with &nbsp
   cell.text_node.data = value;
@@ -1525,7 +1510,7 @@ AibChoice.prototype.get_cell_value_for_server = function(cell) {
   };
 AibChoice.prototype.grid_create_dropdown = function(cell) {
   choice = cell.input;
-  if (choice.readonly || !(choice.allow_amend || cell.grid.inserted))
+  if (!choice.get_amendable())
     return;
   cell.parentNode.appendChild(choice);
   choice.cell = cell;
@@ -1559,7 +1544,7 @@ AibSpin.prototype = new AibCtrl();
 AibSpin.prototype.after_got_focus = function(spin) {
   var inp = spin.childNodes[0];
   var dsp = spin.childNodes[1];
-  if (spin.readonly) {
+  if (!spin.get_amendable()) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -1571,7 +1556,7 @@ AibSpin.prototype.before_lost_focus = function(spin) {
 AibSpin.prototype.after_lost_focus = function(spin) {
   var inp = spin.childNodes[0];
   var dsp = spin.childNodes[1];
-  if (spin.readonly) {
+  if (!spin.get_amendable()) {
     dsp.style.border = '1px solid darkgrey';
     dsp.style.background = 'transparent';
     dsp.txt.style.background = '#f5f5f5';  // very light grey
@@ -1678,7 +1663,7 @@ AibSxml.prototype.after_got_focus = function(sxml) {
   if (sxml.frame.form.focus_from_server)
     //sxml.className = 'error_background'
     sxml.style.background = sxml.bg_error;
-  else if (sxml.readonly)
+  else if (!sxml.get_amendable())
     sxml.style.background = sxml.bg_disabled;
   else
     sxml.style.background = sxml.bg_focus;
@@ -1692,14 +1677,14 @@ AibSxml.prototype.after_lost_focus = function(sxml) {
   sxml.style.border = '1px solid darkgrey';
   sxml.has_focus = false;
   };
-AibSxml.prototype.set_readonly = function(sxml, state) {
-  if (state) {
-    sxml.style.color = 'grey';
-    }
-  else {
-    sxml.style.color = null;  //'navy';
-    };
-  };
+//AibSxml.prototype.set_readonly = function(sxml, state) {
+//  if (state) {
+//    sxml.style.color = 'grey';
+//    }
+//  else {
+//    sxml.style.color = null;  //'navy';
+//    };
+//  };
 AibSxml.prototype.ondownkey = function(sxml, e) {
   if (e.keyCode === 13) {
     sxml.onclick(sxml);

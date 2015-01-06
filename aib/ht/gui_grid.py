@@ -61,7 +61,7 @@ class GuiGrid:
         self.temp_data = {}
         self.must_validate = True
         self.readonly = False
-        self.parent_type = 'grid'
+#       self.parent_type = 'grid'
 
         self.data_objects = parent.data_objects
         self.obj_name = element.get('data_object')
@@ -79,8 +79,9 @@ class GuiGrid:
         self.ref = ref
         self.pos = pos
 
-        self.on_read_dict = {}
-        self.on_amend_dict = {}
+        self.on_read_set = set()
+        self.on_clean_set = set()
+        self.on_amend_set = set()
 
         self.methods = {}
 #       methods = element.find('grid_methods')
@@ -116,21 +117,17 @@ class GuiGrid:
 #                   parser=parser)
 
             if method_name == 'on_amend':  # set up callback on db_object
-#               obj_name = method.get('obj_name')
                 db_obj = self.data_objects[obj_name]
-#               if db_obj not in self.on_amend_dict:
-#                   db_obj.add_amend_func(self)
-#                   self.on_amend_dict[db_obj] = []
-#               self.on_amend_dict[db_obj].append(method)
                 db_obj.add_amend_func((self, method))
+                self.on_amend_set.add(db_obj)
             elif method_name == 'on_read':  # set up callback on db_object
-#               obj_name = method.get('obj_name')
                 db_obj = self.data_objects[obj_name]
-#               if db_obj not in self.on_read_dict:
-#                   db_obj.add_read_func(self)
-#                   self.on_read_dict[db_obj] = []
-#               self.on_read_dict[db_obj].append(method)
                 db_obj.add_read_func((self, method))
+                self.on_read_set.add(db_obj)
+            elif method_name == 'on_clean':  # set up callback on db_object
+                db_obj = self.data_objects[obj_name]
+                db_obj.add_clean_func((self, method))
+                self.on_clean_set.add(db_obj)
             else:
                 self.methods[method_name] = method
 #       repos_func = etree.fromstring('<action><repos_row/></action>')
@@ -267,7 +264,7 @@ class GuiGrid:
                 if validation is not None:
                     validations = etree.fromstring(validation, parser=parser)
                     for vld in validations.findall('validation'):
-                        fld.vld_rules.append((self, vld))
+                        fld.form_vlds.append((self, vld))
 
                 if after is not None:
                     gui_obj.after_input = etree.fromstring(
@@ -625,6 +622,7 @@ class GuiGrid:
         else:
             assert self.current_row == row, 'row={} current_row={}'.format(
                 row, self.current_row)
+            yield from self.validate_all()  # ensure row is valid before showing form
 
         form_name = (self.form_name if self.form_name
             else self.db_obj.db_table.setup_form)
@@ -702,20 +700,21 @@ class GuiGrid:
 
     @log_func
     @asyncio.coroutine
-    def on_cell_req_focus(self, obj, row, save):  # save is True/False
+    def on_cell_req_focus(self, obj, row):
 #       log.write('CELL REQ FOCUS {} {} {}\n\n'.format(
 #           obj.ref, row, self.current_row))
         if row == self.current_row:
             yield from self.validate_data(obj.pos)
         else:
-            yield from self.end_current_row(save)
+            yield from self.end_current_row()
 #       obj_col = self.grid_cols.index(obj.pos)
         self.session.request.send_cell_set_focus(self.ref, row, obj.ref)
 
     @log_func
     def data_changed(self):
         if self.grid_frame is not None:
-            return self.grid_frame.data_changed()
+            if self.grid_frame.data_changed():
+                return True
         if debug:
             log.write('CHANGED? {} {}\n\n'.format(self.db_obj.dirty, self.temp_data))
         return bool(self.db_obj.dirty or self.temp_data)
@@ -723,7 +722,16 @@ class GuiGrid:
     @log_func
     @asyncio.coroutine
     def end_current_row(self, save=False):
+        # save can be set to True by -
+        #   user tabbed off row or pressed Enter -
+        #     client sends 'req_save_row', ht.htc calls end_current_row(save=True)
+        #   user closes window, ask if save changes, answer=Yes -
+        #     call frame.validate_all(save=True), which filters through to here
         if self.grid_frame is not None:
+            # possibly should only do this if save is True [2015-01-06]
+            # otherwise we may have tabbed into the grid_frame, so we
+            #   should not try to validate it at this stage
+            # more testing required
             if self.grid_frame.data_changed():
                 yield from self.grid_frame.validate_all(save)
 ##          for grid in self.grid_frame.grids:
@@ -737,7 +745,7 @@ class GuiGrid:
             self.reset_current_row()
         elif not self.data_changed():
             self.reset_current_row()
-        elif save:  # assume user wants to save
+        elif save:  # user requested save
             yield from self.try_save()
         else:
 
@@ -784,6 +792,11 @@ class GuiGrid:
     @asyncio.coroutine
     def try_save(self):
         yield from self.validate_all()
+#       if self.grid_frame is not None:
+#           yield from ht.form_xml.exec_xml(
+#               self.grid_frame, self.grid_frame.methods['do_save'])
+#       else:
+#           yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
         yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
 
     @log_func
@@ -843,18 +856,13 @@ class GuiGrid:
             obj = self.obj_list[i]
 
             try:
-                if obj.after_input is not None:  # steps to perform after input
-                    obj.fld._before_input = obj.fld.getval()
-                    yield from obj.validate(self.temp_data)  # can raise AibError
-                    self.last_vld = i
-                    yield from ht.form_xml.after_input(obj)
-                else:
-                    yield from obj.validate(self.temp_data)  # can raise AibError
-                    self.last_vld = i
+                self.last_vld += 1  # preset, for 'after_input'
+                assert self.last_vld == i, 'Grid: last={} i={}'.format(self.last_vld, i)
+                yield from obj.validate(self.temp_data)  # can raise AibError
 
             except AibError as err:
+                self.last_vld -= 1  # reset
                 if err.head is not None:
-#                   obj_col = self.grid_cols.index(obj.pos)
                     self.session.request.send_cell_set_focus(self.ref,
                         self.current_row, obj.ref, err_flag=True)
                     print('-'*20)
@@ -863,11 +871,12 @@ class GuiGrid:
                     print('-'*20)
                 raise
 
-#           self.last_vld = i
-
     @asyncio.coroutine
-    def validate_all(self, save=False):
+    def validate_all(self, save=False, grid_only=False):
         yield from self.validate_data(len(self.obj_list), save)
+        if not grid_only:
+            if self.grid_frame is not None:
+                self.grid_frame.validate_all(save)
 
     @asyncio.coroutine
     def handle_restore(self):
@@ -876,13 +885,15 @@ class GuiGrid:
         print('RESTORED', self.temp_data)
         for obj_ref in self.temp_data:
             self.session.request.obj_to_reset.append(obj_ref)
+        self.temp_data.clear()
+        if self.grid_frame is not None:
+            for obj_ref in self.grid_frame.temp_data:
+                self.session.request.obj_to_reset.append(obj_ref)
+            self.grid_frame.temp_data.clear()
         first_col_obj = self.obj_list[self.grid_cols[0]]
         self.session.request.send_cell_set_focus(
             self.ref, self.current_row, first_col_obj.ref)
-        self.session.request.obj_to_redisplay.append((self.ref, False))  # reset row_amended
-        self.temp_data = {}
-        if self.grid_frame is not None:
-            self.grid_frame.temp_data = {}
+#       self.session.request.obj_to_redisplay.append((self.ref, False))  # reset row_amended
 
     @asyncio.coroutine
     def repos_row(self):
@@ -942,21 +953,16 @@ class GuiGrid:
 
         else:
             yield from self.parent.on_req_cancel()
-
-#       if self.dataChanged():
-#           self.session.askQuestion(self,title=self.table.name,
-#               text='OK to undo changes to %s?' % self.getDescr(),
-#               qtype = c.QUESTION_YESNO|c.QUESTION_NO_DEFAULT,
-#               callbacks = (self.doReset,self.dontReset))
-#       elif (self.currentRow is not None) and self.inserted:
-#           self.doDeleteRow(self.currentRow)
-#       else:
-#           self.onCancel()
     """
 
     def on_req_cancel(self):
-        yield from ht.form_xml.exec_xml(self, self.methods['on_req_cancel'])
+        if 'on_req_cancel' in self.methods:
+            yield from ht.form_xml.exec_xml(self, self.methods['on_req_cancel'])
+        else:
+            yield from self.parent.on_req_cancel()
 
     def on_req_close(self):
-        print('DON\'T THINK THIS IS EVER CALLED (2)')
-        ht.form_xml.exec_xml(self, self.methods['on_req_close'])
+        if 'on_req_close' in self.methods:
+            ht.form_xml.exec_xml(self, self.methods['on_req_close'])
+        else:
+            yield from self.parent.on_req_close()

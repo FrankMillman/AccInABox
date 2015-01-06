@@ -123,7 +123,10 @@ function create_input(frame, json_elem, label) {
   input.ref = json_elem.ref;
   input.help_msg = json_elem.help_msg;
   input.title = input.help_msg;
-  input.readonly = false;
+//  input.readonly = false;
+  input.readonly = json_elem.readonly;  // set in form defn
+  input.allow_amend = json_elem.allow_amend;  // set in col defn
+  input.amend_ok = json_elem.amend_ok;  // db permissions
 
   // input.form_value is value received from server
   // input.current_value is value entered by user, awaiting validation
@@ -159,10 +162,7 @@ function create_input(frame, json_elem, label) {
     switch(e.keyCode) {
       case 27:  // Esc
         if (input.aib_obj.data_changed(input)) {  //, input.childNodes[0].value)) {
-          if (input.aib_obj.handle_escape !== undefined) {
-            input.aib_obj.handle_escape(input);
-            }
-          else if (input.key_strokes) {
+          if (input.key_strokes) {
             input.value = input.current_value;
             input.key_strokes = 0;
             }
@@ -172,6 +172,7 @@ function create_input(frame, json_elem, label) {
           e.cancelBubble = true;
           return false;
           };
+        // else allow escape to bubble up to form, which sends 'req_cancel'
         break;
       case 32:  // space
         if (!input.key_strokes && input.expander !== undefined) {
@@ -255,23 +256,30 @@ function create_input(frame, json_elem, label) {
 //    input.aib_obj.set_disabled(input, state);
 //    };
 
+  input.get_amendable = function() {
+    if (this.readonly) return false;
+    if (!this.amend_ok) return false;
+    if (!this.allow_amend && this.frame.obj_exists) return false;
+    return true;
+    };
+
   input.set_readonly = function(state) {
-    input.readonly = state;
-    input.aib_obj.set_readonly(input, state);
+    this.readonly = state;
+//    this.aib_obj.set_readonly(this, state);
     };
 
   input.set_value_from_server = function(value) {
-    input.aib_obj.set_value_from_server(input, value);
+    this.aib_obj.set_value_from_server(this, value);
     };
 
   input.reset_value = function() {
-    input.aib_obj.reset_value(input);
+    this.aib_obj.reset_value(this);
     };
 
-  if (json_elem.readonly) {
-    input.set_readonly(true);
-    //set_readonly(input, true);  //disable_obj(input);
-    };
+//  if (json_elem.readonly) {
+//    input.set_readonly(true);
+//    //set_readonly(input, true);  //disable_obj(input);
+//    };
 
   input.set_value_from_server(json_elem.value);
 
@@ -314,7 +322,7 @@ function setup_dsp(json_elem) {
   dsp.text = text_node;
 
   dsp.onclick = function() {
-    if (!dsp.parentNode.readonly)
+    if (dsp.parentNode.get_amendable())
       dsp.parentNode.focus();
     };
 
@@ -432,7 +440,7 @@ function setup_lkup(json_elem) {
   lkup.title = 'Call lookup (Ctrl+F)';
   lkup.onclick = function() {
     if (text.frame.form.disable_count) return;
-    if (text.readonly) {
+    if (!text.get_amendable()) {
       text.focus();
       return;
       };
@@ -464,7 +472,7 @@ function setup_lkup(json_elem) {
   lkdn.title = 'Call lookdown (Shift+Enter)';
   lkdn.onclick = function() {
     if (text.frame.form.disable_count) return;
-    if (text.readonly) {
+    if (!text.get_amendable()) {
       text.focus();
       return;
       };
@@ -518,7 +526,7 @@ function setup_textarea(json_elem) {
   dsp.style.wordWrap = 'break-word';
 
   dsp.onclick = function() {
-    if (!dsp.parentNode.readonly)
+    if (dsp.parentNode.get_amendable())
       dsp.parentNode.focus();
     };
 
@@ -608,7 +616,7 @@ function setup_date(json_elem) {
 
   cal.onclick = function() {
     if (date.frame.form.disable_count) return;
-    if (date.readonly) {
+    if (!date.get_amendable()) {
       date.focus();
       return;
       };
@@ -656,7 +664,7 @@ function setup_bool(label, json_elem) {
 
   bool.onclick = function() {
     if (bool.frame.form.disable_count) return false;
-    if (bool.readonly) return false;
+    if (!bool.get_amendable()) return false;
     if (bool.frame.form.current_focus !== bool) {
       callbacks.push([bool, bool.after_click]);
       if (bool.has_focus)  // can't call focus() - it will be ignored!
@@ -769,7 +777,7 @@ function setup_choice(json_elem) {
   down.onfocus = function() {choice.focus()};
   down.onclick = function() {
     if (choice.frame.form.disable_count) return;
-    if (choice.readonly) {
+    if (!choice.get_amendable()) {
       choice.focus();
       return;
       };
@@ -852,7 +860,7 @@ function setup_spin(json_elem) {
     up.incr = null;
     up.up = false;
     if (spin.frame.form.disable_count) return;
-    if (spin.readonly) {
+    if (!spin.get_amendable()) {
       spin.focus();
       return;
       };
@@ -890,7 +898,7 @@ function setup_spin(json_elem) {
     dn.decr = null;
     dn.up = false;
     if (spin.frame.form.disable_count) return;
-    if (spin.readonly) {
+    if (!spin.get_amendable()) {
       spin.focus();
       return;
       };

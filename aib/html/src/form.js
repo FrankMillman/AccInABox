@@ -180,7 +180,8 @@ function setup_form(args) {
           };
 
         form.req_close = function() {
-          var args = [form.form_id + '_0'];  // the 'ref' of the main frame
+//          var args = [form.form_id + '_0'];  // the 'ref' of the main frame
+          var args = [this.active_frame.ref];
           send_request('req_close', args);
           };
 
@@ -350,6 +351,7 @@ function setup_form(args) {
         form.obj_dict[frame.ref] = frame;
         form.active_frame = frame;
         frame.frame_amended = false;
+        frame.obj_exists = false;
         frame.send_focus_msg = true;  // can be over-ridden in 'start_frame'
 
         if (elem[1].ctrl_grid_ref === null)
@@ -358,7 +360,9 @@ function setup_form(args) {
           frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
 
         frame.set_value_from_server = function(value) {
-          this.frame_amended = value;
+          // only called to notify of existing record becoming 'clean'
+          this.obj_exists = true;
+          this.frame_amended = false;
           };
 
         break;
@@ -895,6 +899,7 @@ function setup_form(args) {
         page.frame = frame;
         form.obj_dict[frame.ref] = frame;
         frame.frame_amended = false;
+        frame.obj_exists = false;
         frame.send_focus_msg = true;  // can be over-ridden in 'start_frame'
 
         frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
@@ -903,8 +908,10 @@ function setup_form(args) {
         frame.ctrl_grid.parentNode.style.border = '1px solid transparent';
 
         frame.set_value_from_server = function(value) {
-          this.frame_amended = value;
-          this.ctrl_grid.row_amended = value;
+          // only called to notify of existing record becoming 'clean'
+          this.obj_exists = true;
+          this.frame_amended = false;
+          this.ctrl_grid.row_amended = false;
           };
 
         break;
@@ -987,6 +994,7 @@ function setup_form(args) {
         page.frame = frame;
         form.obj_dict[frame.ref] = frame;
         frame.frame_amended = false;
+        frame.obj_exists = false;
         frame.send_focus_msg = true;  // can be over-ridden in 'start_frame'
 
 //        frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
@@ -997,8 +1005,9 @@ function setup_form(args) {
         tree.tree_frame = frame;
 
         frame.set_value_from_server = function(value) {
-          this.frame_amended = value;
-//          this.ctrl_grid.row_amended = value;
+          // only called to notify of existing record becoming 'clean'
+          this.obj_exists = true;
+          this.frame_amended = false;
           };
 
         break;

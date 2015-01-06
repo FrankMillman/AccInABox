@@ -19,7 +19,7 @@ import db.cursor
 import db.connection
 import db.db_xml
 from db.chk_constraints import chk_constraint
-from errors import AibError, AibPerms
+from errors import AibError, AibDenied
 
 # should 'tables_open' be in db.objects or ht.htc.Session()
 # if server is long-running, the former would prevent changes being picked up
@@ -158,6 +158,7 @@ class DbObject:
         self.exists = False
         self.dirty = False
         self.where = None
+        self.init_vals = {}  # can be over-ridden in init()
         self.cursor = None
         self.cursor_row = None
         self.virt_list = []
@@ -470,7 +471,6 @@ class DbObject:
         conn.release()
 
     def select_row(self, keys, display=True, debug=False):
-#       cols_vals = []
         where = []
         test = 'WHERE'
         for col_name, value in keys.items():
@@ -488,7 +488,6 @@ class DbObject:
                     eq = 'IS'
                 else:
                     eq = '='
-#           cols_vals.append(('a.{}'.format(col_name), value))
             where.append(
                 (test, '', col_name, eq, value, '') )
 #               {'test': test, 'lbr': '', 'col_name': col_name,
@@ -521,7 +520,6 @@ class DbObject:
             except ValueError as e:
                 if str(e).startswith('need'):
                     # need more than 0 values to unpack = no rows selected
-#                   self.on_select_failed(cols_vals, display)
                     self.on_select_failed(display)
                 else:
                     print(self.cursor.rows)
@@ -565,16 +563,12 @@ class DbObject:
                             for obj in alt_src.gui_obj:
                                 obj._redisplay()
 
+        self.init_vals = {}  # to prevent re-use on restore()
         self.exists = True
-#       for callback in self.on_clean_func:  # frame method
-#           callback.on_clean(self)
         if self.dirty:
             for caller, method in self.on_clean_func:  # frame methods
                 caller.session.request.db_events.append((caller, method))
-#       for callback in self.on_read_func:  # frame method
-#           callback.on_read(self)
         for caller, method in self.on_read_func:  # frame methods
-#           print('ON READ', caller, method)
             caller.session.request.db_events.append((caller, method))
         for after_read in self.after_read_xml:  # table hook
             db.db_xml.table_hook(self, after_read)
@@ -582,7 +576,6 @@ class DbObject:
         for child in self.children.values():
             child.dirty = False
 
-#   def on_select_failed(self, cols_vals, display):
     def on_select_failed(self, display):
         # assume we are trying to create a new db_obj
         self.check_perms('insert')
@@ -620,25 +613,26 @@ class DbObject:
 #           db.db_xml.table_hook(self, after_read)
 #?#
 
-    def init(self, display=True, init_vals={}, preserve=[]):
+    def init(self, display=True, init_vals=None):
+        # if not None, init_vals is a dict of col_name, value pairs
+        #   used to initialise db_obj fields (see ht.gui_tree for example)
+        # purpose -  set initial value, do *not* set db_obj.dirty to True
+        if init_vals is None:
+            self.init_vals = {}
+        else:
+            self.init_vals = init_vals
+
         for fld in self.fields.values():
             # store existing data as 'prev' for data-entry '\' function
             if self.exists:
                 fld._prev = fld._value
 
-            # 'preserve' not used at present
-            if fld.col_name not in preserve:
+            if fld.col_name in self.init_vals:
+                fld._value = self.init_vals[fld.col_name]
+            else:
                 fld._value = fld.get_dflt()
-                fld._orig = None
 
-            # col_name, value pairs to initialise db_obj with (cf ht.gui_tree)
-            # i.e. set initial value, do *not* set db_obj.dirty to True
-            # debatable whether it should set fld._orig [2014-09-27]
-            # it comes into play if we call restore()
-            # should it restore the initial values? I think yes
-            # if yes, they must be stored in fld._orig, else they are lost
-            if fld.col_name in init_vals:
-                fld._value = fld._orig = init_vals[fld.col_name]
+            fld._orig = None
 
             # if fld has foreign_key, init foreign db_obj
             if fld.foreign_key:
@@ -668,20 +662,33 @@ class DbObject:
         self.dirty = False
 
     def restore(self,display=True):
+        if not self.dirty:
+            return  # nothing to restore
+
         for fld in self.fields.values():
-            if fld._value != fld._orig:
+
+            if fld.col_name in self.init_vals:
+                restore_val = self.init_vals[fld.col_name]
+            else:
+                restore_val = fld._orig
+
+#           if fld._value != fld._orig:
+            if fld._value != restore_val:
 
                 # if fld has foreign_key, restore foreign db_obj
                 if fld.foreign_key and fld.foreign_key['true_src'] is None:
                     tgt_field = fld.foreign_key['tgt_field']
-                    if not fld._orig:
+#                   if not fld._orig:
+                    if not restore_val:
                         tgt_field.db_obj.init()
                     else:
                         tgt_field.db_obj.init(display=False)
-                        tgt_field.read_row(fld._orig, display)
+#                       tgt_field.read_row(fld._orig, display)
+                        tgt_field.read_row(restore_val, display)
 
                 # check for 'accum' fields here - subtract _value, add _orig
-                fld._value = fld._orig
+#               fld._value = fld._orig
+                fld._value = restore_val
 
                 if display:
                     for obj in fld.gui_obj:
@@ -690,11 +697,8 @@ class DbObject:
                         form, subtype = fld.gui_subtype
                         form.set_subtype(subtype, fld._value)
 
-#       for callback in self.on_clean_func:  # frame method
-#           callback.on_clean(self)
-        if self.dirty:
-            for caller, method in self.on_clean_func:  # frame methods
-                caller.session.request.db_events.append((caller, method))
+        for caller, method in self.on_clean_func:  # frame methods
+            caller.session.request.db_events.append((caller, method))
         for after_restore in self.after_restore_xml:
             db.db_xml.table_hook(self, after_restore)
         self.dirty = False
@@ -730,6 +734,7 @@ class DbObject:
         #   sequence number of the current db_obj
         # if it is a new db_obj, this is generated from setup_defaults()
         # have to wait and see if there is an implication
+
         self.setup_defaults()  # generate defaults for blank fields
                                # can raise AibError if required and no default
 
@@ -769,6 +774,7 @@ class DbObject:
         for caller, method in self.on_clean_func:  # frame methods
             caller.session.request.db_events.append((caller, method))
 
+        self.init_vals = {}  # to prevent re-use on restore()
         self.dirty = False
         for child in self.children.values():
             child.dirty = False
@@ -776,28 +782,6 @@ class DbObject:
 
         for fld in self.fields.values():
             fld._orig = fld._value
-
-        # what is going on here? [28/03/2013]
-        # it looks as if we are re-evaluating all virtual columns after save
-        # but I thought we re-evaluated them on change of a dependant column!
-        if 0:  #self.virt_list:
-            key_cols = []
-            key_vals = []
-            for fld in self.primary_keys:
-                key_cols.append(fld.col_name)
-                key_vals.append(str(fld._value))
-
-            where = ' and '.join(['='.join((key, val))
-                for key, val in zip(key_cols, key_vals)])
-            sql = "SELECT {} FROM {}.{} a WHERE {}".format(
-                ', '.join(virt[1] for virt in self.virt_list),
-                self.data_company, self.table_name, where)
-            with self.context as conn:
-                conn.cur.execute(sql)
-                for fld, val in zip(
-                        [virt[0] for virt in self.virt_list],
-                        conn.cur.fetchone()):
-                    fld._value = fld._orig = val
 
     def check_subtypes(self):  # if subtype, check subtype values
         # self.db_table.subtypes is a dict - subtype: col_names
@@ -815,27 +799,10 @@ class DbObject:
                         raise AibError(head=descr, body=errmsg)
 
     def setup_defaults(self):  # generate defaults for blank fields
-        error_list = []  # accumulate all errors before raising error
-        #for fld in self.fields[:self.no_cols]:  # exclude virtual columns
         for fld in self.flds_to_update:  # exclude virtual columns
             if fld._value is None:
                 if not fld.col_defn.generated:
-#                   print('{}.{}'.format(fld.table_name, fld.col_name))
-                    value = None
-#                   if fld.fkey_parent is not None:
-#                       value = fld.fkey_parent._value
-                    if fld.col_defn.dflt_val is not None:
-                        value = fld.get_dflt(fld.col_defn.dflt_val)
-#                   try:
-#                       fld.setval(value)
-##                      print('Dflt {}.{} "{}"'.format(
-##                          fld.table_name, fld.col_name, value))
-#                   except ValueError as err:
-#                       errmsg = err.args
-#                       if not len(errmsg) == 2:  #  eg from IOError
-#                           errmsg = [fld.col_defn.short_descr, errmsg[0]]
-#                       raise ValueError(errmsg)
-                    fld.setval(value)  # can raise AibError
+                    fld.setval(fld.get_dflt())  # can raise AibError
 
     def insert(self, conn):
         self.check_perms('insert')
@@ -969,7 +936,7 @@ class DbObject:
                 if self.context.perms[self.data_company][table_id][3]:
                     ok = True
         if not ok:
-            raise AibPerms(
+            raise AibDenied(
                 head='{} {}.{}'.format(perm_type, self.data_company, self.table_name),
                 body='Permission denied'
                 )

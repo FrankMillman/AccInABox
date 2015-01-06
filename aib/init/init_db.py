@@ -27,31 +27,7 @@ def init_database(context, conn):
     setup_forms(context)
     setup_menus(context)
 
-    conn.cur.execute(
-        "INSERT INTO _sys.dir_companies (company_id, company_name) "
-        "VALUES ({})".format(', '.join([conn.param_style] * 2))
-        , ('_sys', 'System Administration')
-        )
-
-    dir_comp = db.api.get_db_object(context, '_sys', 'dir_companies')
-    dir_comp.setval('company_id', '_sys')
-    dir_comp.setval('company_name', 'System Administration')
-
-    dir_user = db.api.get_db_object(context, '_sys', 'dir_users')
-    dir_user.setval('user_id', 'admin')
-#   dir_user.setval('password', 'da39a3ee5e6b4b0d3255bfef95601890afd80709')  # ''
-    dir_user.setval('password', 'd033e22ae348aeb5660fc2140aec35850c4da997')  # 'admin'
-    dir_user.setval('sys_admin', True)
-    dir_user.setval('user_type', 'admin')
-    dir_user.save()
-
-    adm_role = db.api.get_db_object(context, '_sys', 'adm_roles')
-    adm_role.setval('role', 'admin')
-    adm_role.setval('descr', 'System adminstrator')
-    adm_role.setval('parent_id', None)
-    adm_role.setval('seq', -1)
-    adm_role.setval('delegate', True)
-    adm_role.save()
+    setup_init_data(context, conn)
 
 def setup_db_tables(context, conn):
     seq_counter = count()
@@ -552,3 +528,36 @@ def setup_menus(context):
 #   menu_id = db_obj.getval('row_id')
 #   setup_menu('AP setup', menu_id, -1, MENU)
 #   setup_menu('AP transactions', menu_id, -1, MENU)
+
+def setup_init_data(context, conn):
+
+    #dir_comp = db.api.get_db_object(context, '_sys', 'dir_companies')
+    #dir_comp.setval('company_id', '_sys')
+    #dir_comp.setval('company_name', 'System Administration')
+    #dir_comp.save()
+ 
+    # can't do the above, as a tablehook tries to create
+    #   the company _sys, which already exists
+    # therefore do it manually -
+
+    conn.cur.execute(
+        "INSERT INTO _sys.dir_companies (company_id, company_name) "
+        "VALUES ({})".format(', '.join([conn.param_style] * 2))
+        , ('_sys', 'System Administration')
+        )
+
+    dir_user = db.api.get_db_object(context, '_sys', 'dir_users')
+    dir_user.setval('user_id', 'admin')
+#   dir_user.setval('password', 'da39a3ee5e6b4b0d3255bfef95601890afd80709')  # ''
+    dir_user.setval('password', 'd033e22ae348aeb5660fc2140aec35850c4da997')  # 'admin'
+    dir_user.setval('sys_admin', True)
+    dir_user.setval('user_type', 'admin')
+    dir_user.save()
+
+    adm_role = db.api.get_db_object(context, '_sys', 'adm_roles')
+    adm_role.setval('role', 'admin')
+    adm_role.setval('descr', 'System adminstrator')
+    adm_role.setval('parent_id', None)
+    adm_role.setval('seq', -1)
+    adm_role.setval('delegate', True)
+    adm_role.save()

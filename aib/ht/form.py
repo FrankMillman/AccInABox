@@ -119,6 +119,7 @@ class Form:
         self.callback = callback
         self.ctrl_grid = ctrl_grid
         self.inline = inline
+        self.closed = False
 
         self.table_name = None
         self.obj_list = []  # list of frames for this form
@@ -222,6 +223,15 @@ class Form:
         self.setup_mem_objects(form_defn.find('mem_objects'))
         yield from self.setup_input_attr(input_params)
 
+        # self.grids is a necessary evil!
+        # example - setup_form_memobj
+        # a frame can contain a grid - memobj
+        # the same frame can contain a grid_frame - memobj
+        # the grid_frame can contain a grid - memcol
+        # we want to create a grid_frame for memcol, but it is contained
+        #   in the main frame, not the grid frame
+        # not easy to locate the grid that the gtid_frame relates to
+        # this is an ugly workaround - improvements welcome!
         self.grids = []
         yield from self.setup_form(form_defn, title)
         del self.grids
@@ -499,16 +509,77 @@ class Form:
 #           obj = self.obj_dict[obj_id]
 #           print(obj_id, obj.ref, getattr(obj, 'pos', None), obj)
 
+#       def show_obj_list(obj):
+#           if hasattr(obj, 'obj_list'):
+#               print([_.ref for _ in obj.obj_list])
+#               for sub_obj in obj.obj_list:
+#                   show_obj_list(sub_obj)
+#       show_obj_list(self)
+
         try:
             yield from frame.restart_frame()
         except AibError:
             self.session.request.send_end_form(self)
             self.close_form()
             raise
+
+    @asyncio.coroutine
+    def on_req_cancel(self):
+        yield from self.end_form(state='cancelled')
+
+    @asyncio.coroutine
+    def on_req_close(self):
+        yield from self.end_form(state='completed')
+
+    @asyncio.coroutine
+    def end_form(self, state):
+        return_params = {}  # data to be returned on completion
+        output_params = self.form_defn.find('output_params')
+        if output_params is not None:
+            for output_param in output_params.findall('output_param'):
+                name = output_param.get('name')
+                param_type = output_param.get('type')
+                source = output_param.get('source')
+                if state == 'completed':
+                    if param_type == 'data_obj':
+                        value = self.data_objects[source]
+                    elif param_type == 'data_attr':
+                        data_obj_name, col_name = source.split('.')
+                        value = self.data_objects[data_obj_name].getval(col_name)
+                    elif param_type == 'data_list':
+                        value = self.data_objects[source].dump_one()
+                        if value == []:
+                            value = None
+                    elif param_type == 'data_array':
+                        value = self.data_objects[source].dump_all()
+                        if value == []:
+                            value = None
+                    elif param_type == 'pyfunc':
+                        func_name = source
+                        module_name, func_name = func_name.rsplit('.', 1)
+                        module = importlib.import_module(module_name)
+                        value = yield from getattr(module, func_name)(self)
+                else:
+                    value = None
+                return_params[name] = value
+
+        session = self.session  # store it now - inaccessible after close_form()
+        session.request.send_end_form(self)
+        self.close_form()
+
+        if self.callback is not None:
+            if self.parent is not None:  # closing a sub-form
+                log.write('RETURN {} {} {}\n\n'.format(state, return_params, self.callback))
+                yield from self.callback[0](self.parent, state, return_params, *self.callback[1:])
+            else:  # return to calling process(?)
+                self.callback[0](session, state, return_params, *self.callback[1:])
+                self.callback = None  # remove circular reference
         
     def close_form(self):
-        if hasattr(self, 'form_defn'):  # form has been started
+        if self.closed:
+            return  # form has already been closed - can happen on AibError
 
+        if hasattr(self, 'form_defn'):  # form has been started
             for frame in self.obj_list:
                 for fld, gui_obj in frame.flds_notified:
                     fld.unnotify_form(gui_obj)
@@ -517,10 +588,12 @@ class Form:
                 frame.btn_dict = None  # remove circular reference
 
                 for grid in frame.grids:
-                    for db_obj in grid.on_amend_dict:
+                    for db_obj in grid.on_amend_set:
                         db_obj.remove_amend_func(grid)
-                    for db_obj in grid.on_read_dict:
+                    for db_obj in grid.on_read_set:
                         db_obj.remove_read_func(grid)
+                    for db_obj in grid.on_clean_set:
+                        db_obj.remove_clean_func(grid)
                     grid.db_obj.close_cursor()
 
                 for db_obj in frame.on_clean_set:
@@ -537,7 +610,6 @@ class Form:
                     subtype_fld.gui_subtype = None
 
             self.obj_dict = None
-
             self.mem_session.close()
 
         del self.root.form_list[-1]
@@ -545,6 +617,8 @@ class Form:
         if self.parent is None:
             del self.session.active_roots[self.root.ref]
             self.root = None  # remove circular reference
+
+        self.closed = True
 
     #-------------------------------------------------------------------------
     # the following attributes are shared between all forms with the same root
@@ -582,25 +656,22 @@ class Frame:
             ctrl_grid_ref = ctrl_grid.ref
 
         if grid_frame:
-            frame_type = 'grid_frame'
+            self.frame_type = 'grid_frame'
+            self.parent = ctrl_grid
         elif tree is not None:
-            frame_type = 'tree_frame'
+            self.frame_type = 'tree_frame'
+            self.parent = tree
         else:
-            frame_type = 'frame'
-        self.parent_type = frame_type
+            self.frame_type = 'frame'
+            self.parent = form
         self.tree = tree  # either None or a reference to the Tree object
 
         ref, pos = form.add_obj(form, self)
         self.ref = ref  # used when sending 'start_frame'
-#       frame_pos = pos
-        gui.append((frame_type, {'ref': ref, 'ctrl_grid_ref': ctrl_grid_ref}))
-
-#       frame_xml = form_defn.find('frame')
-#       frame = Frame(self, frame_xml, frame_ref, self.ctrl_grid, gui)
+        gui.append((self.frame_type, {'ref': ref, 'ctrl_grid_ref': ctrl_grid_ref}))
 
         self.form = form
         self.session = form.session
-#       self.request = form.request
         self.ctrl_grid = ctrl_grid
         self.obj_list = []
         self.subtype_records = {}
@@ -808,7 +879,7 @@ class Frame:
                     validations = etree.fromstring(
                         validations, parser=parser)
                     for vld in validations.findall('validation'):
-                        fld.vld_rules.append((self, vld))
+                        fld.form_vlds.append((self, vld))
 
                 after = element.get('after')
                 if after is not None:
@@ -846,6 +917,14 @@ class Frame:
                 button = ht.gui_objects.GuiButton(self, gui, btn_label, lng,
                     enabled, must_validate, default, help_msg, btn_action)
                 self.btn_dict[element.get('btn_id')] = button
+
+                validation = element.get('validation')
+                if validation is not None:
+                    validation = etree.fromstring(
+                        validation, parser=parser)
+                    for vld in validation.findall('validation'):
+                        button.form_vlds.append((self, vld))
+
             elif element.tag == 'nb_start':
                 gui.append(('nb_start', None))
                 nb_firstpage = True
@@ -865,9 +944,8 @@ class Frame:
 
             elif element.tag == 'grid_frame':
                 grid = self.form.grids.pop()
-                frame = Frame(self.form, element, grid, gui, grid_frame=True)
+                grid.grid_frame = Frame(self.form, element, grid, gui, grid_frame=True)
                 gui.append(('grid_frame_end', None))
-                grid.grid_frame = frame
             elif element.tag == 'tree':
                 self.tree = ht.gui_tree.GuiTree(self, gui, element)
             elif element.tag == 'tree_frame':
@@ -885,7 +963,7 @@ class Frame:
                     validation = etree.fromstring(
                         validation, parser=parser)
                     for vld in validation.findall('validation'):
-                        gui_obj.vld_rules.append((self, vld))
+                        gui_obj.form_vlds.append((self, vld))
 
                 after = element.get('after')
                 if after is not None:
@@ -1142,11 +1220,17 @@ class Frame:
 
     @asyncio.coroutine
     def on_req_cancel(self):
-        yield from ht.form_xml.exec_xml(self, self.methods['on_req_cancel'])
+        if 'on_req_cancel' in self.methods:
+            yield from ht.form_xml.exec_xml(self, self.methods['on_req_cancel'])
+        else:
+            yield from self.parent.on_req_cancel()
 
     @asyncio.coroutine
     def on_req_close(self):
-        yield from ht.form_xml.exec_xml(self, self.methods['on_req_close'])
+        if 'on_req_close' in self.methods:
+            yield from ht.form_xml.exec_xml(self, self.methods['on_req_close'])
+        else:
+            yield from self.parent.on_req_close()
 
     @asyncio.coroutine
     def on_navigate(self, nav_type):
@@ -1215,21 +1299,20 @@ class Frame:
         if self.last_vld >= obj.pos:
             self.last_vld = obj.pos-1  # this one needs validating
 #           frame = self
-#           while frame.parent_type == 'grid_frame':
+#           while frame.frame_type == 'grid_frame':
 #               ctrl_grid = frame.ctrl_grid
 #               frame = ctrl_grid.parent
 #               if frame.last_vld > ctrl_grid.pos:
 #                   frame.last_vld = ctrl_grid.pos-1
-            if self.parent_type == 'grid_frame':
-                ctrl_grid = self.ctrl_grid
-                ctrl_grid.parent.set_last_vld(ctrl_grid)
+            if self.frame_type == 'grid_frame':
+                self.ctrl_grid.parent.set_last_vld(self.ctrl_grid)
+            elif self.frame_type == 'tree_frame':
+                self.tree.parent.set_last_vld(self.tree)
 
     @log_func
     @asyncio.coroutine
     def on_got_focus(self, obj):
 #       log.write('got focus {}\n\n'.format(obj))
-        if self.parent_type == 'grid_frame':
-            yield from self.ctrl_grid.validate_data(len(self.ctrl_grid.obj_list))
         if obj.must_validate:  # eg not Cancel button
             yield from self.validate_data(obj.pos)
 
@@ -1277,6 +1360,11 @@ class Frame:
                 self.ref, self.last_vld+1, pos-1))
             log.write('{}\n\n'.format(
                 ', '.join([_.ref for _ in self.obj_list])))
+
+        if self.frame_type == 'grid_frame':
+            if self.ctrl_grid.last_vld < (len(self.ctrl_grid.obj_list)-1):
+                yield from self.ctrl_grid.validate_all(grid_only=True)
+
         for i in range(self.last_vld+1, pos):
             if self.last_vld > i:  # after 'read', last_vld set to 'all'
                 break
@@ -1284,20 +1372,17 @@ class Frame:
             obj = self.obj_list[i]
 
             try:
-#               yield from obj.validate(self.temp_data, save)
+                self.last_vld += 1  # preset, for 'after_input'
+                assert self.last_vld == i, 'Form: last={} i={}'.format(self.last_vld, i)
                 if isinstance(obj, ht.gui_grid.GuiGrid):
                     yield from obj.validate(save)
+                elif isinstance(obj, ht.gui_tree.GuiTree):
+                    yield from obj.validate(save)
                 else:
-                    if obj.after_input is not None:  # steps to perform after input
-                        obj.fld._before_input = obj.fld.getval()
-                        yield from obj.validate(self.temp_data)  # can raise AibError
-                        self.last_vld = i
-                        yield from ht.form_xml.after_input(obj)
-                    else:
-                        yield from obj.validate(self.temp_data)  # can raise AibError
-                        self.last_vld = i
+                    yield from obj.validate(self.temp_data)  # can raise AibError
 
             except AibError as err:
+                self.last_vld -= 1  # reset
                 if err.head is not None:
                     if type(obj) != ht.gui_grid.GuiGrid:
                         self.session.request.send_set_focus(obj.ref)
@@ -1309,8 +1394,6 @@ class Frame:
                     print()
                 raise
 
-#           self.last_vld = i
-
     @asyncio.coroutine
     def validate_all(self, save=False):
 #       print('validate all', len(self.form.obj_list))
@@ -1318,20 +1401,22 @@ class Frame:
         if save:  # save db_obj automatically
             yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
 
+    @asyncio.coroutine
     def save_obj(self, db_obj):
         db_obj.save()
 
     @asyncio.coroutine
     def handle_restore(self):
         yield from ht.form_xml.exec_xml(self, self.methods['do_restore'])
-        print('RESTORED', self.temp_data)
         for obj_ref in self.temp_data:
             self.session.request.obj_to_reset.append(obj_ref)
-        if self.db_obj is not None and self.db_obj.exists:
-            self.session.request.obj_to_redisplay.append((self.ref, False))  # reset form_amended
-        self.temp_data = {}
-        if self.parent_type == 'grid_frame':
-            self.ctrl_grid.temp_data = {}
+#       if self.db_obj is not None and self.db_obj.exists:
+#           self.session.request.obj_to_redisplay.append((self.ref, False))  # reset form_amended
+        self.temp_data.clear()
+        if self.frame_type == 'grid_frame':
+            for obj_ref in self.ctrl_grid.temp_data:
+                self.session.request.obj_to_reset.append(obj_ref)
+            self.ctrl_grid.temp_data.clear()
 
     @log_func
     @asyncio.coroutine
@@ -1342,22 +1427,26 @@ class Frame:
             # if cursor is open, it needs a cursor_row, but we don't have one
             grid.db_obj.close_cursor()
         for method in self.on_start_form:
-            yield from ht.form_xml.exec_xml(self, method)
+            # don't process any db_events - the form is not started yet
+            yield from ht.form_xml.exec_xml(self, method, clear_dbevents=True)
         for grid in self.grids:
             yield from grid.start_grid()
         if self.db_obj is not None and self.db_obj.exists:
             self.last_vld = len(self.obj_list)
-            for obj in self.non_amendable:
-                obj.set_readonly(True)
-            set_frame_amended = False
+#           for obj in self.non_amendable:
+#               obj.set_readonly(True)
+            set_rec_exists = True
         else:
             self.last_vld = -1
-            for obj in self.non_amendable:
-                obj.set_readonly(False)
-            set_frame_amended = True
+#           for obj in self.non_amendable:
+#               obj.set_readonly(False)
+            set_rec_exists = False
         self.session.request.check_redisplay(redisplay=False)  # send any 'readonly' messages
-        self.session.request.start_frame(self.ref, set_frame_amended, set_focus)
+        self.session.request.start_frame(self.ref, set_rec_exists, set_focus)
         #self.session.request.check_redisplay()  # send any 'redisplay' messages
+
+        # next line is very dodgy, but it might be correct
+        self.session.request.db_events.clear()
 
     def return_to_grid(self):
         grid = self.ctrl_grid

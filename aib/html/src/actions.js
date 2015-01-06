@@ -192,7 +192,9 @@ function cell_set_focus(args) {
 
 function start_frame(args) {
   var frame = get_obj(args[0]);
-  frame.frame_amended = args[1];  // false if object exists, else true
+  frame.obj_exists = args[1];
+  frame.frame_amended = !frame.obj_exists;
+  //frame.frame_amended = args[1];  // false if object exists, else true
   if (args[2]) {  // set_focus
 
     frame.form.tabdir = 1;  // in case 'dummy' gets focus

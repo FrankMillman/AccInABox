@@ -23,7 +23,7 @@ class GuiTree:
     def __init__(self, parent, gui, element):
         self.must_validate = True
         self.readonly = False
-        self.parent_type = 'tree'
+#       self.parent_type = 'tree'
         self.tree_frame = None  # over-ridden if tree_frame exists
 
         self.data_objects = parent.data_objects
@@ -32,8 +32,7 @@ class GuiTree:
         self.parent = parent
         self.form = parent.form
         self.session = parent.session
-        self.form_active = None
-        self.grid_frame = None
+        self.methods = {}
 
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
@@ -58,7 +57,38 @@ class GuiTree:
             'tree_data': tree_data}))
 
     @asyncio.coroutine
+    def validate(self, save):
+        if debug:
+            log.write('validate tree {} {}\n\n'.format(
+                self.ref, self.db_obj.dirty))
+        if self.db_obj.dirty:
+            if save:
+                if self.tree_frame is not None:
+                    yield from self.tree_frame.validate_all()
+#               self.db_obj.save()
+                yield from ht.form_xml.exec_xml(self.parent, self.parent.methods['do_save'])
+            else:
+                print('DBOBJ NOT SAVED!')
+
+    @asyncio.coroutine
     def on_active(self, node_id):
+        if self.db_obj.dirty:
+
+            title = self.db_obj.table_name
+            question = 'Do you want to save the changes to {}?'.format(
+                self.db_obj.getval('descr'))
+            answers = ['Yes', 'No']
+            default = 'No'
+            escape = 'No'
+
+            ans = yield from self.session.request.ask_question(
+                self.parent, title, question, answers, default, escape)
+
+            if ans == 'Yes':
+                if self.tree_frame is not None:
+                    yield from self.tree_frame.validate_all()
+                yield from ht.form_xml.exec_xml(self.parent, self.parent.methods['do_save'])
+
         self.db_obj.init()
         self.db_obj.setval('row_id', node_id)
         if self.tree_frame is not None:
@@ -68,9 +98,9 @@ class GuiTree:
     def on_req_insert_node(self, parent_id, seq):
         if not parent_id:
             raise AibError(head='Error', body='Cannot create new root')
-        self.db_obj.init(init_vals={'parent_id': parent_id, 'seq': seq})
         #self.db_obj.setval('parent_id', parent_id)
         #self.db_obj.setval('seq', seq)
+        self.db_obj.init(init_vals={'parent_id': parent_id, 'seq': seq})
         self.session.request.send_insert_node(self.ref, parent_id, seq, -1)
         if self.tree_frame is not None:
             yield from self.tree_frame.restart_frame()
@@ -101,3 +131,15 @@ class GuiTree:
             self.db_obj.getval('descr'),  # text
             self.db_obj.getval('expandable')
             )
+
+    def on_req_cancel(self):
+        if 'on_req_cancel' in self.methods:
+            yield from ht.form_xml.exec_xml(self, self.methods['on_req_cancel'])
+        else:
+            yield from self.parent.on_req_cancel()
+
+    def on_req_close(self):
+        if 'on_req_close' in self.methods:
+            ht.form_xml.exec_xml(self, self.methods['on_req_close'])
+        else:
+            yield from self.parent.on_req_close()

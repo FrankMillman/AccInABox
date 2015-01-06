@@ -4,8 +4,8 @@ parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
 
 import db.api
 import ht.form_xml
-from db.validation_xml import check_rule
-from errors import AibError
+from db.validation_xml import check_vld
+from errors import AibError, AibDenied
 from start import log, debug
 
 #----------------------------------------------------------------------------
@@ -38,6 +38,13 @@ class GuiCtrl:
 #       fld.notify_form(self)
 #       if fld._value:
 #           self._redisplay()
+
+        try:
+            fld.db_obj.check_perms('amend')
+            self.amend_ok = True
+        except AibDenied:
+            self.amend_ok = False
+
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
         self.pos = pos
@@ -81,12 +88,15 @@ class GuiCtrl:
             value = self.fld.getval()
             if value is None:
                 value = self.fld.get_dflt()
-        prev_value = self.fld.getval()
+
+        if self.after_input is not None:  # steps to perform after input
+            self.fld._before_input = self.fld.getval()  # used in after_input()
+
         yield from self.fld.setval_async(value)  # can raise AibError
 
-#       if self.after_input is not None:  # steps to perform after input
-#           self.fld._prev_value = prev_value
-#           yield from ht.form_xml.after_input(self)
+        if self.after_input is not None:  # steps to perform after input
+            yield from ht.form_xml.after_input(self)
+            del self.fld._before_input
 
     def _redisplay(self):  # must only be called from db module
         if self.pwd:
@@ -127,8 +137,8 @@ class GuiTextCtrl(GuiCtrl):
                 'maxlen': fld.col_defn.max_len, 'ref': self.ref,
                 'help_msg': fld.col_defn.long_descr,
                 'head': fld.col_defn.col_head, 'allow_amend': fld.col_defn.allow_amend,
-                'password': self.pwd, 'readonly': readonly, 'lkup': lkup,
-                'choices': choices, 'height': height, 'value': value}
+                'password': self.pwd, 'readonly': readonly, 'amend_ok': self.amend_ok,
+                'lkup': lkup, 'choices': choices, 'height': height, 'value': value}
             gui.append(('input', input))
         else:
             self.readonly = True
@@ -151,7 +161,8 @@ class GuiTextCtrl(GuiCtrl):
         if state == 'completed':
             tgt_fld = self.fld.foreign_key['tgt_field']
             if tgt_fld.db_obj.exists:
-                yield from self.fld.setval_async(tgt_fld.getval())
+#               yield from self.fld.setval_async(tgt_fld.getval())
+                self.fld.setval(tgt_fld.getval())
 
     @asyncio.coroutine
     def on_req_lookdown(self):  # user selected 'lookdown'
@@ -174,8 +185,8 @@ class GuiNumCtrl(GuiCtrl):
             input = {'type': 'num', 'lng': lng, 'ref': self.ref,
                 'help_msg': fld.col_defn.long_descr,
                 'head': fld.col_defn.col_head, 'allow_amend': fld.col_defn.allow_amend,
-                'readonly': readonly, 'reverse': reverse, 'value': value,
-                'integer': (fld.col_defn.data_type == 'INT'),
+                'readonly': readonly, 'amend_ok': self.amend_ok, 'reverse': reverse,
+                'value': value, 'integer': (fld.col_defn.data_type == 'INT'),
                 'max_decimals': fld.col_defn.db_scale, 'neg_display': NEG_DISPLAY}
             gui.append(('input', input))
         else:
@@ -190,7 +201,7 @@ class GuiDateCtrl(GuiCtrl):
             input = {'type': 'date', 'lng': lng, 'ref': self.ref,
                 'help_msg': fld.col_defn.long_descr,
                 'head': fld.col_defn.col_head, 'allow_amend': fld.col_defn.allow_amend,
-                'readonly': readonly, 'value': value,
+                'readonly': readonly, 'amend_ok': self.amend_ok, 'value': value,
                 'input_format': DATE_INPUT, 'display_format': DATE_DISPLAY}
             gui.append(('input', input))
         else:
@@ -204,7 +215,8 @@ class GuiBoolCtrl(GuiCtrl):
             value = fld.val_to_str()  #fld.get_dflt())
             input = {'type': 'bool', 'lng': lng, 'ref': self.ref, 'value': value,
                 'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
-                'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly}
+                'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly,
+                'amend_ok': self.amend_ok}
             gui.append(('input', input))
         else:
             self.readonly = True
@@ -217,7 +229,8 @@ class GuiSxmlCtrl(GuiCtrl):
             value = fld.val_to_str()  #fld.get_dflt())
             input = {'type': 'sxml', 'lng': lng, 'ref': self.ref, 'value': value,
                 'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
-                'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly}
+                'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly,
+                'amend_ok': self.amend_ok}
             gui.append(('input', input))
         else:
             self.readonly = True
@@ -269,7 +282,7 @@ class GuiDummy:  # dummy field to force validation of last real field
         self.pwd = ''
         self.choices = None
         self.must_validate = True
-        self.vld_rules = []
+        self.form_vlds = []
         self.after_input = None
         self.col_name = 'dummy'
         ref, pos = parent.form.add_obj(parent, self)
@@ -283,15 +296,8 @@ class GuiDummy:  # dummy field to force validation of last real field
 
     @asyncio.coroutine
     def validate(self, temp_data, tab=False):
-#       if self.vld_rules is not None:  # validations to perform after input
-#           try:
-#               check_rules(self, 'Dummy field', None)
-#           except AibError:
-#               self.parent.session.request.send_set_focus(self.ref)
-#               raise
-
-        for rule in self.vld_rules:  # 'rule' is a tuple of (ctx, xml)
-            yield from check_rule(self, 'Dummy', rule, None)
+        for vld in self.form_vlds:  # 'vld' is a tuple of (ctx, xml)
+            yield from check_vld(self, 'Dummy', vld)
 
 #       if self.after_input is not None:  # steps to perform after input
 #           yield from ht.form_xml.after_input(self)
@@ -305,6 +311,7 @@ class GuiButton:
         self.parent = parent
 #       self.xml = element
 #       self.xml = etree.fromstring(element.get('btn_action'), parser=parser)
+        self.form_vlds = []
         self.xml = btn_action
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
@@ -329,7 +336,8 @@ class GuiButton:
 
     @asyncio.coroutine
     def validate(self, temp_data, tab=False):
-        pass
+        for vld in self.form_vlds:  # 'vld' is a tuple of (ctx, xml)
+            yield from check_vld(self, self.label, vld)
 
     def change_button(self, attr, value):
         # attr can be enabled/default/label/show

@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 import db.objects
 from db.chk_constraints import chk_constraint
-from db.validation_xml import check_rule
-from errors import AibError, AibPerms
+from db.validation_xml import check_vld
+from errors import AibError, AibDenied
 
 debug = 0
 
@@ -42,7 +42,7 @@ class Field:
         self.sql = col_defn.sql
         self.gui_obj = []  # gui_objects to be notified of changes
         self.gui_subtype = None  # if set by form, notify gui on change
-        self.vld_rules = []
+        self.form_vlds = []
         self.flds_to_recalc = []
         self.fkey_parent = None
         self.children = []  # list of xrefs to child fkey fields
@@ -259,8 +259,8 @@ class Field:
     @asyncio.coroutine
     def setval_async(self, value, display=True):
         self.validate(value, display)
-        for rule in self.vld_rules:  # 'rule' is a tuple of (ctx, xml)
-            yield from check_rule(self, self.col_defn.short_descr, rule, value)
+        for vld in self.form_vlds:  # 'vld' is a tuple of (ctx, xml)
+            yield from check_vld(self, self.col_defn.short_descr, vld, value)
         if self.value_changed(value):
             self.continue_setval(value, display)
 
@@ -340,8 +340,8 @@ class Field:
 
         try:
             self.db_obj.check_perms('amend', self.col_defn.row_id)
-        except AibPerms:
-            raise AibPerms(
+        except AibDenied:
+            raise AibDenied(
                 head='Amend {}.{}'.format(self.table_name, self.col_name),
                 body='Permission denied'
                 )
@@ -507,7 +507,7 @@ class Text(Field):
                 return ''
             else:
                 return value
-        except AibPerms:
+        except AibDenied:
             return '*'
 
     def prev_to_str(self):
@@ -713,7 +713,7 @@ class StringXml(Xml):
             if value is None:
                 return ''
             return etree.tostring(value, encoding=str, pretty_print=True)
-        except AibPerms:
+        except AibDenied:
             return '*'
 
     def concurrency_check(self):
@@ -787,7 +787,7 @@ class Integer(Field):
                 return ''
             else:
                 return str(value)
-        except AibPerms:
+        except AibDenied:
             return '*'
 
     def prev_to_str(self):
@@ -867,7 +867,7 @@ class Decimal(Field):
             if value is None:
                 value = self._value
             return self._format_output(value)
-        except AibPerms:
+        except AibDenied:
             return '*'
 
     def prev_to_str(self):
@@ -937,7 +937,7 @@ class Date(Field):
                 return ''
             else:
                 return value.isoformat()  # 'yyyy-mm-dd'  [same as str(value)]
-        except AibPerms:
+        except AibDenied:
             return '*'
 
     def prev_to_str(self):
@@ -996,7 +996,7 @@ class DateTime(Field):
         try:
             self.db_obj.check_perms('view', self.col_defn.row_id)
             return str(self._value)[:19]
-        except AibPerms:
+        except AibDenied:
             return '*'
 
     def str_to_val(self, value):
@@ -1088,7 +1088,7 @@ class Boolean(Field):
                 return ''
             else:
                 return str(int(value))
-        except AibPerms:
+        except AibDenied:
             return '*'
 
     def prev_to_str(self):

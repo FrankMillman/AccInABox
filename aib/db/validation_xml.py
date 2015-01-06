@@ -4,9 +4,9 @@ import hashlib
 from errors import AibError
 
 @asyncio.coroutine
-def check_rule(obj, descr, rule, value):
-    ctx, rule = rule
-    for xml in rule:
+def check_vld(obj, descr, vld, value=None):
+    ctx, vld = vld
+    for xml in vld:
         yield from globals()[xml.tag](ctx, obj, value, xml)
 
 @asyncio.coroutine
@@ -20,7 +20,7 @@ def on_answer(ctx, obj, value, elem):
 
 def obj_exists(ctx, obj, value, xml):
     """
-    <vld_select data_object="db_table"/>
+    <obj_exists obj_name="db_table"/>
     """
     target = xml.get('obj_name')
     target_record = ctx.data_objects[target]
@@ -59,7 +59,7 @@ def case(ctx, obj, value, xml):
 
 def compare(ctx, obj, value, xml):
     """
-    <vld_compare src="$value" op="ne" tgt="pwd_var.pwd1"/>
+    <compare src="$value" op="ne" tgt="pwd_var.pwd1"/>
     """
     source = xml.get('src')
     if '.' in source:
@@ -89,6 +89,8 @@ def compare(ctx, obj, value, xml):
         target_value = target_field.getval()
     elif target == '$value':
         target_value = value
+    elif target == '$None':
+        target_value = None
     else:
         target_value = target
 

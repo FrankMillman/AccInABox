@@ -83,7 +83,7 @@ xsd_parser = etree.XMLParser(
     schema=etree.XMLSchema(file=os.path.join(schema_path, 'form.xsd')),
     attribute_defaults=True, remove_comments=True, remove_blank_text=True)
 
-from errors import AibError, AibPerms
+from errors import AibError, AibDenied
 from start import log, debug
 
 """
@@ -112,7 +112,7 @@ def init_xml(caller, xml):
     etree.SubElement(form_xml, 'mem_objects')
     etree.SubElement(form_xml, 'input_params')
     etree.SubElement(form_xml, 'output_params')
-    etree.SubElement(form_xml, 'rules')
+#   etree.SubElement(form_xml, 'rules')
     frame = etree.SubElement(form_xml, 'frame')
     etree.SubElement(frame, 'toolbar')
     etree.SubElement(frame, 'body')
@@ -1297,7 +1297,7 @@ def load_user_comps(caller, xml):
                 user_comp_view.setval('company_id', comp.getval('company_id'))
                 user_comp_view.setval('company_name', comp.getval('company_name'))
                 user_comp_view.save()
-        except AibPerms:
+        except AibDenied:
             return  # this user has no permissions on dir_companies
 
     # we need to store orig at start, to compare at end to see what changed
@@ -1343,8 +1343,9 @@ def dump_user_comps(caller, xml):
     user_comp_orig = caller.data_objects['user_comp_orig']
     user_comp_view = caller.data_objects['user_comp_view']
 
-    if (user.getval('sys_admin') and
-            user.getval('sys_admin') == user.get_orig('sys_admin')):
+#   if (user.getval('sys_admin') and
+#           user.getval('sys_admin') == user.get_orig('sys_admin')):
+    if user.getval('sys_admin') and user.get_orig('sys_admin'):
         return  # no changes
 
     all_views = user_comp_view.select_many(where=[], order=[])
@@ -1385,10 +1386,15 @@ def load_table_perms(caller, xml):
         all_tables = db_table.select_many(where=[], order=[('table_name', False)])
         for _ in all_tables:
             table_id = db_table.getval('row_id')
-            tbl_view.init()
-            tbl_view.setval('table_id', table_id)
-            tbl_view.setval('table_name', db_table.getval('table_name'))
-            tbl_view.setval('descr', db_table.getval('short_descr') or 'None')
+#           tbl_view.init()
+#           tbl_view.setval('table_id', table_id)
+#           tbl_view.setval('table_name', db_table.getval('table_name'))
+#           tbl_view.setval('descr', db_table.getval('short_descr') or 'None')
+            init_vals = {}
+            init_vals['table_id'] = table_id
+            init_vals['table_name'] = db_table.getval('table_name')
+            init_vals['descr'] = db_table.getval('short_descr') or 'None'
+            tbl_view.init(init_vals=init_vals)
             tbl_view.save()
 
     # we need to store orig at start, to compare at end to see what changed
@@ -1514,26 +1520,27 @@ def dump_table_perms(caller, xml):
                 else:
                     tbl_perms.delete()
                     tbl_orig.delete()  # in case we change again without moving off row
-            else:
-                if (
-                        tbl_view.getval('sel_ok') or
-                        tbl_view.getval('ins_ok') or
-                        tbl_view.getval('upd_ok') or
-                        tbl_view.getval('del_ok')
-                        ):
-                    tbl_perms.init()
-                    tbl_perms.setval('table_id', tbl_view.getval('table_id'))
-                    tbl_perms.setval('sel_ok', tbl_view.getval('sel_ok'))
-                    tbl_perms.setval('ins_ok', tbl_view.getval('ins_ok'))
-                    tbl_perms.setval('upd_ok', tbl_view.getval('upd_ok'))
-                    tbl_perms.setval('del_ok', tbl_view.getval('del_ok'))
-                    tbl_perms.save()
-                    # in case we change again without moving off row
-                    tbl_orig.setval('sel_ok', tbl_view.getval('sel_ok'))
-                    tbl_orig.setval('ins_ok', tbl_view.getval('ins_ok'))
-                    tbl_orig.setval('upd_ok', tbl_view.getval('upd_ok'))
-                    tbl_orig.setval('del_ok', tbl_view.getval('del_ok'))
-                    tbl_orig.save()
+        else:
+            if (
+                    # can be True, False, or dict - empty dict is not False, must be updated
+                    tbl_view.getval('sel_ok') != False or
+                    tbl_view.getval('ins_ok') != False or
+                    tbl_view.getval('upd_ok') != False or
+                    tbl_view.getval('del_ok') != False
+                    ):
+                tbl_perms.init()
+                tbl_perms.setval('table_id', tbl_view.getval('table_id'))
+                tbl_perms.setval('sel_ok', tbl_view.getval('sel_ok'))
+                tbl_perms.setval('ins_ok', tbl_view.getval('ins_ok'))
+                tbl_perms.setval('upd_ok', tbl_view.getval('upd_ok'))
+                tbl_perms.setval('del_ok', tbl_view.getval('del_ok'))
+                tbl_perms.save()
+                # in case we change again without moving off row
+                tbl_orig.setval('sel_ok', tbl_view.getval('sel_ok'))
+                tbl_orig.setval('ins_ok', tbl_view.getval('ins_ok'))
+                tbl_orig.setval('upd_ok', tbl_view.getval('upd_ok'))
+                tbl_orig.setval('del_ok', tbl_view.getval('del_ok'))
+                tbl_orig.save()
 
 @asyncio.coroutine
 def load_col_perms(caller, xml):
@@ -1573,19 +1580,19 @@ def load_col_perms(caller, xml):
         init_vals['col_name'] = db_col.getval('col_name')
         init_vals['descr'] = db_col.getval('short_descr')
         if sel_ok is True:
-            col_sel_ok = True
+            col_view_ok = True
         elif sel_ok is False:
-            col_sel_ok = False
+            col_view_ok = False
         else:  # must be dictionary of permitted columns
-            col_sel_ok = str(col_id) in sel_ok
-        init_vals['sel_ok'] = col_sel_ok
+            col_view_ok = str(col_id) in sel_ok
+        init_vals['view_ok'] = col_view_ok
         if upd_ok is True:
-            col_upd_ok = True
+            col_amend_ok = True
         elif upd_ok is False:
-            col_upd_ok = False
+            col_amend_ok = False
         else:  # must be dictionary of permitted columns
-            col_upd_ok = str(col_id) in upd_ok
-        init_vals['upd_ok'] = col_upd_ok
+            col_amend_ok = str(col_id) in upd_ok
+        init_vals['amend_ok'] = col_amend_ok
 
         col_view.init(init_vals=init_vals)
         col_view.save()
@@ -1602,19 +1609,19 @@ def check_sel_ok(caller, xml):
             col_view.set_cursor_row(row)
             col_view.select_row_from_cursor(row, display=True)
 
-            col_view.setval('sel_ok', False)
+            col_view.setval('view_ok', False)
             col_view.save()
-        col_view.getfld('sel_ok').set_readonly(True)
+        col_view.getfld('view_ok').set_readonly(True)
     elif new_val == 'Y':
         for row in range(col_view.cursor.no_rows):
             col_view.set_cursor_row(row)
             col_view.select_row_from_cursor(row, display=True)
 
-            col_view.setval('sel_ok', True)
+            col_view.setval('view_ok', True)
             col_view.save()
-        col_view.getfld('sel_ok').set_readonly(True)
+        col_view.getfld('view_ok').set_readonly(True)
     else:  # must be 'C'
-        col_view.getfld('sel_ok').set_readonly(False)
+        col_view.getfld('view_ok').set_readonly(False)
 
     for grid in caller.grids:
         yield from grid.start_grid()
@@ -1631,19 +1638,19 @@ def check_upd_ok(caller, xml):
             col_view.set_cursor_row(row)
             col_view.select_row_from_cursor(row, display=True)
 
-            col_view.setval('upd_ok', False)
+            col_view.setval('amend_ok', False)
             col_view.save()
-        col_view.getfld('upd_ok').set_readonly(True)
+        col_view.getfld('amend_ok').set_readonly(True)
     elif new_val == 'Y':
         for row in range(col_view.cursor.no_rows):
             col_view.set_cursor_row(row)
             col_view.select_row_from_cursor(row, display=True)
 
-            col_view.setval('upd_ok', True)
+            col_view.setval('amend_ok', True)
             col_view.save()
-        col_view.getfld('upd_ok').set_readonly(True)
+        col_view.getfld('amend_ok').set_readonly(True)
     else:  # must be 'C'
-        col_view.getfld('upd_ok').set_readonly(False)
+        col_view.getfld('amend_ok').set_readonly(False)
 
     for grid in caller.grids:
         yield from grid.start_grid()
@@ -1691,12 +1698,12 @@ def dump_col_perms(caller, xml):
     for _ in all_col_views:
         col_id = str(col_view.getval('col_id'))
         if check_sel:
-            if col_view.getval('sel_ok'):
+            if col_view.getval('view_ok'):
                 sel_ok = tbl_view.getval('sel_ok')
                 sel_ok[col_id] = None
                 tbl_view.setval('sel_ok', sel_ok)
         if check_upd:
-            if col_view.getval('upd_ok'):
+            if col_view.getval('amend_ok'):
                 upd_ok = tbl_view.getval('upd_ok')
                 upd_ok[col_id] = None
                 tbl_view.setval('upd_ok', upd_ok)

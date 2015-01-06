@@ -56,6 +56,36 @@
       <label value="Sys Admin?"/>
       <col/>
       <input fld="user.sys_admin"/>
+      <row/>
+      <col/>
+      <label value="Password:"/>
+      <col/>
+      <button btn_id="btn_pwd" btn_label="Change password" btn_enabled="true"
+          btn_validate="true" btn_default="false" btn_action="
+        <<action>>
+          <<sub_form form_name=`chg_pwd_form`>>
+            <<call_params/>>
+            <<return_params>>
+              <<return_param name=`password` type=`data_attr` target=`user.password`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</sub_form>>
+        <</action>>"
+        validation="
+          <<validations>>
+            <<validation>>
+              <<case>>
+                <<compare src=`user.password` op=`ne` tgt=`$None`/>>
+                <<default>>
+                  <<error head=`Password` body=`You must enter a password`/>>
+                <</default>>
+              <</case>>
+            <</validation>>
+          <</validations>>
+        "/>
       <block/>
       <subtype_panel subtype="user.user_type"/>
       <block/>
@@ -87,6 +117,7 @@
       </grid>
     </body>
     <button_row validate="true" template="Setup_Form">
+<!--
       <button btn_id="btn_pwd" btn_label="Change password" btn_enabled="false"
           btn_validate="true" btn_default="false" btn_action="
         <<action>>
@@ -102,23 +133,12 @@
           <</sub_form>>
         <</action>>
         "/>
+-->
     </button_row>
     <frame_methods template="Setup_Form">
       <method name="on_start_form" action="
         <<action>>
           <<pyfunc name=`db.formdefn_funcs.load_user_comps`/>>
-          <<case>>
-            <<obj_exists obj_name=`user`>>
-              <<change_button>>
-                <<btn_enabled btn_id=`btn_pwd` state=`true`/>>
-              <</change_button>>
-            <</obj_exists>>
-            <<default>>
-              <<change_button>>
-                <<btn_enabled btn_id=`btn_pwd` state=`false`/>>
-              <</change_button>>
-            <</default>>
-          <</case>>
         <</action>>
       "/>
       <method name="do_save" action="

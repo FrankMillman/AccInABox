@@ -349,6 +349,7 @@
       <xs:attribute name="btn_validate" type="xs:boolean" use="required"/>
       <xs:attribute name="lng" type="xs:integer"/>
       <xs:attribute name="btn_action"/>
+      <xs:attribute name="validation"/>
       <xs:attribute name="help_msg"/>
     </xs:complexType>
   </xs:element>

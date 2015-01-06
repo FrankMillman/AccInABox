@@ -550,7 +550,6 @@ function create_tree(container, frame, toolbar, hide_root){
         tree.active_node.text_span.style.background = node.style.background;
         node.text_span.style.color = 'lightcyan';
         node.text_span.style.background = 'darkblue';
-        tree.active_node = node;
         //if (node.expandable) {
         //  if (!node.expanded) {
         //    node.expanded = true;
@@ -560,9 +559,10 @@ function create_tree(container, frame, toolbar, hide_root){
         //else {
         if (!node.expandable)
           tree.onselected(node);
-        if (node !== tree.active_node)
+        if (node !== tree.active_node) {
+          tree.active_node = node;
           tree.onactive(node);
-        //  };
+          };
         };
       text_span.node = node;
       text_span.appendChild(text);

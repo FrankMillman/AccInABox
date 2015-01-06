@@ -474,9 +474,7 @@ class RequestHandler:
         menu_defn = menu_defns[company]
         menu_defn.init()
         menu_defn.setval('row_id', int(row_id))
-#       print('SELECTED {} TYPE={} ID={} COMPANY={}'.format(
-#           descr, option_type, option_data, company))
-        print('SELECTED', company, menu_defn)
+#       print('SELECTED', company, menu_defn)
         opt_type = menu_defn.getval('opt_type')
         if opt_type == '2':  # grid
             yield from ht.form.start_setupgrid(
@@ -570,9 +568,9 @@ class RequestHandler:
 
     @asyncio.coroutine
     def on_cell_req_focus(self, args):
-        ref, row, save = args
+        ref, row = args
         obj = self.session.get_obj(ref)
-        yield from obj.grid.on_cell_req_focus(obj, row, save)
+        yield from obj.grid.on_cell_req_focus(obj, row)
 
     @asyncio.coroutine
     def on_req_save_row(self, args):
@@ -640,13 +638,16 @@ class RequestHandler:
 
     @asyncio.coroutine
     def on_req_close(self, data):
-        form_ref, = data
+#       frame_ref, = data  # 'frame' is always the top-level frame
+        obj_ref, = data  # could be frame or grid
         try:
-            form = self.session.get_obj(form_ref)
+#           frame = self.session.get_obj(frame_ref)
+            obj = self.session.get_obj(obj_ref)
         except IndexError:  # user clicked Close twice?
             pass
         else:
-            yield from form.on_req_close()
+#           yield from frame.on_req_close()
+            yield from obj.on_req_close()
 
     @asyncio.coroutine
     def on_req_cancel(self, data):

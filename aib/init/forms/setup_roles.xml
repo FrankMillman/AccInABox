@@ -81,11 +81,11 @@
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
         long_descr="Description" col_head="Description" key_field="N" allow_null="false"
         allow_amend="false" max_len="30" db_scale="0"/>
-      <mem_col col_name="sel_ok" data_type="BOOL" short_descr="Select ok?"
-        long_descr="Select ok?" col_head="Sel?" key_field="N" allow_null="false"
+      <mem_col col_name="view_ok" data_type="BOOL" short_descr="View ok?"
+        long_descr="View ok?" col_head="View?" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
-      <mem_col col_name="upd_ok" data_type="BOOL" short_descr="Update ok?"
-        long_descr="Update ok?" col_head="Upd?" key_field="N" allow_null="false"
+      <mem_col col_name="amend_ok" data_type="BOOL" short_descr="Amend ok?"
+        long_descr="Amend ok?" col_head="Amend?" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
     </mem_obj>
   </mem_objects>
@@ -207,19 +207,19 @@
               <grid data_object="col_view" growable="false" num_grid_rows="8">
                 <cur_columns>
                   <cur_col col_name="col_name" lng="140" readonly="true"/>
-                  <cur_col col_name="sel_ok" lng="40" after="
+                  <cur_col col_name="view_ok" lng="60" after="
                     <<action>>
                       <<case>>
-                        <<fld_changed name=`col_view.sel_ok`>>
+                        <<fld_changed name=`col_view.view_ok`>>
                           <<call method=`do_save`/>>
                         <</fld_changed>>
                       <</case>>
                     <</action>>
                   "/>
-                  <cur_col col_name="upd_ok" lng="40" after="
+                  <cur_col col_name="amend_ok" lng="60" after="
                     <<action>>
                       <<case>>
-                        <<fld_changed name=`col_view.upd_ok`>>
+                        <<fld_changed name=`col_view.amend_ok`>>
                           <<call method=`do_save`/>>
                         <</fld_changed>>
                       <</case>>
@@ -256,8 +256,8 @@
           "/>
           <method name="do_save" action="
             <<action>>
-              <<save_obj obj_name=`role`/>>
               <<pyfunc name=`db.formdefn_funcs.dump_table_perms`/>>
+              <<save_obj obj_name=`role`/>>
               <<update_node/>>
             <</action>>
           "/>
@@ -282,7 +282,8 @@
         "/>
 -->
     </button_row>
-    <frame_methods>
+    <frame_methods template="Tree_Form">
+<!--
       <method name="on_req_close" action="
         <<action>>
          <<call method=`do_cancel`/>>
@@ -298,6 +299,7 @@
           <<end_form state=`cancelled`/>>
         <</action>>
       "/>
+-->
     </frame_methods>
   </frame>
 </form>

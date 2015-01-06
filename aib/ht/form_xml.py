@@ -13,23 +13,41 @@ def on_click(caller, btn):  # caller can be frame or grid
     for xml in btn.xml:
         if debug: log.write('CLICK {} {}\n\n'.format(caller, xml.tag))
         yield from globals()[xml.tag](caller, xml)
+        if caller.session.request.db_events:
+            yield from chk_db_events(caller)
 
 @asyncio.coroutine
 def on_answer(caller, elem):
     for xml in elem:
         yield from globals()[xml.tag](caller, xml)
+        if caller.session.request.db_events:
+            yield from chk_db_events(caller)
 
 @asyncio.coroutine
-def exec_xml(caller, elem):  # caller can be frame or grid
+def exec_xml(caller, elem, clear_dbevents=False):  # caller can be frame or grid
     for xml in elem:
         if debug: log.write('EXEC {} {}\n\n'.format(caller, xml.tag))
         yield from globals()[xml.tag](caller, xml)
+        if caller.session.request.db_events:
+            if clear_dbevents:
+                caller.session.request.db_events.clear()
+            else:
+                yield from chk_db_events(caller)
 
 @asyncio.coroutine
 def after_input(obj):
     for xml in obj.after_input:
         obj.parent._after_input = obj
         yield from globals()[xml.tag](obj.parent, xml)
+        if obj.parent.session.request.db_events:
+            yield from chk_db_events(obj.parent)
+
+@asyncio.coroutine
+def chk_db_events(caller):
+    db_events = caller.session.request.db_events[:]
+    caller.session.request.db_events.clear()
+    for sub_caller, action in db_events:
+        yield from exec_xml(sub_caller, action)
 
 #----------------------------------------------------------------------
 # the following functions are called via their xml.tag, using globals()
@@ -42,6 +60,8 @@ def case(caller, xml):
             for step in child:
                 if debug: log.write('STEP {} {}\n\n'.format(caller, step.tag))
                 yield from globals()[step.tag](caller, step)
+#               if caller.session.request.db_events:
+#                   yield from chk_db_events(caller)
             break
 
 def obj_exists(caller, xml):
@@ -150,6 +170,41 @@ def init_obj(caller, xml):
     caller.data_objects.get(obj_name).init()
 
 @asyncio.coroutine
+def notify_obj_clean(caller, xml):
+    # notify client that data_obj is now clean - called from template on_clean
+
+    # what do we want to do here?
+    # object is 'clean', but it may or may not 'exist'
+    #
+    # if 'selecting' an existing record by entering the key field -
+    #   obj_exists changes to True
+    #
+    # if 'saving' an existing record, obj_exists stays True
+    # if 'saving' a new record, obj_exists changes to True
+    #
+    # if 'restoring' an existing record, obj_exists stays True
+    # if 'restoring' a new record, obj_exists stays False
+    #
+    # if an existing record, form_amended changes from True to False
+    # if a new record, form_amended stays True
+
+    # on the client -
+    #   if object exists -
+    #     set form/row_amended to False
+    #     set obj_exists to True - state only changes if
+    #       we are 'saving' a new record, but does no harm
+    #   if object does not exist -
+    #     set form/row_amended to True
+    #     set obj_exists to False
+    #
+    # but if the object does not exist, the client is already in the second state
+    #
+    # so we only need to notify if object exists
+
+    if caller.db_obj is not None and caller.db_obj.exists:
+        caller.session.request.obj_to_redisplay.append((caller.ref, True))
+
+@asyncio.coroutine
 def handle_restore(caller, xml):
     yield from caller.handle_restore()
 
@@ -176,8 +231,8 @@ def save_obj(frame, xml):
     if frame.ctrl_grid and db_obj == frame.ctrl_grid.db_obj:
         yield from frame.ctrl_grid.try_save()
     else:
-        db_obj.save()
-#       caller.save_obj(db_obj)
+#       db_obj.save()
+        yield from frame.save_obj(db_obj)
 
 @asyncio.coroutine
 def save_row(grid, xml):
@@ -339,6 +394,8 @@ def call(caller, xml):
     for xml in method:
         if debug: log.write('CALL {} {}\n\n'.format(caller, xml.tag))
         yield from globals()[xml.tag](caller, xml)
+#       if caller.session.request.db_events:
+#           yield from chk_db_events(caller)
 
 @asyncio.coroutine
 def pyfunc(caller, xml):
@@ -351,6 +408,16 @@ def pyfunc(caller, xml):
     else:
         log.write('WHY NOT CALL {} DIRECTLY?\n\n'.format(func_name))
         yield from globals()[func_name](caller, xml)
+#   if caller.session.request.db_events:
+#       yield from chk_db_events(caller)
+
+@asyncio.coroutine
+def parent_req_close(caller, xml):
+    yield from caller.parent.on_req_close()
+
+@asyncio.coroutine
+def parent_req_cancel(caller, xml):
+    yield from caller.parent.on_req_cancel()
 
 @asyncio.coroutine
 def return_to_grid(caller, xml):
@@ -369,6 +436,9 @@ def ask(caller, xml):
     default = xml.get('enter')
     escape = xml.get('escape')
     question = xml.get('question')
+    if '{obj_descr}' in question:
+        question = question.replace(
+            '{obj_descr}', repr(caller.obj_list[0].fld.getval()))
     for response in xml.findall('response'):
         ans = response.get('ans')
         answers.append(ans)
@@ -414,6 +484,10 @@ def end_form(caller, xml):
     form = caller.form
     state = xml.get('state')
 
+    yield from form.end_form(state)
+
+    return
+
     return_params = {}  # data to be returned on completion
     output_params = form.form_defn.find('output_params')
     if output_params is not None:
@@ -454,8 +528,6 @@ def end_form(caller, xml):
         else:  # return to calling process(?)
             form.callback[0](caller.session, state, return_params, *form.callback[1:])
             form.callback = None  # remove circular reference
-#       del frame.session.active_roots[frame.root_id]
-#       frame.root = None  # remove circular reference
 
 @asyncio.coroutine
 def return_from_subform(caller, state, output_params, calling_xml):
@@ -480,6 +552,8 @@ def return_from_subform(caller, state, output_params, calling_xml):
         "return[@state='{}']".format(state))
     for xml in callback:
         yield from globals()[xml.tag](caller, xml)
+#       if caller.session.request.db_events:
+#           yield from chk_db_events(caller)
 
 """
 def form_view(frame, xml):
