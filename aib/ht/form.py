@@ -416,9 +416,11 @@ class Form:
             db_parent = obj_xml.get('parent')
             if db_parent is not None:
                 db_parent = self.data_objects[db_parent]
+            upd_chks = obj_xml.get('upd_chks')
+            del_chks = obj_xml.get('del_chks')
             company = obj_xml.get('company', self.company)
             db_obj = db.api.get_mem_object(self,
-                company, obj_name, db_parent)
+                company, obj_name, db_parent, upd_chks, del_chks)
             self.data_objects[obj_name] = db_obj
             hooks = obj_xml.get('hooks')
             if hooks is not None:

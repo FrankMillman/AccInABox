@@ -333,8 +333,8 @@ class Field:
                 errmsg = 'Value must be one of {}'.format(vld_choices)
                 raise AibError(head=col_defn.short_descr, body=errmsg)
 
-        if col_defn.col_chks:
-            chk_constraint(self, col_defn.col_chks, value)
+        for descr, errmsg, col_chk in col_defn.col_chks:
+            chk_constraint(self, col_chk, errmsg=errmsg)  # will raise AibError on fail
 
     def continue_setval(self, value, display):
 

@@ -2,34 +2,17 @@ from json import loads
 from ast import literal_eval
 import operator
 import re
-#from lxml import etree
+
 from errors import AibError
 
-# to think about [2014-02-12] -
-#
-# at present, chk_constraint is a 'list of checks', where the first element is
-#   'check/and/or' and tests can be enclosed in brackets for precedence
-#
-# arguably, it should be a 'list of list of checks', where each list is a
-#   separate 'list of checks', and each one must pass
-#
-# benefits -
-#   1. you can add a new check without interfering with an existing, possibly
-#         complex, check
-#   2. you can add a 'description' element to each one, to make the
-#         gui interface more intuitive
-#   3. possibly add a customised error message on failure (?)
-#
-# note - if we do this, *this* function will not change
-#        the caller will loop through the checks and call this for each one
-
-def chk_constraint(ctx, constraint, value=None):
+def chk_constraint(ctx, constraint, value=None, errmsg=None):
+    # can be a column constraint (col_chk) or a table constraint (upd_chk or del_chk)
     try:
-        db_obj = ctx.db_obj
+        db_obj = ctx.db_obj  # this is a column constraint
         fld = ctx
         descr = ctx.col_defn.short_descr
     except AttributeError:
-        db_obj = ctx
+        db_obj = ctx  # this is a table constraint
         fld = None
         descr = db_obj.db_table.short_descr
     new_check = []
@@ -53,16 +36,16 @@ def chk_constraint(ctx, constraint, value=None):
             result = False
             err = e.args[0]
         if result is False:
-            errmsg = err
-            if '$src' in errmsg:
-                errmsg = errmsg.split('$src')
-#               errmsg.insert(1, "'{}'".format(src))
-                errmsg.insert(1, '{}'.format(db_obj.getfld(src).col_name))
-                errmsg = ''.join(errmsg)
-            if '$tgt' in errmsg:
-                errmsg = errmsg.split('$tgt')
-                errmsg.insert(1, tgt)
-                errmsg = ''.join(errmsg)
+            if not errmsg:  # if exists, use errmsg supplied
+                errmsg = err
+                if '$src' in errmsg:
+                    errmsg = errmsg.split('$src')
+                    errmsg.insert(1, '{}'.format(db_obj.getfld(src).col_name))
+                    errmsg = ''.join(errmsg)
+                if '$tgt' in errmsg:
+                    errmsg = errmsg.split('$tgt')
+                    errmsg.insert(1, tgt)
+                    errmsg = ''.join(errmsg)
         new_check.append(str(result))  # literal 'True' or 'False'
         if rbr == ')':
             new_check.append(rbr)
@@ -75,43 +58,6 @@ def chk_constraint(ctx, constraint, value=None):
         errmsg = 'constraint {} is invalid'.format(constraint)
         raise AibError(head=descr, body=errmsg)
 
-"""
-def chk_constraint2(fld, constraint, value):
-    constraint = loads(constraint)
-    c_type = constraint[0]
-    c_args = constraint[1]
-    if c_type == 'enum':  # type = TEXT
-        # [['enum', ['aaa', 'bbb', 'ccc']]
-        if value not in c_args:
-            raise ValueError('Value must be one of {}'.format(c_args))
-    elif c_type == 'range':  # type = INT or DEC
-        # [['range', [0, 999999]]  [min, max]
-        if c_args[0] is not None:
-            if value < c_args[0]:
-                raise ValueError('Value must be greater than {}'.format(c_args[0]))
-        if c_args[1] is not None:
-            if value > c_args[1]:
-                raise ValueError('Value must be less than {}'.format(c_args[1]))
-    elif c_type == 'pattern':  # type = TEXT
-        # [['pattern', '[0-9]{3}-[a-zA-Z]{3}-[0-9]{,6}']
-        # exactly 3 digits | - | exactly 3 letters | - | up to 6 digits
-        if not re.match(c_args[1]+'$', value):  #  $ means end of string
-            raise ValueError('Value must match pattern {}'.format(c_args[1]))
-    elif c_type == 'cdv':  # type = TEXT
-        # [['cdv', '137137', 10]  weights, modulo - string must be 7 digits
-        base, chkdig = value[:-1], value[-1]
-        tot = sum(operator.mul(b, w) for b, w in zip(base, c_args[1]))
-        mod = tot % c_args[2]
-        if mod != chkdig:
-            raise ValueError('Value fails check digit verification')
-    elif c_type == 'nospace':  # type = TEXT
-        if not value.isalnum():
-            raise ValueError('Value may not contain whitespace')
-    elif c_type == 'expr':  # type = any
-        # use the full 'constraint' mechanism above
-        pass
-"""
-
 def enum(value, args):
     # [['enum', ['aaa', 'bbb', 'ccc']]
     return value in args
@@ -120,23 +66,17 @@ def pattern(value, args):
     return bool(re.match(args+'$', value))  #  $ means end of string
 
 def cdv(value, args):
+    # this cannot work as is - is value a string or an int?
+    # it will be easy to get working when needed, so leave for now
     weights, cdv_mod = args
     base, chkdig = value[:-1], value[-1]
-    tot = sum(operator.mul(b, w) for b, w in zip(base, weights))
+#   tot = sum(operator.mul(b, w) for b, w in zip(base, weights))
+    tot = sum((b * w) for b, w in zip(base, weights))
     mod = tot % cdv_mod
     return mod == chkdig
 
 def nospace(value, args):
     return value.isalnum()
-
-"""
-def is_xml(value, args):
-    try:
-        xml = etree.fromstring(value)
-        return True
-    except (etree.XMLSyntaxError, ValueError) as e:
-        raise ValueError('Xml error - {}'.format(e.args[0]))
-"""
 
 def nexist(value, args):
     table_name, where = args

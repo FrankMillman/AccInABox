@@ -25,6 +25,8 @@ def upgrade_datamodel(db_session, old_version, new_version, company='_sys'):
         upgrade_0_1_4(db_session)
     if old_version < (0, 1, 5):
         upgrade_0_1_5(db_session, company)
+    if old_version < (0, 1, 6):
+        upgrade_0_1_6(db_session, company)
 
 # replace amended form definitions
 def upd_form_defn(conn, company, form_name):
@@ -411,3 +413,33 @@ def upgrade_0_1_5(db_session, company):
         form_names = ('setup_user', 'setup_roles')
         for form_name in form_names:
             upd_form_defn(conn, company, form_name)
+
+def upgrade_0_1_6(db_session, company):
+    print('upgrading to 0.1.6')
+    with db_session as conn:
+
+        # modify del_chk on dir_companies - new format allows multiple checks
+        del_chks = []
+        del_chk = []
+        del_chk.append('Cannot delete _sys')  # description
+        del_chk.append('Cannot delete _sys')  # error message
+        del_chk.append([['CHECK', '', 'company_id', '!=', '"_sys"', '']]
+        del_chks.append(del_chk)
+
+        db_table = db.api.get_db_object(__main__, '_sys', 'db_tables')
+        db_table.setval('table_id', 'dir_companies')
+        db_table.setval('del_chks', del_chks)
+        db_table.save()
+
+        # add del_chk to dir_users - cannot delete admin
+        del_chks = []
+        del_chk = []
+        del_chk.append('Cannot delete admin')  # description
+        del_chk.append('Cannot delete admin')  # error message
+        del_chk.append([['CHECK', '', 'user_id', '!=', '"admin"', '']]
+        del_chks.append(del_chk)
+
+        db_table.init()
+        db_table.setval('table_id', 'dir_users')
+        db_table.setval('del_chks', del_chks)
+        db_table.save()

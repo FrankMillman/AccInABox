@@ -7,7 +7,11 @@ table = {
     'long_descr'    : 'Directory of companies',
     'audit_trail'   : False,
     'upd_chks'      : None,
-    'del_chks'      : [('CHECK', '', 'company_id', '!=', '"_sys"', '')],
+    'del_chks'      : [[
+                        'Cannot delete _sys',
+                        'Cannot delete _sys',
+                        [['CHECK', '', 'company_id', '!=', '"_sys"', '']],
+                      ]],
     'table_hooks'   : etree.fromstring(
         '<hooks><hook type="after_insert"><create_company/></hook></hooks>'),
     'defn_company'  : None,

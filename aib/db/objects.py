@@ -58,8 +58,9 @@ def get_fkey_object(context, table_name, src_obj, src_colname):
             body='{} is not a foreign key for {}'.format(src_colname, table_name))
     return fk_object
 
-def get_mem_object(context, active_company, table_name, parent=None):
-    db_table = MemTable(table_name)
+def get_mem_object(context, active_company, table_name, parent=None,
+        upd_chks=None, del_chks=None):
+    db_table = MemTable(table_name, upd_chks, del_chks)
     return MemObject(context, active_company, db_table, parent)
 
 def get_db_table(context, active_company, table_name):
@@ -738,8 +739,8 @@ class DbObject:
         self.setup_defaults()  # generate defaults for blank fields
                                # can raise AibError if required and no default
 
-        for upd_chk in self.db_table.upd_chks:
-            chk_constraint(self, upd_chk)  # will raise AibError on fail
+        for descr, errmsg, upd_chk in self.db_table.upd_chks:
+            chk_constraint(self, upd_chk, errmsg=errmsg)  # will raise AibError on fail
 
         if self.mem_obj:
             session = self.context.mem_session
@@ -861,12 +862,8 @@ class DbObject:
                 head='Delete',
                 body='No current row - cannot delete')
 
-#       for del_chk in self.db_table.del_chks:
-#           # will raise AibError on fail
-#           chk_constraint(self, del_chk)
-        if self.db_table.del_chks:
-            # will raise AibError on fail
-            chk_constraint(self, self.db_table.del_chks)
+        for descr, errmsg, del_chk in self.db_table.del_chks:
+            chk_constraint(self, del_chk, errmsg=errmsg)  # will raise AibError on fail
 
         self.restore(display=False)  # remove unsaved changes, to ensure valid audit trail
 
@@ -1437,16 +1434,23 @@ class DbTable:
 #-----------------------------------------------------------------------------
 
 class MemTable(DbTable):
-    def __init__(self, table_name):
+    def __init__(self, table_name, upd_chks, del_chks):
         self.table_name = table_name
+        self.short_descr = table_name
         self.read_only = False
         self.col_list = []  # maintain sorted list of column names
         self.subtypes = {}  # insert col_name: col_names if col is subtype
         self.primary_keys = []
         self.virt_list = []
         self.audit_trail = None
-        self.upd_chks = []
-        self.del_chks = []
+        if upd_chks is None:
+            self.upd_chks = []
+        else:
+            self.upd_chks = loads(upd_chks)
+        if del_chks is None:
+            self.del_chks = []
+        else:
+            self.del_chks = loads(del_chks)
         self.table_hooks = None
 
 #----------------------------------------------------------------------------

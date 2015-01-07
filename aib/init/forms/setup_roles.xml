@@ -67,7 +67,12 @@
         long_descr="Delete ok?" col_head="Del?" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
-    <mem_obj name="col_view" descr="List of column permissions" parent="tbl_view">
+    <mem_obj name="col_view" descr="List of column permissions" parent="tbl_view"
+      upd_chks="[[`Check amend_ok`, `Cannot allow amend without allowing view`,
+        [[`check`, `(`, `view_ok`, `is`, `False`, ``],
+        [`and`, ``, `amend_ok`, `is`, `False`, `)`],
+        [`or`, ``, `view_ok`, `is`, `True`, ``]]]]">
+
       <mem_col col_name="table_id" data_type="INT" short_descr="Table id"
         long_descr="Table id" col_head="" key_field="A" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"

@@ -7,7 +7,11 @@ table = {
     'long_descr'    : 'Directory of users',
     'audit_trail'   : True,
     'upd_chks'      : None,
-    'del_chks'      : None,
+    'del_chks'      : [[
+                        'Cannot delete admin',
+                        'Cannot delete admin',
+                        [['CHECK', '', 'user_id', '!=', '"admin"', '']],
+                      ]],
     'table_hooks'   : None,
     'defn_company'  : None,
     'data_company'  : None,
@@ -128,7 +132,7 @@ cols.append ({
     'choices'    : None,
     })
 choices = [
-    True,   # use sub_types?
+    True,  # use sub_types?
     True,  # use display_names?
     [ ['admin', 'System administrator', [], []] ]
     ]

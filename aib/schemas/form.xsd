@@ -45,6 +45,7 @@
       <xs:attribute name="descr"/>
       <xs:attribute name="parent"/>
       <xs:attribute name="hooks"/>
+      <xs:attribute name="upd_chks"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="mem_col">
