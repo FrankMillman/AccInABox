@@ -2,12 +2,12 @@ from lxml import etree
 
 # table definition
 table = {
-    'table_name'    : 'sys_menu_defns',
-    'group_code'    : 'sys',
+    'table_name'    : 'acc_roles',
+    'group_code'    : 'acc',
     'seq'           : -1,
-    'short_descr'   : 'Menu definitions',
-    'long_descr'    : 'Menu definitions',
-    'audit_trail'   : False,
+    'short_descr'   : 'Roles',
+    'long_descr'    : 'Hierarchy of roles and responsibilities',
+    'audit_trail'   : True,
     'table_created' : True,
     'default_cursor': None,
     'setup_form'    : None,
@@ -15,7 +15,8 @@ table = {
     'del_chks'      : None,
     'table_hooks'   : etree.fromstring(
         '<hooks><hook type="before_save"><increment_seq args="parent_id"/></hook>'
-        '<hook type="after_delete"><decrement_seq args="parent_id"/></hook></hooks>'),
+        '<hook type="after_delete"><decrement_seq args="parent_id"/></hook></hooks>'
+        ),
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -42,10 +43,64 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'created_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Created id',
+    'long_descr' : 'Created row id',
+    'col_head'   : 'Created',
+    'key_field'  : 'N',
+    'generated'  : True,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '0',
+    'col_chks'   : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'deleted_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Deleted id',
+    'long_descr' : 'Deleted row id',
+    'col_head'   : 'Deleted',
+    'key_field'  : 'N',
+    'generated'  : True,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '0',
+    'col_chks'   : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'role',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Role',
+    'long_descr' : 'Role code',
+    'col_head'   : 'Role',
+    'key_field'  : 'A',
+    'generated'  : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 15,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'col_chks'   : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'descr',
     'data_type'  : 'TEXT',
     'short_descr': 'Description',
-    'long_descr' : 'Menu description',
+    'long_descr' : 'Description',
     'col_head'   : 'Description',
     'key_field'  : 'N',
     'generated'  : False,
@@ -74,7 +129,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'col_chks'   : None,
-    'fkey'       : ['sys_menu_defns', 'row_id', None, None, False],
+    'fkey'       : ['acc_roles', 'row_id', None, None, False],
     'choices'    : None,
     })
 cols.append ({
@@ -95,81 +150,15 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-choices = [
-    True,   # use sub_types?
-    False,  # use display_names?
-    [
-        ['0', 'Root', [['descr', True]], []],
-        ['1', 'Menu', [['descr', True]], []],
-        ['2', 'Grid', [['descr', True], ['table_name', True], ['cursor_name', True]], []],
-        ['3', 'Form', [['descr', True], ['form_name', True]], []],
-        ['4', 'Report', [['descr', True]], []],
-        ['5', 'Process', [['descr', True]], []]
-        ]
-    ]
 cols.append ({
-    'col_name'   : 'opt_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Type of option',
-    'long_descr' : 'Type of option',
-    'col_head'   : 'Type',
+    'col_name'   : 'delegate',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Can delegate?',
+    'long_descr' : 'Can this role have other roles reporting to it?',
+    'col_head'   : 'Delegate',
     'key_field'  : 'N',
     'generated'  : False,
     'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 10,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'col_chks'   : None,
-    'fkey'       : None,
-    'choices'    : choices,
-    })
-cols.append ({
-    'col_name'   : 'table_name',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Table name',
-    'long_descr' : 'Table name',
-    'col_head'   : '',
-    'key_field'  : 'N',
-    'generated'  : False,
-    'allow_null' : True,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'col_chks'   : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'cursor_name',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Cursor name',
-    'long_descr' : 'Cursor name',
-    'col_head'   : '',
-    'key_field'  : 'N',
-    'generated'  : False,
-    'allow_null' : True,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'col_chks'   : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'form_name',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Form name',
-    'long_descr' : 'Form name',
-    'col_head'   : '',
-    'key_field'  : 'N',
-    'generated'  : False,
-    'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
@@ -188,7 +177,7 @@ virt.append ({
     'short_descr': 'Children',
     'long_descr' : 'Number of children',
     'col_head'   : '',
-    'sql'        : "SELECT count(*) FROM {company}.sys_menu_defns b "
+    'sql'        : "SELECT count(*) FROM {company}.acc_roles b "
                    "WHERE b.parent_id = a.row_id",
     })
 virt.append ({
@@ -197,7 +186,7 @@ virt.append ({
     'short_descr': 'Expandable?',
     'long_descr' : 'Is this node expandable?',
     'col_head'   : '',
-    'sql'        : "SELECT CASE WHEN a.opt_type in ('0', '1') THEN 1 ELSE 0 END",
+    'sql'        : "SELECT a.delegate",
     })
 virt.append ({
     'col_name'   : 'parent_num',
@@ -206,4 +195,19 @@ virt.append ({
     'long_descr' : 'Parent id - change null to 0',
     'col_head'   : '',
     'sql'        : "SELECT COALESCE(a.parent_id, 0)",
+    })
+
+# cursor definitions
+cursors = []
+
+cursors.append({
+    'cursor_name': 'role_list',
+    'descr': 'List of roles',
+    'columns': [
+        ('role', 80, False, False, False, None, None),
+        ('descr', 150, True, False, False, None, None),
+        ],
+    'filter': [],
+    'sequence': [('role', False)],
+    'default': True
     })

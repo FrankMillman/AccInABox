@@ -116,8 +116,9 @@ class GuiCtrl:
     def enable(self, state):
         self.parent.session.request.send_enable(self.ref, state)
 
-    def show(self, state):
-        self.parent.session.request.send_show(self.ref, state)
+# not used [2015-01-15]
+#   def show(self, state):
+#       self.parent.session.request.send_show(self.ref, state)
 
 class GuiTextCtrl(GuiCtrl):
     def __init__(self, parent, fld, reverse, readonly, choices, lkup,
@@ -147,14 +148,15 @@ class GuiTextCtrl(GuiCtrl):
     def on_req_lookup(self, value):  # user selected 'lookup'
         # TO DO - block if db_obj exists and fld not amendable
         tgt_obj = self.fld.foreign_key['tgt_field'].db_obj
-        form_name = 'grid_lookup'
-        data_inputs = {'start_val': value}
+        form_name = '_sys.grid_lookup'
+        data_inputs = {}  # input parameters to be passed to sub-form
+        data_inputs['lkup_obj'] = tgt_obj
+        data_inputs['start_val'] = value
         sub_form = ht.form.Form(self.parent.form.company, form_name,
             parent=self.parent, data_inputs=data_inputs,
             callback=(self.on_selected,))
         yield from sub_form.start_form(self.parent.session,
-            db_obj=tgt_obj, cursor=tgt_obj.db_table.default_cursor,
-            formdefn_company='_sys')
+            cursor=tgt_obj.db_table.default_cursor)
 
     @asyncio.coroutine
     def on_selected(self, caller, state, output_params):
@@ -171,7 +173,7 @@ class GuiTextCtrl(GuiCtrl):
 #           form_name = 'setup_form'
             form_name = tgt_obj.db_table.setup_form
             data_inputs = {}  # input parameters to be passed to sub-form
-            data_inputs['db_obj'] = tgt_obj
+            data_inputs['formview_obj'] = tgt_obj
             sub_form = ht.form.Form(self.parent.form.company,
                 form_name, parent=self.parent, data_inputs=data_inputs)
             yield from sub_form.start_form(self.parent.session)
@@ -273,8 +275,9 @@ class GuiDisplay:
             value = (self.parent.current_row, value)
         self.parent.session.request.obj_to_redisplay.append((self.ref, value))
 
-    def show(self, state):
-        self.parent.session.request.sendShow(self.ref, state)
+# not used [2015-01-15]
+#   def show(self, state):
+#       self.parent.session.request.send_show(self.ref, state)
 
 class GuiDummy:  # dummy field to force validation of last real field
     def __init__(self, parent, gui):
@@ -342,7 +345,9 @@ class GuiButton:
     def change_button(self, attr, value):
         # attr can be enabled/default/label/show
         setattr(self, attr, value)
-        self.parent.session.request.obj_to_redisplay.append((self.ref, (attr, value)))
+        if attr != 'must_validate':
+            self.parent.session.request.obj_to_redisplay.append(
+                (self.ref, (attr, value)))
 
 """
 class GuiToolBar:

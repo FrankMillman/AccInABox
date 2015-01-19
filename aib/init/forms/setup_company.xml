@@ -1,15 +1,15 @@
 <form name="setup_company">
   <db_objects>
-    <db_obj name="db_obj" table_name="dir_companies"/>
+    <db_obj name="db_comp" table_name="dir_companies"/>
   </db_objects>
   <mem_objects/>
   <input_params/>
   <output_params/>
-  <frame main_object="db_obj">
+  <frame main_object="db_comp">
     <toolbar/>
     <body>
       <block/>
-      <grid data_object="db_obj" growable="true">
+      <grid data_object="db_comp" growable="true">
         <toolbar template="Setup_Grid"/>
         <cur_columns>
           <cur_col col_name="company_id" lng="100"/>
@@ -17,7 +17,7 @@
             <<validations>>
               <<validation>>
                 <<case>>
-                  <<obj_exists obj_name=`db_obj`>>
+                  <<obj_exists obj_name=`db_comp`>>
                   <</obj_exists>>
                   <<default>>
                     <<ask title=`New company` enter=`No` escape=`No`

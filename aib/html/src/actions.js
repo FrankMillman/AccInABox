@@ -193,10 +193,20 @@ function cell_set_focus(args) {
 function start_frame(args) {
   var frame = get_obj(args[0]);
   frame.obj_exists = args[1];
+  var set_focus = args[2];
   frame.frame_amended = !frame.obj_exists;
   //frame.frame_amended = args[1];  // false if object exists, else true
-  if (args[2]) {  // set_focus
-
+  if (frame.combo_type !== undefined) {
+    if (frame.combo_type === 'member') {
+      frame.tree.tree_frames['group'].page.style.display = 'none';
+      frame.page.style.display = 'block';
+      }
+    else {  // must be 'group'
+      frame.tree.tree_frames['member'].page.style.display = 'none';
+      frame.page.style.display = 'block';
+      };
+    };
+  if (set_focus) {
     frame.form.tabdir = 1;  // in case 'dummy' gets focus
     for (var i=0, l=frame.obj_list.length; i<l; i++) {
       var obj = frame.obj_list[i];

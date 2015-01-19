@@ -749,10 +749,13 @@ class Integer(Field):
 
     def check_val(self, value):
         if value is not None:
-            try:
-                int(value)
-            except ValueError:
-                errmsg = 'Not a valid integer'
+#           try:
+#               int(value)
+#           except ValueError:
+#               errmsg = 'Not a valid integer'
+#               raise AibError(head=self.col_defn.short_descr, body=errmsg)
+            if not isinstance(value, int):
+                errmsg = 'Not an integer'
                 raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     def _setval(self, value):
@@ -1065,7 +1068,9 @@ class Boolean(Field):
             return False
 
     def check_val(self, value):
-        pass
+        if value not in (None, True, False):
+            errmsg = 'Not a valid boolean value'
+            raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     def _setval(self, value):
         self._value = bool(value)

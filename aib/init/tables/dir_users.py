@@ -3,9 +3,14 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'dir_users',
+    'group_code'    : 'dir',
+    'seq'           : -1,
     'short_descr'   : 'Users',
     'long_descr'    : 'Directory of users',
     'audit_trail'   : True,
+    'table_created' : True,
+    'default_cursor': None,
+    'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : [[
                         'Cannot delete admin',
@@ -16,9 +21,6 @@ table = {
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
-    'table_created' : True,
-    'default_cursor': None,
-    'setup_form'    : None,
     }
 
 # column definitions

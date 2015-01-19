@@ -23,6 +23,13 @@ def create_table(conn, company_id, table_name):
         .format(defn_comp, defn_comp, conn.param_style), (table_name,))
     db_columns = conn.cur.fetchall()
 
+    _create_table(conn, company_id, table_defn, db_columns)
+
+# special method to 'bootstrap' creation of db_tables and db_columns
+def create_orig_table(conn, company_id, table_defn, db_columns):
+    _create_table(conn, company_id, table_defn, db_columns)
+
+def _create_table(conn, company_id, table_defn, db_columns):
     cols = []
     pkeys = []
     alt_keys = []
@@ -97,17 +104,21 @@ def create_table(conn, company_id, table_name):
 ,CREATED_ID
 ,DELETED_ID
 ,TABLE_NAME
+,PARENT_ID
+,SEQ
 ,SHORT_DESCR
 ,LONG_DESCR
 ,AUDIT_TRAIL
+,TABLE_CREATED
+,DEFAULT_CURSOR
+,SETUP_FORM
 ,UPD_CHKS
 ,DEL_CHKS
 ,TABLE_HOOKS
 ,DEFN_COMP
 ,DATA_COMP
 ,READ_ONLY
-,FORM_XML
-) = range(14)
+) = range(18)
 
 # db_columns columns
 (ROW_ID
@@ -129,9 +140,9 @@ def create_table(conn, company_id, table_name):
 ,DB_SCALE
 ,SCALE_PTR
 ,DFLT_VAL
-,COL_CHK
+,COL_CHKS
 ,FKEY
-,SUB_TYPE
+,CHOICES
 ,SQL
 ) = range(23)
 

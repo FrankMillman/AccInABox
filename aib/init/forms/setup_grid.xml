@@ -3,11 +3,11 @@
   <mem_objects/>
   <input_params/>
   <output_params/>
-  <frame main_object="db_obj">
+  <frame main_object="grid_obj">
     <toolbar/>
     <body>
       <block/>
-      <grid data_object="db_obj" growable="true">
+      <grid data_object="grid_obj" growable="true">
         <toolbar template="Setup_Grid"/>
         <grid_methods template="Setup_Grid"/>
       </grid>

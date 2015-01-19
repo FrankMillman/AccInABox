@@ -3,18 +3,20 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'dir_users_companies',
+    'group_code'    : 'dir',
+    'seq'           : -1,
     'short_descr'   : 'Users/companies',
     'long_descr'    : 'Mapping of users to companies',
     'audit_trail'   : True,
+    'table_created' : True,
+    'default_cursor': None,
+    'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : None,
     'table_hooks'   : None,
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
-    'table_created' : True,
-    'default_cursor': None,
-    'setup_form'    : None,
     }
 
 # column definitions

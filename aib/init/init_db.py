@@ -16,11 +16,13 @@ def init_database(context, conn):
 
     conn.create_functions()
     conn.create_company('_sys')
-    # next function is external as it can be called when creating any company
-    import init.create_dbtbls_dbcols
-    init.create_dbtbls_dbcols.create_dbtbls_dbcols(context, conn, '_sys')
-    setup_db_tables(context, conn)
-    setup_db_columns(context, conn)
+#   # next function is external as it can be called when creating any company
+#   import init.create_dbtbls_dbcols
+#   init.create_dbtbls_dbcols.create_dbtbls_dbcols(context, conn, '_sys')
+#   setup_db_tables(context, conn)
+#   setup_db_columns(context, conn)
+
+    setup_init_tables(context, conn)  # create db_tables and db_columns
 
     setup_other_tables(context, conn)
     setup_fkeys(context)
@@ -29,6 +31,7 @@ def init_database(context, conn):
 
     setup_init_data(context, conn)
 
+"""
 def setup_db_tables(context, conn):
     seq_counter = count()
     seq = seq_counter.__next__
@@ -273,6 +276,229 @@ def setup_db_columns(context, conn):
         "VALUES ({})".format(', '.join([conn.param_style] * 4))
         , audit_params)
     audit_row_id = next(audit_row_counter)  # set up for next table
+"""
+
+def setup_init_tables(context, conn):
+
+    audit_row_counter = count(start=audit_row_id)
+    arc = audit_row_counter.__next__
+
+    tables = [
+        'db_table_groups',
+        'db_tables',
+        'db_columns',
+        ]
+    # create tables first
+    for table_name in tables:
+        setup_orig_table(conn, table_name)
+    setup_table_groups(conn)
+    # then populate db_tables and db_columns
+    column_id = 1
+    for table_id, table_name in enumerate(tables):
+        column_id = setup_orig_data(conn, table_id, table_name, column_id)
+
+def setup_orig_table(conn, table_name):
+    module = importlib.import_module('.tables.{}'.format(table_name), 'init')
+
+    tbl = getattr(module, 'table')
+    table_defn = [None] * 18
+    table_defn[3] = tbl['table_name']
+    table_defn[8] = tbl['audit_trail']
+
+    cols = getattr(module, 'cols')
+    db_columns = []
+    for col in cols:
+        db_col = [None] * 23
+        db_col[4] = col['col_name']
+        db_col[7] = col['data_type']
+        db_col[11] = col['key_field']
+        db_col[12] = col['generated']
+        db_col[13] = col['allow_null']
+        db_col[14] = col['allow_amend']
+        db_col[16] = col['db_scale']
+        db_col[18] = col['dflt_val']
+        if col['fkey'] is not None:
+            db_col[20] = dumps(col['fkey'])
+        db_columns.append(db_col)
+
+    db.create_table.create_orig_table(conn, '_sys', table_defn, db_columns)
+
+def setup_table_groups(conn):
+    sql = (
+        "INSERT INTO _sys.db_table_groups (created_id, group_code, descr, parent_id, seq) VALUES "
+        "({})".format(', '.join([conn.param_style]*5))
+        )
+    params = []
+    params.append((1, 'root', 'All tables', None, 0))
+    params.append((2, 'db', 'Database', 1, 0))
+    params.append((3, 'dir', 'Directories', 1, 1))
+    params.append((4, 'acc', 'Access control', 1, 2))
+    params.append((5, 'sys', 'System setup', 1, 3))
+
+    conn.cur.executemany(sql, params)        
+
+    sql = (
+        "INSERT INTO _sys.db_table_groups_audit_xref "
+        "(data_row_id, user_row_id, date_time, type) VALUES "
+        "({})".format(', '.join([conn.param_style]*4))
+        )
+    params = []
+    params.append((1, USER_ROW_ID, conn.timestamp, 'add'))
+    params.append((2, USER_ROW_ID, conn.timestamp, 'add'))
+    params.append((3, USER_ROW_ID, conn.timestamp, 'add'))
+    params.append((4, USER_ROW_ID, conn.timestamp, 'add'))
+    params.append((5, USER_ROW_ID, conn.timestamp, 'add'))
+    conn.cur.executemany(sql, params)
+
+def setup_orig_data(conn, table_id, table_name, column_id):
+    module = importlib.import_module('.tables.{}'.format(table_name), 'init')
+    tbl = getattr(module, 'table')
+
+    params = []
+    params.append(table_id+1)
+    params.append(table_name)
+    params.append(2)  # group_code = 'db'
+    params.append(table_id)  # seq
+    params.append(tbl['short_descr'])
+    params.append(tbl['long_descr'])
+    params.append(tbl['audit_trail'])
+    params.append(tbl['table_created'])
+    params.append(tbl['default_cursor'])
+    params.append(tbl['setup_form'])
+    if tbl['upd_chks'] is None:
+        params.append(None)
+    else:
+        params.append(dumps(tbl['upd_chks']))
+    if tbl['del_chks'] is None:
+        params.append(None)
+    else:
+        params.append(dumps(tbl['upd_chks']))
+    if tbl['table_hooks'] is None:
+        params.append(None)
+    else:
+        params.append(gzip.compress(etree.tostring(tbl['table_hooks'])))
+    params.append(tbl['defn_company'])
+    params.append(tbl['data_company'])
+    params.append(tbl['read_only'])
+
+    conn.cur.execute(
+        "INSERT INTO _sys.db_tables "
+        "(created_id, table_name, parent_id, seq, short_descr, long_descr, "
+        "audit_trail, table_created, default_cursor, setup_form, upd_chks, "
+        "del_chks, table_hooks, defn_company, data_company, read_only) "
+        "VALUES ({})".format(', '.join([conn.param_style]*16))
+        , params)
+
+    audit_params = [(table_id, USER_ROW_ID, conn.timestamp, 'add')]
+    conn.cur.executemany(
+        "INSERT INTO _sys.db_tables_audit_xref (data_row_id, user_row_id, date_time, type) "
+        "VALUES ({})".format(', '.join([conn.param_style] * 4))
+        , audit_params)
+
+    conn.cur.execute("SELECT row_id FROM _sys.db_tables WHERE table_name = {}"
+        .format(conn.param_style), [table_name])
+    table_id = conn.cur.fetchone()[0]
+
+    cols = getattr(module, 'cols')
+    params = []
+    for seq, col in enumerate(cols):
+        param = []
+        param.append(column_id + seq)
+        param.append(table_id)
+        param.append(col['col_name'])
+        param.append('sys')
+        param.append(seq)
+        param.append(col['data_type'])
+        param.append(col['short_descr'])
+        param.append(col['long_descr'])
+        param.append(col['col_head'])
+        param.append(col['key_field'])
+        param.append(col['generated'])
+        param.append(col['allow_null'])
+        param.append(col['allow_amend'])
+        param.append(col['max_len'])
+        param.append(col['db_scale'])
+        param.append(col['scale_ptr'])
+        param.append(col['dflt_val'])
+        if col['col_chks'] is None:
+            param.append(None)
+        else:
+            param.append(dumps(col['col_chks']))
+        if col['fkey'] is None:
+            param.append(None)
+        else:
+            param.append(dumps(col['fkey']))
+        if col['choices'] is None:
+            param.append(None)
+        else:
+            param.append(dumps(col['choices']))
+        params.append(param)
+
+    conn.cur.executemany(
+        "INSERT INTO _sys.db_columns (created_id, table_id, col_name, col_type, seq, "
+        "data_type, short_descr, long_descr, col_head, key_field, generated, "
+        "allow_null, allow_amend, max_len, db_scale, scale_ptr, dflt_val, "
+        "col_chks, fkey, choices) "
+        "VALUES ({})".format(', '.join([conn.param_style] * 20))
+        , params)
+
+    audit_params = []
+    for seq, col in enumerate(cols):
+        audit_params.append((column_id + seq, USER_ROW_ID, conn.timestamp, 'add'))
+    conn.cur.executemany(
+        "INSERT INTO _sys.db_columns_audit_xref (data_row_id, user_row_id, date_time, type) "
+        "VALUES ({})".format(', '.join([conn.param_style] * 4))
+        , audit_params)
+
+    column_id += (seq + 1)
+
+    cols = getattr(module, 'virt')
+    if cols:
+        params = []
+        for seq, col in enumerate(cols):
+            param = []
+            param.append(column_id + seq)
+            param.append(table_id)
+            param.append(col['col_name'])
+            param.append('virt')
+            param.append(seq)
+            param.append(col['data_type'])
+            param.append(col['short_descr'])
+            param.append(col['long_descr'])
+            param.append(col['col_head'])
+            param.append(col.get('key_field', 'N'))
+            param.append(col.get('generated', False))
+            param.append(col.get('allow_null', True))
+            param.append(col.get('allow_amend', True))
+            param.append(col.get('max_len', 0))
+            param.append(col.get('max_len', 0))
+            param.append(col.get('scale_ptr', None))
+            param.append(col.get('dflt_val', None))
+            param.append(col.get('col_chks', None))
+            param.append(col.get('fkey', None))
+            param.append(col.get('choices', None))
+            param.append(col.get('sql', None))
+            params.append(param)
+
+        conn.cur.executemany(
+            "INSERT INTO _sys.db_columns (created_id, table_id, col_name, col_type, seq, "
+            "data_type, short_descr, long_descr, col_head, key_field, generated, "
+            "allow_null, allow_amend, max_len, db_scale, scale_ptr, dflt_val, "
+            "col_chks, fkey, choices, sql) "
+            "VALUES ({})".format(', '.join([conn.param_style] * 21))
+            , params)
+
+        audit_params = []
+        for seq, col in enumerate(cols):
+            audit_params.append((column_id + seq, USER_ROW_ID, conn.timestamp, 'add'))
+        conn.cur.executemany(
+            "INSERT INTO _sys.db_columns_audit_xref (data_row_id, user_row_id, date_time, type) "
+            "VALUES ({})".format(', '.join([conn.param_style] * 4))
+            , audit_params)
+
+        column_id += (seq + 1)
+
+    return column_id
 
 def setup_other_tables(context, conn):
     db_tbl = db.api.get_db_object(context, '_sys', 'db_tables')
@@ -284,9 +510,9 @@ def setup_other_tables(context, conn):
         'dir_users_companies',
         'sys_form_defns',
         'sys_menu_defns',
-        'adm_roles',
-        'adm_table_perms',
-        'adm_users_roles',
+        'acc_roles',
+        'acc_table_perms',
+        'acc_users_roles',
         ]
     for table_name in tables:
         setup_table(db_tbl, db_col, table_name)
@@ -298,7 +524,7 @@ def setup_other_tables(context, conn):
         'dir_companies',
         'dir_users',
         'sys_form_defns',
-        'adm_roles',
+        'acc_roles',
         ]
     for table_name in tables:
         setup_cursor(db_tbl, db_cur, table_name)
@@ -309,6 +535,8 @@ def setup_table(db_tbl, db_col, table_name):
     tbl = getattr(module, 'table')
     db_tbl.init()
     db_tbl.setval('table_name', table_name)
+    db_tbl.setval('group_code', tbl.get('group_code', 'sys'))
+    db_tbl.setval('seq', tbl.get('seq', -1))
     db_tbl.setval('short_descr', tbl['short_descr'])
     db_tbl.setval('long_descr', tbl['long_descr'])
     db_tbl.setval('audit_trail', tbl['audit_trail'])
@@ -320,6 +548,7 @@ def setup_table(db_tbl, db_col, table_name):
     db_tbl.setval('table_hooks', tbl['table_hooks'])
     db_tbl.setval('defn_company', tbl['defn_company'])
     db_tbl.setval('data_company', tbl['data_company'])
+    db_tbl.setval('read_only', tbl['read_only'])
     db_tbl.save()
 
     table_id = db_tbl.getval('row_id')
@@ -457,6 +686,7 @@ def setup_forms(context):
     setup_form('menu_setup', 'Menu setup')
     setup_form('setup_user', 'Setup users', table_name='dir_users')
     setup_form('setup_table', 'Setup database tables', table_name='db_tables')
+    setup_form('setup_table_combo', 'Setup database tables')
     setup_form('setup_table_dbcols', 'Setup database columns')
     setup_form('setup_roles', 'Role setup')
     setup_form('users_roles', 'Set up users roles')
@@ -495,13 +725,16 @@ def setup_menus(context):
     setup_menu('Table definitions', menu_id, -1, GRID,
         table_name='db_tables', cursor_name='db_tables')
 
+    setup_menu('Table combo', menu_id, -1, FORM,
+        form_name='setup_table_combo')
+
     setup_menu('Form definitions', menu_id, -1, GRID,
         table_name='sys_form_defns', cursor_name='form_list')
 
     setup_menu('Menu definitions', menu_id, -1, FORM,
         form_name='menu_setup')
 
-    setup_menu('Administration', root_id, -1, MENU)
+    setup_menu('Access control', root_id, -1, MENU)
     menu_id = db_obj.getval('row_id')
 
     setup_menu('Setup roles', menu_id, -1, FORM,
@@ -554,10 +787,10 @@ def setup_init_data(context, conn):
     dir_user.setval('user_type', 'admin')
     dir_user.save()
 
-    adm_role = db.api.get_db_object(context, '_sys', 'adm_roles')
-    adm_role.setval('role', 'admin')
-    adm_role.setval('descr', 'System adminstrator')
-    adm_role.setval('parent_id', None)
-    adm_role.setval('seq', -1)
-    adm_role.setval('delegate', True)
-    adm_role.save()
+    acc_role = db.api.get_db_object(context, '_sys', 'acc_roles')
+    acc_role.setval('role', 'admin')
+    acc_role.setval('descr', 'System adminstrator')
+    acc_role.setval('parent_id', None)
+    acc_role.setval('seq', -1)
+    acc_role.setval('delegate', True)
+    acc_role.save()

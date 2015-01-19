@@ -2,18 +2,20 @@
 # table definition
 table = {
     'table_name'    : 'sys_form_defns',
+    'group_code'    : 'sys',
+    'seq'           : -1,
     'short_descr'   : 'Form definitions',
     'long_descr'    : 'Form definitions',
     'audit_trail'   : True,
+    'table_created' : True,
+    'default_cursor': 'form_list',
+    'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : None,
     'table_hooks'   : None,
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
-    'table_created' : True,
-    'default_cursor': 'form_list',
-    'setup_form'    : None,
     }
 
 # column definition

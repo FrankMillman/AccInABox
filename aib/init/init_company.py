@@ -16,14 +16,6 @@ import db.api
 from itertools import count
 audit_row_id = 1
 
-# menu option types
-ROOT = '0'
-MENU = '1'
-GRID = '2'
-FORM = '3'
-REPORT = '4'
-PROCESS = '5'
-
 def init_company(context, conn, company, company_name):
     conn.create_company(company)
     create_db_tables(context, conn, company)
@@ -166,6 +158,14 @@ def setup_forms(context, conn, company):
     db.create_table.create_table(conn, company, table_name)
 
 def setup_menus(context, conn, company, company_name):
+    # menu option types
+    ROOT = '0'
+    MENU = '1'
+    GRID = '2'
+    FORM = '3'
+    REPORT = '4'
+    PROCESS = '5'
+
     table_name = 'sys_menu_defns'
     db_table = db.api.get_db_object(context, company, 'db_tables')
     db_table.setval('table_name', table_name)
@@ -201,7 +201,7 @@ def setup_menus(context, conn, company, company_name):
         form_name='menu_setup')
 
 def setup_roles(context, conn, company, company_name):
-    table_name = 'adm_roles'
+    table_name = 'acc_roles'
     db_table = db.api.get_db_object(context, company, 'db_tables')
     db_table.setval('table_name', table_name)
     db_table.setval('short_descr', 'Roles')
@@ -316,7 +316,7 @@ def setup_roles(context, conn, company, company_name):
     db_cursor.setval('sequence', sequence)
     db_cursor.save()
 
-    db_obj = db.api.get_db_object(context, company, 'adm_roles')
+    db_obj = db.api.get_db_object(context, company, 'acc_roles')
     db_obj.setval('role', 'admin')
     db_obj.setval('descr', 'Company adminstrator')
     db_obj.setval('parent_id', None)
@@ -350,7 +350,7 @@ def setup_roles(context, conn, company, company_name):
         form_name='users_roles')
 
 def setup_table_perms(context, conn, company):
-    table_name = 'adm_table_perms'
+    table_name = 'acc_table_perms'
     db_table = db.api.get_db_object(context, company, 'db_tables')
     db_table.setval('table_name', table_name)
     db_table.setval('short_descr', 'Table permissions')
@@ -368,12 +368,12 @@ def setup_table_perms(context, conn, company):
     params.append(('deleted_id', 'INT', 'Deleted id',
         'Deleted row id', 'Deleted', 'N', True, False, True, 0, 0, None, '0', None, None, None))
 #   fkey = []
-#   fkey.append('adm_roles')
+#   fkey.append('acc_roles')
 #   fkey.append('row_id')
 #   fkey.append('role')
 #   fkey.append('role')
 #   fkey.append(True)
-    fkey = ['adm_roles', 'row_id', 'role', 'role', True]
+    fkey = ['acc_roles', 'row_id', 'role', 'role', True]
     params.append(('role_id', 'INT', 'Role id', 'Role id',
         'Role id', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
 #   fkey = []
@@ -425,7 +425,7 @@ def setup_table_perms(context, conn, company):
     create_form(db_obj, 'roles_setup', 'Role setup')
 
 def setup_users_roles(context, conn, company):
-    table_name = 'adm_users_roles'
+    table_name = 'acc_users_roles'
     db_table = db.api.get_db_object(context, company, 'db_tables')
     db_table.setval('table_name', table_name)
     db_table.setval('short_descr', 'User roles')
@@ -452,12 +452,12 @@ def setup_users_roles(context, conn, company):
     params.append(('user_row_id', 'INT', 'User row id', 'User row id',
         'User row id', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
 #   fkey = []
-#   fkey.append('adm_roles')
+#   fkey.append('acc_roles')
 #   fkey.append('row_id')
 #   fkey.append('role')
 #   fkey.append('role')
 #   fkey.append(True)
-    fkey = ['adm_roles', 'row_id', 'role', 'role', True]
+    fkey = ['acc_roles', 'row_id', 'role', 'role', True]
     params.append(('role_id', 'INT', 'Role id', 'Role id',
         'Role id', 'A', False, False, False, 0, 0, None, None, None, fkey, None))
 

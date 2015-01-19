@@ -63,14 +63,15 @@ function ask_question(args) {
   question.style.left = (max_x / 2) + 'px';
   question.style.top = (max_y / 4) + 'px';
 
+  current_form.disable_controls();
+  question.active_form = current_form;
+  question.current_focus = question.lastChild.childNodes[question.dflt_pos];
+
   Drag.init(question.header, question, 0, max_x, 0, max_y);
   question.onDragEnd = function(x, y) {
     question.current_focus.focus();
     };
 
-  current_form.disable_controls();
-  question.active_form = current_form;
-  question.current_focus = question.lastChild.childNodes[question.dflt_pos];
   question.current_focus.focus();
   current_form = question
 

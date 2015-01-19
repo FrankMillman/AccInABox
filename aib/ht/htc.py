@@ -81,6 +81,7 @@ class Session:
 
         self.active_roots = {}  # active roots for this session
         self.root_id = itertools.count()  # seq id for roots created in this session
+        self.perms = {}  # key=company, value=permissions (populated on demand - db.objects)
 
 #       self.obj_to_redisplay = []
 #       self.obj_to_set_readonly = []
@@ -129,21 +130,12 @@ class Session:
 
         self.sys_admin = self.dir_user.getval('sys_admin')
 
-        self.perms = {}  # key=company, value=permissions
-
         client_menu = []  # build menu to send to client
         root_id = '_root'
         client_menu.append((root_id, None, 'root', True))
         db_session = db.api.start_db_session()
         with db_session as conn:
             for company, comp_name, comp_admin in list(self.select_companies(conn)):
-
-#               if self.sys_admin:
-#                   pass
-#               elif comp_admin:
-#                   self.perms[company] = '_admin_'  # allow full permissions
-#               else:
-#                   self.setup_permissions(conn, company)
 
                 comp_menu = []
                 comp_menu.append((
@@ -186,55 +178,7 @@ class Session:
                 "ORDER BY a.company_id"
                 .format(self.user_row_id)
                 )
-        return db.api.exec_sql(conn, sql)
-
-    """
-    def setup_permissions(self, conn, company):
-        # user can have more than one role
-        # roles could have differing permissions on the same table
-        # allowed is true/false -> cast to 0/1
-        # selecting max(...) ensures that if *any* of the roles give
-        #   permission, then the user is granted permission
-        self.perms[company] = {}  # key=table_id, value=permissions
-#       sql = (
-#           "SELECT a.table_id, "
-#           "MAX(CAST( a.sel_allowed AS INT )), MAX(CAST( a.ins_allowed AS INT )), "
-#           "MAX(CAST( a.upd_allowed AS INT )), MAX(CAST( a.del_allowed AS INT )) "
-#           "FROM {0}.adm_table_perms a "
-#           "LEFT JOIN {0}.adm_users_roles b ON b.role_id = a.role_id "
-#           "WHERE a.deleted_id = 0 AND b.user_row_id = {1} "
-#           "GROUP BY a.table_id"
-#           .format(company, self.user_row_id)
-#           )
-        sql = (
-            "SELECT a.table_id, "
-            "MAX(a.all_ok), MAX(a.ins_ok), MAX(a.del_ok), MAX(a.upd_ok) , MAX(a.view_ok) "
-            "FROM {0}.adm_table_perms a "
-            "LEFT JOIN {0}.adm_users_roles b ON b.role_id = a.role_id "
-            "WHERE a.deleted_id = 0 AND b.user_row_id = {1} "
-            "GROUP BY a.table_id"
-            .format(company, self.user_row_id)
-            )
-        cur = db.api.exec_sql(conn, sql)
-        for table_id, all_ok, ins_ok, del_ok, upd_ok, view_ok in cur:
-            self.perms[company][table_id] = (
-                all_ok, ins_ok, del_ok, upd_ok, view_ok, {})
-        sql = (
-            "SELECT c.table_id, a.column_id, "
-            "MAX(CAST(a.upd_ok AS INT)), MAX(CAST(a.view_ok AS INT)) "
-            "FROM {0}.adm_column_perms a "
-            "LEFT JOIN {0}.adm_users_roles b ON b.role_id = a.role_id "
-            "LEFT JOIN {0}.db_columns c ON c.row_id = a.column_id "
-            "WHERE a.deleted_id = 0 AND b.user_row_id = {1} "
-            "GROUP BY a.column_id"
-            .format(company, self.user_row_id)
-            )
-        for table_id, column_id, upd_ok, view_ok in cur:
-            # self.perms is a dict - look up 'company'
-            # self.perms[company[table_id] is a tuple - get 5th element
-            # 5th element is a dictionary - update with column permissions
-            self.perms[company][table_id][5][column_id] = (upd_ok, view_ok)
-    """
+        return conn.exec_sql(sql)
 
     def select_options(self, conn, company):
         sql = (
@@ -244,7 +188,7 @@ class Session:
             "ORDER BY parent_id, seq"
             .format(company)
             )
-        return db.api.exec_sql(conn, sql)
+        return conn.exec_sql(sql)
 
 @asyncio.coroutine
 def on_login_ok(caller, xml):
@@ -252,6 +196,7 @@ def on_login_ok(caller, xml):
     session = caller.session
     dir_user = session.dir_user = caller.data_objects['dir_user']
     session.user_row_id = dir_user.getval('row_id')
+#   don't set sys_admin yet - user may want to change his password
 #   session.sys_admin = dir_user.getval('sys_admin')
 
 class RequestHandler:
@@ -339,6 +284,9 @@ class RequestHandler:
                     self.check_redisplay()
                 except AibError as err:
                     print("ERR: head='{}' body='{}'".format(err.head, err.body))
+                    for caller, action in self.db_events:
+                        yield from ht.form_xml.exec_xml(caller, action)
+                    self.db_events.clear()
                     self.check_redisplay()
                     if err.head is not None:
                         self.reply.append(('display_error', (err.head, err.body)))
@@ -370,9 +318,9 @@ class RequestHandler:
         self.reply.append(('setup_form', gui))
 #       self.check_redisplay()
 
-    def start_frame(self, frame_ref, set_frame_amended, set_focus):
+    def start_frame(self, frame_ref, set_obj_exists, set_focus):
         self.reply.append(('start_frame',
-            (frame_ref, set_frame_amended, set_focus)))
+            (frame_ref, set_obj_exists, set_focus)))
 
     def send_start_grid(self, ref, args):
         self.reply.append(('start_grid', (ref, args)))
@@ -618,9 +566,9 @@ class RequestHandler:
 
     @asyncio.coroutine
     def on_req_insert_node(self, args):
-        tree_ref, parent_id, seq = args
+        tree_ref, parent_id, seq, combo_type = args
         tree = self.session.get_obj(tree_ref)
-        yield from tree.on_req_insert_node(parent_id, seq)
+        yield from tree.on_req_insert_node(parent_id, seq, combo_type)
 
     @asyncio.coroutine
     def on_req_delete_node(self, args):

@@ -896,7 +896,6 @@ class DbObject:
 
         if self.data_company not in self.context.perms:
             self.setup_perms()
-            print(self.context.perms)
 
         if self.context.perms[self.data_company] == '_admin_':
             return  # company administrator
@@ -957,12 +956,12 @@ class DbObject:
 
             sql = (
                 "SELECT table_id, sel_ok, ins_ok, upd_ok, del_ok "
-                " FROM {0}.adm_table_perms a "
-                "LEFT JOIN {0}.adm_users_roles b ON b.role_id = a.role_id "
+                " FROM {0}.acc_table_perms a "
+                "LEFT JOIN {0}.acc_users_roles b ON b.role_id = a.role_id "
                 "WHERE a.deleted_id = 0 AND b.user_row_id = {1}"
                 .format(company, user_row_id)
                 )
-            conn.cur = db.api.exec_sql(conn, sql)
+            conn.cur = conn.exec_sql(sql)
             for table_id, sel_new, ins_new, upd_new, del_new in conn.cur:
                 sel_new, ins_new, upd_new, del_new = [
                     loads(_) for _ in (sel_new, ins_new, upd_new, del_new)]

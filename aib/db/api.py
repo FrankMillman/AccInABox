@@ -57,22 +57,22 @@ def get_mem_object(db_session, active_company, table_name, parent=None,
     return db.objects.get_mem_object(
         db_session, active_company, table_name, parent, upd_chks, del_chks)
 
-def select_rows(conn, db_obj, cols, where=None, order=None,
-        limit=0, lock=False, param=None):
-    return conn.full_select(
-        db_obj, cols, where, order, limit, lock, param)
+#def select_rows(conn, db_obj, cols, where=None, order=None,
+#        limit=0, lock=False, param=None):
+#    return conn.full_select(
+#        db_obj, cols, where, order, limit, lock, param)
 
-def get_data(db_obj):
-    return str(db_obj)
+#def get_data(db_obj):
+#    return str(db_obj)
 
-def set_col_val(db_obj, col_name, value):
-    db_obj.setval(col_name, value)
+#def set_col_val(db_obj, col_name, value):
+#    db_obj.setval(col_name, value)
 
-def get_col_val(db_obj, col_name):
-    return db_obj.getval(col_name)
+#def get_col_val(db_obj, col_name):
+#    return db_obj.getval(col_name)
 
-def exec_sql(conn, sql):
-    return conn.exec_sql(sql)
+#def exec_sql(conn, sql):
+#    return conn.exec_sql(sql)
 
 def close_all_connections():
     db.connection.close_all_connections()

@@ -1,6 +1,8 @@
 <form name="setup_user">
   <db_objects>
+<!--
     <db_obj name="user" table_name="dir_users"/>
+-->
     <db_obj name="company" table_name="dir_companies"/>
     <db_obj name="user_comps" table_name="dir_users_companies" parent="user"/>
   </db_objects>
@@ -32,7 +34,7 @@
     </mem_obj>
   </mem_objects>
   <input_params>
-    <input_param name="db_obj" type="data_obj" target="user" required="false"/>
+    <input_param name="formview_obj" type="data_obj" target="user" required="true"/>
   </input_params>
   <output_params/>
   <frame main_object="user">

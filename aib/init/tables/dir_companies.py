@@ -3,9 +3,14 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'dir_companies',
+    'group_code'    : 'dir',
+    'seq'           : -1,
     'short_descr'   : 'Companies',
     'long_descr'    : 'Directory of companies',
     'audit_trail'   : False,
+    'table_created' : True,
+    'default_cursor': None,
+    'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : [[
                         'Cannot delete _sys',
@@ -17,9 +22,6 @@ table = {
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
-    'table_created' : True,
-    'default_cursor': None,
-    'setup_form'    : None,
     }
 
 # column definitions

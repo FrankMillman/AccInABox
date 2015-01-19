@@ -79,7 +79,7 @@
   </mem_objects>
   <input_params>
     <!-- input_param name="db_table" type="data_obj" target="db_table" required="true"/ -->
-    <input_param name="db_obj" type="data_obj" target="db_cur" required="true"/>
+    <input_param name="formview_obj" type="data_obj" target="db_cur" required="true"/>
   </input_params>
   <output_params/>
   <frame main_object="db_cur">

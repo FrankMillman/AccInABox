@@ -491,6 +491,7 @@ function setup_form(args) {
           if (elem[1].active === true)
             subtype._active_box = elem[1].subtype_id;
           };
+
         break;
         };
       case 'row': {
@@ -941,7 +942,8 @@ function setup_form(args) {
         // store box.height for tree.js, so it knows when to overflow
         box.height = box.offsetHeight;
 
-        var toolbar=elem[1].toolbar, tree_data = elem[1].tree_data, hide_root=false;
+        var toolbar=elem[1].toolbar, tree_data = elem[1].tree_data,
+          hide_root=elem[1].hide_root;
         for (var j=0, lng=tree_data.length; j<lng; j++) {
           var arg = tree_data[j];
           var node_id=arg[0], parent_id=arg[1], text=arg[2], expandable=arg[3];
@@ -960,6 +962,13 @@ function setup_form(args) {
           send_request('treeitem_active', args);
           };
         tree.write();
+
+        tree.combo = elem[1].combo;
+        if (tree.combo !== null) {
+          var group_name = tree.combo[0];
+          var member_name = tree.combo[1];
+          tree.tree_frames = {};  // store 'group' and 'member' frames
+          };
 
         break;
         };
@@ -986,7 +995,6 @@ function setup_form(args) {
         var frame = {}  // new Object()
         frame.type = 'tree_frame';
         frame.obj_list = [];
-        frame.subtypes = {};  //new Object();
 
         frame.ref = elem[1].ref;
         frame.form = form;
@@ -996,6 +1004,12 @@ function setup_form(args) {
         frame.frame_amended = false;
         frame.obj_exists = false;
         frame.send_focus_msg = true;  // can be over-ridden in 'start_frame'
+
+        if (elem[1].combo_type !== null) {
+          frame.combo_type = elem[1].combo_type;
+          tree.tree_frames[elem[1].combo_type] = frame;
+          frame.tree = tree;
+          };
 
 //        frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
 //        frame.ctrl_grid.grid_frame = frame;
@@ -1013,6 +1027,21 @@ function setup_form(args) {
         break;
         };
       case 'tree_frame_end': {
+        if (frame.combo_type !== undefined) {
+          if (frame.combo_type === 'member') {
+            var max_fw = frame.page.offsetWidth, max_fh = frame.page.offsetHeight;
+            var group_frame = frame.tree.tree_frames['group'];
+            if (group_frame.page.offsetWidth > max_fw)
+              max_fw = group_frame.page.offsetWidth;
+            if (group_frame.page.offsetHeight > max_fh)
+              max_fh = group_frame.page.offsetHeight;
+            frame.page.style.width = max_fw + 'px';
+            frame.page.style.height = max_fh + 'px';
+            group_frame.page.style.width = max_fw + 'px';
+            group_frame.page.style.height = max_fh + 'px';
+            frame.page.style.display = 'none';
+            };
+          };
         frame.page.end_page();
         var page = save_pages.pop();
         var frame = save_frames.pop();

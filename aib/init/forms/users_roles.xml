@@ -1,12 +1,12 @@
 <form name="users_roles">
 
   <db_objects>
-    <db_obj name="role" table_name="adm_roles"/>
+    <db_obj name="role" table_name="acc_roles"/>
     <db_obj name="user_comp" table_name="_sys.dir_users_companies"/>
     <db_obj name="user" table_name="_sys.dir_users" fkey="user_comp.user_row_id"/>
-    <db_obj name="user_role" table_name="adm_users_roles" parent="user"/>
+    <db_obj name="user_role" table_name="acc_users_roles" parent="user"/>
 <!--
-    <db_obj name="user_role" table_name="adm_users_roles"/>
+    <db_obj name="user_role" table_name="acc_users_roles"/>
 -->
   </db_objects>
   <mem_objects/>

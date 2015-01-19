@@ -284,6 +284,9 @@ def change_button(caller, xml):
     elif change.tag == 'btn_show':
         attr_name = 'show'
         attr_value = change.get('state') == 'true'
+    elif change.tag == 'validate':
+        attr_name = 'must_validate'
+        attr_value = change.get('state') == 'true'
     button.change_button(attr_name, attr_value)
 
 @asyncio.coroutine
@@ -477,7 +480,7 @@ def sub_form(caller, xml):
     form_name = xml.get('form_name')
     sub_form = Form(caller.form.company, form_name, parent=caller,
         data_inputs=data_inputs, callback=(return_from_subform, xml))
-    yield from sub_form.start_form(caller.session, db_obj=caller.db_obj)
+    yield from sub_form.start_form(caller.session)
 
 @asyncio.coroutine
 def end_form(caller, xml):

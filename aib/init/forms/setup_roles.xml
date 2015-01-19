@@ -1,10 +1,10 @@
 <form name="setup_roles">
 
   <db_objects>
-    <db_obj name="role" table_name="adm_roles"/>
+    <db_obj name="role" table_name="acc_roles"/>
     <db_obj name="db_table" table_name="db_tables"/>
     <db_obj name="db_col" table_name="db_columns"/>
-    <db_obj name="tbl_perms" table_name="adm_table_perms" parent="role"/>
+    <db_obj name="tbl_perms" table_name="acc_table_perms" parent="role"/>
   </db_objects>
   <mem_objects>
     <mem_obj name="tbl_view" descr="List of table permissions" parent="role">

@@ -46,6 +46,7 @@
       <xs:attribute name="parent"/>
       <xs:attribute name="hooks"/>
       <xs:attribute name="upd_chks"/>
+      <xs:attribute name="del_chks"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="mem_col">
@@ -150,6 +151,7 @@
       <xs:element ref="grid"/>
       <xs:element ref="grid_frame"/>
       <xs:element ref="tree"/>
+      <xs:element ref="tree_combo"/>
       <xs:element ref="tree_frame"/>
       <xs:element ref="subtype_panel"/>
     </xs:choice>
@@ -306,6 +308,18 @@
       <xs:attribute name="toolbar" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
+  <xs:element name="tree_combo">
+    <xs:complexType>
+      <xs:attribute name="data_object" use="required"/>
+      <xs:attribute name="group" use="required"/>
+      <xs:attribute name="member" use="required"/>
+      <xs:attribute name="member_code" use="required"/>
+      <xs:attribute name="member_descr" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="height" type="xs:integer"/>
+      <xs:attribute name="toolbar" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
   <xs:element name="tree_frame">
     <xs:complexType>
       <xs:sequence>
@@ -314,7 +328,8 @@
         <xs:element ref="button_row" minOccurs="0"/>
         <xs:element ref="frame_methods" minOccurs="0"/>
       </xs:sequence>
-      <xs:attribute name="main_object"/>
+      <xs:attribute name="main_object" use="required"/>
+      <xs:attribute name="combo_type"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="subtype_panel">

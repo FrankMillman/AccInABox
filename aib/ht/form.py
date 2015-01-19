@@ -64,11 +64,10 @@ form_defns = FormDefns()
 
 @asyncio.coroutine
 def start_setupgrid(session, company, table_name, cursor_name):
-#   table_name, cursor_name = (_.strip() for _ in option_data.split(','))
     form = Form(company, '_sys.setup_grid')
     try:
         yield from form.start_form(
-            session, db_obj=table_name, cursor=cursor_name)
+            session, grid_tablename=table_name, cursor_name=cursor_name)
     except AibError as err:
         form.close_form()
         raise
@@ -121,7 +120,6 @@ class Form:
         self.inline = inline
         self.closed = False
 
-        self.table_name = None
         self.obj_list = []  # list of frames for this form
         self.obj_dict = {}  # dict of objects for this form
         self.obj_id = itertools.count()  # seq id for objects for this form
@@ -160,9 +158,8 @@ class Form:
     @log_func
     @asyncio.coroutine
     def start_form(self, session,
-            db_obj=None,   # can be passed in if formview/listview/sub_form
-            cursor=None,   # can be passed in if formview/listview
-            formdefn_company=None):
+            grid_tablename=None,   # passed in from menu_option if setup_grid
+            cursor_name=None):   # passed in from menu option if setup_grid
         if self.parent is None:
             self.root = Root(session)
         else:
@@ -180,17 +177,6 @@ class Form:
             title = self.form_name
             self.data_objects = self.parent.data_objects
         else:  # read form_defn from 'sys_form_defns'
-#           if formdefn_company is None:
-#               formdefn_company = self.company
-#           form_defn = form_defns[formdefn_company]
-#           form_defn.init()
-#           form_defn.select_row({'form_name': self.form_name})
-#           if not form_defn.exists:
-#               if db_obj is not None:
-#                   if db_obj.db_table.defn_company != formdefn_company:
-#                       form_defn = form_defns[db_obj.db_table.defn_company]
-#                       form_defn.init()
-#                       form_defn.select_row({'form_name': self.form_name})
             if '.' in self.form_name:
                 formdefn_company, self.form_name = self.form_name.split('.')
             else:
@@ -206,16 +192,12 @@ class Form:
             form_defn = self.form_defn = form_defn.getval('form_xml')
             self.data_objects = {}
 
-        if db_obj is not None:  # passed in as parameter
-            if isinstance(db_obj, str):  # table_name passed in
-                db_obj = db.api.get_db_object(
-                    self, self.company, db_obj)
-            self.data_objects['db_obj'] = db_obj
-            self.table_name = db_obj.table_name
-            if self.form_name in ('setup_form', 'form_lookdown'):
-                self.setup_formview(db_obj, form_defn)
+        if grid_tablename is not None:  # passed in if setup_grid
+            grid_obj = db.api.get_db_object(
+                self, self.company, grid_tablename)
+            self.data_objects['grid_obj'] = grid_obj
 
-        self.cursor = cursor
+        self.cursor_name = cursor_name
 
         input_params = form_defn.find('input_params')
         self.setup_input_obj(input_params)
@@ -386,6 +368,7 @@ class Form:
                 db_parent = self.data_objects[db_parent]
             company = obj_xml.get('company', self.company)
             table_name = obj_xml.get('table_name')
+# don't think this is used
             if table_name == '{table_name}':
                 table_name = self.table_name
 
@@ -489,13 +472,6 @@ class Form:
     @asyncio.coroutine
     def setup_form(self, form_defn, title):
         gui = []  # list of elements to send to client for rendering
-
-#       if self.ctrl_grid is not None:
-#           title += ' - form view'
-
-#       if self.table_name is not None:
-#           title = title.replace('-', '- {} - '.format(
-#               self.data_objects['db_obj'].db_table.short_descr))
 
         if self.parent is None:
             gui.append(('root', {'root_id': self.root.ref}))
@@ -668,9 +644,14 @@ class Frame:
             self.parent = form
         self.tree = tree  # either None or a reference to the Tree object
 
+        combo_type = frame_xml.get('combo_type')  # only used by tree_frame
+        if combo_type is not None:  # must be 'group' or 'member'
+            tree.tree_frames[combo_type] = self
+
         ref, pos = form.add_obj(form, self)
         self.ref = ref  # used when sending 'start_frame'
-        gui.append((self.frame_type, {'ref': ref, 'ctrl_grid_ref': ctrl_grid_ref}))
+        gui.append((self.frame_type,
+            {'ref': ref, 'ctrl_grid_ref': ctrl_grid_ref, 'combo_type': combo_type}))
 
         self.form = form
         self.session = form.session
@@ -950,6 +931,8 @@ class Frame:
                 gui.append(('grid_frame_end', None))
             elif element.tag == 'tree':
                 self.tree = ht.gui_tree.GuiTree(self, gui, element)
+            elif element.tag == 'tree_combo':
+                self.tree = ht.gui_tree.GuiTreeCombo(self, gui, element)
             elif element.tag == 'tree_frame':
                 self.tree.tree_frame = Frame(self.form, element, None, gui, tree=self.tree)
                 gui.append(('tree_frame_end', None))
@@ -1437,14 +1420,14 @@ class Frame:
             self.last_vld = len(self.obj_list)
 #           for obj in self.non_amendable:
 #               obj.set_readonly(True)
-            set_rec_exists = True
+            set_obj_exists = True
         else:
             self.last_vld = -1
 #           for obj in self.non_amendable:
 #               obj.set_readonly(False)
-            set_rec_exists = False
+            set_obj_exists = False
         self.session.request.check_redisplay(redisplay=False)  # send any 'readonly' messages
-        self.session.request.start_frame(self.ref, set_rec_exists, set_focus)
+        self.session.request.start_frame(self.ref, set_obj_exists, set_focus)
         #self.session.request.check_redisplay()  # send any 'redisplay' messages
 
         # next line is very dodgy, but it might be correct

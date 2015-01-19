@@ -8,15 +8,16 @@
     </mem_obj>
   </mem_objects>
   <input_params>
+    <input_param name="lkup_obj" type="data_obj" target="lkup_obj" required="true"/>
     <input_param name="start_val" type="data_attr" target="grid_vars.start_val"
       required="false"/>
   </input_params>
   <output_params/>
-  <frame main_object="db_obj">
+  <frame main_object="lkup_obj">
     <toolbar/>
     <body>
       <block/>
-      <grid data_object="db_obj" growable="true">
+      <grid data_object="lkup_obj" growable="true">
         <toolbar template="Setup_Grid">
           <tool type="selected" tip="Item selected (Enter)"/>
         </toolbar>

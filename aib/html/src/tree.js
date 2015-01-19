@@ -3,7 +3,7 @@
 function create_tree(container, frame, toolbar, hide_root){
 
   var tree = document.createElement('div');
-  tree.type = 'tree';
+  //tree.type = 'tree';
   tree.frame = frame;
   tree.active_frame = frame;
   tree.help_msg = '\xa0';
@@ -110,7 +110,7 @@ function create_tree(container, frame, toolbar, hide_root){
       this.active_node.text_span.style.color = 'lightcyan';
       this.active_node.text_span.style.background = 'darkblue';
       };
-    if (this.frame !== null)  // i.e. menu definition, not actual menu!
+    if (this.frame !== null)  // i.e. not the menu
       got_focus(this);
     };
   tree.got_focus = function() {
@@ -272,8 +272,9 @@ function create_tree(container, frame, toolbar, hide_root){
           //tree.write();
           }
         else if (this.toolbar) {
-          var args = [tree.ref, active_node.node_id, 0];
-          send_request('req_insert_node', args);
+          this.do_req_insert(active_node.node_id, 0);
+          //var args = [this.ref, active_node.node_id, 0];
+          //send_request('req_insert_node', args);
           };
         };
       };
@@ -365,8 +366,9 @@ function create_tree(container, frame, toolbar, hide_root){
       show_errmsg('Error', 'Cannot append to root');
       return;
       };
-    var args = [this.ref, parent.node_id, parent.nodes.length];
-    send_request('req_insert_node', args);
+    this.do_req_insert(parent.node_id, parent.nodes.length);
+    //var args = [this.ref, parent.node_id, parent.nodes.length];
+    //send_request('req_insert_node', args);
     };
 
   tree.req_insert_node = function() {
@@ -377,7 +379,31 @@ function create_tree(container, frame, toolbar, hide_root){
       return;
       };
     var seq = parent.nodes.indexOf(active_node);
-    var args = [this.ref, parent.node_id, seq];
+    this.do_req_insert(parent.node_id, seq);
+    //var args = [this.ref, parent.node_id, seq];
+    //send_request('req_insert_node', args);
+    };
+
+  tree.do_req_insert = function(node_id, seq) {
+    if (this.combo === null) {
+      var args = [this.ref, node_id, seq, null];
+      send_request('req_insert_node', args);
+      }
+    else {
+      this.req_args = [node_id, seq];
+      var args = [null, 'Insert?', 'What do you want to insert?',
+        [this.combo[0], this.combo[1], 'Cancel'], 'Cancel', 'Cancel', this.send_req_insert]
+      ask_question(args);
+      };
+    };
+
+  tree.send_req_insert = function(answer, node_id, seq) {
+    if (answer === 'Cancel')
+      return;
+    var node_id = tree.req_args[0], seq = tree.req_args[1];
+    var combo_pos = tree.combo.indexOf(answer);
+    var combo_type = ['group', 'member'][combo_pos];
+    var args = [tree.ref, node_id, seq, combo_type];
     send_request('req_insert_node', args);
     };
 
@@ -390,7 +416,7 @@ function create_tree(container, frame, toolbar, hide_root){
       show_errmsg('Error', 'Cannot delete a node with children');
       return;
       };
-    args = [null, 'Delete?', 'Sure you want to delete ' + this.active_node.text + '?',
+    var args = [null, 'Delete?', 'Sure you want to delete ' + this.active_node.text + '?',
       ['Yes', 'No'], 'No', 'No', tree.get_answer]
     ask_question(args);
     };

@@ -5,7 +5,7 @@
   </db_objects>
   <mem_objects/>
   <input_params>
-    <input_param name="db_obj" type="data_obj" target="form" required="false"/>
+    <input_param name="formview_obj" type="data_obj" target="form" required="false"/>
   </input_params>
   <output_params/>
 

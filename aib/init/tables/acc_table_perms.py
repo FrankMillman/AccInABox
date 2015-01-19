@@ -2,19 +2,21 @@ from lxml import etree
 
 # table definition
 table = {
-    'table_name'    : 'adm_table_perms',
+    'group_code'    : 'acc',
+    'seq'           : -1,
+    'table_name'    : 'acc_table_perms',
     'short_descr'   : 'Table permissions',
     'long_descr'    : 'Assign select/insert/update/delete permissions to each role',
     'audit_trail'   : True,
+    'table_created' : True,
+    'default_cursor': None,
+    'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : None,
     'table_hooks'   : None,
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
-    'table_created' : True,
-    'default_cursor': None,
-    'setup_form'    : None,
     }
 
 # column definitions
@@ -88,7 +90,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'col_chks'   : None,
-    'fkey'       : ['adm_roles', 'row_id', 'role', 'role', True],
+    'fkey'       : ['acc_roles', 'row_id', 'role', 'role', True],
     'choices'    : None,
     })
 cols.append ({

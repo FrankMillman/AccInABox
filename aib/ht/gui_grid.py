@@ -188,7 +188,7 @@ class GuiGrid:
             db_obj = self.db_obj
             cursor_name = element.get('cursor')
             if cursor_name is None:
-                cursor_name = parent.form.cursor  #db_obj.db_table.default_cursor
+                cursor_name = parent.form.cursor_name  # passed in from menu option
                 if cursor_name is None:
                     self.form.close_form()
                     raise AibError(head=db_obj.table_name,
@@ -628,7 +628,7 @@ class GuiGrid:
             else self.db_obj.db_table.setup_form)
 
         data_inputs = {}  # input parameters to be passed to sub-form
-        data_inputs['db_obj'] = self.db_obj
+        data_inputs['formview_obj'] = self.db_obj
 
         sub_form = ht.form.Form(self.form.company, form_name,
             parent=self, ctrl_grid=self, data_inputs=data_inputs,

@@ -2,22 +2,28 @@ from lxml import etree
 
 # table definition
 table = {
-    'table_name'    : 'adm_roles',
-    'short_descr'   : 'Roles',
-    'long_descr'    : 'Hierarchy of roles and responsibilities',
+    'table_name'    : 'db_table_groups',
+    'group_code'    : 'db',
+    'seq'           : -1,
+    'short_descr'   : 'Table groups',
+    'long_descr'    : 'Hierarchical grouping of database tables',
     'audit_trail'   : True,
+    'table_created' : True,
+    'default_cursor': None,
+    'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : None,
     'table_hooks'   : etree.fromstring(
-        '<hooks><hook type="before_save"><increment_seq args="parent_id"/></hook>'
-        '<hook type="after_delete"><decrement_seq args="parent_id"/></hook></hooks>'
+        '<hooks><hook type="before_save">'
+          '<incr_seq_with_alt alt_table="db_tables" args="parent_id"/>'
+          '</hook>'
+        '<hook type="after_delete">'
+          '<decr_seq_with_alt alt_table="db_tables" args="parent_id"/></hook>'
+          '</hooks>'
         ),
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
-    'table_created' : True,
-    'default_cursor': None,
-    'setup_form'    : None,
     }
 
 # column definitions
@@ -77,16 +83,16 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'role',
+    'col_name'   : 'group_code',
     'data_type'  : 'TEXT',
-    'short_descr': 'Role',
-    'long_descr' : 'Role code',
-    'col_head'   : 'Role',
+    'short_descr': 'Group code',
+    'long_descr' : 'Group code',
+    'col_head'   : 'Group',
     'key_field'  : 'A',
     'generated'  : False,
     'allow_null' : False,
     'allow_amend': False,
-    'max_len'    : 15,
+    'max_len'    : 12,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
@@ -127,7 +133,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'col_chks'   : None,
-    'fkey'       : ['adm_roles', 'row_id', None, None, False],
+    'fkey'       : ['db_table_groups', 'row_id', None, None, False],
     'choices'    : None,
     })
 cols.append ({
@@ -136,24 +142,6 @@ cols.append ({
     'short_descr': 'Sequence',
     'long_descr' : 'Sequence',
     'col_head'   : 'Seq',
-    'key_field'  : 'N',
-    'generated'  : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'col_chks'   : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'delegate',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Can delegate?',
-    'long_descr' : 'Can this role have other roles reporting to it?',
-    'col_head'   : 'Delegate',
     'key_field'  : 'N',
     'generated'  : False,
     'allow_null' : False,
@@ -175,7 +163,7 @@ virt.append ({
     'short_descr': 'Children',
     'long_descr' : 'Number of children',
     'col_head'   : '',
-    'sql'        : "SELECT count(*) FROM {company}.adm_roles b "
+    'sql'        : "SELECT count(*) FROM {company}.db_table_groups b "
                    "WHERE b.parent_id = a.row_id",
     })
 virt.append ({
@@ -184,7 +172,7 @@ virt.append ({
     'short_descr': 'Expandable?',
     'long_descr' : 'Is this node expandable?',
     'col_head'   : '',
-    'sql'        : "SELECT a.delegate",
+    'sql'        : "SELECT '1'",
     })
 virt.append ({
     'col_name'   : 'parent_num',
@@ -197,15 +185,3 @@ virt.append ({
 
 # cursor definitions
 cursors = []
-
-cursors.append({
-    'cursor_name': 'role_list',
-    'descr': 'List of roles',
-    'columns': [
-        ('role', 80, False, False, False, None, None),
-        ('descr', 150, True, False, False, None, None),
-        ],
-    'filter': [],
-    'sequence': [('role', False)],
-    'default': True
-    })
