@@ -4,7 +4,6 @@ from lxml import etree
 table = {
     'table_name'    : 'dir_users',
     'group_code'    : 'dir',
-    'seq'           : -1,
     'short_descr'   : 'Users',
     'long_descr'    : 'Directory of users',
     'audit_trail'   : True,
@@ -133,11 +132,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-choices = [
-    True,  # use sub_types?
-    True,  # use display_names?
-    [ ['admin', 'System administrator', [], []] ]
-    ]
 cols.append ({
     'col_name'   : 'user_type',
     'data_type'  : 'TEXT',
@@ -154,7 +148,11 @@ cols.append ({
     'dflt_val'   : None,
     'col_chks'   : None,
     'fkey'       : None,
-    'choices'    : choices,
+    'choices'    : [
+        True,  # use sub_types?
+        True,  # use display_names?
+        [ ['admin', 'System administrator', [], []] ]
+        ],
     })
 
 # virtual column definitions
@@ -167,8 +165,8 @@ cursors.append({
     'cursor_name': 'users',
     'descr': 'Users',
     'columns': [
-        ('user_id', 100, False, False, False, None, None),
-        ('display_name', 260, True, True, False, None, None),
+        ('user_id', 100, False, False, False, False, None, None, None, None),
+        ('display_name', 260, True, True, False, False, None, None, None, None),
         ],
     'filter': [],
     'sequence': [('user_id', False)],

@@ -112,16 +112,20 @@
           <col/>
           <label value="Role:"/>
           <input fld="role.role" lng="80" validation="
-          <<validations>>
-            <<validation>>
-              <<case>>
-                <<obj_exists obj_name=`role`>>
-                  <<init_obj obj_name=`role`/>>
-                  <<error head=`Role code` body=`'$value' already exists`/>>
-                <</obj_exists>>
-              <</case>>
-            <</validation>>
-          <</validations>>
+            <<validations>>
+              <<validation>>
+                <<case>>
+                  <<node_inserted>>
+                    <<case>>
+                      <<obj_exists obj_name=`role`>>
+                        <<init_obj obj_name=`role`/>>
+                        <<error head=`Role code` body=`'$value' already exists`/>>
+                      <</obj_exists>>
+                    <</case>>
+                  <</node_inserted>>
+                <</case>>
+              <</validation>>
+            <</validations>>
             "/>
           <col/>
           <label value="Description:"/>
@@ -133,30 +137,7 @@
           <grid data_object="tbl_view" growable="false" num_grid_rows="16">
             <cur_columns>
               <cur_col col_name="table_name" lng="140" readonly="true"/>
-              <cur_col col_name="sel_dsp" lng="20" readonly="true"
-              />
-<!--
-              after="
-                <<action>>
-                  <<case>>
-                    <<fld_changed name=`tbl_view.sel_ok`>>
-                      <<assign>>
-                        <<source>>tbl_view.sel_ok<</source>>
-                        <<target>>tbl_view.ins_ok<</target>>
-                      <</assign>>
-                      <<assign>>
-                        <<source>>tbl_view.sel_ok<</source>>
-                        <<target>>tbl_view.upd_ok<</target>>
-                      <</assign>>
-                      <<assign>>
-                        <<source>>tbl_view.sel_ok<</source>>
-                        <<target>>tbl_view.del_ok<</target>>
-                      <</assign>>
-                    <</fld_changed>>
-                  <</case>>
-                <</action>>
-              "
--->
+              <cur_col col_name="sel_dsp" lng="20" readonly="true"/>
               <cur_col col_name="ins_dsp" lng="20" readonly="true"/>
               <cur_col col_name="upd_dsp" lng="20" readonly="true"/>
               <cur_col col_name="del_dsp" lng="20" readonly="true"/>
@@ -189,7 +170,7 @@
                 <<action>>
                   <<case>>
                     <<fld_changed name=`tbl_view.sel_dsp`>>
-                      <<pyfunc name=`db.formdefn_funcs.check_sel_ok`/>>
+                      <<pyfunc name=`custom.table_perms.check_sel_ok`/>>
                     <</fld_changed>>
                   <</case>>
                 <</action>>
@@ -201,7 +182,7 @@
                 <<action>>
                   <<case>>
                     <<fld_changed name=`tbl_view.upd_dsp`>>
-                      <<pyfunc name=`db.formdefn_funcs.check_upd_ok`/>>
+                      <<pyfunc name=`custom.table_perms.check_upd_ok`/>>
                     <</fld_changed>>
                   <</case>>
                 <</action>>
@@ -212,7 +193,7 @@
               <grid data_object="col_view" growable="false" num_grid_rows="8">
                 <cur_columns>
                   <cur_col col_name="col_name" lng="140" readonly="true"/>
-                  <cur_col col_name="view_ok" lng="60" after="
+                  <cur_col col_name="view_ok" lng="60" readonly="true" after="
                     <<action>>
                       <<case>>
                         <<fld_changed name=`col_view.view_ok`>>
@@ -221,7 +202,7 @@
                       <</case>>
                     <</action>>
                   "/>
-                  <cur_col col_name="amend_ok" lng="60" after="
+                  <cur_col col_name="amend_ok" lng="60" readonly="true" after="
                     <<action>>
                       <<case>>
                         <<fld_changed name=`col_view.amend_ok`>>
@@ -238,14 +219,14 @@
             </body>
             <button_row validate="true" template="Grid_Frame"/>
             <frame_methods template="Grid_Frame">
-              <method name="on_start_form" action="
+              <method name="on_start_frame" action="
                 <<action>>
-                  <<pyfunc name=`db.formdefn_funcs.load_col_perms`/>>
+                  <<pyfunc name=`custom.table_perms.load_col_perms`/>>
                 <</action>>
               "/>
               <method name="do_save" action="
                 <<action>>
-                  <<pyfunc name=`db.formdefn_funcs.dump_col_perms`/>>
+                  <<pyfunc name=`custom.table_perms.dump_col_perms`/>>
                   <<save_obj obj_name=`tbl_view`/>>
                 <</action>>
               "/>
@@ -254,15 +235,16 @@
         </body>
         <button_row validate="true" template="Tree_Frame"/>
         <frame_methods template="Tree_Frame">
-          <method name="on_start_form" action="
+          <method name="on_start_frame" action="
             <<action>>
-              <<pyfunc name=`db.formdefn_funcs.load_table_perms`/>>
+              <<pyfunc name=`custom.table_perms.load_table_perms`/>>
             <</action>>
           "/>
           <method name="do_save" action="
             <<action>>
-              <<pyfunc name=`db.formdefn_funcs.dump_table_perms`/>>
+              <<tree_before_save/>>
               <<save_obj obj_name=`role`/>>
+              <<pyfunc name=`custom.table_perms.dump_table_perms`/>>
               <<update_node/>>
             <</action>>
           "/>
@@ -273,14 +255,14 @@
 <!--
       <button btn_id="btn_ok" btn_label="Ok" lng="60"
         btn_enabled="true" btn_validate="true" btn_default="true"
-        btn_action="
+        action="
           <<action>>
             <<end_form state=`cancelled`/>>
           <</action>>
         "/>
       <button btn_id="btn_can" btn_label="Cancel" lng="60"
         btn_enabled="true" btn_validate="false" btn_default="false"
-        btn_action="
+        action="
           <<action>>
             <<end_form state=`cancelled`/>>
           <</action>>

@@ -122,7 +122,6 @@ def pyfunc(db_obj, xml):
 
 def create_company(db_obj, xml):
     with db_obj.context.db_session as conn:
-#       conn.create_company(db_obj.getval('company_id'))
         init_company(db_obj.context, conn,
             db_obj.getval('company_id'), db_obj.getval('company_name'))
 

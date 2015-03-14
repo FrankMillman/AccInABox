@@ -4,7 +4,7 @@ parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
 
 import db.api
 import ht.form_xml
-from db.validation_xml import check_vld
+from ht.validation_xml import check_vld
 from errors import AibError, AibDenied
 from start import log, debug
 
@@ -14,7 +14,8 @@ NEG_DISPLAY = 'r'  # d=default, r=minus sign on right, b=angle brackets
                    # how about an option for 'red'?
 
 DATE_INPUT = '%d-%m-%Y'
-DATE_DISPLAY = '%a %d %b %Y'
+#DATE_DISPLAY = '%a %d %b %Y'
+DATE_DISPLAY = '%d-%m-%Y'
 
 #----------------------------------------------------------------------------
 
@@ -32,6 +33,7 @@ class GuiCtrl:
         self.descr = fld.col_defn.short_descr
         self.must_validate = True
         self.hidden = False  # for 'subtype' gui objects
+        self.form_dflt = None
         self.after_input = None
         self.pwd = ''  # over-ridden with 'seed' if type is pwd
 #       self.choices = None  # over-ridden if type is GuiChoice
@@ -121,7 +123,7 @@ class GuiCtrl:
 #       self.parent.session.request.send_show(self.ref, state)
 
 class GuiTextCtrl(GuiCtrl):
-    def __init__(self, parent, fld, reverse, readonly, choices, lkup,
+    def __init__(self, parent, fld, readonly, skip, reverse, choices, lkup,
             pwd, lng, height, gui):
         GuiCtrl.__init__(self, parent, fld, readonly)
         self.pwd = pwd
@@ -136,9 +138,9 @@ class GuiTextCtrl(GuiCtrl):
                 type = 'text'
             input = {'type': type, 'lng': lng,
                 'maxlen': fld.col_defn.max_len, 'ref': self.ref,
-                'help_msg': fld.col_defn.long_descr,
-                'head': fld.col_defn.col_head, 'allow_amend': fld.col_defn.allow_amend,
-                'password': self.pwd, 'readonly': readonly, 'amend_ok': self.amend_ok,
+                'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
+                'allow_amend': fld.col_defn.allow_amend, 'password': self.pwd,
+                'readonly': readonly, 'skip': skip, 'amend_ok': self.amend_ok,
                 'lkup': lkup, 'choices': choices, 'height': height, 'value': value}
             gui.append(('input', input))
         else:
@@ -156,7 +158,7 @@ class GuiTextCtrl(GuiCtrl):
             parent=self.parent, data_inputs=data_inputs,
             callback=(self.on_selected,))
         yield from sub_form.start_form(self.parent.session,
-            cursor=tgt_obj.db_table.default_cursor)
+            cursor_name=tgt_obj.default_cursor)
 
     @asyncio.coroutine
     def on_selected(self, caller, state, output_params):
@@ -179,15 +181,15 @@ class GuiTextCtrl(GuiCtrl):
             yield from sub_form.start_form(self.parent.session)
 
 class GuiNumCtrl(GuiCtrl):
-    def __init__(self, parent, fld, reverse, readonly, choices, fkey,
+    def __init__(self, parent, fld, readonly, skip, reverse, choices, fkey,
             pwd, lng, height, gui):
         GuiCtrl.__init__(self, parent, fld, readonly)
         if lng != 0:
             value = fld.val_to_str()  #fld.get_dflt())
             input = {'type': 'num', 'lng': lng, 'ref': self.ref,
-                'help_msg': fld.col_defn.long_descr,
-                'head': fld.col_defn.col_head, 'allow_amend': fld.col_defn.allow_amend,
-                'readonly': readonly, 'amend_ok': self.amend_ok, 'reverse': reverse,
+                'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
+                'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly,
+                'skip': skip, 'amend_ok': self.amend_ok, 'reverse': reverse,
                 'value': value, 'integer': (fld.col_defn.data_type == 'INT'),
                 'max_decimals': fld.col_defn.db_scale, 'neg_display': NEG_DISPLAY}
             gui.append(('input', input))
@@ -195,22 +197,22 @@ class GuiNumCtrl(GuiCtrl):
             self.readonly = True
 
 class GuiDateCtrl(GuiCtrl):
-    def __init__(self, parent, fld, reverse, readonly, choices, fkey,
+    def __init__(self, parent, fld, readonly, skip, reverse, choices, fkey,
             pwd, lng, height, gui):
         GuiCtrl.__init__(self, parent, fld, readonly)
         if lng != 0:
             value = fld.val_to_str()  #fld.get_dflt())
             input = {'type': 'date', 'lng': lng, 'ref': self.ref,
-                'help_msg': fld.col_defn.long_descr,
-                'head': fld.col_defn.col_head, 'allow_amend': fld.col_defn.allow_amend,
-                'readonly': readonly, 'amend_ok': self.amend_ok, 'value': value,
+                'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
+                'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly,
+                'skip': skip, 'amend_ok': self.amend_ok, 'value': value,
                 'input_format': DATE_INPUT, 'display_format': DATE_DISPLAY}
             gui.append(('input', input))
         else:
             self.readonly = True
 
 class GuiBoolCtrl(GuiCtrl):
-    def __init__(self, parent, fld, reverse, readonly, choices, fkey,
+    def __init__(self, parent, fld, readonly, skip, reverse, choices, fkey,
             pwd, lng, height, gui):
         GuiCtrl.__init__(self, parent, fld, readonly)
         if lng != 0:
@@ -218,13 +220,13 @@ class GuiBoolCtrl(GuiCtrl):
             input = {'type': 'bool', 'lng': lng, 'ref': self.ref, 'value': value,
                 'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
                 'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly,
-                'amend_ok': self.amend_ok}
+                'skip': skip, 'amend_ok': self.amend_ok}
             gui.append(('input', input))
         else:
             self.readonly = True
 
 class GuiSxmlCtrl(GuiCtrl):
-    def __init__(self, parent, fld, reverse, readonly, choices, fkey,
+    def __init__(self, parent, fld, readonly, skip, reverse, choices, fkey,
             pwd, lng, height, gui):
         GuiCtrl.__init__(self, parent, fld, readonly)
         if lng != 0:
@@ -232,7 +234,7 @@ class GuiSxmlCtrl(GuiCtrl):
             input = {'type': 'sxml', 'lng': lng, 'ref': self.ref, 'value': value,
                 'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
                 'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly,
-                'amend_ok': self.amend_ok}
+                'skip': skip, 'amend_ok': self.amend_ok}
             gui.append(('input', input))
         else:
             self.readonly = True
@@ -248,6 +250,7 @@ class GuiDisplay:
         self.fld = fld
         self.col_name = fld.col_defn.col_name
         self.must_validate = True
+        self.form_dflt = None
         self.hidden = False  # for 'subtype' gui objects
         self.after_input = None
 #       fld.notify_form(self)
@@ -286,6 +289,7 @@ class GuiDummy:  # dummy field to force validation of last real field
         self.choices = None
         self.must_validate = True
         self.form_vlds = []
+        self.form_dflt = None
         self.after_input = None
         self.col_name = 'dummy'
         ref, pos = parent.form.add_obj(parent, self)
@@ -308,14 +312,14 @@ class GuiDummy:  # dummy field to force validation of last real field
 class GuiButton:
 #   def __init__(self, parent, gui, element):
     def __init__(self, parent, gui, btn_label, lng, enabled,
-            must_validate, default, help_msg, btn_action):
+            must_validate, default, help_msg, action):
 #       self.root_id = form.root_id
 #       self.form_id = form.form_id
         self.parent = parent
 #       self.xml = element
-#       self.xml = etree.fromstring(element.get('btn_action'), parser=parser)
+#       self.xml = etree.fromstring(element.get('action'), parser=parser)
         self.form_vlds = []
-        self.xml = btn_action
+        self.xml = action
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
         self.pos = pos
@@ -325,6 +329,7 @@ class GuiButton:
 #       self.default = (element.get('btn_default') == 'true')
 #       self.label = element.get('btn_label')
 #       help_msg = element.get('help_msg', '')
+        self.form_dflt = None
         self.after_input = None
         self.enabled = enabled
         self.must_validate = must_validate
@@ -345,9 +350,7 @@ class GuiButton:
     def change_button(self, attr, value):
         # attr can be enabled/default/label/show
         setattr(self, attr, value)
-        if attr != 'must_validate':
-            self.parent.session.request.obj_to_redisplay.append(
-                (self.ref, (attr, value)))
+        self.parent.session.request.obj_to_redisplay.append((self.ref, (attr, value)))
 
 """
 class GuiToolBar:
@@ -388,20 +391,31 @@ class GuiTbButton:  # Toolbar button
 #       self.form_id = form.form_id
 #       self.frame = frame
         self.parent = parent
-        self.xml = element
+        self.xml = etree.fromstring(element.get('action'), parser=parser)
         ref, pos = parent.form.add_obj(parent, self, add_to_list=False)
         self.ref = ref
         #self.pos = pos
+        self.must_validate = False
 
     def validate(self, temp_data):
         pass
 
 class GuiTbText:
-    def __init__(self, formRef, ref, task):
-        self.formRef = formRef
+
+    # <tool type="text" fld="var.ye_date" lng="80"/>
+
+    def __init__(self, parent, tool):
+        self.parent = parent
+        ref, pos = parent.form.add_obj(parent, self, add_to_list=False)
         self.ref = ref
-    def setValue(self, value):
-        self.parent.obj_to_redisplay.append((self.formRef, self.ref, value))
+
+        obj_name, col_name = tool.get('fld').split('.')
+        self.fld = parent.data_objects[obj_name].getfld(col_name)
+        self.fld.notify_form(self)
+
+    def _redisplay(self):  # must only be called from db module
+        value = self.fld.val_to_str()  # prepare value for display
+        self.parent.session.request.obj_to_redisplay.append((self.ref, value))
 
 #class GuiTree:
 #   def __init__(self, task, ref):

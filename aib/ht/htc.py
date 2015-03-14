@@ -11,7 +11,8 @@ import traceback
 import time
 import threading
 import asyncio
-from urllib.parse import unquote
+import urllib.parse
+import email.utils
 from json import loads, dumps
 import itertools
 import random
@@ -29,6 +30,8 @@ from start import log, debug
 
 sessions = {}  # key=session_id, value=session instance
 
+DEL = chr(127)
+
 #----------------------------------------------------------------------------
 
 class delwatcher:
@@ -36,6 +39,7 @@ class delwatcher:
         self.name = obj.session_id
         print('*** session', self.name, 'created ***')
     def __del__(self):
+        pass
         print('*** session', self.name, 'deleted ***')
 
 #----------------------------------------------------------------------------
@@ -135,19 +139,22 @@ class Session:
         client_menu.append((root_id, None, 'root', True))
         db_session = db.api.start_db_session()
         with db_session as conn:
+            # we use list(...) because we use a nested select on the same
+            #   connection, so we would lose the results of the first select
             for company, comp_name, comp_admin in list(self.select_companies(conn)):
 
+                menu_prefix = '{}{}'.format(company, DEL)
                 comp_menu = []
                 comp_menu.append((
-                    '{}_{}'.format(company, 1),  # root row_id is always 1
+                    '{}{}'.format(menu_prefix, 1),  # root row_id is always 1
                     root_id, comp_name, True))
 
                 for opt in self.select_options(conn, company):
                     row_id, parent_id, descr, opt_type = opt
-                    expandable = (opt_type in ('0', '1'))
+                    expandable = (opt_type in ('root', 'menu'))
                     comp_menu.append((
-                        '{}_{}'.format(company, row_id),  #  node_id
-                        '{}_{}'.format(company, parent_id),  # parent_id
+                        '{}{}'.format(menu_prefix, row_id),  #  node_id
+                        '{}{}'.format(menu_prefix, parent_id),  # parent_id
                         descr, expandable))
 
                 if len(comp_menu) > 1:
@@ -239,7 +246,6 @@ class RequestHandler:
         yield from form.start_form(self.session)
 
         reply = dumps(self.reply)
-#       response = aiohttp.Response(writer, 200)
         response = Response(writer, 200)
         response.add_header('Content-type', 'text/html')
         response.add_header('Transfer-Encoding', 'chunked')
@@ -253,7 +259,6 @@ class RequestHandler:
         session_id, messages = request
         if session_id not in sessions:  # dangling client
             reply = dumps([('close_program', None)])  # tell it to stop 'ticking'
-#           response = aiohttp.Response(writer, 200)
             response = Response(writer, 200)
             response.add_header('Content-type', 'text/html')
             response.add_header('Transfer-Encoding', 'chunked')
@@ -272,8 +277,8 @@ class RequestHandler:
         try:
             while(messages):
                 evt_id, args = messages.pop(0)
-                if evt_id != 'tick':
-                    if debug:
+                if debug:
+                    if evt_id != 'tick':
                         log.write('recd {} {} [{}]\n\n'.format(
                             evt_id, args, len(messages)))
                 try:
@@ -295,8 +300,15 @@ class RequestHandler:
             tb = traceback.format_exception(*sys.exc_info())  # a list of strings
             self.reply = [('exception', tb)]
         if self.reply:
+            if debug:
+                for pos, reply in enumerate(self.reply):
+                    ndx = '{}/{}'.format(pos, len(self.reply))
+                    if reply[0] in ['setup_form', 'start_menu',
+                            'start_grid', 'recv_rows', 'redisplay']:
+                        log.write('send {} {}\n\n'.format(ndx, reply[0]))
+                    else:
+                        log.write('send {} {}\n\n'.format(ndx, reply))
             reply = dumps(self.reply)
-#           response = aiohttp.Response(self.writer, 200)
             response = Response(self.writer, 200)
             response.add_header('Content-type', 'application/json; charset=utf-8')
             response.add_header('Transfer-Encoding', 'chunked')
@@ -304,7 +316,6 @@ class RequestHandler:
             response.write(reply)
             response.write_eof()
         elif self.reply is not None:  # if None do not reply - set by on_answer()
-#           response = aiohttp.Response(self.writer, 200)
             response = Response(self.writer, 200)
             response.add_header('Content-type', 'text/html')
             response.send_headers()
@@ -334,6 +345,9 @@ class RequestHandler:
     def send_prev(self, ref, value):
         self.reply.append(('recv_prev', (ref, value)))
 
+    def send_dflt_val(self, obj_ref, value):
+        self.reply.append(('recv_dflt', (obj_ref, value)))
+
 #   def send_readonly(self, ref, state):
 #       self.reply.append(('set_readonly', (ref, state)))
 
@@ -359,19 +373,15 @@ class RequestHandler:
     @asyncio.coroutine
     def send_question(self, fut, args):
         reply = dumps([('ask_question', args)])
-#       response = aiohttp.Response(self.writer, 200)
         response = Response(self.writer, 200)
         response.add_header('Content-type', 'application/json; charset=utf-8')
         response.add_header('Transfer-Encoding', 'chunked')
         response.send_headers()
         response.write(reply)
         response.write_eof()
-#       self.reader.unset_parser()
-#       self._request_handler = None
-#       self.transport.close()
 
-    def send_cell_set_focus(self, grid_ref, row, col_ref, err_flag=False):
-        self.reply.append(('cell_set_focus', (grid_ref, row, col_ref, err_flag)))
+    def send_cell_set_focus(self, grid_ref, row, col_ref, dflt_val=None, err_flag=False):
+        self.reply.append(('cell_set_focus', (grid_ref, row, col_ref, dflt_val, err_flag)))
 
     def send_move_row(self, grid_ref, old_row, new_row):
         self.reply.append(('move_row', (grid_ref, old_row, new_row)))
@@ -418,24 +428,24 @@ class RequestHandler:
         menu_id, = args
 #       company, descr, option_type, option_data = self.session.option_dict[menu_id]
 #       company, row_id = self.session.option_dict[menu_id]
-        company, row_id = menu_id.rsplit('_', 1)
+        company, row_id = menu_id.split(DEL)
         menu_defn = menu_defns[company]
         menu_defn.init()
         menu_defn.setval('row_id', int(row_id))
 #       print('SELECTED', company, menu_defn)
         opt_type = menu_defn.getval('opt_type')
-        if opt_type == '2':  # grid
+        if opt_type == 'grid':
             yield from ht.form.start_setupgrid(
 #               self.session, company, option_data, self.session.user_row_id)
                 self.session, company, menu_defn.getval('table_name'),
                 menu_defn.getval('cursor_name'))
-        elif opt_type == '3':  # form
+        elif opt_type == 'form':
 #           form = ht.form.Form(company, option_data)
             form = ht.form.Form(company, menu_defn.getval('form_name'))
             yield from form.start_form(self.session)
-        elif opt_type == '4':  # report
+        elif opt_type == 'report':
             pass
-        elif opt_type == '5':  # process
+        elif opt_type == 'process':
             pass
 #           bp.bpm.init_process(company, option_data,
 #               {'user_row_id': self.session.user_row_id})
@@ -479,10 +489,11 @@ class RequestHandler:
     @asyncio.coroutine
     def on_clicked(self, args):
 #       print('clicked', args)
-        ref = args[0]
+#       ref = args[0]
+#       btn_args = args[1:]
+        ref = args.pop(0)  # remaining args (if any) are passed to on_clicked
         button = self.session.get_obj(ref)
-        btn_args = args[1:]
-        yield from button.parent.on_clicked(button, btn_args)
+        yield from button.parent.on_clicked(button, args)
 
     @asyncio.coroutine
     def on_navigate(self, args):
@@ -516,9 +527,9 @@ class RequestHandler:
 
     @asyncio.coroutine
     def on_cell_req_focus(self, args):
-        ref, row = args
+        ref, row, save = args
         obj = self.session.get_obj(ref)
-        yield from obj.grid.on_cell_req_focus(obj, row)
+        yield from obj.grid.on_cell_req_focus(obj, row, save)
 
     @asyncio.coroutine
     def on_req_save_row(self, args):
@@ -526,6 +537,7 @@ class RequestHandler:
         grid = self.session.get_obj(ref)
         yield from grid.end_current_row(save=True)
 
+    """
     @asyncio.coroutine
     def on_req_insert_row(self, args):
         ref, row = args
@@ -550,6 +562,7 @@ class RequestHandler:
         grid_ref, row = args
         grid = self.session.get_obj(grid_ref)
         yield from grid.on_formview(row)
+    """
 
     @asyncio.coroutine
     def on_start_row(self, args):
@@ -594,6 +607,7 @@ class RequestHandler:
         except IndexError:  # user clicked Close twice?
             pass
         else:
+            print('CLOSE', obj)
 #           yield from frame.on_req_close()
             yield from obj.on_req_close()
 
@@ -661,7 +675,6 @@ class CheckSessions(threading.Thread):
 dummy_id_counter = itertools.count(1)
 def send_js(srv, path, dev):
 
-#   response = aiohttp.Response(srv.writer, 200)
     response = Response(srv, 200)
     if path == '':  #in ('', '/'):
         if dev:
@@ -706,39 +719,6 @@ def send_js(srv, path, dev):
 
     response.write_eof()
 
-import asyncio
-
-"""
-import aiohttp
-import aiohttp.server
-class HttpServer(aiohttp.server.ServerHttpProtocol):
-
-    @asyncio.coroutine
-    def handle_request(self, message, payload):
-#       print('method = {!r}; path = {!r}; version = {!r}'.format(
-#           message.method, message.path, message.version))
-
-        path = message.path
-        if path.startswith('/send_req'):
-            path, args = path.split('?')
-            args = loads(unquote(args))
-            request_handler = RequestHandler()
-            yield from request_handler.handle_request(
-                self.reader, self.writer, self.transport, self._request_handler, args)
-        elif path.startswith('/get_login'):
-            path, args = path.split('?')
-            args = loads(unquote(args))
-            request_handler = RequestHandler()
-            yield from request_handler.get_login(self.writer, args)
-        elif path.startswith('/dev'):
-            path = path[4:]
-            send_js(self, path, dev=True)
-        else:
-            path = path[1:]  # strip leading '/'
-            send_js(self, path, dev=False)
-"""
-
-import email.utils
 CHUNK = 8192
 class Response:
     def __init__(self, writer, status):
@@ -789,9 +769,9 @@ def accept_client(client_reader, client_writer):
 #   def client_done(task):
 #       print("End Connection")
 
-#   print("New Connection")
+#   print("New Connection", id(client_reader), id(client_writer))
 #   task.add_done_callback(client_done)
- 
+
 @asyncio.coroutine
 def handle_client(client_reader, client_writer):
 
@@ -815,23 +795,19 @@ def handle_client(client_reader, client_writer):
     except ValueError:
         print('***', req_line, '***')
         raise
+
     if method == 'POST':
 #       print('method = {!r}; path = {!r}; version = {!r}'.format(method, path, version))
-
         lng = int(headers['content-length'])
-        args = yield from asyncio.wait_for(client_reader.read(lng),
-                                       timeout=10.0)
-#       print('HDRS =', headers)
-#       print('ARGS =', args)
+        args = yield from asyncio.wait_for(
+            client_reader.read(lng), timeout=10.0)
 
     if path.startswith('/send_req'):
-#       path, args = path.split('?')
-        args = loads(unquote(args.decode()))
+        args = loads(urllib.parse.unquote(args.decode()))
         request_handler = RequestHandler()
         yield from request_handler.handle_request(client_writer, args)
     elif path.startswith('/get_login'):
-#       path, args = path.split('?')
-        args = loads(unquote(args.decode()))
+        args = loads(urllib.parse.unquote(args.decode()))
         request_handler = RequestHandler()
         yield from request_handler.get_login(client_writer, args)
     elif path.startswith('/dev'):
@@ -851,11 +827,7 @@ def setup(params):
     session_check.start()
 
     loop = asyncio.get_event_loop()
-
-#   server = loop.run_until_complete(loop.create_server(HttpServer, host, port))
     server = loop.run_until_complete(asyncio.start_server(accept_client, host, port))
-
-    # update log
     logger.info('task client listening on port {}'.format(port))
 
     return (loop, server, session_check)

@@ -32,6 +32,7 @@ class GuiTreeCommon:
         self.parent = parent
         self.form = parent.form
         self.session = parent.session
+        self.node_inserted = False
         self.methods = {}
 
         ref, pos = parent.form.add_obj(parent, self)
@@ -97,6 +98,7 @@ class GuiTree(GuiTreeCommon):
 
     @asyncio.coroutine
     def on_active(self, node_id):
+        self.node_inserted = False
         if self.db_obj.dirty:
 
             title = self.db_obj.table_name
@@ -123,9 +125,8 @@ class GuiTree(GuiTreeCommon):
     def on_req_insert_node(self, parent_id, seq, combo_type=None):
         if not parent_id:
             raise AibError(head='Error', body='Cannot create new root')
-        #self.db_obj.setval('parent_id', parent_id)
-        #self.db_obj.setval('seq', seq)
-        self.db_obj.init(init_vals={'parent_id': parent_id, 'seq': seq})
+        self.node_inserted = (parent_id, seq)  # retain for before_save() below
+        self.db_obj.init()
         self.session.request.send_insert_node(self.ref, parent_id, seq, -1)
         if self.tree_frame is not None:
             yield from self.tree_frame.restart_frame()
@@ -149,7 +150,20 @@ class GuiTree(GuiTreeCommon):
         pass
 
     @asyncio.coroutine
+    def before_save(self):  # called from frame_methods before save
+        if self.node_inserted:  # set up in on_req_insert_node() above
+            parent_id, seq = self.node_inserted
+            self.db_obj.setval('parent_id', parent_id)
+            self.db_obj.setval('seq', seq)
+
+    @asyncio.coroutine
     def update_node(self):  # called from frame_methods after save
+        # this is called from tree_frame frame_methods
+        # could we ever have a tree without a tree_frame
+        # if yes, this would not be called
+        # on the other hand, how would we trigger a 'save' anyway?
+        # leave alone for now [2015-03-02]
+        self.node_inserted = False
         self.session.request.send_update_node(
             self.ref,  # tree_ref
             self.db_obj.getval('row_id'),  # node_id
@@ -177,7 +191,6 @@ class GuiTreeCombo(GuiTreeCommon):
         else:
             member_where = ''
 
-
         sql = (
             "SELECT row_id, 'group' AS type, group_code AS code, descr, "
             "COALESCE(parent_id, 0) AS parent_num, seq FROM {0}.{1}{3} "
@@ -190,7 +203,7 @@ class GuiTreeCombo(GuiTreeCommon):
             )
 
         with self.form.db_session as conn:
-            for row_id, node_type, code, descr, parent_num, seq in conn.cur.execute(sql):
+            for row_id, node_type, code, descr, parent_num, seq in conn.exec_sql(sql):
                 self.db_obj.init()
                 self.db_obj.setval('data_row_id', row_id)
                 self.db_obj.setval('type', node_type)
@@ -230,6 +243,7 @@ class GuiTreeCombo(GuiTreeCommon):
 
     @asyncio.coroutine
     def on_active(self, node_id):
+        self.node_inserted = False
 
         data_row_id, node_type = node_id.split('_')
         data_row_id = int(data_row_id)
@@ -276,14 +290,20 @@ class GuiTreeCombo(GuiTreeCommon):
             raise AibError(head='Error', body='Cannot create new root')
         parent_num = int(parent_id.split('_')[0])
         if node_type == 'group':
-            self.db_obj.init(init_vals=
-                {'parent_num': parent_num, 'seq': seq, 'type': 'group'})
-            self.group.init(init_vals={'parent_id': parent_num, 'seq': seq})
+            self.node_inserted = (parent_num, seq, 'group')  # retain for before_save() below
+            #self.db_obj.init(init_vals=
+            #    {'parent_num': parent_num, 'seq': seq, 'type': 'group'})
+            #self.group.init(init_vals={'parent_id': parent_num, 'seq': seq})
+            self.db_obj.init()
+            self.group.init()
             self.tree_frame = self.tree_frames['group']
         else:  # must be 'member'
-            self.db_obj.init(init_vals=
-                {'parent_num': parent_num, 'seq': seq, 'type': 'member'})
-            self.member.init(init_vals={'parent_id': parent_num, 'seq': seq})
+            self.node_inserted = (parent_num, seq, 'member')  # retain for before_save() below
+            #self.db_obj.init(init_vals=
+            #    {'parent_num': parent_num, 'seq': seq, 'type': 'member'})
+            #self.member.init(init_vals={'parent_id': parent_num, 'seq': seq})
+            self.db_obj.init()
+            self.member.init()
             self.tree_frame = self.tree_frames['member']
         self.session.request.send_insert_node(self.ref, parent_id, seq, -1)
         yield from self.tree_frame.restart_frame()
@@ -315,7 +335,22 @@ class GuiTreeCombo(GuiTreeCommon):
         pass
 
     @asyncio.coroutine
+    def before_save(self):  # called from frame_methods before save
+        if self.node_inserted:  # set up in on_req_insert_node() above
+            parent_num, seq, type = self.node_inserted
+            self.db_obj.set_val('parent_num', parent_num)
+            self.db_obj.set_val('seq', seq)
+            self.db_obj.set_val('type', type)
+            if type == 'group':
+                self.group.set_val('parent_id', parent_num)
+                self.group.set_val('seq', seq)
+            elif type == 'member':
+                self.member.setval('parent_id', parent_num)
+                self.member.setval('seq', seq)
+
+    @asyncio.coroutine
     def update_node(self):  # called from frame_methods after save
+        self.node_inserted = False
         if self.db_obj.getval('type') == 'group':
             data_row_id = self.group.getval('row_id')
             code = self.group.getval('group_code')

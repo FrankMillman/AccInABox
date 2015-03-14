@@ -418,7 +418,7 @@ class Conn:
 
                 if not isinstance(expr, str):  # must be int, dec, date
                     params.append(expr)
-                    expr = '?'
+                    expr = self.param_style
                 elif expr.lower() == 'null':
                     pass  # don't parameterise 'null'
                 elif expr.startswith('c"'):  # expr is a column name
@@ -428,15 +428,18 @@ class Conn:
                         if join_column not in self.joins:
                             self.build_join(db_obj, join_column)
                         join_alias = self.joins[join_column]
-                        expr = '{}.{}'.format(join_alias, expr)
+#                       expr = '{}.{}'.format(join_alias, expr)
+                        expr = join_alias + '.' + expr
                     else:
                         sql = getattr(db_obj.getfld(expr), 'sql', None)
                         if sql is not None:
                             while '_param_' in sql:
                                 sql = sql.replace('_param_', param.pop(0), 1)
-                            expr =  '({})'.format(sql)
+#                           expr =  '({})'.format(sql)
+                            expr =  '(' + sql + ')'
                         else:
-                            expr = 'a.{}'.format(expr)
+#                           expr = 'a.{}'.format(expr)
+                            expr = 'a.' + expr
                 elif expr.startswith('('):  # expression
                     # could be a tuple - WHERE title IN ('Mr', 'Mrs')
                     raise NotImplementedError  # does this ever happen
@@ -447,13 +450,13 @@ class Conn:
                 else:  # must be literal string
                     params.append(expr)
 #                   col = 'LOWER({})'.format(col)
-                    expr = 'LOWER(?)'
-
+#                   expr = 'LOWER({})'.format(self.param_style)
+                    expr = 'LOWER(' + self.param_style + ')'
 
                 where_clause += ' {} {}{} {} {}{}'.format(
                     test, lbr, col, op, expr, rbr)
 
-            where_clause = where_clause.replace('?', self.param_style)
+#           where_clause = where_clause.replace('?', self.param_style)
 
         order_clause = ''
         if order:

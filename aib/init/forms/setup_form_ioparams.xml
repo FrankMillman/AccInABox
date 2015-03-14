@@ -108,19 +108,19 @@
     </body>
     <button_row validate="true" template="Setup_Form"/>
     <frame_methods template="Setup_Form">
-      <method name="on_start_form" action="
+      <method name="on_start_frame" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.load_ioparams`/>>
+          <<pyfunc name=`custom.formdefn_funcs.load_ioparams`/>>
         <</action>>
       "/>
       <method name="do_save" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.dump_ioparams`/>>
+          <<pyfunc name=`custom.formdefn_funcs.dump_ioparams`/>>
         <</action>>
       "/>
       <method name="do_restore" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.restore_ioparams`/>>
+          <<pyfunc name=`custom.formdefn_funcs.restore_ioparams`/>>
         <</action>>
       "/>
     </frame_methods>

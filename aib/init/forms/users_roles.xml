@@ -5,6 +5,8 @@
     <db_obj name="user_comp" table_name="_sys.dir_users_companies"/>
     <db_obj name="user" table_name="_sys.dir_users" fkey="user_comp.user_row_id"/>
     <db_obj name="user_role" table_name="acc_users_roles" parent="user"/>
+    <db_obj name="lkup_role" table_name="acc_roles"
+       fkey="user_role.role_id" cursor="roles_no_admin"/>
 <!--
     <db_obj name="user_role" table_name="acc_users_roles"/>
 -->
@@ -62,7 +64,7 @@
         </body>
         <button_row validate="false">
           <button btn_id="btn_rgt" btn_label="Return" btn_enabled="true" 
-              btn_validate="false" btn_default="true" lng="60" btn_action="
+              btn_validate="false" btn_default="true" lng="60" action="
             <<action>>
               <<return_to_grid/>>
             <</action>>
@@ -75,14 +77,14 @@
 <!--
       <button btn_id="btn_ok" btn_label="Ok" lng="60"
         btn_enabled="true" btn_validate="true" btn_default="true"
-        btn_action="
+        action="
           <<action>>
             <<end_form state=`cancelled`/>>
           <</action>>
         "/>
       <button btn_id="btn_can" btn_label="Cancel" lng="60"
         btn_enabled="true" btn_validate="false" btn_default="false"
-        btn_action="
+        action="
           <<action>>
             <<end_form state=`cancelled`/>>
           <</action>>

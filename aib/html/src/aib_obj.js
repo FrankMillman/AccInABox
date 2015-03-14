@@ -14,13 +14,15 @@ AibText.prototype.commonfunc = function() {will override AibCtrl commonfunc};
 //  AibCtrl       //
 ////////////////////
 function AibCtrl() {};
-AibCtrl.prototype.onfocus = function(ctrl) {
+AibCtrl.prototype.got_focus = function(ctrl) {
   var inp = ctrl.childNodes[0];
   var dsp = ctrl.childNodes[1];
-  if (!ctrl.get_amendable()) {
+  if (!ctrl.amendable()) {
 
 //    if (ctrl.tabIndex === -1) {
     if (dsp.style.display === 'none') {
+      // can happen on navigating a form view -
+      //   switching from blank row to existing row - key field becomes not amendable
       inp.style.display = 'none';
       dsp.style.display = 'block';
       ctrl.tabIndex = 0;
@@ -30,10 +32,10 @@ AibCtrl.prototype.onfocus = function(ctrl) {
     if (dsp.txt !== undefined)
       dsp.txt.style.background = '#B4EEB4';  // slightly darker green
 
-    if (ctrl.frame.form.current_focus === ctrl)
-      ctrl.aib_obj.after_got_focus(ctrl)
-    else
-      got_focus(ctrl);
+//    if (ctrl.frame.form.current_focus === ctrl)
+//      ctrl.aib_obj.after_got_focus(ctrl)
+//    else
+//      got_focus(ctrl);
     return;
     };
 
@@ -49,8 +51,8 @@ AibCtrl.prototype.onfocus = function(ctrl) {
   else
     inp.className = 'focus_background';
 
-  inp.focus();
-  got_focus(ctrl);
+  //inp.focus();
+  //got_focus(ctrl);
   };
 AibCtrl.prototype.set_cell_value_from_server = function(grid, row, col, value) {
   var subset_row = row - grid.first_subset_row;
@@ -77,7 +79,11 @@ AibText.prototype = new AibCtrl();
 AibText.prototype.after_got_focus = function(text) {
   var inp = text.childNodes[0];
   var dsp = text.childNodes[1];
-  if (!text.get_amendable()) {
+  if (!text.amendable()) {
+    if (text.password !== '')
+      dsp.text.data = repeat('x', text.current_value.length);
+    else
+      dsp.text.data = text.current_value;
     dsp.style.border = '1px solid black';
     return;
     };
@@ -89,8 +95,18 @@ AibText.prototype.after_got_focus = function(text) {
   else
     setInsertionPoint(inp, 0);  //inp.value.length);
   };
+AibText.prototype.set_dflt_val = function(text, value) {
+  var inp = text.childNodes[0];
+  inp.value = value;
+  if (text.multi_line === true) {
+    inp.scrollTop = 0;
+    setInsertionPoint(inp, 0);
+    }
+  else
+    setInsertionPoint(inp, 0);  //inp.value.length);
+  };
 AibText.prototype.before_lost_focus = function(text) {
-  if (!text.get_amendable())
+  if (!text.amendable())
     return true;
   var inp = text.childNodes[0];
   if (text.multi_line === true)
@@ -203,6 +219,9 @@ AibText.prototype.set_cell_value_got_focus = function(cell) {
 //    value = '\xa0';  // replace with &nbsp
 //  cell.text_node.data = value;
   };
+AibText.prototype.set_cell_dflt_val = function(cell, value) {
+  cell.text_node.data = value;
+  };
 AibText.prototype.set_cell_value_lost_focus = function(cell, value) {
   cell.current_value = value;  // save for 'got_focus' and 'edit_cell'
   if (cell.input.choices)
@@ -253,15 +272,21 @@ AibNum.prototype = new AibCtrl();
 AibNum.prototype.after_got_focus = function(num) {
   var inp = num.childNodes[0];
   var dsp = num.childNodes[1];
-  if (!num.get_amendable()) {
+  if (!num.amendable()) {
+    dsp.text.data = this.num_to_string(num, num.current_value);
     dsp.style.border = '1px solid black';
     return;
     };
   inp.value = num.current_value;  // reset from display format to input format
   setInsertionPoint(inp, 0, inp.value.length);
   };
+AibNum.prototype.set_dflt_val = function(num, value) {
+  var inp = num.childNodes[0];
+  inp.value = value;
+  setInsertionPoint(inp, 0, inp.value.length);
+  };
 AibNum.prototype.before_lost_focus = function(num) {
-  if (!num.get_amendable())
+  if (!num.amendable())
     return true;
   var inp = num.childNodes[0];
   num.current_value = inp.value;
@@ -411,6 +436,9 @@ AibNum.prototype.set_cell_value_got_focus = function(cell) {
 //    value = '\xa0';  // replace with &nbsp
   cell.text_node.data = value;
   };
+AibNum.prototype.set_cell_dflt_val = function(cell, value) {
+  cell.text_node.data = value;
+  };
 AibNum.prototype.set_cell_value_lost_focus = function(cell, value) {
   cell.current_value = value;  // save for 'got_focus' and 'edit_cell'
   if (cell.input.reverse)
@@ -457,7 +485,8 @@ AibDate.prototype = new AibCtrl();
 AibDate.prototype.after_got_focus = function(date) {
   var inp = date.childNodes[0];
   var dsp = date.childNodes[1];
-  if (!date.get_amendable()) {
+  if (!date.amendable()) {
+    dsp.text.data = this.date_to_string(date, date.current_value, date.display_format);
     dsp.style.border = '1px solid black';
     return;
     };
@@ -470,15 +499,22 @@ AibDate.prototype.after_got_focus = function(date) {
   else  // returning from failed validation - leave string untouched
     date.pos = 0;
   };
+AibDate.prototype.set_dflt_val = function(date, value) {
+  var inp = date.childNodes[0];
+  inp.value = this.date_to_string(date, value, date.input_format);
+  setInsertionPoint(inp, 0, inp.value.length);
+  };
 AibDate.prototype.before_lost_focus = function(date) {
-  if (!date.get_amendable())
+  if (!date.amendable())
     return true;
   var inp = date.childNodes[0];
   date.valid = true;
   var errmsg = this.validate_string(date);  // sets up current_value if ok
   if (errmsg !== '') {
     date.valid = false;
+    date.focus();
     setTimeout(function() {show_errmsg('Date', errmsg)}, 0);
+    //show_errmsg('Date', errmsg);
     return false;
     };
   return true;
@@ -498,9 +534,12 @@ AibDate.prototype.after_lost_focus = function(date) {
   date.tabIndex = 0;
   };
 AibDate.prototype.validate_string = function(date) {
-  var inp = date.childNodes[0];
+  if (date.childNodes.length)  // 'date' is a gui_obj
+    var inp = date.childNodes[0];
+  else  // 'date' is a grid_obj
+    var inp = date;
   if (inp.value === date.blank) {
-    date.current_value = null;
+    date.current_value = '';
     return '';  // no error
     };
   var today = new Date();
@@ -544,16 +583,20 @@ AibDate.prototype.validate_string = function(date) {
   if (new_date.getFullYear() !== +year) {
     return msg = '"' + year + '" - Invalid year!';
     };
-  date.current_value = new_date;
+  //date.current_value = new_date;
+  date.current_value = new_date.getFullYear() + '-' +
+    zfill(new_date.getMonth()+1, 2) + '-' + zfill(new_date.getDate(), 2);
   return '';  // no error
   };
-AibDate.prototype.date_to_string = function(date, date_obj, format) {
+AibDate.prototype.date_to_string = function(date, value, format) {
   var output = '';
-  if (date_obj === null)
+  if (value === '')
     if (format === date.display_format)
       return '';
     else
       return date.blank;
+  var dt = value.split('-');
+  var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
   for (var i=0, l=format.length; i<l; i++) {
     if (format[i] === '%') {
       switch(format[i+1]) {
@@ -605,7 +648,7 @@ AibDate.prototype.test_literal = function(date, pos) {
   return false;
   };
 AibDate.prototype.show_cal = function(date) {
-  if (!date.get_amendable())
+  if (!date.amendable())
     return;
   show_cal(date, date.current_value, this.after_cal);
   date.selected = false;
@@ -617,37 +660,52 @@ AibDate.prototype.after_cal = function(date, new_date) {
   setTimeout(function() {date.focus()}, 0);
   };
 AibDate.prototype.handle_bs = function(date) {
-  var inp = date.childNodes[0];
+  if (date.childNodes.length)  // 'date' is a gui_obj
+    var inp = date.childNodes[0];
+  else  // 'date' is a grid_obj
+    var inp = date;
   if (date.pos > 0) {
-    date.pos -= 1;
-    while (this.test_literal(date, date.pos))
+
+    while (this.test_literal(date, date.pos-1))
       date.pos -= 1;
+    date.pos -= 1;
     inp.value =
       inp.value.substring(0, date.pos) + ' ' +
       inp.value.substring(date.pos+1);
+
+//    date.pos -= 1;
+//    while (this.test_literal(date, date.pos))
+//      date.pos -= 1;
+//    inp.value =
+//      inp.value.substring(0, date.pos) + ' ' +
+//      inp.value.substring(date.pos+1);
     };
   date.selected = false;
   };
 AibDate.prototype.handle_del = function(date) {
-  var inp = date.childNodes[0];
-  inp.value =
-    inp.value.substring(0, date.pos) + ' ' +
-    inp.value.substring(date.pos+1);
+  if (date.childNodes.length)  // 'date' is a gui_obj
+    var inp = date.childNodes[0];
+  else  // 'date' is a grid_obj
+    var inp = date;
+  if (!this.test_literal(date, date.pos))
+    inp.value =
+      inp.value.substring(0, date.pos) + ' ' +
+      inp.value.substring(date.pos+1);
   date.selected = false;
   };
 AibDate.prototype.handle_left = function(date) {
   if (date.pos > 0) {
     date.pos -= 1;
-    while (this.test_literal(date, date.pos))
-      date.pos -= 1;
+//    while (this.test_literal(date, date.pos-1))
+//      date.pos -= 1;
     };
   date.selected = false;
   };
 AibDate.prototype.handle_right = function(date) {
   if (date.pos < date.blank.length) {
     date.pos += 1;
-    while (this.test_literal(date, date.pos))
-      date.pos += 1;
+//    while (this.test_literal(date, date.pos-1))
+//      date.pos += 1;
     };
   date.selected = false;
   };
@@ -671,7 +729,10 @@ AibDate.prototype.handle_end = function(date) {
 //    };
 //  };
 AibDate.prototype.handle_keyCode = function(date, keyCode) {
-  var inp = date.childNodes[0];
+  if (date.childNodes.length)  // 'date' is a gui_obj
+    var inp = date.childNodes[0];
+  else  // 'date' is a grid_obj
+    var inp = date;
   if (date.selected) {
     inp.value = date.blank;
     date.pos = 0;
@@ -686,7 +747,10 @@ AibDate.prototype.handle_keyCode = function(date, keyCode) {
     date.pos += 1;
   };
 AibDate.prototype.onkey = function(date, e) {
-  var inp = date.childNodes[0];
+  if (date.childNodes.length)  // 'date' is a gui_obj
+    var inp = date.childNodes[0];
+  else  // 'date' is a grid_obj
+    var inp = date;
   // allow 'space' (32) for use as 'date expander'
   if (e.keyCode < 33 && e.keyCode !== 8)
     return true;
@@ -741,29 +805,30 @@ AibDate.prototype.get_value_for_server = function(date) {
   if (date.current_value === date.form_value)
     return null;  // no change
   var value = date.current_value;
-  if (value === null)
-    return ''
-  else
-    return value.getFullYear() + '-' + (zfill(value.getMonth()+1, 2))
-      + '-' + zfill(value.getDate(), 2);
+//  if (value === null)
+//    return ''
+//  else
+//    return value.getFullYear() + '-' + (zfill(value.getMonth()+1, 2))
+//      + '-' + zfill(value.getDate(), 2);
+  return value;
   };
 AibDate.prototype.set_value_from_server = function(date, value) {
   var inp = date.childNodes[0];
   var dsp = date.childNodes[1];
   if (value === '') {
-    date.current_value = null;
+    date.current_value = '';
     inp.value = '';
     dsp.text.data = '';
     }
   else {
-    var dt = value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    if (date_obj !== date.current_value) {
-      date.current_value = date_obj;
+//    var dt = value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+    if (value !== date.current_value) {
+      date.current_value = value;
       if (inp.style.display === 'none')
-        dsp.text.data = this.date_to_string(date, date_obj, date.display_format);
+        dsp.text.data = this.date_to_string(date, value, date.display_format);
       else
-        inp.value = this.date_to_string(date, date_obj, date.input_format);
+        inp.value = this.date_to_string(date, value, date.input_format);
       };
     };
   date.form_value = date.current_value;
@@ -776,13 +841,13 @@ AibDate.prototype.set_prev_from_server = function(date, value) {
     dsp.text.data = '';
     }
   else {
-    var dt = value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    if (date_obj !== date.current_value) {
+//    var dt = value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+    if (value !== date.current_value) {
       if (inp.style.display === 'none')
-        dsp.text.data = this.date_to_string(date, date_obj, date.display_format);
+        dsp.text.data = this.date_to_string(date, value, date.display_format);
       else
-        inp.value = this.date_to_string(date, date_obj, date.input_format);
+        inp.value = this.date_to_string(date, value, date.input_format);
       };
     };
   };
@@ -799,17 +864,18 @@ AibDate.prototype.reset_cell_value = function(cell) {
 //  if (!(/\S/.test(value)))  // if cannot find a non-whitespace character
 //    value = '\xa0';  // replace with &nbsp
 
-  // *** value format is 'yyyy-mm-dd ***
-  if (value === '') {
-    var date_obj = null;
-    }
-  else {
-    var dt = value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    };
+//  // *** value format is 'yyyy-mm-dd ***
+//  if (value === '') {
+//    var date_obj = null;
+//    }
+//  else {
+//    var dt = value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+//    };
+//  cell.current_value = date_obj;
 
   var date = cell.input;
-  value = this.date_to_string(date, date_obj, date.display_format);
+  value = this.date_to_string(date, value, date.display_format);
   cell.text_node.data = value;
   };
 AibDate.prototype.before_cell_lost_focus = function(date) {
@@ -823,36 +889,39 @@ AibDate.prototype.before_cell_lost_focus = function(date) {
   return true;
   };
 AibDate.prototype.set_cell_value_got_focus = function(cell) {
-  var value = cell.current_value;
+//  var date_obj = cell.current_value;
   // *** value format is 'yyyy-mm-dd ***
-  if (value === '') {
-    var date_obj = null;
-    }
-  else {
-    var dt = value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    };
+//  if (value === '') {
+//    var date_obj = null;
+//    }
+//  else {
+//    var dt = value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+//    };
 
   var date = cell.input;
-  value = this.date_to_string(date, date_obj, date.input_format);
+  value = this.date_to_string(date, cell.current_value, date.input_format);
 //  if (!(/\S/.test(value)))  // if cannot find a non-whitespace character
 //    value = '\xa0';  // replace with &nbsp
   cell.text_node.data = value;
   };
+AibDate.prototype.set_cell_dflt_val = function(cell, value) {
+  cell.text_node.data = this.date_to_string(date, value, date.input_format);
+  };
 AibDate.prototype.set_cell_value_lost_focus = function(cell, value) {
   cell.current_value = value;  // save for 'got_focus' and 'edit_cell'
 
-  // *** value format is 'yyyy-mm-dd ***
-  if (value === '') {
-    var date_obj = null;
-    }
-  else {
-    var dt = value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    };
+//  // *** value format is 'yyyy-mm-dd ***
+//  if (value === '') {
+//    var date_obj = null;
+//    }
+//  else {
+//    var dt = value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+//    };
 
   var date = cell.input;
-  value = this.date_to_string(date, date_obj, date.display_format);
+  value = this.date_to_string(date, value, date.display_format);
 //  if (!(/\S/.test(value)))  // if cannot find a non-whitespace character
 //    value = '\xa0';  // replace with &nbsp
   cell.text_node.data = value;
@@ -864,7 +933,8 @@ AibDate.prototype.get_cell_value_for_server = function(cell) {
 //  if (value === null)
 //    return ''
 //  else
-//    return value.getFullYear() + '-' + (+value.getMonth()+1) + '-' + value.getDate();
+//    return value.getFullYear() + '-' + (zfill(value.getMonth()+1, 2))
+//      + '-' + zfill(value.getDate(), 2);
   return value;
   };
 AibDate.prototype.start_edit = function(input, current_value, keyCode) {  // called from grid
@@ -891,47 +961,45 @@ AibDate.prototype.start_edit = function(input, current_value, keyCode) {  // cal
     };
   };
 AibDate.prototype.convert_prev_cell_value = function(cell, prev_value) {
-  if (prev_value === '') {
-    var date_obj = null;
-    }
-  else {
-    var dt = prev_value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    };
+//  if (prev_value === '') {
+//    var date_obj = null;
+//    }
+//  else {
+//    var dt = prev_value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+//    };
   var date = cell.input;
-  prev_value = this.date_to_string(date, date_obj, date.input_format);
+  prev_value = this.date_to_string(date, prev_value, date.input_format);
 //  if (!(/\S/.test(prev_value)))  // if cannot find a non-whitespace character
 //    prev_value = '\xa0';  // replace with &nbsp
   return prev_value;
   };
 AibDate.prototype.grid_show_cal = function(date) {
-  var value = date.cell.current_value;
+  var date_obj = date.cell.current_value;
   // *** value format is 'yyyy-mm-dd ***
-  if (value === '') {
-    var date_obj = null;
-    }
-  else {
-    var dt = value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    };
+//  if (value === '') {
+//    var date_obj = null;
+//    }
+//  else {
+//    var dt = value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+//    };
   show_cal(date, date_obj, this.grid_after_cal);
   date.selected = false;
   };
 AibDate.prototype.grid_after_cal = function(date, new_date) {
   // to investigate -
-  // 1. is row_amended always true? what if no change?
+  // 1. is grid_amended always true? what if no change?
   // 2. alternatively, could call start_edit
   //    slightly more consistent with (e.g.) backslash, and allows esc to reset
   var cell = date.cell;
   if (new_date != null) {  // else keep old date
-    cell.current_value =
-      new_date.getFullYear() + '-' + zfill((new_date.getMonth()+1), 2)
-        + '-' + zfill(new_date.getDate(), 2);
-    cell.grid.row_amended = true;
-    if (cell.grid.grid_frame !== null)
-      cell.grid.grid_frame.frame_amended = true;
+    cell.current_value = new_date;
+//      new_date.getFullYear() + '-' + zfill((new_date.getMonth()+1), 2)
+//        + '-' + zfill(new_date.getDate(), 2);
+    cell.grid.set_amended(true);
     };
-  this.set_cell_value_got_focus(cell);
+  date.aib_obj.set_cell_value_got_focus(cell);
   setTimeout(function() {cell.grid.focus()}, 0);
   };
 
@@ -940,7 +1008,7 @@ AibDate.prototype.grid_after_cal = function(date, new_date) {
 ////////////////////
 function AibBool() {};
 AibBool.prototype = new AibCtrl();
-AibBool.prototype.onfocus = function(bool) {
+AibBool.prototype.got_focus = function(bool) {
   bool.has_focus = true;
   if (bool.mouse_down)
     return;  // will set focus from onclick()
@@ -950,10 +1018,18 @@ AibBool.prototype.after_got_focus = function(bool) {
   bool.style.border = '1px solid black';
   if (bool.frame.form.focus_from_server)
     bool.className = 'error_background'
-  else if (!bool.get_amendable())
+  else if (!bool.amendable())
     bool.className = 'readonly_background';
   else
     bool.className = 'focus_background';
+  };
+AibBool.prototype.set_dflt_val = function(bool, value) {
+  // don't think this will work
+  // if user tabs off, how do we know value has changed?
+  if (value === '1')
+    this.draw_chk(bool)
+  else
+    this.draw_unchk(bool);
   };
 AibBool.prototype.before_lost_focus = function(bool) {
   return true;
@@ -979,7 +1055,7 @@ AibBool.prototype.after_lost_focus = function(bool) {
 /*
 AibBool.prototype.onclick = function(bool) {
   if (bool.frame.form.disable_count) return false;
-  if (!bool.get_amendable()) return false;
+  if (!bool.amendable()) return false;
 //  if (bool.frame.form.current_focus !== bool) {
 //    if (bool.has_focus)
 //      got_focus(bool);  // call lost_focus(), got_focus()
@@ -987,7 +1063,7 @@ AibBool.prototype.onclick = function(bool) {
 //      bool.focus();  // set focus on bool first
 //    };
 //  bool.focus();  // in case it does not have focus - if it does, nothing will happen
-//  if (bool.frame.frame_amended && !bool.frame.form.focus_from_server) {
+//  if (bool.frame.amended() && !bool.frame.form.focus_from_server) {
 //    var args = [bool.ref];
 //    send_request('got_focus', args);
 //    };
@@ -999,7 +1075,7 @@ AibBool.prototype.onclick = function(bool) {
   };
 */
 AibBool.prototype.ondownkey = function(bool, e) {
-  if (!bool.get_amendable())
+  if (!bool.amendable())
     return;
   if (e.keyCode === 32)
     this.chkbox_change(bool);
@@ -1025,7 +1101,7 @@ AibBool.prototype.chkbox_change = function(bool) {
 
   var args = [bool.ref];
   send_request('cb_checked', args);
-  bool.frame.frame_amended = true;
+  bool.frame.set_amended(true);
   bool.current_value = bool.value;
   };
 //AibBool.prototype.data_changed = function(bool, value) {
@@ -1127,9 +1203,7 @@ AibBool.prototype.grid_chkbox_change = function(cell, row) {
   var grid = cell.grid;
   var args = [cell.input.ref, row];
   send_request('cell_cb_checked', args);
-  grid.row_amended = true;
-  if (grid.grid_frame !== null)
-    grid.grid_frame.frame_amended = true;
+  grid.set_amended(true);
   };
 
 if (window.SVGSVGElement === undefined) {  // no svg - use vml (IE8)
@@ -1177,7 +1251,7 @@ AibChoice.prototype = new AibCtrl();
 AibChoice.prototype.after_got_focus = function(choice) {
   var inp = choice.childNodes[0];
   var dsp = choice.childNodes[1];
-  if (!choice.get_amendable()) {
+  if (!choice.amendable()) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -1367,7 +1441,7 @@ AibChoice.prototype.create_dropdown = function(choice) {
   return dropdown;
   };
 AibChoice.prototype.onkey = function(choice, e) {
-  if (!choice.get_amendable())
+  if (!choice.amendable())
     return;
   if (e.keyCode === 32) {  // space
     choice.on_selection = this.after_selection;
@@ -1510,7 +1584,7 @@ AibChoice.prototype.get_cell_value_for_server = function(cell) {
   };
 AibChoice.prototype.grid_create_dropdown = function(cell) {
   choice = cell.input;
-  if (!choice.get_amendable())
+  if (!choice.amendable())
     return;
   cell.parentNode.appendChild(choice);
   choice.cell = cell;
@@ -1522,7 +1596,7 @@ AibChoice.prototype.grid_create_dropdown = function(cell) {
   };
 AibChoice.prototype.grid_after_selection = function(choice, option_selected) {
   // to investigate -
-  // 1. is row_amended always true? what if no change?
+  // 1. is grid_amended always true? what if no change?
   // 2. alternatively, could call start_edit
   //    slightly more consistent with (e.g.) backslash, and allows esc to reset
   var cell = choice.cell;
@@ -1530,9 +1604,7 @@ AibChoice.prototype.grid_after_selection = function(choice, option_selected) {
     cell.current_value = choice.data[option_selected];
     cell.pos = option_selected;
     cell.text_node.data = choice.values[option_selected];
-    cell.grid.row_amended = true;
-    if (cell.grid.grid_frame !== null)
-      cell.grid.grid_frame.frame_amended = true;
+    cell.grid.set_amended(true);
     };
   };
 
@@ -1544,7 +1616,7 @@ AibSpin.prototype = new AibCtrl();
 AibSpin.prototype.after_got_focus = function(spin) {
   var inp = spin.childNodes[0];
   var dsp = spin.childNodes[1];
-  if (!spin.get_amendable()) {
+  if (!spin.amendable()) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -1556,7 +1628,7 @@ AibSpin.prototype.before_lost_focus = function(spin) {
 AibSpin.prototype.after_lost_focus = function(spin) {
   var inp = spin.childNodes[0];
   var dsp = spin.childNodes[1];
-  if (!spin.get_amendable()) {
+  if (!spin.amendable()) {
     dsp.style.border = '1px solid darkgrey';
     dsp.style.background = 'transparent';
     dsp.txt.style.background = '#f5f5f5';  // very light grey
@@ -1652,7 +1724,7 @@ AibSpin.prototype.set_value_from_server = function(spin, value) {
 ////////////////////
 function AibSxml() {};
 AibSxml.prototype = new AibCtrl();
-AibSxml.prototype.onfocus = function(sxml) {
+AibSxml.prototype.got_focus = function(sxml) {
   sxml.has_focus = true;
   if (sxml.mouse_down)
     return;  // will set focus from onclick()
@@ -1663,7 +1735,7 @@ AibSxml.prototype.after_got_focus = function(sxml) {
   if (sxml.frame.form.focus_from_server)
     //sxml.className = 'error_background'
     sxml.style.background = sxml.bg_error;
-  else if (!sxml.get_amendable())
+  else if (!sxml.amendable())
     sxml.style.background = sxml.bg_disabled;
   else
     sxml.style.background = sxml.bg_focus;
@@ -1699,7 +1771,7 @@ AibSxml.prototype.popup = function(sxml) {
   sxml_popup(sxml);
 //  var args = [sxml.ref];
 //  send_request('sxml_checked', args);
-//  sxml.frame.frame_amended = true;
+//  sxml.frame.set_amended(true);
   };
 AibSxml.prototype.data_changed = function(sxml) {
   return (sxml.current_value !== sxml.form_value);
@@ -1752,13 +1824,11 @@ AibSxml.prototype.grid_popup = function(cell, row) {
 //  var grid = cell.grid;
 //  var args = [cell.input.ref, row];
 //  send_request('cell_sxml_checked', args);
-//  grid.row_amended = true;
+//  grid.set_amended(true);
   };
 AibSxml.prototype.grid_popup_callback = function(cell, row) {
   cell.current_value = cell.value;
-  cell.grid.row_amended = true;
-  if (cell.grid.grid_frame !== null)
-    cell.grid.grid_frame.frame_amended = true;
+  cell.grid.set_amended(true);
   };
 
 ////////////////////
@@ -1766,7 +1836,7 @@ AibSxml.prototype.grid_popup_callback = function(cell, row) {
 ////////////////////
 function AibDummy() {};
 AibDummy.prototype = new AibCtrl();
-AibDummy.prototype.onfocus = function(dummy) {
+AibDummy.prototype.got_focus = function(dummy) {
   if (dummy.frame.form.focus_from_server) {
     dummy.frame.form.tabdir = -1;  // dummy failed vld, set focus on prev field
     dummy.frame.form.focus_from_server = false;
@@ -1774,7 +1844,7 @@ AibDummy.prototype.onfocus = function(dummy) {
   got_focus(dummy);
   };
 AibDummy.prototype.after_got_focus = function(dummy) {
-//  if (dummy.frame.frame_amended)
+//  if (dummy.frame.amended())
 //    callbacks.push([this, this.go_to_next, dummy]);
 //  else {
 //    that = this;

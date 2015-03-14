@@ -63,13 +63,13 @@
     <!-- button_row template="Setup_Form"/ -->
     <button_row validate="true">
       <button btn_id="btn_ok" btn_label="Ok" lng="60"
-          btn_enabled="true" btn_validate="true" btn_default="true" btn_action="
+          btn_enabled="true" btn_validate="true" btn_default="true" action="
         <<action>>
           <<end_form state=`completed`/>>
         <</action>>
       "/>
       <button btn_id="btn_can" btn_label="Cancel" lng="60"
-          btn_enabled="true" btn_validate="false" btn_default="false" btn_action="
+          btn_enabled="true" btn_validate="false" btn_default="false" action="
         <<action>>
           <<end_form state=`cancelled`/>>
         <</action>>

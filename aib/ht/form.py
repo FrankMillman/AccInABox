@@ -18,6 +18,7 @@ import ht.gui_grid
 import ht.gui_tree
 import ht.form_xml
 import ht.templates
+from ht.default_xml import get_form_dflt
 from errors import AibError
 from start import log, debug
 
@@ -142,8 +143,8 @@ class Form:
         """
 
         self.data_inputs = data_inputs
-
         self.parent = parent
+        self.form = self
 
     def add_obj(self, parent, obj, add_to_list=True):
         ref = next(self.obj_id)
@@ -184,6 +185,13 @@ class Form:
             form_defn = form_defns[formdefn_company]
             form_defn.init()
             form_defn.select_row({'form_name': self.form_name})
+            if not form_defn.exists:
+                formview_obj = self.data_inputs.get('formview_obj')
+                if formview_obj is not None:
+                    if formview_obj.db_table.defn_company != formdefn_company:
+                        form_defn = form_defns[formview_obj.db_table.defn_company]
+                        form_defn.init()
+                        form_defn.select_row({'form_name': self.form_name})
             if not form_defn.exists:
                 del self.root.form_list[-1]
                 raise AibError(head='Form {}'.format(self.form_name),
@@ -369,8 +377,8 @@ class Form:
             company = obj_xml.get('company', self.company)
             table_name = obj_xml.get('table_name')
 # don't think this is used
-            if table_name == '{table_name}':
-                table_name = self.table_name
+#           if table_name == '{table_name}':
+#               table_name = self.table_name
 
             fkey = obj_xml.get('fkey')
             if fkey is not None:
@@ -390,6 +398,9 @@ class Form:
                 print(etree.tostring(hooks, encoding=str, pretty_print=True))
 #               for hook in hooks:
 #                   db_obj.setup_hook(hook)
+            cursor = obj_xml.get('cursor')
+            if cursor is not None:
+                db_obj.default_cursor = cursor
 
     def setup_mem_objects(self, mem_objects):
         if mem_objects is None:
@@ -494,6 +505,24 @@ class Form:
 #                   show_obj_list(sub_obj)
 #       show_obj_list(self)
 
+        form_methods = form_defn.find('form_methods')
+        if form_methods is not None:
+            for method in form_methods.findall('method'):
+                method_name = method.get('name')
+                method = etree.fromstring(method.get('action'), parser=parser)
+                if method_name == 'on_start_form':
+                    yield from ht.form_xml.exec_xml(self, method)  #, clear_dbevents=True)
+
+        on_start_form = form_defn.find('on_start_form')
+        if on_start_form is not None:
+            action = etree.fromstring(on_start_form.get('action'), parser=parser)
+            yield from ht.form_xml.exec_xml(self, action)
+        else:
+            yield from self.continue_form()
+
+    @asyncio.coroutine
+    def continue_form(self):
+        frame = self.obj_list[0]  # main frame
         try:
             yield from frame.restart_frame()
         except AibError:
@@ -655,6 +684,8 @@ class Frame:
 
         self.form = form
         self.session = form.session
+        self.db_session = form.db_session
+        self.company = form.company
         self.ctrl_grid = ctrl_grid
         self.obj_list = []
         self.subtype_records = {}
@@ -668,9 +699,9 @@ class Frame:
         self.grids = []  # list of grids created for this frame
         self.flds_notified = []  # list of db fields notified for redisplay
 
-        self.on_start_form = []
-        self.on_clean_set = set()
+        self.on_start_frame = []
         self.on_read_set = set()
+        self.on_clean_set = set()
         self.on_amend_set = set()
         self.methods = {}
 
@@ -737,33 +768,41 @@ class Frame:
         #   per toolbar, but you could have > 1 with type == 'btn'
         # leave for now, wait till it happens
         #
-        toolbar_dict = OrderedDict()
+        # it has happened [2015-03-04]
+        # setup_periods has two 'img'-type tools
+        # for now, assume you would never customise a template tool
+        # remove OrderedDict, load the toolbar directly
+#       toolbar_dict = OrderedDict()
+#       for tool in toolbar.findall('tool'):
+#           tool_type = tool.get('type')
+#           toolbar_dict[tool_type] = tool
+        tool_list = []
+#       for tool_type in toolbar_dict:
+#           tool = toolbar_dict[tool_type]
         for tool in toolbar.findall('tool'):
             tool_type = tool.get('type')
-            toolbar_dict[tool_type] = tool
-        tool_list = []
-        for tool_type in toolbar_dict:
-            if tool_type in ('nav', 'ins_row', 'del_row'):
+#           if tool_type in ('nav', 'ins_row', 'del_row'):
+            if tool_type == 'nav':
                 if self.ctrl_grid is None:
                     continue  # cannot create these without ctrl_grid
-            tool = toolbar_dict[tool_type]
-#           # if a template is specified, insert template steps
-#           template_name = tool.get('template')
-#           if template_name is not None:
-#               template = getattr(ht.templates, template_name)  # class
-#               xml = getattr(template, tool_type)  # class attribute
-#               tool = etree.fromstring(xml, parser=parser)
-            if tool_type == 'nav':
-                tool_list.append({'type': 'nav'})
-            else:  # selected/formview/ins_row/del_row/btn
+#           if tool_type == 'nav':
+                tool_attr = {'type': 'nav'}
+            elif tool_type == 'text':
+                tb_text = ht.gui_objects.GuiTbText(self, tool)
+                tool_attr = {'type': tool_type, 'ref':  tb_text.ref,
+                    'lng': tool.get('lng')}
+            elif tool_type in ('btn', 'img'):
                 tb_btn = ht.gui_objects.GuiTbButton(self, tool)
                 tool_attr = {'type': tool_type, 'ref':  tb_btn.ref,
-                    'tip': tool.get('tip')}
-                if tool_type == 'del_row':
-                    tool_attr['confirm'] = tool.get('confirm') == 'true'
-                elif tool_type == 'btn':
-                    tool_attr['label'] = tool.get('label')
-                tool_list.append(tool_attr)
+                    'tip': tool.get('tip'), 'name': tool.get('name'),
+                    'label': tool.get('label'), 'shortcut': tool.get('shortcut')}
+#           else:  # selected/formview/ins_row/del_row
+#               tool_attr = {'type': tool_type, 'tip': tool.get('tip')}
+#               if tool_type == 'del_row':
+#                   tool_attr['confirm'] = tool.get('confirm') == 'true'
+#               elif tool_type == 'btn':
+#                   tool_attr['label'] = tool.get('label')
+            tool_list.append(tool_attr)
 #           if tool_type == 'nav':
 #               ref = None  # can derive ref from ctrl_grid
 #           else:
@@ -822,6 +861,7 @@ class Frame:
                 # but could also use 'display' field!
                 # alternatively, could drop 'display' field and use 'readonly'
                 readonly = (element.get('readonly') == 'true')
+                skip = (element.get('skip') == 'true')
                 reverse = (element.get('reverse') == 'true')
                 lng = element.get('lng')
                 if lng is not None:
@@ -848,7 +888,7 @@ class Frame:
                             choices.append(None)
                         choices.append(fld.choices)
                 height = element.get('height')
-                gui_obj = gui_ctrl(self, fld, reverse, readonly,
+                gui_obj = gui_ctrl(self, fld, readonly, skip, reverse,
                     choices, lkup, pwd, lng, height, gui)
                 #gui_obj = gui_ctrl(self, fld, element, readonly, gui)
                 fld.notify_form(gui_obj)
@@ -856,6 +896,16 @@ class Frame:
 #               self.obj_list.append(gui_obj)
                 if not fld.col_defn.allow_amend:
                     self.non_amendable.append(gui_obj)
+
+                before = element.get('before')
+                if before is not None:
+                    gui_obj.before_input = etree.fromstring(
+                        before, parser=parser)
+
+                default = element.get('default')
+                if default is not None:
+                    default = (self, etree.fromstring(default, parser=parser))
+                gui_obj.form_dflt = default
 
                 validations = element.get('validation')
                 if validations is not None:
@@ -895,10 +945,10 @@ class Frame:
                 must_validate = (element.get('btn_validate') == 'true')
                 default = (element.get('btn_default') == 'true')
                 help_msg = element.get('help_msg', '')
-                btn_action = etree.fromstring(
-                    element.get('btn_action'), parser=parser)
+                action = etree.fromstring(
+                    element.get('action'), parser=parser)
                 button = ht.gui_objects.GuiButton(self, gui, btn_label, lng,
-                    enabled, must_validate, default, help_msg, btn_action)
+                    enabled, must_validate, default, help_msg, action)
                 self.btn_dict[element.get('btn_id')] = button
 
                 validation = element.get('validation')
@@ -982,10 +1032,10 @@ class Frame:
             must_validate = (btn.get('btn_validate') == 'true')
             default = (btn.get('btn_default') == 'true')
             help_msg = btn.get('help_msg', '')
-            btn_action = etree.fromstring(
-                btn.get('btn_action'), parser=parser)
+            action = etree.fromstring(
+                btn.get('action'), parser=parser)
             button = ht.gui_objects.GuiButton(self, button_list, btn_label,
-                lng, enabled, must_validate, default, help_msg, btn_action)
+                lng, enabled, must_validate, default, help_msg, action)
             self.btn_dict[btn_id] = button
         if button_list:
             gui.append(('button_row', button_list))
@@ -1026,56 +1076,22 @@ class Frame:
             obj_name = method.get('obj_name')  #, self.main_obj_name)
             method = etree.fromstring(method.get('action'), parser=parser)
 
-#           # if a template is specified, insert template steps
-#           template_name = method.get('template')
-#           if template_name is not None:
-#               template = getattr(ht.templates, template_name)  # class
-#               xml = getattr(template, method_name)  # class attribute
-##              method = etree.fromstring(xml.replace('{obj_name}', obj_name),
-##                  parser=parser)
-#               # insert template steps at the top of method
-##              method[:0] = etree.fromstring(
-##                  xml.replace('{obj_name}', obj_name), parser=parser)[0:]
-#               xml = etree.fromstring(
-#                   xml.replace('{obj_name}', obj_name), parser=parser)
-##              obj_name = xml.get('obj_name', self.main_obj_name)
-#               method[:0] = xml[0:]  # insert template methods before any others
-#               del method.attrib['template']  # to prevent re-substitution
-#               method = etree.fromstring(
-#                   xml.replace('{obj_name}', obj_name), parser=parser)
-
-            if method_name == 'on_start_form':
-                self.on_start_form.append(method)
-            elif method_name == 'on_clean':  # set up callback on db_object
-#               obj_name = method.get('obj_name')
+            if method_name == 'on_start_frame':
+                self.on_start_frame.append(method)
+            elif method_name == 'on_read':  # set up callback on db_object
                 db_obj = self.data_objects[obj_name]
-#               if db_obj not in self.on_clean_dict:
-#                   db_obj.add_clean_func(self)
-#                   self.on_clean_dict[db_obj] = []
-#               self.on_clean_dict[db_obj].append(method)
+                db_obj.add_read_func((self, method))
+                self.on_read_set.add(db_obj)
+            elif method_name == 'on_clean':  # set up callback on db_object
+                db_obj = self.data_objects[obj_name]
                 db_obj.add_clean_func((self, method))
                 self.on_clean_set.add(db_obj)
             elif method_name == 'on_amend':  # set up callback on db_object
-#               obj_name = method.get('obj_name')
                 db_obj = self.data_objects[obj_name]
-#               if db_obj not in self.on_amend_dict:
-#                   db_obj.add_amend_func(self)
-#                   self.on_amend_dict[db_obj] = []
-#               self.on_amend_dict[db_obj].append(method)
                 db_obj.add_amend_func((self, method))
                 self.on_amend_set.add(db_obj)
-            elif method_name == 'on_read':  # set up callback on db_object
-#               obj_name = method.get('obj_name')
-                db_obj = self.data_objects[obj_name]
-#               if db_obj not in self.on_read_dict:
-#                   db_obj.add_read_func(self)
-#                   self.on_read_dict[db_obj] = []
-#               self.on_read_dict[db_obj].append(method)
-                db_obj.add_read_func((self, method))
-                self.on_read_set.add(db_obj)
             else:
                 self.methods[method_name] = method
-#               print('METH', self, method_name, etree.tostring(method, encoding=str))
 
     def setup_subtype(self, element, subtype, lng, gui):
         obj_name, col_name = subtype.split('.')
@@ -1126,6 +1142,7 @@ class Frame:
                 gui_ctrl = ht.gui_objects.gui_ctrls[data_type]
 
                 readonly = False
+                skip = False
                 reverse = False
                 if data_type == 'BOOL':
                     lng = None
@@ -1134,7 +1151,7 @@ class Frame:
                 pwd = ''
                 height = None
 
-                gui_obj = gui_ctrl(self, fld, reverse, readonly,
+                gui_obj = gui_ctrl(self, fld, readonly, skip, reverse,
                     choices, lkup, pwd, lng, height, subtype_gui)
                 fld.notify_form(gui_obj)
                 self.flds_notified.append((fld, gui_obj))
@@ -1301,6 +1318,10 @@ class Frame:
         if obj.must_validate:  # eg not Cancel button
             yield from self.validate_data(obj.pos)
 
+        if obj.form_dflt is not None:
+            dflt_val = yield from get_form_dflt(obj, obj.form_dflt)
+            self.session.request.send_dflt_val(obj.ref, dflt_val)
+
 #       the following applies to col_defn.dflt_val
 #       it is no longer required, as we set this during init()
 #       however, it *may* apply when we implement 'default business rules'
@@ -1348,13 +1369,20 @@ class Frame:
 
         if self.frame_type == 'grid_frame':
             if self.ctrl_grid.last_vld < (len(self.ctrl_grid.obj_list)-1):
-                yield from self.ctrl_grid.validate_all(grid_only=True)
+                # validate grid before moving to grid_frame
+                yield from self.ctrl_grid.validate_data(
+                    len(self.ctrl_grid.obj_list))
 
         for i in range(self.last_vld+1, pos):
             if self.last_vld > i:  # after 'read', last_vld set to 'all'
                 break
 
             obj = self.obj_list[i]
+
+            if i < (pos-1):  # object 'skipped' by user
+                if obj.form_dflt is not None:
+                    dflt_val = yield from get_form_dflt(obj, obj.form_dflt)
+                    self.temp_data[obj.ref] = dflt_val
 
             try:
                 self.last_vld += 1  # preset, for 'after_input'
@@ -1382,7 +1410,11 @@ class Frame:
     @asyncio.coroutine
     def validate_all(self, save=False):
 #       print('validate all', len(self.form.obj_list))
-        yield from self.validate_data(len(self.obj_list), save)
+# debatable whether 'save' should be passed to validate_data()
+# if yes, we automatically save any 'dirty' children
+# if no, we ask user whether to save
+#       yield from self.validate_data(len(self.obj_list), save)
+        yield from self.validate_data(len(self.obj_list))
         if save:  # save db_obj automatically
             yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
 
@@ -1408,10 +1440,10 @@ class Frame:
     def restart_frame(self, set_focus=True):
         for grid in self.grids:
             # close any open cursors [2014-09-25]
-            # in on_start_form we may manually create the table
+            # in on_start_frame we may manually populate an in-memory table
             # if cursor is open, it needs a cursor_row, but we don't have one
             grid.db_obj.close_cursor()
-        for method in self.on_start_form:
+        for method in self.on_start_frame:
             # don't process any db_events - the form is not started yet
             yield from ht.form_xml.exec_xml(self, method, clear_dbevents=True)
         for grid in self.grids:

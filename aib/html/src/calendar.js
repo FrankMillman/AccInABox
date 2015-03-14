@@ -28,10 +28,12 @@ function show_cal(parent, current_value, callback) {
   calendar.parent = parent;
   calendar.callback = callback;
 
-  if (current_value != null)
-    var date = current_value
-  else
+  if (current_value === '')
     var date = new Date();
+  else {
+    var dt = current_value.split('-');
+    var date = new Date(dt[0], dt[1]-1, dt[2]);
+    }
   calendar.current_year = date.getFullYear();
   calendar.current_month = date.getMonth();
   calendar.current_day = date.getDate();
@@ -92,7 +94,7 @@ var frame = {}  // new Object()
 frame.obj_list = [];
 frame.form = calendar;
 frame.form.obj_dict = {};
-frame.frame_amended = false;
+frame._amended = false;
 calendar.active_frame = frame;
 
 calendar.get_dates = function(date) {
@@ -189,6 +191,9 @@ args.ref = '0';
 args.lng = 40;
 args.value = 0;
 args.help_msg = 'Month';
+args.readonly = false;
+args.amend_ok = true;
+args.allow_amend = true;
 var choices = [[0, 'Jan'], [1, 'Feb'], [2, 'Mar'], [3, 'Apr'], [4, 'May'], [5, 'Jun'],
   [6, 'Jul'], [7, 'Aug'], [8, 'Sep'], [9, 'Oct'], [10, 'Nov'], [11, 'Dec']];
 args.choices = [null, choices];
@@ -206,6 +211,9 @@ args.ref = '1';
 args.lng = 40;
 args.value = 0;
 args.help_msg = 'Year';
+args.readonly = false;
+args.amend_ok = true;
+args.allow_amend = true;
 args.min = 1900;
 args.max = 2100;
 args.callback = calendar.onchange_yr;
@@ -391,5 +399,10 @@ calendar.close_window = function(new_date) {
   current_form.enable_controls();
   //calendar.parent.aib_obj.after_got_focus(calendar.parent);
   //setTimeout(function() {calendar.parent.focus()}, 0);
+
+  if (new_date !== null)
+    new_date = new_date.getFullYear() + '-' +
+      zfill(new_date.getMonth()+1, 2) + '-' + zfill(new_date.getDate(), 2);
+
   calendar.callback(calendar.parent, new_date);
   };

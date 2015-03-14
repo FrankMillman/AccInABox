@@ -14,20 +14,27 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
   grid.active_frame = frame;  // can be over-ridden by grid_frame
   grid.ref = json_elem.ref;
   grid.growable = json_elem.growable;
+  grid.auto_startrow = json_elem.auto_startrow;
   grid.expand_col = json_elem.expand_col;
   grid.num_grid_rows = json_elem.num_grid_rows;
   grid.has_focus = false;
-  //grid.active = false;
+  grid.start_in_progress = false;
   grid.inserted = 0;  // 0=existing row  -1=appended row  1=inserted row
-  grid.row_amended = false;
+  grid._amended = false;
   grid.num_cols = col_defns.length;
   grid.row_count = null;
   grid.form_row_count = null;
   grid.help_msg = '';
   grid.scrollbar_setup = false;
   grid.edit_in_progress = false;
+  grid.tabbing = false;
   grid.grid_frame = null;
   grid.req_save_row = false;
+  grid.kbd_shortcuts = {};
+  grid.kbd_shortcuts['normal'] = {};
+  grid.kbd_shortcuts['alt'] = {};
+  grid.kbd_shortcuts['ctrl'] = {};
+  grid.kbd_shortcuts['shift'] = {};
 
   grid.highlighted_cell = null;
   grid.highlighted_row = null;
@@ -35,12 +42,12 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
   grid.active_row = -1;
   grid.active_col = -1;
 
-  // next 5 can be over-ridden by toolbar options
-  grid.insert_ok = false;
-  grid.delete_ok = false;
-  grid.formview_ok = false;
-  grid.navigate_ok = false;
-  grid.lkup_select_ok = false;
+//  // next 5 can be over-ridden by toolbar options
+//  grid.insert_ok = false;
+//  grid.delete_ok = false;
+//  grid.formview_ok = false;
+//  grid.navigate_ok = false;
+//  grid.lkup_select_ok = false;
 
   grid.tabIndex = 0;  // so that it will accept 'focus'
 //  grid.grid_width = 0;
@@ -93,20 +100,20 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
         if (col_defn.lkup) {
           input.expander = function() {  // press Space or click ButtonTop
             var grid = this.grid;
-            if (!grid.row_amended) {
+            if (!grid.amended()) {
               var args = [grid.ref, grid.active_row, grid.inserted];
               send_request('start_row', args);
-              grid.row_amended = true;
+              grid.set_amended(true);
               };
             var args = [this.ref, this.value];
             send_request('req_lookup', args);
             };
           input.lookdown = function() {  // press Shift+Enter or click ButtonBottom
             var grid = this.grid;
-            if (!grid.row_amended) {
+            if (!grid.amended()) {
               var args = [grid.ref, grid.active_row, grid.inserted];
               send_request('start_row', args);
-              grid.row_amended = true;
+              grid.set_amended(true);
               };
             var args = [this.ref];
             send_request('req_lookdown', args);
@@ -171,9 +178,15 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
             };
           };
 
-        input.expander = input.aib_obj.grid_show_cal;
+        //input.expander = input.aib_obj.grid_show_cal;
+        input.expander = function() {
+          this.aib_obj.grid_show_cal(this);
+          };
         //input.style.width = col_defn.lng + 'px';
-        var btn_lng = 18;
+        if (col_defn.readonly === true)
+          var btn_lng = 0;
+        else
+          var btn_lng = 18;
         break;
       case 'bool':
         var input = {};  //new Object();  //document.createElement('span');
@@ -195,6 +208,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
           //var cell = this.grid.grid_rows[row-this.grid.first_grid_row].grid_cols[this.col];
           //cell.aib_obj.set_cell_value_from_server(cell, value);
           this.aib_obj.set_cell_value_from_server(this.grid, row, this.col, value);
+          this.grid.set_amended(true);
           };
         input.reset_value = function() {
           if (this.grid.active_row === -1)  // grid not yet set up
@@ -236,6 +250,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
             return
           var row = args[0], value = args[1];
           this.aib_obj.set_cell_value_from_server(this.grid, row, this.col, value);
+          //this.grid.set_amended(true);
           };
         input.reset_value = function() {
           if (this.grid.active_row === -1)  // grid not yet set up
@@ -287,9 +302,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
             // before_lost_focus() copies input.value to input.current_value
             cell.current_value = this.current_value;
             cell.text_node.data = this.value;
-            grid.row_amended = true;
-            if (grid.grid_frame !== null)
-              grid.grid_frame.frame_amended = true;
+            grid.set_amended(true);
             };
           cell.parentNode.removeChild(this);
           cell.style.display = 'inline-block';
@@ -315,6 +328,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
           //var cell = this.grid.grid_rows[row-this.grid.first_grid_row].grid_cols[this.col];
           //cell.aib_obj.set_cell_value_from_server(cell, value);
           this.aib_obj.set_cell_value_from_server(this.grid, row, this.col, value);
+          this.grid.set_amended(true);
           };
 
         var btn_lng = 18;
@@ -328,14 +342,15 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     input.readonly = col_defn.readonly;  // set in form defn
     input.allow_amend = col_defn.allow_amend;  // set in col defn
     input.amend_ok = col_defn.amend_ok;  // db permissions
+    input.skip = col_defn.skip;
     input.lng = col_defn.lng;
 
     input.set_readonly = function(state) {
       input.readonly = state;
-      input.aib_obj.set_readonly(input, state);
+      //input.aib_obj.set_readonly(input, state);
       };
 
-    input.get_amendable = function() {
+    input.amendable = function() {
       //if (!cell.input.readonly && (cell.input.allow_amend || grid.inserted)) {
       if (this.readonly) return false;
       if (!this.amend_ok) return false;
@@ -529,7 +544,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //    if (grid.highlighted_cell !== null) {
 //      var cell = grid.highlighted_cell;
 ////      if (!cell.input.readonly && (cell.input.allow_amend || grid.inserted)) {
-//      if (cell.input.get_amendable()) {
+//      if (cell.input.amendable()) {
 //        if (grid.err_flag)
 //          grid.highlighted_cell.className = 'error_background';
 //        else
@@ -542,7 +557,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     //debug3('grid got focus ' + grid.ref + ' rows=' + grid.num_data_rows
     //  + ' gridframe=' + (grid.grid_frame !== null)
     //  + ' inserted=' + grid.inserted
-    //  + ' frame_amended=' + grid.frame.frame_amended);
+    //  + ' frame_amended=' + grid.frame.amended());
     //  + ' highlighted=' + ((grid.highlighted_cell === null) ? 'none' :
     //    (grid.highlighted_cell.grid_row + '/' + grid.highlighted_cell.grid_col)));
     //DOMViewerObj = grid;
@@ -553,7 +568,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       grid.tab_to_ctrl(grid.frame.form.tabdir);
 
     if (grid.frame.send_focus_msg) {  // can be set to false in start_frame()
-      if (grid.frame.frame_amended && !grid.frame.form.focus_from_server) {
+      if (grid.frame.amended() && !grid.frame.form.focus_from_server) {
         var args = [grid.ref];
         send_request('got_focus', args);
         };
@@ -567,15 +582,19 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //      else
 //        grid.frame.form.help_msg.data = grid.obj_list[grid.active_col].help_msg;
 
+    grid.has_focus = true;
+    grid.frame.form.current_focus = grid;
+
+    if (grid.active_col !== -1) {  // else empty grid waiting for cell_set_focus
       grid.highlight_active_cell()
       grid.frame.form.help_msg.data = grid.obj_list[grid.active_col].help_msg;
+      };
 
 //      }
 //    else {
 //      var args = [grid.ref];
 //      send_request('start_grid', args);
 //      };
-    grid.has_focus = true;
     };
 //  grid.onblur = function() {
 //    if (grid.highlighted_cell !== null)
@@ -583,8 +602,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //    };
   grid.lost_focus = function() {
     //debug3('grid lost focus ' + grid.num_grid_rows +
-    //  ' row_amd=' + grid.row_amended +
-    //  ' form_amd=' + grid.frame.frame_amended);
+    //  ' row_amd=' + grid.amended() +
+    //  ' form_amd=' + grid.frame.amended());
 
       if (grid.edit_in_progress) {
         var input = grid.obj_list[grid.active_col];
@@ -595,7 +614,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     cell.highlight('blur');
 
     if (grid.frame.send_focus_msg) {  // can be set to false in start_frame()
-      if (grid.row_amended) {
+      if (grid.amended()) {
         if (cell.data_col !== null) {
           var value_for_server =
             cell.aib_obj.get_cell_value_for_server(cell);
@@ -611,9 +630,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
         };
       };
 
-    if (grid.row_amended)  // not sure about this - if we find the reason, document it
-      grid.frame.frame_amended = true;
-    if (grid.frame.frame_amended && !grid.frame.form.focus_from_server) {
+//    if (grid.amended())  // not sure about this - if we find the reason, document it
+//      grid.frame.set_amended(true);
+    if (grid.frame.amended() && !grid.frame.form.focus_from_server) {
       var value = null;
       var args = [grid.ref, value];
       send_request('lost_focus', args);
@@ -627,16 +646,18 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     // problem - on bottom row, grid.inserted == -1
     //           move to another row, it forces col to 0 - why?
     //           if we clicked on chkbox, focus shifts to col 0 - wrong!
-    //if (grid.inserted && !grid.row_amended)
+    //if (grid.inserted && !grid.amended())
     //  new_col = 0;
 
-    //debug3('req cell focus ' + new_row + '/' + new_col + ' amended=' + grid.row_amended);
+    //debug3('req ' + new_row + '/' + new_col + ' amended=' + grid.amended()
+    //  + ' data_rows=' + grid.total_rows() + ' active=' + grid.active_row
+    //  + ' save=' + grid.req_save_row + ' tabbing=' + grid.tabbing);
 
-    if (new_row === grid.num_data_rows && new_row !== grid.active_row)
+    if (new_row === grid.total_rows() && new_row !== grid.active_row)
       new_col = 0;
 
     grid.focus_from_server = false;  // pre-set
-    if (grid.row_amended) {
+    if (grid.amended()) {
       var cell = grid.active_cell;
       if (cell.data_col !== null) {
         var value_for_server =
@@ -645,20 +666,30 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
           [grid.obj_list[grid.active_col].ref, grid.active_row, value_for_server];
         send_request('cell_lost_focus', args);
         };
-      if (grid.req_save_row) {
-        var args = [grid.ref];
-        send_request('req_save_row', args);
-        grid.req_save_row = false;
-        };
-      var args =
-        [grid.obj_list[new_col].ref, new_row];
+//      if (grid.req_save_row) {
+//        var args = [grid.ref];
+//        send_request('req_save_row', args);
+//        grid.req_save_row = false;
+//        };
+      var args = [grid.obj_list[new_col].ref, new_row, grid.req_save_row];
       send_request('cell_req_focus', args);
-      }
-    else {
-//      if (callbacks.length)  // no request sent, so execute any callbacks now
-//        exec_callbacks();
-      grid.cell_set_focus(new_row, new_col);
+      grid.req_save_row = false;
+      return;
       };
+
+    if (!grid.start_in_progress) {
+      if (new_row !== grid.active_row) {
+        if (grid.grid_frame !== null || grid.auto_startrow) {
+          var args = [grid.obj_list[new_col].ref, new_row, false];
+          send_request('cell_req_focus', args);
+          return;
+          };
+        };
+      };
+
+//  if (callbacks.length)  // no request sent, so execute any callbacks now
+//    exec_callbacks();
+    grid.cell_set_focus(new_row, new_col);
     };
 
   grid.request_rows = function(first_row) {
@@ -696,13 +727,50 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 
     grid.draw_grid();
 
+/*
+    if (!grid.num_data_rows && args[3]) {
+      // always req focus when starting a new blank row
+      //   to give a chance for a dflt_val to be returned
+      var args = [grid.obj_list[0].ref, focus_row, false];
+      send_request('cell_req_focus', args);
+      grid.inserted = -1;
+      }
+    else {
+      // don't do this above
+      // reason - server will send 'cell_set_focus'
+      // if row/col = active_row/col, it returns early
+      // if there is a dflt_val, it does not get set
+      grid.active_row = focus_row;
+      grid.active_col = 0;
+      grid.active_cell = grid.grid_rows[focus_row].grid_cols[0];
+      if (grid.highlighted_cell !== null)
+        grid.highlighted_cell.highlight('clear');
+      var cell = grid.active_cell;
+      cell.highlight('blur');
+      grid.highlighted_cell = cell;
+      grid.inserted = 0;
+      };
+*/
+
+    //debug3('start grid ' + grid.ref + ' ' + grid.num_grid_rows + ' ' +
+    //  grid.num_data_rows + ' ' + grid.has_focus);
+    //debug3(JSON.stringify(grid.subset_data));
+
     if (!grid.num_data_rows && args[3])
-      grid.inserted = -1
+      grid.inserted = -1;
     else
       grid.inserted = 0;
 
-//    debug3('start grid ' + grid.num_grid_rows + ' ' + grid.num_data_rows + ' ' +
-//      grid.has_focus);
+    grid.active_row = -1;
+    grid.active_col = -1;
+    grid.set_amended(false);
+
+    // when cell gets focus, treat the same as if we had tabbed there
+    grid.tabbing = true;
+
+    grid.start_in_progress = true;  // tell set_cell_focus not to set focus on grid
+    grid.req_cell_focus(focus_row, 0);
+    grid.start_in_progress = false;
 
 /*
     grid.active_row = -1;
@@ -722,32 +790,42 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
         grid.highlighted_cell.className = 'blur_background';
 */
 
-    grid.start_row(focus_row);
-    grid.active_row = focus_row;
-    grid.active_col = 0;
-    grid.active_cell = grid.grid_rows[focus_row].grid_cols[grid.active_col];
-    if (grid.highlighted_cell !== null)
-      grid.highlighted_cell.highlight('clear');
-    var cell = grid.active_cell;
-    cell.highlight('blur');
-    grid.highlighted_cell = cell;
+//    grid.start_row(focus_row);
+//    grid.active_row = focus_row;
+//    grid.active_col = 0;
+//    grid.active_cell = grid.grid_rows[focus_row].grid_cols[0];
+//    if (grid.highlighted_cell !== null)
+//      grid.highlighted_cell.highlight('clear');
+//    var cell = grid.active_cell;
+//    cell.highlight('blur');
+//    grid.highlighted_cell = cell;
 
-//    grid.active = true;
     };
 
-  grid.cell_set_focus = function(new_row, new_col) {
+  grid.cell_set_focus = function(new_row, new_col, dflt_val) {
     // can be recd from server, or called from start_grid or req_cell_focus or grid.got_focus
 
+    if (dflt_val === undefined)
+      dflt_val = null;
 
-    // why test for focus_from_server? [2014-08-14]
-    // leave it out for now, and see what happens
-    //if (!grid.has_focus && (!grid.focus_from_server))
-    if (!grid.has_focus)
-      if (grid.offsetHeight || grid.offsetWidth)  // check if visible
-        grid.focus();
+    //debug3('cell set focus ' + grid.ref + ' ' + new_row + ' ' + new_col + ' ' +
+    //  grid.focus_from_server + ' ' + grid.active_row + ' ' + grid.active_col + ' ' +
+    //  grid.num_grid_rows + ' ' + this.start_in_progress);
 
-    //debug3('cell set focus ' + new_row + ' ' + new_col + ' ' + grid.focus_from_server +
-    //  ' ' + grid.active_row + ' ' + grid.active_col + ' ' + grid.num_grid_rows);
+// ********* is this necessary? *********
+// we have changed 'start_grid' to call req_cell_focus, which calls this function,
+//   as 99% of the functionality required is the same
+// but if the grid is not the main object, it may not have focus yet
+//   so it would be wrong to set focus, as the following lines do
+// if it is necessary, we cannot just uncomment these lines
+//   so a major rethink will be required
+// it *is* necessary [2015-02-21]
+// solution - add new flag 'start_in_progress', don't set focus if flag is true
+    if (!grid.start_in_progress)
+      if (!grid.has_focus)
+        if (grid.offsetHeight || grid.offsetWidth)  // check if visible
+          //grid.focus();  // IE8 delays setting focus :-(
+          got_focus(grid);
 
     if (new_row === -1)  // e.g. cancel_end_row
       new_row = grid.active_row;
@@ -779,7 +857,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
         cell.aib_obj.set_cell_value_lost_focus(cell, cell.current_value);
       };
 
-    //debug3('SET FOCUS ' + new_row + '/' + new_col);
+    //debug3('SET FOCUS ' + grid.active_row + '/' + grid.active_col +
+    //  ' -> ' + new_row + '/' + new_col);
 
     // ensure cell visible
     // if focus set from server, display active row in centre of grid
@@ -826,20 +905,51 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     grid.highlight_active_cell();
     var cell = grid.active_cell;
     if (cell.data_col !== null)
-      cell.aib_obj.set_cell_value_got_focus(cell);
+      if (cell.input.amendable())
+        cell.aib_obj.set_cell_value_got_focus(cell);
+      else
+        cell.aib_obj.set_cell_value_lost_focus(cell, cell.current_value);
     grid.focus_from_server = false;
     grid.err_flag = false;
 
     if (callbacks.length)  // no request sent, so execute any callbacks now
       exec_callbacks();
 
+    if (dflt_val !== null) {
+      var input = grid.obj_list[grid.active_col];
+      input.set_dflt_val(dflt_val);
+      };
+
+    if (grid.tabbing) {
+      if(grid.grid_frame === null) {  // debatable! really neede finer control
+        var input = grid.obj_list[grid.active_col];
+        if (input.skip)
+          callbacks.push([grid, grid.handle_tab]);
+        };
+      grid.tabbing = false;
+      };
+
+    };
+
+  grid.set_amended = function(state, from_grid_frame) {
+    this._amended = state;
+    if (state === true) {
+      this.frame.set_amended(true);
+      if (this.grid_frame !== null)
+        if (!from_grid_frame === true)
+          this.grid_frame.set_amended(true);  // else we loop!
+      };
+    };
+
+  grid.amended = function() {
+    return this._amended;
     };
 
   grid.set_value_from_server = function(value) {
     // only called to notify of existing record becoming 'clean'
-    grid.row_amended = false;
+    grid.set_amended(false);
     if (grid.grid_frame !== null)
-      grid.grid_frame.frame_amended = false;
+      grid.grid_frame.set_amended(false);
     };
 
   grid.recv_rows = function(args) {
@@ -861,6 +971,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
         grid.show_scrollbar();
       };
 
+    //debug3('MOVE ' + old_row + ' -> ' + new_row +
+    //  ' 1st=' + grid.first_subset_row + ' lng=' + grid.subset_data.length);
+
     if (new_row !== old_row) {
 
       // old_row is in subset_data, by definition
@@ -881,7 +994,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 
     grid.draw_grid();
     grid.inserted = 0;
-    grid.start_row(new_row, false);  // do not send 'start_row'
+    grid.start_row(new_row);
+    grid.active_cell =
+      grid.grid_rows[new_row-grid.first_grid_row].grid_cols[0];
     grid.highlight_active_cell();
     };
 
@@ -908,7 +1023,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 
     grid.draw_grid();
     grid.inserted = 1;
-    grid.start_row(row, false);  // do not send 'start_row'
+    grid.start_row(row);
+    grid.set_amended(true);
     grid.highlight_active_cell();
     };
 
@@ -938,6 +1054,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 
     grid.draw_grid();
     grid.start_row(row);
+    grid.set_amended(false);
+    grid.highlight_active_cell();
     };
 
   ///////////////////
@@ -999,31 +1117,21 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     grid.frame.obj_list[pos].focus();
     };
 
-  grid.start_row = function(row, send_start_row) {
+  grid.start_row = function(row) {
     //debug3('START ROW ' + row + ' inserted=' + grid.inserted);
-    if (send_start_row === undefined)
-      send_start_row = true;  // false if called by insert/move_row()
     if (grid.row_count !== null)
       grid.row_count.innerHTML =
         (row+1) + '/' + grid.num_data_rows;
     if (grid.form_row_count !== null)
       grid.form_row_count.innerHTML =
         (row+1) + '/' + grid.num_data_rows;
-    grid.row_amended = false;
+
+    grid.set_amended(false);
     if (grid.grid_frame !== null)
-      grid.grid_frame.frame_amended = false;
+      grid.grid_frame.set_amended(false);
+
     if (grid.grid_frame !== null)
       grid.highlight_active_row();
-    if (send_start_row) {
-      if (grid.grid_frame !== null && grid.total_rows() > 0) {
-        if (grid.inserted)  // -1=appended row  1=inserted row
-          grid.grid_frame.frame_amended = true;
-        else
-          grid.grid_frame.frame_amended = false;
-        var args = [grid.ref, row, grid.inserted];
-        send_request('start_row', args);
-        };
-      };
     };
 
   grid.draw_grid = function() {
@@ -1077,8 +1185,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
           debug3('ERR ' + row + ' ' + grid.first_subset_row);
         for (var col=0; col<grid.num_cols; col++) {
           var cell = grid.grid_rows[row-start_row].grid_cols[col];
-          if (cell.data_col !== null)
+          if (cell.data_col !== null) {
             cell.aib_obj.set_cell_value_lost_focus(cell, row_data[cell.data_col]);
+            };
           };
         };
 //      show_all = function(elem, level) {
@@ -1144,7 +1253,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       var cell = grid.active_cell;
 //      if ((cell.data_col !== null) && (cell.input.readonly ||
 //          !(cell.input.allow_amend || grid.inserted)))
-      if (cell.data_col !== null && !cell.input.get_amendable())
+      if (!grid.has_focus)
+        var state = 'blur'
+      else if (cell.data_col !== null && !cell.input.amendable())
         var state = 'readonly'
       else if (grid.err_flag)
         var state = 'error'
@@ -1158,7 +1269,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //    var col_span = cell.parentNode;
 
 ////    if (!cell.input.readonly && (cell.input.allow_amend || grid.inserted)) {
-//    if (cell.input.get_amendable()) {
+//    if (cell.input.amendable()) {
 //      if (grid.err_flag)
 //        cell.className = 'error_background';
 //      else
@@ -1228,16 +1339,17 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
   grid.handle_escape = function() {
     // TO BE IMPLEMENTED [2013-08-21]
     // if cell_data_changed, restore cell value
-    // if row_amended and not inserted, ask if ok, then restore row
-    // if row_amended and inserted === 1, ask if ok, then delete row
-    // if not row_amended and inserted === 1, delete row
-    // if row_amended and inserted === -1, ask if ok, then restore blank row
+    // if grid_amended and not inserted, ask if ok, then restore row
+    // if grid_amended and inserted === 1, ask if ok, then delete row
+    // if not grid_amended and inserted === 1, delete row
+    // if grid_amended and inserted === -1, ask if ok, then restore blank row
     // else send req_cancel
 
     //var cell = grid.grid_rows[grid.active_row-grid.first_grid_row].grid_cols[grid.active_col];
     var cell = grid.active_cell;
 
-    if ((cell.data_col !== null) && cell.aib_obj.cell_data_changed(cell)) {
+    if (cell !== null && cell.data_col !== null && cell.aib_obj.cell_data_changed(cell)
+        && cell.input.amendable()) {
       cell.aib_obj.reset_cell_value(cell);
       }
     else {
@@ -1264,6 +1376,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 */
     };
 
+/*
   grid.req_formview = function() {
     if (grid.formview_ok) {
       var args = [grid.ref, grid.active_row];
@@ -1272,7 +1385,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       //send_request('clicked', args);
       };
     };
+*/
 
+/*
   grid.send_selected = function() {
     if (grid.lkup_select_ok) {
       var args = [grid.ref, grid.active_row];
@@ -1282,13 +1397,16 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       send_request('selected', args);
       };
     };
+*/
 
   grid.handle_enter = function() {
-    if (grid.lkup_select_ok)
-      grid.send_selected()
-    else if (grid.active_row < grid.total_rows()) {
-      if (grid.row_amended)
+//    if (grid.lkup_select_ok)
+//      grid.send_selected()
+//    else if (grid.active_row < grid.total_rows()) {
+    if (grid.active_row < grid.total_rows()) {
+      if (grid.amended())
         grid.req_save_row = true;
+      grid.tabbing = true;
       grid.req_cell_focus(grid.active_row+1, grid.active_col);
       };
     };
@@ -1296,7 +1414,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
   grid.edit_cell = function(keyCode) {
     var input = grid.obj_list[grid.active_col];
 //    if (input.readonly || !(input.allow_amend || grid.inserted))
-    if (!input.get_amendable())
+    if (!input.amendable())
       return;
     input.edit_cell(grid.active_cell, null, keyCode);
     };
@@ -1325,7 +1443,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //      if (shiftKey)  //move to previous control on form
 //        grid.tab_to_ctrl(-1);
 //      else  // move to grid_frame
-//        start_frame([grid.grid_frame.ref, grid.row_amended, true]);
+//        start_frame([grid.grid_frame.ref, grid.amended(), true]);
 //        grid.has_focus = false;  // not elegant!
 //      return;
 //      };
@@ -1351,9 +1469,11 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     else {
       grid.frame.form.tabdir = 1;
 
+      //debug3('TAB grow=' + grid.growable + ' active=' + grid.active_row
+      //  + ' num_rows' + grid.num_data_rows + ' amended=' + grid.amended());
       // if growable and on bottom blank line and tab, move to next control
       if (grid.growable && (grid.active_row === grid.num_data_rows) &&
-          (grid.active_col === 0) && (!grid.row_amended))
+          (grid.active_col === 0) && (!grid.amended()))
         grid.tab_to_ctrl(1)  //  move to next control on form
 
 // move next 4 lines to below grid_frame
@@ -1363,12 +1483,14 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //      grid.tab_to_ctrl(1)  //  move to next control on form
 
       // if not on last cell in row, try move to next cell
-      else if (grid.active_col < (grid.num_cols-1))
+      else if (grid.active_col < (grid.num_cols-1)) {
+        grid.tabbing = true;
         grid.req_cell_focus(grid.active_row, grid.active_col+1);
+        }
 
       // if on last cell and grid_frame, move to grid frame
       else if (grid.grid_frame !== null) {  // move to grid_frame
-//      if (grid.row_amended) {
+//      if (grid.amended()) {
 //        var cell = grid.active_cell;
 //        var value_for_server = cell.aib_obj.get_cell_value_for_server(cell);
 //        var args =
@@ -1378,7 +1500,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //        send_request('gridframe_got_focus', args);
 //        };
 //      //var grid_frame = grid.grid_frame.ref;
-//      //var frame_amended = (grid.row_amended);
+//      //var frame_amended = (grid.amended());
 //      //var set_focus = true;
 //      //var args = [grid_frame, frame_amended, set_focus];
 //      //start_frame(args);
@@ -1386,28 +1508,29 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //      // args = [grid_frame, frame_amended, set_focus]
 
         var grid_frame = grid.grid_frame.ref;
-        var frame_amended = (grid.inserted !== 0 || grid.row_amended);
+        var frame_amended = (grid.inserted !== 0 || grid.amended());
         var set_focus = true;
         var args = [grid_frame, frame_amended, set_focus];
         start_frame(args);
         grid.has_focus = false;  // not elegant!
 
-//        start_frame([grid.grid_frame.ref, grid.row_amended, true]);
+//        start_frame([grid.grid_frame.ref, grid.amended(), true]);
 //        grid.has_focus = false;  // not elegant!
         }
 
       // if not growable and on last cell and tab, move to next control
       else if (!grid.growable && (grid.active_row === grid.num_data_rows-1) &&
           (grid.active_col === grid.num_cols-1)) {
-        if (grid.row_amended)
+        if (grid.amended())
           grid.req_save_row = true;
         grid.tab_to_ctrl(1)  //  move to next control on form
         }
 
       // on last cell in row - req move to next row, send 'save = true' to server
       else {
-        if (grid.row_amended)
+        if (grid.amended())
           grid.req_save_row = true;
+        grid.tabbing = true;
         grid.req_cell_focus(grid.active_row+1, 0);
         };
       };
@@ -1434,18 +1557,21 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     if (grid.active_row < (grid.total_rows()-1))
       grid.req_cell_focus(grid.active_row+1, grid.active_col);
     };
+/*
   grid.req_insert = function() {
     if (grid.insert_ok) {
       var args = [grid.ref, grid.active_row];
       send_request('req_insert_row', args);
       };
     };
+*/
+/*
   grid.req_delete = function() {
-    if (grid.inserted === -1 && !grid.row_amended)
+    if (grid.inserted === -1 && !grid.amended())
       return
     if (grid.delete_ok) {
       if (grid.confirm_delete) {
-        if (grid.inserted === 1 && !grid.row_amended)
+        if (grid.inserted === 1 && !grid.amended())
           grid.confirm_req('Yes');  // no confirmation required
         else {
           var cell = grid.grid_rows[grid.active_row-grid.first_grid_row].grid_cols[0];
@@ -1465,6 +1591,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       send_request('req_delete_row', args);
       };
     };
+*/
   grid.goto_top = function() {
     if (grid.active_row > 0)  // maybe test for active_col > 0 (?)
       grid.req_cell_focus(0, 0);
@@ -1501,21 +1628,38 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     if (grid.frame.form.disable_count) return false;
     var opera = (navigator.appName === 'Opera');
     if (!e) e=window.event;
+
+    if (e.altKey)
+      var target = grid.kbd_shortcuts['alt'][e.keyCode];
+    else if (e.ctrlKey)
+      var target = grid.kbd_shortcuts['ctrl'][e.keyCode];
+    else if (e.shiftKey)
+      var target = grid.kbd_shortcuts['shift'][e.keyCode];
+    else
+      var target = grid.kbd_shortcuts['normal'][e.keyCode];
+
+    if (target !== undefined) {
+      target.onclick.call(target);
+      e.cancelBubble = true;
+      return false;
+      };
+
     if (e.altKey)
       return;
     if (e.ctrlKey)
-      if ([13, 35, 36, 45, 46].indexOf(e.keyCode) === -1)
+      if ([35, 36, 45, 46].indexOf(e.keyCode) === -1)
         return;
     if (e.keyCode === 13 && grid.grid_frame !== null)
       return;  // allow <enter> to trigger active_button
     var key_handled = true;
     switch (e.keyCode) {
       case 9:  grid.handle_tab(e.shiftKey); break;          // Tab
-      case 13: if (e.ctrlKey)                               // Enter
-                  grid.req_formview();
-                else
-                  grid.handle_enter();
-                break;
+//      case 13: if (e.ctrlKey)                               // Enter
+//                  grid.req_formview();
+//                else
+//                  grid.handle_enter();
+//                break;
+      case 13: grid.handle_enter(); break;                  // Enter
       case 27: grid.handle_escape(); break;                 // Esc
       case 33: if (!opera) {grid.page_up()}; break;         // PageUp
       case 34: if (!opera) {grid.page_down()}; break;       // PageDown
@@ -1525,8 +1669,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       case 38: if (!opera) {grid.up()}; break;              // Up
       case 39: if (!opera) {grid.right()}; break;           // Right
       case 40: if (!opera) {grid.down()}; break;            // Down
-      case 45: if (e.ctrlKey) {grid.req_insert()}; break;   // Ctrl+Ins
-      case 46: if (e.ctrlKey) {grid.req_delete()}; break;   // Ctrl+Del
+//      case 45: if (e.ctrlKey) {grid.req_insert()}; break;   // Ctrl+Ins
+//      case 46: if (e.ctrlKey) {grid.req_delete()}; break;   // Ctrl+Del
       case 113: grid.edit_cell(null); break;                // F2
       default: key_handled = false;
       };
@@ -1559,7 +1703,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     if (!e.which) e.which=e.keyCode;
     var input = grid.obj_list[grid.active_col];
 //    if (input.readonly || !(input.allow_amend || grid.inserted))
-    if (!input.get_amendable())
+    if (!input.amendable())
       return;
     if (e.which === 92) {  // backslash
       input.handle_backslash();
@@ -1769,6 +1913,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     for (var i=0, l=json_args.length; i<l; i++) {
       tool = json_args[i];
       switch(tool.type) {
+/*
         case 'selected': {
           this.grid.lkup_select_ok = true;
           var btn = document.createElement('div');
@@ -1870,6 +2015,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
           toolbar.appendChild(btn)
           break;
           }
+*/
         case 'btn': {
           var label = tool.label;
           var text = '';  // convert '&' to underline
@@ -1914,12 +2060,64 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
             send_request('clicked', args);
             grid.focus();
             };
+
+          if (tool.shortcut !== null) {
+            var type_key = tool.shortcut.split(',');
+            if (type_key[0] == 'normal')
+              grid.kbd_shortcuts['normal'][type_key[1]] = btn;
+            else if (type_key[0] == 'alt')
+              grid.kbd_shortcuts['alt'][type_key[1]] = btn;
+            else if (type_key[0] == 'ctrl')
+              grid.kbd_shortcuts['ctrl'][type_key[1]] = btn;
+            else if (type_key[0] == 'shift')
+              grid.kbd_shortcuts['shift'][type_key[1]] = btn;
+            };
+
           toolbar.appendChild(btn)
           break;
           }
-        case 'img': debug3('IMAGE'); break;
+        case 'img': {
+          var btn = document.createElement('div');
+          btn.style[cssFloat] = 'left';
+          btn.style.backgroundImage = 'url(images/' + tool.name + '.png)';
+          btn.style.width = '16px';
+          btn.style.height = '16px';
+          btn.style.marginLeft = '5px';
+          btn.style.marginRight = '2px';
+          btn.style.marginTop = '5px';
+          btn.style.position = 'relative';
+
+          frame.form.obj_dict[tool.ref] = btn;
+          btn.tabIndex = -1  // remove from tab order
+          btn.ref = tool.ref;
+
+          btn.title = tool.tip;
+          btn.onclick = function(e) {
+            var grid = this.parentNode.grid;
+            if (grid.frame.form.disable_count) return false;
+            //var args = [grid.ref, grid.active_row];
+            var args = [this.ref, grid.active_row];
+            send_request('clicked', args);
+            grid.focus();
+            };
+
+          if (tool.shortcut !== null) {
+            var type_key = tool.shortcut.split(',');
+            if (type_key[0] == 'normal')
+              grid.kbd_shortcuts['normal'][type_key[1]] = btn;
+            else if (type_key[0] == 'alt')
+              grid.kbd_shortcuts['alt'][type_key[1]] = btn;
+            else if (type_key[0] == 'ctrl')
+              grid.kbd_shortcuts['ctrl'][type_key[1]] = btn;
+            else if (type_key[0] == 'shift')
+              grid.kbd_shortcuts['shift'][type_key[1]] = btn;
+            };
+
+          toolbar.appendChild(btn)
+          break;
+          }
         case 'nav': {
-          grid.navigate_ok = true;
+          //grid.navigate_ok = true;
           // FIRST
           //var nav = document.createElement('div');
           //var nav = iFirst;

@@ -32,11 +32,11 @@
       <mem_col col_name="display_name" data_type="TEXT" short_descr="Full name"
         long_descr="Full name" col_head="" key_field="N" allow_null="true"
         allow_amend="true" max_len="0" db_scale="0"/>
-<!--
+
       <mem_col col_name="amount" data_type="DEC" short_descr="Amount"
         long_descr="Amount" col_head="" key_field="N" allow_null="true"
         allow_amend="true" max_len="0" db_scale="2" dflt_val="0"/>
--->
+
       <mem_col col_name="choice" data_type="TEXT" short_descr="Choice"
         long_descr="Choice" col_head="" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"
@@ -83,24 +83,33 @@
       <col/>
       <input fld="var.user" lng="60"/>
       <display fld="var.display_name" lng="160"/>
+
 <!--
       <row/>
       <col/>
       <label value="Amount:"/>
       <col/>
-      <input fld="var.amount" lng="120"/>
+      <input fld="var.amount" lng="120" readonly="true" default="
+        <<default>>
+          <<literal value=`123.45`/>>
+        <</default>>
+        "/>
+
+      <row/>
+      <col/>
+      <label value="Date:"/>
+      <col/>
+      <input fld="var.date" lng="120" default="
+        <<default>>
+          <<literal value=`2014-12-25`/>>
+        <</default>>
+        "/>
 
       <row/>
       <col/>
       <label value="Choice:"/>
       <col/>
       <input fld="var.choice" lng="120"/>
-
-      <row/>
-      <col/>
-      <label value="Date:"/>
-      <col/>
-      <input fld="var.date" lng="120"/>
 
       <row/>
       <col/>
@@ -183,22 +192,21 @@
 
     <button_row validate="true">
       <button btn_id="btn_ok" btn_label="Login" btn_enabled="true" btn_validate="true"
-        btn_default="true" btn_action="
+        btn_default="true" action="
           <<action>>
             <<end_form state=`completed`/>>
           <</action>>
         "/>
       <button btn_id="btn_can" btn_label="Cancel" btn_enabled="true" btn_validate="false"
-        btn_default="false" btn_action="
+        btn_default="false" action="
           <<action>>
             <<call method=`on_req_cancel`/>>
           <</action>>
         "/>
       <button btn_id="btn_pwd" btn_label="Change password"
-          btn_enabled="false" btn_validate="false" btn_default="false"
-        btn_action="
+          btn_enabled="false" btn_validate="false" btn_default="false" action="
           <<action>>
-            <<sub_form form_name=`chg_pwd_form`>>
+            <<sub_form form_name=`_sys.chg_pwd_form`>>
               <<call_params/>>
               <<return_params>>
                 <<return_param name=`password` type=`data_attr` target=`dir_user.password`/>>

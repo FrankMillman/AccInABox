@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal as D
 
 def customise(DbConn, db_params):
@@ -57,6 +57,12 @@ def zfill(string, lng):
     template = '{{:0>{}}}'.format(lng)
     return template.format(string)
 
+def date_func(date_string, op, days):
+    if op.lower() in ('+', 'add'):
+        return str(date(*map(int, date_string.split('-'))) + timedelta(days))
+    if op.lower() in ('-', 'sub'):
+        return str(date(*map(int, date_string.split('-'))) - timedelta(days))
+
 # Decimal adapter (store Decimal in database as string)
 # add '#' to force sqlite3 not to convert to int if no decimals
 # else it stores '4.00' as 4, and returns it as D('4')
@@ -97,6 +103,7 @@ def init(self, pos, mem_id=None):
     conn.create_function('subfield', 3, subfield)
     conn.create_function('repeat', 2, repeat)
     conn.create_function('zfill', 2, zfill)
+    conn.create_function('date_func', 3, date_func)
     self.conn = conn
     self.cursor = conn.cursor
     self.param_style = '?'

@@ -270,6 +270,24 @@ def create_functions(self):
           "$$;"
         )
 
+    cur.execute(
+        "CREATE OR REPLACE FUNCTION date_func (DATE, VARCHAR, INT) "
+            "RETURNS DATE LANGUAGE 'plpgsql' IMMUTABLE AS $$ "
+          "DECLARE "
+            "_date ALIAS FOR $1;"
+            "_op VARCHAR := LOWER($2);"
+            "_days ALIAS FOR $3;"
+          "BEGIN "
+            "IF _op = '+' OR _op = 'add' THEN "
+              "RETURN _date + _days; "
+            "END IF;"
+            "IF _op = '-' OR _op = 'sub' THEN "
+              "RETURN _date - _days; "
+            "END IF;"
+          "END;"
+          "$$;"
+        )
+
 def create_company(self, company_id):
     self.cur.execute('CREATE SCHEMA {}'.format(company_id))
 

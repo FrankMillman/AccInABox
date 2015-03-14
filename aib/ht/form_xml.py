@@ -2,6 +2,7 @@ import operator
 import hashlib
 import importlib
 import asyncio
+from ast import literal_eval
 
 from ht.form import Form
 import db.api
@@ -29,7 +30,7 @@ def exec_xml(caller, elem, clear_dbevents=False):  # caller can be frame or grid
         if debug: log.write('EXEC {} {}\n\n'.format(caller, xml.tag))
         yield from globals()[xml.tag](caller, xml)
         if caller.session.request.db_events:
-            if clear_dbevents:
+            if clear_dbevents:  # set in restart_frame - not sure why :-(
                 caller.session.request.db_events.clear()
             else:
                 yield from chk_db_events(caller)
@@ -70,7 +71,12 @@ def obj_exists(caller, xml):
 
 @asyncio.coroutine
 def repos_row(grid, xml):
-    yield from grid.repos_row()
+    # only required if user enters 'key field' on blank row
+    # grid_inserted will be 1 or -1  (i.e. True)
+    # this is only called if record exists
+    # purpose - locate the existing record in the grid and move to it
+    if grid.inserted:
+        yield from grid.repos_row()
 
 """
 def any_data_changed(caller, xml):
@@ -107,24 +113,17 @@ def has_gridframe(caller, xml):
     return caller.grid_frame is not None
 
 def row_inserted(caller, xml):
+    # called from grid
     return caller.inserted == 1
 
-"""
-def parent_req_cancel(frame, xml):
-    ref = frame.split('_')
-    parent_ref = '_'.join(ref[:-1])
-    parent = frame.session.get_obj(parent_ref)
-    parent.on_req_cancel()
+def frame_row_inserted(caller, xml):
+    # called from frame
+    if caller.ctrl_grid is None:
+        return False
+    return caller.ctrl_grid.inserted == 1
 
-def parent_req_close(frame, xml):
-    ref = frame.split('_')
-    parent_ref = '_'.join(ref[:-1])
-    parent = frame.session.get_obj(parent_ref)
-    parent.on_req_close()
-
-def ctrl_grid(caller, xml):
-    return caller.ctrl_grid is not None
-"""
+def node_inserted(caller, xml):
+    return caller.parent.node_inserted
 
 def compare(caller, xml):
     """
@@ -146,6 +145,8 @@ def compare(caller, xml):
         target_value = True
     elif target == '$False':
         target_value = False
+    elif target.startswith('eval('):
+        target_value = literal_eval(target[5:-1])
     elif '.' in target:
         target_objname, target_colname = target.split('.')
         target_record = caller.data_objects[target_objname]
@@ -200,8 +201,12 @@ def notify_obj_clean(caller, xml):
     # but if the object does not exist, the client is already in the second state
     #
     # so we only need to notify if object exists
+    #
+    # not true [2015-03-05]
+    # enter first field, fail validation, decide not to proceed
+    # object does not exist, but still needs to be set to 'clean'
 
-    if caller.db_obj is not None and caller.db_obj.exists:
+    if caller.db_obj is not None:
         caller.session.request.obj_to_redisplay.append((caller.ref, True))
 
 @asyncio.coroutine
@@ -214,25 +219,39 @@ def restore_obj(caller, xml):
     db_obj.restore()
 
 @asyncio.coroutine
+def continue_form(caller, xml):
+    yield from caller.continue_form()
+
+@asyncio.coroutine
 def restart_frame(caller, xml):
     yield from caller.restart_frame()
 
 @asyncio.coroutine
 def validate_save(caller, xml):
-    yield from caller.validate_all(save=True)
+#   yield from caller.validate_all(save=True)
+    yield from caller.validate_all()
 
 @asyncio.coroutine
 def validate_all(caller, xml):
     yield from caller.validate_all()
 
 @asyncio.coroutine
+def gridframe_dosave(caller, xml):
+    # if try to save grid, and grid has grid_frame, invoke grid_frame's do_save
+    yield from exec_xml(caller.grid_frame, caller.grid_frame.methods['do_save'])
+
+@asyncio.coroutine
 def save_obj(frame, xml):
     db_obj = frame.data_objects.get(xml.get('obj_name'))
-    if frame.ctrl_grid and db_obj == frame.ctrl_grid.db_obj:
-        yield from frame.ctrl_grid.try_save()
-    else:
-#       db_obj.save()
-        yield from frame.save_obj(db_obj)
+# if grid has grid_frame and we call 'save', we
+#   invoke the grid_frame's do_save() instead of the grid's
+# therefore the following is wrong - endless loop!
+#   if frame.ctrl_grid and db_obj == frame.ctrl_grid.db_obj:
+#       yield from frame.ctrl_grid.try_save()
+#   else:
+##      db_obj.save()
+#       yield from frame.save_obj(db_obj)
+    yield from frame.save_obj(db_obj)
 
 @asyncio.coroutine
 def save_row(grid, xml):
@@ -240,16 +259,57 @@ def save_row(grid, xml):
     yield from grid.save_row()
 
 @asyncio.coroutine
-def delete_row(grid, xml):
+def req_formview(grid, xml):
+    row, = grid.btn_args
+    yield from grid.on_formview(row)
+
+@asyncio.coroutine
+def grid_req_insert_row(grid, xml):
+    row, = grid.btn_args
+    yield from grid.on_req_insert_row(row)
+
+@asyncio.coroutine
+def frame_req_insert_row(frame, xml):
+    grid = frame.ctrl_grid
+    row, = frame.btn_args
+    yield from grid.on_req_insert_row(row)
+
+@asyncio.coroutine
+def grid_req_delete_row(grid, xml):
+    row, = grid.btn_args
+    yield from grid.on_req_delete_row(row)
+
+@asyncio.coroutine
+def frame_req_delete_row(frame, xml):
+    grid = frame.ctrl_grid
+    row, = frame.btn_args
+    yield from frame.ctrl_grid.on_req_delete_row(row)
+
+@asyncio.coroutine
+def grid_delete_row(grid, xml):
     yield from grid.on_req_delete_row()
+
+@asyncio.coroutine
+def frame_delete_row(frame, xml):
+    grid = frame.ctrl_grid
+    yield from frame.ctrl_grid.on_req_delete_row()
 
 @asyncio.coroutine
 def restore_row(grid, xml):
     grid.db_obj.restore()
 
 @asyncio.coroutine
+def row_selected(grid, xml):
+    row, = grid.btn_args
+    yield from grid.on_selected(row)
+
+@asyncio.coroutine
 def do_navigate(caller, xml):
     yield from caller.do_navigate()
+
+@asyncio.coroutine
+def tree_before_save(caller, xml):
+    yield from caller.tree.before_save()
 
 @asyncio.coroutine
 def update_node(caller, xml):
@@ -283,9 +343,6 @@ def change_button(caller, xml):
         attr_value = change.get('state') == 'true'
     elif change.tag == 'btn_show':
         attr_name = 'show'
-        attr_value = change.get('state') == 'true'
-    elif change.tag == 'validate':
-        attr_name = 'must_validate'
         attr_value = change.get('state') == 'true'
     button.change_button(attr_name, attr_value)
 
@@ -365,6 +422,10 @@ def assign(caller, xml):
                 value_to_assign = caller.current_row
             except AttributeError:
                 value_to_assign = caller.ctrl_grid.current_row
+        elif source == '$True':
+            value_to_assign = True
+        elif source == '$False':
+            value_to_assign = False
         else:  # literal value
             value_to_assign = source
         if hash_type is not None:
@@ -456,8 +517,17 @@ def inline_form(caller, xml):
     form_name = xml.get('form_name')
     form_defn = caller.form.form_defn
     form_xml = form_defn.find("inline_form[@form_name='{}']".format(form_name))
-    inline_form = Form(caller.form.company, form_name, parent=caller, inline=form_xml)
+    inline_form = Form(caller.form.company, form_name, parent=caller,
+        callback=(return_from_inlineform, xml), inline=form_xml)
     yield from inline_form.start_form(caller.session)
+
+@asyncio.coroutine
+def return_from_inlineform(caller, state, output_params, calling_xml):
+    # from callbacks, find callback with attribute 'state' = state
+    callback = calling_xml.find('on_return').find(
+        "return[@state='{}']".format(state))
+    for xml in callback:
+        yield from globals()[xml.tag](caller, xml)
 
 @asyncio.coroutine
 def sub_form(caller, xml):
@@ -557,23 +627,6 @@ def return_from_subform(caller, state, output_params, calling_xml):
         yield from globals()[xml.tag](caller, xml)
 #       if caller.session.request.db_events:
 #           yield from chk_db_events(caller)
-
-"""
-def form_view(frame, xml):
-    grid_ref, row = args
-    grid = frame.obj_list[grid_ref]
-    grid.start_row(row)
-    frame_name = xml.get('name')
-    print('frame VIEW', frame_name, 'row={}'.format(row))
-
-    data_inputs = {}
-#   for data_input in xml.find('input_message').findall('dataInput'):
-#       obj_ref = data_input.get('data_object_ref')
-#       data_inputs[obj_ref] = frame.data_objects[obj_ref]
-    sub_frame = frame(frame.company, frame_name, data_inputs,
-        xml.find('callbacks'), frame, ctrl_grid=grid)
-    sub_frame.start_frame()
-"""
 
 @asyncio.coroutine
 def find_row(caller, xml):

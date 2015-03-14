@@ -26,6 +26,9 @@ def obj_exists(ctx, obj, value, xml):
     target_record = ctx.data_objects[target]
     return target_record.exists
 
+def node_inserted(ctx, obj, value, xml):
+    return bool(ctx.parent.node_inserted)  # False, or tuple of (parent_id, seq)
+
 @asyncio.coroutine
 def init_obj(ctx, obj, value, xml):
     obj_name = xml.get('obj_name')

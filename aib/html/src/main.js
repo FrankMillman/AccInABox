@@ -308,24 +308,20 @@ function exec_callbacks() {
 requests = [];
 function send_request(event_id, args) {
   if (dbg)
-    debug3('-> ' + requests.length + ' ' + event_id + ' ' + JSON.stringify(args));
+    debug3('<- ' + requests.length + ' ' + event_id + ' ' + JSON.stringify(args));
+  if (!requests.length)
+    setTimeout(function() {send_requests()}, 0);
   requests.push([event_id, args]);
-  setTimeout(function() {send_requests()}, 0);
   };
 
 function send_requests() {
-  if (requests.length) {
-    // if > 1 request, this is called > 1 times
-    // but all messages are sent during the first call
-    // so subsequent calls must do nothing
-    message = [];
-    for (var i=0; i<requests.length; i++) {
-      request = requests[i];
-      message.push([request[0], request[1]]);
-      };
-    send_message('send_req', message);
-    requests = [];
+  message = [];
+  for (var i=0; i<requests.length; i++) {
+    request = requests[i];
+    message.push([request[0], request[1]]);
     };
+  send_message('send_req', message);
+  requests = [];
   };
 
 function send_message(url, message) {
@@ -358,9 +354,9 @@ function process_response(response_text) {
         if (
             ['setup_form', 'start_menu', 'start_grid', 'recv_rows', 'redisplay']
             .indexOf(msg_type) !== -1)
-          debug3('<- ' + i + ' ' + msg_type)
+          debug3('-> ' + i + ' ' + msg_type)
         else
-          debug3('<- ' + i + ' ' + msg_type + ' ' + JSON.stringify(msg_args));
+          debug3('-> ' + i + ' ' + msg_type + ' ' + JSON.stringify(msg_args));
       switch(msg_type) {
         case 'ask_question': ask_question(msg_args); callback_blocked = true; break;
         case 'close_program': close_program(msg_args); break;
@@ -374,6 +370,7 @@ function process_response(response_text) {
         case 'start_frame': start_frame(msg_args); break;
         case 'start_menu': start_menu(msg_args); break;
         case 'start_grid': start_grid(msg_args); break;
+        case 'recv_dflt': recv_dflt(msg_args); break;
         case 'recv_prev': recv_prev(msg_args); break;
         case 'recv_rows': recv_rows(msg_args); break;
         case 'cell_set_focus': cell_set_focus(msg_args); break;

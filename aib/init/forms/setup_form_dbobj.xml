@@ -138,7 +138,7 @@
     <button_row validate="true">
       <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
           btn_validate="true" btn_default="true" lng="60">
-        <pyfunc name="db.formdefn_funcs.dump_db_objects"/>
+        <pyfunc name="custom.formdefn_funcs.dump_db_objects"/>
         <call method="on_req_cancel"/>
       </button>
     </button_row>
@@ -153,19 +153,19 @@
         <end_form state="completed"/>
       </method>
 -->
-      <method name="on_start_form" action="
+      <method name="on_start_frame" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.load_db_objects`/>>
+          <<pyfunc name=`custom.formdefn_funcs.load_db_objects`/>>
         <</action>>
       "/>
       <method name="do_save" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.dump_db_objects`/>>
+          <<pyfunc name=`custom.formdefn_funcs.dump_db_objects`/>>
         <</action>>
       "/>
       <method name="do_restore" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.restore_db_objects`/>>
+          <<pyfunc name=`custom.formdefn_funcs.restore_db_objects`/>>
         <</action>>
       "/>
     </frame_methods>

@@ -38,7 +38,7 @@
     </body>
     <button_row validate="true">
       <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
-          btn_validate="true" btn_default="true" lng="60" btn_action="
+          btn_validate="true" btn_default="true" lng="60" action="
         <<action>>
           <<call method=`on_req_cancel`/>>
         <</action>>

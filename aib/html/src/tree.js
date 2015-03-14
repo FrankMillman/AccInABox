@@ -430,6 +430,10 @@ function create_tree(container, frame, toolbar, hide_root){
 
   tree.move_node = function() {
     debug3('move');
+    // get node data from old position
+    // insert node data into new position
+    // delete old node
+    // tree.write()
     };
 
   tree.insert_node = function(parent_id, seq, node_id) {

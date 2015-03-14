@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 import db.objects
 from db.chk_constraints import chk_constraint
-from db.validation_xml import check_vld
+from ht.validation_xml import check_vld
 from errors import AibError, AibDenied
 
 debug = 0
@@ -299,6 +299,8 @@ class Field:
             self.read_row(value, display)
             if db_obj.exists:
                 value = self._value  # to change (eg) 'a001' to 'A001'
+                for caller, method in db_obj.on_read_func:  # frame methods
+                    caller.session.request.db_events.append((caller, method))
 
         if self.foreign_key is not None:
             # check that value exists as key on foreign table
@@ -334,7 +336,7 @@ class Field:
                 raise AibError(head=col_defn.short_descr, body=errmsg)
 
         for descr, errmsg, col_chk in col_defn.col_chks:
-            chk_constraint(self, col_chk, errmsg=errmsg)  # will raise AibError on fail
+            chk_constraint(self, col_chk, value=value, errmsg=errmsg)  # can raise AibError
 
     def continue_setval(self, value, display):
 
@@ -401,30 +403,47 @@ class Field:
     def get_prev(self):
         return self._prev
 
-    def get_val_for_sql(self):
-        return self._value
-
-    def get_val_for_xml(self):
-        return self._value
-
     def set_val_from_sql(self, value):
+        # this is used to populate the column after reading from the database
+        # similar to setval(), but does not perform any validations
+        # called from db_obj.on_row_selected()
         self._value = self.get_val_from_sql(value)
         self._orig = self._value  # see 'Date' - self._value is computed, so can't use value
-        if self.gui_subtype is not None:
-            frame, subtype = self.gui_subtype
-            frame.set_subtype(subtype, value)
+
+# this is already called in on_row_selected
+# feels like duplication - remove for now [2015-02-19]
+#       if self.gui_subtype is not None:
+#           frame, subtype = self.gui_subtype
+#           frame.set_subtype(subtype, value)
 
     def get_val_from_sql(self, value):
         return value
 
+    def get_val_for_sql(self):
+        # used for insert/update - return value suitable for storing in database
+        return self._value
+
     def set_val_from_xml(self, value):
+        # at present [2015-02-19]] this is only used for form definitions
+        # form definitions are stored as xml
+        # for maintenance, we unpack it into seversl in-memory db tables
+        # this method takes a value from the xml file and populates the column
         self._value = value
         self._orig = self._value
 
+        # don't think this is necessary
         if self.table_keys:
             self.read_row(value, display=False)
             if self.db_obj.exists:
+                if value != self._value:
+                    print('SET VAL FROM XML - it *is* necessary!')
                 value = self._value  # to change (eg) 'a001' to 'A001'
+
+    def get_val_for_xml(self):
+        # see above
+        # this method does the opposite
+        # it returns a value to be used when re-creating the xml file
+        return self._value
 
     def update_reqd(self):
         if not self.value_changed():
@@ -493,7 +512,7 @@ class Text(Field):
         self._value = value
 
     def str_to_val(self, value):
-        if value == '':
+        if value in (None, ''):
             return None # to avoid triggering false 'data changed'
         else:
             return value
@@ -551,12 +570,10 @@ class Json(Text):
         else:
             return dumps(self._value)
 
-    def set_val_from_sql(self, value):
+    def get_val_from_sql(self, value):
         if value is None:
-            self._value = None
-        else:
-            self._value = loads(value)
-        self._orig = self._value
+            return None
+        return loads(value)
 
     def set_val_from_xml(self, value):
         if value is None:
@@ -591,12 +608,10 @@ class Xml(Text):
             return None
         return gzip.compress(etree.tostring(self._value))
 
-    def set_val_from_sql(self, value):
+    def get_val_from_sql(self, value):
         if value is None:
-            self._value = None
-        else:
-            self._value = etree.fromstring(gzip.decompress(value), parser=self.parser)
-        self._orig = self._value
+            return None
+        return etree.fromstring(gzip.decompress(value), parser=self.parser)
 
     def set_val_from_xml(self, value):
         if value is None:
@@ -672,7 +687,7 @@ class StringXml(Xml):
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     def str_to_val(self, value):
-        if value == '':
+        if value in (None, ''):
             return None
         else:
             try:
@@ -691,12 +706,10 @@ class StringXml(Xml):
             return None
         return etree.tostring(self._value, encoding=str)
 
-    def set_val_from_sql(self, value):
+    def get_val_from_sql(self, value):
         if value is None:
-            self._value = None
-        else:
-            self._value = etree.fromstring(value, parser=self.parser)
-        self._orig = self._value
+            return None
+        return etree.fromstring(value, parser=self.parser)
 
     def set_val_from_xml(self, value):
         if value is None:
@@ -740,10 +753,15 @@ class Integer(Field):
 
     def get_dflt(self):
         if self.col_defn.dflt_val is None:
-            if self.col_defn.allow_null:
-                return None
-            else:
-                return 0
+# not sure why we did this [2015-01-30]
+# it causes a problem if we use a *form* default
+# we only want to generate the default if value is None
+# but this sets it to zero, so we don't generate it
+#           if self.col_defn.allow_null:
+#               return None
+#           else:
+#               return 0
+            return None
         else:
             return int(self.col_defn.dflt_val)
 
@@ -772,7 +790,7 @@ class Integer(Field):
         pass
 
     def str_to_val(self, value):
-        if value == '':
+        if value in (None, ''):
             return None
         else:
             try:
@@ -819,10 +837,12 @@ class Decimal(Field):
 
     def get_dflt(self):
         if self.col_defn.dflt_val is None:
-            if self.col_defn.allow_null:
-                return None
-            else:
-                return D(0)
+# see notes under Integer
+#           if self.col_defn.allow_null:
+#               return None
+#           else:
+#               return D(0)
+            return None
         else:
             return D(self.col_defn.dflt_val)
 
@@ -843,13 +863,12 @@ class Decimal(Field):
             quant = D(str(10**-scale))
             #self._value = D(str(value)).quantize(quant, rounding=ROUND)
             self._value = value.quantize(quant, rounding=ROUND)
-            print('{} {}'.format(value, self._value))
 
     def check_length(self,value):
         pass
 
     def str_to_val(self, value):
-        if value == '':
+        if value in (None, ''):
             return None
         else:
             if self.col_defn.scale_ptr:
@@ -910,16 +929,15 @@ class Date(Field):
 #           raise ValueError('Not a valid date object')
 
     def get_dflt(self):
-        if self.col_defn.dflt_val.lower() == 'today':
-            return dt.today()
-        else:
-            return None
+        if self.col_defn.dflt_val is not None:
+            if self.col_defn.dflt_val.lower() == 'today':
+                return dt.today()
 
     def check_length(self,value):
         pass
 
     def str_to_val(self, value):
-        if value == '':
+        if value in (None, ''):
             return None
         else:
             try:
@@ -954,8 +972,7 @@ class Date(Field):
         MS Sql Server 2005 only accepts datetime objects, not date objects.
         [Actually ceODBC does, but pyodbc does not].
         It *does* accept a string of 'yyyy-mm-dd'.
-        Luckily, PostgreSQL accepts this as well.
-        Still have to test sqlite3 [2012-11-08].
+        Luckily, PostgreSQL and sqlite3 accept this as well.
         """
         if self._value is None:
             return None
@@ -968,7 +985,7 @@ class Date(Field):
     def set_date(self, value):
         if value is None:
             self._value_ = None
-        elif isinstance(value, dtm):
+        elif isinstance(value, dtm):  # MS Sql Server returns datetime
             self._value_ = dt(value.year, value.month, value.day)
         elif isinstance(value, dt):
             self._value_ = value
@@ -981,10 +998,9 @@ class DateTime(Field):
         Field.__init__(self, db_obj, col_defn)
 
     def get_dflt(self):
-        if self.col_defn.dflt_val.lower() == 'now':
-            return dtm.now()
-        else:
-            return None
+        if self.col_defn.dflt_val is not None:
+            if self.col_defn.dflt_val.lower() == 'now':
+                return dtm.now()
 
     def check_val(self, value):
         pass
@@ -1003,7 +1019,7 @@ class DateTime(Field):
             return '*'
 
     def str_to_val(self, value):
-        if value == '':
+        if value in (None, ''):
             return None
         else:
             return value  # modify if required
@@ -1058,6 +1074,8 @@ class Boolean(Field):
     def get_dflt(self):
         dflt_val = self.col_defn.dflt_val
         if dflt_val is None:
+# don't know if this is correct
+# see notes under Integer
             if self.col_defn.allow_null:
                 return None
             else:
@@ -1079,7 +1097,7 @@ class Boolean(Field):
         pass
 
     def str_to_val(self, value):
-        if value == '':
+        if value in (None, ''):
             return False  # None (any implications? 14/12/2102}
         else:
             return bool(int(value))
@@ -1103,6 +1121,7 @@ class Boolean(Field):
             return str(int(self._prev))
 
     def get_val_from_sql(self, value):
+        # virtual column - returns 1/0 instead of T/F
         return bool(value)
 
     def get_val_for_xml(self):
@@ -1121,6 +1140,9 @@ class Boolean(Field):
         else:
             self._value = False
         self._orig = self._value
+
+    def concurrency_check(self):  # self._curr_val has just been read in from database
+        return bool(self._curr_val) == self._orig
 
 #-----------------------------------------------------------------------------
 

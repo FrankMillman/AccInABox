@@ -57,7 +57,7 @@
       <col/>
       <button btn_id="pre_save" btn_label="Save header"
         help_msg = "Save header before proceeding"
-        btn_enabled="true" btn_validate="true" btn_action="
+        btn_enabled="true" btn_validate="true" action="
           <<action>>
             <<save_obj obj_name=`db_table`/>>
             <<change_button>>
@@ -115,22 +115,22 @@
       <row/>
       <col/>
       <button lng="150" btn_id="upd_chk" btn_label="Update checks"
-        btn_enabled="true" btn_validate="true" btn_action="
+        btn_enabled="true" btn_validate="true" action="
           <<action>>
           <</action>>
         "/>
       <col/>
       <button lng="150" btn_id="del_chk" btn_label="Delete checks"
-        btn_enabled="true" btn_validate="true" btn_action="
+        btn_enabled="true" btn_validate="true" action="
           <<action>>
           <</action>>
         "/>
       <row/>
       <col/>
       <button lng="150" btn_id="db_col" btn_label="Db columns"
-        btn_enabled="true" btn_validate="true" btn_action="
+        btn_enabled="true" btn_validate="true" action="
           <<action>>
-            <<sub_form form_name=`setup_table_dbcols`>>
+            <<sub_form form_name=`_sys.setup_table_dbcols`>>
               <<call_params>>
                 <<call_param name=`db_table` type=`data_obj` source=`db_table`/>>
               <</call_params>>
@@ -144,9 +144,9 @@
         "/>
       <col/>
       <button lng="150" btn_id="db_cur" btn_label="Db cursors"
-        btn_enabled="true" btn_validate="true" btn_action="
+        btn_enabled="true" btn_validate="true" action="
           <<action>>
-            <<sub_form form_name=`cursor_grid`>>
+            <<sub_form form_name=`_sys.cursor_grid`>>
               <<call_params>>
                 <<call_param name=`db_table` type=`data_obj` source=`db_table`/>>
               <</call_params>>
@@ -161,21 +161,21 @@
       <row/>
       <col/>
       <button lng="150" btn_id="db_hook" btn_label="Table hooks"
-        btn_enabled="true" btn_validate="true" btn_action="
+        btn_enabled="true" btn_validate="true" action="
           <<action>>
           <</action>>
         "/>
       <col/>
       <button lng="150" btn_id="form_defn" btn_label="Form definition"
-        btn_enabled="true" btn_validate="true" btn_action="
+        btn_enabled="true" btn_validate="true" action="
           <<action>>
-            <<inline_form form_name=`Form setup`/>>
+            <<inline_form form_name=`_sys.Form setup`/>>
           <</action>>
         "/>
     </body>
     <button_row validate="true" template="Setup_Form">
       <button btn_id="create_table" btn_label="Create table" btn_enabled="true"
-        btn_validate="true" btn_default="false" btn_action="
+        btn_validate="true" btn_default="false" action="
           <<action>>
             <<pyfunc name=`db.db_xml.create_table`/>>
             <<assign>>
@@ -190,7 +190,7 @@
         " help_msg="Set up table in database"/>
     </button_row>
     <frame_methods template="Setup_Form">
-      <method name="on_start_form" action="
+      <method name="on_start_frame" action="
         <<action>>
           <<case>>
             <<obj_exists obj_name=`db_table`>>
@@ -359,7 +359,7 @@
       </body>
       <button_row validate="true">
         <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
-            btn_validate="true" btn_default="true" lng="60" btn_action="
+            btn_validate="true" btn_default="true" lng="60" action="
           <<action>>
             <<call method=`on_req_cancel`/>>
           <</action>>
@@ -430,22 +430,22 @@
             <row/>
             <col/>
             <button lng="150" btn_id="cur_cols" btn_label="Columns"
-              btn_enabled="true" btn_validate="true" btn_action="
+              btn_enabled="true" btn_validate="true" action="
                 <<action>>
-                  <<inline_form form_name=`cur_cols`/>>
+                  <<inline_form form_name=`_sys.cur_cols`/>>
                 <</action>>
               "/>
             <row/>
             <col/>
             <button lng="150" btn_id="cur_filt" btn_label="Filter"
-              btn_enabled="true" btn_validate="true" btn_action="
+              btn_enabled="true" btn_validate="true" action="
                 <<action>>
                 <</action>>
               "/>
             <row/>
             <col/>
             <button lng="150" btn_id="cur_seq" btn_label="Sequence"
-              btn_enabled="true" btn_validate="true" btn_action="
+              btn_enabled="true" btn_validate="true" action="
                 <<action>>
                 <</action>>
               "/>
@@ -456,7 +456,7 @@
       </body>
       <button_row validate="true">
         <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
-            btn_validate="true" btn_default="true" lng="60" btn_action="
+            btn_validate="true" btn_default="true" lng="60" action="
           <<action>>
             <<call method=`on_req_cancel`/>>
           <</action>>
@@ -521,9 +521,9 @@
         <row/>
         <col/>
         <button lng="150" btn_id="dbobj" btn_label="Db objects"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
           <<action>>
-            <<sub_form form_name=`form_setup_dbobj`>>
+            <<sub_form form_name=`_sys.form_setup_dbobj`>>
               <<call_params>>
                 <<call_param name=`form_name` type=`data_attr` source=`db_obj.table_name`/>>
                 <<call_param name=`title` type=`data_attr` source=`Form view`/>>
@@ -541,9 +541,9 @@
         "/>
         <col/>
         <button lng="150" btn_id="memobj" btn_label="Memory objects"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
           <<action>>
-            <<sub_form form_name=`form_setup_memobj`>>
+            <<sub_form form_name=`_sys.form_setup_memobj`>>
               <<call_params>>
                 <<call_param name=`form_name` type=`data_attr` source=`db_obj.table_name`/>>
                 <<call_param name=`title` type=`data_attr` source=`Form view`/>>
@@ -562,9 +562,9 @@
         <row/>
         <col/>
         <button lng="150" btn_id="inputs" btn_label="Input parameters"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
           <<action>>
-            <<sub_form form_name=`form_setup_inputs`>>
+            <<sub_form form_name=`_sys.form_setup_inputs`>>
               <<call_params>>
                 <<call_param name=`form_name` type=`data_attr` source=`db_obj.table_name`/>>
                 <<call_param name=`title` type=`data_attr` source=`Form view`/>>
@@ -582,9 +582,9 @@
         "/>
         <col/>
         <button lng="150" btn_id="outputs" btn_label="Output parameters"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
           <<action>>
-            <<sub_form form_name=`form_setup_outputs`>>
+            <<sub_form form_name=`_sys.form_setup_outputs`>>
               <<call_params>>
                 <<call_param name=`form_name` type=`data_attr` source=`db_obj.table_name`/>>
                 <<call_param name=`title` type=`data_attr` source=`Form view`/>>
@@ -603,9 +603,9 @@
         <row/>
         <col/>
         <button lng="150" btn_id="rules" btn_label="Rules"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
           <<action>>
-            <<sub_form form_name=`form_setup_rules`>>
+            <<sub_form form_name=`_sys.form_setup_rules`>>
               <<call_params>>
                 <<call_param name=`form_name` type=`data_attr` source=`db_obj.table_name`/>>
                 <<call_param name=`title` type=`data_attr` source=`Form view`/>>
@@ -623,9 +623,9 @@
         "/>
         <col/>
         <button lng="150" btn_id="frame" btn_label="Gui objects"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
           <<action>>
-            <<sub_form form_name=`form_setup_gui`>>
+            <<sub_form form_name=`_sys.form_setup_gui`>>
               <<call_params>>
                 <<call_param name=`form_name` type=`data_attr` source=`db_obj.table_name`/>>
                 <<call_param name=`title` type=`data_attr` source=`Form view`/>>

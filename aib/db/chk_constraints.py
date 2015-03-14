@@ -27,6 +27,8 @@ def chk_constraint(ctx, constraint, value=None, errmsg=None):
             src_val = db_obj.getval(src)
         if tgt == '':
             tgt_val = None
+        elif tgt in db_obj.fields:
+            tgt_val = db_obj.getval(tgt)
         else:
             tgt_val = literal_eval(tgt)
         chk, err = CHKS[chk]

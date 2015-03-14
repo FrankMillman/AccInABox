@@ -4,7 +4,6 @@ from lxml import etree
 table = {
     'table_name'    : 'db_tables',
     'group_code'    : 'db',
-    'seq'           : -1,
     'short_descr'   : 'Db tables',
     'long_descr'    : 'Database tables',
     'audit_trail'   : True,
@@ -392,10 +391,10 @@ cursors.append({
     'cursor_name': 'db_tables',
     'descr': 'Database tables',
     'columns': [
-        ('table_name', 160, False, False, False, None, None),
-        ('short_descr', 250, True, False, False, None, None),
-        ('defn_company', 80, False, True, False, None, None),
-        ('table_created', 80, False, True, False, None, None),
+        ('table_name', 160, False, False, False, False, None, None, None, None),
+        ('short_descr', 250, True, False, False, False, None, None, None, None),
+        ('defn_company', 80, False, True, False, False, None, None, None, None),
+        ('table_created', 80, False, True, False, False, None, None, None, None),
         ],
     'filter': [],
     'sequence': [('table_name', False)],

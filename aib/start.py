@@ -85,10 +85,12 @@ def check_versions():
     from releases import program_version_info, datamodel_version_info
 
     def s_to_t(s):  # convert string '0.1.1' to tuple(0, 1, 1)
-        return tuple(int(_) for _ in s.split('.'))
+        #return tuple(int(_) for _ in s.split('.'))
+        return tuple(map(int, s.split('.')))
 
     def t_to_s(t):  # convert tuple(0, 1, 1) to string '0.1.1'
-        return '.'.join(str(_) for _ in t)
+        #return '.'.join(str(_) for _ in t)
+        return '.'.join(map(str, t))
 
     progver_fn = os.path.join(os.path.dirname(__file__), 'program_version')
     try:

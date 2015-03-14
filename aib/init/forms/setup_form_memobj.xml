@@ -273,9 +273,9 @@
               <row/>
               <col/>
               <button lng="100" btn_id="chk" btn_label="Col checks"
-                  btn_enabled="true" btn_validate="true" btn_action="
+                  btn_enabled="true" btn_validate="true" action="
                 <<action>>
-                  <<sub_form form_name=`col_checks`>>
+                  <<sub_form form_name=`_sys.col_checks`>>
                     <<call_params>>
                       <<call_param name=`col_chks` type=`data_attr`
                         source=`memcol.col_chks`/>>
@@ -293,9 +293,9 @@
               "/>
               <col/>
               <button lng="100" btn_id="fkey" btn_label="Foreign key"
-                  btn_enabled="true" btn_validate="true" btn_action="
+                  btn_enabled="true" btn_validate="true" action="
                 <<action>>
-                  <<sub_form form_name=`foreign_key`>>
+                  <<sub_form form_name=`_sys.foreign_key`>>
                     <<call_params>>
                       <<call_param name=`fkey` type=`data_attr` source=`memcol.fkey`/>>
                     <</call_params>>
@@ -311,9 +311,9 @@
               "/>
               <col/>
               <button lng="100" btn_id="sub" btn_label="Choices"
-                  btn_enabled="true" btn_validate="true" btn_action="
+                  btn_enabled="true" btn_validate="true" action="
                 <<action>>
-                  <<sub_form form_name=`choices`>>
+                  <<sub_form form_name=`_sys.choices`>>
                     <<call_params>>
                       <<call_param name=`table_name` type=`data_attr` source=`memcol.memobj_name`/>>
                       <<call_param name=`col_name` type=`data_attr` source=`memcol.col_name`/>>
@@ -331,9 +331,9 @@
               "/>
               <col/>
               <button lng="100" btn_id="sql" btn_label="SQL"
-                  btn_enabled="true" btn_validate="true" btn_action="
+                  btn_enabled="true" btn_validate="true" action="
                 <<action>>
-                  <<sub_form form_name=`sql`>>
+                  <<sub_form form_name=`_sys.sql`>>
                     <<call_params/>>
                     <<return_params/>>
                     <<on_return/>>
@@ -353,19 +353,19 @@
     </body>
     <button_row validate="true" template="Setup_Form"/>
     <frame_methods template="Setup_Form">
-      <method name="on_start_form" action="
+      <method name="on_start_frame" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.load_mem_objects`/>>
+          <<pyfunc name=`custom.formdefn_funcs.load_mem_objects`/>>
         <</action>>
       "/>
       <method name="do_save" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.dump_mem_objects`/>>
+          <<pyfunc name=`custom.formdefn_funcs.dump_mem_objects`/>>
         <</action>>
       "/>
       <method name="do_restore" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.restore_mem_objects`/>>
+          <<pyfunc name=`custom.formdefn_funcs.restore_mem_objects`/>>
         <</action>>
       "/>
     </frame_methods>

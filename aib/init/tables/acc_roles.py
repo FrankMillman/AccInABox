@@ -4,7 +4,6 @@ from lxml import etree
 table = {
     'table_name'    : 'acc_roles',
     'group_code'    : 'acc',
-    'seq'           : -1,
     'short_descr'   : 'Roles',
     'long_descr'    : 'Hierarchy of roles and responsibilities',
     'audit_trail'   : True,
@@ -204,10 +203,22 @@ cursors.append({
     'cursor_name': 'role_list',
     'descr': 'List of roles',
     'columns': [
-        ('role', 80, False, False, False, None, None),
-        ('descr', 150, True, False, False, None, None),
+        ('role', 80, False, False, False, False, None, None, None, None),
+        ('descr', 150, True, False, False, False, None, None, None, None),
         ],
     'filter': [],
     'sequence': [('role', False)],
     'default': True
+    })
+
+cursors.append({
+    'cursor_name': 'roles_no_admin',
+    'descr': 'List of roles excluding admin',
+    'columns': [
+        ('role', 80, False, False, False, False, None, None, None, None),
+        ('descr', 150, True, False, False, False, None, None, None, None),
+        ],
+    'filter': [['where', '', 'role', '!=', 'admin', '']],
+    'sequence': [('role', False)],
+    'default': False
     })

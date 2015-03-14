@@ -75,9 +75,9 @@
       <row/>
       <col/>
       <button lng="100" btn_id="chk" btn_label="Col checks"
-          btn_enabled="true" btn_validate="true" btn_action="
+          btn_enabled="true" btn_validate="true" action="
         <<action>>
-          <<sub_form form_name=`col_checks`>>
+          <<sub_form form_name=`_sys.col_checks`>>
             <<call_params>>
               <<call_param name=`col_chks` type=`data_attr`
                 source=`db_col.col_chks`/>>
@@ -95,9 +95,9 @@
       "/>
       <col/>
       <button lng="100" btn_id="fkey" btn_label="Foreign key"
-          btn_enabled="true" btn_validate="true" btn_action="
+          btn_enabled="true" btn_validate="true" action="
         <<action>>
-          <<sub_form form_name=`foreign_key`>>
+          <<sub_form form_name=`_sys.foreign_key`>>
             <<call_params>>
               <<call_param name=`fkey` type=`data_attr` source=`db_col.fkey`/>>
             <</call_params>>
@@ -113,9 +113,9 @@
       "/>
       <col/>
       <button lng="100" btn_id="sub" btn_label="Choices"
-          btn_enabled="true" btn_validate="true" btn_action="
+          btn_enabled="true" btn_validate="true" action="
         <<action>>
-          <<sub_form form_name=`choices`>>
+          <<sub_form form_name=`_sys.choices`>>
             <<call_params>>
               <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
               <<call_param name=`col_name` type=`data_attr` source=`db_col.col_name`/>>
@@ -133,9 +133,9 @@
       "/>
       <col/>
       <button lng="100" btn_id="sql" btn_label="SQL"
-          btn_enabled="true" btn_validate="true" btn_action="
+          btn_enabled="true" btn_validate="true" action="
         <<action>>
-          <<sub_form form_name=`sql`>>
+          <<sub_form form_name=`_sys.sql`>>
             <<call_params/>>
             <<return_params/>>
             <<on_return/>>

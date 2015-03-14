@@ -4,7 +4,6 @@ from lxml import etree
 table = {
     'table_name'    : 'db_cursors',
     'group_code'    : 'db',
-    'seq'           : -1,
     'short_descr'   : 'Cursor definitions',
     'long_descr'    : 'Database cursor definitions',
     'audit_trail'   : False,
@@ -132,3 +131,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+
+# cursor definitions
+cursors = []

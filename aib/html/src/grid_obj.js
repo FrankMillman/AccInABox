@@ -1,4 +1,4 @@
-function create_cell_input(grid) {
+  function create_cell_input(grid) {
 
   var input = document.createElement('input');
   input.className = 'focus_background';
@@ -23,11 +23,27 @@ function create_cell_input(grid) {
 //    input.aib_obj.set_readonly(input, state);
 //    };
 
+  input.set_dflt_val = function(value) {
+    var grid = this.grid;
+    var cell = grid.grid_rows[grid.active_row-grid.first_grid_row].grid_cols[this.col];
+    if (this.col === grid.active_col && this.amendable()) {
+      this.aib_obj.set_cell_dflt_val(cell, value);
+      }
+    else {
+      cell.text_node.data = value;
+      cell.current_value = value;
+      this.aib_obj.set_cell_value_lost_focus(cell, value);
+      };
+    //grid.set_amended(true);
+    };
+
   input.set_value_from_server = function(args) {
     if (this.grid.active_row === -1)  // grid not yet set up
-      return
+      return;
+    //debug3('redisp ' + args[0] + '/' + this.col + ' "' + args[1] + '"');
     var row = args[0], value = args[1];
     input.aib_obj.set_cell_value_from_server(this.grid, row, this.col, value);
+    grid.set_amended(true);
     };
 
   input.reset_value = function() {
@@ -65,17 +81,16 @@ function create_cell_input(grid) {
 
   input.end_edit = function(update, reset_focus) {
     var cell = this.cell, grid = this.grid;
-    grid.edit_in_progress = false;
+    //grid.edit_in_progress = false;
     if (update) {
       if (!input.aib_obj.before_cell_lost_focus(input))  // validation failed
         return false;
       // before_lost_focus() copies input.value to input.current_value
       cell.current_value = input.current_value;
       cell.text_node.data = input.value;
-      grid.row_amended = true;
-      if (grid.grid_frame !== null)
-        grid.grid_frame.frame_amended = true;
+      grid.set_amended(true);
       };
+    grid.edit_in_progress = false;
     cell.parentNode.removeChild(input);
     cell.style.display = 'inline-block';
     grid.onkeypress = grid.save_onkeypress;
@@ -194,6 +209,7 @@ function create_grid_input(col_span, col_defn, cell) {
       };
 
     cell.highlight = function(state) {
+      //debug3(cell.grid_row + '/' + cell.grid_col + ' - ' + state);
       switch (state) {
         case 'clear':
           cell.firstChild.style.border = '1px solid darkgrey';
@@ -224,7 +240,7 @@ function create_grid_input(col_span, col_defn, cell) {
       var grid = cell.grid;
       if (grid.frame.form.disable_count) return false;
 //      if (cell.input.readonly) return false;
-      if (!cell.input.get_amendable()) return false;
+      if (!cell.input.amendable()) return false;
       if (grid.active_cell === cell)
         cell.aib_obj.grid_chkbox_change(cell, grid.active_row);
       else {
@@ -315,6 +331,7 @@ function create_grid_input(col_span, col_defn, cell) {
     txt.style.background = '#F5F5F5';  // very light grey
 
     cell.highlight = function(state) {
+      //debug3(cell.grid_row + '/' + cell.grid_col + ' - ' + state);
       switch (state) {
         case 'clear':
           var border = '1px solid darkgrey';
@@ -332,7 +349,7 @@ function create_grid_input(col_span, col_defn, cell) {
           cell.firstChild.style.background = '#B4EEB4';
           break;
         case 'blur':
-          var border = '1px solid black';
+          var border = '1px solid darkslategray';
           cell.className = 'blur_background';
           cell.firstChild.style.background = '#F5F5F5';
           break;
@@ -455,46 +472,52 @@ function create_grid_input(col_span, col_defn, cell) {
       cell.text_node = document.createTextNode('');  //('\xa0');
       txt.appendChild(cell.text_node);
 
-      //var btn = document.createElement('span');
-      //btn.style.display = 'inline-block';
-      var btn = document.createElement('div');
-      btn.style[cssFloat] = 'right';
-      col_span.appendChild(btn);
-      btn.style.backgroundImage = 'url(' + iCal_src + ')';
-      btn.style.backgroundRepeat = 'no-repeat';
-      btn.style.width = '16px';
-      btn.style.height = '16px';
-//      btn.style.margin = '2px 2px 2px 0px';  // top/right/bottom/left
-      btn.style.margin = '1px 1px 0px 1px';  // top/right/bottom/left
-      btn.title = 'Calendar (Space)';
+      if (col_defn.readonly !== true) {
 
-      btn.onmouseover = function() {
-        this.style.cursor = 'pointer';
-        };
-      btn.onmouseleave = function() {
-        this.style.cursor = 'default';
-        };
-      btn.onclick = function() {
-        var cell = this.parentNode.firstChild;
-        var grid = cell.grid;
-        if (grid.frame.form.disable_count) return false;
-        if (grid.active_cell === cell) {
+        //var btn = document.createElement('span');
+        //btn.style.display = 'inline-block';
+        var btn = document.createElement('div');
+        btn.style[cssFloat] = 'right';
+        col_span.appendChild(btn);
+        btn.style.backgroundImage = 'url(' + iCal_src + ')';
+        btn.style.backgroundRepeat = 'no-repeat';
+        btn.style.width = '16px';
+        btn.style.height = '16px';
+  //      btn.style.margin = '2px 2px 2px 0px';  // top/right/bottom/left
+        btn.style.margin = '1px 1px 0px 1px';  // top/right/bottom/left
+        btn.title = 'Calendar (Space)';
+
+        btn.onmouseover = function() {
+          this.style.cursor = 'pointer';
+          };
+        btn.onmouseleave = function() {
+          this.style.cursor = 'default';
+          };
+        btn.onclick = function() {
+          var cell = this.parentNode.firstChild;
+          var grid = cell.grid;
+          if (grid.frame.form.disable_count) return false;
+          if (grid.active_cell === cell) {
+            btn.afterclick(cell);
+            //var date = cell.input
+            //date.cell = cell;
+            //cell.aib_obj.grid_show_cal(date)
+            }
+          else {
+            callbacks.push([btn, btn.afterclick, cell]);
+            grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
+            };
+          };
+        btn.afterclick = function(cell) {
+          var grid = cell.grid;
+          if (grid.active_cell !== cell)  // server has set focus somewhere else
+            return;
           var date = cell.input
+          if (grid.edit_in_progress)
+            date.end_edit(false, false)
           date.cell = cell;
           cell.aib_obj.grid_show_cal(date)
-          }
-        else {
-          callbacks.push([btn, btn.afterclick, cell]);
-          grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
           };
-        };
-      btn.afterclick = function(cell) {
-        var grid = cell.grid;
-        if (grid.active_cell !== cell)  // server has set focus somewhere else
-          return;
-        var date = cell.input
-        date.cell = cell;
-        cell.aib_obj.grid_show_cal(date)
         };
 
       break;
@@ -608,10 +631,10 @@ function create_grid_button(col_span, col_defn, cell) {
     var grid = cell.grid;
     if (grid.active_cell !== cell)  // server has set focus somewhere else
       return;
-    if (!grid.row_amended) {
+    if (!grid.amended()) {
       var args = [grid.ref, grid.active_row, grid.inserted];
       send_request('start_row', args);
-      grid.row_amended = true;
+      grid.set_amended(true);
       };
     var args = [cell.input.ref];
     send_request('clicked', args);

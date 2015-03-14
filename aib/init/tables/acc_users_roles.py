@@ -4,7 +4,6 @@ from lxml import etree
 table = {
     'table_name'    : 'acc_users_roles',
     'group_code'    : 'acc',
-    'seq'           : -1,
     'short_descr'   : 'User roles',
     'long_descr'    : 'Mapping of user-id to one or more roles',
     'audit_trail'   : True,
@@ -107,7 +106,8 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'col_chks'   : [['not_admin', 'Role cannot be admin',
+        [['check', '', 'role', '!=', '"admin"', '']]]],
     'fkey'       : ['acc_roles', 'row_id', 'role', 'role', True],
     'choices'    : None,
     })

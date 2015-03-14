@@ -181,14 +181,14 @@
         </body>
         <button_row validate="true" template="Grid_Frame"/>
         <frame_methods template="Grid_Frame">
-          <method name="on_start_form" action="
+          <method name="on_start_frame" action="
             <<action>>
-              <<pyfunc name=`db.formdefn_funcs.load_cur_flds`/>>
+              <<pyfunc name=`custom.cursor_fields.load_cur_flds`/>>
             <</action>>
           "/>
           <method name="do_save" action="
             <<action>>
-              <<pyfunc name=`db.formdefn_funcs.dump_cur_flds`/>>
+              <<pyfunc name=`custom.cursor_fields.dump_cur_flds`/>>
               <<save_obj obj_name=`db_cur`/>>
             <</action>>
           "/>
@@ -199,7 +199,7 @@
 <!--
     <button_row validate="true">
       <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
-          btn_validate="true" btn_default="true" lng="60" btn_action="
+          btn_validate="true" btn_default="true" lng="60" action="
         <<action>>
           <<call method=`do_save`/>>
           <<call method=`on_req_cancel`/>>
@@ -219,21 +219,21 @@
 -->
     <button_row validate="true" template="Setup_Form"/>
     <frame_methods template="Setup_Form">
-      <method name="on_start_form" action="
+      <method name="on_start_frame" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.load_cur_flds`/>>
+          <<pyfunc name=`custom.cursor_fields.load_cur_flds`/>>
         <</action>>
       "/>
       <method name="do_save" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.dump_cur_flds`/>>
+          <<pyfunc name=`custom.cursor_fields.dump_cur_flds`/>>
           <<save_obj obj_name=`db_cur`/>>
         <</action>>
       "/>
       <method name="do_restore" action="
         <<action>>
           <<restore_obj obj_name=`db_cur`/>>
-          <<pyfunc name=`db.formdefn_funcs.load_cur_flds`/>>
+          <<pyfunc name=`custom.cursor_fields.load_cur_flds`/>>
         <</action>>
       "/>
     </frame_methods>

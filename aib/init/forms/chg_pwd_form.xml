@@ -49,30 +49,9 @@
         "/>
     </body>
     <button_row validate="true">
-<!--
-      <button btn_id="btn_ok" btn_label="Ok" lng="60"
-          btn_enabled="true" btn_validate="true" btn_default="true">
-        <case>
-          <compare src="pwd_var.pwd1" op="eq" tgt="$None">
-            <ask title="Password" enter="No" escape="No"
-                question="Are you sure you want a blank password?">
-              <response ans="Yes">
-                <call method="do_ok"/>
-              </response>
-              <response ans="No">
-                <restart_frame/>
-              </response>
-            </ask>
-          </compare>
-          <default>
-            <call method="do_ok"/>
-          </default>
-        </case>
-      </button>
--->
       <button btn_id="btn_ok" btn_label="Ok" lng="60"
         btn_enabled="true" btn_validate="true" btn_default="true"
-        btn_action="
+        action="
           <<action>>
             <<case>>
               <<compare src=`pwd_var.pwd1` op=`eq` tgt=`$None`>>
@@ -92,15 +71,9 @@
             <</case>>
           <</action>>
         "/>
-<!--
-      <button btn_id="btn_can" btn_label="Cancel" lng="60"
-          btn_enabled="true" btn_validate="false" btn_default="false">
-        <end_form state="cancelled"/>
-      </button>
--->
       <button btn_id="btn_can" btn_label="Cancel" lng="60"
         btn_enabled="true" btn_validate="false" btn_default="false"
-        btn_action="
+        action="
           <<action>>
             <<end_form state=`cancelled`/>>
           <</action>>

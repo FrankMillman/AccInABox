@@ -345,9 +345,9 @@ class Cursor:
         if self.pos == -1:
             return current_row  # i.e. return current row
         search_str = self.db_obj.getval(self.seq)
-#       g.debug = 1
+#       self.debug = True
         rowno = self.start(search_str)
-#       g.debug = 0
+#       self.debug = False
 #       print('find_gap', current_row, search_str, rowno, self.pos, self.row_data)
         if self.row_data[self.pos] == search_str:
             for key in self.key_cols:
@@ -414,7 +414,7 @@ class Cursor:
         if self.debug:
             print('rows={} incr={}'.format(self.no_rows, incr))
         rowno = incr
-        found = 0
+        found = False
         while True:
             if rowno < 0:
                 rowno = 0
@@ -428,15 +428,16 @@ class Cursor:
                 break
             self._fetch_row(rowno)
             if self._compare(self.row_data[self.pos], search_str, 'eq'):
-                found = 1
+                found = True
                 break
             elif self._compare(self.row_data[self.pos], search_str, 'gt'):
                 rowno -= 1
                 if rowno < 0:
+                    rowno = 0
                     break
                 self._fetch_row(rowno)
                 if self._compare(self.row_data[self.pos], search_str, 'eq'):
-                    found = 1
+                    found = True
                     break
                 elif self._compare(self.row_data[self.pos], search_str, 'lt'):
                     if not self.desc:  # descending sequence (untested)
@@ -452,7 +453,7 @@ class Cursor:
                     break
                 self._fetch_row(rowno)
                 if self._compare(self.row_data[self.pos], search_str, 'eq'):
-                    found = 1
+                    found = True
                     break
                 elif self._compare(self.row_data[self.pos], search_str, 'gt'):
                     if self.desc:  # descending sequence (untested)

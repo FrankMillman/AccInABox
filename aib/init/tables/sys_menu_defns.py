@@ -4,7 +4,6 @@ from lxml import etree
 table = {
     'table_name'    : 'sys_menu_defns',
     'group_code'    : 'sys',
-    'seq'           : -1,
     'short_descr'   : 'Menu definitions',
     'long_descr'    : 'Menu definitions',
     'audit_trail'   : False,
@@ -95,18 +94,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-choices = [
-    True,   # use sub_types?
-    False,  # use display_names?
-    [
-        ['0', 'Root', [['descr', True]], []],
-        ['1', 'Menu', [['descr', True]], []],
-        ['2', 'Grid', [['descr', True], ['table_name', True], ['cursor_name', True]], []],
-        ['3', 'Form', [['descr', True], ['form_name', True]], []],
-        ['4', 'Report', [['descr', True]], []],
-        ['5', 'Process', [['descr', True]], []]
-        ]
-    ]
 cols.append ({
     'col_name'   : 'opt_type',
     'data_type'  : 'TEXT',
@@ -123,7 +110,18 @@ cols.append ({
     'dflt_val'   : None,
     'col_chks'   : None,
     'fkey'       : None,
-    'choices'    : choices,
+    'choices'    : [
+        True,   # use sub_types?
+        False,  # use display_names?
+        [
+            ['root', 'Root', [['descr', True]], []],
+            ['menu', 'Menu', [['descr', True]], []],
+            ['grid', 'Grid', [['descr', True], ['table_name', True], ['cursor_name', True]], []],
+            ['form', 'Form', [['descr', True], ['form_name', True]], []],
+            ['report', 'Report', [['descr', True]], []],
+            ['process', 'Process', [['descr', True]], []]
+            ]
+        ],
     })
 cols.append ({
     'col_name'   : 'table_name',
@@ -197,7 +195,7 @@ virt.append ({
     'short_descr': 'Expandable?',
     'long_descr' : 'Is this node expandable?',
     'col_head'   : '',
-    'sql'        : "SELECT CASE WHEN a.opt_type in ('0', '1') THEN 1 ELSE 0 END",
+    'sql'        : "SELECT CASE WHEN a.opt_type in ('root', 'menu') THEN 1 ELSE 0 END",
     })
 virt.append ({
     'col_name'   : 'parent_num',
@@ -207,3 +205,6 @@ virt.append ({
     'col_head'   : '',
     'sql'        : "SELECT COALESCE(a.parent_id, 0)",
     })
+
+# cursor definitions
+cursors = []

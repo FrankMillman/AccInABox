@@ -24,7 +24,7 @@
             <<obj_exists obj_name=`form`>>
             <</obj_exists>>
             <<default>>
-              <<pyfunc name=`db.formdefn_funcs.init_xml`/>>
+              <<pyfunc name=`custom.formdefn_funcs.init_xml`/>>
             <</default>>
           <</case>>
         <</action>>
@@ -40,9 +40,9 @@
       <row/>
       <col/>
       <button lng="150" btn_id="dbobj" btn_label="Db objects"
-          btn_enabled="true" btn_validate="true" btn_action="
+          btn_enabled="true" btn_validate="true" action="
         <<action>>
-          <<sub_form form_name=`setup_form_dbobj`>>
+          <<sub_form form_name=`_sys.setup_form_dbobj`>>
             <<call_params>>
               <<call_param name=`form_name` type=`data_attr` source=`form.form_name`/>>
               <<call_param name=`title` type=`data_attr` source=`form.title`/>>
@@ -60,9 +60,9 @@
       "/>
       <col/>
       <button lng="150" btn_id="memobj" btn_label="Memory objects"
-          btn_enabled="true" btn_validate="true" btn_action="
+          btn_enabled="true" btn_validate="true" action="
         <<action>>
-          <<sub_form form_name=`setup_form_memobj`>>
+          <<sub_form form_name=`_sys.setup_form_memobj`>>
             <<call_params>>
               <<call_param name=`form_name` type=`data_attr` source=`form.form_name`/>>
               <<call_param name=`title` type=`data_attr` source=`form.title`/>>
@@ -81,9 +81,9 @@
       <row/>
       <col/>
       <button lng="150" btn_id="ioparams" btn_label="I/O parameters"
-          btn_enabled="true" btn_validate="true" btn_action="
+          btn_enabled="true" btn_validate="true" action="
         <<action>>
-          <<sub_form form_name=`setup_form_ioparams`>>
+          <<sub_form form_name=`_sys.setup_form_ioparams`>>
             <<call_params>>
               <<call_param name=`form_name` type=`data_attr` source=`form.form_name`/>>
               <<call_param name=`title` type=`data_attr` source=`form.title`/>>
@@ -101,9 +101,9 @@
       "/>
       <col/>
       <button lng="150" btn_id="frame" btn_label="Gui objects"
-          btn_enabled="true" btn_validate="true" btn_action="
+          btn_enabled="true" btn_validate="true" action="
         <<action>>
-          <<sub_form form_name=`setup_form_gui`>>
+          <<sub_form form_name=`_sys.setup_form_gui`>>
             <<call_params>>
               <<call_param name=`form_name` type=`data_attr` source=`form.form_name`/>>
               <<call_param name=`title` type=`data_attr` source=`form.title`/>>

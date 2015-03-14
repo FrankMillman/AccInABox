@@ -3,6 +3,8 @@ create_frame_toolbar = function(toolbar, json_args) {
 
   toolbar.style.border = '1px solid lightgrey';
   toolbar.style.height = '28px';
+  var frame = toolbar.frame;
+  var page = frame.page;
   for (var i=0; i<json_args.length; i++) {
     var tool = json_args[i];
     switch(tool.type) {
@@ -56,10 +58,68 @@ create_frame_toolbar = function(toolbar, json_args) {
           //window.open('../tests/domviewer.html');
           frame.form.current_focus.focus();
           };
+
+          if (tool.shortcut !== null) {
+            var type_key = tool.shortcut.split(',');
+            if (type_key[0] == 'normal')
+              page.kbd_shortcuts['normal'][type_key[1]] = btn;
+            else if (type_key[0] == 'alt')
+              page.kbd_shortcuts['alt'][type_key[1]] = btn;
+            else if (type_key[0] == 'ctrl')
+              page.kbd_shortcuts['ctrl'][type_key[1]] = btn;
+            else if (type_key[0] == 'shift')
+              page.kbd_shortcuts['shift'][type_key[1]] = btn;
+            };
+
         toolbar.appendChild(btn)
         break;
         }
-      case 'img': debug3('IMAGE'); break;
+      case 'img':
+        //debug3('IMAGE'); break;
+        var btn = document.createElement('div');
+        btn.style[cssFloat] = 'left';
+        btn.style.backgroundImage = 'url(images/' + tool.name + '.png)';
+        btn.style.width = '16px';
+        btn.style.height = '16px';
+        btn.style.marginLeft = '5px';
+        btn.style.marginRight = '2px';
+        btn.style.marginTop = '5px';
+        btn.style.position = 'relative';
+
+        frame.form.obj_dict[tool.ref] = btn;
+        btn.tabIndex = -1  // remove from tab order
+        btn.ref = tool.ref;
+
+        btn.title = tool.tip;
+        btn.onclick = function(e) {
+          var frame = toolbar.frame;
+          if (frame.disable_count) return false;
+          //var args = [frame.root_id, frame.form_id, this.ref, grid.active_row];
+          var args = [this.ref];
+          if (frame.ctrl_grid !== null)
+            args.push(frame.ctrl_grid.active_row);
+          send_request('clicked', args);
+          //DOMViewerObj = document.getElementById("toolbar")
+          //DOMViewerName = null;
+          //window.open('../tests/domviewer.html');
+          frame.form.current_focus.focus();
+          };
+
+          if (tool.shortcut !== null) {
+            var type_key = tool.shortcut.split(',');
+            if (type_key[0] == 'normal')
+              page.kbd_shortcuts['normal'][type_key[1]] = btn;
+            else if (type_key[0] == 'alt')
+              page.kbd_shortcuts['alt'][type_key[1]] = btn;
+            else if (type_key[0] == 'ctrl')
+              page.kbd_shortcuts['ctrl'][type_key[1]] = btn;
+            else if (type_key[0] == 'shift')
+              page.kbd_shortcuts['shift'][type_key[1]] = btn;
+            };
+
+        toolbar.appendChild(btn)
+        break;
+/*
       case 'ins_row': {
         var ctrl_grid = toolbar.frame.ctrl_grid;
         ctrl_grid.insert_ok = true;
@@ -107,6 +167,7 @@ create_frame_toolbar = function(toolbar, json_args) {
         toolbar.appendChild(btn)
         break;
         }
+*/
       case 'nav': {
 
         var ctrl_grid = toolbar.frame.ctrl_grid;
@@ -136,6 +197,9 @@ create_frame_toolbar = function(toolbar, json_args) {
           send_request('navigate', args);
           frame.form.current_focus.focus();
           };
+
+        page.kbd_shortcuts['ctrl'][36] = nav;  // Ctrl+Home
+
         toolbar.appendChild(nav);
 
 /*
@@ -181,6 +245,9 @@ create_frame_toolbar = function(toolbar, json_args) {
           send_request('navigate', args);
           frame.form.current_focus.focus();
           }
+
+        page.kbd_shortcuts['ctrl'][38] = nav;  // Ctrl+Up
+
         toolbar.appendChild(nav);
 
 /*
@@ -230,6 +297,9 @@ create_frame_toolbar = function(toolbar, json_args) {
           send_request('navigate', args);
           frame.form.current_focus.focus();
           };
+
+        page.kbd_shortcuts['ctrl'][40] = nav;  // Ctrl+Down
+
         toolbar.appendChild(nav);
 
 /*
@@ -269,6 +339,9 @@ create_frame_toolbar = function(toolbar, json_args) {
           send_request('navigate', args);
           frame.form.current_focus.focus();
           };
+
+        page.kbd_shortcuts['ctrl'][35] = nav;  // Ctrl+End
+
         toolbar.appendChild(nav);
 
 /*
@@ -289,6 +362,25 @@ create_frame_toolbar = function(toolbar, json_args) {
           ctx.fill();
           };
 */
+
+        break;
+        }
+      case 'text': {
+        var text = document.createElement('div');
+        text.style[cssFloat] = 'left';
+        text.style.marginTop = '5px';
+        text.style.width = tool.lng + 'px';
+        text.style.position = 'relative';
+
+        frame.form.obj_dict[tool.ref] = text;
+        text.tabIndex = -1  // remove from tab order
+        text.ref = tool.ref;
+
+        text.set_value_from_server = function(value) {
+          this.innerHTML = value.replace(/ /g, '\xa0');
+          };
+
+        toolbar.appendChild(text);
 
         break;
         }

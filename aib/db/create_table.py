@@ -25,7 +25,9 @@ def create_table(conn, company_id, table_name):
 
     _create_table(conn, company_id, table_defn, db_columns)
 
-# special method to 'bootstrap' creation of db_tables and db_columns
+# special method to 'bootstrap' creation of db_* tables
+# cannot read db_tables and db_columns as they don't exist yet
+# therefore set up table_defn and db_columns manually and pass as arguments
 def create_orig_table(conn, company_id, table_defn, db_columns):
     _create_table(conn, company_id, table_defn, db_columns)
 

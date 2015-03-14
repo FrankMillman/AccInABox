@@ -39,6 +39,11 @@ function got_focus(new_focus) {
 //  if (new_focus_form.disable_count) return;
 
   if (new_focus_form.current_focus === new_focus) {
+    // after dragging, we set focus on current_focus
+    // here we check if 'input' is active
+    // if input is active, we set focus on input
+    if (new_focus.tabIndex === -1)
+      new_focus.childNodes[0].focus();
     new_focus_form.focus_from_server = false;
     return;
     };
@@ -100,7 +105,7 @@ function got_focus(new_focus) {
     if (new_frame.type === 'grid_frame') {
       new_frame.page.style.border = '1px solid blue';
       new_frame.ctrl_grid.highlight_active_row();
-      new_frame.frame_amended = (new_frame.ctrl_grid.inserted !== 0);
+      new_frame.set_amended((new_frame.ctrl_grid.inserted !== 0));
       };
 //
 //    new_focus.frame.form.set_gridframe_border(new_focus.active_frame);
@@ -171,13 +176,18 @@ function set_focus(args) {
   obj.focus();
   };
 
+function recv_dflt(args) {
+  var obj = get_obj(args[0]), value = args[1];
+  obj.set_dflt_val(value);
+  };
+
 function recv_prev(args) {
   var obj = get_obj(args[0]);
   obj.aib_obj.set_prev_from_server(obj, args[1]);
   };
 
 function cell_set_focus(args) {
-  var grid_ref = args[0], row = args[1], col_ref = args[2], err_flag=args[3];
+  var grid_ref = args[0], row = args[1], col_ref = args[2], dflt_val=args[3], err_flag=args[4];
   var grid = get_obj(grid_ref);
   if (col_ref === null)
     var col = grid.active_col;
@@ -187,15 +197,15 @@ function cell_set_focus(args) {
     grid.focus();
   grid.focus_from_server = true;
   grid.err_flag = err_flag;
-  grid.cell_set_focus(row, col);
+  grid.cell_set_focus(row, col, dflt_val);
   };
 
 function start_frame(args) {
   var frame = get_obj(args[0]);
   frame.obj_exists = args[1];
   var set_focus = args[2];
-  frame.frame_amended = !frame.obj_exists;
-  //frame.frame_amended = args[1];  // false if object exists, else true
+  frame.set_amended(!frame.obj_exists);
+  //frame.set_amended(args[1]);  // false if object exists, else true
   if (frame.combo_type !== undefined) {
     if (frame.combo_type === 'member') {
       frame.tree.tree_frames['group'].page.style.display = 'none';

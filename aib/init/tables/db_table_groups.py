@@ -4,7 +4,6 @@ from lxml import etree
 table = {
     'table_name'    : 'db_table_groups',
     'group_code'    : 'db',
-    'seq'           : -1,
     'short_descr'   : 'Table groups',
     'long_descr'    : 'Hierarchical grouping of database tables',
     'audit_trail'   : True,

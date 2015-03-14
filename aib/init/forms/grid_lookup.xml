@@ -18,13 +18,11 @@
     <body>
       <block/>
       <grid data_object="lkup_obj" growable="true">
-        <toolbar template="Setup_Grid">
-          <tool type="selected" tip="Item selected (Enter)"/>
-        </toolbar>
-        <grid_methods template="Setup_Grid"/>
+        <toolbar template="Grid_Lookup"/>
+        <grid_methods template="Grid_Lookup"/>
       </grid>
     </body>
     <button_row validate="false"/>
-    <frame_methods template="Setup_Grid"/>
+    <frame_methods template="Grid_Lookup"/>
   </frame>
 </form>

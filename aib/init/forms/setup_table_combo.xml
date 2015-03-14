@@ -44,9 +44,24 @@
           <panel/>
           <row/>
           <col/>
-          <label value="Group name:"/>
+          <label value="Group code:"/>
           <col/>
-          <input fld="db_table_group.group_code" lng="80"/>
+          <input fld="db_table_group.group_code" lng="80" validation="
+            <<validations>>
+              <<validation>>
+                <<case>>
+                  <<node_inserted>>
+                    <<case>>
+                      <<obj_exists obj_name=`db_table_group`>>
+                        <<init_obj obj_name=`db_table_group`/>>
+                        <<error head=`Group code` body=`'$value' already exists`/>>
+                      <</obj_exists>>
+                    <</case>>
+                  <</node_inserted>>
+                <</case>>
+              <</validation>>
+            <</validations>>
+            "/>
           <row/>
           <col/>
           <label value="Group description:"/>
@@ -66,7 +81,22 @@
           <col/>
           <label value="Table name:"/>
           <col colspan="3"/>
-          <input fld="db_table.table_name" lng="150"/>
+          <input fld="db_table.table_name" lng="150" validation="
+            <<validations>>
+              <<validation>>
+                <<case>>
+                  <<node_inserted>>
+                    <<case>>
+                      <<obj_exists obj_name=`db_table`>>
+                        <<init_obj obj_name=`db_table`/>>
+                        <<error head=`Table name` body=`'$value' already exists`/>>
+                      <</obj_exists>>
+                    <</case>>
+                  <</node_inserted>>
+                <</case>>
+              <</validation>>
+            <</validations>>
+            "/>
           <row/>
           <col/>
           <label value="Short description:"/>
@@ -100,7 +130,7 @@
           <col/>
           <button btn_id="pre_save" btn_label="Save header"
             help_msg = "Save header before proceeding"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
               <<action>>
                 <<save_obj obj_name=`db_table`/>>
                 <<change_button>>
@@ -158,22 +188,22 @@
           <row/>
           <col/>
           <button lng="150" btn_id="upd_chk" btn_label="Update checks"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
               <<action>>
               <</action>>
             "/>
           <col/>
           <button lng="150" btn_id="del_chk" btn_label="Delete checks"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
               <<action>>
               <</action>>
             "/>
           <row/>
           <col/>
           <button lng="150" btn_id="db_col" btn_label="Db columns"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
               <<action>>
-                <<sub_form form_name=`setup_table_dbcols`>>
+                <<sub_form form_name=`_sys.setup_table_dbcols`>>
                   <<call_params>>
                     <<call_param name=`db_table` type=`data_obj` source=`db_table`/>>
                   <</call_params>>
@@ -187,9 +217,9 @@
             "/>
           <col/>
           <button lng="150" btn_id="db_cur" btn_label="Db cursors"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
               <<action>>
-                <<sub_form form_name=`cursor_grid`>>
+                <<sub_form form_name=`_sys.cursor_grid`>>
                   <<call_params>>
                     <<call_param name=`db_table` type=`data_obj` source=`db_table`/>>
                   <</call_params>>
@@ -204,21 +234,21 @@
           <row/>
           <col/>
           <button lng="150" btn_id="db_hook" btn_label="Table hooks"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
               <<action>>
               <</action>>
             "/>
           <col/>
           <button lng="150" btn_id="form_defn" btn_label="Form definition"
-            btn_enabled="true" btn_validate="true" btn_action="
+            btn_enabled="true" btn_validate="true" action="
               <<action>>
-                <<inline_form form_name=`Form setup`/>>
+                <<inline_form form_name=`_sys.Form setup`/>>
               <</action>>
             "/>
         </body>
         <button_row validate="true" template="Setup_Form">
           <button btn_id="create_table" btn_label="Create table" btn_enabled="true"
-            btn_validate="true" btn_default="false" btn_action="
+            btn_validate="true" btn_default="false" action="
               <<action>>
                 <<pyfunc name=`db.db_xml.create_table`/>>
                 <<assign>>
@@ -233,7 +263,7 @@
             " help_msg="Set up table in database"/>
         </button_row>
         <frame_methods template="Setup_Form">
-          <method name="on_start_form" action="
+          <method name="on_start_frame" action="
             <<action>>
               <<case>>
                 <<obj_exists obj_name=`db_table`>>

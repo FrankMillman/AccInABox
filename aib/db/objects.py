@@ -9,12 +9,12 @@ from json import loads
 from lxml import etree
 import gzip
 from datetime import datetime
+from collections import OrderedDict as OD
 
 import logging
 logger = logging.getLogger(__name__)
 
 import db.object_fields
-import db.templates
 import db.cursor
 import db.connection
 import db.db_xml
@@ -154,6 +154,7 @@ class DbObject:
         self.data_company = data_company
         self.db_table = db_table
         self.table_name = db_table.table_name
+        self.default_cursor = db_table.default_cursor  # can be over-ridden
 
         self.mem_obj = False  # over-ridden if MemObject
         self.exists = False
@@ -211,7 +212,7 @@ class DbObject:
                 parent.getfld(parent_pkey))  # used in setup_fkey(), start_grid()
             parent.children[self.table_name] = self
 
-        self.fields = {}  # key=col_name value=Field() instance
+        self.fields = OD()  # key=col_name value=Field() instance
         self.flds_to_update = []
         self.select_cols = []
         virtual_cols = []
@@ -374,9 +375,10 @@ class DbObject:
         fld = self.fields[col_name]
         return fld.get_prev()
 
-    def get_val_for_sql(self, col_name):
-        fld = self.fields[col_name]
-        return fld.get_val_for_sql()
+# don't think this is ever called
+#   def get_val_for_sql(self, col_name):
+#       fld = self.fields[col_name]
+#       return fld.get_val_for_sql()
 
     def get_val_for_xml(self, col_name):
         fld = self.fields[col_name]
@@ -569,8 +571,12 @@ class DbObject:
         if self.dirty:
             for caller, method in self.on_clean_func:  # frame methods
                 caller.session.request.db_events.append((caller, method))
-        for caller, method in self.on_read_func:  # frame methods
-            caller.session.request.db_events.append((caller, method))
+# cannot call this here [2015-03-04]
+# we may re-read the contents of the grid for other purposes (e.g. fin_periods)
+# we do not want on_read to be triggered for each read
+# solution - move this to object_fields, when reading row after key field entered
+#       for caller, method in self.on_read_func:  # frame methods
+#           caller.session.request.db_events.append((caller, method))
         for after_read in self.after_read_xml:  # table hook
             db.db_xml.table_hook(self, after_read)
         self.dirty = False
@@ -614,7 +620,7 @@ class DbObject:
 #           db.db_xml.table_hook(self, after_read)
 #?#
 
-    def init(self, display=True, init_vals=None):
+    def init(self, *, display=True, init_vals=None):
         # if not None, init_vals is a dict of col_name, value pairs
         #   used to initialise db_obj fields (see ht.gui_tree for example)
         # purpose -  set initial value, do *not* set db_obj.dirty to True
@@ -661,10 +667,18 @@ class DbObject:
         for after_init in self.after_init_xml:
             db.db_xml.table_hook(self, after_init)
         self.dirty = False
+        for child in self.children.values():
+            child.dirty = False
 
     def restore(self,display=True):
         if not self.dirty:
             return  # nothing to restore
+
+        if not self.exists:
+            self.init(display=display, init_vals=self.init_vals)
+            for caller, method in self.on_clean_func:  # frame methods
+                caller.session.request.db_events.append((caller, method))
+            return
 
         for fld in self.fields.values():
 
@@ -672,8 +686,9 @@ class DbObject:
                 restore_val = self.init_vals[fld.col_name]
             else:
                 restore_val = fld._orig
+                if restore_val is None:
+                    restore_val = fld.get_dflt()  # if None, check dflt
 
-#           if fld._value != fld._orig:
             if fld._value != restore_val:
 
                 # if fld has foreign_key, restore foreign db_obj
@@ -1451,6 +1466,7 @@ class MemTable(DbTable):
         else:
             self.del_chks = loads(del_chks)
         self.table_hooks = None
+        self.default_cursor = None
 
 #----------------------------------------------------------------------------
 

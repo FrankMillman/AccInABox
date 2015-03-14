@@ -63,9 +63,9 @@
       <label value="Password:"/>
       <col/>
       <button btn_id="btn_pwd" btn_label="Change password" btn_enabled="true"
-          btn_validate="true" btn_default="false" btn_action="
+          btn_validate="true" btn_default="false" action="
         <<action>>
-          <<sub_form form_name=`chg_pwd_form`>>
+          <<sub_form form_name=`_sys.chg_pwd_form`>>
             <<call_params/>>
             <<return_params>>
               <<return_param name=`password` type=`data_attr` target=`user.password`/>>
@@ -107,11 +107,20 @@
                       <</assign>>
                     <</compare>>
                   <</case>>
+                  <<call method=`do_save`/>>
                 <</fld_changed>>
               <</case>>
             <</action>>
           "/>
-          <cur_col col_name="comp_admin" lng="60"/>
+          <cur_col col_name="comp_admin" lng="60" after="
+            <<action>>
+              <<case>>
+                <<fld_changed name=`user_comp_view.comp_admin`>>
+                  <<call method=`do_save`/>>
+                <</fld_changed>>
+              <</case>>
+            <</action>>
+          "/>
         </cur_columns>
         <cur_filter/>
         <cur_sequence/>
@@ -119,34 +128,17 @@
       </grid>
     </body>
     <button_row validate="true" template="Setup_Form">
-<!--
-      <button btn_id="btn_pwd" btn_label="Change password" btn_enabled="false"
-          btn_validate="true" btn_default="false" btn_action="
-        <<action>>
-          <<sub_form form_name=`chg_pwd_form`>>
-            <<call_params/>>
-            <<return_params>>
-              <<return_param name=`password` type=`data_attr` target=`user.password`/>>
-            <</return_params>>
-            <<on_return>>
-              <<return state=`completed`/>>
-              <<return state=`cancelled`/>>
-            <</on_return>>
-          <</sub_form>>
-        <</action>>
-        "/>
--->
     </button_row>
     <frame_methods template="Setup_Form">
-      <method name="on_start_form" action="
+      <method name="on_start_frame" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.load_user_comps`/>>
+          <<pyfunc name=`custom.user_companies.load_user_comps`/>>
         <</action>>
       "/>
       <method name="do_save" action="
         <<action>>
           <<save_obj obj_name=`user`/>>
-          <<pyfunc name=`db.formdefn_funcs.dump_user_comps`/>>
+          <<pyfunc name=`custom.user_companies.dump_user_comps`/>>
         <</action>>
       "/>
     </frame_methods>

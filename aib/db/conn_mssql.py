@@ -202,7 +202,7 @@ def convert_string(self, string, db_scale=None):
     return (string
         .replace('CHAR','NCHAR')
         .replace('TEXT','NVARCHAR(3999)')
-        .replace('DTE','DATETIME')
+        .replace('DTE','DATETIME')  # Sql Server 2008 has a DATE type, but not 2005
         .replace('DTM','DATETIME')
         .replace('DEC','DEC (17,{})'.format(db_scale))
         .replace('AUTO','INT IDENTITY PRIMARY KEY NONCLUSTERED')
@@ -226,11 +226,11 @@ def create_functions(self):
     except self.exception:
         pass
     cur.execute(
-        "CREATE FUNCTION subfield (@str VARCHAR(999), @sep CHAR, @occ INT) "
-            "RETURNS VARCHAR(999) WITH SCHEMABINDING AS "
+        "CREATE FUNCTION subfield (@str NVARCHAR(999), @sep CHAR, @occ INT) "
+            "RETURNS NVARCHAR(999) WITH SCHEMABINDING AS "
           "BEGIN "
-            "DECLARE @ans VARCHAR(999) "
-            "DECLARE @ch CHAR "
+            "DECLARE @ans NVARCHAR(999) "
+            "DECLARE @ch NCHAR "
             "DECLARE @found INT "
             "DECLARE @pos INT "
             "SET @ans = '' "
@@ -263,14 +263,32 @@ def create_functions(self):
         pass
     cur.execute(
         "CREATE FUNCTION zfill (@num INT, @lng INT) "
-            "RETURNS VARCHAR(999) WITH SCHEMABINDING AS "
+            "RETURNS NVARCHAR(999) WITH SCHEMABINDING AS "
           "BEGIN "
-            "DECLARE @ans VARCHAR(999) "
+            "DECLARE @ans NVARCHAR(999) "
             "SET @ans = CAST(@num AS NVARCHAR) "
             "WHILE LEN(@ans) < @lng "
               "BEGIN "
                 "SET @ans = '0' + @ans "
               "END "
+            "RETURN @ans "
+          "END "
+        )
+
+    try:
+        cur.execute("drop function date_func")
+    except self.exception:
+        pass
+    cur.execute(
+        "CREATE FUNCTION date_func (@date DATETIME, @op NVARCHAR(5), @days INT) "
+            "RETURNS DATETIME WITH SCHEMABINDING AS "
+          "BEGIN "
+            "DECLARE @ans DATETIME "
+            "SET @op = LOWER(@op) "
+            "IF @op = '+' OR @op = 'add' "
+              "SET @ans = @date + @days "
+            "ELSE IF @op = '-' OR @op = 'sub' "
+              "SET @ans = @date - @days "
             "RETURN @ans "
           "END "
         )

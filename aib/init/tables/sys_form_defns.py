@@ -3,7 +3,6 @@
 table = {
     'table_name'    : 'sys_form_defns',
     'group_code'    : 'sys',
-    'seq'           : -1,
     'short_descr'   : 'Form definitions',
     'long_descr'    : 'Form definitions',
     'audit_trail'   : True,
@@ -139,8 +138,8 @@ cursors.append({
     'cursor_name': 'form_list',
     'descr': 'List of forms',
     'columns': [
-        ('form_name', 160, False, False, False, None, None),
-        ('title', 300, True, False, False, None, None),
+        ('form_name', 160, False, False, False, False, None, None, None, None),
+        ('title', 300, True, False, False, False, None, None, None, None),
         ],
     'filter': [],
     'sequence': [('form_name', False)],

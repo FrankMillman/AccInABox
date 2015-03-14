@@ -27,6 +27,8 @@ def upgrade_datamodel(db_session, old_version, new_version, company='_sys'):
         upgrade_0_1_5(db_session, company)
     if old_version < (0, 1, 6):
         upgrade_0_1_6(db_session, company)
+    if old_version < (0, 1, 7):
+        upgrade_0_1_7(db_session, company)
 
 # replace amended form definitions
 def upd_form_defn(conn, company, form_name):
@@ -415,6 +417,15 @@ def upgrade_0_1_5(db_session, company):
             upd_form_defn(conn, company, form_name)
 
 def upgrade_0_1_6(db_session, company):
+    print()
+    print('Database model has changed too much to be updated.')
+    print()
+    print('Please delete the database and recreate it, then run init.py')
+    print()
+    import sys
+    sys.exit(0)
+
+def upgrade_0_1_7(db_session, company):
     print()
     print('Database model has changed too much to be updated.')
     print()

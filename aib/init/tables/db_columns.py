@@ -4,7 +4,6 @@ from lxml import etree
 table = {
     'table_name'    : 'db_columns',
     'group_code'    : 'db',
-    'seq'           : -1,
     'short_descr'   : 'Db columns',
     'long_descr'    : 'Database column definitions',
     'audit_trail'   : True,

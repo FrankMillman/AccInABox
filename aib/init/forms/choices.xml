@@ -79,12 +79,12 @@
         required="true"/>
     <input_param name="col_name" type="data_attr" target="choice_flds.col_name"
         required="true"/>
-    <input_param name="choices" type="pyfunc" target="db.formdefn_funcs.load_choices_xml"
+    <input_param name="choices" type="pyfunc" target="custom.choices.load_choices_xml"
         required="true"/>
   </input_params>
 
   <output_params>
-    <output_param name="choices" type="pyfunc" source="db.formdefn_funcs.dump_choices_xml"/>
+    <output_param name="choices" type="pyfunc" source="custom.choices.dump_choices_xml"/>
   </output_params>
 
   <frame main_object="choice_flds">
@@ -215,13 +215,13 @@
     </body>
     <button_row validate="true">
       <button btn_id="btn_ok" btn_label="Ok" lng="60"
-          btn_enabled="true" btn_validate="true" btn_default="true" btn_action="
+          btn_enabled="true" btn_validate="true" btn_default="true" action="
         <<action>>
           <<end_form state=`completed`/>>
         <</action>>
       "/>
       <button btn_id="btn_can" btn_label="Cancel" lng="60"
-          btn_enabled="true" btn_validate="false" btn_default="false" btn_action="
+          btn_enabled="true" btn_validate="false" btn_default="false" action="
         <<action>>
           <<end_form state=`cancelled`/>>
         <</action>>

@@ -49,9 +49,9 @@
     </body>
     <button_row validate="true" template="Setup_Form"/>
     <frame_methods template="Setup_Form">
-      <method name="on_start_form" action="
+      <method name="on_start_frame" action="
         <<action>>
-          <<pyfunc name=`db.formdefn_funcs.load_col_perms`/>>
+          <<pyfunc name=`custom.column_perms.load_col_perms`/>>
         <</action>>
       "/>
     </frame_methods>
