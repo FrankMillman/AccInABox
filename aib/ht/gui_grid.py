@@ -36,7 +36,7 @@ def log_func(func):
 db_session = db.api.start_db_session()
 sys_admin = True  # only used to read cursor definitions
 
-class DbCursors(dict):  # cache to store db_cursors data object for each company
+class DbCursors(dict):
     def __missing__(self, company):
         result = self[company] = db.api.get_db_object(
             ht.gui_grid, company, 'db_cursors')
@@ -139,7 +139,7 @@ class GuiGrid:
                         cur_col.get('skip') == 'true',
                         cur_col.get('reverse') == 'true',
                         cur_col.get('before'),
-                        cur_col.get('default'),
+                        cur_col.get('dflt_val'),
                         cur_col.get('validation'),
                         cur_col.get('after')]
                 elif cur_col.tag == 'cur_btn':
@@ -452,7 +452,10 @@ class GuiGrid:
         else:
             filter = self.cursor_filter[:]  # make a copy
             test = 'AND' if filter else 'WHERE'
-            filter.append((test, '', parent[0], '=', parent[1].getval(), ''))
+            parent_val = parent[1].getval()
+            if isinstance(parent_val, str):
+                parent_val = repr(parent_val)
+            filter.append((test, '', parent[0], '=', parent_val, ''))
         self.cursor.setup_cursor(self.col_names, filter,
             self.cursor_sequence, param)
 
@@ -766,8 +769,8 @@ class GuiGrid:
     def on_cell_lost_focus(self, obj, row, value):
         if debug:
             log.write('CELL LOST FOCUS {} {} {} {} {} {}\n\n'.format(
-                obj.ref, row, repr(value),
-                self.current_row, self.growable, self.no_rows))
+                obj.ref, row, repr(value), self.current_row,
+                self.growable, self.no_rows))
 
         if self.current_row is None:
             yield from self.start_row(row)
@@ -787,15 +790,17 @@ class GuiGrid:
     @log_func
     @asyncio.coroutine
     def on_cell_req_focus(self, obj, row, save):
+        # 'save' is set to True if user moved to new row via Tab or Enter
+        # assumption - they want to save changes, so do not ask
+
         if debug:
             log.write('CELL REQ FOCUS ref={} pos={} row={} curr={} save={}\n\n'.format(
                 obj.ref, obj.pos, row, self.current_row, save))
-        new_row = True
-        if row == self.current_row:
-            yield from self.validate_data(obj.pos)
-            new_row = False
-        elif self.current_row is not None:
+
+        if row != self.current_row:
             yield from self.end_current_row(save)
+        else:
+            yield from self.validate_data(obj.pos)
 
         replies = [reply[0] for reply in self.session.request.reply
             if reply in ('cell_set_focus', 'start_grid')]
@@ -803,19 +808,10 @@ class GuiGrid:
         #   and then re-positioned
         # 'start_grid' can be set by any function which modifies the
         #   content of the grid and wants to redisplay it from scratch
-#       if 'cell_set_focus' in replies or 'start_grid' in replies:
         if replies:
-            return
-
-        if new_row:
-            if self.auto_startrow or self.grid_frame is not None:
-                yield from self.start_row(row, display=True)
+            return  # don't send cell_set_focus message
 
         if obj.form_dflt is not None:
-#           if self.current_row is None:  # must be start of blank row
-##              yield from self.start_row(row)
-#               obj._row = row
-#               obj.fld.db_obj.init()
             dflt_val = yield from get_form_dflt(obj, obj.form_dflt)
         else:
             dflt_val = None
@@ -827,15 +823,17 @@ class GuiGrid:
             if self.grid_frame.data_changed():
                 return True
         if debug:
-            log.write('CHANGED? {} {}\n\n'.format(self.db_obj.dirty, self.temp_data))
+            log.write('CHANGED? {} {} {}\n\n'.format(
+                self.ref, self.db_obj.dirty, self.temp_data))
         return bool(self.db_obj.dirty or self.temp_data)
 
     @log_func
     @asyncio.coroutine
     def end_current_row(self, save=False):
         if debug:
-            log.write('END row={} ins={} chg={} save={}\n\n'.format(
-                self.current_row, self.inserted, self.data_changed(), save))
+            log.write('END {} row={} ins={} chg={} save={} frame={}\n\n'.format(
+                self.ref, self.current_row, self.inserted,
+                self.data_changed(), save, self.grid_frame is not None))
 
         # save can be set to True by -
         #   user tabbed off row or pressed Enter -
@@ -968,15 +966,19 @@ class GuiGrid:
     @asyncio.coroutine
     def validate(self, save):
         if debug:
-            log.write('validate grid {} {} {}\n\n'.format(
-                self.ref, self.current_row, self.data_changed()))
+            log.write('validate grid {} row={} chg={} frame={}\n\n'.format(
+                self.ref, self.current_row, self.data_changed(), self.grid_frame is not None))
         if self.current_row is not None:
-            yield from self.end_current_row(save)
+            if self.grid_frame is not None:
+                # just validate up to this point, let grid_frame do the rest
+                yield from self.validate_data(len(self.obj_list))
+            else:
+                yield from self.end_current_row(save)
 
     @asyncio.coroutine
     def validate_data(self, pos, save=False):
         if debug:
-            log.write('validate grid {} row={} {} to {}\n\n'.format(
+            log.write('validate grid data {} row={} {} to {}\n\n'.format(
                 self.ref, self.current_row, self.last_vld+1, pos-1))
         for i in range(self.last_vld+1, pos):
             if self.last_vld > i:  # after 'read', last_vld set to 'all'

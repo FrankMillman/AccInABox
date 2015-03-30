@@ -174,7 +174,7 @@ def on_start_row(caller, xml):
     fin_period = caller.data_objects['fin_period']
     var = caller.data_objects['var']
     if fin_period.exists:
-        next_start_date =  fin_period.getval('cl_date') + dt.timedelta(1)
+        next_start_date = fin_period.getval('cl_date') + dt.timedelta(1)
         var.setval('start_date', next_start_date)
     elif var.getval('ye_per_no') is None:
         fin_period.init(init_vals={

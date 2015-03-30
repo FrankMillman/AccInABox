@@ -53,32 +53,18 @@ def load_table_perms(caller, xml):
             if tbl_orig.exists:
                 sel_ok = tbl_orig.getval('sel_ok')
                 tbl_view.setval('sel_ok', sel_ok)
-                if sel_ok is True:
-                    tbl_view.setval('sel_dsp', 'Y')
-                elif sel_ok is False:
-                    tbl_view.setval('sel_dsp', 'N')
-                else:  # must be dict of columns allowed
-                    tbl_view.setval('sel_dsp', 'C')
+                tbl_view.setval('sel_dsp',
+                    'Y' if sel_ok is True else'N' if sel_ok is False else 'C')
                 ins_ok = tbl_orig.getval('ins_ok')
                 tbl_view.setval('ins_ok', ins_ok)
-                if ins_ok is True:
-                    tbl_view.setval('ins_dsp', 'Y')
-                else:  # must be False
-                    tbl_view.setval('ins_dsp', 'N')
+                tbl_view.setval('ins_dsp', 'Y' if ins_ok is True else'N')
                 upd_ok = tbl_orig.getval('upd_ok')
                 tbl_view.setval('upd_ok', upd_ok)
-                if upd_ok is True:
-                    tbl_view.setval('upd_dsp', 'Y')
-                elif upd_ok is False:
-                    tbl_view.setval('upd_dsp', 'N')
-                else:  # must be dict of columns allowed
-                    tbl_view.setval('upd_dsp', 'C')
+                tbl_view.setval('upd_dsp',
+                    'Y' if upd_ok is True else'N' if upd_ok is False else 'C')
                 del_ok = tbl_orig.getval('del_ok')
                 tbl_view.setval('del_ok', del_ok)
-                if del_ok is True:
-                    tbl_view.setval('del_dsp', 'Y')
-                else:  # must be False
-                    tbl_view.setval('del_dsp', 'N')
+                tbl_view.setval('del_dsp', 'Y' if del_ok is True else'N')
             else:
                 tbl_view.setval('sel_ok', False)
                 tbl_view.setval('ins_ok', False)
@@ -199,27 +185,18 @@ def load_col_perms(caller, xml):
     for _ in all_cols:
         col_id = db_col.getval('row_id')
 
-        init_vals = {}
-        init_vals['col_id'] = col_id
-        init_vals['table_id'] = db_col.getval('table_id')
-        init_vals['col_name'] = db_col.getval('col_name')
-        init_vals['descr'] = db_col.getval('short_descr')
-        if sel_ok is True:
-            col_view_ok = True
-        elif sel_ok is False:
-            col_view_ok = False
-        else:  # must be dictionary of permitted columns
-            col_view_ok = str(col_id) in sel_ok
-        init_vals['view_ok'] = col_view_ok
-        if upd_ok is True:
-            col_amend_ok = True
-        elif upd_ok is False:
-            col_amend_ok = False
-        else:  # must be dictionary of permitted columns
-            col_amend_ok = str(col_id) in upd_ok
-        init_vals['amend_ok'] = col_amend_ok
-
-        col_view.init(init_vals=init_vals)
+        col_view.init(init_vals={
+            'col_id': col_id,
+            'table_id': db_col.getval('table_id'),
+            'col_name': db_col.getval('col_name'),
+            'descr': db_col.getval('short_descr'),
+            'view_ok': True if sel_ok is True
+                            else False if sel_ok is False
+                            else str(col_id) in sel_ok,
+            'amend_ok': True if upd_ok is True
+                            else False if upd_ok is False
+                            else str(col_id) in upd_ok,
+            })
         col_view.save()
 
     if sel_ok in (True, False):
@@ -300,32 +277,19 @@ def dump_col_perms(caller, xml):
     if role.exists and role.getval('parent_id') is None:  # company administrator
         return  # no permissions necessary
 
-    check_sel = False
-    check_upd = False
-    
-    if tbl_view.getval('sel_dsp') == 'Y':
-        tbl_view.setval('sel_ok', True)
-    elif tbl_view.getval('sel_dsp') == 'N':
-        tbl_view.setval('sel_ok', False)
-    else:  # must be 'C'
-        tbl_view.setval('sel_ok', {})
-        check_sel = True
-    if tbl_view.getval('ins_dsp') == 'Y':
-        tbl_view.setval('ins_ok', True)
-    else:  # must be 'N'
-        tbl_view.setval('ins_ok', False)
-    if tbl_view.getval('upd_dsp') == 'Y':
-        tbl_view.setval('upd_ok', True)
-    elif tbl_view.getval('upd_dsp') == 'N':
-        tbl_view.setval('upd_ok', False)
-    else:  # must be 'C'
-        tbl_view.setval('upd_ok', {})
-        check_upd = True
-    if tbl_view.getval('del_dsp') == 'Y':
-        tbl_view.setval('del_ok', True)
-    else:  # must be 'N'
-        tbl_view.setval('del_ok', False)
+    tbl_view.setval('sel_ok',
+        True if tbl_view.getval('sel_dsp') == 'Y'
+        else False if tbl_view.getval('sel_dsp') == 'N'
+        else {})  # empty dict - populate below
+    tbl_view.setval('ins_ok', True if tbl_view.getval('ins_dsp') == 'Y' else False)
+    tbl_view.setval('upd_ok',
+        True if tbl_view.getval('upd_dsp') == 'Y'
+        else False if tbl_view.getval('upd_dsp') == 'N'
+        else {})  # empty dict - populate below
+    tbl_view.setval('del_ok', True if tbl_view.getval('del_dsp') == 'Y' else False)
 
+    check_sel = (tbl_view.getval('sel_ok') == {})
+    check_upd = (tbl_view.getval('upd_ok') == {})
     if check_sel or check_upd:
         all_col_views = col_view.select_many(where=[], order=[])
         for _ in all_col_views:
@@ -333,10 +297,10 @@ def dump_col_perms(caller, xml):
             if check_sel:
                 if col_view.getval('view_ok'):
                     sel_ok = tbl_view.getval('sel_ok')
-                    sel_ok[col_id] = None
+                    sel_ok[col_id] = None  # cannot use set() because of JSON
                     tbl_view.setval('sel_ok', sel_ok)
             if check_upd:
                 if col_view.getval('amend_ok'):
                     upd_ok = tbl_view.getval('upd_ok')
-                    upd_ok[col_id] = None
+                    upd_ok[col_id] = None  # cannot use set() because of JSON
                     tbl_view.setval('upd_ok', upd_ok)

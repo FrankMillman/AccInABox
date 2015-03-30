@@ -361,15 +361,32 @@ def setup_disp_name(db_obj, xml):
     with db_obj.context.db_session as conn:
         concat = conn.concat
 
+# sql format changed [2015-03-23]
+# previously all column names were prefixed with 'a.'
+#
+# it worked when the table with the 'display_name' column was the
+#   primary table being selected
+#
+# the problem comes if it is not the primary table
+#   e.g. SELECT a.user_row_id, b.user_id, b.display_name FROM
+#          _sys.dir_users_companies a, _sys.dir_users b ...
+#
+# removing the prefix solves the problem, but it is will fail if
+#  there are duplicate column names in the primary and secondary tables
+#
+# run with it for now
+#
     col_name = db_obj.getval('col_name')
     virt_sql = ""
     for choice, descr, subtype_cols, disp_names in choices[2]:
         if disp_names:
             virt_sql += (
-                " WHEN a.{} = '{}' THEN ".format(col_name, choice))
+#               " WHEN a.{} = '{}' THEN ".format(col_name, choice))
+                " WHEN {} = '{}' THEN ".format(col_name, choice))
             sql_elem = []
             for disp_name, separator in disp_names:
-                sql_elem.append('a.' + disp_name)
+#               sql_elem.append('a.' + disp_name)
+                sql_elem.append(disp_name)
                 if separator != "":
                     sql_elem.append("'{}'".format(separator))
             virt_sql += " {} ".format(concat).join(sql_elem)

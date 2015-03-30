@@ -148,6 +148,8 @@ function create_input(frame, json_elem, label) {
   input.ref = json_elem.ref;
   input.help_msg = json_elem.help_msg;
   input.title = input.help_msg;
+  if (label !== null)
+    label.title = input.help_msg;
 //  input.readonly = false;
   input.readonly = json_elem.readonly;  // set in form defn
   input.allow_amend = json_elem.allow_amend;  // set in col defn
@@ -233,14 +235,9 @@ function create_input(frame, json_elem, label) {
   //input.onfocus = function() {input.aib_obj.onfocus(input)};
   input.got_focus = function() {
     input.aib_obj.got_focus(input);
-    if (input.frame.send_focus_msg) {  // can be set to false in start_frame()
-      if (input.frame.amended() && !input.frame.form.focus_from_server) {
-        var args = [input.ref];
-        send_request('got_focus', args);
-        };
-      }
-    else {  // over-ridden in 'start_frame'
-      input.frame.send_focus_msg = true;  // reset
+    if (input.frame.amended() && !input.frame.form.focus_from_server) {
+      var args = [input.ref];
+      send_request('got_focus', args);
       };
     input.key_strokes = 0;
     input.aib_obj.after_got_focus(input);
@@ -255,17 +252,11 @@ function create_input(frame, json_elem, label) {
 //    if (input.aib_obj.data_changed(input, input.current_value) && !input.frame.form.internal)
     if ((input.current_value !== input.form_value) && !input.frame.form.internal)
       input.frame.set_amended(true);
-    if (input.frame.send_focus_msg) {  // can be set to false in start_frame()
-      if (input.frame.amended() && !input.frame.form.focus_from_server) {
-        var value = input.aib_obj.get_value_for_server(input);
-//        if (value !== null) {  // 'dummy' field
-          var args = [input.ref, value];
-          send_request('lost_focus', args);
-//          };
-        };
+    if (input.frame.amended() && !input.frame.form.focus_from_server) {
+      var value = input.aib_obj.get_value_for_server(input);
+        var args = [input.ref, value];
+        send_request('lost_focus', args);
       };
-//    else  // over-ridden in 'start_frame'
-//      input.frame.send_focus_msg = true;  // reset
     input.aib_obj.after_lost_focus(input);
     if (input.multi_line === true)
       ignore_enter = false;
@@ -313,6 +304,8 @@ function create_input(frame, json_elem, label) {
 
   input.set_value_from_server = function(value) {
     this.aib_obj.set_value_from_server(this, value);
+// not sure about this
+//    input.frame.set_amended(true);
     };
 
   input.reset_value = function() {
@@ -1046,7 +1039,7 @@ function setup_sxml(json_elem) {
   return sxml;
   };
 
-function create_display(frame, json_elem) {
+function create_display(frame, json_elem, label) {
   var display = document.createElement('div');
   display.style[cssFloat] = 'left';
 
@@ -1079,6 +1072,10 @@ function create_display(frame, json_elem) {
   display.active_frame = frame;
   display.ref = json_elem.ref;
   display.text = text;
+  display.help_msg = json_elem.help_msg;
+  display.title = display.help_msg;
+  if (label !== null)
+    label.title = display.help_msg;
 
   display.set_value_from_server = function(value) {
     if (display.choices)
@@ -1162,7 +1159,7 @@ function create_button(frame, json_elem) {
     got_focus(button);
     };
   button.got_focus = function() {
-    //debug3(button.label.data + ' got focus');
+    //debug3(button.label.data + ' got focus amd=' + button.frame.amended());
     if (button.readonly)
       button.style.background = button.bg_disabled;
     else

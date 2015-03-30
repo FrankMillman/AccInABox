@@ -218,7 +218,7 @@ cursors.append({
         ('role', 80, False, False, False, False, None, None, None, None),
         ('descr', 150, True, False, False, False, None, None, None, None),
         ],
-    'filter': [['where', '', 'role', '!=', 'admin', '']],
+    'filter': [['where', '', 'role', '!=', "'admin'", '']],
     'sequence': [('role', False)],
     'default': False
     })

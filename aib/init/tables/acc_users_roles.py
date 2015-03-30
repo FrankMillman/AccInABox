@@ -107,7 +107,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'col_chks'   : [['not_admin', 'Role cannot be admin',
-        [['check', '', 'role', '!=', '"admin"', '']]]],
+        [['check', '', 'role', '!=', "'admin'", '']]]],
     'fkey'       : ['acc_roles', 'row_id', 'role', 'role', True],
     'choices'    : None,
     })

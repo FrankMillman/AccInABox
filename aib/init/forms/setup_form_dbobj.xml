@@ -76,11 +76,11 @@
       <panel/>
       <row/>
       <col/>
-      <text value="Form name:"/>
+      <label value="Form name:"/>
       <col/>
       <display fld="form.form_name" lng="160"/>
       <col/>
-      <text value="Title:"/>
+      <label value="Title:"/>
       <col/>
       <display fld="form.title" lng="250"/>
       <block/>
@@ -161,11 +161,13 @@
       <method name="do_save" action="
         <<action>>
           <<pyfunc name=`custom.formdefn_funcs.dump_db_objects`/>>
+          <<save_obj obj_name=`form`/>>
         <</action>>
       "/>
       <method name="do_restore" action="
         <<action>>
           <<pyfunc name=`custom.formdefn_funcs.restore_db_objects`/>>
+          <<restore_obj obj_name=`form`/>>
         <</action>>
       "/>
     </frame_methods>

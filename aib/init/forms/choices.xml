@@ -17,10 +17,10 @@
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
     <mem_obj name="choices" descr="Choices codes" hooks="
-        <<hooks>>
-          <<hook type=`before_save`>><<increment_seq/>><</hook>>
-          <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-        <</hooks>>
+      <<hooks>>
+        <<hook type=`before_save`>><<increment_seq/>><</hook>>
+        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
+      <</hooks>>
       ">
       <mem_col col_name="code" data_type="TEXT" short_descr="Code"
         long_descr="Choice code" col_head="Code" key_field="A"
@@ -33,10 +33,10 @@
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
     <mem_obj name="sub_types" descr="Sub types" parent="choices" hooks="
-        <<hooks>>
-          <<hook type=`before_save`>><<increment_seq/>><</hook>>
-          <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-        <</hooks>>
+      <<hooks>>
+        <<hook type=`before_save`>><<increment_seq/>><</hook>>
+        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
+      <</hooks>>
       ">
       <mem_col col_name="code" data_type="TEXT" short_descr="Choice code"
         long_descr="Choice code" col_head="Code" key_field="A"
@@ -53,10 +53,10 @@
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
     <mem_obj name="disp_names" descr="Display names" parent="choices" hooks="
-        <<hooks>>
-          <<hook type=`before_save`>><<increment_seq/>><</hook>>
-          <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-        <</hooks>>
+      <<hooks>>
+        <<hook type=`before_save`>><<increment_seq/>><</hook>>
+        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
+      <</hooks>>
       ">
       <mem_col col_name="code" data_type="TEXT" short_descr="Choice code"
         long_descr="Choice code" col_head="Code" key_field="A"

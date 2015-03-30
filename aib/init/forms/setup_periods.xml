@@ -28,8 +28,7 @@
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"
         col_chks="[[`no_amd`, `Date cannot be amended if period closed`,
         [[`check`, ``, `per_closed`, `!=`, `True`, ``],
-        [`or`, ``, `$value`, `=`, `cl_date`, ``]]]]"
-        />
+        [`or`, ``, `$value`, `=`, `cl_date`, ``]]]]"/>
       <mem_col col_name="per_closed" data_type="BOOL" short_descr="Period closed?"
         long_descr="Period closed?" col_head="Closed?" key_field="N"
         allow_null="true" allow_amend="false" max_len="0" db_scale="0"/>

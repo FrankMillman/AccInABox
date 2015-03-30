@@ -40,9 +40,15 @@
       <mem_col col_name="tip" data_type="TEXT" short_descr="Tool tip"
         long_descr="Tool tip" col_head="Tool tip" key_field="N" allow_null="true"
         allow_amend="true" max_len="120" db_scale="0"/>
-      <mem_col col_name="confirm" data_type="BOOL" short_descr="Request confirmation"
-        long_descr="Request confirmation (only for Delete)" col_head="Confirm" key_field="N"
-        allow_null="true" allow_amend="true" max_len="120" db_scale="0"/>
+      <mem_col col_name="lng" data_type="INT" short_descr="Length"
+        long_descr="Length (only for Text)" col_head="Lng" key_field="N"
+        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="name" data_type="TEXT" short_descr="Image name"
+        long_descr="Image name" col_head="Image name" key_field="N" allow_null="true"
+        allow_amend="true" max_len="120" db_scale="0"/>
+      <mem_col col_name="shortcut" data_type="TEXT" short_descr="Keyboard shortcut"
+        long_descr="Keyboard shortcut" col_head="Shortcut" key_field="N" allow_null="true"
+        allow_amend="true" max_len="120" db_scale="0"/>
     </mem_obj>
 
     <mem_obj name="body" descr="Body definition elements" parent="form">
@@ -247,11 +253,11 @@
       <panel/>
       <row/>
       <col/>
-      <text value="Form name:"/>
+      <label value="Form name:"/>
       <col/>
       <display fld="form.form_name" lng="160"/>
       <col/>
-      <text value="Title:"/>
+      <label value="Title:"/>
       <col/>
       <display fld="form.title" lng="250"/>
       <block/>
@@ -464,11 +470,13 @@
       <method name="do_save" action="
         <<action>>
           <<pyfunc name=`custom.formdefn_funcs.dump_frame`/>>
+          <<save_obj obj_name=`form`/>>
         <</action>>
       "/>
       <method name="do_restore" action="
         <<action>>
           <<pyfunc name=`custom.formdefn_funcs.restore_frame`/>>
+          <<restore_obj obj_name=`form`/>>
         <</action>>
       "/>
     </frame_methods>

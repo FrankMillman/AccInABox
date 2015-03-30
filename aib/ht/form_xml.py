@@ -5,6 +5,7 @@ import asyncio
 from ast import literal_eval
 
 from ht.form import Form
+import ht.gui_grid
 import db.api
 from errors import AibError
 from start import log, debug
@@ -208,6 +209,11 @@ def notify_obj_clean(caller, xml):
 
     if caller.db_obj is not None:
         caller.session.request.obj_to_redisplay.append((caller.ref, True))
+
+@asyncio.coroutine
+def notify_obj_dirty(caller, xml):
+    if caller.db_obj is not None:
+        caller.session.request.obj_to_redisplay.append((caller.ref, False))
 
 @asyncio.coroutine
 def handle_restore(caller, xml):
@@ -501,8 +507,18 @@ def ask(caller, xml):
     escape = xml.get('escape')
     question = xml.get('question')
     if '{obj_descr}' in question:
+        if isinstance(caller, ht.gui_grid.GuiGrid):
+            if caller.parent.frame_type == 'frame':
+                obj = caller.obj_list[0]
+            elif caller.parent.frame_type == 'grid_frame':
+                obj = caller.parent.ctrl_grid.obj_list[0]
+        else:
+            if caller.frame_type == 'grid_frame':
+                obj = caller.ctrl_grid.obj_list[0]
+            else:
+                obj = caller.obj_list[0]
         question = question.replace(
-            '{obj_descr}', repr(caller.obj_list[0].fld.getval()))
+            '{obj_descr}', repr(obj.fld.getval()))
     for response in xml.findall('response'):
         ans = response.get('ans')
         answers.append(ans)

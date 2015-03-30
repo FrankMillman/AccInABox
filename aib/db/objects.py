@@ -96,7 +96,9 @@ def get_db_table(context, active_company, table_name):
                     body='Table {} does not exist'.format(table_name))
             else:
                 # too many values to unpack = more than 1 row selected
-                raise RuntimeError('More than one row found')
+#               raise RuntimeError('More than one row found')
+                raise AibError(head='Select {}'.format(table_name),
+                    body='More than one row found')
                 # should never happen - table_name is primary key
 
     # table_id is the row_id of the entry in db_tables
@@ -129,7 +131,9 @@ def get_db_table(context, active_company, table_name):
                         body='Table {} does not exist'.format(table_name))
                 else:
                     # too many values to unpack = more than 1 row selected
-                    raise RuntimeError('More than one row found')
+#                   raise RuntimeError('More than one row found')
+                    raise AibError(head='Select {}'.format(table_name),
+                        body='More than one row found')
                     # should never happen - table_name is primary key
 
     tables_open[table_key] = DbTable(
@@ -388,9 +392,13 @@ class DbObject:
         fld = self.fields[col_name]
         fld.setval(value, display)
 
-    def set_val_from_xml(self, col_name, value):
+    def get_val_from_xml(self, col_name, value):
         fld = self.fields[col_name]
-        fld.set_val_from_xml(value)
+        return fld.get_val_from_xml(value)
+
+#   def set_val_from_xml(self, col_name, value):
+#       fld = self.fields[col_name]
+#       fld.set_val_from_xml(value)
 
     def recalc(self, col_name):
         fld = self.fields[col_name]
@@ -431,7 +439,7 @@ class DbObject:
         self.init(display=False)
         for key in keys:
             self.setval(key, keys[key], display)
-        self.exists = True
+        assert self.exists
 
     def select_many(self, where, order, debug=False):
 
@@ -448,7 +456,10 @@ class DbObject:
 
         parent = self.parent
         if parent is not None:
-            where.append((test, '', parent[0], '=', parent[1].getval(), ''))
+            parent_val = parent[1].getval()
+            if isinstance(parent_val, str):
+                parent_val = repr(parent_val)
+            where.append((test, '', parent[0], '=', parent_val, ''))
 
         # cannot use 'with conn' here
         # if we have nested 'select_many's, they would share the same
@@ -456,10 +467,8 @@ class DbObject:
 
         if self.mem_obj:
             session = self.context.mem_session
-#           conn = self.context.mem_session.conn
             conn = db.connection._get_mem_connection(session.mem_id)
         else:
-#           session = self.context.db_session
             conn = db.connection._get_connection()
         conn.cur = conn.cursor()
 
@@ -469,8 +478,6 @@ class DbObject:
             self.on_row_selected(row, display=False)
             yield None  # throw-away value
 
-#       if not self.mem_obj:
-#           conn.release()
         conn.release()
 
     def select_row(self, keys, display=True, debug=False):
@@ -491,6 +498,8 @@ class DbObject:
                     eq = 'IS'
                 else:
                     eq = '='
+                    if isinstance(value, str):
+                        value = repr(value)
             where.append(
                 (test, '', col_name, eq, value, '') )
 #               {'test': test, 'lbr': '', 'col_name': col_name,
@@ -527,7 +536,9 @@ class DbObject:
                 else:
                     print(self.cursor.rows)
                     # too many values to unpack = more than 1 row selected
-                    raise RuntimeError('More than one row found')
+#                   raise RuntimeError('More than one row found')
+                    raise AibError(head='Select {}'.format(self.table_name),
+                        body='More than one row found')
 
     def on_row_selected(self, row, display):
         for fld, dat in zip(self.select_cols, row):
@@ -580,8 +591,11 @@ class DbObject:
         for after_read in self.after_read_xml:  # table hook
             db.db_xml.table_hook(self, after_read)
         self.dirty = False
-        for child in self.children.values():
-            child.dirty = False
+
+# don't understand this [2015-03-16]
+# better to disallow save() if any children are dirty!
+#       for child in self.children.values():
+#           child.dirty = False
 
     def on_select_failed(self, display):
         # assume we are trying to create a new db_obj
@@ -667,14 +681,16 @@ class DbObject:
         for after_init in self.after_init_xml:
             db.db_xml.table_hook(self, after_init)
         self.dirty = False
-        for child in self.children.values():
-            child.dirty = False
+# don't understand this [2015-03-16]
+# better to disallow save() if any children are dirty!
+#       for child in self.children.values():
+#           child.dirty = False
 
     def restore(self,display=True):
         if not self.dirty:
             return  # nothing to restore
 
-        if not self.exists:
+        if not self.mem_obj and not self.exists:
             self.init(display=display, init_vals=self.init_vals)
             for caller, method in self.on_clean_func:  # frame methods
                 caller.session.request.db_events.append((caller, method))
@@ -718,13 +734,22 @@ class DbObject:
         for after_restore in self.after_restore_xml:
             db.db_xml.table_hook(self, after_restore)
         self.dirty = False
-        for child in self.children.values():
-            child.dirty = False
+# don't understand this [2015-03-16]
+# better to disallow save() if any children are dirty!
+#       for child in self.children.values():
+#           child.dirty = False
 
     def save(self):
         if self.db_table.read_only:
-            raise IOError('{} is read only - no updates allowed'
-                .format(self.table_name))
+#           raise IOError('{} is read only - no updates allowed'
+#               .format(self.table_name))
+            raise AibError(head='Save {}'.format(self.table_name),
+                body='Table is read only - no updates allowed')
+
+        for child in self.children.values():
+            if child.dirty:
+                raise AibError(head='Save {}'.format(self.table_name),
+                    body='{} must be saved first'.format(child.table_name))
 
         for before_save in self.before_save_xml:
             db.db_xml.table_hook(self, before_save)  # can raise AibError
@@ -785,15 +810,15 @@ class DbObject:
 
         for after_save in self.after_save_xml:
             db.db_xml.table_hook(self, after_save)
-#       for callback in self.on_clean_func:  # frame method
-#           callback.on_clean(self)
         for caller, method in self.on_clean_func:  # frame methods
             caller.session.request.db_events.append((caller, method))
 
         self.init_vals = {}  # to prevent re-use on restore()
         self.dirty = False
-        for child in self.children.values():
-            child.dirty = False
+# don't understand this [2015-03-16]
+# better to disallow save() if any children are dirty!
+#       for child in self.children.values():
+#           child.dirty = False
         self.exists = True
 
         for fld in self.fields.values():
@@ -1024,8 +1049,9 @@ class MemObject(DbObject):
         self._dirty = False
         DbObject.__init__(self, context, data_company, db_table)
         self.mem_obj = True  # over-ride value set in DbObject.__init__
-        if parent is not None:
-            parent.children[self.table_name] = self
+# only do this when fkey is processed - see below
+#       if parent is not None:
+#           parent.children[self.table_name] = self
 
 #       self.conn = db.connection.MemConn()
 #       cur = self.conn.cursor()
@@ -1193,8 +1219,6 @@ class MemObject(DbObject):
         if self.mem_parent is not None:
             if not self.mem_parent.dirty:
                 self.mem_parent.dirty = True
-#               for callback in self.mem_parent.on_amend_func:
-#                   callback.on_amend(self.mem_parent)
                 for caller, method in self.mem_parent.on_amend_func:
                     caller.session.request.db_events.append((caller, method))
 
@@ -1234,6 +1258,9 @@ class MemObject(DbObject):
         session = self.context.mem_session
         with session as conn:
             conn.delete_all(self)
+        self.init(display=False)
+        for caller, method in self.on_clean_func:  # frame methods
+            caller.session.request.db_events.append((caller, method))
 
     """
     def select_row_from_cursor(self, row, display):
@@ -1295,8 +1322,8 @@ class MemObject(DbObject):
             caller.session.request.db_events.append((caller, method))
 
         self.dirty = False
-        for child in self.children.values():
-            child.dirty = False
+#       for child in self.children.values():
+#            child.dirty = False
         self.exists = True
 
         for fld in self.fields.values():
@@ -1325,8 +1352,6 @@ class MemObject(DbObject):
             if self.mem_parent is not None:
                 if not self.mem_parent.dirty:
                     self.mem_parent.dirty = True
-#                   for callback in self.mem_parent.on_amend_func:
-#                       callback.on_amend(self.mem_parent)
                     for caller, method in self.mem_parent.on_amend_func:
                         caller.session.request.db_events.append((caller, method))
     dirty = property(get_dirty, set_dirty)

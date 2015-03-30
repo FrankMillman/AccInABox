@@ -49,9 +49,7 @@ function show_cal(parent, current_value, callback) {
 
   calendar.style.zIndex = root_zindex.length * 100
 
-  //calendar.obj_list[0].set_value_from_server(calendar.current_month);
   calendar.data_mth.set_value_from_server(calendar.current_month);
-  //calendar.obj_list[1].set_value_from_server(calendar.current_year);
   calendar.data_yr.set_value_from_server(calendar.current_year);
 
   setTimeout(function() {calendar.page.focus()}, 0);
@@ -199,7 +197,7 @@ var choices = [[0, 'Jan'], [1, 'Feb'], [2, 'Mar'], [3, 'Apr'], [4, 'May'], [5, '
 args.choices = [null, choices];
 args.callback = calendar.onchange_mth;
 
-var data_mth = create_input(frame, args);
+var data_mth = create_input(frame, args, null);
 //data_mth.choice.onfocus = function() {data_mth.choice.after_got_focus()};
 data_mth.style.marginLeft = '20px';
 data_row.appendChild(data_mth);
@@ -218,7 +216,7 @@ args.min = 1900;
 args.max = 2100;
 args.callback = calendar.onchange_yr;
 
-var data_yr = create_input(frame, args);
+var data_yr = create_input(frame, args, null);
 //data_yr.spin.onfocus = function() {data_yr.spin.after_got_focus()};
 data_yr.style.marginLeft = '30px';
 data_row.appendChild(data_yr);

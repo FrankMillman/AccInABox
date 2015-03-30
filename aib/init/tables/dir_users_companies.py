@@ -115,7 +115,7 @@ cols.append ({
     'data_type'  : 'BOOL',
     'short_descr': 'Company administrator?',
     'long_descr' : 'Is user a company administrator?',
-    'col_head'   : 'Admin',
+    'col_head'   : 'Admin?',
     'key_field'  : 'N',
     'generated'  : False,
     'allow_null' : False,

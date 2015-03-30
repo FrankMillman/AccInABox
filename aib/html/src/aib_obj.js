@@ -46,7 +46,8 @@ AibCtrl.prototype.got_focus = function(ctrl) {
     ctrl.tabIndex = -1;
     };
 
-  if (ctrl.frame.form.focus_from_server)
+//  if (ctrl.frame.form.focus_from_server)
+  if (ctrl.frame.err_flag)
     inp.className = 'error_background'
   else
     inp.className = 'focus_background';
@@ -1016,7 +1017,8 @@ AibBool.prototype.got_focus = function(bool) {
   };
 AibBool.prototype.after_got_focus = function(bool) {
   bool.style.border = '1px solid black';
-  if (bool.frame.form.focus_from_server)
+//  if (bool.frame.form.focus_from_server)
+  if (bool.frame.err_flag)
     bool.className = 'error_background'
   else if (!bool.amendable())
     bool.className = 'readonly_background';
@@ -1358,12 +1360,10 @@ AibChoice.prototype.create_dropdown = function(choice) {
     parent.aib_obj.onselection(parent, parent.dropdown.clicked)
     };
 
-  if (document.attachEvent) {
+  if (document.attachEvent)
     document.attachEvent('onclick', dropdown.onclick);
-    }
-  else if (document.addEventListener) {
+  else if (document.addEventListener)
     document.addEventListener('click', dropdown.onclick, false);
-    };
 
   for (var i=0, l=choice.values.length; i<l; i++) {
     var row = document.createElement('div');
@@ -1438,7 +1438,7 @@ AibChoice.prototype.create_dropdown = function(choice) {
     dropdown.onkeydown = dropdown.onkey;
 
   setTimeout(function() {dropdown.focus()}, 0);
-  return dropdown;
+  //return dropdown;
   };
 AibChoice.prototype.onkey = function(choice, e) {
   if (!choice.amendable())
@@ -1606,6 +1606,7 @@ AibChoice.prototype.grid_after_selection = function(choice, option_selected) {
     cell.text_node.data = choice.values[option_selected];
     cell.grid.set_amended(true);
     };
+  setTimeout(function() {cell.grid.focus()}, 0);
   };
 
 ////////////////////
@@ -1732,7 +1733,8 @@ AibSxml.prototype.got_focus = function(sxml) {
   };
 AibSxml.prototype.after_got_focus = function(sxml) {
   sxml.style.border = '1px solid black';
-  if (sxml.frame.form.focus_from_server)
+//  if (sxml.frame.form.focus_from_server)
+  if (sxml.frame.err_flag)
     //sxml.className = 'error_background'
     sxml.style.background = sxml.bg_error;
   else if (!sxml.amendable())

@@ -283,15 +283,17 @@ class RequestHandler:
                             evt_id, args, len(messages)))
                 try:
                     yield from getattr(self, 'on_'+evt_id)(args)  # get method and call it
-                    for caller, action in self.db_events:
+                    local_db_events = self.db_events[:]
+                    self.db_events.clear()  # else exec_xml() processes the rest!
+                    for caller, action in local_db_events:
                         yield from ht.form_xml.exec_xml(caller, action)
-                    self.db_events.clear()
                     self.check_redisplay()
                 except AibError as err:
                     print("ERR: head='{}' body='{}'".format(err.head, err.body))
-                    for caller, action in self.db_events:
+                    local_db_events = self.db_events[:]
+                    self.db_events.clear()  # else exec_xml() processes the rest!
+                    for caller, action in local_db_events:
                         yield from ht.form_xml.exec_xml(caller, action)
-                    self.db_events.clear()
                     self.check_redisplay()
                     if err.head is not None:
                         self.reply.append(('display_error', (err.head, err.body)))
@@ -339,8 +341,8 @@ class RequestHandler:
     def send_rows(self, ref, args):
         self.reply.append(('recv_rows', (ref, args)))
 
-    def send_set_focus(self, ref):
-        self.reply.append(('set_focus', (ref)))
+    def send_set_focus(self, ref, err_flag=False):
+        self.reply.append(('set_focus', (ref, err_flag)))
 
     def send_prev(self, ref, value):
         self.reply.append(('recv_prev', (ref, value)))

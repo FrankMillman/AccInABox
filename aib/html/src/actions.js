@@ -45,6 +45,7 @@ function got_focus(new_focus) {
     if (new_focus.tabIndex === -1)
       new_focus.childNodes[0].focus();
     new_focus_form.focus_from_server = false;
+    new_focus.frame.err_flag = false;
     return;
     };
   if (new_focus.disabled)
@@ -52,7 +53,7 @@ function got_focus(new_focus) {
 
   //debug3('GOT FOCUS ' + new_focus.ref + ' ' + new_focus.help_msg + ' ' +
   //  (new_focus.frame.form.current_focus === new_focus) + ' ' +
-  //  new_focus.frame.send_focus_msg);
+  //  new_focus_form.focus_from_server);
 
   current_form = new_focus_form;  // global variable
   var old_focus = new_focus_form.current_focus;
@@ -80,6 +81,7 @@ function got_focus(new_focus) {
 //    new_focus.got_focus();
   new_focus.got_focus();
   new_focus_form.focus_from_server = false;
+  new_focus.frame.err_flag = false;
 
   if (new_focus.active_frame !== new_focus.frame.form.active_frame) {
 
@@ -115,6 +117,7 @@ function got_focus(new_focus) {
   };
 
 function redisplay(args) {
+  //debug3('redisp ' + JSON.stringify(args));
   for (var i=0, l=args.length; i<l; i++) {
     var ref = args[i][0], value = args[i][1];
     get_obj(ref).set_value_from_server(value);
@@ -170,9 +173,11 @@ function disable_obj(obj) {
   };
 
 function set_focus(args) {
-  var obj = get_obj(args);
+  var obj_ref = args[0], err_flag=args[1];
+  var obj = get_obj(obj_ref);
   obj.frame.form.focus_from_server = true;
   obj.frame.form.setting_focus = obj;  // IE workaround - delays actually setting focus!
+  obj.frame.err_flag = err_flag;
   obj.focus();
   };
 
@@ -204,8 +209,8 @@ function start_frame(args) {
   var frame = get_obj(args[0]);
   frame.obj_exists = args[1];
   var set_focus = args[2];
+  //debug3('start frame ' + frame.ref + ' exists=' + args[1] + ' focus=' + args[2]);
   frame.set_amended(!frame.obj_exists);
-  //frame.set_amended(args[1]);  // false if object exists, else true
   if (frame.combo_type !== undefined) {
     if (frame.combo_type === 'member') {
       frame.tree.tree_frames['group'].page.style.display = 'none';
@@ -244,7 +249,7 @@ function start_frame(args) {
     else {
 //      if (frame.form.current_focus !== null)
       if (frame.type === 'frame') // don't do this for grid_frame
-        frame.send_focus_msg = false;  // do not notify server of 'lost/got_focus'
+        frame.form.focus_from_server = true;  // do not notify server of 'lost/got_focus'
       setTimeout(function() {obj.focus()}, 0);
       };
     };

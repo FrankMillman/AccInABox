@@ -2,9 +2,39 @@
 
   <db_objects/>
   <mem_objects>
-    <mem_obj name="check_array" descr="Expanded array for column checks">
+
+    <mem_obj name="var" descr="Variable to store col_chks">
+      <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
+        long_descr="Table name" col_head="" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="col_chks" data_type="JSON" short_descr="Column checks"
+        long_descr="Column checks" col_head="Checks" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0"/>
+    </mem_obj>
+
+    <mem_obj name="col_checks" descr="Column checks" parent="var">
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="Col" key_field="A" allow_null="false"
+        allow_amend="false" max_len="10" db_scale="0"
+        fkey="[`var`, `col_name`, null, null, true]"/>
+      <mem_col col_name="code" data_type="TEXT" short_descr="Code"
+        long_descr="Code" col_head="Code" key_field="A" allow_null="false"
+        allow_amend="false" max_len="10" db_scale="0"/>
+      <mem_col col_name="errmsg" data_type="TEXT" short_descr="Error message"
+        long_descr="Error message" col_head="Error message" key_field="N" allow_null="false"
+        allow_amend="true" max_len="30" db_scale="0"/>
+    </mem_obj>
+
+    <mem_obj name="steps" descr="Steps for column checks" parent="col_checks">
+      <mem_col col_name="code" data_type="TEXT" short_descr="Code"
+        long_descr="Code" col_head="Code" key_field="A" allow_null="false"
+        allow_amend="false" max_len="10" db_scale="0"
+        fkey="[`col_checks`, `code`, null, null, true]"/>
       <mem_col col_name="test" data_type="TEXT" short_descr="Test"
-        long_descr="CHECK/AND/OR" col_head="Test" key_field="N" allow_null="false"
+        long_descr="check/and/or" col_head="Test" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="lbr" data_type="TEXT" short_descr="Left bracket"
         long_descr="Left bracket (if required)" col_head="(" key_field="N" allow_null="true"
@@ -25,31 +55,64 @@
   </mem_objects>
 
   <input_params>
-    <input_param name="col_chks" type="data_array" target="check_array" required="true"/>
+    <input_param name="table_name" type="data_attr" target="var.table_name"/>
+    <input_param name="col_name" type="data_attr" target="var.col_name"/>
+    <input_param name="col_chks" type="data_attr" target="var.col_chks" required="true"/>
   </input_params>
 
   <output_params>
-    <output_param name="col_chks" type="data_array" source="check_array"/>
+    <output_param name="col_chks" type="data_attr" source="var.col_chks"/>
   </output_params>
 
-  <frame main_object="check_array">
+  <frame main_object="var">
     <toolbar/>
     <body>
       <block/>
-      <grid data_object="check_array" growable="true" num_grid_rows="5">
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Table:"/>
+      <col/>
+      <display fld="var.table_name" lng="160"/>
+      <col/>
+      <label value="Column:"/>
+      <col/>
+      <display fld="var.col_name" lng="250"/>
+      <block/>
+      <grid data_object="col_checks" growable="true" num_grid_rows="5">
         <cur_columns>
-          <cur_col col_name="test" lng="80"/>
-          <cur_col col_name="lbr" lng="20"/>
-          <cur_col col_name="src" lng="160"/>
-          <cur_col col_name="chk" lng="60"/>
-          <cur_col col_name="tgt" lng="160" expand="true"/>
-          <cur_col col_name="rbr" lng="20"/>
+          <cur_col col_name="code" lng="80"/>
+          <cur_col col_name="errmsg" lng="200"/>
         </cur_columns>
         <cur_filter/>
         <cur_sequence/>
         <grid_methods template="Setup_Grid"/>
       </grid>
+      <block/>
+      <grid_frame main_object="col_checks">
+        <toolbar/>
+        <body>
+          <block/>
+          <grid data_object="steps" growable="true" num_grid_rows="5">
+            <cur_columns>
+              <cur_col col_name="test" lng="80"/>
+              <cur_col col_name="lbr" lng="20"/>
+              <cur_col col_name="src" lng="160"/>
+              <cur_col col_name="chk" lng="60"/>
+              <cur_col col_name="tgt" lng="160" expand="true"/>
+              <cur_col col_name="rbr" lng="20"/>
+            </cur_columns>
+            <cur_filter/>
+            <cur_sequence/>
+            <grid_methods template="Setup_Grid"/>
+          </grid>
+        </body>
+        <button_row validate="true" template="Grid_Frame"/>
+        <frame_methods template="Grid_Frame"/>
+      </grid_frame>
     </body>
+    <button_row validate="true" template="Setup_Form"/>
+<!--
     <button_row validate="true">
       <button btn_id="btn_ok" btn_label="Ok" lng="60"
           btn_enabled="true" btn_validate="true" btn_default="true" action="
@@ -64,7 +127,26 @@
         <</action>>
       "/>
     </button_row>
-    <frame_methods>
+-->
+    <frame_methods template="Setup_Form">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<pyfunc name=`custom.col_checks.load_checks`/>>
+        <</action>>
+      "/>
+      <method name="do_save" action="
+        <<action>>
+          <<pyfunc name=`custom.col_checks.dump_checks`/>>
+          <<save_obj obj_name=`var`/>>
+        <</action>>
+      "/>
+      <method name="do_restore" action="
+        <<action>>
+          <<pyfunc name=`custom.col_checks.restore_checks`/>>
+          <<restore_obj obj_name=`var`/>>
+        <</action>>
+      "/>
+<!--
       <method name="on_req_cancel" action="
         <<action>>
           <<end_form state=`cancelled`/>>
@@ -75,6 +157,7 @@
           <<end_form state=`cancelled`/>>
         <</action>>
       "/>
+-->
     </frame_methods>
   </frame>
 </form>

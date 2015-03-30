@@ -2,10 +2,10 @@
   <db_objects/>
   <mem_objects>
     <mem_obj name="column" descr="Cursor columns" parent="db_cur" hooks="
-        <<hooks>>
-          <<hook type=`before_save`>><<increment_seq/>><</hook>>
-          <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-        <</hooks>>
+      <<hooks>>
+        <<hook type=`before_save`>><<increment_seq/>><</hook>>
+        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
+      <</hooks>>
       ">
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
@@ -22,9 +22,18 @@
       <mem_col col_name="readonly" data_type="BOOL" short_descr="Read only?"
         long_descr="Read only field?" col_head="R/O?" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="skip" data_type="BOOL" short_descr="Skip?"
+        long_descr="Skip field?" col_head="Skip?" key_field="N"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="reverse" data_type="BOOL" short_descr="Reverse?"
         long_descr="Reverse sign? (numeric only)" col_head="Rev?" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="before" data_type="SXML" short_descr="Before input"
+        long_descr="Action to take before input" col_head="Input" key_field="N"
+        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="dflt_val" data_type="SXML" short_descr="Default value"
+        long_descr="Steps to derive default value" col_head="Default" key_field="N"
+        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="validation" data_type="SXML" short_descr="Validation"
         long_descr="Validation after input" col_head="Validation" key_field="N"
         allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
@@ -33,10 +42,10 @@
         allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
     <mem_obj name="filter" descr="Cursor filter" parent="db_cur" hooks="
-        <<hooks>>
-          <<hook type=`before_save`>><<increment_seq/>><</hook>>
-          <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-        <</hooks>>
+      <<hooks>>
+        <<hook type=`before_save`>><<increment_seq/>><</hook>>
+        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
+      <</hooks>>
       ">
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
@@ -61,10 +70,10 @@
         allow_null="true" allow_amend="true" max_len="1" db_scale="0"/>
     </mem_obj>
     <mem_obj name="sequence" descr="Cursor sequence" parent="db_cur" hooks="
-        <<hooks>>
-          <<hook type=`before_save`>><<increment_seq/>><</hook>>
-          <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-        <</hooks>>
+      <<hooks>>
+        <<hook type=`before_save`>><<increment_seq/>><</hook>>
+        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
+      <</hooks>>
       ">
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
@@ -89,11 +98,11 @@
       <panel/>
       <row/>
       <col/>
-      <text value="Name:"/>
+      <label value="Name:"/>
       <col/>
       <input fld="db_cur.cursor_name" lng="160"/>
       <col/>
-      <text value="Description:"/>
+      <label value="Description:"/>
       <col/>
       <input fld="db_cur.descr" lng="250"/>
       <block/>
@@ -105,7 +114,10 @@
           <cur_col col_name="lng" lng="40"/>
           <cur_col col_name="expand" lng="40"/>
           <cur_col col_name="readonly" lng="40"/>
+          <cur_col col_name="skip" lng="40"/>
           <cur_col col_name="reverse" lng="40"/>
+          <cur_col col_name="before" lng="100"/>
+          <cur_col col_name="dflt_val" lng="100"/>
           <cur_col col_name="validation" lng="100"/>
           <cur_col col_name="after" lng="100"/>
         </cur_columns>

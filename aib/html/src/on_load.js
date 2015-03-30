@@ -47,6 +47,7 @@ function on_load() {
   favr_hdng.appendChild(favr_text);
   favr_div.appendChild(favr_hdng);
   favr_div.id = 'debug3';
+  favr_div.style.overflow = 'auto';
   document.body.appendChild(favr_div);
 
 //  window_id = Math.random();
@@ -71,7 +72,7 @@ function on_load() {
       10000);  // send 'tick' every 10 seconds
 
   window.onbeforeunload = function() {
-    return 'This will close the program. Are you sure?';
+    return 'This will log you off. Are you sure?';
     };
 
   };

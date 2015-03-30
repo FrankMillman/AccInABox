@@ -421,8 +421,43 @@ class Conn:
                     expr = self.param_style
                 elif expr.lower() == 'null':
                     pass  # don't parameterise 'null'
-                elif expr.startswith('c"'):  # expr is a column name
-                    expr = expr[2:-1]  # strip leading "c'" and trailing "'"
+                elif expr.startswith("'"):  # literal string
+                    params.append(expr[1:-1])
+#                   col = 'LOWER({})'.format(col)
+#                   expr = 'LOWER({})'.format(self.param_style)
+                    expr = 'LOWER(' + self.param_style + ')'
+#               elif expr.startswith('c"'):  # expr is a column name
+#                   expr = expr[2:-1]  # strip leading "c'" and trailing "'"
+#                   if '.' in expr:  # can be col_name or fkey_col.target_col
+#                       join_column, expr = expr.split('.')
+#                       if join_column not in self.joins:
+#                           self.build_join(db_obj, join_column)
+#                       join_alias = self.joins[join_column]
+##                      expr = '{}.{}'.format(join_alias, expr)
+#                       expr = join_alias + '.' + expr
+#                   else:
+#                       sql = getattr(db_obj.getfld(expr), 'sql', None)
+#                       if sql is not None:
+#                           while '_param_' in sql:
+#                               sql = sql.replace('_param_', param.pop(0), 1)
+##                          expr =  '({})'.format(sql)
+#                           expr =  '(' + sql + ')'
+#                       else:
+##                          expr = 'a.{}'.format(expr)
+#                           expr = 'a.' + expr
+                elif expr.startswith('('):  # expression
+                    # could be a tuple - WHERE title IN ('Mr', 'Mrs')
+                    raise NotImplementedError  # does this ever happen
+#               elif expr.startswith('_'):  # parameter
+#                   raise NotImplementedError  # can't use this - company_id = '_sys'
+                elif expr.startswith('?'):  # get user input
+                    raise NotImplementedError  # does this ever happen
+#               else:  # must be literal string
+#                   params.append(expr)
+##                  col = 'LOWER({})'.format(col)
+##                  expr = 'LOWER({})'.format(self.param_style)
+#                   expr = 'LOWER(' + self.param_style + ')'
+                else:  # must be a column name
                     if '.' in expr:  # can be col_name or fkey_col.target_col
                         join_column, expr = expr.split('.')
                         if join_column not in self.joins:
@@ -440,18 +475,6 @@ class Conn:
                         else:
 #                           expr = 'a.{}'.format(expr)
                             expr = 'a.' + expr
-                elif expr.startswith('('):  # expression
-                    # could be a tuple - WHERE title IN ('Mr', 'Mrs')
-                    raise NotImplementedError  # does this ever happen
-#               elif expr.startswith('_'):  # parameter
-#                   raise NotImplementedError  # can't use this - company_id = '_sys'
-                elif expr.startswith('?'):  # get user input
-                    raise NotImplementedError  # does this ever happen
-                else:  # must be literal string
-                    params.append(expr)
-#                   col = 'LOWER({})'.format(col)
-#                   expr = 'LOWER({})'.format(self.param_style)
-                    expr = 'LOWER(' + self.param_style + ')'
 
                 where_clause += ' {} {}{} {} {}{}'.format(
                     test, lbr, col, op, expr, rbr)

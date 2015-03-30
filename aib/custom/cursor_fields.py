@@ -18,32 +18,32 @@ def load_cur_flds(caller, xml):
     # we use init_vals below to avoid making the object 'dirty'
     # we use select_cols[2:] to skip the first two columns -
     #   'row_id' is automatically generated
-    #   'seq' is populated with 'pos'
-    # we use 'get_val_from_sql' because 'before'/'validation'/'after'
+    #   'seq' is populated with seq
+    # we use 'get_val_from_sql' because before/dflt_val/validation/after
     #   are stored as XML strings, but must be converted into an
     #   etree element before passing into cur_col
 
-    for pos, row in enumerate(db_cur.getval('columns')):
+    for seq, row in enumerate(db_cur.getval('columns')):
         init_vals = {}
         for fld, dat in zip(cur_col.select_cols[2:], row):
             init_vals[fld.col_name] = fld.get_val_from_sql(dat)
-        init_vals['seq'] = pos
+        init_vals['seq'] = seq
         cur_col.init(init_vals=init_vals)
         cur_col.save()
 
-    for pos, row in enumerate(db_cur.getval('filter')):
+    for seq, row in enumerate(db_cur.getval('filter')):
         init_vals = {}
         for fld, dat in zip(cur_filter.select_cols[2:], row):
             init_vals[fld.col_name] = fld.get_val_from_sql(dat)
-        init_vals['seq'] = pos
+        init_vals['seq'] = seq
         cur_filter.init(init_vals=init_vals)
         cur_filter.save()
 
-    for pos, row in enumerate(db_cur.getval('sequence')):
+    for seq, row in enumerate(db_cur.getval('sequence')):
         init_vals = {}
         for fld, dat in zip(cur_seq.select_cols[2:], row):
             init_vals[fld.col_name] = fld.get_val_from_sql(dat)
-        init_vals['seq'] = pos
+        init_vals['seq'] = seq
         cur_seq.init(init_vals=init_vals)
         cur_seq.save()
 

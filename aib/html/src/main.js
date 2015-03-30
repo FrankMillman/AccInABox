@@ -169,12 +169,21 @@ function debug3(msg) {
   };
 */
 
-str3 = [];  //new Array();
+//str3 = [];  //new Array();
+str3 = new String();
 function debug3(msg) {
-  str3.push(msg);
-  if (str3.length > 32)
-    str3.shift();
-  document.getElementById('debug3').innerHTML = str3.join('<br>');
+//  str3.push(msg);
+//  if (str3.length > 32)
+//    str3.shift();
+//  document.getElementById('debug3').innerHTML = str3.join('<br>');
+//  if (str3.length) str3 += '<br>';
+//  str3 += msg;
+  if (str3.length) str3 = '<br>' + str3;
+  str3 = msg + str3;
+  document.getElementById('debug3').innerHTML = str3;
+  //var dbg = document.getElementById('debug3')
+  //dbg.innerHTML = str3;
+  //dbg.scrollTop = dbg.scrollHeight;  // force scroll to bottom
   };
 
 // debug4 is to handle Opera bug - remove when fixed

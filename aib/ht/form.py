@@ -54,7 +54,7 @@ A sub-form is treated exactly the same as a root form, except -
 db_session = db.api.start_db_session()
 sys_admin = True  # only used to read form definitions
 
-class FormDefns(dict):  # cache to store form_defn data object for each company
+class FormDefns(dict):
     def __missing__(self, company):
         result = self[company] = db.api.get_db_object(
             ht.form, company, 'sys_form_defns')
@@ -818,6 +818,7 @@ class Frame:
             gui.append(('form_toolbar', tool_list))
 
     def setup_body(self, body, gui, subtype=None):
+        self.first_input = None  # used to determine if top-level obj is grid or fld
         for element in body:
             if element.tag == 'block':
                 gui.append(('block', None))
@@ -924,6 +925,9 @@ class Frame:
                     subtype_obj.append(gui_obj)
                     gui_obj.hidden = not active
 
+                if self.first_input is None:
+                    self.first_input = gui_obj
+
             elif element.tag == 'display':
                 obj_name, col_name = element.get('fld').split('.')
                 fld = self.data_objects[obj_name].getfld(col_name)
@@ -935,7 +939,8 @@ class Frame:
                 gui_obj = ht.gui_objects.GuiDisplay(self, fld)
                 value = fld.val_to_str(fld.get_dflt())
                 gui.append(('display',
-                    {'lng': lng, 'ref': gui_obj.ref, 'choices': choices, 'value': value}))
+                    {'lng': lng, 'ref': gui_obj.ref, 'choices': choices,
+                    'help_msg': fld.col_defn.long_descr, 'value': value}))
                 fld.notify_form(gui_obj)
                 self.flds_notified.append((fld, gui_obj))
             elif element.tag == 'button':
@@ -974,6 +979,9 @@ class Frame:
                 grid = ht.gui_grid.GuiGrid(self, gui, element)
                 self.grids.append(grid)
                 self.form.grids.append(grid)
+
+                if self.first_input is None:
+                    self.first_input = grid
 
             elif element.tag == 'grid_frame':
                 grid = self.form.grids.pop()
@@ -1282,7 +1290,8 @@ class Frame:
 
     @log_func
     def on_lost_focus(self, obj, value):
-#       log.write('lost focus {} "{}"\n\n'.format(obj, value))
+        if debug:
+            log.write('lost focus {} "{}"\n\n'.format(obj, value))
         if isinstance(obj, ht.gui_grid.GuiGrid):
             # call gui_grid.validate_grid() when grid loses focus
             self.set_last_vld(obj)
@@ -1314,7 +1323,8 @@ class Frame:
     @log_func
     @asyncio.coroutine
     def on_got_focus(self, obj):
-#       log.write('got focus {}\n\n'.format(obj))
+        if debug:
+            log.write('got focus {}\n\n'.format(obj))
         if obj.must_validate:  # eg not Cancel button
             yield from self.validate_data(obj.pos)
 
@@ -1356,7 +1366,8 @@ class Frame:
         if self.db_obj is None:
             return False
         if debug:
-            log.write('CHANGED? {} {}\n\n'.format(self.db_obj.dirty, self.temp_data))
+            log.write('CHANGED? {} {} {}\n\n'.format(
+                self.ref, self.db_obj.dirty, self.temp_data))
         return bool(self.db_obj.dirty or self.temp_data)
 
     @asyncio.coroutine
@@ -1397,8 +1408,8 @@ class Frame:
             except AibError as err:
                 self.last_vld -= 1  # reset
                 if err.head is not None:
-                    if type(obj) != ht.gui_grid.GuiGrid:
-                        self.session.request.send_set_focus(obj.ref)
+                    if type(obj) != ht.gui_grid.GuiGrid:  # cell_set_focus already sent
+                        self.session.request.send_set_focus(obj.ref, err_flag=True)
                     print()
                     print('-'*20)
                     print(err.head)
@@ -1446,9 +1457,11 @@ class Frame:
         for method in self.on_start_frame:
             # don't process any db_events - the form is not started yet
             yield from ht.form_xml.exec_xml(self, method, clear_dbevents=True)
-        for grid in self.grids:
-            yield from grid.start_grid()
-        if self.db_obj is not None and self.db_obj.exists:
+#       for grid in self.grids:
+#           yield from grid.start_grid()
+        if isinstance(self.first_input, ht.gui_grid.GuiGrid):
+            set_obj_exists = True  # tell client to set ameneded = False
+        elif self.db_obj is not None and self.db_obj.exists:
             self.last_vld = len(self.obj_list)
 #           for obj in self.non_amendable:
 #               obj.set_readonly(True)
@@ -1462,7 +1475,11 @@ class Frame:
         self.session.request.start_frame(self.ref, set_obj_exists, set_focus)
         #self.session.request.check_redisplay()  # send any 'redisplay' messages
 
-        # next line is very dodgy, but it might be correct
+        for grid in self.grids:
+            yield from grid.start_grid()
+
+        # next line is a bit dodgy, but it might be correct
+        # why would there be any pending db_events?
         self.session.request.db_events.clear()
 
     def return_to_grid(self):

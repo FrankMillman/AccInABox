@@ -79,12 +79,12 @@
         <<action>>
           <<sub_form form_name=`_sys.col_checks`>>
             <<call_params>>
-              <<call_param name=`col_chks` type=`data_attr`
-                source=`db_col.col_chks`/>>
+              <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+              <<call_param name=`col_name` type=`data_attr` source=`db_col.col_name`/>>
+              <<call_param name=`col_chks` type=`data_attr` source=`db_col.col_chks`/>>
             <</call_params>>
             <<return_params>>
-              <<return_param name=`col_chks` type=`data_attr`
-                target=`db_col.col_chks`/>>
+              <<return_param name=`col_chks` type=`data_attr` target=`db_col.col_chks`/>>
             <</return_params>>
             <<on_return>>
               <<return state=`completed`/>>

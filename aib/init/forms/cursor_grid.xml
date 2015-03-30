@@ -7,18 +7,18 @@
     <input_param name="db_table" type="data_obj" target="db_table" required="true"/>
   </input_params>
   <output_params/>
-  <frame main_object="db_cur">
+  <frame main_object="db_table">
     <toolbar/>
     <body>
       <block/>
       <panel/>
       <row/>
       <col/>
-      <text value="Table:"/>
+      <label value="Table:"/>
       <col/>
       <display fld="db_table.table_name" lng="160"/>
       <col/>
-      <text value="Description:"/>
+      <label value="Description:"/>
       <col/>
       <display fld="db_table.short_descr" lng="250"/>
       <block/>

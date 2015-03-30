@@ -103,7 +103,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
             if (!grid.amended()) {
               var args = [grid.ref, grid.active_row, grid.inserted];
               send_request('start_row', args);
-              grid.set_amended(true);
+// not sure about this
+//              grid.set_amended(true);
               };
             var args = [this.ref, this.value];
             send_request('req_lookup', args);
@@ -113,7 +114,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
             if (!grid.amended()) {
               var args = [grid.ref, grid.active_row, grid.inserted];
               send_request('start_row', args);
-              grid.set_amended(true);
+// not sure about this
+//              grid.set_amended(true);
               };
             var args = [this.ref];
             send_request('req_lookdown', args);
@@ -208,7 +210,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
           //var cell = this.grid.grid_rows[row-this.grid.first_grid_row].grid_cols[this.col];
           //cell.aib_obj.set_cell_value_from_server(cell, value);
           this.aib_obj.set_cell_value_from_server(this.grid, row, this.col, value);
-          this.grid.set_amended(true);
+// not sure about this
+//          this.grid.set_amended(true);
           };
         input.reset_value = function() {
           if (this.grid.active_row === -1)  // grid not yet set up
@@ -250,7 +253,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
             return
           var row = args[0], value = args[1];
           this.aib_obj.set_cell_value_from_server(this.grid, row, this.col, value);
-          //this.grid.set_amended(true);
+// not sure about this
+//          this.grid.set_amended(true);
           };
         input.reset_value = function() {
           if (this.grid.active_row === -1)  // grid not yet set up
@@ -328,7 +332,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
           //var cell = this.grid.grid_rows[row-this.grid.first_grid_row].grid_cols[this.col];
           //cell.aib_obj.set_cell_value_from_server(cell, value);
           this.aib_obj.set_cell_value_from_server(this.grid, row, this.col, value);
-          this.grid.set_amended(true);
+// not sure about this
+//          this.grid.set_amended(true);
           };
 
         var btn_lng = 18;
@@ -555,9 +560,11 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     };
   grid.got_focus = function() {
     //debug3('grid got focus ' + grid.ref + ' rows=' + grid.num_data_rows
-    //  + ' gridframe=' + (grid.grid_frame !== null)
-    //  + ' inserted=' + grid.inserted
-    //  + ' frame_amended=' + grid.frame.amended());
+    //  + ' gframe=' + (grid.grid_frame !== null)
+    //  + ' from_srv=' + grid.frame.form.focus_from_server
+    //  + ' ins=' + grid.inserted
+    //  + ' amd=' + grid.amended()
+    //  + ' frame_amd=' + grid.frame.amended());
     //  + ' highlighted=' + ((grid.highlighted_cell === null) ? 'none' :
     //    (grid.highlighted_cell.grid_row + '/' + grid.highlighted_cell.grid_col)));
     //DOMViewerObj = grid;
@@ -567,14 +574,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     if (!grid.growable && !grid.num_data_rows)
       grid.tab_to_ctrl(grid.frame.form.tabdir);
 
-    if (grid.frame.send_focus_msg) {  // can be set to false in start_frame()
-      if (grid.frame.amended() && !grid.frame.form.focus_from_server) {
-        var args = [grid.ref];
-        send_request('got_focus', args);
-        };
-      }
-    else {  // over-ridden in 'start_frame'
-      grid.frame.send_focus_msg = true;  // reset
+    if (grid.frame.amended() && !grid.frame.form.focus_from_server) {
+      var args = [grid.ref];
+      send_request('got_focus', args);
       };
 
 //      if (grid.highlighted_cell === null)
@@ -588,6 +590,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     if (grid.active_col !== -1) {  // else empty grid waiting for cell_set_focus
       grid.highlight_active_cell()
       grid.frame.form.help_msg.data = grid.obj_list[grid.active_col].help_msg;
+//      grid.req_cell_focus(grid.active_row, grid.active_col);
       };
 
 //      }
@@ -601,9 +604,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //      grid.highlighted_cell.className = 'blur_background';
 //    };
   grid.lost_focus = function() {
-    //debug3('grid lost focus ' + grid.num_grid_rows +
-    //  ' row_amd=' + grid.amended() +
-    //  ' form_amd=' + grid.frame.amended());
+    //debug3('grid lost focus ' + grid.ref + ' ' + grid.num_grid_rows +
+    //  ' row_amd=' + grid.amended() + ' frame_amd=' + grid.frame.amended());
 
       if (grid.edit_in_progress) {
         var input = grid.obj_list[grid.active_col];
@@ -613,19 +615,17 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     var cell = grid.active_cell;
     cell.highlight('blur');
 
-    if (grid.frame.send_focus_msg) {  // can be set to false in start_frame()
-      if (grid.amended()) {
-        if (cell.data_col !== null) {
-          var value_for_server =
-            cell.aib_obj.get_cell_value_for_server(cell);
-          var args =
-            [grid.obj_list[grid.active_col].ref, grid.active_row, value_for_server];
-          send_request('cell_lost_focus', args);
-          if (grid.req_save_row) {
-            var args = [grid.ref];
-            send_request('req_save_row', args);
-            grid.req_save_row = false;
-            };
+    if (grid.amended()) {
+      if (cell.data_col !== null) {
+        var value_for_server =
+          cell.aib_obj.get_cell_value_for_server(cell);
+        var args =
+          [grid.obj_list[grid.active_col].ref, grid.active_row, value_for_server];
+        send_request('cell_lost_focus', args);
+        if (grid.req_save_row) {
+          var args = [grid.ref];
+          send_request('req_save_row', args);
+          grid.req_save_row = false;
           };
         };
       };
@@ -649,7 +649,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     //if (grid.inserted && !grid.amended())
     //  new_col = 0;
 
-    //debug3('req ' + new_row + '/' + new_col + ' amended=' + grid.amended()
+    //debug3('req ' + new_row + '/' + new_col + ' ref=' + grid.ref + ' amended=' + grid.amended()
     //  + ' data_rows=' + grid.total_rows() + ' active=' + grid.active_row
     //  + ' save=' + grid.req_save_row + ' tabbing=' + grid.tabbing);
 
@@ -666,29 +666,22 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
           [grid.obj_list[grid.active_col].ref, grid.active_row, value_for_server];
         send_request('cell_lost_focus', args);
         };
-//      if (grid.req_save_row) {
-//        var args = [grid.ref];
-//        send_request('req_save_row', args);
-//        grid.req_save_row = false;
-//        };
       var args = [grid.obj_list[new_col].ref, new_row, grid.req_save_row];
       send_request('cell_req_focus', args);
       grid.req_save_row = false;
       return;
       };
 
-    if (!grid.start_in_progress) {
-      if (new_row !== grid.active_row) {
+    if (!grid.start_in_progress)
+      if (new_row !== grid.active_row)
         if (grid.grid_frame !== null || grid.auto_startrow) {
-          var args = [grid.obj_list[new_col].ref, new_row, false];
-          send_request('cell_req_focus', args);
-          return;
+          // is it ok to call cell_set_focus immediately,
+          //   or should it be set up as a callback?
+          // see what happens
+          var args = [grid.ref, new_row, grid.inserted];
+          send_request('start_row', args);
           };
-        };
-      };
 
-//  if (callbacks.length)  // no request sent, so execute any callbacks now
-//    exec_callbacks();
     grid.cell_set_focus(new_row, new_col);
     };
 
@@ -763,7 +756,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 
     grid.active_row = -1;
     grid.active_col = -1;
-    grid.set_amended(false);
+// why?
+//    grid.set_amended(false);
 
     // when cell gets focus, treat the same as if we had tabbed there
     grid.tabbing = true;
@@ -808,9 +802,10 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     if (dflt_val === undefined)
       dflt_val = null;
 
-    //debug3('cell set focus ' + grid.ref + ' ' + new_row + ' ' + new_col + ' ' +
-    //  grid.focus_from_server + ' ' + grid.active_row + ' ' + grid.active_col + ' ' +
-    //  grid.num_grid_rows + ' ' + this.start_in_progress);
+    //debug3('SET FOCUS ' + grid.ref + ' ' + grid.active_row + '/' + grid.active_col +
+    //  ' -> ' + new_row + '/' + new_col + ' start_in_prog=' + this.start_in_progress +
+    //  ' grid_has_focus=' + grid.has_focus + '  dflt_val=' + dflt_val);
+
 
 // ********* is this necessary? *********
 // we have changed 'start_grid' to call req_cell_focus, which calls this function,
@@ -856,9 +851,6 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       if (cell.data_col !== null)
         cell.aib_obj.set_cell_value_lost_focus(cell, cell.current_value);
       };
-
-    //debug3('SET FOCUS ' + grid.active_row + '/' + grid.active_col +
-    //  ' -> ' + new_row + '/' + new_col);
 
     // ensure cell visible
     // if focus set from server, display active row in centre of grid
@@ -907,6 +899,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     if (cell.data_col !== null)
       if (cell.input.amendable())
         cell.aib_obj.set_cell_value_got_focus(cell);
+// next 2 lines should not be necessary (?)
       else
         cell.aib_obj.set_cell_value_lost_focus(cell, cell.current_value);
     grid.focus_from_server = false;
@@ -921,23 +914,21 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       };
 
     if (grid.tabbing) {
-      if(grid.grid_frame === null) {  // debatable! really neede finer control
         var input = grid.obj_list[grid.active_col];
         if (input.skip)
-          callbacks.push([grid, grid.handle_tab]);
-        };
+//          callbacks.push([grid, grid.handle_tab]);
+          setTimeout(function() {grid.handle_tab()}, 0);
       grid.tabbing = false;
       };
 
     };
 
-  grid.set_amended = function(state, from_grid_frame) {
+  grid.set_amended = function(state) {
     this._amended = state;
     if (state === true) {
-      this.frame.set_amended(true);
       if (this.grid_frame !== null)
-        if (!from_grid_frame === true)
-          this.grid_frame.set_amended(true);  // else we loop!
+        if (!this.grid_frame.amended())
+          this.grid_frame.set_amended(true);
       };
     };
 
@@ -946,10 +937,22 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     };
 
   grid.set_value_from_server = function(value) {
-    // only called to notify of existing record becoming 'clean'
-    grid.set_amended(false);
-    if (grid.grid_frame !== null)
-      grid.grid_frame.set_amended(false);
+//    // only called to notify of existing record becoming 'clean'
+//    grid.set_amended(false);
+//    if (grid.grid_frame !== null)
+//      grid.grid_frame.set_amended(false);
+    // notification of record becoming clean/dirty (true/false)
+    if (value === true) {
+      this.obj_exists = true;
+      this.set_amended(false);
+      if (this.grid_frame !== null)
+        this.grid_frame.set_amended(false);
+      }
+    else {
+      this.set_amended(true);
+      if (this.grid_frame !== null)
+        this.grid_frame.set_amended(true);
+      };
     };
 
   grid.recv_rows = function(args) {
@@ -1114,11 +1117,12 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       pos = 0;  // wrap to start
     while (grid.frame.obj_list[pos].offsetHeight === 0)
       pos += tabdir;  // look for next available object
-    grid.frame.obj_list[pos].focus();
+    setTimeout(function() {grid.frame.obj_list[pos].focus()}, 0);
     };
 
   grid.start_row = function(row) {
-    //debug3('START ROW ' + row + ' inserted=' + grid.inserted);
+    //debug3('START ROW ref=' + grid.ref + ' row=' + row +
+    //  ' ins=' + grid.inserted + ' gframe=' + (grid.grid_frame !== null));
     if (grid.row_count !== null)
       grid.row_count.innerHTML =
         (row+1) + '/' + grid.num_data_rows;
@@ -1126,6 +1130,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       grid.form_row_count.innerHTML =
         (row+1) + '/' + grid.num_data_rows;
 
+// not sure about this
+    if (grid.amended())
+      debug3('WHY DO WE GET HERE?')
     grid.set_amended(false);
     if (grid.grid_frame !== null)
       grid.grid_frame.set_amended(false);
@@ -1469,8 +1476,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     else {
       grid.frame.form.tabdir = 1;
 
-      //debug3('TAB grow=' + grid.growable + ' active=' + grid.active_row
-      //  + ' num_rows' + grid.num_data_rows + ' amended=' + grid.amended());
+      //debug3('TAB grow=' + grid.growable + ' num_rows=' + grid.num_data_rows
+      //  + ' active=' + grid.active_row + '/' + grid.active_col
+      //  + ' amended=' + grid.amended() + ' grid_frame=' + (grid.grid_frame !== null));
       // if growable and on bottom blank line and tab, move to next control
       if (grid.growable && (grid.active_row === grid.num_data_rows) &&
           (grid.active_col === 0) && (!grid.amended()))
@@ -1507,15 +1515,32 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //
 //      // args = [grid_frame, frame_amended, set_focus]
 
-        var grid_frame = grid.grid_frame.ref;
-        var frame_amended = (grid.inserted !== 0 || grid.amended());
-        var set_focus = true;
-        var args = [grid_frame, frame_amended, set_focus];
-        start_frame(args);
-        grid.has_focus = false;  // not elegant!
-
-//        start_frame([grid.grid_frame.ref, grid.amended(), true]);
+//        var grid_frame = grid.grid_frame.ref;
+//        var frame_amended = (grid.inserted !== 0 || grid.amended());
+//        var set_focus = true;
+//        var args = [grid_frame, frame_amended, set_focus];
+//        start_frame(args);
 //        grid.has_focus = false;  // not elegant!
+
+        var grid_frame = grid.grid_frame;
+// should not be necessary - set in got_focus()
+//        grid_frame.set_amended(grid.amended());
+// should not be necessary - set in start_frame
+//        grid_frame.obj_exists = (grid.inserted === 0);
+
+        // find first object to set focus on
+        for (var j=0, l=grid_frame.obj_list.length; j<l; i++) {
+          var obj = grid_frame.obj_list[j];
+//          if (obj.display || !obj.offsetHeight)
+//            continue;  // look for the next obj
+//          else
+//            break;  // set focus on this obj
+          if (!obj.display && obj.offsetHeight)
+            break;  // set focus on this obj
+          };
+        grid_frame.form.focus_from_server = false;
+        setTimeout(function() {obj.focus()}, 0);
+
         }
 
       // if not growable and on last cell and tab, move to next control

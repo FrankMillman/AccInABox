@@ -43,7 +43,8 @@
     //debug3('redisp ' + args[0] + '/' + this.col + ' "' + args[1] + '"');
     var row = args[0], value = args[1];
     input.aib_obj.set_cell_value_from_server(this.grid, row, this.col, value);
-    grid.set_amended(true);
+// not sure about this
+//    grid.set_amended(true);
     };
 
   input.reset_value = function() {
@@ -550,21 +551,23 @@ function create_grid_input(col_span, col_defn, cell) {
         };
       btn.onclick = function(e) {
         if (!e) e=window.event;
-        var cell = this.parentNode.parentNode.firstChild;
+        var cell = this.parentNode.firstChild;
         var grid = cell.grid;
         if (grid.frame.form.disable_count) return false;
         if (grid.active_cell === cell)
-          cell.aib_obj.grid_create_dropdown(cell);
+          btn.afterclick(cell, e);
         else {
-          callbacks.push([btn, btn.afterclick, cell]);
+          callbacks.push([btn, btn.afterclick, cell, e]);
           grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
           };
         };
-      btn.afterclick = function(cell) {
+      btn.afterclick = function(cell, e) {
         var grid = cell.grid;
         if (grid.active_cell !== cell)  // server has set focus somewhere else
           return;
         cell.aib_obj.grid_create_dropdown(cell);
+        e.cancelBubble = true;
+        return false;
         };
 
       break;

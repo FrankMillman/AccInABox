@@ -13,6 +13,7 @@ function setup_form(args) {
   var save_blocks = [];
   var save_vbox = [];
   var subtype_name = null;
+  var label = null;
 
   for (var i=0, args_length=args.length; i<args_length; i++) {
     var elem = args[i];
@@ -355,7 +356,7 @@ function setup_form(args) {
         form.active_frame = frame;
         frame._amended = false;
         frame.obj_exists = false;
-        frame.send_focus_msg = true;  // can be over-ridden in 'start_frame'
+        frame.err_flag = false;
 
         if (elem[1].ctrl_grid_ref === null)
           frame.ctrl_grid = null;
@@ -371,9 +372,14 @@ function setup_form(args) {
           };
 
         frame.set_value_from_server = function(value) {
-          // only called to notify of existing record becoming 'clean'
-          this.obj_exists = true;
-          this.set_amended(false);
+          // notification of record becoming clean/dirty (true/false)
+          if (value === true) {
+            this.obj_exists = true;
+            this.set_amended(false);
+            }
+          else {
+            this.set_amended(true);
+            };
           };
 
         break;
@@ -544,14 +550,15 @@ function setup_form(args) {
         break;
         };
       case 'display': {
-        var display = create_display(frame, elem[1]);
+        var display = create_display(frame, elem[1], label);
         if (col.childNodes.length)
           display.style.marginLeft = '5px';
         col.appendChild(display);
+        var label = null;
         break;
         };
       case 'dummy': {
-        var dummy = create_input(frame, elem[1]);
+        var dummy = create_input(frame, elem[1], null);
         page.appendChild(dummy);
         break;
         };
@@ -912,7 +919,7 @@ function setup_form(args) {
         form.obj_dict[frame.ref] = frame;
         frame._amended = false;
         frame.obj_exists = false;
-        frame.send_focus_msg = true;  // can be over-ridden in 'start_frame'
+        frame.err_flag = false;
 
         frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
         frame.ctrl_grid.grid_frame = frame;
@@ -922,7 +929,8 @@ function setup_form(args) {
         frame.set_amended = function(state) {
           this._amended = state;
           if (state === true)
-            this.ctrl_grid.set_amended(true, true);  // tell grid not to set amended here!
+            if (!this.ctrl_grid.amended())
+              this.ctrl_grid.set_amended(true);
           };
 
         frame.amended = function() {
@@ -930,10 +938,16 @@ function setup_form(args) {
           };
 
         frame.set_value_from_server = function(value) {
-          // only called to notify of existing record becoming 'clean'
-          this.obj_exists = true;
-          this.set_amended(false);
-          this.ctrl_grid.set_amended(false);
+          // notification of record becoming clean/dirty (true/false)
+          if (value === true) {
+            this.obj_exists = true;
+            this.set_amended(false);
+            this.ctrl_grid.set_amended(false);
+            }
+          else {
+            this.set_amended(true);
+            this.ctrl_grid.set_amended(true);
+            };
           };
 
         break;
@@ -1025,7 +1039,7 @@ function setup_form(args) {
         form.obj_dict[frame.ref] = frame;
         frame._amended = false;
         frame.obj_exists = false;
-        frame.send_focus_msg = true;  // can be over-ridden in 'start_frame'
+        frame.err_flag = false;
 
         if (elem[1].combo_type !== null) {
           frame.combo_type = elem[1].combo_type;
@@ -1049,9 +1063,14 @@ function setup_form(args) {
           };
 
         frame.set_value_from_server = function(value) {
-          // only called to notify of existing record becoming 'clean'
-          this.obj_exists = true;
-          this.set_amended(false);
+          // notification of record becoming clean/dirty (true/false)
+          if (value === true) {
+            this.obj_exists = true;
+            this.set_amended(false);
+            }
+          else {
+            this.set_amended(true);
+            };
           };
 
         break;

@@ -19,11 +19,11 @@
       <panel/>
       <row/>
       <col/>
-      <text value="Table:"/>
+      <label value="Table:"/>
       <col/>
       <display fld="db_table.table_name" lng="160"/>
       <col/>
-      <text value="Description:"/>
+      <label value="Description:"/>
       <col/>
       <display fld="db_table.short_descr" lng="250"/>
       <block/>
@@ -38,7 +38,7 @@
           <cur_col col_name="short_descr" lng="200" expand="true"/>
         </cur_columns>
         <cur_filter>
-          <cur_fil test="where" lbr="" col_name="col_type" op="=" expr="sys" rbr=""/>
+          <cur_fil test="where" lbr="" col_name="col_type" op="=" expr="'sys'" rbr=""/>
         </cur_filter>
         <cur_sequence>
           <cur_seq col_name="seq" desc="false"/>
@@ -55,7 +55,7 @@
           <cur_col col_name="short_descr" lng="200" expand="true"/>
         </cur_columns>
         <cur_filter>
-          <cur_fil test="where" lbr="" col_name="col_type" op="=" expr="user" rbr=""/>
+          <cur_fil test="where" lbr="" col_name="col_type" op="=" expr="'user'" rbr=""/>
         </cur_filter>
         <cur_sequence>
           <cur_seq col_name="seq" desc="false"/>
@@ -72,7 +72,7 @@
           <cur_col col_name="short_descr" lng="200" expand="true"/>
         </cur_columns>
         <cur_filter>
-          <cur_fil test="where" lbr="" col_name="col_type" op="=" expr="virt" rbr=""/>
+          <cur_fil test="where" lbr="" col_name="col_type" op="=" expr="'virt'" rbr=""/>
         </cur_filter>
         <cur_sequence>
           <cur_seq col_name="seq" desc="false"/>

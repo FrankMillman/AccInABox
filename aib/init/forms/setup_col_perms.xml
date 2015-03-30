@@ -1,3 +1,4 @@
+# THIS FORM IS OBSOLETE #
 <form name="setup_col_perms">
 
   <db_objects>
@@ -22,12 +23,12 @@
       <panel/>
       <row/>
       <col/>
-      <text value="Role:"/>
+      <label value="Role:"/>
       <col/>
       <display fld="role.descr" lng="160"/>
       <row/>
       <col/>
-      <text value="Table:"/>
+      <label value="Table:"/>
       <col/>
       <display fld="db_table.short_descr" lng="250"/>
       <block/>
@@ -40,7 +41,7 @@
         </cur_columns>
         <cur_filter>
 <!--
-          <cur_fil test="where" lbr="" col_name="table_id" op="=" expr="db_table.row_id" rbr=""/>
+          <cur_fil test="where" lbr="" col_name="table_id" op="=" expr="'db_table.row_id'" rbr=""/>
 -->
         </cur_filter>
         <cur_sequence/>

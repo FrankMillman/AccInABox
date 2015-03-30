@@ -137,10 +137,10 @@
           <grid data_object="tbl_view" growable="false" num_grid_rows="16">
             <cur_columns>
               <cur_col col_name="table_name" lng="140" readonly="true"/>
-              <cur_col col_name="sel_dsp" lng="20" readonly="true"/>
-              <cur_col col_name="ins_dsp" lng="20" readonly="true"/>
-              <cur_col col_name="upd_dsp" lng="20" readonly="true"/>
-              <cur_col col_name="del_dsp" lng="20" readonly="true"/>
+              <cur_col col_name="sel_dsp" lng="20" readonly="true" skip="true"/>
+              <cur_col col_name="ins_dsp" lng="20" readonly="true" skip="true"/>
+              <cur_col col_name="upd_dsp" lng="20" readonly="true" skip="true"/>
+              <cur_col col_name="del_dsp" lng="20" readonly="true" skip="true"/>
             </cur_columns>
             <cur_filter/>
             <cur_sequence/>

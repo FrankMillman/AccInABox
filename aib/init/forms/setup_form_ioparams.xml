@@ -74,20 +74,22 @@
       <panel/>
       <row/>
       <col/>
-      <text value="Form name:"/>
+      <label value="Form name:"/>
       <col/>
       <display fld="form.form_name" lng="160"/>
       <row/>
       <col/>
-      <text value="Title:"/>
+      <label value="Title:"/>
       <col/>
       <display fld="form.title" lng="250"/>
       <block/>
+      <string value="Inputs:" lng="75"/>
       <grid data_object="inputs" growable="true" num_grid_rows="5">
+        <toolbar template="Setup_Grid"/>
         <cur_columns>
           <cur_col col_name="name" lng="120"/>
           <cur_col col_name="type" lng="120"/>
-          <cur_col col_name="target" lng="120" expand="true"/>
+          <cur_col col_name="target" lng="200" expand="true"/>
           <cur_col col_name="required" lng="40"/>
         </cur_columns>
         <cur_filter/>
@@ -95,11 +97,13 @@
         <grid_methods template="Setup_Grid"/>
       </grid>
       <block/>
+      <string value="Outputs:" lng="75"/>
       <grid data_object="outputs" growable="true" num_grid_rows="5">
+        <toolbar template="Setup_Grid"/>
         <cur_columns>
           <cur_col col_name="name" lng="120"/>
           <cur_col col_name="type" lng="120"/>
-          <cur_col col_name="source" lng="120" expand="true"/>
+          <cur_col col_name="source" lng="200" expand="true"/>
         </cur_columns>
         <cur_filter/>
         <cur_sequence/>
@@ -116,11 +120,13 @@
       <method name="do_save" action="
         <<action>>
           <<pyfunc name=`custom.formdefn_funcs.dump_ioparams`/>>
+          <<save_obj obj_name=`form`/>>
         <</action>>
       "/>
       <method name="do_restore" action="
         <<action>>
           <<pyfunc name=`custom.formdefn_funcs.restore_ioparams`/>>
+          <<restore_obj obj_name=`form`/>>
         <</action>>
       "/>
     </frame_methods>

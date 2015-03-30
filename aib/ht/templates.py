@@ -70,6 +70,7 @@ class Setup_Form:  # template for setup-type forms
               '&lt;change_button&gt;'
                 '&lt;btn_label btn_id=&quot;btn_rgt&quot; value=&quot;Cancel&quot;/&gt;'
               '&lt;/change_button&gt;'
+              '&lt;notify_obj_dirty/&gt;'
             '&lt;/action&gt;'
           '"/>'
           '<method name="on_navigate" action="'  # user clicked in navigation bar
@@ -204,6 +205,11 @@ class Setup_Grid:  # template for setup-type grids
           '<method name="on_clean" obj_name="{obj_name}" action="'
             '&lt;action&gt;'
               '&lt;notify_obj_clean/&gt;'
+           '&lt;/action&gt;'
+          '"/>'
+          '<method name="on_amend" obj_name="{obj_name}" action="'
+            '&lt;action&gt;'
+              '&lt;notify_obj_dirty/&gt;'
            '&lt;/action&gt;'
           '"/>'
           '<method name="on_req_close" action="'  # click [X] or press Shift+F4
@@ -390,6 +396,7 @@ class Grid_Frame:  # template for a grid_frame
               '&lt;change_button&gt;'
                 '&lt;btn_label btn_id=&quot;btn_rgt&quot; value=&quot;Cancel&quot;/&gt;'
               '&lt;/change_button&gt;'
+              '&lt;notify_obj_dirty/&gt;'
             '&lt;/action&gt;'
           '"/>'
           '<method name="on_navigate" action="'  # user clicked in navigation bar
@@ -618,6 +625,7 @@ class Tree_Frame:  # template for a tree_frame
               '&lt;change_button&gt;'
                 '&lt;btn_label btn_id=&quot;btn_rgt&quot; value=&quot;Cancel&quot;/&gt;'
               '&lt;/change_button&gt;'
+              '&lt;notify_obj_dirty/&gt;'
             '&lt;/action&gt;'
           '"/>'
           '<method name="on_req_cancel" action="'  # press Esc or click 'Cancel'
