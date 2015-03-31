@@ -96,7 +96,6 @@
       </grid>
       <block/>
       <grid_frame main_object="dbobj">
-        <toolbar template="Setup_Form"/>
         <body>
           <block/>
           <vbox/>
@@ -115,7 +114,6 @@
           </grid>
           <vbox_end/>
           <grid_frame main_object="dbhooks">
-            <toolbar template="Setup_Form"/>
             <body>
               <block/>
               <panel/>

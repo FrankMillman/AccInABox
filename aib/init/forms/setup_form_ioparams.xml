@@ -49,7 +49,7 @@
         long_descr="Input parameter type" col_head="Type" key_field="N" allow_null="false"
         allow_amend="true" max_len="20" db_scale="0"
         choices="[false, false, [[`data_obj`, `Data object`, [], []],
-        [`data_attr`, `Data attribute`, [], []], [`data_array`, `Array`, [], []]]]"/>
+        [`data_attr`, `Data attribute`, [], []]]]"/>
       <mem_col col_name="source" data_type="TEXT" short_descr="Source"
         long_descr="Output parameter source" col_head="Source" key_field="N" allow_null="false"
         allow_amend="true" max_len="20" db_scale="0"/>
