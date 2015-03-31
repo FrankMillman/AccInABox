@@ -111,6 +111,8 @@ def data_changed(caller, xml):
     return caller.data_changed()
 
 def has_gridframe(caller, xml):
+    if caller.grid_frame is not None:
+        print('has_gridframe() - DO WE GET HERE?')
     return caller.grid_frame is not None
 
 def row_inserted(caller, xml):
@@ -242,7 +244,13 @@ def validate_all(caller, xml):
     yield from caller.validate_all()
 
 @asyncio.coroutine
+def after_save(caller, xml):
+    # called by grid_frame do_save()
+    yield from caller.parent.after_save()
+
+@asyncio.coroutine
 def gridframe_dosave(caller, xml):
+    print('gridframe_dosave() - DO WE GET HERE?')
     # if try to save grid, and grid has grid_frame, invoke grid_frame's do_save
     yield from exec_xml(caller.grid_frame, caller.grid_frame.methods['do_save'])
 
@@ -508,10 +516,7 @@ def ask(caller, xml):
     question = xml.get('question')
     if '{obj_descr}' in question:
         if isinstance(caller, ht.gui_grid.GuiGrid):
-            if caller.parent.frame_type == 'frame':
-                obj = caller.obj_list[0]
-            elif caller.parent.frame_type == 'grid_frame':
-                obj = caller.parent.ctrl_grid.obj_list[0]
+            obj = caller.obj_list[0]
         else:
             if caller.frame_type == 'grid_frame':
                 obj = caller.ctrl_grid.obj_list[0]
@@ -590,6 +595,7 @@ def end_form(caller, xml):
                 elif param_type == 'data_attr':
                     data_obj_name, col_name = source.split('.')
                     value = caller.data_objects[data_obj_name].getval(col_name)
+                """
                 elif param_type == 'data_list':
                     value = caller.data_objects[source].dump_one()
                     if value == []:
@@ -603,6 +609,7 @@ def end_form(caller, xml):
                     module_name, func_name = func_name.rsplit('.', 1)
                     module = importlib.import_module(module_name)
                     value = yield from getattr(module, func_name)(form)
+                """
             else:
                 value = None
             return_params[name] = value

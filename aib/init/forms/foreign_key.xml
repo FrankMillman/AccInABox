@@ -2,7 +2,26 @@
 
   <db_objects/>
   <mem_objects>
-    <mem_obj name="fkey_flds" descr="Foreign key fields">
+    <mem_obj name="var" descr="Variable to store fkey_flds">
+      <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
+        long_descr="Table name" col_head="" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="fkey" data_type="JSON" short_descr="Foreign key"
+        long_descr="Foreign key" col_head="Fkey" key_field="N" allow_null="true"
+        allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="full_col_name" data_type="TEXT" short_descr="Full column name"
+        long_descr="Table name [dot] column name" col_head="" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0"/>
+    </mem_obj>
+
+    <mem_obj name="fkey_flds" descr="Foreign key fields" parent="var">
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="Col" key_field="A" allow_null="false"
+        allow_amend="false" max_len="10" db_scale="0"
+        fkey="[`var`, `col_name`, null, null, true]"/>
       <mem_col col_name="tgt_table" data_type="TEXT" short_descr="Target table"
         long_descr="Target table name" col_head="Tgt table" key_field="N" allow_null="true"
         allow_amend="true" max_len="0" db_scale="0"/>
@@ -22,16 +41,25 @@
   </mem_objects>
 
   <input_params>
-    <input_param name="fkey" type="data_list" target="fkey_flds" required="true"/>
+    <input_param name="table_name" type="data_attr" target="var.table_name"/>
+    <input_param name="col_name" type="data_attr" target="var.col_name"/>
+    <input_param name="fkey" type="data_attr" target="var.fkey" required="true"/>
   </input_params>
 
   <output_params>
-    <output_param name="fkey" type="data_list" source="fkey_flds"/>
+    <output_param name="fkey" type="data_attr" source="var.fkey"/>
   </output_params>
 
   <frame main_object="fkey_flds">
     <toolbar/>
     <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Column:"/>
+      <col/>
+      <display fld="var.full_col_name" lng="250"/>
       <block/>
       <panel/>
       <row/>
@@ -61,6 +89,27 @@
       <input fld="fkey_flds.child"/>
     </body>
     <!-- button_row template="Setup_Form"/ -->
+    <button_row validate="true" template="Setup_Form"/>
+    <frame_methods template="Setup_Form">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<pyfunc name=`custom.foreign_key.load_fkey`/>>
+        <</action>>
+      "/>
+      <method name="do_save" action="
+        <<action>>
+          <<pyfunc name=`custom.foreign_key.dump_fkey`/>>
+          <<save_obj obj_name=`var`/>>
+        <</action>>
+      "/>
+      <method name="do_restore" action="
+        <<action>>
+          <<pyfunc name=`custom.foreign_key.restore_fkey`/>>
+          <<restore_obj obj_name=`var`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+<!--
     <button_row validate="true">
       <button btn_id="btn_ok" btn_label="Ok" lng="60"
           btn_enabled="true" btn_validate="true" btn_default="true" action="
@@ -87,5 +136,6 @@
         <</action>>
       "/>
     </frame_methods>
+-->
   </frame>
 </form>

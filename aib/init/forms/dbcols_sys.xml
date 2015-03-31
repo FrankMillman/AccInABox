@@ -99,6 +99,8 @@
         <<action>>
           <<sub_form form_name=`_sys.foreign_key`>>
             <<call_params>>
+              <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+              <<call_param name=`col_name` type=`data_attr` source=`db_col.col_name`/>>
               <<call_param name=`fkey` type=`data_attr` source=`db_col.fkey`/>>
             <</call_params>>
             <<return_params>>

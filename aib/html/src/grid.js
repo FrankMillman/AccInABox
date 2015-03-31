@@ -1130,9 +1130,6 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       grid.form_row_count.innerHTML =
         (row+1) + '/' + grid.num_data_rows;
 
-// not sure about this
-    if (grid.amended())
-      debug3('WHY DO WE GET HERE?')
     grid.set_amended(false);
     if (grid.grid_frame !== null)
       grid.grid_frame.set_amended(false);

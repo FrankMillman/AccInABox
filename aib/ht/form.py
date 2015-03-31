@@ -459,6 +459,7 @@ class Form:
                         db_obj = self.data_objects[obj_name]
                         fld = db_obj.getfld(col_name)
                         fld._value = fld._orig = value
+                    """
                     elif param_type == 'data_list':
                         if value is None:
                             self.data_objects[target].init()
@@ -475,6 +476,7 @@ class Form:
                         module_name, func_name = func_name.rsplit('.', 1)
                         module = importlib.import_module(module_name)
                         yield from getattr(module, func_name)(self, value)
+                    """
 
                 except KeyError:
                     if required:

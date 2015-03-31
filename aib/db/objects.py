@@ -1222,6 +1222,7 @@ class MemObject(DbObject):
                 for caller, method in self.mem_parent.on_amend_func:
                     caller.session.request.db_events.append((caller, method))
 
+    """
     def load_one(self, row):  # populate self from list
         cols = [col for col in self.select_cols if not col.col_defn.generated]
         self.init()
@@ -1250,6 +1251,7 @@ class MemObject(DbObject):
         for _ in all_dbobj:
             array.append([fld.get_val_for_sql() for fld in cols])
         return array
+    """
 
     def delete_all(self):
 #       all_cols = self.select_many(where=[], order=[])

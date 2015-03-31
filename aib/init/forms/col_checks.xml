@@ -13,6 +13,9 @@
       <mem_col col_name="col_chks" data_type="JSON" short_descr="Column checks"
         long_descr="Column checks" col_head="Checks" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="full_col_name" data_type="TEXT" short_descr="Full column name"
+        long_descr="Table name [dot] column name" col_head="" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
     <mem_obj name="col_checks" descr="Column checks" parent="var">
@@ -71,15 +74,12 @@
       <panel/>
       <row/>
       <col/>
-      <label value="Table:"/>
-      <col/>
-      <display fld="var.table_name" lng="160"/>
-      <col/>
       <label value="Column:"/>
       <col/>
-      <display fld="var.col_name" lng="250"/>
+      <display fld="var.full_col_name" lng="250"/>
       <block/>
       <grid data_object="col_checks" growable="true" num_grid_rows="5">
+        <toolbar template="Setup_Grid"/>
         <cur_columns>
           <cur_col col_name="code" lng="80"/>
           <cur_col col_name="errmsg" lng="200"/>
@@ -94,6 +94,7 @@
         <body>
           <block/>
           <grid data_object="steps" growable="true" num_grid_rows="5">
+            <toolbar template="Setup_Grid"/>
             <cur_columns>
               <cur_col col_name="test" lng="80"/>
               <cur_col col_name="lbr" lng="20"/>
@@ -112,22 +113,6 @@
       </grid_frame>
     </body>
     <button_row validate="true" template="Setup_Form"/>
-<!--
-    <button_row validate="true">
-      <button btn_id="btn_ok" btn_label="Ok" lng="60"
-          btn_enabled="true" btn_validate="true" btn_default="true" action="
-        <<action>>
-          <<end_form state=`completed`/>>
-        <</action>>
-      "/>
-      <button btn_id="btn_can" btn_label="Cancel" lng="60"
-          btn_enabled="true" btn_validate="false" btn_default="false" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
-      "/>
-    </button_row>
--->
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
         <<action>>
@@ -146,18 +131,6 @@
           <<restore_obj obj_name=`var`/>>
         <</action>>
       "/>
-<!--
-      <method name="on_req_cancel" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
-      "/>
-      <method name="on_req_close" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
-      "/>
--->
     </frame_methods>
   </frame>
 </form>

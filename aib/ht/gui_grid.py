@@ -841,6 +841,10 @@ class GuiGrid:
         #   user closes window, ask if save changes, answer=Yes -
         #     call frame.validate_all(save=True), which filters through to here
         if self.grid_frame is not None:
+            print('DO WE GET HERE?')
+            print('END {} row={} ins={} chg={} save={} frame={}\n\n'.format(
+                self.ref, self.current_row, self.inserted,
+                self.data_changed(), save, self.grid_frame is not None))
             # possibly should only do this if save is True [2015-01-06]
             # otherwise we may have tabbed into the grid_frame, so we
             #   should not try to validate it at this stage
@@ -934,6 +938,10 @@ class GuiGrid:
         if debug:
             log.write('SAVED {}\n\n'.format(self.db_obj))
 
+        yield from self.after_save()
+
+    @asyncio.coroutine
+    def after_save(self):
         # should this run from here, or in try_save()?
         #
         # if we run it from try save, and an 'after_save' function calls
@@ -971,7 +979,8 @@ class GuiGrid:
         if self.current_row is not None:
             if self.grid_frame is not None:
                 # just validate up to this point, let grid_frame do the rest
-                yield from self.validate_data(len(self.obj_list))
+                if self.data_changed():
+                    yield from self.validate_data(len(self.obj_list))
             else:
                 yield from self.end_current_row(save)
 
