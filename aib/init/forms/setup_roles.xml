@@ -76,7 +76,7 @@
       <mem_col col_name="table_id" data_type="INT" short_descr="Table id"
         long_descr="Table id" col_head="" key_field="A" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`tbl_view`, `table_id`, null, null, true]"/>
+        fkey="[`tbl_view`, `row_id`, null, null, true]"/>
       <mem_col col_name="col_id" data_type="INT" short_descr="Column id"
         long_descr="Column id" col_head="" key_field="A" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"/>

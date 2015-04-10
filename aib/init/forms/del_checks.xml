@@ -1,24 +1,21 @@
-<form name="col_checks">
+<form name="del_checks">
 
   <db_objects/>
   <mem_objects>
 
-    <mem_obj name="var" descr="Variable to store col_chks">
+    <mem_obj name="var" descr="Variable to store del_chks">
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
         long_descr="Table name" col_head="" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
-      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
-        long_descr="Column name" col_head="" key_field="N" allow_null="false"
+      <mem_col col_name="del_chks" data_type="JSON" short_descr="Delete checks"
+        long_descr="Delete checks" col_head="Checks" key_field="N" allow_null="true"
         allow_amend="true" max_len="0" db_scale="0"/>
-      <mem_col col_name="col_chks" data_type="JSON" short_descr="Column checks"
-        long_descr="Column checks" col_head="Checks" key_field="N" allow_null="true"
-        allow_amend="true" max_len="0" db_scale="0"/>
-      <mem_col col_name="full_col_name" data_type="TEXT" short_descr="Full column name"
-        long_descr="Table name [dot] column name" col_head="" key_field="N" allow_null="false"
+      <mem_col col_name="full_name" data_type="TEXT" short_descr="Full name"
+        long_descr="Table name [dot] del_chks" col_head="" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="col_checks" descr="Column checks" parent="var" hooks="
+    <mem_obj name="del_checks" descr="Delete checks" parent="var" hooks="
       <<hooks>>
         <<hook type=`before_save`>><<increment_seq/>><</hook>>
         <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
@@ -39,7 +36,7 @@
         allow_amend="true" max_len="30" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="steps" descr="Steps for column checks" parent="col_checks" hooks="
+    <mem_obj name="steps" descr="Steps for delete checks" parent="del_checks" hooks="
       <<hooks>>
         <<hook type=`before_save`>><<increment_seq args=`chk_id`/>><</hook>>
         <<hook type=`after_delete`>><<decrement_seq args=`chk_id`/>><</hook>>
@@ -48,7 +45,7 @@
       <mem_col col_name="chk_id" data_type="INT" short_descr="Check id"
         long_descr="Check id" col_head="Chk" key_field="A" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`col_checks`, `row_id`, null, null, true]"/>
+        fkey="[`del_checks`, `row_id`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -75,12 +72,11 @@
 
   <input_params>
     <input_param name="table_name" type="data_attr" target="var.table_name"/>
-    <input_param name="col_name" type="data_attr" target="var.col_name"/>
-    <input_param name="col_chks" type="data_attr" target="var.col_chks" required="true"/>
+    <input_param name="del_chks" type="data_attr" target="var.del_chks" required="true"/>
   </input_params>
 
   <output_params>
-    <output_param name="col_chks" type="data_attr" source="var.col_chks"/>
+    <output_param name="del_chks" type="data_attr" source="var.del_chks"/>
   </output_params>
 
   <frame main_object="var">
@@ -92,9 +88,9 @@
       <col/>
       <label value="Column:"/>
       <col/>
-      <display fld="var.full_col_name" lng="250"/>
+      <display fld="var.full_name" lng="250"/>
       <block/>
-      <grid data_object="col_checks" growable="true" num_grid_rows="5">
+      <grid data_object="del_checks" growable="true" num_grid_rows="5">
         <toolbar template="Setup_Grid"/>
         <cur_columns>
           <cur_col col_name="code" lng="80"/>
@@ -107,20 +103,20 @@
         <grid_methods template="Setup_Grid"/>
       </grid>
       <block/>
-      <grid_frame main_object="col_checks">
+      <grid_frame main_object="del_checks">
         <toolbar/>
         <body>
           <block/>
           <dummy after="
             <<action>>
               <<case>>
-                <<obj_exists obj_name=`col_checks`/>>
+                <<obj_exists obj_name=`del_checks`/>>
                 <<default>>
                   <<assign>>
                     <<source>>$current_row<</source>>
-                    <<target>>col_checks.seq<</target>>
+                    <<target>>del_checks.seq<</target>>
                   <</assign>>
-                  <<save_obj obj_name=`col_checks`/>>
+                  <<save_obj obj_name=`del_checks`/>>
                 <</default>>
               <</case>>
             <</action>>
@@ -160,18 +156,18 @@
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
         <<action>>
-          <<pyfunc name=`custom.col_checks.load_checks`/>>
+          <<pyfunc name=`custom.del_checks.load_checks`/>>
         <</action>>
       "/>
       <method name="do_save" action="
         <<action>>
-          <<pyfunc name=`custom.col_checks.dump_checks`/>>
+          <<pyfunc name=`custom.del_checks.dump_checks`/>>
           <<save_obj obj_name=`var`/>>
         <</action>>
       "/>
       <method name="do_restore" action="
         <<action>>
-          <<pyfunc name=`custom.col_checks.restore_checks`/>>
+          <<pyfunc name=`custom.del_checks.restore_checks`/>>
           <<restore_obj obj_name=`var`/>>
         <</action>>
       "/>

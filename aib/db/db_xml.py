@@ -387,7 +387,7 @@ def setup_disp_name(db_obj, xml):
             for disp_name, separator in disp_names:
 #               sql_elem.append('a.' + disp_name)
                 sql_elem.append(disp_name)
-                if separator != "":
+                if separator:  # if not '' or None
                     sql_elem.append("'{}'".format(separator))
             virt_sql += " {} ".format(concat).join(sql_elem)
     if virt_sql != "":

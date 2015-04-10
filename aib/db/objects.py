@@ -171,6 +171,7 @@ class DbObject:
         self.children = {}  # store reference to any child records
         self.on_clean_func = []  # function(s) to call on clean
         self.on_amend_func = []  # function(s) to call on amend
+        self.on_delete_func = []  # function(s) to call on delete
         self.on_read_func = []  # function(s) to call on read/select
 
         # table hooks
@@ -331,6 +332,14 @@ class DbObject:
         for callback in self.on_amend_func:
             if callback[0] == caller:
                 self.on_amend_func.remove(callback)
+
+    def add_delete_func(self, callback):
+        self.on_delete_func.append(callback)
+
+    def remove_delete_func(self, caller):
+        for callback in self.on_delete_func:
+            if callback[0] == caller:
+                self.on_delete_func.remove(callback)
 
     def add_read_func(self, callback):
         self.on_read_func.append(callback)
@@ -637,7 +646,7 @@ class DbObject:
     def init(self, *, display=True, init_vals=None):
         # if not None, init_vals is a dict of col_name, value pairs
         #   used to initialise db_obj fields (see ht.gui_tree for example)
-        # purpose -  set initial value, do *not* set db_obj.dirty to True
+        # purpose -  set initial values, do *not* set db_obj.dirty to True
         if init_vals is None:
             self.init_vals = {}
         else:
@@ -914,11 +923,18 @@ class DbObject:
         with session as conn:
             for before_delete in self.before_delete_xml:
                 db.db_xml.table_hook(self, before_delete)
-            conn.delete_row(self)
+            try:
+                conn.delete_row(self)
+            except conn.exception as err:
+                raise AibError(head='Delete {}'.format(self.table_name),
+                    body=str(err))
             for after_delete in self.after_delete_xml:
                 db.db_xml.table_hook(self, after_delete)
             if self.cursor is not None:
                 self.cursor.delete_row(self.cursor_row)
+
+            for caller, method in self.on_delete_func:  # frame methods
+                caller.session.request.db_events.append((caller, method))
 
 #       self.dirty = False
 #       self.exists = False
@@ -1215,7 +1231,24 @@ class MemObject(DbObject):
         return field
 
     def delete(self):
+        # for each child (if any), delete rows
+        for child in self.children.values():
+            # if there is a cursor, we need to specify the cursor row
+            #   to be deleted
+            # as each row is deleted, the rows move up by one, so the
+            #   cursor row to be deleted is always 0
+            # it does not matter if they are not in the same sequence,
+            #   provided the number of rows in the cursor equals the
+            #   number of rows selected
+            # they should always be equal, but don't know how to prove it
+            if child.cursor is not None:
+                child.set_cursor_row(0)
+            rows = child.select_many(where=[], order=[])
+            for row in rows:  # automatically selects next row in child
+                child.delete()
+
         DbObject.delete(self)
+
         if self.mem_parent is not None:
             if not self.mem_parent.dirty:
                 self.mem_parent.dirty = True

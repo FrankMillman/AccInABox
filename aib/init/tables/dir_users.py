@@ -12,9 +12,9 @@ table = {
     'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : [[
+                        'not_admin',
                         'Cannot delete admin',
-                        'Cannot delete admin',
-                        [['CHECK', '', 'user_id', '!=', '"admin"', '']],
+                        [['check', '', 'user_id', '!=', "'admin'", '']],
                       ]],
     'table_hooks'   : None,
     'defn_company'  : None,

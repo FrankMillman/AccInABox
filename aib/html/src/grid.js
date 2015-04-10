@@ -642,19 +642,18 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     };
 
   grid.req_cell_focus = function(new_row, new_col) {
-    // not sure why this is needed? [2014-05-12]
-    // problem - on bottom row, grid.inserted == -1
-    //           move to another row, it forces col to 0 - why?
-    //           if we clicked on chkbox, focus shifts to col 0 - wrong!
-    //if (grid.inserted && !grid.amended())
-    //  new_col = 0;
-
     //debug3('req ' + new_row + '/' + new_col + ' ref=' + grid.ref + ' amended=' + grid.amended()
     //  + ' data_rows=' + grid.total_rows() + ' active=' + grid.active_row
     //  + ' save=' + grid.req_save_row + ' tabbing=' + grid.tabbing);
 
-    if (new_row === grid.total_rows() && new_row !== grid.active_row)
-      new_col = 0;
+    if (grid.growable)
+      // it will be = if we are on bottom row
+      // it will be > if we are tabbing off bottom row - create new bottom row
+      if (new_row >= (grid.total_rows() - 1))  // if new row is bottom row
+        if (new_row === grid.active_row)  // if already on botton row
+          grid.set_amended(true);  // force sending 'cell_lost_focus'
+        else  // if moving to bottom row
+          new_col = 0;  // move to first column
 
     grid.focus_from_server = false;  // pre-set
     if (grid.amended()) {
@@ -671,16 +670,6 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       grid.req_save_row = false;
       return;
       };
-
-    if (!grid.start_in_progress)
-      if (new_row !== grid.active_row)
-        if (grid.grid_frame !== null || grid.auto_startrow) {
-          // is it ok to call cell_set_focus immediately,
-          //   or should it be set up as a callback?
-          // see what happens
-          var args = [grid.ref, new_row, grid.inserted];
-          send_request('start_row', args);
-          };
 
     grid.cell_set_focus(new_row, new_col);
     };
@@ -757,7 +746,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     grid.active_row = -1;
     grid.active_col = -1;
 // why?
-//    grid.set_amended(false);
+    if (grid.amended())
+      debug3('why is grid_amended true here?');
+    grid.set_amended(false);
 
     // when cell gets focus, treat the same as if we had tabbed there
     grid.tabbing = true;
@@ -924,12 +915,12 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     };
 
   grid.set_amended = function(state) {
+    //debug3('gset ' + grid.ref + ' ' + state);
     this._amended = state;
-    if (state === true) {
+    if (state === true)
       if (this.grid_frame !== null)
         if (!this.grid_frame.amended())
           this.grid_frame.set_amended(true);
-      };
     };
 
   grid.amended = function() {
@@ -943,7 +934,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //      grid.grid_frame.set_amended(false);
     // notification of record becoming clean/dirty (true/false)
     if (value === true) {
-      this.obj_exists = true;
+      //this.obj_exists = true;
       this.set_amended(false);
       if (this.grid_frame !== null)
         this.grid_frame.set_amended(false);
@@ -951,7 +942,8 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     else {
       this.set_amended(true);
       if (this.grid_frame !== null)
-        this.grid_frame.set_amended(true);
+        if (!this.grid_frame.amended())
+          this.grid_frame.set_amended(true);
       };
     };
 
@@ -997,7 +989,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 
     grid.draw_grid();
     grid.inserted = 0;
+    grid.start_in_progress = true;  // don't send 'start_row' to server
     grid.start_row(new_row);
+    grid.start_in_progress = false;
     grid.active_cell =
       grid.grid_rows[new_row-grid.first_grid_row].grid_cols[0];
     grid.highlight_active_cell();
@@ -1026,7 +1020,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 
     grid.draw_grid();
     grid.inserted = 1;
+    grid.start_in_progress = true;  // don't send 'start_row' to server
     grid.start_row(row);
+    grid.start_in_progress = false;
     grid.set_amended(true);
     grid.highlight_active_cell();
     };
@@ -1056,7 +1052,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
      };
 
     grid.draw_grid();
+    grid.start_in_progress = true;  // don't send 'start_row' to server
     grid.start_row(row);
+    grid.start_in_progress = false;
     grid.set_amended(false);
     grid.highlight_active_cell();
     };
@@ -1136,6 +1134,12 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 
     if (grid.grid_frame !== null)
       grid.highlight_active_row();
+
+    if (!grid.start_in_progress)
+      if (grid.grid_frame !== null || grid.auto_startrow) {
+        var args = [grid.ref, row, grid.inserted];
+        send_request('start_row', args);
+        };
     };
 
   grid.draw_grid = function() {
@@ -1476,9 +1480,11 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       //debug3('TAB grow=' + grid.growable + ' num_rows=' + grid.num_data_rows
       //  + ' active=' + grid.active_row + '/' + grid.active_col
       //  + ' amended=' + grid.amended() + ' grid_frame=' + (grid.grid_frame !== null));
+
       // if growable and on bottom blank line and tab, move to next control
-      if (grid.growable && (grid.active_row === grid.num_data_rows) &&
-          (grid.active_col === 0) && (!grid.amended()))
+//      if (grid.growable && (grid.active_row === grid.num_data_rows) &&
+//          (grid.active_col === 0) && (!grid.amended()))
+      if (grid.inserted === -1  && !grid.amended())
         grid.tab_to_ctrl(1)  //  move to next control on form
 
 // move next 4 lines to below grid_frame
@@ -1526,7 +1532,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //        grid_frame.obj_exists = (grid.inserted === 0);
 
         // find first object to set focus on
-        for (var j=0, l=grid_frame.obj_list.length; j<l; i++) {
+        for (var j=0, l=grid_frame.obj_list.length; j<l; j++) {
           var obj = grid_frame.obj_list[j];
 //          if (obj.display || !obj.offsetHeight)
 //            continue;  // look for the next obj
@@ -1650,7 +1656,6 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     if (grid.frame.form.disable_count) return false;
     var opera = (navigator.appName === 'Opera');
     if (!e) e=window.event;
-
     if (e.altKey)
       var target = grid.kbd_shortcuts['alt'][e.keyCode];
     else if (e.ctrlKey)

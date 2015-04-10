@@ -107,7 +107,9 @@ function got_focus(new_focus) {
     if (new_frame.type === 'grid_frame') {
       new_frame.page.style.border = '1px solid blue';
       new_frame.ctrl_grid.highlight_active_row();
-      new_frame.set_amended((new_frame.ctrl_grid.inserted !== 0));
+// is this necessary? [2015-04-03]
+// causes a problem with 'del_checks' - cannot tab off empty grid
+//      new_frame.set_amended((new_frame.ctrl_grid.inserted !== 0));
       };
 //
 //    new_focus.frame.form.set_gridframe_border(new_focus.active_frame);

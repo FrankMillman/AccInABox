@@ -437,7 +437,10 @@ class Form:
                     col_defn.get('scale_ptr'),
                     col_defn.get('dflt_val'),
                     col_defn.get('col_chks'),
-                    col_defn.get('fkey'),
+                    (
+                        col_defn.get('fkey').replace('{company}', company)
+                          if col_defn.get('fkey') is not None else None
+                          ),
                     col_defn.get('choices'),
                     col_defn.get('sql')
                     )
@@ -597,20 +600,24 @@ class Form:
                 frame.btn_dict = None  # remove circular reference
 
                 for grid in frame.grids:
-                    for db_obj in grid.on_amend_set:
-                        db_obj.remove_amend_func(grid)
                     for db_obj in grid.on_read_set:
                         db_obj.remove_read_func(grid)
                     for db_obj in grid.on_clean_set:
                         db_obj.remove_clean_func(grid)
+                    for db_obj in grid.on_amend_set:
+                        db_obj.remove_amend_func(grid)
+                    for db_obj in grid.on_delete_set:
+                        db_obj.remove_delete_func(grid)
                     grid.db_obj.close_cursor()
 
+                for db_obj in frame.on_read_set:
+                    db_obj.remove_read_func(frame)
                 for db_obj in frame.on_clean_set:
                     db_obj.remove_clean_func(frame)
                 for db_obj in frame.on_amend_set:
                     db_obj.remove_amend_func(frame)
-                for db_obj in frame.on_read_set:
-                    db_obj.remove_read_func(frame)
+                for db_obj in frame.on_delete_set:
+                    db_obj.remove_delete_func(frame)
 
                 for subtype in frame.subtype_records:
                     obj_name, col_name = subtype.split('.')
@@ -705,6 +712,7 @@ class Frame:
         self.on_read_set = set()
         self.on_clean_set = set()
         self.on_amend_set = set()
+        self.on_delete_set = set()
         self.methods = {}
 
         self.main_obj_name = frame_xml.get('main_object')  # else None
@@ -1100,6 +1108,10 @@ class Frame:
                 db_obj = self.data_objects[obj_name]
                 db_obj.add_amend_func((self, method))
                 self.on_amend_set.add(db_obj)
+            elif method_name == 'on_delete':  # set up callback on db_object
+                db_obj = self.data_objects[obj_name]
+                db_obj.add_delete_func((self, method))
+                self.on_delete_set.add(db_obj)
             else:
                 self.methods[method_name] = method
 
@@ -1309,6 +1321,9 @@ class Frame:
             self.set_last_vld(obj)
 
     def set_last_vld(self, obj):
+        if debug:
+            log.write('set_last_vld ref={} pos={} last={}\n\n'.format(
+                self.ref, obj.pos, self.last_vld))
         if self.last_vld >= obj.pos:
             self.last_vld = obj.pos-1  # this one needs validating
 #           frame = self
@@ -1462,7 +1477,8 @@ class Frame:
 #       for grid in self.grids:
 #           yield from grid.start_grid()
         if isinstance(self.first_input, ht.gui_grid.GuiGrid):
-            set_obj_exists = True  # tell client to set ameneded = False
+            self.last_vld = -1
+            set_obj_exists = True  # tell client to set amended = False
         elif self.db_obj is not None and self.db_obj.exists:
             self.last_vld = len(self.obj_list)
 #           for obj in self.non_amendable:

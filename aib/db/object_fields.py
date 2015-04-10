@@ -299,8 +299,9 @@ class Field:
             self.read_row(value, display)
             if db_obj.exists:
                 value = self._value  # to change (eg) 'a001' to 'A001'
-                for caller, method in db_obj.on_read_func:  # frame methods
-                    caller.session.request.db_events.append((caller, method))
+                if display:  # on_read checks for 'repos' - don't if not 'display'
+                    for caller, method in db_obj.on_read_func:  # frame methods
+                        caller.session.request.db_events.append((caller, method))
 
         if self.foreign_key is not None:
             # check that value exists as key on foreign table

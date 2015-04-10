@@ -364,6 +364,7 @@ function setup_form(args) {
           frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
 
         frame.set_amended = function(state) {
+          //debug3('fset1 ' + frame.ref + ' ' + state);
           this._amended = state;
           };
 
@@ -927,10 +928,11 @@ function setup_form(args) {
         frame.ctrl_grid.parentNode.style.border = '1px solid transparent';
 
         frame.set_amended = function(state) {
+          //debug3('fset2 ' + this.ref + ' ' + state);
           this._amended = state;
-          if (state === true)
-            if (!this.ctrl_grid.amended())
-              this.ctrl_grid.set_amended(true);
+          //if (state === true)
+          //  if (!this.ctrl_grid.amended())
+          //    this.ctrl_grid.set_amended(true);
           };
 
         frame.amended = function() {
@@ -1055,6 +1057,7 @@ function setup_form(args) {
         tree.tree_frame = frame;
 
         frame.set_amended = function(state) {
+          //debug3('fset3 ' + frame.ref + ' ' + state);
           this._amended = state;
           };
 

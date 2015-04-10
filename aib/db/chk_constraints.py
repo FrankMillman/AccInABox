@@ -99,9 +99,13 @@ def nexist(value, args):
         elif expr.lower() == '$value':
             params.append(value)
             expr = '?'
-        elif expr.startswith("c'"):  # expr is a column name
-            expr = expr[2:-1]  # strip leading "c'" and trailing "'"
-            expr = 'a.{}'.format(expr)
+#       elif expr.startswith("c'"):  # expr is a column name
+#           expr = expr[2:-1]  # strip leading "c'" and trailing "'"
+#           expr = 'a.{}'.format(expr)
+        elif expr.startswith("'"):  # expr is a literal string
+            params.append(expr[1:-1])
+            col = 'LOWER({})'.format(col)
+            expr = 'LOWER(?)'
         elif expr.startswith('('):  # expression
             # could be a tuple - WHERE title IN ('Mr', 'Mrs')
             raise NotImplementedError  # does this ever happen
@@ -109,10 +113,12 @@ def nexist(value, args):
             raise NotImplementedError  # does this ever happen
         elif expr.startswith('?'):  # get user input
             raise NotImplementedError  # does this ever happen
-        else:  # must be literal string
-            params.append(expr)
-            col = 'LOWER({})'.format(col)
-            expr = 'LOWER(?)'
+#       else:  # must be literal string
+#           params.append(expr)
+#           col = 'LOWER({})'.format(col)
+#           expr = 'LOWER(?)'
+        else:  # must be a column name
+            expr = 'a.{}'.format(expr)
 
         where_clause += ' {} {}{} {} {}{}'.format(
             test, lbr, col, op, expr, rbr)

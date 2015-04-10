@@ -411,6 +411,8 @@ def setup_forms(context):
     setup_form('setup_table', 'Setup database tables', table_name='db_tables')
     setup_form('setup_table_combo', 'Setup database tables')
     setup_form('setup_table_dbcols', 'Setup database columns')
+    setup_form('upd_checks', 'Update checks')
+    setup_form('del_checks', 'Delete checks')
     setup_form('setup_roles', 'Role setup')
     setup_form('users_roles', 'Set up users roles')
 

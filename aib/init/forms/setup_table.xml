@@ -1,4 +1,3 @@
-# THIS FORM IS OBSOLETE #
 <form name="setup_table">
   <db_objects>
 <!--
@@ -39,6 +38,7 @@
       <row/>
       <col/>
       <label value="Keep audit trail?"/>
+      <col/>
       <input fld="db_table.audit_trail"/>
       <row/>
       <col/>
@@ -116,15 +116,41 @@
       <row/>
       <col/>
       <button lng="150" btn_id="upd_chk" btn_label="Update checks"
-        btn_enabled="true" btn_validate="true" action="
-          <<action>>
-          <</action>>
+          btn_enabled="true" btn_validate="true" action="
+        <<action>>
+          <<sub_form form_name=`_sys.upd_checks`>>
+            <<call_params>>
+              <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+              <<call_param name=`upd_chks` type=`data_attr` source=`db_table.upd_chks`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`upd_chks` type=`data_attr` target=`db_table.upd_chks`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</sub_form>>
+        <</action>>
         "/>
       <col/>
       <button lng="150" btn_id="del_chk" btn_label="Delete checks"
-        btn_enabled="true" btn_validate="true" action="
-          <<action>>
-          <</action>>
+          btn_enabled="true" btn_validate="true" action="
+        <<action>>
+          <<sub_form form_name=`_sys.del_checks`>>
+            <<call_params>>
+              <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+              <<call_param name=`del_chks` type=`data_attr` source=`db_table.del_chks`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`del_chks` type=`data_attr` target=`db_table.del_chks`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</sub_form>>
+        <</action>>
         "/>
       <row/>
       <col/>

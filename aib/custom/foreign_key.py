@@ -8,6 +8,7 @@ def load_fkey(caller, xml):
 
     var.setval('full_col_name', '{}.{}.fkey'.format(
         var.getval('table_name'), var.getval('col_name')))
+    var.save()  # set to 'clean', and populate 'row_id' for children
 
     fkey = var.getval('fkey')
     if fkey is None:
@@ -20,7 +21,7 @@ def load_fkey(caller, xml):
             'alt_tgt': fkey[3],
             'child': fkey[4],
             })
-#   fkey_flds.save()
+    fkey_flds.save()
 
 @asyncio.coroutine
 def restore_fkey(caller, xml):

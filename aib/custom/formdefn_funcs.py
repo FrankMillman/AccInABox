@@ -45,6 +45,8 @@ def load_db_objects(caller, xml):
     dbobj = caller.data_objects['dbobj']
     dbhooks = caller.data_objects['dbhooks']
 
+    form.save()  # populate 'row_id' for children
+
 # is this necessary?
 
 #   dbhooks.delete_all()
@@ -66,10 +68,8 @@ def load_db_objects(caller, xml):
                 {col: dbobj.get_val_from_xml(col, obj_xml.get(col))
                     for col in dbobj_cols}
                 )
-
-#           dbobj.set_val_from_xml('name', obj_xml.get('name'))
-#           dbobj.set_val_from_xml('table_name', obj_xml.get('table_name'))
             dbobj.save()
+
             #set up dbhooks for this dbobj (if any)
             hooks = obj_xml.get('hooks')
             if hooks is not None:
@@ -82,10 +82,6 @@ def load_db_objects(caller, xml):
                         {'type': dbhooks.get_val_from_xml('type', hook_xml.get('type')),
                             'action': hook_action}
                         )
-#                   dbhooks.set_val_from_xml('type', hook_xml.get('type'))
-#                   hook_action = etree.Element('action')
-#                   hook_action[:] = hook_xml[:]
-#                   dbhooks.setval('action', hook_action)
                     dbhooks.save()
 
 #   form.save()  # to trigger 'on_clean' method

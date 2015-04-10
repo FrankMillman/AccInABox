@@ -305,9 +305,8 @@ class GuiDummy:  # dummy field to force validation of last real field
     def validate(self, temp_data, tab=False):
         for vld in self.form_vlds:  # 'vld' is a tuple of (ctx, xml)
             yield from check_vld(self, 'Dummy', vld)
-
-#       if self.after_input is not None:  # steps to perform after input
-#           yield from ht.form_xml.after_input(self)
+        if self.after_input is not None:  # steps to perform after input
+            yield from ht.form_xml.after_input(self)
 
 class GuiButton:
 #   def __init__(self, parent, gui, element):

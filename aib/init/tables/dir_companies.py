@@ -12,9 +12,9 @@ table = {
     'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : [[
+                        'not_sys',
                         'Cannot delete _sys',
-                        'Cannot delete _sys',
-                        [['CHECK', '', 'company_id', '!=', '"_sys"', '']],
+                        [['check', '', 'company_id', '!=', "'_sys'", '']],
                       ]],
     'table_hooks'   : etree.fromstring(
         '<hooks><hook type="after_insert"><create_company/></hook></hooks>'),

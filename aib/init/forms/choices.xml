@@ -22,65 +22,65 @@
         long_descr="Table name [dot] column name" col_head="" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
-    <mem_obj name="choices" descr="Choices codes" parent="var" hooks="
+    <mem_obj name="choice_codes" descr="Choices codes" parent="var" hooks="
       <<hooks>>
         <<hook type=`before_save`>><<increment_seq/>><</hook>>
         <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
       <</hooks>>
       ">
-      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
-        long_descr="Column name" col_head="Col" key_field="A" allow_null="false"
-        allow_amend="false" max_len="10" db_scale="0"
-        fkey="[`var`, `col_name`, null, null, true]"/>
+      <mem_col col_name="chk_id" data_type="INT" short_descr="Check id"
+        long_descr="Check id" col_head="Chk" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`var`, `row_id`, null, null, true]"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" key_field="N"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="code" data_type="TEXT" short_descr="Code"
         long_descr="Choice code" col_head="Code" key_field="A"
         allow_null="false" allow_amend="true" max_len="15" db_scale="0"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
         long_descr="Choice description" col_head="Description" key_field="N"
         allow_null="false" allow_amend="true" max_len="30" db_scale="0"/>
+    </mem_obj>
+    <mem_obj name="sub_types" descr="Sub types" parent="choice_codes" hooks="
+      <<hooks>>
+        <<hook type=`before_save`>><<increment_seq args=`chk_id`/>><</hook>>
+        <<hook type=`after_delete`>><<decrement_seq args=`chk_id`/>><</hook>>
+      <</hooks>>
+      ">
+      <mem_col col_name="chk_id" data_type="INT" short_descr="Check id"
+        long_descr="Check id" col_head="Chk" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`choice_codes`, `row_id`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
-    </mem_obj>
-    <mem_obj name="sub_types" descr="Sub types" parent="choices" hooks="
-      <<hooks>>
-        <<hook type=`before_save`>><<increment_seq/>><</hook>>
-        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-      <</hooks>>
-      ">
-      <mem_col col_name="code" data_type="TEXT" short_descr="Choice code"
-        long_descr="Choice code" col_head="Code" key_field="A"
-        allow_null="false" allow_amend="true" max_len="0" db_scale="0"
-        fkey="[`choices`, `code`, null, null, true]"/>
       <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
         long_descr="Subtype column name" col_head="Col name" key_field="A"
         allow_null="false" allow_amend="true" max_len="15" db_scale="0"/>
       <mem_col col_name="reqd" data_type="BOOL" short_descr="Required?"
         long_descr="Subtype column required?" col_head="Reqd?" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+    </mem_obj>
+    <mem_obj name="disp_names" descr="Display names" parent="choice_codes" hooks="
+      <<hooks>>
+        <<hook type=`before_save`>><<increment_seq args=`chk_id`/>><</hook>>
+        <<hook type=`after_delete`>><<decrement_seq args=`chk_id`/>><</hook>>
+      <</hooks>>
+      ">
+      <mem_col col_name="chk_id" data_type="INT" short_descr="Check id"
+        long_descr="Check id" col_head="Chk" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`choice_codes`, `row_id`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
-    </mem_obj>
-    <mem_obj name="disp_names" descr="Display names" parent="choices" hooks="
-      <<hooks>>
-        <<hook type=`before_save`>><<increment_seq/>><</hook>>
-        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-      <</hooks>>
-      ">
-      <mem_col col_name="code" data_type="TEXT" short_descr="Choice code"
-        long_descr="Choice code" col_head="Code" key_field="A"
-        allow_null="false" allow_amend="true" max_len="0" db_scale="0"
-        fkey="[`choices`, `code`, null, null, true]"/>
       <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
         long_descr="Display column name" col_head="Col name" key_field="A"
         allow_null="false" allow_amend="true" max_len="15" db_scale="0"/>
       <mem_col col_name="separator" data_type="TEXT" short_descr="Separator"
         long_descr="Display column separator" col_head="Sep" key_field="N"
         allow_null="true" allow_amend="true" max_len="5" db_scale="0"/>
-      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
-        long_descr="Sequence" col_head="Seq" key_field="N"
-        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
   </mem_objects>
 
@@ -115,48 +115,47 @@
       <label value="Use display names?"/>
       <input fld="var.disp_names"/>
       <block/>
-      <grid data_object="choices" growable="true" num_grid_rows="10">
-        <toolbar template="Setup_Form"/>
+      <grid data_object="choice_codes" growable="true" num_grid_rows="10">
+        <toolbar template="Setup_Grid"/>
         <cur_columns>
           <cur_col col_name="code" lng="100"/>
           <cur_col col_name="descr" lng="200" expand="true"/>
         </cur_columns>
         <cur_filter/>
-        <cur_sequence/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
         <grid_methods template="Setup_Grid">
-          <method name="do_save" action="
-            <<action>>
-              <<assign>>
-                <<source>>$current_row<</source>>
-                <<target>>choices.seq<</target>>
-              <</assign>>
-              <<save_row/>>
-            <</action>>
-          "/>
        </grid_methods>
       </grid>
       <vbox/>
-      <grid_frame main_object="choices">
-        <!-- toolbar template="Setup_Form"/ -->
+      <grid_frame main_object="choice_codes">
         <body>
           <block/>
-<!--
-          <vbox/>
-          <panel/>
-          <row/>
-          <col/>
-          <label value="Use sub types?"/>
-          <col/>
-          <input fld="var.sub_types"/>
--->
+          <dummy after="
+            <<action>>
+              <<case>>
+                <<obj_exists obj_name=`choice_codes`/>>
+                <<default>>
+                  <<assign>>
+                    <<source>>$current_row<</source>>
+                    <<target>>choice_codes.seq<</target>>
+                  <</assign>>
+                  <<save_obj obj_name=`choice_codes`/>>
+                <</default>>
+              <</case>>
+            <</action>>
+          "/>
           <grid data_object="sub_types" growable="true" num_grid_rows="7">
-            <toolbar template="Setup_Form"/>
+            <toolbar template="Setup_Grid"/>
             <cur_columns>
               <cur_col col_name="col_name" lng="100"/>
               <cur_col col_name="reqd" lng="40"/>
             </cur_columns>
             <cur_filter/>
-            <cur_sequence/>
+            <cur_sequence>
+              <cur_seq col_name="seq"/>
+            </cur_sequence>
             <grid_methods template="Setup_Grid">
               <method name="do_save" action="
                 <<action>>
@@ -169,24 +168,16 @@
               "/>
            </grid_methods>
           </grid>
-<!--
-          <vbox_end/>
-          <vbox/>
-          <panel/>
-          <row/>
-          <col/>
-          <label value="Use display names?"/>
-          <col/>
-          <input fld="var.disp_names"/>
--->
           <grid data_object="disp_names" growable="true" num_grid_rows="7">
-            <toolbar template="Setup_Form"/>
+            <toolbar template="Setup_Grid"/>
             <cur_columns>
               <cur_col col_name="col_name" lng="100"/>
               <cur_col col_name="separator" lng="40"/>
             </cur_columns>
             <cur_filter/>
-            <cur_sequence/>
+            <cur_sequence>
+              <cur_seq col_name="seq"/>
+            </cur_sequence>
             <grid_methods template="Setup_Grid">
               <method name="do_save" action="
                 <<action>>
@@ -199,40 +190,13 @@
               "/>
            </grid_methods>
           </grid>
-<!--
-          <vbox_end/>
--->
         </body>
         <button_row validate="true" template="Grid_Frame"/>
-<!--
-        <frame_methods>
-          <method name="on_req_cancel" action="
-            <<action>>
-              <<end_form state=`completed`/>>
-            <</action>>
-          "/>
-        </frame_methods>
--->
         <frame_methods template="Grid_Frame"/>
       </grid_frame>
       <vbox_end/>
     </body>
-    <button_row validate="true" template="Setup_Form">
-<!--
-      <button btn_id="btn_ok" btn_label="Ok" lng="60"
-          btn_enabled="true" btn_validate="true" btn_default="true" action="
-        <<action>>
-          <<end_form state=`completed`/>>
-        <</action>>
-      "/>
-      <button btn_id="btn_can" btn_label="Cancel" lng="60"
-          btn_enabled="true" btn_validate="false" btn_default="false" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
-      "/>
--->
-    </button_row>
+    <button_row validate="true" template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
         <<action>>
@@ -251,18 +215,6 @@
           <<restore_obj obj_name=`var`/>>
         <</action>>
       "/>
-<!--
-      <method name="on_req_cancel" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
-      "/>
-      <method name="on_req_close" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
-      "/>
--->
     </frame_methods>
   </frame>
 </form>

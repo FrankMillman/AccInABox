@@ -160,7 +160,7 @@ AibText.prototype.reset_value = function(text) {
   inp.focus();
   };
 AibText.prototype.get_value_for_server = function(text) {
-  if (text.current_value === text.form_value)
+  if ((text.current_value === text.form_value) && (text.password === ''))
     return null;  // no change
   var value = text.current_value;
   if (text.password !== '') {
@@ -1839,10 +1839,8 @@ AibSxml.prototype.grid_popup_callback = function(cell, row) {
 function AibDummy() {};
 AibDummy.prototype = new AibCtrl();
 AibDummy.prototype.got_focus = function(dummy) {
-  if (dummy.frame.form.focus_from_server) {
+  if (dummy.frame.form.err_flag)
     dummy.frame.form.tabdir = -1;  // dummy failed vld, set focus on prev field
-    dummy.frame.form.focus_from_server = false;
-    };
   got_focus(dummy);
   };
 AibDummy.prototype.after_got_focus = function(dummy) {
@@ -1858,6 +1856,7 @@ AibDummy.prototype.after_got_focus = function(dummy) {
       dummy.frame.form.setting_focus !== dummy)
     return;  // focus reset by server
   var pos = dummy.pos + dummy.frame.form.tabdir;  // tab = 1, shift+tab = -1
+  var obj = dummy.frame.obj_list[pos]
   while (dummy.frame.obj_list[pos].offsetHeight === 0)
     pos += dummy.frame.form.tabdir;  // look for next available object
   dummy.frame.obj_list[pos].focus();

@@ -77,6 +77,7 @@ class GuiGrid:
         self.on_read_set = set()
         self.on_clean_set = set()
         self.on_amend_set = set()
+        self.on_delete_set = set()
         self.methods = {}
 
         methods = element.find('grid_methods')
@@ -113,6 +114,10 @@ class GuiGrid:
                 db_obj = self.data_objects[obj_name]
                 db_obj.add_amend_func((self, method))
                 self.on_amend_set.add(db_obj)
+            elif method_name == 'on_delete':  # set up callback on db_object
+                db_obj = self.data_objects[obj_name]
+                db_obj.add_delete_func((self, method))
+                self.on_delete_set.add(db_obj)
             else:
                 self.methods[method_name] = method
 
@@ -576,8 +581,8 @@ class GuiGrid:
     @asyncio.coroutine
     def on_req_insert_row(self, row):
         if row < self.no_rows:  # else on last blank row
-            display = self.form_active is not None or self.grid_frame is not None
-            yield from self.start_row(row, display=display, row_inserted=True)
+            self.current_row = None  # else row == current_row (no-op)
+            yield from self.start_row(row, display=False, row_inserted=True)
             if self.form_active is not None:
                 yield from self.form_active.restart_frame()
             self.session.request.send_insert_row(self.ref, row)
@@ -658,7 +663,7 @@ class GuiGrid:
         self.session.request.send_cell_set_focus(self.ref, row, first_col_obj.ref)
         self.inserted = 0
         self.current_row = None
-        if self.form_active:
+        if self.form_active or self.grid_frame is not None:
             yield from self.start_row(row, display=True)
 
     """
@@ -781,8 +786,10 @@ class GuiGrid:
             self.temp_data[obj.ref] = value
         self.set_last_vld(obj)
 
-    @log_func
     def set_last_vld(self, obj):
+        if debug:
+            log.write('set_last_vld ref={} pos={} last={}\n\n'.format(
+                self.ref, obj.pos, self.last_vld))
         if self.last_vld >= obj.pos:
             self.last_vld = obj.pos-1  # this one needs validating
             self.parent.set_last_vld(self)
@@ -938,6 +945,8 @@ class GuiGrid:
         if debug:
             log.write('SAVED {}\n\n'.format(self.db_obj))
 
+        # after_save has been split so that it can be called independently
+        #   when saving a grid_frame
         yield from self.after_save()
 
     @asyncio.coroutine
