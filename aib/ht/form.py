@@ -407,14 +407,15 @@ class Form:
             return  # can happen with inline form
         for obj_xml in mem_objects:
             obj_name = obj_xml.get('name')
+            company = obj_xml.get('company', self.company)
             db_parent = obj_xml.get('parent')
             if db_parent is not None:
                 db_parent = self.data_objects[db_parent]
             upd_chks = obj_xml.get('upd_chks')
             del_chks = obj_xml.get('del_chks')
-            company = obj_xml.get('company', self.company)
+            sequence = obj_xml.get('sequence')
             db_obj = db.api.get_mem_object(self,
-                company, obj_name, db_parent, upd_chks, del_chks)
+                company, obj_name, db_parent, upd_chks, del_chks, sequence)
             self.data_objects[obj_name] = db_obj
             hooks = obj_xml.get('hooks')
             if hooks is not None:
@@ -1447,6 +1448,40 @@ class Frame:
             yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
 
     @asyncio.coroutine
+    def check_children(self, db_obj):
+        @asyncio.coroutine
+        def check(frame, parent_obj):
+            for grid in frame.grids:
+                if grid.grid_frame is None:
+                    continue
+
+                # check children first
+                yield from check(grid.grid_frame, grid.db_obj)
+
+                if grid.db_obj.dirty:
+                    title = 'Save changes to {}?'.format(grid.db_obj.table_name)
+                    descr = grid.obj_list[0].fld.getval()
+                    if descr is None:
+                        if grid.obj_list[0].ref in grid.temp_data:
+                            descr = grid.temp_data[grid.obj_list[0].ref]
+                    descr = repr(descr)  # enclose in quotes
+                    question = 'Do you want to save the changes to {}?'.format(descr)
+                    answers = ['Yes', 'No', 'Cancel']
+                    default = 'No'
+                    escape = 'Cancel'
+
+                    ans = yield from self.session.request.ask_question(
+                        self, title, question, answers, default, escape)
+
+                    if ans == 'Yes':
+                        grid.db_obj.save()
+                    elif ans == 'No':
+                        grid.db_obj.restore()
+                    else:
+                        raise AibError(head=None, body=None)  # stop processing messages
+        yield from check(self, db_obj)
+
+    @asyncio.coroutine
     def save_obj(self, db_obj):
         db_obj.save()
 
@@ -1474,6 +1509,7 @@ class Frame:
         for method in self.on_start_frame:
             # don't process any db_events - the form is not started yet
             yield from ht.form_xml.exec_xml(self, method, clear_dbevents=True)
+# moved to end - can't remember why!
 #       for grid in self.grids:
 #           yield from grid.start_grid()
         if isinstance(self.first_input, ht.gui_grid.GuiGrid):

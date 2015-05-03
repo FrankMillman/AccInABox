@@ -16,11 +16,15 @@
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="inputs" descr="Input parameters" parent="form">
-      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
-        long_descr="Form name" col_head="Form name" key_field="A" allow_null="false"
+    <mem_obj name="inputs" descr="Input parameters" parent="form"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
+        long_descr="Form id" col_head="Form name" key_field="A" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"
-        fkey="[`form`, `form_name`, null, null, true]"/>
+        fkey="[`form`, `row_id`, null, null, true]"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" key_field="N"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="name" data_type="TEXT" short_descr="Name"
         long_descr="Input parameter name" col_head="Name" key_field="A" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"/>
@@ -37,11 +41,15 @@
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="outputs" descr="Output parameters" parent="form">
-      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
-        long_descr="Form name" col_head="Form name" key_field="A" allow_null="false"
+    <mem_obj name="outputs" descr="Output parameters" parent="form"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
+        long_descr="Form id" col_head="Form name" key_field="A" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"
-        fkey="[`form`, `form_name`, null, null, true]"/>
+        fkey="[`form`, `row_id`, null, null, true]"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" key_field="N"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="name" data_type="TEXT" short_descr="Name"
         long_descr="Output parameter name" col_head="Name" key_field="A" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"/>
@@ -93,7 +101,9 @@
           <cur_col col_name="required" lng="40"/>
         </cur_columns>
         <cur_filter/>
-        <cur_sequence/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
         <grid_methods template="Setup_Grid"/>
       </grid>
       <block/>
@@ -106,7 +116,9 @@
           <cur_col col_name="source" lng="200" expand="true"/>
         </cur_columns>
         <cur_filter/>
-        <cur_sequence/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
         <grid_methods template="Setup_Grid"/>
       </grid>
     </body>
@@ -119,6 +131,7 @@
       "/>
       <method name="do_save" action="
         <<action>>
+          <<check_children obj_name=`form`/>>
           <<pyfunc name=`custom.formdefn_funcs.dump_ioparams`/>>
           <<save_obj obj_name=`form`/>>
         <</action>>

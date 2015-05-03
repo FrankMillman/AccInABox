@@ -106,8 +106,8 @@ def setup_db_metadata(conn, seq, table_name, column_id):
         "INSERT INTO _sys.db_tables "
         "(created_id, table_name, parent_id, seq, short_descr, long_descr, "
         "audit_trail, table_created, default_cursor, setup_form, upd_chks, "
-        "del_chks, table_hooks, defn_company, data_company, read_only) "
-        "VALUES ({})".format(', '.join([conn.param_style]*16))
+        "del_chks, table_hooks, sequence, defn_company, data_company, read_only) "
+        "VALUES ({})".format(', '.join([conn.param_style]*17))
         )
     params = [
         table_id,  # created_id
@@ -124,6 +124,7 @@ def setup_db_metadata(conn, seq, table_name, column_id):
         None if tbl['del_chks'] is None else dumps(tbl['del_chks']),
         None if tbl['table_hooks'] is None else
             gzip.compress(etree.tostring(tbl['table_hooks'])),
+        None if tbl['sequence'] is None else dumps(tbl['sequence']),
         tbl['defn_company'],
         tbl['data_company'],
         tbl['read_only'],
@@ -273,6 +274,7 @@ def setup_table(db_tbl, db_col, table_name):
     db_tbl.setval('upd_chks', tbl['upd_chks'])
     db_tbl.setval('del_chks', tbl['del_chks'])
     db_tbl.setval('table_hooks', tbl['table_hooks'])
+    db_tbl.setval('sequence', tbl['sequence'])
     db_tbl.setval('defn_company', tbl['defn_company'])
     db_tbl.setval('data_company', tbl['data_company'])
     db_tbl.setval('read_only', tbl['read_only'])
@@ -281,12 +283,12 @@ def setup_table(db_tbl, db_col, table_name):
     table_id = db_tbl.getval('row_id')
 
     cols = getattr(module, 'cols')
-    for seq, col in enumerate(cols):
+    for col in cols:
         db_col.init()
         db_col.setval('table_id', table_id)
         db_col.setval('col_name', col['col_name'])
         db_col.setval('col_type', 'sys')
-        db_col.setval('seq', seq)
+        db_col.setval('seq', -1)
         db_col.setval('data_type', col['data_type'])
         db_col.setval('short_descr', col['short_descr'])
         db_col.setval('long_descr', col['long_descr'])
@@ -306,12 +308,12 @@ def setup_table(db_tbl, db_col, table_name):
         db_col.save()
 
     virts = getattr(module, 'virt')
-    for seq, virt in enumerate(virts):
+    for virt in virts:
         db_col.init()
         db_col.setval('table_id', table_id)
         db_col.setval('col_name', virt['col_name'])
         db_col.setval('col_type', 'virt')
-        db_col.setval('seq', seq)
+        db_col.setval('seq', -1)
         db_col.setval('data_type', virt['data_type'])
         db_col.setval('short_descr', virt['short_descr'])
         db_col.setval('long_descr', virt['long_descr'])

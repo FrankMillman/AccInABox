@@ -8,7 +8,7 @@
   </input_params>
   <output_params/>
   <frame main_object="db_col">
-    <toolbar/>
+    <toolbar template="Setup_Form"/>
     <body>
       <block/>
       <panel/>
@@ -49,7 +49,7 @@
       <row/>
       <col/>
       <label value="Key field?"/>
-      <input fld="db_col.key_field" lng="100"/>
+      <input fld="db_col.key_field" lng="40"/>
       <col/>
       <label value="Generated?"/>
       <input fld="db_col.generated"/>
@@ -148,14 +148,11 @@
     <button_row validate="true" template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="do_save" action="
+        <<check_children obj_name=`db_col`/>>
         <<action>>
           <<assign>>
             <<source>>sys<</source>>
             <<target>>db_col.col_type<</target>>
-          <</assign>>
-          <<assign>>
-            <<source>>$current_row<</source>>
-            <<target>>db_col.seq<</target>>
           <</assign>>
           <<save_obj obj_name=`db_col`/>>
         <</action>>

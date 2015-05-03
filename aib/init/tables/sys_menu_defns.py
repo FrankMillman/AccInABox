@@ -12,9 +12,11 @@ table = {
     'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : None,
-    'table_hooks'   : etree.fromstring(
-        '<hooks><hook type="before_save"><increment_seq args="parent_id"/></hook>'
-        '<hook type="after_delete"><decrement_seq args="parent_id"/></hook></hooks>'),
+#   'table_hooks'   : etree.fromstring(
+#       '<hooks><hook type="before_save"><increment_seq args="parent_id"/></hook>'
+#       '<hook type="after_delete"><decrement_seq args="parent_id"/></hook></hooks>'),
+    'table_hooks'   : None,
+    'sequence'      : ['seq', ['parent_id'], None],
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,

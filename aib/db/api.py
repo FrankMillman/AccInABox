@@ -53,9 +53,9 @@ def get_fkey_object(db_session, table_name, src_obj, src_colname):
         db_session, table_name, src_obj, src_colname)
 
 def get_mem_object(db_session, active_company, table_name, parent=None,
-        upd_chks=None, del_chks=None):
-    return db.objects.get_mem_object(
-        db_session, active_company, table_name, parent, upd_chks, del_chks)
+        upd_chks=None, del_chks=None, sequence=None):
+    return db.objects.get_mem_object(db_session, active_company,
+        table_name, parent, upd_chks, del_chks, sequence)
 
 #def select_rows(conn, db_obj, cols, where=None, order=None,
 #        limit=0, lock=False, param=None):

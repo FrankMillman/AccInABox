@@ -12,14 +12,16 @@ table = {
     'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : None,
-    'table_hooks'   : etree.fromstring(
-        '<hooks><hook type="before_save">'
-          '<incr_seq_with_alt alt_table="db_tables" args="parent_id"/>'
-          '</hook>'
-        '<hook type="after_delete">'
-          '<decr_seq_with_alt alt_table="db_tables" args="parent_id"/></hook>'
-          '</hooks>'
-        ),
+#   'table_hooks'   : etree.fromstring(
+#       '<hooks><hook type="before_save">'
+#         '<incr_seq_with_alt alt_table="db_tables" args="parent_id"/>'
+#         '</hook>'
+#       '<hook type="after_delete">'
+#         '<decr_seq_with_alt alt_table="db_tables" args="parent_id"/></hook>'
+#         '</hooks>'
+#       ),
+    'table_hooks'   : None,
+    'sequence'      : ['seq', ['parent_id'], 'db_tables'],
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,

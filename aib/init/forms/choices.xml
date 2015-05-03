@@ -22,14 +22,10 @@
         long_descr="Table name [dot] column name" col_head="" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
-    <mem_obj name="choice_codes" descr="Choices codes" parent="var" hooks="
-      <<hooks>>
-        <<hook type=`before_save`>><<increment_seq/>><</hook>>
-        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-      <</hooks>>
-      ">
-      <mem_col col_name="chk_id" data_type="INT" short_descr="Check id"
-        long_descr="Check id" col_head="Chk" key_field="A" allow_null="false"
+    <mem_obj name="choice_codes" descr="Choices codes" parent="var"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="var_id" data_type="INT" short_descr="Var id"
+        long_descr="Var id" col_head="Var" key_field="A" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"
         fkey="[`var`, `row_id`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
@@ -42,14 +38,10 @@
         long_descr="Choice description" col_head="Description" key_field="N"
         allow_null="false" allow_amend="true" max_len="30" db_scale="0"/>
     </mem_obj>
-    <mem_obj name="sub_types" descr="Sub types" parent="choice_codes" hooks="
-      <<hooks>>
-        <<hook type=`before_save`>><<increment_seq args=`chk_id`/>><</hook>>
-        <<hook type=`after_delete`>><<decrement_seq args=`chk_id`/>><</hook>>
-      <</hooks>>
-      ">
-      <mem_col col_name="chk_id" data_type="INT" short_descr="Check id"
-        long_descr="Check id" col_head="Chk" key_field="A" allow_null="false"
+    <mem_obj name="sub_types" descr="Sub types" parent="choice_codes"
+        sequence="[`seq`, [`choice_id`], null]">
+      <mem_col col_name="choice_id" data_type="INT" short_descr="Choice id"
+        long_descr="Choice id" col_head="Choice" key_field="A" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"
         fkey="[`choice_codes`, `row_id`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
@@ -62,14 +54,10 @@
         long_descr="Subtype column required?" col_head="Reqd?" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
-    <mem_obj name="disp_names" descr="Display names" parent="choice_codes" hooks="
-      <<hooks>>
-        <<hook type=`before_save`>><<increment_seq args=`chk_id`/>><</hook>>
-        <<hook type=`after_delete`>><<decrement_seq args=`chk_id`/>><</hook>>
-      <</hooks>>
-      ">
-      <mem_col col_name="chk_id" data_type="INT" short_descr="Check id"
-        long_descr="Check id" col_head="Chk" key_field="A" allow_null="false"
+    <mem_obj name="disp_names" descr="Display names" parent="choice_codes"
+        sequence="[`seq`, [`choice_id`], null]">
+      <mem_col col_name="choice_id" data_type="INT" short_descr="Choice id"
+        long_descr="Choice id" col_head="Choice" key_field="A" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"
         fkey="[`choice_codes`, `row_id`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
@@ -125,8 +113,7 @@
         <cur_sequence>
           <cur_seq col_name="seq"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid">
-       </grid_methods>
+        <grid_methods template="Setup_Grid"/>
       </grid>
       <vbox/>
       <grid_frame main_object="choice_codes">
@@ -134,18 +121,9 @@
           <block/>
           <dummy after="
             <<action>>
-              <<case>>
-                <<obj_exists obj_name=`choice_codes`/>>
-                <<default>>
-                  <<assign>>
-                    <<source>>$current_row<</source>>
-                    <<target>>choice_codes.seq<</target>>
-                  <</assign>>
-                  <<save_obj obj_name=`choice_codes`/>>
-                <</default>>
-              <</case>>
+              <<call method=`save_parent`/>>
             <</action>>
-          "/>
+            "/>
           <grid data_object="sub_types" growable="true" num_grid_rows="7">
             <toolbar template="Setup_Grid"/>
             <cur_columns>
@@ -156,17 +134,7 @@
             <cur_sequence>
               <cur_seq col_name="seq"/>
             </cur_sequence>
-            <grid_methods template="Setup_Grid">
-              <method name="do_save" action="
-                <<action>>
-                  <<assign>>
-                    <<source>>$current_row<</source>>
-                    <<target>>sub_types.seq<</target>>
-                  <</assign>>
-                  <<save_row/>>
-                <</action>>
-              "/>
-           </grid_methods>
+            <grid_methods template="Setup_Grid"/>
           </grid>
           <grid data_object="disp_names" growable="true" num_grid_rows="7">
             <toolbar template="Setup_Grid"/>
@@ -178,17 +146,7 @@
             <cur_sequence>
               <cur_seq col_name="seq"/>
             </cur_sequence>
-            <grid_methods template="Setup_Grid">
-              <method name="do_save" action="
-                <<action>>
-                  <<assign>>
-                    <<source>>$current_row<</source>>
-                    <<target>>disp_names.seq<</target>>
-                  <</assign>>
-                  <<save_row/>>
-                <</action>>
-              "/>
-           </grid_methods>
+            <grid_methods template="Setup_Grid"/>
           </grid>
         </body>
         <button_row validate="true" template="Grid_Frame"/>
@@ -205,6 +163,7 @@
       "/>
       <method name="do_save" action="
         <<action>>
+          <<check_children obj_name=`var`/>>
           <<pyfunc name=`custom.choices.dump_choices`/>>
           <<save_obj obj_name=`var`/>>
         <</action>>

@@ -117,10 +117,11 @@ def _create_table(conn, company_id, table_defn, db_columns):
 ,UPD_CHKS
 ,DEL_CHKS
 ,TABLE_HOOKS
+,SEQUENCE
 ,DEFN_COMP
 ,DATA_COMP
 ,READ_ONLY
-) = range(18)
+) = range(19)
 
 # db_columns columns
 (ROW_ID

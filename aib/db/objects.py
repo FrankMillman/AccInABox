@@ -59,8 +59,8 @@ def get_fkey_object(context, table_name, src_obj, src_colname):
     return fk_object
 
 def get_mem_object(context, active_company, table_name, parent=None,
-        upd_chks=None, del_chks=None):
-    db_table = MemTable(table_name, upd_chks, del_chks)
+        upd_chks=None, del_chks=None, sequence=None):
+    db_table = MemTable(table_name, upd_chks, del_chks, sequence)
     return MemObject(context, active_company, db_table, parent)
 
 def get_db_table(context, active_company, table_name):
@@ -79,15 +79,16 @@ def get_db_table(context, active_company, table_name):
 
     table = 'db_tables'
     cols = ['row_id', 'table_name', 'short_descr', 'audit_trail', 'upd_chks',
-        'del_chks', 'table_hooks', 'defn_company', 'data_company', 'read_only',
-        'default_cursor', 'setup_form']
+        'del_chks', 'table_hooks', 'sequence', 'defn_company', 'data_company',
+        'read_only', 'default_cursor', 'setup_form']
     where = [('WHERE', '', 'table_name', '=', table_name, '')]
 
     with context.db_session as conn:
         try:
             # next line only works if exactly one row is selected
             ((table_id, table_name, short_descr, audit_trail, upd_chks, del_chks,
-                table_hooks, defn_company, data_company, read_only, default_cursor, setup_form),
+                table_hooks, sequence, defn_company, data_company, read_only,
+                default_cursor, setup_form),
                  ) = conn.simple_select(db_company, table, cols, where)
         except ValueError as e:
             if str(e).startswith('need'):
@@ -122,7 +123,8 @@ def get_db_table(context, active_company, table_name):
                 # NB don't overwrite defn_company or data_company [2014-07-25]
                 (
                 (table_id, table_name, short_descr, audit_trail, upd_chks, del_chks,
-                table_hooks, defn_company2, data_company2, read_only, default_cursor, setup_form),
+                table_hooks, sequence, defn_company2, data_company2, read_only,
+                default_cursor, setup_form),
                 ) = conn.simple_select(defn_company, table, cols, where)
             except ValueError as e:
                 if str(e).startswith('need'):
@@ -138,7 +140,7 @@ def get_db_table(context, active_company, table_name):
 
     tables_open[table_key] = DbTable(
         context, orig_tableid, table_id, table_name, short_descr, audit_trail,
-            upd_chks, del_chks, table_hooks, defn_company, data_company,
+            upd_chks, del_chks, table_hooks, sequence, defn_company, data_company,
             read_only, default_cursor, setup_form)
     return tables_open[table_key]
 
@@ -452,6 +454,10 @@ class DbObject:
 
     def select_many(self, where, order, debug=False):
 
+        if self.dirty:
+            raise AibError(head="Trying to select '{}'".format(self.table_name),
+                body='Current row has been amended - must save or cancel before selecting')
+
         self.check_perms('select')
 
         if where:
@@ -672,12 +678,7 @@ class DbObject:
                         tgt_field.db_obj.init()
 
             if fld.fkey_parent is not None:
-#               fld._value = fld._orig = fld.fkey_parent._value
                 fld._value = fld.fkey_parent._value
-
-#           if not fld.col_defn.allow_amend:
-#               for obj in fld.gui_obj:
-#                   obj.set_readonly(False)
 
             if display:
                 for obj in fld.gui_obj:
@@ -755,10 +756,16 @@ class DbObject:
             raise AibError(head='Save {}'.format(self.table_name),
                 body='Table is read only - no updates allowed')
 
-        for child in self.children.values():
-            if child.dirty:
-                raise AibError(head='Save {}'.format(self.table_name),
-                    body='{} must be saved first'.format(child.table_name))
+        # not thought through 100% yet
+        # if parent does not exist, and child is dirty, we need to save the
+        #   parent in order to populate the foreign key field on the child
+        # if parent does exist, and child is dirty, does it matter if the
+        #   parent is saved first? - not sure
+        if self.exists:
+            for child in self.children.values():
+                if child.dirty:
+                    raise AibError(head='Save {}'.format(self.table_name),
+                        body='{} must be saved first'.format(child.table_name))
 
         for before_save in self.before_save_xml:
             db.db_xml.table_hook(self, before_save)  # can raise AibError
@@ -796,6 +803,9 @@ class DbObject:
         else:
             session = self.context.db_session
         with session as conn:
+
+            if self.db_table.sequence is not None:
+                self.increment_seq(conn)
 
             if self.exists:  # update row
                 for before_update in self.before_update_xml:
@@ -928,6 +938,10 @@ class DbObject:
             except conn.exception as err:
                 raise AibError(head='Delete {}'.format(self.table_name),
                     body=str(err))
+
+            if self.db_table.sequence is not None:
+                self.decrement_seq(conn)
+
             for after_delete in self.after_delete_xml:
                 db.db_xml.table_hook(self, after_delete)
             if self.cursor is not None:
@@ -942,6 +956,131 @@ class DbObject:
         # set display=False, because if we are in a grid, display=True results
         #   in blanking out the next row after they all move up one
         self.init(display=False)
+
+    def increment_seq(self, conn):  # called before save
+        seq_col_name, groups, combo = self.db_table.sequence
+        seq = self.getfld(seq_col_name)
+        orig_seq = seq.get_orig()
+        new_seq = seq.getval()
+        if new_seq == orig_seq:
+            return
+
+        if self.mem_obj:
+            table_name = self.table_name
+        else:
+            table_name = self.data_company + '.' + self.table_name
+            if combo is not None:
+                combo = self.data_company + '.' + combo
+
+        if not self.exists and new_seq == -1:  # append node
+            sql = 'SELECT COALESCE(MAX({}), -1) FROM'.format(seq_col_name)
+            params = []
+
+            if combo is not None:
+
+                sql += ' (SELECT {} FROM {}'.format(seq_col_name, table_name)
+
+                test = 'WHERE'
+                for group in groups:  # if any
+                    sql += ' {} {} = {}'.format(test, group, conn.param_style)
+                    params.append(self.getfld(group).getval())
+                    test = 'AND'
+
+                sql += ' UNION ALL SELECT {} FROM {}'.format(seq_col_name, combo)
+
+                test = 'WHERE'
+                for group in groups:  # if any
+                    sql += ' {} {} = {}'.format(test, group, conn.param_style)
+                    params.append(self.getfld(group).getval())
+                    test = 'AND'
+
+                sql += ') AS temp'  # MS-SQL requires 'AS'
+
+            else:
+                sql += ' {}'.format(table_name)
+
+                test = 'WHERE'
+                for group in groups:  # if any
+                    sql += ' {} {} = {}'.format(test, group, conn.param_style)
+                    params.append(self.getfld(group).getval())
+                    test = 'AND'
+
+            conn.cur.execute(sql, params)
+            seq = conn.cur.fetchone()[0] + 1
+            self.setval(seq_col_name, seq)
+            return
+
+        if self.exists:
+            if new_seq > orig_seq:
+                sql_1 = (
+                    'UPDATE {0} SET {1} = ({1}-1) WHERE {1} > {2} AND {1} <= {2}'
+                    .format(table_name, seq_col_name, conn.param_style)
+                    )
+                if combo is not None:
+                    sql_2 = (
+                        'UPDATE {0} SET {1} = ({1}-1) WHERE {1} > {2} AND {1} <= {2}'
+                        .format(combo, seq_col_name, conn.param_style)
+                        )
+                params = [orig_seq, new_seq]
+            else:
+                sql_1 = (
+                    'UPDATE {0} SET {1} = ({1}+1) WHERE {1} >= {2} AND {1} < {2}'
+                    .format(table_name, seq_col_name, conn.param_style)
+                    )
+                if combo is not None:
+                    sql_2 = (
+                        'UPDATE {0} SET {1} = ({1}+1) WHERE {1} >= {2} AND {1} < {2}'
+                        .format(combo, seq_col_name, conn.param_style)
+                        )
+                params = [new_seq, orig_seq]
+        else:
+            sql_1 = (
+                'UPDATE {0} SET {1} = ({1}+1) WHERE {1} >= {2}'.format(
+                table_name, seq_col_name, conn.param_style)
+                )
+            if combo is not None:
+                sql_2 = (
+                    'UPDATE {0} SET {1} = ({1}+1) WHERE {1} >= {2}'.format(
+                    combo, seq_col_name, conn.param_style)
+                    )
+            params = [new_seq]
+
+        for group in groups:  # if any
+            sql_1 += ' AND {} = {}'.format(group, conn.param_style)
+            if combo is not None:
+                sql_2 += ' AND {} = {}'.format(group, conn.param_style)
+            params.append(self.getfld(group).getval())
+
+        conn.cur.execute(sql_1, params)
+        if combo is not None:
+            conn.cur.execute(sql_2, params)
+
+    def decrement_seq(self, conn):  # called after delete
+        seq_col_name, groups, combo = self.db_table.sequence
+
+        if self.mem_obj:
+            table_name = self.table_name
+        else:
+            table_name = self.data_company + '.' + self.table_name
+            if combo is not None:
+                combo = self.data_company + '.' + combo
+
+        sql_1 = ('UPDATE {0} SET {1} = ({1}-1) WHERE {1} > {2}'.format(
+            table_name, seq_col_name, conn.param_style))
+        if combo is not None:
+            sql_2 = ('UPDATE {0} SET {1} = ({1}-1) WHERE {1} > {2}'.format(
+                combo, seq_col_name, conn.param_style))
+        params = [self.getval(seq_col_name)]
+
+        for group in groups:  # if any
+            sql_1 += ' AND {} = {}'.format(group, conn.param_style)
+            if combo is not None:
+                sql_2 += ' AND {} = {}'.format(group, conn.param_style)
+            params.append(self.getfld(group).getval())
+
+        conn.cur.execute(sql_1, params)
+        if combo is not None:
+            conn.cur.execute(sql_2, params)
 
     def check_perms(self, perm_type, col_id=None):
         if self.mem_obj:
@@ -1396,7 +1535,7 @@ class MemObject(DbObject):
 class DbTable:
 
     def __init__(self, context, orig_tableid, table_id, table_name, short_descr,
-            audit_trail, upd_chks, del_chks, table_hooks, defn_company,
+            audit_trail, upd_chks, del_chks, table_hooks, sequence, defn_company,
             data_company, read_only, default_cursor, setup_form):
         self.orig_tableid = orig_tableid
         self.table_id = table_id
@@ -1412,6 +1551,10 @@ class DbTable:
         else:
             self.del_chks = loads(del_chks)
         self.table_hooks = table_hooks
+        if sequence is None:
+            self.sequence = None
+        else:
+            self.sequence = loads(sequence)
         self.defn_company = defn_company
         self.data_company = data_company
         self.read_only = read_only
@@ -1508,7 +1651,7 @@ class DbTable:
 #-----------------------------------------------------------------------------
 
 class MemTable(DbTable):
-    def __init__(self, table_name, upd_chks, del_chks):
+    def __init__(self, table_name, upd_chks, del_chks, sequence):
         self.table_name = table_name
         self.short_descr = table_name
         self.read_only = False
@@ -1526,6 +1669,10 @@ class MemTable(DbTable):
         else:
             self.del_chks = loads(del_chks)
         self.table_hooks = None
+        if sequence is None:
+            self.sequence = None
+        else:
+            self.sequence = loads(sequence)
         self.default_cursor = None
 
 #----------------------------------------------------------------------------

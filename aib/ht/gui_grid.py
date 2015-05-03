@@ -554,14 +554,18 @@ class GuiGrid:
         self.current_row = row
 
         if self.inserted:
-            self.db_obj.init(display=display)
+            if self.db_obj.db_table.sequence is not None:
+                seq_col_name = self.db_obj.db_table.sequence[0]
+                init_vals = {seq_col_name: row}
+            else:
+                init_vals = None
+            self.db_obj.init(display=display, init_vals=init_vals)
             self.last_vld = -1
+
         else:
             self.db_obj.select_row_from_cursor(row, display=display)
-            if self.db_obj.exists:  # it *must* exist
-                self.last_vld = len(self.obj_list)
-            else:
-                print('*** row {} does not exist ***'.format(row))
+            assert self.db_obj.exists, 'row {} does not exist'.format(row)
+            self.last_vld = len(self.obj_list)
 
 # the timing of the next statement is a bit delicate
 # normally, values to redisplay are sent after all other messages are sent
@@ -570,7 +574,7 @@ class GuiGrid:
 #   sets 'amended' to True, which is correct
 # if we place this line after on_start_row, the values are amended and then
 #   'amended' is set to False, so 'amended' is never set to True
-        self.session.request.check_redisplay()  # send any 'redisplay' messages
+#       self.session.request.check_redisplay()  # send any 'redisplay' messages
 
         for method in self.on_start_row:
             yield from ht.form_xml.exec_xml(self, method)
@@ -580,9 +584,11 @@ class GuiGrid:
 
     @asyncio.coroutine
     def on_req_insert_row(self, row):
+        if self.inserted:
+            return  # already requested
         if row < self.no_rows:  # else on last blank row
             self.current_row = None  # else row == current_row (no-op)
-            yield from self.start_row(row, display=False, row_inserted=True)
+            yield from self.start_row(row, display=True, row_inserted=True)
             if self.form_active is not None:
                 yield from self.form_active.restart_frame()
             self.session.request.send_insert_row(self.ref, row)
@@ -818,6 +824,16 @@ class GuiGrid:
         if replies:
             return  # don't send cell_set_focus message
 
+        if row != self.current_row:
+            if self.auto_startrow or self.grid_frame is not None:
+                # call start_row before sending cell_set_focus
+                # in 'setup_periods', in on_start_row, we populate the
+                #   first column which is then 'skipped'
+                # if we send cell_set_focus first, the column is skipped
+                #   before the row is set to 'amended', so the client
+                #   assumes an empty row and moves to the next control
+                yield from self.start_row(row, display=True)
+
         if obj.form_dflt is not None:
             dflt_val = yield from get_form_dflt(obj, obj.form_dflt)
         else:
@@ -843,26 +859,17 @@ class GuiGrid:
                 self.data_changed(), save, self.grid_frame is not None))
 
         # save can be set to True by -
-        #   user tabbed off row or pressed Enter -
+        #   user amends row, then tabs to next row or presses Enter -
+        #     client sets 'save' = True when sending 'req_cell_focus',
+        #     which filters through to here
+        #   user is on bottom row of 'non-growable' grid, amends row,
+        #     then tabs to next control on frame -
         #     client sends 'req_save_row', ht.htc calls end_current_row(save=True)
-        #   user closes window, ask if save changes, answer=Yes -
-        #     call frame.validate_all(save=True), which filters through to here
         if self.grid_frame is not None:
-            print('DO WE GET HERE?')
-            print('END {} row={} ins={} chg={} save={} frame={}\n\n'.format(
-                self.ref, self.current_row, self.inserted,
-                self.data_changed(), save, self.grid_frame is not None))
-            # possibly should only do this if save is True [2015-01-06]
-            # otherwise we may have tabbed into the grid_frame, so we
-            #   should not try to validate it at this stage
-            # more testing required
+            # we get here if there is a grid_frame, the user made a change
+            #   to the grid, and then moved to another row
             if self.grid_frame.data_changed():
                 yield from self.grid_frame.validate_all(save)
-##          for grid in self.grid_frame.grids:
-##              yield from grid.validate(self.grid_frame.temp_data, save)
-#       else:
-#           if self.data_changed():
-#               yield from self.validate_data(len(self.obj_list), save)
         if self.inserted and not self.data_changed():
             if self.inserted == 1:  # eg start insert, then press down arrow!
                 yield from self.delete_gui_row(self.current_row)
@@ -877,7 +884,7 @@ class GuiGrid:
                 log.write('ASK {} {} {}\n\n'.format(
                     self.db_obj, self.db_obj.dirty, self.temp_data))
 
-            title = self.db_obj.table_name
+            title = 'Save changes to {}?'.format(self.db_obj.table_name)
             descr = self.obj_list[0].fld.getval()
             if descr is None:
                 if self.obj_list[0].ref in self.temp_data:
@@ -905,7 +912,6 @@ class GuiGrid:
 
     def reset_current_row(self):
         self.last_vld = -1
-#       self.inserted = 0
         self.current_row = None
 
     @asyncio.coroutine
@@ -920,12 +926,16 @@ class GuiGrid:
     @asyncio.coroutine
     def try_save(self):
         yield from self.validate_all()
+        # if there is a grid_frame, we must call *its* do_save method
+        # here it is hard-coded
+        # it is also handled by the do_save method in the Setup_Grid template,
+        #   but it is never called because of the hard-coding
+        # not sure if there is a preference either way
         if self.grid_frame is not None:
             yield from ht.form_xml.exec_xml(
                 self.grid_frame, self.grid_frame.methods['do_save'])
         else:
             yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
-#       yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
 
         if self.form_active is None and self.grid_frame is None:  # else we are still on same row
             self.reset_current_row()
@@ -951,11 +961,6 @@ class GuiGrid:
 
     @asyncio.coroutine
     def after_save(self):
-        # should this run from here, or in try_save()?
-        #
-        # if we run it from try save, and an 'after_save' function calls
-        #   start_grid(), this is called after restarting the grid
-        #   if we send 'move_row' (see below), this causes problems [2015-02-13]
         if self.inserted:
             self.no_rows += 1
             new_row = self.db_obj.cursor_row
@@ -965,9 +970,8 @@ class GuiGrid:
             #   - if new row appended, tell client to append new blank row
             if new_row != self.current_row or self.inserted == -1:
                 self.session.request.send_move_row(self.ref, self.current_row, new_row)
-            # if req_cell_focus, and row moved, set focus on new row instead
+            # if req_cell_focus, and row moved, set focus on 'moved' row instead
             if new_row != self.current_row:
-#               self.req_row = new_row
                 first_col_obj = self.obj_list[self.grid_cols[0]]
                 self.session.request.send_cell_set_focus(
                     self.ref, new_row, first_col_obj.ref)
@@ -998,6 +1002,8 @@ class GuiGrid:
         if debug:
             log.write('validate grid data {} row={} {} to {}\n\n'.format(
                 self.ref, self.current_row, self.last_vld+1, pos-1))
+            log.write('{}\n\n'.format(
+                ', '.join([_.ref for _ in self.obj_list])))
         for i in range(self.last_vld+1, pos):
             if self.last_vld > i:  # after 'read', last_vld set to 'all'
                 break

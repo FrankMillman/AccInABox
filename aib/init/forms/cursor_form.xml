@@ -1,12 +1,8 @@
 <form name="cursor_form">
   <db_objects/>
   <mem_objects>
-    <mem_obj name="column" descr="Cursor columns" parent="db_cur" hooks="
-      <<hooks>>
-        <<hook type=`before_save`>><<increment_seq/>><</hook>>
-        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-      <</hooks>>
-      ">
+    <mem_obj name="column" descr="Cursor columns" parent="db_cur"
+        sequence="[`seq`, [], null]">
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -29,7 +25,7 @@
         long_descr="Reverse sign? (numeric only)" col_head="Rev?" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="before" data_type="SXML" short_descr="Before input"
-        long_descr="Action to take before input" col_head="Input" key_field="N"
+        long_descr="Action to take before input" col_head="Before" key_field="N"
         allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="dflt_val" data_type="SXML" short_descr="Default value"
         long_descr="Steps to derive default value" col_head="Default" key_field="N"
@@ -41,12 +37,8 @@
         long_descr="Action to take after input" col_head="After" key_field="N"
         allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
-    <mem_obj name="filter" descr="Cursor filter" parent="db_cur" hooks="
-      <<hooks>>
-        <<hook type=`before_save`>><<increment_seq/>><</hook>>
-        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-      <</hooks>>
-      ">
+    <mem_obj name="filter" descr="Cursor filter" parent="db_cur"
+        sequence="[`seq`, [], null]">
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -69,12 +61,8 @@
         long_descr="Right bracket (if required)" col_head=")" key_field="N"
         allow_null="true" allow_amend="true" max_len="1" db_scale="0"/>
     </mem_obj>
-    <mem_obj name="sequence" descr="Cursor sequence" parent="db_cur" hooks="
-      <<hooks>>
-        <<hook type=`before_save`>><<increment_seq/>><</hook>>
-        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-      <</hooks>>
-      ">
+    <mem_obj name="sequence" descr="Cursor sequence" parent="db_cur"
+        sequence="[`seq`, [], null]">
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -87,7 +75,6 @@
     </mem_obj>
   </mem_objects>
   <input_params>
-    <!-- input_param name="db_table" type="data_obj" target="db_table" required="true"/ -->
     <input_param name="formview_obj" type="data_obj" target="db_cur" required="true"/>
   </input_params>
   <output_params/>
@@ -108,7 +95,7 @@
       <block/>
       <string value="Columns:" lng="75"/>
       <grid data_object="column" growable="true" num_grid_rows="3">
-        <toolbar template="Setup_Form"/>
+        <toolbar template="Setup_Grid"/>
         <cur_columns>
           <cur_col col_name="col_name" lng="120" expand="true"/>
           <cur_col col_name="lng" lng="40"/>
@@ -125,22 +112,12 @@
         <cur_sequence>
           <cur_seq col_name="seq" desc="false"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid">
-          <method name="do_save" action="
-            <<action>>
-              <<assign>>
-                <<source>>$current_row<</source>>
-                <<target>>column.seq<</target>>
-              <</assign>>
-              <<save_row/>>
-            <</action>>
-          "/>
-       </grid_methods>
-     </grid>
+        <grid_methods template="Setup_Grid"/>
+      </grid>
       <block/>
       <string value="Filter:" lng="75"/>
       <grid data_object="filter" growable="true" num_grid_rows="2">
-        <toolbar template="Setup_Form"/>
+        <toolbar template="Setup_Grid"/>
         <cur_columns>
           <cur_col col_name="test" lng="80"/>
           <cur_col col_name="lbr" lng="20"/>
@@ -153,22 +130,12 @@
         <cur_sequence>
           <cur_seq col_name="seq" desc="false"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid">
-          <method name="do_save" action="
-            <<action>>
-              <<assign>>
-                <<source>>$current_row<</source>>
-                <<target>>filter.seq<</target>>
-              <</assign>>
-              <<save_row/>>
-            <</action>>
-          "/>
-       </grid_methods>
+        <grid_methods template="Setup_Grid"/>
       </grid>
       <block/>
       <string value="Sequence:" lng="75"/>
       <grid data_object="sequence" growable="true" num_grid_rows="2">
-        <toolbar template="Setup_Form"/>
+        <toolbar template="Setup_Grid"/>
         <cur_columns>
           <cur_col col_name="col_name" lng="120" expand="true"/>
           <cur_col col_name="descending" lng="40"/>
@@ -177,58 +144,9 @@
         <cur_sequence>
           <cur_seq col_name="seq" desc="false"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid">
-          <method name="do_save" action="
-            <<action>>
-              <<assign>>
-                <<source>>$current_row<</source>>
-                <<target>>sequence.seq<</target>>
-              <</assign>>
-              <<save_row/>>
-            <</action>>
-          "/>
-       </grid_methods>
+        <grid_methods template="Setup_Grid"/>
       </grid>
-<!--
-        </body>
-        <button_row validate="true" template="Grid_Frame"/>
-        <frame_methods template="Grid_Frame">
-          <method name="on_start_frame" action="
-            <<action>>
-              <<pyfunc name=`custom.cursor_fields.load_cur_flds`/>>
-            <</action>>
-          "/>
-          <method name="do_save" action="
-            <<action>>
-              <<pyfunc name=`custom.cursor_fields.dump_cur_flds`/>>
-              <<save_obj obj_name=`db_cur`/>>
-            <</action>>
-          "/>
-        </frame_methods>
-      </grid_frame>
--->
     </body>
-<!--
-    <button_row validate="true">
-      <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
-          btn_validate="true" btn_default="true" lng="60" action="
-        <<action>>
-          <<call method=`do_save`/>>
-          <<call method=`on_req_cancel`/>>
-        <</action>>
-      "/>
-    </button_row>
-      <method name="on_req_cancel" action="
-        <<action>>
-          <<end_form state=`completed`/>>
-        <</action>>
-      "/>
-      <method name="on_req_close" action="
-        <<action>>
-          <<end_form state=`completed`/>>
-        <</action>>
-      "/>
--->
     <button_row validate="true" template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
@@ -238,6 +156,7 @@
       "/>
       <method name="do_save" action="
         <<action>>
+          <<check_children obj_name=`db_cur`/>>
           <<pyfunc name=`custom.cursor_fields.dump_cur_flds`/>>
           <<save_obj obj_name=`db_cur`/>>
         <</action>>

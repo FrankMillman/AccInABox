@@ -535,6 +535,11 @@ class RequestHandler:
 
     @asyncio.coroutine
     def on_req_save_row(self, args):
+        # only called in rare circumstances [2015-05-02]
+        # AFAICT, it is only called by the client if on
+        #   the bottom row of a 'non-growable' grid, the
+        #   row has been amended, and the user tabs off
+        #   the grid to the next control
         ref, = args
         grid = self.session.get_obj(ref)
         yield from grid.end_current_row(save=True)

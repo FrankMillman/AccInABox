@@ -137,6 +137,7 @@
       "/>
       <method name="do_save" action="
         <<action>>
+          <<check_children obj_name=`user`/>>
           <<save_obj obj_name=`user`/>>
           <<pyfunc name=`custom.user_companies.dump_user_comps`/>>
         <</action>>

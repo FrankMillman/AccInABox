@@ -17,6 +17,7 @@ table = {
                         [['check', '', 'user_id', '!=', "'admin'", '']],
                       ]],
     'table_hooks'   : None,
+    'sequence'      : None,
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,

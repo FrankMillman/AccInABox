@@ -181,6 +181,8 @@ def on_start_row(caller, xml):
             'per_no': caller.current_row + 1,
             'op_date': var.getval('start_date'),
             })
+        # notify client that row has been amended
+        caller.session.request.obj_to_redisplay.append((caller.ref, False))
 
 @asyncio.coroutine
 def after_save_row(caller, xml):

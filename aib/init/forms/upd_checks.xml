@@ -15,12 +15,8 @@
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="upd_checks" descr="Update checks" parent="var" hooks="
-      <<hooks>>
-        <<hook type=`before_save`>><<increment_seq/>><</hook>>
-        <<hook type=`after_delete`>><<decrement_seq/>><</hook>>
-      <</hooks>>
-      ">
+    <mem_obj name="upd_checks" descr="Update checks" parent="var"
+        sequence="[`seq`, [], null]">
       <mem_col col_name="chk_id" data_type="INT" short_descr="Check id"
         long_descr="Check id" col_head="Chk" key_field="A" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"
@@ -36,12 +32,8 @@
         allow_amend="true" max_len="30" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="steps" descr="Steps for update checks" parent="upd_checks" hooks="
-      <<hooks>>
-        <<hook type=`before_save`>><<increment_seq args=`chk_id`/>><</hook>>
-        <<hook type=`after_delete`>><<decrement_seq args=`chk_id`/>><</hook>>
-      <</hooks>>
-      ">
+    <mem_obj name="steps" descr="Steps for update checks" parent="upd_checks"
+        sequence="[`seq`, [`chk_id`], null]">
       <mem_col col_name="chk_id" data_type="INT" short_descr="Check id"
         long_descr="Check id" col_head="Chk" key_field="A" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"
@@ -109,18 +101,9 @@
           <block/>
           <dummy after="
             <<action>>
-              <<case>>
-                <<obj_exists obj_name=`upd_checks`/>>
-                <<default>>
-                  <<assign>>
-                    <<source>>$current_row<</source>>
-                    <<target>>upd_checks.seq<</target>>
-                  <</assign>>
-                  <<save_obj obj_name=`upd_checks`/>>
-                <</default>>
-              <</case>>
+              <<call method=`save_parent`/>>
             <</action>>
-          "/>
+            "/>
           <grid data_object="steps" growable="true" num_grid_rows="5">
             <toolbar template="Setup_Grid"/>
             <cur_columns>
@@ -135,17 +118,7 @@
             <cur_sequence>
               <cur_seq col_name="seq"/>
             </cur_sequence>
-            <grid_methods template="Setup_Grid">
-              <method name="do_save" action="
-                <<action>>
-                  <<assign>>
-                    <<source>>$current_row<</source>>
-                    <<target>>steps.seq<</target>>
-                  <</assign>>
-                  <<save_row/>>
-                <</action>>
-              "/>
-            </grid_methods>
+            <grid_methods template="Setup_Grid"/>
           </grid>
         </body>
         <button_row validate="true" template="Grid_Frame"/>
@@ -161,6 +134,7 @@
       "/>
       <method name="do_save" action="
         <<action>>
+          <<check_children obj_name=`var`/>>
           <<pyfunc name=`custom.upd_checks.dump_checks`/>>
           <<save_obj obj_name=`var`/>>
         <</action>>

@@ -18,6 +18,7 @@ table = {
                       ]],
     'table_hooks'   : etree.fromstring(
         '<hooks><hook type="after_insert"><create_company/></hook></hooks>'),
+    'sequence'      : None,
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,

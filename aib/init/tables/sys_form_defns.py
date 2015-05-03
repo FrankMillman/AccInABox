@@ -12,6 +12,7 @@ table = {
     'upd_chks'      : None,
     'del_chks'      : None,
     'table_hooks'   : None,
+    'sequence'      : None,
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,

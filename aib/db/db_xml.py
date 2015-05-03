@@ -145,6 +145,7 @@ def add_column(db_obj, xml):
                 db_obj.getval('data_type'))
             conn.cur.execute(conn.convert_string(sql))
 
+"""
 def increment_seq(db_obj, xml):  # called 'before_save'
     seq = db_obj.getfld('seq')
     orig_seq = seq.get_orig()
@@ -180,7 +181,7 @@ def increment_seq(db_obj, xml):  # called 'before_save'
         if db_obj.exists:
             if new_seq > orig_seq:
                 sql = (
-                    'UPDATE 0} SET seq = (seq-1) WHERE seq > {1} AND seq <= {1}'
+                    'UPDATE {0} SET seq = (seq-1) WHERE seq > {1} AND seq <= {1}'
                     .format(table_name, conn.param_style)
                     )
                 params = [orig_seq, new_seq]
@@ -350,6 +351,7 @@ def decr_seq_with_alt(db_obj, xml):  # called 'after_delete'
 
         conn.cur.execute(sql_1, params)
         conn.cur.execute(sql_2, params)
+"""
 
 def setup_disp_name(db_obj, xml):
     choices = db_obj.getval('choices')

@@ -98,6 +98,7 @@
       "/>
       <method name="do_save" action="
         <<action>>
+          <<check_children obj_name=`var`/>>
           <<pyfunc name=`custom.foreign_key.dump_fkey`/>>
           <<save_obj obj_name=`var`/>>
         <</action>>

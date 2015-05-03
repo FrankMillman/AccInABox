@@ -2,18 +2,6 @@
 
   <db_objects>
     <db_obj name="dir_user" table_name="dir_users"/>
-
-<!--
-    <db_obj name="dir_user" table_name="dir_users" hooks="
-      <<hooks>>
-        <<hook type=`after_read`>><<pyfunc name=`db.formdefn_funcs.load_form_xml`/>><</hook>>
-        <<hook type=`after_init`>><<pyfunc name=`db.formdefn_funcs.load_form_xml`/>><</hook>>
-        <<hook type=`after_restore`>><<pyfunc name=`db.formdefn_funcs.load_form_xml`/>><</hook>>
-        <<hook type=`before_save`>><<pyfunc name=`db.formdefn_funcs.dump_form_xml`/>><</hook>>
-      <</hooks>>
-    "/>
--->
-
   </db_objects>
   <mem_objects>
     <mem_obj name="var" descr="Form variables">
@@ -212,8 +200,7 @@
                 <<return_param name=`password` type=`data_attr` target=`dir_user.password`/>>
               <</return_params>>
               <<on_return>>
-                <<return state=`cancelled`>>
-                <</return>>
+                <<return state=`cancelled`/>>
                 <<return state=`completed`>>
                   <<save_obj obj_name=`dir_user`/>>
                   <<set_focus btn_id=`btn_ok`/>>

@@ -234,10 +234,11 @@ def continue_form(caller, xml):
 def restart_frame(caller, xml):
     yield from caller.restart_frame()
 
+"""
 @asyncio.coroutine
 def validate_save(caller, xml):
-#   yield from caller.validate_all(save=True)
-    yield from caller.validate_all()
+    yield from caller.validate_all(save=True)
+"""
 
 @asyncio.coroutine
 def validate_all(caller, xml):
@@ -250,26 +251,29 @@ def after_save(caller, xml):
 
 @asyncio.coroutine
 def gridframe_dosave(caller, xml):
+    # don't think this is ever called [2015-05-02]
+    # it is called from the Setup_Grid template do_save method
+    # but we have changed ht.gui_grid.try_save() -
+    #   if there is a grid_frame, call *its* do_save method
+    #   else call the grid's do_save method
+    # leave it like this for now, as I am not sure which approach
+    #   is preferable
     print('gridframe_dosave() - DO WE GET HERE?')
     # if try to save grid, and grid has grid_frame, invoke grid_frame's do_save
     yield from exec_xml(caller.grid_frame, caller.grid_frame.methods['do_save'])
 
 @asyncio.coroutine
+def check_children(frame, xml):
+    db_obj = frame.data_objects.get(xml.get('obj_name'))
+    yield from frame.check_children(db_obj)
+
+@asyncio.coroutine
 def save_obj(frame, xml):
     db_obj = frame.data_objects.get(xml.get('obj_name'))
-# if grid has grid_frame and we call 'save', we
-#   invoke the grid_frame's do_save() instead of the grid's
-# therefore the following is wrong - endless loop!
-#   if frame.ctrl_grid and db_obj == frame.ctrl_grid.db_obj:
-#       yield from frame.ctrl_grid.try_save()
-#   else:
-##      db_obj.save()
-#       yield from frame.save_obj(db_obj)
     yield from frame.save_obj(db_obj)
 
 @asyncio.coroutine
 def save_row(grid, xml):
-#   grid.db_obj.save()
     yield from grid.save_row()
 
 @asyncio.coroutine
@@ -431,11 +435,13 @@ def assign(caller, xml):
             source_record = caller.data_objects[source_objname]
             source_field = source_record.getfld(source_colname)
             value_to_assign = source_field.getval()
-        elif source == '$current_row':
-            try:
-                value_to_assign = caller.current_row
-            except AttributeError:
-                value_to_assign = caller.ctrl_grid.current_row
+# removed for now [2015-04-30]
+# I think it is only used for maintaining 'seq', which has now been automated
+#       elif source == '$current_row':
+#           try:
+#               value_to_assign = caller.current_row
+#           except AttributeError:
+#               value_to_assign = caller.ctrl_grid.current_row
         elif source == '$True':
             value_to_assign = True
         elif source == '$False':

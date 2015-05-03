@@ -13,13 +13,20 @@ table = {
     'upd_chks'      : None,
     'del_chks'      : None,
     'table_hooks'   : etree.fromstring(
-        '<hooks><hook type="before_save"><increment_seq args="table_id, col_type"/></hook>'
-        '<hook type="after_delete"><decrement_seq args="table_id, col_type"/></hook>'
-        '<hook type="after_save"><setup_disp_name/></hook>'
-        '<hook type="after_insert"><case>'
-        '<compare src="col_type" op="eq" tgt="user">'
-        '<add_column/></compare></case></hook></hooks>'
+#       '<hooks><hook type="before_save"><increment_seq args="table_id, col_type"/></hook>'
+#       '<hook type="after_delete"><decrement_seq args="table_id, col_type"/></hook>'
+        '<hooks>'
+            '<hook type="after_save"><setup_disp_name/></hook>'
+            '<hook type="after_insert">'
+                '<case>'
+                    '<compare src="col_type" op="eq" tgt="user">'
+                        '<add_column/>'
+                    '</compare>'
+                '</case>'
+            '</hook>'
+        '</hooks>'
         ),
+    'sequence'      : ['seq', ['table_id', 'col_type'], None],
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -253,7 +260,7 @@ cols.append ({
     'col_name'   : 'key_field',
     'data_type'  : 'TEXT',
     'short_descr': 'Key field',
-    'long_descr' : 'Y=primary key, A=alternate key, N=not key field',
+    'long_descr' : 'Yes=primary key, Alt=alternate key, No=not key field',
     'col_head'   : 'Key?',
     'key_field'  : 'N',
     'generated'  : False,
@@ -269,9 +276,9 @@ cols.append ({
         False,  # use sub_types?
         False,  # use display_names?
         [
-            ['Y', 'Primary key', [], []],
-            ['A', 'Alternate key', [], []],
-            ['N', 'Not a key', [], []],
+            ['Y', 'Yes', [], []],
+            ['A', 'Alt', [], []],
+            ['N', 'No', [], []],
             ]
         ],
     })

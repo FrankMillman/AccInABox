@@ -12,14 +12,16 @@ table = {
     'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : None,
-    'table_hooks'   : etree.fromstring(
-        '<hooks><hook type="before_save">'
-          '<incr_seq_with_alt alt_table="db_table_groups" args="parent_id"/>'
-          '</hook>'
-        '<hook type="after_delete">'
-          '<decr_seq_with_alt alt_table="db_table_groups" args="parent_id"/></hook>'
-          '</hooks>'
-        ),
+#   'table_hooks'   : etree.fromstring(
+#       '<hooks><hook type="before_save">'
+#         '<incr_seq_with_alt alt_table="db_table_groups" args="parent_id"/>'
+#         '</hook>'
+#       '<hook type="after_delete">'
+#         '<decr_seq_with_alt alt_table="db_table_groups" args="parent_id"/></hook>'
+#         '</hooks>'
+#       ),
+    'table_hooks'   : None,
+    'sequence'      : ['seq', ['parent_id'], 'db_table_groups'],
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -285,6 +287,24 @@ cols.append ({
     'short_descr': 'Table hooks',
     'long_descr' : 'Table hooks',
     'col_head'   : 'Hooka',
+    'key_field'  : 'N',
+    'generated'  : False,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'col_chks'   : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'sequence',
+    'data_type'  : 'JSON',
+    'short_descr': 'Sequence parameters',
+    'long_descr' : 'Sequence parameters (if applicable)',
+    'col_head'   : 'Sequence',
     'key_field'  : 'N',
     'generated'  : False,
     'allow_null' : True,

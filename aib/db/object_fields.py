@@ -564,31 +564,43 @@ class Json(Text):
 #           self._value = value
 
     def getval(self):
+        # must return deepcopy because value is mutable, so
+        #   we would not be able to detect if it was changed
         return deepcopy(self._value)
 
-    def get_val_for_sql(self):
-        if self._value is None:
+    def str_to_val(self, value):
+        if value in (None, ''):
             return None
-        return dumps(self._value)
+        else:
+            try:
+                return loads(value)
+            except ValueError:
+                errmsg = 'Not a valid Json string'
+                raise AibError(head=self.col_defn.short_descr, body=errmsg)
+
+    def get_val_for_sql(self):
+#       if self._value is None:
+#           return None
+#       return dumps(self._value)
+        return None if self._value is None else dumps(self._value)
 
     def get_val_for_xml(self):
-        if self._value is None:
-            return None
-#       elif self._value == '':
-#           return ''
-        else:
-            return dumps(self._value)
+#       if self._value is None:
+#           return None
+#       return dumps(self._value)
+        return None if self._value is None else dumps(self._value)
 
     def get_val_from_sql(self, value):
-        if value is None:
-            return None
-        return loads(value)
+#       if value is None:
+#           return None
+#       return loads(value)
+        return None if value is None else loads(value)
 
     def get_val_from_xml(self, value):
-        if value is None:
-            return None
-        else:
-            return loads(value)
+#       if value is None:
+#           return None
+#       return loads(value)
+        return None if value is None else loads(value)
 
 #   def set_val_from_xml(self, value):
 #       if value is None:
@@ -603,6 +615,18 @@ class Json(Text):
         if self._curr_val is None:
             return self._orig is None
         return loads(self._curr_val) == self._orig
+
+    def val_to_str(self, value=None):
+        try:
+            self.db_obj.check_perms('view', self.col_defn.row_id)
+            if value is None:
+                value = self._value
+            if value is None:
+                return ''
+            else:
+                return dumps(value)
+        except AibDenied:
+            return '*'
 
 class Xml(Text):
     parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)

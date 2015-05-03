@@ -47,6 +47,7 @@
       <xs:attribute name="descr"/>
       <xs:attribute name="parent"/>
       <xs:attribute name="hooks"/>
+      <xs:attribute name="sequence"/>
       <xs:attribute name="upd_chks"/>
       <xs:attribute name="del_chks"/>
     </xs:complexType>
@@ -56,8 +57,8 @@
       <xs:attribute name="col_name" use="required"/>
       <xs:attribute name="data_type" use="required"/>
       <xs:attribute name="short_descr" use="required"/>
-      <xs:attribute name="long_descr" use="required"/>
-      <xs:attribute name="col_head" use="required"/>
+      <xs:attribute name="long_descr"/>
+      <xs:attribute name="col_head"/>
       <xs:attribute name="key_field" use="required"/>
       <xs:attribute name="allow_null" use="required" type="xs:boolean"/>
       <xs:attribute name="allow_amend" use="required" type="xs:boolean"/>

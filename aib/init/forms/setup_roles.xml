@@ -226,6 +226,7 @@
               "/>
               <method name="do_save" action="
                 <<action>>
+                  <<check_children obj_name=`tbl_view`/>>
                   <<pyfunc name=`custom.table_perms.dump_col_perms`/>>
                   <<save_obj obj_name=`tbl_view`/>>
                 <</action>>
@@ -243,6 +244,7 @@
           <method name="do_save" action="
             <<action>>
               <<tree_before_save/>>
+              <<check_children obj_name=`role`/>>
               <<save_obj obj_name=`role`/>>
               <<pyfunc name=`custom.table_perms.dump_table_perms`/>>
               <<update_node/>>
