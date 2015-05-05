@@ -8,7 +8,6 @@
         <xs:element ref="input_params"/>
         <xs:element ref="output_params"/>
         <xs:element ref="frame"/>
-        <xs:element ref="on_start_form" minOccurs="0"/>
         <xs:element ref="inline_form" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
       <xs:attribute name="name" use="required"/>
@@ -110,6 +109,7 @@
         <xs:element ref="frame_methods"/>
       </xs:sequence>
       <xs:attribute name="main_object"/>
+      <xs:attribute name="on_start_form"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="toolbar">
@@ -366,7 +366,7 @@
         <xs:element ref="button" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
       <xs:attribute name="template"/>
-      <xs:attribute name="validate" type="xs:boolean" use="required"/>
+      <xs:attribute name="validate" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="button">
@@ -374,8 +374,8 @@
       <xs:attribute name="btn_id" use="required"/>
       <xs:attribute name="btn_label" use="required"/>
       <xs:attribute name="btn_default" type="xs:boolean"/>
-      <xs:attribute name="btn_enabled" type="xs:boolean" use="required"/>
-      <xs:attribute name="btn_validate" type="xs:boolean" use="required"/>
+      <xs:attribute name="btn_enabled" type="xs:boolean"/>
+      <xs:attribute name="btn_validate" type="xs:boolean"/>
       <xs:attribute name="lng" type="xs:integer"/>
       <xs:attribute name="action" use="required"/>
       <xs:attribute name="validation"/>
@@ -394,11 +394,6 @@
     <xs:complexType>
       <xs:attribute name="name" use="required"/>
       <xs:attribute name="obj_name"/>
-      <xs:attribute name="action" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="on_start_form">
-    <xs:complexType>
       <xs:attribute name="action" use="required"/>
     </xs:complexType>
   </xs:element>

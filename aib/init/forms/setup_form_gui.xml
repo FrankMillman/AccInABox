@@ -14,23 +14,29 @@
       <mem_col col_name="form_xml" data_type="FXML" short_descr="Form definition"
         long_descr="Form definition (xml)" col_head="Defn" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="tb_template" data_type="TEXT" short_descr="Toolbar template"
+        long_descr="Toolbar template" col_head="" key_field="N" allow_null="true"
+        allow_amend="true" max_len="120" db_scale="0"/>
+      <mem_col col_name="btn_template" data_type="TEXT" short_descr="Button template"
+        long_descr="Button template" col_head="" key_field="N" allow_null="true"
+        allow_amend="true" max_len="120" db_scale="0"/>
+      <mem_col col_name="btn_validate" data_type="BOOL" short_descr="Validate?"
+        long_descr="Validate form up to this point?" col_head="" key_field="N" allow_null="true"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="true"/>
+      <mem_col col_name="on_start_form" data_type="SXML" short_descr="Start method"
+        long_descr="Method called on start of form" col_head="Template" key_field="N"
+        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="method_template" data_type="TEXT" short_descr="Method template"
+        long_descr="Template for frame methods" col_head="" key_field="N"
+        allow_null="true" allow_amend="true" max_len="120" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="toolbar" descr="Toolbar" parent="form">
+    <mem_obj name="tool" descr="Toolbar elements" parent="form"
+        sequence="[`seq`, [], null]">
       <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
         long_descr="Form id" col_head="Form id" key_field="A" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"
         fkey="[`form`, `row_id`, null, null, true]"/>
-      <mem_col col_name="template" data_type="TEXT" short_descr="Template"
-        long_descr="Template" col_head="Template" key_field="N" allow_null="true"
-        allow_amend="true" max_len="120" db_scale="0"/>
-    </mem_obj>
-
-    <mem_obj name="tool" descr="Toolbar elements" parent="toolbar">
-      <mem_col col_name="toolbar_id" data_type="INT" short_descr="Toolbar id"
-        long_descr="Toolbar id" col_head="" key_field="A" allow_null="false"
-        allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`toolbar`, `row_id`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -54,7 +60,8 @@
         allow_amend="true" max_len="120" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="body" descr="Body definition elements" parent="form">
+    <mem_obj name="body" descr="Body definition elements" parent="form"
+        sequence="[`seq`, [], null]">
       <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
         long_descr="Form id" col_head="Form id" key_field="A" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"
@@ -176,24 +183,12 @@
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="button_row" descr="Button row" parent="form">
+    <mem_obj name="button" descr="Button" parent="form"
+        sequence="[`seq`, [], null]">
       <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
         long_descr="Form id" col_head="Form id" key_field="A" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"
         fkey="[`form`, `row_id`, null, null, true]"/>
-      <mem_col col_name="template" data_type="TEXT" short_descr="Template"
-        long_descr="Template" col_head="Template" key_field="N" allow_null="true"
-        allow_amend="true" max_len="120" db_scale="0"/>
-      <mem_col col_name="validate" data_type="BOOL" short_descr="Validate?"
-        long_descr="Validate form up to this point?" col_head="" key_field="N" allow_null="true"
-        allow_amend="true" max_len="0" db_scale="0" dflt_val="true"/>
-    </mem_obj>
-
-    <mem_obj name="button" descr="Button" parent="button_row">
-      <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
-        long_descr="Form id" col_head="Form id" key_field="A" allow_null="false"
-        allow_amend="false" max_len="20" db_scale="0"
-        fkey="[`button_row`, `row_id`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -220,27 +215,22 @@
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="method_row" descr="Method row" parent="form">
+    <mem_obj name="frame_method" descr="Frame method" parent="form"
+        sequence="[`seq`, [], null]">
       <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
         long_descr="Form id" col_head="Form id" key_field="A" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"
         fkey="[`form`, `row_id`, null, null, true]"/>
-      <mem_col col_name="template" data_type="TEXT" short_descr="Template"
-        long_descr="Template" col_head="Template" key_field="N" allow_null="true"
-        allow_amend="true" max_len="120" db_scale="0"/>
-    </mem_obj>
-
-    <mem_obj name="frame_method" descr="Frame method" parent="method_row">
-      <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
-        long_descr="Form id" col_head="Form id" key_field="A" allow_null="false"
-        allow_amend="false" max_len="20" db_scale="0"
-        fkey="[`method_row`, `row_id`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="name" data_type="TEXT" short_descr="Method name"
-        long_descr="Method name" col_head="Name" key_field="N" allow_null="false"
+        long_descr="Method name" col_head="Name" key_field="A" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"/>
+      <mem_col col_name="obj_name" data_type="TEXT" short_descr="Object name"
+        long_descr="Object name (used in on_clean/on_amend/on_read/on_delete)"
+        col_head="Object" key_field="N" allow_null="true"
+        allow_amend="true" max_len="20" db_scale="0"/>
       <mem_col col_name="action" data_type="SXML" short_descr="Method action"
         long_descr="Method action" col_head="Action" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
@@ -282,7 +272,7 @@
       <col/>
       <label value="Template:"/>
       <col/>
-      <input fld="toolbar.template" lng="120"/>
+      <input fld="form.tb_template" lng="120"/>
       <grid data_object="tool" growable="true" num_grid_rows="5">
         <cur_columns>
           <cur_col col_name="type" lng="120"/>
@@ -333,12 +323,13 @@
         <button_row validate="true" template="Grid_Frame"/>
         <frame_methods template="Grid_Frame"/>
       </grid_frame>
-<!--
+
       <nb_page label="Gui objects"/>
       <block/>
       <grid data_object="body" growable="true" num_grid_rows="12">
+        <toolbar template="Setup_Grid"/>
         <cur_columns>
-          <cur_col col_name="type" lng="120" readonly="true"/>
+          <cur_col col_name="type" lng="80"/>
           <cur_col col_name="display_name" lng="150" expand="true" readonly="true"/>
         </cur_columns>
         <cur_filter/>
@@ -347,6 +338,7 @@
         </cur_sequence>
         <grid_methods template="Setup_Grid"/>
       </grid>
+
       <grid_frame main_object="body">
         <toolbar template="Setup_Form"/>
         <body>
@@ -376,37 +368,37 @@
             <subtype_body subtype_id="input">
               <row/>
               <col/>
-              <label value="Field:"/>
+              <label value="Field name:"/>
               <col/>
               <input fld="body.fld" lng="120"/>
               <row/>
               <col/>
               <label value="Length:"/>
-              <col/>
               <input fld="body.lng" lng="40"/>
               <col/>
               <label value="Height:"/>
-              <col/>
               <input fld="body.height" lng="40"/>
               <row/>
               <col/>
               <label value="Password?"/>
-              <col/>
               <input fld="body.pwd"/>
               <col/>
               <label value="Read only?"/>
-              <col/>
               <input fld="body.readonly"/>
               <row/>
               <col/>
               <label value="Reverse sign?"/>
-              <col/>
               <input fld="body.reverse"/>
               <row/>
               <col/>
+              <label value="Validation:"/>
+              <col/>
+              <input fld="body.validation" lng="300"/>
+              <row/>
+              <col/>
               <label value="Action after:"/>
-              <col colspan="3"/>
-              <input fld="body.after" lng="300" height="5"/>
+              <col/>
+              <input fld="body.after" lng="300"/>
             </subtype_body>
             <subtype_body subtype_id="display">
               <row/>
@@ -425,7 +417,7 @@
         <button_row validate="true" template="Grid_Frame"/>
         <frame_methods template="Grid_Frame"/>
       </grid_frame>
--->
+
       <nb_page label="Button row"/>
       <block/>
       <vbox/>
@@ -434,13 +426,14 @@
       <col/>
       <label value="Template:"/>
       <col/>
-      <input fld="button_row.template" lng="120"/>
+      <input fld="form.btn_template" lng="120"/>
       <row/>
       <col/>
       <label value="Validate?"/>
       <col/>
-      <input fld="button_row.validate"/>
+      <input fld="form.btn_validate"/>
       <grid data_object="button" growable="true" num_grid_rows="5">
+        <toolbar template="Setup_Grid"/>
         <cur_columns>
           <cur_col col_name="btn_id" lng="120"/>
         </cur_columns>
@@ -490,9 +483,36 @@
         <button_row validate="true" template="Grid_Frame"/>
         <frame_methods template="Grid_Frame"/>
       </grid_frame>
-<!--
       <nb_page label="Methods"/>
--->
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Start method:"/>
+      <col/>
+      <input fld="form.on_start_form" lng="400" height="5"/>
+      <row/>
+      <col/>
+      <label value="Template:"/>
+      <col/>
+      <input fld="form.method_template" lng="120"/>
+      <block/>
+      <vbox/>
+      <string value="Frame methods:" lng="120"/>
+      <grid data_object="frame_method" growable="true" num_grid_rows="5">
+        <toolbar template="Setup_Grid"/>
+        <cur_columns>
+          <cur_col col_name="name" lng="120"/>
+          <cur_col col_name="obj_name" lng="80"/>
+          <cur_col col_name="action" lng="80"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
+        <grid_methods template="Setup_Grid"/>
+      </grid>
+      <vbox_end/>
       <nb_end/>
     </body>
     <button_row validate="true" template="Setup_Form"/>

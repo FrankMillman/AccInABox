@@ -64,7 +64,29 @@
   <input_params/>
   <output_params/>
 
-  <frame main_object="fin_year">
+  <frame main_object="fin_year" on_start_form="
+      <<action>>
+        <<pyfunc name=`custom.finperiod_funcs.get_no_periods`/>>
+        <<case>>
+          <<compare src=`var.count_per` op=`eq` tgt=`eval(0)`>>
+            <<inline_form form_name=`Opening date`>>
+              <<on_return>>
+                <<return state=`cancelled`>>
+                  <<end_form state=`cancelled`/>>
+                <</return>>
+                <<return state=`completed`>>
+                  <<pyfunc name=`custom.finperiod_funcs.save_start_date`/>>
+                  <<continue_form/>>
+                <</return>>
+              <</on_return>>
+            <</inline_form>>
+          <</compare>>
+          <<default>>
+            <<continue_form/>>
+          <</default>>
+        <</case>>
+      <</action>>
+      ">
     <toolbar>
       <tool type="img" name="prev" tip="Prev year (Ctrl+Left)" action="
         <<action>>
@@ -158,29 +180,6 @@
       "/>
     </frame_methods>
   </frame>
-  <on_start_form action="
-    <<action>>
-      <<pyfunc name=`custom.finperiod_funcs.get_no_periods`/>>
-      <<case>>
-        <<compare src=`var.count_per` op=`eq` tgt=`eval(0)`>>
-          <<inline_form form_name=`Opening date`>>
-            <<on_return>>
-              <<return state=`cancelled`>>
-                <<end_form state=`cancelled`/>>
-              <</return>>
-              <<return state=`completed`>>
-                <<pyfunc name=`custom.finperiod_funcs.save_start_date`/>>
-                <<continue_form/>>
-              <</return>>
-            <</on_return>>
-          <</inline_form>>
-        <</compare>>
-        <<default>>
-          <<continue_form/>>
-        <</default>>
-      <</case>>
-    <</action>>
-  "/>
   <inline_form form_name="Opening date">
     <frame main_object="var">
       <toolbar/>

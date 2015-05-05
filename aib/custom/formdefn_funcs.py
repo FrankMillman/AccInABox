@@ -40,7 +40,7 @@ dbobj_cols = ('name', 'table_name')
 
 @asyncio.coroutine
 def load_db_objects(caller, xml):
-    # called from form_setup_dbobj 'on_start_form'
+    # called from form_setup_dbobj 'on_start_frame'
     form = caller.data_objects['form']
     dbobj = caller.data_objects['dbobj']
 # 'hooks' not used at present [2015-04-26]
@@ -125,7 +125,7 @@ memcol_cols = ('col_name', 'data_type', 'short_descr', 'long_descr',
 
 @asyncio.coroutine
 def load_mem_objects(caller, xml):
-    # called from form_setup_memobj 'on_start_form'
+    # called from form_setup_memobj 'on_start_frame'
     form = caller.data_objects['form']
     memobj = caller.data_objects['memobj']
 # 'hooks' not used at present [2015-04-26]
@@ -228,7 +228,7 @@ output_cols = ('name', 'type', 'source')
 
 @asyncio.coroutine
 def load_ioparams(caller, xml):
-    # called from setup_form_ioparams 'on_start_form'
+    # called from setup_form_ioparams 'on_start_frame'
     form = caller.data_objects['form']
 
     form.save()  # populate 'row_id' for children
@@ -287,31 +287,23 @@ def dump_ioparams(caller, xml):
 # gui_objects
 #-----------------------------------------------------------------------------
 
-toolbar_cols = ('template',)
 tool_cols = ('type', 'label', 'tip', 'lng', 'name', 'shortcut')
-body_cols = ('rowspan', 'colspan', 'value', 'fld', 'lng', 'height',
-    'pwd', 'readonly', 'reverse', 'choice', 'lookup', 'after',
+body_cols = ('rowspan', 'colspan', 'value', 'fld', 'lng', 'height', 'pwd',
+    'readonly', 'reverse', 'choice', 'lookup', 'validation', 'after',
     'btn_id', 'btn_label', 'btn_enabled', 'btn_validate', 'action',
     'label', 'subtype', 'data_object', 'growable', 'num_grid_rows',
     'cursor', 'cur_cols', 'cur_filter', 'cur_seq')
-buttonrow_cols = ('template', 'validate')
 button_cols = ('btn_id', 'btn_label', 'lng', 'btn_default',
     'btn_enabled', 'btn_validate', 'action')
-methodrow_cols = ('template',)
-method_cols=('name', 'action')
+method_cols=('name', 'obj_name', 'action')
 
 @asyncio.coroutine
 def load_frame(caller, xml):
-    # called from form_setup_frame 'on_start_form'
+    # called from form_setup_frame 'on_start_frame'
     form = caller.data_objects['form']
-    toolbar = caller.data_objects['toolbar']
-#   tool = toolbar.children['tool']
     tool = caller.data_objects['tool']
     body = caller.data_objects['body']
-    button_row = caller.data_objects['button_row']
-#   button = button_row.children['button']
     button = caller.data_objects['button']
-    method_row = caller.data_objects['method_row']
     method = caller.data_objects['frame_method']
 
     form.save()  # populate 'row_id' for children
@@ -321,10 +313,8 @@ def load_frame(caller, xml):
         frame = form_xml.find('frame')
 
         toolbar_xml = frame.find('toolbar')
-        init_vals = {col: toolbar.get_val_from_xml(col, toolbar_xml.get(col))
-            for col in toolbar_cols}
-        toolbar.init(display=True, init_vals=init_vals)
-        toolbar.save()
+        form.setval('tb_template', form.get_val_from_xml('tb_template',
+            toolbar_xml.get('template')))
         for seq, tool_xml in enumerate(toolbar_xml):
             init_vals = {col: tool.get_val_from_xml(col, tool_xml.get(col))
                 for col in tool_cols}
@@ -341,10 +331,10 @@ def load_frame(caller, xml):
             body.save()
 
         button_row_xml = frame.find('button_row')
-        init_vals = {col: button_row.get_val_from_xml(col, button_row_xml.get(col))
-            for col in buttonrow_cols}
-        button_row.init(display=True, init_vals=init_vals)
-        button_row.save()
+        form.setval('btn_template', form.get_val_from_xml('btn_template',
+            button_row_xml.get('template')))
+        form.setval('btn_validate', form.get_val_from_xml('btn_validate',
+            button_row_xml.get('template')))
         for seq, button_xml in enumerate(button_row_xml):
             init_vals = {col: button.get_val_from_xml(col, button_xml.get(col))
                 for col in button_cols}
@@ -352,56 +342,48 @@ def load_frame(caller, xml):
             button.init(display=False, init_vals=init_vals)
             button.save()
 
-        method_row_xml = frame.find('frame_methods')
-        init_vals = {col: method_row.get_val_from_xml(col, method_row_xml.get(col))
-            for col in methodrow_cols}
-        method_row.init(display=True, init_vals=init_vals)
-        method_row.save()
-        for seq, method_xml in enumerate(method_row_xml):
+        methods_xml = frame.find('frame_methods')
+        form.setval('method_template', form.get_val_from_xml('method_template',
+            methods_xml.get('template')))
+        form.setval('on_start_form', form.get_val_from_xml('on_start_form',
+            frame.get('on_start_form')))
+        for seq, method_xml in enumerate(methods_xml):
             init_vals = {col: method.get_val_from_xml(col, method_xml.get(col))
                 for col in method_cols}
             init_vals['seq'] = seq
             method.init(display=False, init_vals=init_vals)
             method.save()
 
+        form.save()  # set state to 'clean'
+
 @asyncio.coroutine
 def restore_frame(caller, xml):
     # called from form_setup_frame 'do_restore'
-    toolbar = caller.data_objects['toolbar']
     tool = caller.data_objects['tool']
     body = caller.data_objects['body']
-    button_row = caller.data_objects['button_row']
     button = caller.data_objects['button']
-    method_row = caller.data_objects['method_row']
     method = caller.data_objects['frame_method']
 
     # just delete them - they will be recreated on restart_frame()
     tool.delete_all()
-    toolbar.delete_all()
     body.delete_all()
     button.delete_all()
-    button_row.delete_all()
     method.delete_all()
-    method_row.delete_all()
 
 @asyncio.coroutine
 def dump_frame(caller, xml):
     # called from form_setup_frame 'do_save'
-    toolbar = caller.data_objects['toolbar']
-#   tool = toolbar.children['tool']
+    form = caller.data_objects['form']
     tool = caller.data_objects['tool']
     body = caller.data_objects['body']
-    button_row = caller.data_objects['button_row']
-#   button = button_row.children['button']
     button = caller.data_objects['button']
-    method_row = caller.data_objects['method_row']
     method = caller.data_objects['frame_method']
 
     frame_xml = etree.Element('frame')
+    set_if_not_none(frame_xml, form, 'on_start_form')
 
     toolbar_xml = etree.SubElement(frame_xml, 'toolbar')
-    for col in toolbar_cols:
-        set_if_not_none(toolbar_xml, toolbar, col)
+    set_if_not_none(toolbar_xml, form, 'tb_template', 'template')
     all_tools = tool.select_many(where=[], order=[('seq', False)])
     for _ in all_tools:
         tool_xml = etree.SubElement(toolbar_xml, 'tool')
@@ -416,20 +398,19 @@ def dump_frame(caller, xml):
             set_if_not_none(elem_xml, body, col)
 
     button_row_xml = etree.SubElement(frame_xml, 'button_row')
-    for col in buttonrow_cols:
-        set_if_not_none(button_row_xml, button_row, col)
+    set_if_not_none(button_row_xml, form, 'btn_template', 'template')
+    set_if_not_none(button_row_xml, form, 'btn_validate', 'validate')
     all_buttons = button.select_many(where=[], order=[('seq', False)])
     for _ in all_buttons:
         button_xml = etree.SubElement(button_row_xml, 'button')
         for col in button_cols:
             set_if_not_none(button_xml, button, col)
 
-    method_row_xml = etree.SubElement(frame_xml, 'frame_method')
-    for col in methodrow_cols:
-        set_if_not_none(method_row_xml, method_row, col)
+    methods_xml = etree.SubElement(frame_xml, 'frame_methods')
+    set_if_not_none(methods_xml, form, 'method_template', 'template')
     all_methods = method.select_many(where=[], order=[('seq', False)])
     for _ in all_methods:
-        method_xml = etree.SubElement(method_row_xml, 'method')
+        method_xml = etree.SubElement(methods_xml, 'method')
         for col in method_cols:
             set_if_not_none(method_xml, method, col)
 
@@ -440,10 +421,10 @@ def save_xml(caller, tag_to_update, new_xml):
     form = caller.data_objects['form']
     form_xml = form.getval('form_xml')
 
-    # locate block of xml using tag_to_update
-    xml_orig = form_xml.find(tag_to_update)
-    # replace block with new_xml
-    xml_orig[:] = new_xml[:]
+    xml_orig = form_xml.find(tag_to_update)  # locate block of xml to update
+    xml_orig[:] = new_xml[:]  # replace block with new_xml
+    xml_orig.attrib.clear()  # clear old attributes (if any)
+    xml_orig.attrib.update(new_xml.attrib)  # replace with new (if any)
 
     if debug:
         log.write(etree.tostring(xml_orig, encoding=str, pretty_print=True))
@@ -458,8 +439,10 @@ def save_xml(caller, tag_to_update, new_xml):
     # update form_definition with new form_xml
     form.setval('form_xml', form_xml)
 
-def set_if_not_none(elem_xml, db_obj, col_name):
-    # create attribute on xml element, but only if not None
+def set_if_not_none(elem_xml, db_obj, col_name, attr_name=None):
+    # create attribute on xml element, but only if not None and not 'false'
     xml_val = db_obj.get_val_for_xml(col_name)
-    if xml_val is not None:
-        elem_xml.set(col_name, xml_val)
+    if xml_val is not None and xml_val is not 'false':
+        if attr_name is None:
+            attr_name = col_name
+        elem_xml.set(attr_name, xml_val)

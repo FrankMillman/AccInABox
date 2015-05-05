@@ -1050,6 +1050,12 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
         grid.inserted = -1;
       else
         grid.inserted = 0;
+      if (grid.first_grid_row > 0) {
+        if (grid.first_grid_row + grid.num_grid_rows > grid.total_rows()) {
+          grid.first_grid_row -= 1;
+          grid.active_row += 1;
+          };
+        };
       };
 
     if (grid.total_rows() <= grid.num_grid_rows) {

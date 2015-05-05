@@ -452,13 +452,20 @@ function setup_form(args) {
         };
       case 'string': {
         var text = document.createElement('span');
+        text.style.display = 'inline-block';
         text.appendChild(document.createTextNode(elem[1].value));
-        text.style[cssFloat] = 'left';
         text.style.textAlign = 'left';
         text.style.marginTop = '10px';
         if (elem[1].lng)
           text.style.width = elem[1].lng + 'px'
-        block.appendChild(text);
+        if (vbox !== null)
+          vbox.appendChild(text)
+        else {
+          if (block.childNodes.length && subtype_name === null)
+            box.style.marginLeft = '10px';
+          text.style[cssFloat] = 'left';
+          block.appendChild(text);
+          };
         break;
         };
       case 'panel': {

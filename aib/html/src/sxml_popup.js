@@ -118,7 +118,9 @@ popup.close_window = function() {
   document.body.removeChild(popup);
   current_form = popup.active_form;
   current_form.enable_controls();
-  popup.sxml.value = popup.text.value;
+  // IE8 converts all \n to \r\n
+  // this converts it back again!
+  popup.sxml.value = popup.text.value.replace(/(\r\n|\n|\r)/gm, '\n');
   if (popup.sxml.callback !== undefined) {
     callback = popup.sxml.callback;
     var ctx = callback.shift();  // shift removes first element

@@ -511,18 +511,11 @@ class Form:
 #                   show_obj_list(sub_obj)
 #       show_obj_list(self)
 
-        form_methods = form_defn.find('form_methods')
-        if form_methods is not None:
-            for method in form_methods.findall('method'):
-                method_name = method.get('name')
-                method = etree.fromstring(method.get('action'), parser=parser)
-                if method_name == 'on_start_form':
-                    yield from ht.form_xml.exec_xml(self, method)  #, clear_dbevents=True)
-
-        on_start_form = form_defn.find('on_start_form')
+        on_start_form = frame_xml.get('on_start_form')
         if on_start_form is not None:
-            action = etree.fromstring(on_start_form.get('action'), parser=parser)
+            action = etree.fromstring(on_start_form, parser=parser)
             yield from ht.form_xml.exec_xml(self, action)
+            # on_start_form must call continue_form if it wants to continue
         else:
             yield from self.continue_form()
 
@@ -713,7 +706,7 @@ class Frame:
         self.on_read_set = set()
         self.on_clean_set = set()
         self.on_amend_set = set()
-        self.on_delete_set = set()
+        self.on_delete_set = set()  # not used at present [2015-05-03]
         self.methods = {}
 
         self.main_obj_name = frame_xml.get('main_object')  # else None
@@ -1025,7 +1018,8 @@ class Frame:
                         after, parser=parser)
 
     def setup_buttonrow(self, button_row, gui):
-        validate = button_row.get('validate') != 'false'  # default to True
+#       validate = button_row.get('validate') != 'false'  # default to True
+        validate = button_row.get('validate') == 'true'
         if validate:  # create dummy field to force validation of last field
             ht.gui_objects.GuiDummy(self, gui)
 
@@ -1116,7 +1110,7 @@ class Frame:
             else:
                 self.methods[method_name] = method
 
-    def setup_subtype(self, element, subtype, lng, gui):
+    def setup_subtype(self, element, subtype, dflt_lng, gui):
         obj_name, col_name = subtype.split('.')
         db_obj = self.data_objects[obj_name]
         subtype_fld = db_obj.fields[col_name]
@@ -1167,8 +1161,7 @@ class Frame:
                 readonly = False
                 skip = False
                 reverse = False
-                if data_type == 'BOOL':
-                    lng = None
+                lng = None if data_type == 'BOOL' else dflt_lng
                 choices = None
                 lkup = None
                 pwd = ''
@@ -1507,8 +1500,10 @@ class Frame:
             # if cursor is open, it needs a cursor_row, but we don't have one
             grid.db_obj.close_cursor()
         for method in self.on_start_frame:
-            # don't process any db_events - the form is not started yet
-            yield from ht.form_xml.exec_xml(self, method, clear_dbevents=True)
+            # don't process any db_events - the frame is not started yet
+            #   [not sure what problem this is solving! 2015-05-05]
+            self.session.request.db_events.clear()
+            yield from ht.form_xml.exec_xml(self, method)
 # moved to end - can't remember why!
 #       for grid in self.grids:
 #           yield from grid.start_grid()
@@ -1517,13 +1512,9 @@ class Frame:
             set_obj_exists = True  # tell client to set amended = False
         elif self.db_obj is not None and self.db_obj.exists:
             self.last_vld = len(self.obj_list)
-#           for obj in self.non_amendable:
-#               obj.set_readonly(True)
             set_obj_exists = True
         else:
             self.last_vld = -1
-#           for obj in self.non_amendable:
-#               obj.set_readonly(False)
             set_obj_exists = False
         self.session.request.check_redisplay(redisplay=False)  # send any 'readonly' messages
         self.session.request.start_frame(self.ref, set_obj_exists, set_focus)
@@ -1532,9 +1523,16 @@ class Frame:
         for grid in self.grids:
             yield from grid.start_grid()
 
-        # next line is a bit dodgy, but it might be correct
-        # why would there be any pending db_events?
-        self.session.request.db_events.clear()
+# following lines removed [2015-05-05]
+# don't know why it was there in the first place, but it causes a problem
+# if you delete a row in a child grid in a grid_frame, 'on_amend' generates a
+#   db_event on the parent which changes buttons to 'Save/Cancel', which is correct
+# this line prevents that from happening
+# remove for now, see what happens
+
+#       # next line is a bit dodgy, but it might be correct
+#       # why would there be any pending db_events?
+#       self.session.request.db_events.clear()
 
     def return_to_grid(self):
         grid = self.ctrl_grid

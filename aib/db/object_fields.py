@@ -432,22 +432,6 @@ class Field:
         #   if necessary, and returns it
         return value
 
-#   def set_val_from_xml(self, value):
-#       # at present [2015-02-19]] this is only used for form definitions
-#       # form definitions are stored as xml
-#       # for maintenance, we unpack it into seversl in-memory db tables
-#       # this method takes a value from the xml file and populates the column
-#       self._value = value
-#       self._orig = self._value
-#
-#       # don't think this is necessary
-#       if self.table_keys:
-#           self.read_row(value, display=False)
-#           if self.db_obj.exists:
-#               if value != self._value:
-#                   print('SET VAL FROM XML - it *is* necessary!')
-#               value = self._value  # to change (eg) 'a001' to 'A001'
-
     def get_val_for_xml(self):
         # see above
         # this method does the opposite
@@ -602,15 +586,6 @@ class Json(Text):
 #       return loads(value)
         return None if value is None else loads(value)
 
-#   def set_val_from_xml(self, value):
-#       if value is None:
-#           self._value = None
-##      elif value == '':
-##          self._value = ''
-#       else:
-#           self._value = loads(value)
-#       self._orig = self._value
-
     def concurrency_check(self):
         if self._curr_val is None:
             return self._orig is None
@@ -657,13 +632,6 @@ class Xml(Text):
             return None
         else:
             return etree.fromstring(gzip.decompress(value), parser=self.parser)
-
-#   def set_val_from_xml(self, value):
-#       if value is None:
-#           self._value = None
-#       else:
-#           self._value = etree.fromstring(gzip.decompress(value), parser=self.parser)
-#       self._orig = self._value
 
     def concurrency_check(self):
         if self._curr_val is None:
@@ -761,13 +729,6 @@ class StringXml(Xml):
             return None
         else:
             return etree.fromstring(value, parser=self.parser)
-
-#   def set_val_from_xml(self, value):
-#       if value is None:
-#           self._value = None
-#       else:
-#           self._value = etree.fromstring(value, parser=self.parser)
-#       self._orig = self._value
 
     def val_to_str(self, value=None):
         try:
@@ -878,15 +839,6 @@ class Integer(Field):
             return None
         else:
             return int(value)
-
-#   def set_val_from_xml(self, value):
-#       if value is None:
-#           self._value = None
-##      elif value == '':
-##          self._value = None
-#       else:
-#           self._value = int(value)
-#       self._orig = self._value
 
 class Decimal(Field):
     def __init__(self, db_obj, col_defn):
@@ -1196,15 +1148,6 @@ class Boolean(Field):
             return True
         else:
             return False
-
-#   def set_val_from_xml(self, value):
-#       if value is None:
-#           self._value = None
-#       elif value == 'true':
-#           self._value = True
-#       else:
-#           self._value = False
-#       self._orig = self._value
 
     def concurrency_check(self):  # self._curr_val has just been read in from database
         return bool(self._curr_val) == self._orig

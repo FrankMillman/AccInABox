@@ -407,10 +407,6 @@ class DbObject:
         fld = self.fields[col_name]
         return fld.get_val_from_xml(value)
 
-#   def set_val_from_xml(self, col_name, value):
-#       fld = self.fields[col_name]
-#       fld.set_val_from_xml(value)
-
     def recalc(self, col_name):
         fld = self.fields[col_name]
         fld.recalc()

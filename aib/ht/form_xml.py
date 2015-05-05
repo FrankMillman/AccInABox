@@ -26,15 +26,12 @@ def on_answer(caller, elem):
             yield from chk_db_events(caller)
 
 @asyncio.coroutine
-def exec_xml(caller, elem, clear_dbevents=False):  # caller can be frame or grid
+def exec_xml(caller, elem):  # caller can be frame or grid
     for xml in elem:
         if debug: log.write('EXEC {} {}\n\n'.format(caller, xml.tag))
         yield from globals()[xml.tag](caller, xml)
         if caller.session.request.db_events:
-            if clear_dbevents:  # set in restart_frame - not sure why :-(
-                caller.session.request.db_events.clear()
-            else:
-                yield from chk_db_events(caller)
+            yield from chk_db_events(caller)
 
 @asyncio.coroutine
 def after_input(obj):
@@ -301,7 +298,7 @@ def grid_req_delete_row(grid, xml):
 def frame_req_delete_row(frame, xml):
     grid = frame.ctrl_grid
     row, = frame.btn_args
-    yield from frame.ctrl_grid.on_req_delete_row(row)
+    yield from grid.on_req_delete_row(row)
 
 @asyncio.coroutine
 def grid_delete_row(grid, xml):
@@ -310,7 +307,7 @@ def grid_delete_row(grid, xml):
 @asyncio.coroutine
 def frame_delete_row(frame, xml):
     grid = frame.ctrl_grid
-    yield from frame.ctrl_grid.on_req_delete_row()
+    yield from grid.on_req_delete_row()
 
 @asyncio.coroutine
 def restore_row(grid, xml):
