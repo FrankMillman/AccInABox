@@ -938,9 +938,10 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     return this._amended;
     };
 
-  grid.set_value_from_server = function(value) {
+  grid.set_value_from_server = function(args) {
     // notification of record becoming clean/dirty (true/false)
-    if (value === true) {
+    var clean = args[0], exists = args[1];
+    if (clean) {
       this.set_amended(false);
       if (this.grid_frame !== null)
         if (this.grid_frame.amended())

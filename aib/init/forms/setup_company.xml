@@ -10,7 +10,7 @@
     <body>
       <block/>
       <grid data_object="db_comp" growable="true">
-        <toolbar template="Setup_Grid"/>
+        <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="company_id" lng="100"/>
           <cur_col col_name="company_name" lng="260" expand="true" validation="
@@ -38,10 +38,10 @@
         <cur_sequence>
           <cur_seq col_name="company_id"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
     </body>
     <button_row validate="false"/>
-    <frame_methods template="Setup_Grid"/>
+    <frame_methods template="Grid"/>
   </frame>
 </form>

@@ -11,9 +11,7 @@
     <db_obj name="db_cur" table_name="db_cursors" parent="db_table"/>
   </db_objects>
   <mem_objects/>
-  <input_params>
-    <input_param name="formview_obj" type="data_obj" target="db_table" required="true"/>
-  </input_params>
+  <input_params/>
   <output_params/>
   <frame main_object="db_table">
     <toolbar template="Setup_Form"/>
@@ -335,7 +333,7 @@
         <block/>
         <grid data_object="db_col_sys" growable="true"
             num_grid_rows="10" form_name="dbcols_sys">
-          <toolbar template="Setup_Grid"/>
+          <toolbar template="Grid_Setup"/>
           <cur_columns>
             <cur_col col_name="col_name" lng="120"/>
             <cur_col col_name="short_descr" lng="200" expand="true"/>
@@ -346,13 +344,13 @@
           <cur_sequence>
             <cur_seq col_name="seq" desc="false"/>
           </cur_sequence>
-          <grid_methods template="Setup_Grid"/>
+          <grid_methods template="Grid"/>
         </grid>
         <nb_page label="User Columns"/>
         <block/>
         <grid data_object="db_col_user" growable="true"
             num_grid_rows="10" form_name="dbcols_user">
-          <toolbar template="Setup_Grid"/>
+          <toolbar template="Grid_Setup"/>
           <cur_columns>
             <cur_col col_name="col_name" lng="120"/>
             <cur_col col_name="short_descr" lng="200" expand="true"/>
@@ -363,13 +361,13 @@
           <cur_sequence>
             <cur_seq col_name="seq" desc="false"/>
           </cur_sequence>
-          <grid_methods template="Setup_Grid"/>
+          <grid_methods template="Grid"/>
         </grid>
         <nb_page label="Virtual Columns"/>
         <block/>
         <grid data_object="db_col_virt" growable="true"
             num_grid_rows="10" form_name="dbcols_virt">
-          <toolbar template="Setup_Grid"/>
+          <toolbar template="Grid_Setup"/>
           <cur_columns>
             <cur_col col_name="col_name" lng="120"/>
             <cur_col col_name="short_descr" lng="200" expand="true"/>
@@ -380,7 +378,7 @@
           <cur_sequence>
             <cur_seq col_name="seq" desc="false"/>
           </cur_sequence>
-          <grid_methods template="Setup_Grid"/>
+          <grid_methods template="Grid"/>
         </grid>
         <nb_end/>
       </body>
@@ -406,273 +404,4 @@
       </frame_methods>
     </frame>
   </inline_form>
-<!--
-  <inline_form form_name="Db cursors">
-    <frame main_object="db_obj">
-      <toolbar/>
-      <body>
-        <block/>
-        <panel/>
-        <row/>
-        <col/>
-        <label value="Table:"/>
-        <col/>
-        <display fld="db_obj.table_name" lng="160"/>
-        <col/>
-        <label value="Description:"/>
-        <col/>
-        <display fld="db_obj.short_descr" lng="250"/>
-        <block/>
-        <grid data_object="db_cur" growable="true" num_grid_rows="3"
-            form_name="db_cursor">
-          <toolbar template="Setup_Form"/>
-          <cur_columns>
-            <cur_col col_name="cursor_name" lng="120"/>
-            <cur_col col_name="descr" lng="200" expand="true"/>
-          </cur_columns>
-          <cur_filter/>
-          <cur_sequence>
-            <cur_seq col_name="cursor_name" desc="false"/>
-          </cur_sequence>
-          <grid_methods template="Setup_Grid"/>
-        </grid>
-        <block/>
-        <grid_frame main_object="db_cur">
-          <toolbar template="Setup_Form"/>
-          <body>
-            <block/>
-            <panel/>
-            <row/>
-            <col/>
-            <label value="Cursor name:"/>
-            <col/>
-            <input fld="db_cur.cursor_name" lng="120"/>
-            <row/>
-            <col/>
-            <label value="Description:"/>
-            <col/>
-            <input fld="db_cur.descr" lng="250"/>
-            <block/>
-            <panel/>
-            <row/>
-            <col/>
-            <button lng="150" btn_id="cur_cols" btn_label="Columns"
-              btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<inline_form form_name=`_sys.cur_cols`/>>
-                <</action>>
-              "/>
-            <row/>
-            <col/>
-            <button lng="150" btn_id="cur_filt" btn_label="Filter"
-              btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                <</action>>
-              "/>
-            <row/>
-            <col/>
-            <button lng="150" btn_id="cur_seq" btn_label="Sequence"
-              btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                <</action>>
-              "/>
-          </body>
-          <button_row validate="true" template="Grid_Frame"/>
-          <frame_methods/>
-        </grid_frame>
-      </body>
-      <button_row validate="true">
-        <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
-            btn_validate="true" btn_default="true" lng="60" action="
-          <<action>>
-            <<call method=`on_req_cancel`/>>
-          <</action>>
-        "/>
-      </button_row>
-      <frame_methods>
-        <method name="on_req_cancel" action="
-          <<action>>
-            <<end_form state=`completed`/>>
-          <</action>>
-        "/>
-        <method name="on_req_close" action="
-          <<action>>
-            <<end_form state=`completed`/>>
-          <</action>>
-        "/>
-      </frame_methods>
-    </frame>
-  </inline_form>
--->
-<!--
-  <inline_form form_name="cur_cols">
-    <frame main_object="db_cur">
-      <toolbar/>
-      <body>
-        <block/>
-        <panel/>
-        <row/>
-        <col/>
-        <label value="Table:"/>
-        <col/>
-        <display fld="db_cur.cursor_name" lng="160"/>
-        <col/>
-        <label value="Description:"/>
-        <col/>
-        <display fld="db_cur.descr" lng="250"/>
-      </body>
-      <frame_methods/>
-    </frame>
-  </inline_form>
--->
-  <inline_form form_name="Form setup">
-
-    <frame main_object="db_obj">
-      <toolbar/>
-      <body>
-        <block/>
-        <panel/>
-        <row/>
-        <col/>
-        <label value="Table name:"/>
-        <col/>
-        <input fld="db_obj.table_name" lng="160"/>
-        <row/>
-        <col/>
-        <label value="Description:"/>
-        <col/>
-        <input fld="db_obj.short_descr" lng="250"/>
-
-        <block/>
-        <panel/>
-        <row/>
-        <col/>
-        <button lng="150" btn_id="dbobj" btn_label="Db objects"
-            btn_enabled="true" btn_validate="true" action="
-          <<action>>
-            <<sub_form form_name=`_sys.form_setup_dbobj`>>
-              <<call_params>>
-                <<call_param name=`form_name` type=`data_attr` source=`db_obj.table_name`/>>
-                <<call_param name=`title` type=`data_attr` source=`Form view`/>>
-                <<call_param name=`form_xml` type=`data_attr` source=`db_obj.form_xml`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`form_xml` type=`data_attr` target=`db_obj.form_xml`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`completed`/>>
-                <<return state=`cancelled`/>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
-        "/>
-        <col/>
-        <button lng="150" btn_id="memobj" btn_label="Memory objects"
-            btn_enabled="true" btn_validate="true" action="
-          <<action>>
-            <<sub_form form_name=`_sys.form_setup_memobj`>>
-              <<call_params>>
-                <<call_param name=`form_name` type=`data_attr` source=`db_obj.table_name`/>>
-                <<call_param name=`title` type=`data_attr` source=`Form view`/>>
-                <<call_param name=`form_xml` type=`data_attr` source=`db_obj.form_xml`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`form_xml` type=`data_attr` target=`db_obj.form_xml`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`completed`/>>
-                <<return state=`cancelled`/>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
-        "/>
-        <row/>
-        <col/>
-        <button lng="150" btn_id="inputs" btn_label="Input parameters"
-            btn_enabled="true" btn_validate="true" action="
-          <<action>>
-            <<sub_form form_name=`_sys.form_setup_inputs`>>
-              <<call_params>>
-                <<call_param name=`form_name` type=`data_attr` source=`db_obj.table_name`/>>
-                <<call_param name=`title` type=`data_attr` source=`Form view`/>>
-                <<call_param name=`form_xml` type=`data_attr` source=`db_obj.form_xml`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`form_xml` type=`data_attr` target=`db_obj.form_xml`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`completed`/>>
-                <<return state=`cancelled`/>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
-        "/>
-        <col/>
-        <button lng="150" btn_id="outputs" btn_label="Output parameters"
-            btn_enabled="true" btn_validate="true" action="
-          <<action>>
-            <<sub_form form_name=`_sys.form_setup_outputs`>>
-              <<call_params>>
-                <<call_param name=`form_name` type=`data_attr` source=`db_obj.table_name`/>>
-                <<call_param name=`title` type=`data_attr` source=`Form view`/>>
-                <<call_param name=`form_xml` type=`data_attr` source=`db_obj.form_xml`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`form_xml` type=`data_attr` target=`db_obj.form_xml`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`completed`/>>
-                <<return state=`cancelled`/>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
-        "/>
-        <row/>
-        <col/>
-        <button lng="150" btn_id="rules" btn_label="Rules"
-            btn_enabled="true" btn_validate="true" action="
-          <<action>>
-            <<sub_form form_name=`_sys.form_setup_rules`>>
-              <<call_params>>
-                <<call_param name=`form_name` type=`data_attr` source=`db_obj.table_name`/>>
-                <<call_param name=`title` type=`data_attr` source=`Form view`/>>
-                <<call_param name=`form_xml` type=`data_attr` source=`db_obj.form_xml`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`form_xml` type=`data_attr` target=`db_obj.form_xml`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`completed`/>>
-                <<return state=`cancelled`/>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
-        "/>
-        <col/>
-        <button lng="150" btn_id="frame" btn_label="Gui objects"
-            btn_enabled="true" btn_validate="true" action="
-          <<action>>
-            <<sub_form form_name=`_sys.form_setup_gui`>>
-              <<call_params>>
-                <<call_param name=`form_name` type=`data_attr` source=`db_obj.table_name`/>>
-                <<call_param name=`title` type=`data_attr` source=`Form view`/>>
-                <<call_param name=`form_xml` type=`data_attr` source=`db_obj.form_xml`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`form_xml` type=`data_attr` target=`db_obj.form_xml`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`completed`/>>
-                <<return state=`cancelled`/>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
-        "/>
-
-      </body>
-      <button_row validate="true" template="Setup_Form"/>
-      <frame_methods template="Setup_Form"/>
-    </frame>
-  </inline_form>
-
 </form>

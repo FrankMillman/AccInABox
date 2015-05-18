@@ -145,214 +145,6 @@ def add_column(db_obj, xml):
                 db_obj.getval('data_type'))
             conn.cur.execute(conn.convert_string(sql))
 
-"""
-def increment_seq(db_obj, xml):  # called 'before_save'
-    seq = db_obj.getfld('seq')
-    orig_seq = seq.get_orig()
-    new_seq = seq.getval()
-    if new_seq == orig_seq:
-        return
-
-    args = xml.get('args')  # e.g. 'table_id, col_type'
-
-    if db_obj.mem_obj:
-        table_name = db_obj.table_name
-        session = db_obj.context.mem_session
-    else:
-        table_name = db_obj.data_company + '.' + db_obj.table_name
-        session = db_obj.context.db_session
-
-    with session as conn:
-
-        if not db_obj.exists and new_seq == -1:  # append node
-            sql = "SELECT COALESCE(MAX(seq), -1) FROM {} ".format(table_name)
-            params = []
-            if args is not None:
-                for pos, arg in enumerate(args.split(',')):
-                    arg = arg.strip()
-                    test = 'AND' if pos else 'WHERE'
-                    sql += ' {} {} = {}'.format(test, arg, conn.param_style)
-                    params.append(db_obj.getfld(arg).getval())
-            conn.cur.execute(sql, params)
-            seq = conn.cur.fetchone()[0] + 1
-            db_obj.setval('seq', seq)
-            return
-
-        if db_obj.exists:
-            if new_seq > orig_seq:
-                sql = (
-                    'UPDATE {0} SET seq = (seq-1) WHERE seq > {1} AND seq <= {1}'
-                    .format(table_name, conn.param_style)
-                    )
-                params = [orig_seq, new_seq]
-            else:
-                sql = (
-                    'UPDATE {0} SET seq = (seq+1) WHERE seq >= {1} AND seq < {1}'
-                    .format(table_name, conn.param_style)
-                    )
-                params = [new_seq, orig_seq]
-        else:
-            sql = (
-                'UPDATE {0} SET seq = (seq+1) WHERE seq >= {1}'.format(
-                table_name, conn.param_style)
-                )
-            params = [new_seq]
-
-        if args is not None:
-            for arg in args.split(','):
-                arg = arg.strip()
-                sql += ' AND {} = {}'.format(arg, conn.param_style)
-                params.append(db_obj.getfld(arg).getval())
-
-        conn.cur.execute(sql, params)
-
-def decrement_seq(db_obj, xml):  # called 'after_delete'
-    args = xml.get('args')  # e.g. 'table_id, col_type'
-
-    if db_obj.mem_obj:
-        table_name = db_obj.table_name
-        session = db_obj.context.mem_session
-    else:
-        table_name = db_obj.data_company + '.' + db_obj.table_name
-        session = db_obj.context.db_session
-
-    with session as conn:
-        sql = (
-            'UPDATE {} SET seq = (seq-1) WHERE seq > {}'.format(
-                table_name, conn.param_style)
-            )
-        params = [db_obj.getval('seq')]
-
-        if args is not None:
-            for arg in args.split(','):
-                arg = arg.strip()
-                sql += ' AND {} = {}'.format(arg, conn.param_style)
-                params.append(db_obj.getfld(arg).getval())
-
-        conn.cur.execute(sql, params)
-
-def incr_seq_with_alt(db_obj, xml):  # called 'before_save'
-    seq = db_obj.getfld('seq')
-    orig_seq = seq.get_orig()
-    new_seq = seq.getval()
-    if new_seq == orig_seq:
-        return
-
-    alt = xml.get('alt_table')
-    args = xml.get('args')  # e.g. 'table_id, col_type'
-
-    if db_obj.mem_obj:
-        table_name = db_obj.table_name
-        session = db_obj.context.mem_session
-    else:
-        table_name = db_obj.data_company + '.' + db_obj.table_name
-        alt = db_obj.data_company + '.' + alt
-        session = db_obj.context.db_session
-
-    with session as conn:
-
-        if not db_obj.exists and new_seq == -1:  # append node
-            sql = "SELECT COALESCE(MAX(seq), -1) FROM"
-            params = []
-
-            sql += " (SELECT seq FROM {}".format(table_name)
-            if args is not None:
-                for pos, arg in enumerate(args.split(',')):
-                    arg = arg.strip()
-                    test = 'AND' if pos else 'WHERE'
-                    sql += " {} {} = {}".format(test, arg, conn.param_style)
-                    params.append(db_obj.getfld(arg).getval())
-
-            sql += " UNION ALL SELECT seq FROM {}".format(alt)
-            if args is not None:
-                for pos, arg in enumerate(args.split(',')):
-                    arg = arg.strip()
-                    test = 'AND' if pos else 'WHERE'
-                    sql += " {} {} = {}".format(test, arg, conn.param_style)
-                    params.append(db_obj.getfld(arg).getval())
-
-            sql += ") AS temp"  # MS-SQL requires 'AS'
-
-            conn.cur.execute(sql, params)
-            seq = conn.cur.fetchone()[0] + 1
-            db_obj.setval('seq', seq)
-            return
-
-        if db_obj.exists:
-            if new_seq > orig_seq:
-                sql_1 = (
-                    'UPDATE {0} SET seq = (seq-1) WHERE seq > {1} AND seq <= {1}'
-                    .format(table_name, conn.param_style)
-                    )
-                sql_2 = (
-                    'UPDATE {0} SET seq = (seq-1) WHERE seq > {1} AND seq <= {1}'
-                    .format(alt, conn.param_style)
-                    )
-                params = [orig_seq, new_seq]
-            else:
-                sql_1 = (
-                    'UPDATE {0} SET seq = (seq+1) WHERE seq >= {1} AND seq < {1}'
-                    .format(table_name, conn.param_style)
-                    )
-                sql_2 = (
-                    'UPDATE {0} SET seq = (seq+1) WHERE seq >= {1} AND seq < {1}'
-                    .format(alt, conn.param_style)
-                    )
-                params = [new_seq, orig_seq]
-        else:
-            sql_1 = (
-                'UPDATE {0} SET seq = (seq+1) WHERE seq >= {1}'.format(
-                table_name, conn.param_style)
-                )
-            sql_2 = (
-                'UPDATE {0} SET seq = (seq+1) WHERE seq >= {1}'.format(
-                alt, conn.param_style)
-                )
-            params = [new_seq]
-
-        if args is not None:
-            for arg in args.split(','):
-                arg = arg.strip()
-                sql_1 += ' AND {} = {}'.format(arg, conn.param_style)
-                sql_2 += ' AND {} = {}'.format(arg, conn.param_style)
-                params.append(db_obj.getfld(arg).getval())
-
-        conn.cur.execute(sql_1, params)
-        conn.cur.execute(sql_2, params)
-
-def decr_seq_with_alt(db_obj, xml):  # called 'after_delete'
-    alt = xml.get('alt_table')
-    args = xml.get('args')  # e.g. 'table_id, col_type'
-
-    if db_obj.mem_obj:
-        table_name = db_obj.table_name
-        session = db_obj.context.mem_session
-    else:
-        table_name = db_obj.data_company + '.' + db_obj.table_name
-        session = db_obj.context.db_session
-
-    with session as conn:
-        sql_1 = (
-            'UPDATE {0} SET seq = (seq-1) WHERE seq > {1}'.format(
-                table_name, conn.param_style)
-            )
-        sql_2 = (
-            'UPDATE {0} SET seq = (seq-1) WHERE seq > {1}'.format(
-                alt, conn.param_style)
-            )
-        params = [db_obj.getval('seq')]
-
-        if args is not None:
-            for arg in args.split(','):
-                arg = arg.strip()
-                sql_1 += ' AND {} = {}'.format(arg, conn.param_style)
-                sql_2 += ' AND {} = {}'.format(arg, conn.param_style)
-                params.append(db_obj.getfld(arg).getval())
-
-        conn.cur.execute(sql_1, params)
-        conn.cur.execute(sql_2, params)
-"""
-
 def setup_disp_name(db_obj, xml):
     choices = db_obj.getval('choices')
     if choices is None:
@@ -432,11 +224,11 @@ def setup_disp_name(db_obj, xml):
 # called from table_formview
 @asyncio.coroutine
 def setup_audit_cols(caller, xml):
-    db_obj = caller.data_objects['db_obj']
-    if db_obj.getval('defn_company') is not None:
+    db_table = caller.data_objects['db_table']
+    if db_table.getval('defn_company') is not None:
         return  # col definitions already set up in another company
 
-    table_id = db_obj.getval('row_id')
+    table_id = db_table.getval('row_id')
 
     params = []
     params.append(('row_id', 'AUTO', 'Row id', 'Row id', 'Row', 'Y',
@@ -446,7 +238,8 @@ def setup_audit_cols(caller, xml):
     params.append(('deleted_id', 'INT', 'Deleted id', 'Deleted row id', 'Deleted', 'N',
         True, False, True, 0, 0, None, '0', None, None, None))
 
-    db_column = db.api.get_db_object(db_obj.context, db_obj.data_company, 'db_columns')
+    db_column = db.api.get_db_object(
+        db_table.context, db_table.data_company, 'db_columns')
     for seq, param in enumerate(params):
         db_column.init()
         db_column.setval('table_id', table_id)
@@ -474,9 +267,9 @@ def setup_audit_cols(caller, xml):
 # called from setup_table
 @asyncio.coroutine
 def create_table(caller, xml):
-    db_obj = caller.data_objects['db_obj']
-    if db_obj.getval('data_company') is not None:
+    db_table = caller.data_objects['db_table']
+    if db_table.getval('data_company') is not None:
         return  # using table set up in another company
-    with db_obj.context.db_session as conn:
-        create_table.create_table(conn, db_obj.data_company,
-            db_obj.getval('table_name'))
+    with db_table.context.db_session as conn:
+        db.create_table.create_table(conn, db_table.data_company,
+            db_table.getval('table_name'))

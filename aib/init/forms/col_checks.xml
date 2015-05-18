@@ -20,10 +20,10 @@
 
     <mem_obj name="col_checks" descr="Column checks" parent="var"
         sequence="[`seq`, [], null]">
-      <mem_col col_name="chk_id" data_type="INT" short_descr="Check id"
-        long_descr="Check id" col_head="Chk" key_field="A" allow_null="false"
-        allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`var`, `row_id`, null, null, true]"/>
+      <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
+        long_descr="Table name" col_head="" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0"
+        fkey="[`var`, `table_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -36,11 +36,11 @@
     </mem_obj>
 
     <mem_obj name="steps" descr="Steps for column checks" parent="col_checks"
-        sequence="[`seq`, [`chk_id`], null]">
-      <mem_col col_name="chk_id" data_type="INT" short_descr="Check id"
-        long_descr="Check id" col_head="Chk" key_field="A" allow_null="false"
-        allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`col_checks`, `row_id`, null, null, true]"/>
+        sequence="[`seq`, [`code`], null]">
+      <mem_col col_name="code" data_type="TEXT" short_descr="Code"
+        long_descr="Code" col_head="Code" key_field="A" allow_null="false"
+        allow_amend="false" max_len="10" db_scale="0"
+        fkey="[`col_checks`, `code`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -87,7 +87,7 @@
       <display fld="var.full_col_name" lng="250"/>
       <block/>
       <grid data_object="col_checks" growable="true" num_grid_rows="5">
-        <toolbar template="Setup_Grid"/>
+        <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="code" lng="80"/>
           <cur_col col_name="errmsg" lng="200"/>
@@ -96,20 +96,15 @@
         <cur_sequence>
           <cur_seq col_name="seq"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
       <block/>
       <grid_frame main_object="col_checks">
         <toolbar/>
         <body>
           <block/>
-          <dummy after="
-            <<action>>
-              <<call method=`save_parent`/>>
-            <</action>>
-            "/>
           <grid data_object="steps" growable="true" num_grid_rows="5">
-            <toolbar template="Setup_Grid"/>
+            <toolbar template="Grid"/>
             <cur_columns>
               <cur_col col_name="test" lng="80"/>
               <cur_col col_name="lbr" lng="20"/>
@@ -122,7 +117,7 @@
             <cur_sequence>
               <cur_seq col_name="seq"/>
             </cur_sequence>
-            <grid_methods template="Setup_Grid"/>
+            <grid_methods template="Grid"/>
           </grid>
         </body>
         <button_row validate="true" template="Grid_Frame"/>

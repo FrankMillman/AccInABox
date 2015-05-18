@@ -25,7 +25,7 @@ def load_cur_flds(caller, xml):
 
     for seq, row in enumerate(db_cur.getval('columns')):
         init_vals = {}
-        for fld, dat in zip(cur_col.select_cols[2:], row):
+        for fld, dat in zip(cur_col.select_cols[3:], row):
             init_vals[fld.col_name] = fld.get_val_from_sql(dat)
         init_vals['seq'] = seq
         cur_col.init(init_vals=init_vals)
@@ -33,7 +33,7 @@ def load_cur_flds(caller, xml):
 
     for seq, row in enumerate(db_cur.getval('filter')):
         init_vals = {}
-        for fld, dat in zip(cur_filter.select_cols[2:], row):
+        for fld, dat in zip(cur_filter.select_cols[3:], row):
             init_vals[fld.col_name] = fld.get_val_from_sql(dat)
         init_vals['seq'] = seq
         cur_filter.init(init_vals=init_vals)
@@ -41,7 +41,7 @@ def load_cur_flds(caller, xml):
 
     for seq, row in enumerate(db_cur.getval('sequence')):
         init_vals = {}
-        for fld, dat in zip(cur_seq.select_cols[2:], row):
+        for fld, dat in zip(cur_seq.select_cols[3:], row):
             init_vals[fld.col_name] = fld.get_val_from_sql(dat)
         init_vals['seq'] = seq
         cur_seq.init(init_vals=init_vals)
@@ -59,17 +59,17 @@ def dump_cur_flds(caller, xml):
     all_cols = cur_col.select_many(where=[], order=[['seq', False]])
     for _ in all_cols:
         # use get_val_for_sql() instead of getval() - some columns contain xml
-        columns.append([fld.get_val_for_sql() for fld in cur_col.select_cols[2:]])
+        columns.append([fld.get_val_for_sql() for fld in cur_col.select_cols[3:]])
     db_cur.setval('columns', columns)
 
     filter = []
     all_filter = cur_filter.select_many(where=[], order=[['seq', False]])
-    for _ in all_cols:
-        filter.append([fld.get_val_for_sql() for fld in cur_filter.select_cols[2:]])
+    for _ in all_filter:
+        filter.append([fld.get_val_for_sql() for fld in cur_filter.select_cols[3:]])
     db_cur.setval('filter', filter)
 
     sequence = []
     all_seq = cur_seq.select_many(where=[], order=[['seq', False]])
     for _ in all_seq:
-        sequence.append([fld.get_val_for_sql() for fld in cur_seq.select_cols[2:]])
+        sequence.append([fld.get_val_for_sql() for fld in cur_seq.select_cols[3:]])
     db_cur.setval('sequence', sequence)

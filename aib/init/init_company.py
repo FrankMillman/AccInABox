@@ -123,6 +123,8 @@ def setup_db_metadata(context, conn, table_id, table_name, company):
 
 def setup_sys_tables(context, conn, company):
     db_tbl = db.api.get_db_object(context, company, 'db_tables')
+    # 'sys_form_defns' not yet created - this prevents error
+    db_tbl.getfld('setup_form').foreign_key = None
     tables = [
         'acc_roles',
         'acc_table_perms',

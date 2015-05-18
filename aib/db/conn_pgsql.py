@@ -29,6 +29,7 @@ def customise(DbConn, db_params):
     DbConn.create_foreign_key = create_foreign_key
     DbConn.create_index = create_index
     DbConn.tree_select = tree_select
+    DbConn.escape_string = escape_string
     # create class attributes from db parameters
     DbConn.database = db_params['database']
     DbConn.host = db_params['host']
@@ -356,3 +357,6 @@ def tree_select(self, company_id, table_name, start_col, start_value,
         .format(select_1, company_id, table_name, start_col,
             start_value, select_2, test))
     return cte
+
+def escape_string():
+    return ''

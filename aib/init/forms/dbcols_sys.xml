@@ -3,9 +3,7 @@
     <db_obj name="db_table" table_name="db_tables" fkey="db_col.table_id"/>
   </db_objects>
   <mem_objects/>
-  <input_params>
-    <input_param name="formview_obj" type="data_obj" target="db_col" required="true"/>
-  </input_params>
+  <input_params/>
   <output_params/>
   <frame main_object="db_col">
     <toolbar template="Setup_Form"/>
@@ -148,8 +146,8 @@
     <button_row validate="true" template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="do_save" action="
-        <<check_children obj_name=`db_col`/>>
         <<action>>
+          <<check_children obj_name=`db_col`/>>
           <<assign>>
             <<source>>sys<</source>>
             <<target>>db_col.col_type<</target>>

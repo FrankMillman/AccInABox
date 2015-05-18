@@ -144,7 +144,7 @@
             </cur_columns>
             <cur_filter/>
             <cur_sequence/>
-            <grid_methods template="Setup_Grid"/>
+            <grid_methods template="Grid"/>
           </grid>
           <grid_frame main_object="tbl_view">
             <body>
@@ -214,7 +214,7 @@
                 </cur_columns>
                 <cur_filter/>
                 <cur_sequence/>
-                <grid_methods template="Setup_Grid"/>
+                <grid_methods template="Grid"/>
               </grid>
             </body>
             <button_row validate="true" template="Grid_Frame"/>

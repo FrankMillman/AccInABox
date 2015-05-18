@@ -476,8 +476,14 @@ class Conn:
 #                           expr = 'a.{}'.format(expr)
                             expr = 'a.' + expr
 
-                where_clause += ' {} {}{} {} {}{}'.format(
-                    test, lbr, col, op, expr, rbr)
+                if op.lower() in ('like', 'not like'):
+                    assert isinstance(expr, str)
+                    esc = self.escape_string()
+                else:
+                    esc = ''
+
+                where_clause += ' {} {}{} {} {}{}{}'.format(
+                    test, lbr, col, op, expr, rbr, esc)
 
 #           where_clause = where_clause.replace('?', self.param_style)
 

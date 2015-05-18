@@ -25,6 +25,7 @@ def customise(DbConn, db_params):
     DbConn.create_foreign_key = create_foreign_key
     DbConn.create_index = create_index
     DbConn.tree_select = tree_select
+    DbConn.escape_string = escape_string
     # create class attributes from db parameters
     DbConn.database = db_params['database']
 
@@ -525,3 +526,8 @@ if sqlite3.sqlite_version_info < (3, 8, 6):
     tree_select = tree_select_old  # create cte manually
 else:
     tree_select = tree_select_new  # create cte using the new WITH statement
+
+def escape_string():
+    # in a LIKE clause, literals '%' and '_' amust be escaped with '\'
+    # sqlite3 requires the escape character to be specified
+    return " ESCAPE '\'"

@@ -23,6 +23,9 @@
       <mem_col col_name="btn_validate" data_type="BOOL" short_descr="Validate?"
         long_descr="Validate form up to this point?" col_head="" key_field="N" allow_null="true"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="true"/>
+      <mem_col col_name="main_object" data_type="TEXT" short_descr="Main db object"
+        long_descr="Main db object" col_head="Main obj" key_field="N"
+        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="on_start_form" data_type="SXML" short_descr="Start method"
         long_descr="Method called on start of form" col_head="Template" key_field="N"
         allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
@@ -33,10 +36,10 @@
 
     <mem_obj name="tool" descr="Toolbar elements" parent="form"
         sequence="[`seq`, [], null]">
-      <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
-        long_descr="Form id" col_head="Form id" key_field="A" allow_null="false"
-        allow_amend="false" max_len="20" db_scale="0"
-        fkey="[`form`, `row_id`, null, null, true]"/>
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name" col_head="Name" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`form`, `form_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -62,10 +65,10 @@
 
     <mem_obj name="body" descr="Body definition elements" parent="form"
         sequence="[`seq`, [], null]">
-      <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
-        long_descr="Form id" col_head="Form id" key_field="A" allow_null="false"
-        allow_amend="false" max_len="20" db_scale="0"
-        fkey="[`form`, `row_id`, null, null, true]"/>
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name" col_head="Name" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`form`, `form_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -185,10 +188,10 @@
 
     <mem_obj name="button" descr="Button" parent="form"
         sequence="[`seq`, [], null]">
-      <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
-        long_descr="Form id" col_head="Form id" key_field="A" allow_null="false"
-        allow_amend="false" max_len="20" db_scale="0"
-        fkey="[`form`, `row_id`, null, null, true]"/>
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name" col_head="Name" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`form`, `form_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -217,10 +220,10 @@
 
     <mem_obj name="frame_method" descr="Frame method" parent="form"
         sequence="[`seq`, [], null]">
-      <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
-        long_descr="Form id" col_head="Form id" key_field="A" allow_null="false"
-        allow_amend="false" max_len="20" db_scale="0"
-        fkey="[`form`, `row_id`, null, null, true]"/>
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name" col_head="Name" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`form`, `form_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -274,6 +277,7 @@
       <col/>
       <input fld="form.tb_template" lng="120"/>
       <grid data_object="tool" growable="true" num_grid_rows="5">
+        <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="type" lng="120"/>
         </cur_columns>
@@ -281,7 +285,7 @@
         <cur_sequence>
           <cur_seq col_name="seq"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
       <vbox_end/>
       <grid_frame main_object="tool">
@@ -327,16 +331,16 @@
       <nb_page label="Gui objects"/>
       <block/>
       <grid data_object="body" growable="true" num_grid_rows="12">
-        <toolbar template="Setup_Grid"/>
+        <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="type" lng="80"/>
-          <cur_col col_name="display_name" lng="150" expand="true" readonly="true"/>
+          <cur_col col_name="display_name" lng="150" expand="true" readonly="true" skip="true"/>
         </cur_columns>
         <cur_filter/>
         <cur_sequence>
           <cur_seq col_name="seq"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
 
       <grid_frame main_object="body">
@@ -348,7 +352,7 @@
           <col/>
           <label value="Type:"/>
           <col/>
-          <input fld="body.type" lng="120"/>
+          <input fld="body.type" lng="120" readonly="true"/>
           <block/>
           <subtype_panel subtype="body.type">
             <subtype_body subtype_id="text">
@@ -433,7 +437,7 @@
       <col/>
       <input fld="form.btn_validate"/>
       <grid data_object="button" growable="true" num_grid_rows="5">
-        <toolbar template="Setup_Grid"/>
+        <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="btn_id" lng="120"/>
         </cur_columns>
@@ -441,7 +445,7 @@
         <cur_sequence>
           <cur_seq col_name="seq"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
       <vbox_end/>
       <grid_frame main_object="button">
@@ -488,6 +492,11 @@
       <panel/>
       <row/>
       <col/>
+      <label value="Main db object:"/>
+      <col/>
+      <input fld="form.main_object" lng="120"/>
+      <row/>
+      <col/>
       <label value="Start method:"/>
       <col/>
       <input fld="form.on_start_form" lng="400" height="5"/>
@@ -500,7 +509,7 @@
       <vbox/>
       <string value="Frame methods:" lng="120"/>
       <grid data_object="frame_method" growable="true" num_grid_rows="5">
-        <toolbar template="Setup_Grid"/>
+        <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="name" lng="120"/>
           <cur_col col_name="obj_name" lng="80"/>
@@ -510,7 +519,7 @@
         <cur_sequence>
           <cur_seq col_name="seq"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
       <vbox_end/>
       <nb_end/>

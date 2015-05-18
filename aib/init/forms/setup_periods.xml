@@ -115,7 +115,7 @@
         <cur_sequence>
           <cur_seq col_name="per_no" desc="false"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid">
+        <grid_methods template="Grid">
           <method name="on_start_row" action="
             <<action>>
               <<pyfunc name=`custom.finperiod_funcs.on_start_row`/>>

@@ -175,8 +175,10 @@ class GuiTreeCombo(GuiTreeCommon):
     def __init__(self, parent, gui, element):
         GuiTreeCommon.__init__(self, parent, gui, element)
 
-        self.group = self.parent.data_objects[element.get('group')]
-        self.member = self.parent.data_objects[element.get('member')]
+        group_name = element.get('group')
+        self.group = self.parent.data_objects[group_name]
+        member_name = element.get('member')
+        self.member = self.parent.data_objects[member_name]
         self.member_code = element.get('member_code')
         self.member_descr = element.get('member_descr')
 
@@ -205,8 +207,8 @@ class GuiTreeCombo(GuiTreeCommon):
         with self.form.db_session as conn:
             for row_id, node_type, code, descr, parent_num, seq in conn.exec_sql(sql):
                 self.db_obj.init()
-                self.db_obj.setval('data_row_id', row_id)
                 self.db_obj.setval('type', node_type)
+                self.db_obj.setval('data_row_id', row_id)
                 self.db_obj.setval('code', code)
                 self.db_obj.setval('descr', descr)
                 self.db_obj.setval('parent_num', parent_num)
@@ -238,7 +240,8 @@ class GuiTreeCombo(GuiTreeCommon):
             'height': element.get('height'),
             'toolbar': element.get('toolbar') == 'true',
             'hide_root': True,
-            'combo': (self.group.db_table.short_descr, self.member.db_table.short_descr),
+#           'combo': (self.group.db_table.short_descr, self.member.db_table.short_descr),
+            'combo': (group_name, member_name),
             'tree_data': tree_data}))
 
     @asyncio.coroutine
@@ -271,8 +274,8 @@ class GuiTreeCombo(GuiTreeCommon):
                     self.tree_frame, self.tree_frame.methods['do_save'])
 
 #       self.db_obj.init()
-#       self.db_obj.setval('data_row_id', data_row_id)
 #       self.db_obj.setval('type', node_type)
+#       self.db_obj.setval('data_row_id', data_row_id)
 #       if self.db_obj.getval('type') == 'group':
         if node_type == 'group':
             self.group.init()
@@ -325,8 +328,8 @@ class GuiTreeCombo(GuiTreeCommon):
                 raise AibError(head='Error', body='Cannot delete node with children')
             obj_to_delete.delete()
             self.db_obj.init()
-            self.db_obj.setval('data_row_id', data_row_id)
             self.db_obj.setval('type', node_type)
+            self.db_obj.setval('data_row_id', data_row_id)
             self.db_obj.delete()
         self.session.request.send_delete_node(self.ref, node_id)
 
@@ -338,12 +341,12 @@ class GuiTreeCombo(GuiTreeCommon):
     def before_save(self):  # called from frame_methods before save
         if self.node_inserted:  # set up in on_req_insert_node() above
             parent_num, seq, type = self.node_inserted
-            self.db_obj.set_val('parent_num', parent_num)
-            self.db_obj.set_val('seq', seq)
-            self.db_obj.set_val('type', type)
+            self.db_obj.setval('parent_num', parent_num)
+            self.db_obj.setval('seq', seq)
+            self.db_obj.setval('type', type)
             if type == 'group':
-                self.group.set_val('parent_id', parent_num)
-                self.group.set_val('seq', seq)
+                self.group.setval('parent_id', parent_num)
+                self.group.setval('seq', seq)
             elif type == 'member':
                 self.member.setval('parent_id', parent_num)
                 self.member.setval('seq', seq)

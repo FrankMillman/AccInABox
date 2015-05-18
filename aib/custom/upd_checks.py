@@ -8,7 +8,7 @@ def load_checks(caller, xml):
     steps = caller.data_objects['steps']
 
     var.setval('full_name', '{}.upd_chks'.format(var.getval('table_name')))
-    var.save()  # set to 'clean', and populate 'row_id' for children
+    var.save()  # set to 'clean'
 
     upd_chks = var.getval('upd_chks')
     if upd_chks is None:

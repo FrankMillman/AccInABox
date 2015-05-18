@@ -5,11 +5,11 @@
   </db_objects>
   <mem_objects>
     <mem_obj name="db_table_combo" descr="Combination of db_table_groups and db_tables">
-      <mem_col col_name="data_row_id" data_type="INT" short_descr="Data row id"
-        long_descr="if 'group', db_table_group; if 'member', db_table" col_head=""
-        key_field="A" allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
       <mem_col col_name="type" data_type="TEXT" short_descr="Node type"
         long_descr="Node type:- 'group' (db_table_group), 'member' (db_table)" col_head=""
+        key_field="A" allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="data_row_id" data_type="INT" short_descr="Data row id"
+        long_descr="if 'group', db_table_group; if 'member', db_table" col_head=""
         key_field="A" allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
       <mem_col col_name="code" data_type="TEXT" short_descr="Code"
         long_descr="Code" col_head="Code" key_field="N" allow_null="false"
@@ -132,7 +132,7 @@
             help_msg = "Save header before proceeding"
             btn_enabled="true" btn_validate="true" action="
               <<action>>
-                <<save_obj obj_name=`db_table`/>>
+                <<call method=`do_save`/>>
                 <<change_button>>
                   <<btn_dflt btn_id=`btn_rgt`/>>
                 <</change_button>>
@@ -190,12 +190,38 @@
           <button lng="150" btn_id="upd_chk" btn_label="Update checks"
             btn_enabled="true" btn_validate="true" action="
               <<action>>
+                <<sub_form form_name=`_sys.upd_checks`>>
+                  <<call_params>>
+                    <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                    <<call_param name=`upd_chks` type=`data_attr` source=`db_table.upd_chks`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`upd_chks` type=`data_attr` target=`db_table.upd_chks`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</sub_form>>
               <</action>>
             "/>
           <col/>
           <button lng="150" btn_id="del_chk" btn_label="Delete checks"
             btn_enabled="true" btn_validate="true" action="
               <<action>>
+          <<sub_form form_name=`_sys.del_checks`>>
+            <<call_params>>
+              <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+              <<call_param name=`del_chks` type=`data_attr` source=`db_table.del_chks`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`del_chks` type=`data_attr` target=`db_table.del_chks`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</sub_form>>
               <</action>>
             "/>
           <row/>
@@ -219,7 +245,7 @@
           <button lng="150" btn_id="db_cur" btn_label="Db cursors"
             btn_enabled="true" btn_validate="true" action="
               <<action>>
-                <<sub_form form_name=`_sys.cursor_grid`>>
+                <<sub_form form_name=`_sys.cursor_setup`>>
                   <<call_params>>
                     <<call_param name=`db_table` type=`data_obj` source=`db_table`/>>
                   <</call_params>>
@@ -245,8 +271,13 @@
                 <<inline_form form_name=`_sys.Form setup`/>>
               <</action>>
             "/>
+          <row/>
+          <col/>
+          <label value="Form definition:"/>
+          <col/>
+          <input fld="db_table.setup_form" lng="150"/>
         </body>
-        <button_row validate="true" template="Setup_Form">
+        <button_row validate="true" template="Tree_Frame">
           <button btn_id="create_table" btn_label="Create table" btn_enabled="true"
             btn_validate="true" btn_default="false" action="
               <<action>>
@@ -262,7 +293,7 @@
               <</action>>
             " help_msg="Set up table in database"/>
         </button_row>
-        <frame_methods template="Setup_Form">
+        <frame_methods template="Tree_Frame">
           <method name="on_start_frame" action="
             <<action>>
               <<case>>

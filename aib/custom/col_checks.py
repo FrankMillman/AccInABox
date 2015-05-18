@@ -9,7 +9,7 @@ def load_checks(caller, xml):
 
     var.setval('full_col_name', '{}.{}.col_chks'.format(
         var.getval('table_name'), var.getval('col_name')))
-    var.save()  # set to 'clean', and populate 'row_id' for children
+    var.save()  # set to 'clean'
 
     col_chks = var.getval('col_chks')
     if col_chks is None:
@@ -19,9 +19,9 @@ def load_checks(caller, xml):
             col_checks.init(display=False, init_vals={
                 'seq': seq, 'code': code, 'errmsg': errmsg})
             col_checks.save()
-            for seq2, (test, lbr, src, chk, tgt, rbr) in enumerate(stps):
+            for sub_seq, (test, lbr, src, chk, tgt, rbr) in enumerate(stps):
                 steps.init(display=False, init_vals={
-                    'seq': seq2, 'test': test, 'lbr': lbr,
+                    'seq': sub_seq, 'test': test, 'lbr': lbr,
                     'src': src, 'chk': chk, 'tgt': tgt, 'rbr': rbr})
                 steps.save()
 

@@ -160,7 +160,7 @@ class DbObject:
         self.data_company = data_company
         self.db_table = db_table
         self.table_name = db_table.table_name
-        self.default_cursor = db_table.default_cursor  # can be over-ridden
+        self.default_cursor = db_table.default_cursor  # can be over-ridden (users_roles.xml)
 
         self.mem_obj = False  # over-ridden if MemObject
         self.exists = False
@@ -569,8 +569,8 @@ class DbObject:
                 for obj in fld.gui_obj:
                     obj._redisplay()
                 if fld.gui_subtype is not None:
-                    form, subtype = fld.gui_subtype
-                    form.set_subtype(subtype, dat)
+                    frame, subtype = fld.gui_subtype
+                    frame.set_subtype(subtype, dat)
 
             # if fld has foreign_key which has changed, re-read foreign db_obj
             if fld.foreign_key:
@@ -649,10 +649,7 @@ class DbObject:
         # if not None, init_vals is a dict of col_name, value pairs
         #   used to initialise db_obj fields (see ht.gui_tree for example)
         # purpose -  set initial values, do *not* set db_obj.dirty to True
-        if init_vals is None:
-            self.init_vals = {}
-        else:
-            self.init_vals = init_vals
+        self.init_vals = init_vals or {}
 
         for fld in self.fields.values():
             # store existing data as 'prev' for data-entry '\' function
@@ -680,8 +677,8 @@ class DbObject:
                 for obj in fld.gui_obj:
                     obj._redisplay()
                 if fld.gui_subtype is not None:
-                    form, subtype = fld.gui_subtype
-                    form.set_subtype(subtype, None)
+                    frame, subtype = fld.gui_subtype
+                    frame.set_subtype(subtype, None)
 
         self.exists = False
         for after_init in self.after_init_xml:
@@ -732,8 +729,8 @@ class DbObject:
                     for obj in fld.gui_obj:
                         obj._redisplay()
                     if fld.gui_subtype is not None:
-                        form, subtype = fld.gui_subtype
-                        form.set_subtype(subtype, fld._value)
+                        frame, subtype = fld.gui_subtype
+                        frame.set_subtype(subtype, fld._value)
 
         for caller, method in self.on_clean_func:  # frame methods
             caller.session.request.db_events.append((caller, method))
@@ -850,9 +847,10 @@ class DbObject:
             for (col_name, reqd) in self.db_table.subtypes[subtype][this_subtype]:
                 if reqd:
                     if self.getval(col_name) in (None, ''):
-                        errmsg = 'A value is required'
-                        descr = self.fields[col_name].col_defn.short_descr
-                        raise AibError(head=descr, body=errmsg)
+#                       head = self.fields[col_name].col_defn.short_descr
+                        head = '{}.{}'.format(self.table_name, col_name)
+                        body = 'A value is required'
+                        raise AibError(head=head, body=body)
 
     def setup_defaults(self):  # generate defaults for blank fields
         for fld in self.flds_to_update:  # exclude virtual columns

@@ -24,10 +24,10 @@
     </mem_obj>
     <mem_obj name="choice_codes" descr="Choices codes" parent="var"
         sequence="[`seq`, [], null]">
-      <mem_col col_name="var_id" data_type="INT" short_descr="Var id"
-        long_descr="Var id" col_head="Var" key_field="A" allow_null="false"
-        allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`var`, `row_id`, null, null, true]"/>
+      <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
+        long_descr="Table name" col_head="" key_field="N"
+        allow_null="false" allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`var`, `table_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -39,11 +39,11 @@
         allow_null="false" allow_amend="true" max_len="30" db_scale="0"/>
     </mem_obj>
     <mem_obj name="sub_types" descr="Sub types" parent="choice_codes"
-        sequence="[`seq`, [`choice_id`], null]">
-      <mem_col col_name="choice_id" data_type="INT" short_descr="Choice id"
-        long_descr="Choice id" col_head="Choice" key_field="A" allow_null="false"
-        allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`choice_codes`, `row_id`, null, null, true]"/>
+        sequence="[`seq`, [`code`], null]">
+      <mem_col col_name="code" data_type="TEXT" short_descr="Code"
+        long_descr="Choice code" col_head="Code" key_field="A"
+        allow_null="false" allow_amend="true" max_len="15" db_scale="0"
+        fkey="[`choice_codes`, `code`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -55,11 +55,11 @@
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
     <mem_obj name="disp_names" descr="Display names" parent="choice_codes"
-        sequence="[`seq`, [`choice_id`], null]">
-      <mem_col col_name="choice_id" data_type="INT" short_descr="Choice id"
-        long_descr="Choice id" col_head="Choice" key_field="A" allow_null="false"
-        allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`choice_codes`, `row_id`, null, null, true]"/>
+        sequence="[`seq`, [`code`], null]">
+      <mem_col col_name="code" data_type="TEXT" short_descr="Code"
+        long_descr="Choice code" col_head="Code" key_field="A"
+        allow_null="false" allow_amend="true" max_len="15" db_scale="0"
+        fkey="[`choice_codes`, `code`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -104,7 +104,7 @@
       <input fld="var.disp_names"/>
       <block/>
       <grid data_object="choice_codes" growable="true" num_grid_rows="10">
-        <toolbar template="Setup_Grid"/>
+        <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="code" lng="100"/>
           <cur_col col_name="descr" lng="200" expand="true"/>
@@ -113,19 +113,14 @@
         <cur_sequence>
           <cur_seq col_name="seq"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
       <vbox/>
       <grid_frame main_object="choice_codes">
         <body>
           <block/>
-          <dummy after="
-            <<action>>
-              <<call method=`save_parent`/>>
-            <</action>>
-            "/>
           <grid data_object="sub_types" growable="true" num_grid_rows="7">
-            <toolbar template="Setup_Grid"/>
+            <toolbar template="Grid"/>
             <cur_columns>
               <cur_col col_name="col_name" lng="100"/>
               <cur_col col_name="reqd" lng="40"/>
@@ -134,10 +129,10 @@
             <cur_sequence>
               <cur_seq col_name="seq"/>
             </cur_sequence>
-            <grid_methods template="Setup_Grid"/>
+            <grid_methods template="Grid"/>
           </grid>
           <grid data_object="disp_names" growable="true" num_grid_rows="7">
-            <toolbar template="Setup_Grid"/>
+            <toolbar template="Grid"/>
             <cur_columns>
               <cur_col col_name="col_name" lng="100"/>
               <cur_col col_name="separator" lng="40"/>
@@ -146,7 +141,7 @@
             <cur_sequence>
               <cur_seq col_name="seq"/>
             </cur_sequence>
-            <grid_methods template="Setup_Grid"/>
+            <grid_methods template="Grid"/>
           </grid>
         </body>
         <button_row validate="true" template="Grid_Frame"/>

@@ -32,7 +32,7 @@
       <block/>
       <grid data_object="db_col_sys" growable="true"
           num_grid_rows="10" form_name="dbcols_sys">
-        <toolbar template="Setup_Grid"/>
+        <toolbar template="Grid_Setup"/>
         <cur_columns>
           <cur_col col_name="col_name" lng="120"/>
           <cur_col col_name="short_descr" lng="200" expand="true"/>
@@ -43,13 +43,13 @@
         <cur_sequence>
           <cur_seq col_name="seq" desc="false"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
       <nb_page label="User Columns"/>
       <block/>
       <grid data_object="db_col_user" growable="true"
           num_grid_rows="10" form_name="dbcols_user">
-        <toolbar template="Setup_Grid"/>
+        <toolbar template="Grid_Setup"/>
         <cur_columns>
           <cur_col col_name="col_name" lng="120"/>
           <cur_col col_name="short_descr" lng="200" expand="true"/>
@@ -60,13 +60,13 @@
         <cur_sequence>
           <cur_seq col_name="seq" desc="false"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
       <nb_page label="Virtual Columns"/>
       <block/>
       <grid data_object="db_col_virt" growable="true"
           num_grid_rows="10" form_name="dbcols_virt">
-        <toolbar template="Setup_Grid"/>
+        <toolbar template="Grid_Setup"/>
         <cur_columns>
           <cur_col col_name="col_name" lng="120"/>
           <cur_col col_name="short_descr" lng="200" expand="true"/>
@@ -77,7 +77,7 @@
         <cur_sequence>
           <cur_seq col_name="seq" desc="false"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
       <nb_end/>
     </body>

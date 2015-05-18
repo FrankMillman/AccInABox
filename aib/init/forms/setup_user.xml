@@ -33,9 +33,7 @@
         allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
     </mem_obj>
   </mem_objects>
-  <input_params>
-    <input_param name="formview_obj" type="data_obj" target="user" required="true"/>
-  </input_params>
+  <input_params/>
   <output_params/>
   <frame main_object="user">
     <toolbar template="Setup_Form"/>
@@ -62,7 +60,7 @@
       <col/>
       <label value="Password:"/>
       <col/>
-      <button btn_id="btn_pwd" btn_label="Change password" btn_enabled="true"
+      <button btn_id="btn_pwd" btn_label="Enter/amend password" btn_enabled="true"
           btn_validate="true" btn_default="false" action="
         <<action>>
           <<sub_form form_name=`_sys.chg_pwd_form`>>
@@ -124,7 +122,7 @@
         </cur_columns>
         <cur_filter/>
         <cur_sequence/>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
     </body>
     <button_row validate="true" template="Setup_Form">

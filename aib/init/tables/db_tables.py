@@ -12,14 +12,6 @@ table = {
     'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : None,
-#   'table_hooks'   : etree.fromstring(
-#       '<hooks><hook type="before_save">'
-#         '<incr_seq_with_alt alt_table="db_table_groups" args="parent_id"/>'
-#         '</hook>'
-#       '<hook type="after_delete">'
-#         '<decr_seq_with_alt alt_table="db_table_groups" args="parent_id"/></hook>'
-#         '</hooks>'
-#       ),
     'table_hooks'   : None,
     'sequence'      : ['seq', ['parent_id'], 'db_table_groups'],
     'defn_company'  : None,
@@ -230,7 +222,7 @@ cols.append ({
 cols.append ({
     'col_name'   : 'setup_form',
     'data_type'  : 'TEXT',
-    'short_descr': 'Setup form anme',
+    'short_descr': 'Setup form name',
     'long_descr' : 'Setup form name',
     'col_head'   : 'Form',
     'key_field'  : 'N',
@@ -242,7 +234,8 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'col_chks'   : None,
-    'fkey'       : None,
+#   'fkey'       : ['sys_form_defns', 'form_name', None, None, False],
+    'fkey'       : None,  # can only set this up after sys_form_defns created
     'choices'    : None,
     })
 cols.append ({
@@ -317,8 +310,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-fkey = ['_sys.dir_companies', 'company_id', None, None, False]
-fkey = None  # can only set this up after dir_companies created
 cols.append ({
     'col_name'   : 'defn_company',
     'data_type'  : 'TEXT',
@@ -334,11 +325,10 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'col_chks'   : None,
-    'fkey'       : fkey,
+#   'fkey'       : ['_sys.dir_companies', 'company_id', None, None, False],
+    'fkey'       : None,  # can only set this up after dir_companies created
     'choices'    : None,
     })
-fkey = ['_sys.dir_companies', 'company_id', None, None, False]
-fkey = None  # can only set this up after dir_companies created
 cols.append ({
     'col_name'   : 'data_company',
     'data_type'  : 'TEXT',
@@ -354,7 +344,8 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'col_chks'   : None,
-    'fkey'       : fkey,
+#   'fkey'       : ['_sys.dir_companies', 'company_id', None, None, False],
+    'fkey'       : None,  # can only set this up after dir_companies created
     'choices'    : None,
     })
 cols.append ({

@@ -8,11 +8,11 @@
     <body>
       <block/>
       <grid data_object="grid_obj" growable="true">
-        <toolbar template="Setup_Grid"/>
-        <grid_methods template="Setup_Grid"/>
+        <toolbar template="Grid_Setup"/>
+        <grid_methods template="Grid"/>
       </grid>
     </body>
     <button_row validate="false"/>
-    <frame_methods template="Setup_Grid"/>
+    <frame_methods template="Grid"/>
   </frame>
 </form>

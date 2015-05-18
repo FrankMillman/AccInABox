@@ -17,10 +17,10 @@
 
     <mem_obj name="memobj" descr="Mem objects used in form" parent="form"
         sequence="[`seq`, [], null]">
-      <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
-        long_descr="Form id" col_head="" key_field="A" allow_null="false"
-        allow_amend="false" max_len="20" db_scale="0"
-        fkey="[`form`, `row_id`, null, null, true]"/>
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name" col_head="Name" key_field="N" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`form`, `form_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -40,7 +40,7 @@
 
 <!-- 'hooks' not used at present [2015-04-26] - do not remove code in case required in future
     <mem_obj name="memhooks" descr="Table hooks for mem objects" parent="memobj"
-        sequence="[`seq`, [`memobj_id`], null]">
+        sequence="[`seq`, [`memobj_name`], null]">
       <mem_col col_name="type" data_type="TEXT" short_descr="Hook type"
         long_descr="Hook type" col_head="Hook type" key_field="A" allow_null="false"
         allow_amend="false" max_len="15" db_scale="0"
@@ -62,10 +62,10 @@
       <mem_col col_name="action" data_type="SXML" short_descr="Hook action"
         long_descr="Action to be performed" col_head="Action" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
-      <mem_col col_name="memobj_id" data_type="INT" short_descr="Memobj id"
-        long_descr="Memobj id" col_head="" key_field="A" allow_null="false"
-        allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`memobj`, `row_id`, null, null, true]"/>
+      <mem_col col_name="memobj_name" data_type="TEXT" short_descr="Object name"
+        long_descr="Object name" col_head="Object" key_field="A" allow_null="false"
+        allow_amend="false" max_len="20" db_scale="0"
+        fkey="[`memobj`, `name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -73,7 +73,7 @@
 -->
 
     <mem_obj name="memcol" descr="Column defns for mem objects" parent="memobj"
-        sequence="[`seq`, [`memobj_id`], null]">
+        sequence="[`seq`, [`memobj_name`], null]">
       <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
         long_descr="Column name" col_head="Column name" key_field="A" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"/>
@@ -127,10 +127,10 @@
       <mem_col col_name="sql" data_type="TEXT" short_descr="Sql"
         long_descr="Sql statement" col_head="" key_field="N" allow_null="true"
         allow_amend="true" max_len="0" db_scale="0"/>
-      <mem_col col_name="memobj_id" data_type="INT" short_descr="Memobj id"
-        long_descr="Memobj id" col_head="" key_field="A" allow_null="false"
-        allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`memobj`, `row_id`, null, null, true]"/>
+      <mem_col col_name="memobj_name" data_type="TEXT" short_descr="Object name"
+        long_descr="Object name" col_head="Object" key_field="A" allow_null="false"
+        allow_amend="false" max_len="20" db_scale="0"
+        fkey="[`memobj`, `name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -164,7 +164,7 @@
 
       <block/>
       <grid data_object="memobj" growable="true" num_grid_rows="2">
-        <toolbar template="Setup_Grid"/>
+        <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="name" lng="120"/>
           <cur_col col_name="descr" lng="200" expand="true"/>
@@ -175,7 +175,7 @@
         <cur_sequence>
           <cur_seq col_name="seq"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
 
       <block/>
@@ -183,13 +183,8 @@
         <toolbar/>
         <body>
           <block/>
-          <dummy after="
-            <<action>>
-              <<call method=`save_parent`/>>
-            <</action>>
-            "/>
           <grid data_object="memcol" growable="true" num_grid_rows="10">
-            <toolbar template="Setup_Grid"/>
+            <toolbar template="Grid"/>
             <cur_columns>
               <cur_col col_name="col_name" lng="80"/>
             </cur_columns>
@@ -197,7 +192,7 @@
             <cur_sequence>
               <cur_seq col_name="seq"/>
             </cur_sequence>
-            <grid_methods template="Setup_Grid"/>
+            <grid_methods template="Grid"/>
           </grid>
         </body>
         <button_row validate="true" template="Grid_Frame"/>
@@ -332,176 +327,10 @@
               <</sub_form>>
             <</action>>
           "/>
-
-<!--
-          <col/>
-          <label value="Max length:"/>
-          <col/>
-          <input fld="memcol.max_len" lng="40"/>
-          <col/>
-          <label value="Db scale:"/>
-          <col/>
-          <input fld="memcol.db_scale" lng="40"/>
--->
-
         </body>
         <button_row validate="true" template="Grid_Frame"/>
         <frame_methods template="Grid_Frame"/>
       </grid_frame>
-
-<!--
-      <block/>
-      <grid_frame main_object="memobj">
-        <toolbar template="Setup_Form"/>
-        <body>
-          <block/>
-          <grid data_object="memcol" growable="true" num_grid_rows="5">
-            <toolbar template="Setup_Form"/>
-            <cur_columns>
-              <cur_col col_name="col_name" lng="10"/>
-            </cur_columns>
-            <cur_filter/>
-            <cur_sequence/>
-            <grid_methods template="Setup_Grid"/>
-          </grid>
-          <grid_frame main_object="memcol">
-            <toolbar template="Setup_Form"/>
-            <body>
-
-              <block/>
-              <panel/>
-              <row/>
-              <col/>
-              <label value="Short descr:"/>
-              <col/>
-              <input fld="memcol.short_descr" lng="100"/>
-              <col/>
-              <label value="Data type:"/>
-              <col/>
-              <input fld="memcol.data_type" lng="80"/>
-              <col/>
-              <label value="Key field:"/>
-              <col/>
-              <input fld="memcol.key_field" lng="20"/>
-
-              <row/>
-              <col/>
-              <label value="Long descr:"/>
-              <col/>
-              <col/>
-              <label value="Col heading:"/>
-              <col/>
-              <input fld="memcol.col_head" lng="100"/>
-              <col/>
-              <label value="Null ok?"/>
-              <input fld="memcol.allow_null"/>
-              <col/>
-              <label value="Amend ok?"/>
-              <input fld="memcol.allow_amend"/>
-
-              <row/>
-              <col rowspan="3" colspan="2"/>
-              <input fld="memcol.long_descr" lng="200" height="6"/>
-
-              <col/>
-              <label value="Max length:"/>
-              <col/>
-              <input fld="memcol.max_len" lng="40"/>
-              <col/>
-              <label value="Db scale:"/>
-              <col/>
-              <input fld="memcol.db_scale" lng="40"/>
-
-              <row/>
-              <col/>
-              <label value="Scale pointer:"/>
-              <col/>
-              <input fld="memcol.scale_ptr" lng="100"/>
-              <col/>
-              <label value="Default value:"/>
-              <col/>
-              <input fld="memcol.dflt_val" lng="100"/>
-
-              <row/>
-              <col/>
-              <button lng="100" btn_id="chk" btn_label="Col checks"
-                  btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form form_name=`_sys.col_checks`>>
-                    <<call_params>>
-                      <<call_param name=`col_chks` type=`data_attr`
-                        source=`memcol.col_chks`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`col_chks` type=`data_attr`
-                        target=`memcol.col_chks`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
-              "/>
-              <col/>
-              <button lng="100" btn_id="fkey" btn_label="Foreign key"
-                  btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form form_name=`_sys.foreign_key`>>
-                    <<call_params>>
-                      <<call_param name=`fkey` type=`data_attr` source=`memcol.fkey`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`fkey` type=`data_attr` target=`memcol.fkey`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
-              "/>
-              <col/>
-              <button lng="100" btn_id="sub" btn_label="Choices"
-                  btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form form_name=`_sys.choices`>>
-                    <<call_params>>
-                      <<call_param name=`table_name` type=`data_attr` source=`memcol.memobj_name`/>>
-                      <<call_param name=`col_name` type=`data_attr` source=`memcol.col_name`/>>
-                      <<call_param name=`choices` type=`data_attr` source=`memcol.choices`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`choices` type=`data_attr` target=`memcol.choices`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
-              "/>
-              <col/>
-              <button lng="100" btn_id="sql" btn_label="SQL"
-                  btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form form_name=`_sys.sql`>>
-                    <<call_params/>>
-                    <<return_params/>>
-                    <<on_return/>>
-                  <</sub_form>>
-                <</action>>
-              "/>
-
-            </body>
-            <button_row validate="true" template="Grid_Frame"/>
-            <frame_methods template="Grid_Frame"/>
-          </grid_frame>
-        </body>
-        <button_row validate="true" template="Grid_Frame"/>
-        <frame_methods template="Grid_Frame"/>
-      </grid_frame>
--->
     </body>
     <button_row validate="true" template="Setup_Form"/>
     <frame_methods template="Setup_Form">

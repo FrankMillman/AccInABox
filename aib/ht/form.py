@@ -160,7 +160,8 @@ class Form:
     @asyncio.coroutine
     def start_form(self, session,
             grid_tablename=None,   # passed in from menu_option if setup_grid
-            cursor_name=None):   # passed in from menu option if setup_grid
+            cursor_name=None,   # passed in from menu option if setup_grid
+            formview_obj=None):   # supplied if formview or lookdown selected
         if self.parent is None:
             self.root = Root(session)
         else:
@@ -186,7 +187,6 @@ class Form:
             form_defn.init()
             form_defn.select_row({'form_name': self.form_name})
             if not form_defn.exists:
-                formview_obj = self.data_inputs.get('formview_obj')
                 if formview_obj is not None:
                     if formview_obj.db_table.defn_company != formdefn_company:
                         form_defn = form_defns[formview_obj.db_table.defn_company]
@@ -199,6 +199,9 @@ class Form:
             title = form_defn.getval('title')
             form_defn = self.form_defn = form_defn.getval('form_xml')
             self.data_objects = {}
+            if formview_obj:
+                main_object = form_defn.find('frame').get('main_object')
+                self.data_objects[main_object] = formview_obj
 
         if grid_tablename is not None:  # passed in if setup_grid
             grid_obj = db.api.get_db_object(
@@ -211,7 +214,8 @@ class Form:
         self.setup_input_obj(input_params)
         self.setup_db_objects(form_defn.find('db_objects'))
         self.setup_mem_objects(form_defn.find('mem_objects'))
-        yield from self.setup_input_attr(input_params)
+        self.setup_input_attr(input_params)
+#       self.setup_input_params(form_defn.find('input_params'))
 
         # self.grids is a necessary evil!
         # example - setup_form_memobj
@@ -220,7 +224,7 @@ class Form:
         # the grid_frame can contain a grid - memcol
         # we want to create a grid_frame for memcol, but it is contained
         #   in the main frame, not the grid frame
-        # not easy to locate the grid that the gtid_frame relates to
+        # not easy to locate the grid that the grid_frame relates to
         # this is an ugly workaround - improvements welcome!
         self.grids = []
         yield from self.setup_form(form_defn, title)
@@ -357,9 +361,11 @@ class Form:
                 required = input_param.get('required') == 'true'
                 try:
                     self.data_objects[target] = self.data_inputs[name]
-                except KeyError:
+                except (KeyError, TypeError):  # param is missing or data_inputs is None
                     if required:
-                        raise
+                        head = 'Missing parameter'
+                        body = 'Required parameter {} not supplied'.format(name)
+                        raise AibError(head=head, body=body)
 
     def setup_db_objects(self, db_objects):
         # if fkeys is True, only set up objects with fkey
@@ -370,15 +376,12 @@ class Form:
         for obj_xml in db_objects:
             obj_name = obj_xml.get('name')
             if obj_name in self.data_objects:
-                continue  # passed in as parameter
+                continue  # passed in as formview or lookdown
             db_parent = obj_xml.get('parent')
             if db_parent is not None:
                 db_parent = self.data_objects[db_parent]
             company = obj_xml.get('company', self.company)
             table_name = obj_xml.get('table_name')
-# don't think this is used
-#           if table_name == '{table_name}':
-#               table_name = self.table_name
 
             fkey = obj_xml.get('fkey')
             if fkey is not None:
@@ -446,45 +449,51 @@ class Form:
                     col_defn.get('sql')
                     )
 
-    @asyncio.coroutine
     def setup_input_attr(self, input_params):
         if input_params is None:
             return  # can happen with inline form
         for input_param in input_params:
             param_type = input_param.get('type')
-            if param_type != 'data_obj':
+            if param_type == 'data_attr':
                 name = input_param.get('name')
                 target = input_param.get('target')
                 required = input_param.get('required') == 'true'
                 try:
                     value = self.data_inputs[name]
-                    if param_type == 'data_attr':
-                        obj_name, col_name = target.split('.')
-                        db_obj = self.data_objects[obj_name]
-                        fld = db_obj.getfld(col_name)
-                        fld._value = fld._orig = value
-                    """
-                    elif param_type == 'data_list':
-                        if value is None:
-                            self.data_objects[target].init()
-                        else:
-                            self.data_objects[target].load_one(value)
-                    elif param_type == 'data_array':
-                        if value is None:
-                            self.data_objects[target].init()
-                            self.data_objects[target].delete_all()
-                        else:
-                            self.data_objects[target].load_all(value)
-                    elif param_type == 'pyfunc':
-                        func_name = target
-                        module_name, func_name = func_name.rsplit('.', 1)
-                        module = importlib.import_module(module_name)
-                        yield from getattr(module, func_name)(self, value)
-                    """
-
+                    obj_name, col_name = target.split('.')
+                    db_obj = self.data_objects[obj_name]
+                    fld = db_obj.getfld(col_name)
+                    fld._value = fld._orig = value
                 except KeyError:
                     if required:
-                        raise
+                        head = 'Missing parameter'
+                        body = 'Required parameter {} not supplied'.format(name)
+                        raise AibError(head=head, body=body)
+
+    """
+    def setup_input_params(self, input_params):
+        if input_params is None:
+            return  # can happen with inline form
+        for input_param in input_params:
+            param_type = input_param.get('type')
+            name = input_param.get('name')
+            target = input_param.get('target')
+            required = input_param.get('required') == 'true'
+            try:
+                if param_type == 'data_obj':
+                    self.data_objects[target] = self.data_inputs[name]
+                elif param_type == 'data_attr':
+                    value = self.data_inputs[name]
+                    obj_name, col_name = target.split('.')
+                    db_obj = self.data_objects[obj_name]
+                    fld = db_obj.getfld(col_name)
+                    fld._value = fld._orig = value
+            except (KeyError, TypeError):  # param is missing or data_inputs is None
+                if required:
+                    head = 'Missing parameter'
+                    body = 'Required parameter {} not supplied'.format(name)
+                    raise AibError(head=head, body=body)
+    """
         
     @asyncio.coroutine
     def setup_form(self, form_defn, title):
@@ -717,79 +726,61 @@ class Frame:
             # if a template is specified, insert template tools
             template_name = toolbar.get('template')
             if template_name is not None:
-                template = getattr(ht.templates, template_name)  # class
-                xml = getattr(template, 'toolbar')  # class attribute
-                xml = etree.fromstring(xml, parser=parser)
-                    #xml.replace('{obj_name}', self.main_obj_name), parser=parser)
-                toolbar[:0] = xml[0:]  # insert template tools before any others
-                del toolbar.attrib['template']  # to prevent re-substitution
+                # if the form has no controlling grid, do not
+                #   set up the toolbar template
+                # reason - you can set up a form which can
+                #   be invoked directly and can also be
+                #   called as a 'form view' from a grid
+                # in the first case, the template is not required,
+                #   in the second case it is required
+                # otherwise the forms are identical
+                if self.ctrl_grid is not None:
+                    template = getattr(ht.templates, template_name)  # class
+                    xml = getattr(template, 'toolbar')  # class attribute
+                    xml = etree.fromstring(xml, parser=parser)
+                    toolbar[:0] = xml[0:]  # insert template tools before any others
+# is this necessary?
+#                   del toolbar.attrib['template']  # to prevent re-substitution
             self.setup_toolbar(toolbar, gui)
 
         body = frame_xml.find('body')
         self.setup_body(body, gui)
 
         button_row = frame_xml.find('button_row')
-        # if a template is specified, insert template buttons
-        template_name = button_row.get('template')
-        if template_name is not None:
-            template = getattr(ht.templates, template_name)  # class
-            xml = getattr(template, 'button_row')  # class attribute
-            xml = etree.fromstring(xml, parser=parser)
-            button_row[:0] = xml[0:]  # insert template buttons before any others
-            del button_row.attrib['template']  # to prevent re-substitution
-        self.setup_buttonrow(button_row, gui)
+        if button_row is not None:
+            # if a template is specified, insert template buttons
+            template_name = button_row.get('template')
+            if template_name is not None:
+                template = getattr(ht.templates, template_name)  # class
+                xml = getattr(template, 'button_row')  # class attribute
+                xml = etree.fromstring(xml, parser=parser)
+                button_row[:0] = xml[0:]  # insert template buttons before any others
+# is this necessary?
+#               del button_row.attrib['template']  # to prevent re-substitution
+            self.setup_buttonrow(button_row, gui)
 
         methods = frame_xml.find('frame_methods')
-        # if a template is specified, insert template methods
-        template_name = methods.get('template')
-        if template_name is not None:
-            template = getattr(ht.templates, template_name)  # class
-            xml = getattr(template, 'frame_methods')  # class attribute
-            xml = etree.fromstring(
-                xml.replace('{obj_name}', self.main_obj_name), parser=parser)
-            methods[:0] = xml[0:]  # insert template methods before any others
-            del methods.attrib['template']  # to prevent re-substitution
-        self.setup_methods(methods, gui)
+        if methods is not None:
+            # if a template is specified, insert template methods
+            template_name = methods.get('template')
+            if template_name is not None:
+                template = getattr(ht.templates, template_name)  # class
+                xml = getattr(template, 'frame_methods')  # class attribute
+                xml = etree.fromstring(
+                    xml.replace('{obj_name}', self.main_obj_name), parser=parser)
+                methods[:0] = xml[0:]  # insert template methods before any others
+# is this necessary?
+#               del methods.attrib['template']  # to prevent re-substitution
+            self.setup_methods(methods, gui)
 
     def __str__(self):
         return "Frame: {} '{}'".format(self.ref, self.db_obj)
 
     def setup_toolbar(self, toolbar, gui):
-        # if there is a 'nav/insert/delete' tool in the list,
-        #   but the form has no controlling grid,
-        #   the tool is not created
-        # reason - you can set up a form which can
-        #   be invoked directly and can also be
-        #   called as a 'form view' from a grid
-        # in the first case, the tool is not required,
-        #   in the second case it is required
-        # otherwise the forms are identical
-
-        # store the *last* occurence of each tool type
-        # this allows a customised tool to override a template tool
-        #
-        # actually this is not correct - it assumes only one 'tool_type'
-        #   per toolbar, but you could have > 1 with type == 'btn'
-        # leave for now, wait till it happens
-        #
-        # it has happened [2015-03-04]
-        # setup_periods has two 'img'-type tools
-        # for now, assume you would never customise a template tool
-        # remove OrderedDict, load the toolbar directly
-#       toolbar_dict = OrderedDict()
-#       for tool in toolbar.findall('tool'):
-#           tool_type = tool.get('type')
-#           toolbar_dict[tool_type] = tool
         tool_list = []
-#       for tool_type in toolbar_dict:
-#           tool = toolbar_dict[tool_type]
         for tool in toolbar.findall('tool'):
             tool_type = tool.get('type')
-#           if tool_type in ('nav', 'ins_row', 'del_row'):
             if tool_type == 'nav':
-                if self.ctrl_grid is None:
-                    continue  # cannot create these without ctrl_grid
-#           if tool_type == 'nav':
                 tool_attr = {'type': 'nav'}
             elif tool_type == 'text':
                 tb_text = ht.gui_objects.GuiTbText(self, tool)
@@ -800,24 +791,7 @@ class Frame:
                 tool_attr = {'type': tool_type, 'ref':  tb_btn.ref,
                     'tip': tool.get('tip'), 'name': tool.get('name'),
                     'label': tool.get('label'), 'shortcut': tool.get('shortcut')}
-#           else:  # selected/formview/ins_row/del_row
-#               tool_attr = {'type': tool_type, 'tip': tool.get('tip')}
-#               if tool_type == 'del_row':
-#                   tool_attr['confirm'] = tool.get('confirm') == 'true'
-#               elif tool_type == 'btn':
-#                   tool_attr['label'] = tool.get('label')
             tool_list.append(tool_attr)
-#           if tool_type == 'nav':
-#               ref = None  # can derive ref from ctrl_grid
-#           else:
-#               tb_btn = ht.gui_objects.GuiTbButton(self, tool)
-#               ref = tb_btn.ref
-#           tool_list.append({
-#               'ref':  ref,
-#               'type': tool.get('type'),
-#               'label': tool.get('label'),
-#               'tip': tool.get('tip')
-#               })
         if tool_list:
             gui.append(('form_toolbar', tool_list))
 
@@ -1033,12 +1007,6 @@ class Frame:
         button_list = []
         for btn_id in button_dict:
             btn = button_dict[btn_id]
-#           # if a template is specified, insert template steps
-#           template_name = btn.get('template')
-#           if template_name is not None:
-#               template = getattr(ht.templates, template_name)  # class
-#               xml = getattr(template, btn_id)  # class attribute
-#               btn = etree.fromstring(xml, parser=parser)
             btn_label = btn.get('btn_label')
             lng = btn.get('lng')
             enabled = (btn.get('btn_enabled') == 'true')
@@ -1053,30 +1021,6 @@ class Frame:
         if button_list:
             gui.append(('button_row', button_list))
 
-        """
-        template_name = button_row.get('template')
-        if template_name is not None:
-            template = getattr(ht.templates, template_name)  # class
-            xml = template.button_row  # class attribute
-            xml = etree.fromstring(
-                xml.replace('{obj_name}', self.main_obj_name), parser=parser)
-            button_row[:0] = xml[0:]  # insert template buttons before any others
-            del button_row.attrib['template']  # to prevent re-substitution
-        validate = button_row.get('validate') != 'false'  # default to True
-        if validate:  # create dummy field to force validation of last field
-            ht.gui_objects.GuiDummy(self, gui)
-        #gui.append(('button_row', None))
-        button_list = []
-        for btn in button_row:
-            #ref = len(self.obj_list)
-            #button = ht.gui_objects.GuiButton(self, gui, btn, ref, button_list)
-            #self.obj_list.append(button)
-            button = ht.gui_objects.GuiButton(self, button_list, btn)
-            self.btn_dict[btn.get('btn_id')] = button
-        if button_list:
-            gui.append(('button_row', button_list))
-        """
-
     def setup_methods(self, methods, gui):
         # store the *last* occurence of each method name
         # this allows a customised method to override a template method
@@ -1086,7 +1030,7 @@ class Frame:
             method_dict[method_name] = method
         for method_name in method_dict:
             method = method_dict[method_name]
-            obj_name = method.get('obj_name')  #, self.main_obj_name)
+            obj_name = method.get('obj_name')
             method = etree.fromstring(method.get('action'), parser=parser)
 
             if method_name == 'on_start_frame':
@@ -1203,38 +1147,6 @@ class Frame:
 
 #       # send message to client to hide active subtype and show new subtype
 #       self.session.set_subtype(self, subtype, value)
-
-#   @asyncio.coroutine
-#   def on_read(self, db_obj):
-#       for method in self.on_read_dict[db_obj]:
-#           yield from ht.form_xml.exec_xml(self, method)
-
-#   @asyncio.coroutine
-#   def on_clean(self, db_obj):
-##      print('CLEAN', db_obj, len(self.on_clean_dict[db_obj]))
-#       for method in self.on_clean_dict[db_obj]:
-#           yield from ht.form_xml.exec_xml(self, method)
-
-#   @asyncio.coroutine
-#   def on_amend(self, db_obj):
-##      print('AMEND', db_obj, len(self.on_amend_dict[db_obj]))
-#       for method in self.on_amend_dict[db_obj]:
-#           yield from ht.form_xml.exec_xml(self, method)
-
-#   @asyncio.coroutine
-#   def do_save(self):
-#       print('SAVE', 'do_save' in self.methods, self.db_obj)
-#       if 'do_save' in self.methods:
-#           yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
-#       elif self.db_obj is not None:
-#           self.db_obj.save()
-
-#   @asyncio.coroutine
-#   def do_restore(self):
-#       if 'do_restore' in self.methods:
-#           yield from ht.form_xml.exec_xml(self, self.methods['do_restore'])
-#       elif self.db_obj is not None:
-#           self.db_obj.restore()
 
     @asyncio.coroutine
     def on_req_cancel(self):
@@ -1442,14 +1354,16 @@ class Frame:
 
     @asyncio.coroutine
     def check_children(self, db_obj):
+        # check that no child is 'dirty' before saving parent
+        # children are always in a grid
+        # if there is there is a grid_frame, it could also contain a grid,
+        #   so the check has to be carried out recursively
         @asyncio.coroutine
-        def check(frame, parent_obj):
+        def check(frame):
             for grid in frame.grids:
-                if grid.grid_frame is None:
-                    continue
 
-                # check children first
-                yield from check(grid.grid_frame, grid.db_obj)
+                if grid.grid_frame is not None:
+                    yield from check(grid.grid_frame)
 
                 if grid.db_obj.dirty:
                     title = 'Save changes to {}?'.format(grid.db_obj.table_name)
@@ -1472,7 +1386,7 @@ class Frame:
                         grid.db_obj.restore()
                     else:
                         raise AibError(head=None, body=None)  # stop processing messages
-        yield from check(self, db_obj)
+        yield from check(self)
 
     @asyncio.coroutine
     def save_obj(self, db_obj):
@@ -1483,8 +1397,6 @@ class Frame:
         yield from ht.form_xml.exec_xml(self, self.methods['do_restore'])
         for obj_ref in self.temp_data:
             self.session.request.obj_to_reset.append(obj_ref)
-#       if self.db_obj is not None and self.db_obj.exists:
-#           self.session.request.obj_to_redisplay.append((self.ref, False))  # reset form_amended
         self.temp_data.clear()
         if self.frame_type == 'grid_frame':
             for obj_ref in self.ctrl_grid.temp_data:

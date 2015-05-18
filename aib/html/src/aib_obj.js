@@ -1155,10 +1155,13 @@ AibBool.prototype.set_value_from_server = function(bool, value) {
   bool.form_value = value;
   };
 AibBool.prototype.set_prev_from_server = function(bool, value) {
-  if (value === '1')
-    this.draw_chk(bool)
-  else
-    this.draw_unchk(bool);
+  if (value !== bool.current_value) {
+    bool.current_value = value;
+    if (value === '1')
+      this.draw_chk(bool)
+    else
+      this.draw_unchk(bool);
+    };
   };
 AibBool.prototype.cell_data_changed = function(cell) {
   var grid = cell.grid;

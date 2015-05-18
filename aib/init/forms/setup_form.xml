@@ -4,9 +4,7 @@
     <db_obj name="form" table_name="sys_form_defns"/>
   </db_objects>
   <mem_objects/>
-  <input_params>
-    <input_param name="formview_obj" type="data_obj" target="form" required="false"/>
-  </input_params>
+  <input_params/>
   <output_params/>
 
   <frame main_object="form">
@@ -100,7 +98,7 @@
         <</action>>
       "/>
       <col/>
-      <button lng="150" btn_id="frame" btn_label="Gui objects"
+      <button lng="150" btn_id="frame" btn_label="Gui design"
           btn_enabled="true" btn_validate="true" action="
         <<action>>
           <<sub_form form_name=`_sys.setup_form_gui`>>

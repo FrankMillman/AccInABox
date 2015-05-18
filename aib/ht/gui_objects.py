@@ -122,30 +122,6 @@ class GuiCtrl:
 #   def show(self, state):
 #       self.parent.session.request.send_show(self.ref, state)
 
-class GuiTextCtrl(GuiCtrl):
-    def __init__(self, parent, fld, readonly, skip, reverse, choices, lkup,
-            pwd, lng, height, gui):
-        GuiCtrl.__init__(self, parent, fld, readonly)
-        self.pwd = pwd
-
-        if lng != 0:  # if not, do not create a gui object
-            value = fld.val_to_str()  #fld.get_dflt())
-            if choices is not None:
-                type = 'choice'
-                if value == '':
-                    value = choices[1][0][0]
-            else:
-                type = 'text'
-            input = {'type': type, 'lng': lng,
-                'maxlen': fld.col_defn.max_len, 'ref': self.ref,
-                'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
-                'allow_amend': fld.col_defn.allow_amend, 'password': self.pwd,
-                'readonly': readonly, 'skip': skip, 'amend_ok': self.amend_ok,
-                'lkup': lkup, 'choices': choices, 'height': height, 'value': value}
-            gui.append(('input', input))
-        else:
-            self.readonly = True
-
     @asyncio.coroutine
     def on_req_lookup(self, value):  # user selected 'lookup'
         # TO DO - block if db_obj exists and fld not amendable
@@ -172,13 +148,36 @@ class GuiTextCtrl(GuiCtrl):
     def on_req_lookdown(self):  # user selected 'lookdown'
         tgt_obj = self.fld.foreign_key['tgt_field'].db_obj
         if tgt_obj.exists:
-#           form_name = 'setup_form'
             form_name = tgt_obj.db_table.setup_form
             data_inputs = {}  # input parameters to be passed to sub-form
-            data_inputs['formview_obj'] = tgt_obj
-            sub_form = ht.form.Form(self.parent.form.company,
-                form_name, parent=self.parent, data_inputs=data_inputs)
-            yield from sub_form.start_form(self.parent.session)
+            sub_form = ht.form.Form(
+                self.parent.form.company, form_name, parent=self.parent)
+            yield from sub_form.start_form(
+                self.parent.session, formview_obj=tgt_obj)
+
+class GuiTextCtrl(GuiCtrl):
+    def __init__(self, parent, fld, readonly, skip, reverse, choices, lkup,
+            pwd, lng, height, gui):
+        GuiCtrl.__init__(self, parent, fld, readonly)
+        self.pwd = pwd
+
+        if lng != 0:  # if not, do not create a gui object
+            value = fld.val_to_str()  #fld.get_dflt())
+            if choices is not None:
+                type = 'choice'
+                if value == '':
+                    value = choices[1][0][0]
+            else:
+                type = 'text'
+            input = {'type': type, 'lng': lng,
+                'maxlen': fld.col_defn.max_len, 'ref': self.ref,
+                'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
+                'allow_amend': fld.col_defn.allow_amend, 'password': self.pwd,
+                'readonly': readonly, 'skip': skip, 'amend_ok': self.amend_ok,
+                'lkup': lkup, 'choices': choices, 'height': height, 'value': value}
+            gui.append(('input', input))
+        else:
+            self.readonly = True
 
 class GuiNumCtrl(GuiCtrl):
     def __init__(self, parent, fld, readonly, skip, reverse, choices, fkey,

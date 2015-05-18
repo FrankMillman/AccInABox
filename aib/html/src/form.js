@@ -372,15 +372,18 @@ function setup_form(args) {
           return this._amended;
           };
 
-        frame.set_value_from_server = function(value) {
+        frame.set_value_from_server = function(args) {
           // notification of record becoming clean/dirty (true/false)
-          if (value === true) {
-            this.obj_exists = true;
-            this.set_amended(false);
-            }
-          else {
-            this.set_amended(true);
-            };
+//          if (value === true) {
+//            this.obj_exists = true;
+//            this.set_amended(false);
+//            }
+//          else {
+//            this.set_amended(true);
+//            };
+          var clean = args[0], exists = args[1];
+          this.set_amended(!clean);  // if clean, amended=false, if dirty, amended=true
+          this.obj_exists = exists;
           };
 
         break;
@@ -454,6 +457,7 @@ function setup_form(args) {
         var text = document.createElement('span');
         text.style.display = 'inline-block';
         text.appendChild(document.createTextNode(elem[1].value));
+        text.style.fontWeight = 'bold';
         text.style.textAlign = 'left';
         text.style.marginTop = '10px';
         if (elem[1].lng)
@@ -462,7 +466,7 @@ function setup_form(args) {
           vbox.appendChild(text)
         else {
           if (block.childNodes.length && subtype_name === null)
-            box.style.marginLeft = '10px';
+            text.style.marginLeft = '10px';
           text.style[cssFloat] = 'left';
           block.appendChild(text);
           };
@@ -946,17 +950,21 @@ function setup_form(args) {
           return this._amended;
           };
 
-        frame.set_value_from_server = function(value) {
+        frame.set_value_from_server = function(args) {
           // notification of record becoming clean/dirty (true/false)
-          if (value === true) {
-            this.obj_exists = true;
-            this.set_amended(false);
-            this.ctrl_grid.set_amended(false);
-            }
-          else {
-            this.set_amended(true);
-            this.ctrl_grid.set_amended(true);
-            };
+//          if (value === true) {
+//            this.obj_exists = true;
+//            this.set_amended(false);
+//            this.ctrl_grid.set_amended(false);
+//            }
+//          else {
+//            this.set_amended(true);
+//            this.ctrl_grid.set_amended(true);
+//            };
+          var clean = args[0], exists = args[1];
+          this.set_amended(!clean);  // if clean, amended=false, if dirty, amended=true
+          this.ctrl_grid.set_amended(!clean);
+          this.obj_exists = exists;
           };
 
         break;
@@ -1072,15 +1080,18 @@ function setup_form(args) {
           return this._amended;
           };
 
-        frame.set_value_from_server = function(value) {
+        frame.set_value_from_server = function(args) {
           // notification of record becoming clean/dirty (true/false)
-          if (value === true) {
-            this.obj_exists = true;
-            this.set_amended(false);
-            }
-          else {
-            this.set_amended(true);
-            };
+//          if (value === true) {
+//            this.obj_exists = true;
+//            this.set_amended(false);
+//            }
+//          else {
+//            this.set_amended(true);
+//            };
+          var clean = args[0], exists = args[1];
+          this.set_amended(!clean);  // if clean, amended=false, if dirty, amended=true
+          this.obj_exists = exists;
           };
 
         break;

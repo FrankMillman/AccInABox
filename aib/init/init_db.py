@@ -366,6 +366,13 @@ def setup_fkeys(context):
     db_col.setval('fkey', ['_sys.dir_companies', 'company_id', None, None, False])
     db_col.save()
 
+    # can only do this after sys_form_defns has been set up
+    db_col = db.api.get_db_object(context, '_sys', 'db_columns')
+    db_col.setval('table_name', 'db_tables')
+    db_col.setval('col_name', 'setup_form')
+    db_col.setval('fkey', ['sys_form_defns', 'form_name', None, None, False])
+    db_col.save()
+
 def setup_forms(context):
     schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
     parser = etree.XMLParser(
@@ -406,8 +413,7 @@ def setup_forms(context):
     setup_form('choices', 'Choices')
     setup_form('dbcols_sys', 'Db columns - sys')
     setup_form('setup_company', 'Company setup')
-    setup_form('cursor_grid', 'Db cursor setup - grid view')
-    setup_form('cursor_form', 'Db cursor setup - form view')
+    setup_form('cursor_setup', 'Setup database cursor')
     setup_form('menu_setup', 'Menu setup')
     setup_form('setup_user', 'Setup users', table_name='dir_users')
     setup_form('setup_table', 'Setup database tables', table_name='db_tables')

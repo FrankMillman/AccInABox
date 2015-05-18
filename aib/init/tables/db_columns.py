@@ -13,8 +13,6 @@ table = {
     'upd_chks'      : None,
     'del_chks'      : None,
     'table_hooks'   : etree.fromstring(
-#       '<hooks><hook type="before_save"><increment_seq args="table_id, col_type"/></hook>'
-#       '<hook type="after_delete"><decrement_seq args="table_id, col_type"/></hook>'
         '<hooks>'
             '<hook type="after_save"><setup_disp_name/></hook>'
             '<hook type="after_insert">'
@@ -276,9 +274,9 @@ cols.append ({
         False,  # use sub_types?
         False,  # use display_names?
         [
+            ['N', 'No', [], []],
             ['Y', 'Yes', [], []],
             ['A', 'Alt', [], []],
-            ['N', 'No', [], []],
             ]
         ],
     })
@@ -349,7 +347,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
+    'dflt_val'   : '0',
     'col_chks'   : None,
     'fkey'       : None,
     'choices'    : None,
@@ -367,7 +365,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
+    'dflt_val'   : '0',
     'col_chks'   : None,
     'fkey'       : None,
     'choices'    : None,

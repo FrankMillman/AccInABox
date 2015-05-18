@@ -16,7 +16,7 @@ from start import log, debug
 @asyncio.coroutine
 def init_xml(caller, xml):
     # called from sys_form_defns.form_view after form_name if db_obj does not exist
-    form_defn = caller.data_objects['db_obj']
+    form_defn = caller.data_objects['form']
 
     form_xml = etree.Element('form')
     form_xml.set('name', form_defn.getval('form_name'))
@@ -46,34 +46,32 @@ def load_db_objects(caller, xml):
 # 'hooks' not used at present [2015-04-26]
 #   dbhooks = caller.data_objects['dbhooks']
 
-    form.save()  # populate 'row_id' for children
-
     form_xml = form.getval('form_xml')
-    if form_xml is not None:
-        for seq, obj_xml in enumerate(form_xml.find('db_objects')):
-            init_vals = {col: dbobj.get_val_from_xml(col, obj_xml.get(col))
-                for col in dbobj_cols}
-            init_vals['seq'] = seq
-            dbobj.init(display=False, init_vals=init_vals)
-            dbobj.save()
+    if form_xml is None:
+        return
+
+    for seq, obj_xml in enumerate(form_xml.find('db_objects')):
+        init_vals = {col: dbobj.get_val_from_xml(col, obj_xml.get(col))
+            for col in dbobj_cols}
+        init_vals['seq'] = seq
+        dbobj.init(display=False, init_vals=init_vals)
+        dbobj.save()
 
 # 'hooks' not used at present [2015-04-26]
 # do not remove code in case required in future
-#           #set up dbhooks for this dbobj (if any)
-#           hooks = obj_xml.get('hooks')
-#           if hooks is not None:
-#               hooks = etree.fromstring(hooks, parser=parser)
-#               for seq, hook_xml in enumerate(hooks):
-#                   # enclose 'action' in an etree Element with tag 'action'
-#                   hook_action = etree.Element('action')
-#                   hook_action[:] = hook_xml[:]
-#                   init_vals = {
-#                       'type': dbhooks.get_val_from_xml('type', hook_xml.get('type')),
-#                       'action': hook_action, 'seq': seq}
-#                   dbhooks.init(display=False, init_vals=init_vals)
-#                   dbhooks.save()
-
-#   form.save()  # to trigger 'on_clean' method
+#       #set up dbhooks for this dbobj (if any)
+#       hooks = obj_xml.get('hooks')
+#       if hooks is not None:
+#           hooks = etree.fromstring(hooks, parser=parser)
+#           for seq, hook_xml in enumerate(hooks):
+#               # enclose 'action' in an etree Element with tag 'action'
+#               hook_action = etree.Element('action')
+#               hook_action[:] = hook_xml[:]
+#               init_vals = {
+#                   'type': dbhooks.get_val_from_xml('type', hook_xml.get('type')),
+#                   'action': hook_action, 'seq': seq}
+#               dbhooks.init(display=False, init_vals=init_vals)
+#               dbhooks.save()
 
 @asyncio.coroutine
 def restore_db_objects(caller, xml):
@@ -132,40 +130,40 @@ def load_mem_objects(caller, xml):
 #   memhooks = caller.data_objects['memhooks']
     memcol = caller.data_objects['memcol']
 
-    form.save()  # populate 'row_id' for children
-
     form_xml = form.getval('form_xml')
-    if form_xml is not None:
-        for seq, obj_xml in enumerate(form_xml.find('mem_objects')):
-            init_vals = {col: memobj.get_val_from_xml(col, obj_xml.get(col))
-                for col in memobj_cols}
-            init_vals['seq'] = seq
-            memobj.init(display=False, init_vals=init_vals)
-            memobj.save()
+    if form_xml is None:
+        return
+
+    for seq, obj_xml in enumerate(form_xml.find('mem_objects')):
+        init_vals = {col: memobj.get_val_from_xml(col, obj_xml.get(col))
+            for col in memobj_cols}
+        init_vals['seq'] = seq
+        memobj.init(display=False, init_vals=init_vals)
+        memobj.save()
 
 # 'hooks' not used at present [2015-04-26]
 # do not remove code in case required in future
-#           #set up memhooks for this memobj (if any)
-#           hooks = obj_xml.get('hooks')
-#           if hooks is not None:
-#               hooks = etree.fromstring(hooks, parser=parser)
-#               for seq, hook_xml in enumerate(hooks):
-#                   # enclose 'action' in an etree Element with tag 'action'
-#                   hook_action = etree.Element('action')
-#                   hook_action[:] = hook_xml[:]
-#                   init_vals = {
-#                       'type': memhooks.get_val_from_xml('type', hook_xml.get('type')),
-#                       'action': hook_action, 'seq': seq}
-#                   memhooks.init(display=False, init_vals=init_vals)
-#                   memhooks.save()
+#       #set up memhooks for this memobj (if any)
+#       hooks = obj_xml.get('hooks')
+#       if hooks is not None:
+#           hooks = etree.fromstring(hooks, parser=parser)
+#           for seq, hook_xml in enumerate(hooks):
+#               # enclose 'action' in an etree Element with tag 'action'
+#               hook_action = etree.Element('action')
+#               hook_action[:] = hook_xml[:]
+#               init_vals = {
+#                   'type': memhooks.get_val_from_xml('type', hook_xml.get('type')),
+#                   'action': hook_action, 'seq': seq}
+#               memhooks.init(display=False, init_vals=init_vals)
+#               memhooks.save()
 
-            #set up memcols for this memobj
-            for seq, memcol_xml in enumerate(obj_xml.findall('mem_col')):
-                init_vals = {col: memcol.get_val_from_xml(col, memcol_xml.get(col))
-                    for col in memcol_cols}
-                init_vals['seq'] = seq
-                memcol.init(display=False, init_vals=init_vals)
-                memcol.save()
+        #set up memcols for this memobj
+        for seq, memcol_xml in enumerate(obj_xml.findall('mem_col')):
+            init_vals = {col: memcol.get_val_from_xml(col, memcol_xml.get(col))
+                for col in memcol_cols}
+            init_vals['seq'] = seq
+            memcol.init(display=False, init_vals=init_vals)
+            memcol.save()
 
 @asyncio.coroutine
 def restore_mem_objects(caller, xml):
@@ -231,25 +229,25 @@ def load_ioparams(caller, xml):
     # called from setup_form_ioparams 'on_start_frame'
     form = caller.data_objects['form']
 
-    form.save()  # populate 'row_id' for children
-
     form_xml = form.getval('form_xml')
-    if form_xml is not None:
-        inputs = caller.data_objects['inputs']
-        for seq, input_xml in enumerate(form_xml.find('input_params')):
-            init_vals = {col: inputs.get_val_from_xml(col, input_xml.get(col))
-                for col in input_cols}
-            init_vals['seq'] = seq
-            inputs.init(display=False, init_vals=init_vals)
-            inputs.save()
+    if form_xml is None:
+        return
 
-        outputs = caller.data_objects['outputs']
-        for seq, output_xml in enumerate(form_xml.find('output_params')):
-            init_vals = {col: outputs.get_val_from_xml(col, output_xml.get(col))
-                for col in output_cols}
-            init_vals['seq'] = seq
-            outputs.init(display=False, init_vals=init_vals)
-            outputs.save()
+    inputs = caller.data_objects['inputs']
+    for seq, input_xml in enumerate(form_xml.find('input_params')):
+        init_vals = {col: inputs.get_val_from_xml(col, input_xml.get(col))
+            for col in input_cols}
+        init_vals['seq'] = seq
+        inputs.init(display=False, init_vals=init_vals)
+        inputs.save()
+
+    outputs = caller.data_objects['outputs']
+    for seq, output_xml in enumerate(form_xml.find('output_params')):
+        init_vals = {col: outputs.get_val_from_xml(col, output_xml.get(col))
+            for col in output_cols}
+        init_vals['seq'] = seq
+        outputs.init(display=False, init_vals=init_vals)
+        outputs.save()
 
 @asyncio.coroutine
 def restore_ioparams(caller, xml):
@@ -306,55 +304,57 @@ def load_frame(caller, xml):
     button = caller.data_objects['button']
     method = caller.data_objects['frame_method']
 
-    form.save()  # populate 'row_id' for children
-
     form_xml = form.getval('form_xml')
-    if form_xml is not None:
-        frame = form_xml.find('frame')
+    if form_xml is None:
+        return
 
-        toolbar_xml = frame.find('toolbar')
-        form.setval('tb_template', form.get_val_from_xml('tb_template',
-            toolbar_xml.get('template')))
-        for seq, tool_xml in enumerate(toolbar_xml):
-            init_vals = {col: tool.get_val_from_xml(col, tool_xml.get(col))
-                for col in tool_cols}
-            init_vals['seq'] = seq
-            tool.init(display=False, init_vals=init_vals)
-            tool.save()
+    frame = form_xml.find('frame')
 
-        for seq, elem_xml in enumerate(frame.find('body')):
-            init_vals = {col: body.get_val_from_xml(col, elem_xml.get(col))
-                for col in body_cols}
-            init_vals['type'] = elem_xml.tag
-            init_vals['seq'] = seq
-            body.init(display=False, init_vals=init_vals)
-            body.save()
+    toolbar_xml = frame.find('toolbar')
+    form.setval('tb_template', form.get_val_from_xml('tb_template',
+        toolbar_xml.get('template')))
+    for seq, tool_xml in enumerate(toolbar_xml):
+        init_vals = {col: tool.get_val_from_xml(col, tool_xml.get(col))
+            for col in tool_cols}
+        init_vals['seq'] = seq
+        tool.init(display=False, init_vals=init_vals)
+        tool.save()
 
-        button_row_xml = frame.find('button_row')
-        form.setval('btn_template', form.get_val_from_xml('btn_template',
-            button_row_xml.get('template')))
-        form.setval('btn_validate', form.get_val_from_xml('btn_validate',
-            button_row_xml.get('template')))
-        for seq, button_xml in enumerate(button_row_xml):
-            init_vals = {col: button.get_val_from_xml(col, button_xml.get(col))
-                for col in button_cols}
-            init_vals['seq'] = seq
-            button.init(display=False, init_vals=init_vals)
-            button.save()
+    for seq, elem_xml in enumerate(frame.find('body')):
+        init_vals = {col: body.get_val_from_xml(col, elem_xml.get(col))
+            for col in body_cols}
+        init_vals['type'] = elem_xml.tag
+        init_vals['seq'] = seq
+        body.init(display=False, init_vals=init_vals)
+        body.save()
 
-        methods_xml = frame.find('frame_methods')
-        form.setval('method_template', form.get_val_from_xml('method_template',
-            methods_xml.get('template')))
-        form.setval('on_start_form', form.get_val_from_xml('on_start_form',
-            frame.get('on_start_form')))
-        for seq, method_xml in enumerate(methods_xml):
-            init_vals = {col: method.get_val_from_xml(col, method_xml.get(col))
-                for col in method_cols}
-            init_vals['seq'] = seq
-            method.init(display=False, init_vals=init_vals)
-            method.save()
+    button_row_xml = frame.find('button_row')
+    form.setval('btn_template', form.get_val_from_xml('btn_template',
+        button_row_xml.get('template')))
+    form.setval('btn_validate', form.get_val_from_xml('btn_validate',
+        button_row_xml.get('validate')))
+    for seq, button_xml in enumerate(button_row_xml):
+        init_vals = {col: button.get_val_from_xml(col, button_xml.get(col))
+            for col in button_cols}
+        init_vals['seq'] = seq
+        button.init(display=False, init_vals=init_vals)
+        button.save()
 
-        form.save()  # set state to 'clean'
+    methods_xml = frame.find('frame_methods')
+    form.setval('main_object', form.get_val_from_xml('main_object',
+        frame.get('main_object')))
+    form.setval('on_start_form', form.get_val_from_xml('on_start_form',
+        frame.get('on_start_form')))
+    form.setval('method_template', form.get_val_from_xml('method_template',
+        methods_xml.get('template')))
+    for seq, method_xml in enumerate(methods_xml):
+        init_vals = {col: method.get_val_from_xml(col, method_xml.get(col))
+            for col in method_cols}
+        init_vals['seq'] = seq
+        method.init(display=False, init_vals=init_vals)
+        method.save()
+
+    form.save()  # set to 'clean'
 
 @asyncio.coroutine
 def restore_frame(caller, xml):
@@ -380,6 +380,7 @@ def dump_frame(caller, xml):
     method = caller.data_objects['frame_method']
 
     frame_xml = etree.Element('frame')
+    set_if_not_none(frame_xml, form, 'main_object')
     set_if_not_none(frame_xml, form, 'on_start_form')
 
     toolbar_xml = etree.SubElement(frame_xml, 'toolbar')
@@ -443,6 +444,6 @@ def set_if_not_none(elem_xml, db_obj, col_name, attr_name=None):
     # create attribute on xml element, but only if not None and not 'false'
     xml_val = db_obj.get_val_for_xml(col_name)
     if xml_val is not None and xml_val is not 'false':
-        if attr_name is None:
+        if attr_name is None:  # if not specified, use col_name
             attr_name = col_name
         elem_xml.set(attr_name, xml_val)

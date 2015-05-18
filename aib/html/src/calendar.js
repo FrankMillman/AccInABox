@@ -92,7 +92,13 @@ var frame = {}  // new Object()
 frame.obj_list = [];
 frame.form = calendar;
 frame.form.obj_dict = {};
-frame._amended = false;
+//frame._amended = false;
+frame.set_amended = function(state) {
+  this._amended = state;
+  };
+frame.amended = function() {
+  return this._amended;
+  };
 calendar.active_frame = frame;
 
 calendar.get_dates = function(date) {

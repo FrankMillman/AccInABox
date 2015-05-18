@@ -93,7 +93,7 @@
       <block/>
       <string value="Inputs:" lng="75"/>
       <grid data_object="inputs" growable="true" num_grid_rows="5">
-        <toolbar template="Setup_Grid"/>
+        <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="name" lng="120"/>
           <cur_col col_name="type" lng="120"/>
@@ -104,12 +104,12 @@
         <cur_sequence>
           <cur_seq col_name="seq"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
       <block/>
       <string value="Outputs:" lng="75"/>
       <grid data_object="outputs" growable="true" num_grid_rows="5">
-        <toolbar template="Setup_Grid"/>
+        <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="name" lng="120"/>
           <cur_col col_name="type" lng="120"/>
@@ -119,7 +119,7 @@
         <cur_sequence>
           <cur_seq col_name="seq"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
     </body>
     <button_row validate="true" template="Setup_Form"/>

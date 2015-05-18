@@ -32,12 +32,13 @@
         <cur_sequence>
           <cur_seq col_name="user_row_id>user_id" desc="false"/>
         </cur_sequence>
-        <grid_methods template="Setup_Grid"/>
+        <grid_methods template="Grid"/>
       </grid>
       <grid_frame main_object="user_comp">
         <body>
           <block/>
           <grid data_object="user_role" growable="true" num_grid_rows="6">
+            <toolbar template="Grid"/>
             <cur_columns>
               <cur_col col_name="role" lng="40"/>
               <cur_col col_name="role_id>descr" lng="120" readonly="true"/>
@@ -47,7 +48,7 @@
             <cur_sequence>
               <cur_seq col_name="role" desc="false"/>
             </cur_sequence>
-            <grid_methods template="Setup_Grid"/>
+            <grid_methods template="Grid"/>
           </grid>
         </body>
         <button_row validate="false">

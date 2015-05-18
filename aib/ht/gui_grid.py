@@ -193,12 +193,12 @@ class GuiGrid:
             db_cursor.init()
             db_cursor.setval('table_name', db_obj.table_name)
             db_cursor.setval('cursor_name', cursor_name)
-#           if not db_cursor.exists:
-#               if db_cursor.db_table.defn_company != db_obj.db_table.data_company:
-#                   db_cursor = db_cursors[db_cursor.db_table.defn_company]
-#                   db_cursor.init()
-#                   db_cursor.setval('table_name', db_obj.table_name)
-#                   db_cursor.setval('cursor_name', cursor_name)
+            if not db_cursor.exists:
+                if db_cursor.db_table.defn_company != db_obj.db_table.data_company:
+                    db_cursor = db_cursors[db_cursor.db_table.defn_company]
+                    db_cursor.init()
+                    db_cursor.setval('table_name', db_obj.table_name)
+                    db_cursor.setval('cursor_name', cursor_name)
             if not db_cursor.exists:
                 raise AibError(head=db_obj.table_name,
                     body='Cursor {} does not exist'.format(cursor_name))
@@ -320,12 +320,6 @@ class GuiGrid:
                     #xml.replace('{obj_name}', obj_name), parser=parser)
                 toolbar[:0] = xml[0:]  # insert template methods before any others
                 del toolbar.attrib['template']  # to prevent re-substitution
-
-#           if template_name is not None:
-#               template = getattr(ht.templates, template_name)  # class
-#               xml = template.toolbar.replace(
-#                   '{obj_name}', self.obj_name)
-#               toolbar = etree.fromstring(xml, parser=parser)
             self.add_toolbar(gui, toolbar)
 
 #       self.cursor = self.db_obj.get_cursor()
@@ -340,30 +334,9 @@ class GuiGrid:
         return "Grid: {} '{}'".format(self.ref, self.obj_name)
 
     def add_toolbar(self, gui, toolbar):
-
-        # store the *last* occurence of each tool type
-        # this allows a customised tool to override a template tool
-        #
-        # actually this is not correct - it assumes only one 'tool_type'
-        #   per toolbar, but you could have > 1 with type == 'btn'
-        # leave for now, wait till it happens
-        #
-#       toolbar_dict = OrderedDict()
-#       for tool in toolbar.findall('tool'):
-#           tool_type = tool.get('type')
-#           toolbar_dict[tool_type] = tool
-
         tool_list = []
-#       for tool_type in toolbar_dict:
-#           tool = toolbar_dict[tool_type]
         for tool in toolbar.findall('tool'):
             tool_type = tool.get('type')
-#           template_name = tool.get('template')
-#           if template_name is not None:
-#               template = getattr(ht.templates, template_name)  # class
-#               xml = getattr(template, tool_type)  # class attribute
-#               tool = etree.fromstring(
-#                   xml.replace('{obj_name}', self.obj_name), parser=parser)
             if tool_type == 'nav':
                 tool_attr = {'type': 'nav'}
             elif tool_type == 'text':
@@ -375,51 +348,7 @@ class GuiGrid:
                 tool_attr = {'type': tool_type, 'ref':  tb_btn.ref,
                     'tip': tool.get('tip'), 'name': tool.get('name'),
                     'label': tool.get('label'), 'shortcut': tool.get('shortcut')}
-#           else:  # selected/formview/ins_row/del_row
-#               tool_attr = {'type': tool_type, 'tip': tool.get('tip')}
-#               if tool_type == 'del_row':
-#                   tool_attr['confirm'] = tool.get('confirm') == 'true'
-#               elif tool_type == 'btn':
-#                   tool_attr['label'] = tool.get('label')
-#               elif tool_type == 'img':
-#                   tool_attr['name'] = tool.get('name')
             tool_list.append(tool_attr)
-            """
-            elif tool.get('type') == 'selected':
-                tool_list.append({
-                'type': 'selected',
-                'tip': tool.get('tip')
-                })
-            elif tool.get('type') == 'formview':
-                tool_list.append({
-                'type': 'formview',
-                'tip': tool.get('tip')
-                })
-                self.formview_xml = tool.find('sub_form')
-            elif tool.get('type') == 'ins_row':
-                tool_list.append({
-                'type': 'ins_row',
-                'tip': tool.get('tip')
-                })
-            elif tool.get('type') == 'del_row':
-                tool_list.append({
-                'type': 'del_row',
-                'tip': tool.get('tip'),
-                'confirm': tool.get('confirm') == 'true'
-                })
-            elif tool.get('type') == 'btn':
-                #ref = len(self.form.obj_list)
-                #self.parent.obj_list.append(
-                #    ht.gui_objects.GuiTbButton(self.parent, tool, ref))
-                tb_btn = ht.gui_objects.GuiTbButton(self, tool)
-                tool_list.append({
-                    'type': 'btn',
-                    'ref':  tb_btn.ref,
-                    'label': tool.get('label'),
-                    'tip': tool.get('tip')
-                    })
-            """
-
         if tool_list:
             gui.append(('grid_toolbar', tool_list))
 
@@ -732,14 +661,10 @@ class GuiGrid:
             raise AibError(head='Form view',
                 body='Sorry, no form defined for {}'.format(self.db_obj.table_name))
 
-        data_inputs = {}  # input parameters to be passed to sub-form
-        data_inputs['formview_obj'] = self.db_obj
-
         sub_form = ht.form.Form(self.form.company, form_name,
-            parent=self, ctrl_grid=self, data_inputs=data_inputs,
-            callback=(self.return_from_formview,))
+            parent=self, ctrl_grid=self, callback=(self.return_from_formview,))
         try:
-            yield from sub_form.start_form(self.session)
+            yield from sub_form.start_form(self.session, formview_obj=self.db_obj)
         except AibError as err:
             first_col_obj = self.obj_list[self.grid_cols[0]]
             self.session.request.send_cell_set_focus(self.ref, row, first_col_obj.ref)

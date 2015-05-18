@@ -206,13 +206,19 @@ def notify_obj_clean(caller, xml):
     # enter first field, fail validation, decide not to proceed
     # object does not exist, but still needs to be set to 'clean'
 
-    if caller.db_obj is not None:
-        caller.session.request.obj_to_redisplay.append((caller.ref, True))
+    obj_name = xml.get('obj_name')
+    db_obj = caller.data_objects.get(obj_name)
+
+    caller.session.request.obj_to_redisplay.append(
+        (caller.ref, (True, db_obj.exists)))
 
 @asyncio.coroutine
 def notify_obj_dirty(caller, xml):
-    if caller.db_obj is not None:
-        caller.session.request.obj_to_redisplay.append((caller.ref, False))
+    obj_name = xml.get('obj_name')
+    db_obj = caller.data_objects.get(obj_name)
+
+    caller.session.request.obj_to_redisplay.append(
+        (caller.ref, (False, db_obj.exists)))
 
 @asyncio.coroutine
 def handle_restore(caller, xml):
@@ -267,6 +273,10 @@ def check_children(frame, xml):
 @asyncio.coroutine
 def save_obj(frame, xml):
     db_obj = frame.data_objects.get(xml.get('obj_name'))
+    if frame.ctrl_grid is not None:
+        if frame.frame_type != 'grid_frame':
+            yield from frame.ctrl_grid.try_save()
+            return
     yield from frame.save_obj(db_obj)
 
 @asyncio.coroutine
