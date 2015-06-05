@@ -137,41 +137,9 @@ function set_readonly(args) {
   for (var i=0, l=args.length; i<l; i++) {
     var ref = args[i][0], state = args[i][1];
     var obj = get_obj(ref);
-//    if (state === false)
-//      enable_obj(obj)
-//    else
-//      disable_obj(obj)
-    obj.readonly = state;
+    //obj.readonly = state;
     obj.set_readonly(state);
     };
-  };
-
-function enable_obj(obj) {
-  obj.disable_count = 0;
-  obj.set_disabled(false);
-//  obj.disable_count -= 1;
-//  if (!obj.disable_count) {
-//    obj.set_disabled(false);
-////    obj.disabled = false;
-////    obj.tabIndex = 0;
-//    };
-  };
-
-function disable_obj(obj) {
-  obj.disable_count = 1;
-  obj.set_disabled(true);
-//  if (!obj.disable_count){
-//    obj.set_disabled(true);
-////    obj.disabled = true;
-////    obj.tabIndex = -1;
-////    if (obj === obj.frame.form.current_focus) {
-////      var pos = obj.pos + 1;
-////      while (obj.frame.obj_list[pos].disabled || obj.frame.obj_list[pos].display)
-////        pos += 1;  // look for next enabled object
-////      obj.frame.obj_list[pos].focus();
-////      };
-//    };
-//  obj.disable_count += 1;
   };
 
 function set_focus(args) {

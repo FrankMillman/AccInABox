@@ -649,7 +649,7 @@ class DbObject:
         # if not None, init_vals is a dict of col_name, value pairs
         #   used to initialise db_obj fields (see ht.gui_tree for example)
         # purpose -  set initial values, do *not* set db_obj.dirty to True
-        self.init_vals = init_vals or {}
+        self.init_vals = {} if init_vals is None else init_vals
 
         for fld in self.fields.values():
             # store existing data as 'prev' for data-entry '\' function
@@ -678,7 +678,7 @@ class DbObject:
                     obj._redisplay()
                 if fld.gui_subtype is not None:
                     frame, subtype = fld.gui_subtype
-                    frame.set_subtype(subtype, None)
+                    frame.set_subtype(subtype, fld._value)
 
         self.exists = False
         for after_init in self.after_init_xml:
@@ -871,7 +871,11 @@ class DbObject:
                 cols.append(fld.col_name)
                 vals.append(fld.get_val_for_sql())
 
-        conn.insert_row(self, cols, vals, generated_flds)
+        try:
+            conn.insert_row(self, cols, vals, generated_flds)
+        except conn.exception as err:
+            raise AibError(head='Delete {}'.format(self.table_name),
+                body=str(err))
 
     def update(self, conn):
         self.check_perms('update')
@@ -905,7 +909,11 @@ class DbObject:
                 cols.append(fld.col_name)
                 vals.append(fld.get_val_for_sql())
         if len(cols):  # there is something to update
-            conn.update_row(self, cols, vals)
+            try:
+                conn.update_row(self, cols, vals)
+            except conn.exception as err:
+                raise AibError(head='Delete {}'.format(self.table_name),
+                    body=str(err))
 
     def delete(self):
         self.check_perms('delete')
@@ -1298,7 +1306,7 @@ class MemObject(DbObject):
         if col.choices is not None:
             col.choices = loads(col.choices)
             if col.choices[0]:  # use sub_types
-                self.db_table.subtypes[col.col_name] = {}
+                self.db_table.subtypes[col.col_name] = OD()
                 for sub_type, descr, subtype_cols, disp_names in col.choices[2]:
                     # subtype_cols = [(col_1, reqd), (col_2, reqd), ...]
                     self.db_table.subtypes[col.col_name][sub_type] = subtype_cols
@@ -1567,7 +1575,7 @@ class DbTable:
         self.col_list = []  # maintain sorted list of column names
         self.primary_keys = []
         alt_keys = []
-        self.subtypes = {}  # insert col_name: col_names if col is subtype
+        self.subtypes = OD()  # insert col_name: col_names if col is subtype
 
         table = 'db_columns'
         cols = Column.names
@@ -1650,7 +1658,7 @@ class MemTable(DbTable):
         self.short_descr = table_name
         self.read_only = False
         self.col_list = []  # maintain sorted list of column names
-        self.subtypes = {}  # insert col_name: col_names if col is subtype
+        self.subtypes = OD()  # insert col_name: col_names if col is subtype
         self.primary_keys = []
         self.virt_list = []
         self.audit_trail = None

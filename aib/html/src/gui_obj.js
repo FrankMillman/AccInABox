@@ -269,10 +269,6 @@ function create_input(frame, json_elem, label) {
       };
     };
 
-//  input.set_disabled = function(state) {
-//    input.aib_obj.set_disabled(input, state);
-//    };
-
   input.set_dflt_val = function(value) {
 //    this.current_value = value;
 //    if (this.frame.form.current_focus === this)
@@ -299,6 +295,11 @@ function create_input(frame, json_elem, label) {
 
   input.set_readonly = function(state) {
     this.readonly = state;
+    if (input.frame.form.current_focus === input) {
+      //debug3(input.ref + ': must set readonly');
+      input.aib_obj.after_lost_focus(input);
+      input.aib_obj.got_focus(input);
+      };
 //    this.aib_obj.set_readonly(this, state);
     };
 
@@ -312,10 +313,9 @@ function create_input(frame, json_elem, label) {
     this.aib_obj.reset_value(this);
     };
 
-//  if (json_elem.readonly) {
-//    input.set_readonly(true);
-//    //set_readonly(input, true);  //disable_obj(input);
-//    };
+  if (json_elem.readonly) {  // not used at present
+    input.set_readonly(true);
+    };
 
   input.set_value_from_server(json_elem.value);
 
@@ -1268,17 +1268,6 @@ function create_button(frame, json_elem) {
     var val = value[1];
     switch (attr) {
       case 'enabled':
-// can't use enable_obj()
-// server can call 'clean' multiple times, and disable
-//   the same button each time
-// enable_obj will increment the button's disable_count
-//   multiple times, which means it won't be enabled when required!
-//        if (val)
-//          //button.disabled = false;
-//          enable_obj(button);
-//        else
-//          //button.disabled = true;
-//          disable_obj(button);
         button.set_readonly(!val);
         break;
       case 'label':
@@ -1295,12 +1284,14 @@ function create_button(frame, json_elem) {
         button.frame.default_button = button;
         break;
       case 'show':
-        var col = button.parentNode;
-//        var col = button.parentNode.parentNode;
-        col.style.height = (col.offsetHeight - 2) + 'px';
-        if (val)
+// don't know why this is here [2015-06-03]
+// removed for now
+//        var col = button.parentNode;
+////        var col = button.parentNode.parentNode;
+//        col.style.height = (col.offsetHeight - 2) + 'px';
+        if (val)  // show button
           button.style.display = 'block';
-        else {
+        else {  // hide button
           button.style.display = 'none';
           if (button.has_focus) {
             var pos = button.pos + 1;

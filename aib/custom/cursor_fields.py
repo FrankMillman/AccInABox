@@ -16,8 +16,9 @@ def load_cur_flds(caller, xml):
         return
 
     # we use init_vals below to avoid making the object 'dirty'
-    # we use select_cols[2:] to skip the first two columns -
+    # we use select_cols[3:] to skip the first three columns -
     #   'row_id' is automatically generated
+    #   'cursor_name' is automatically populated
     #   'seq' is populated with seq
     # we use 'get_val_from_sql' because before/dflt_val/validation/after
     #   are stored as XML strings, but must be converted into an

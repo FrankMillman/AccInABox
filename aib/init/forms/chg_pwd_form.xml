@@ -54,7 +54,7 @@
         action="
           <<action>>
             <<case>>
-              <<compare src=`pwd_var.pwd1` op=`eq` tgt=`$None`>>
+              <<compare src=`pwd_var.pwd1` op=`is_` tgt=`$None`>>
                 <<ask title=`Password` enter=`No` escape=`No`
                     question=`Are you sure you want a blank password?`>>
                   <<response ans=`Yes`>>

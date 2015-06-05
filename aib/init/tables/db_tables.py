@@ -137,7 +137,7 @@ cols.append ({
     'col_head'   : 'Short description',
     'key_field'  : 'N',
     'generated'  : False,
-    'allow_null' : True,
+    'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 30,
     'db_scale'   : 0,
@@ -324,7 +324,11 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'col_chks'   : [['no_change', 'Can remove company, but not change it', [
+        ['check', '', '$exists', 'is', 'False', ''],
+        ['or', '', '$value', 'is', 'None', ''],
+        ['or', '', '$value', '=', '$orig', ''],
+        ]]],
 #   'fkey'       : ['_sys.dir_companies', 'company_id', None, None, False],
     'fkey'       : None,  # can only set this up after dir_companies created
     'choices'    : None,
@@ -343,7 +347,11 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'col_chks'   : [['no_change', 'Can remove company, but not change it', [
+        ['check', '', '$exists', 'is', 'False', ''],
+        ['or', '', '$value', 'is', 'None', ''],
+        ['or', '', '$value', '=', '$orig', ''],
+        ]]],
 #   'fkey'       : ['_sys.dir_companies', 'company_id', None, None, False],
     'fkey'       : None,  # can only set this up after dir_companies created
     'choices'    : None,
@@ -352,7 +360,7 @@ cols.append ({
     'col_name'   : 'read_only',
     'data_type'  : 'BOOL',
     'short_descr': 'Read only?',
-    'long_descr' : 'Can we write to table in another company?',
+    'long_descr' : 'Updating table in other company disallowed?',
     'col_head'   : 'Read only?',
     'key_field'  : 'N',
     'generated'  : False,

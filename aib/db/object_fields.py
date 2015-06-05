@@ -1,4 +1,3 @@
-import asyncio
 import os.path
 import __main__
 schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
@@ -15,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 import db.objects
 from db.chk_constraints import chk_constraint
-from ht.validation_xml import check_vld
 from errors import AibError, AibDenied
 
 debug = 0
@@ -42,7 +40,6 @@ class Field:
         self.sql = col_defn.sql
         self.gui_obj = []  # gui_objects to be notified of changes
         self.gui_subtype = None  # if set by form, notify gui on change
-        self.form_vlds = []
         self.flds_to_recalc = []
         self.fkey_parent = None
         self.children = []  # list of xrefs to child fkey fields
@@ -252,19 +249,19 @@ class Field:
         self.db_obj.select_row(cols_vals, display, debug=debug)
 
     def setval(self, value, display=True):
+        # 'validate' and 'continue_setval' have been split into
+        #   separate functions deliberately
+        # when validating form input, there could be additional
+        #   validations specified at the form level
+        # this allows ht.gui_objects to carry out the following steps -
+        #   1. fld.validate()
+        #   2. perform any extra validations
+        #   3. if fld.value_changed(), call fld.continue_setval()
         self.validate(value, display)
         if self.value_changed(value):
             self.continue_setval(value, display)
 
-    @asyncio.coroutine
-    def setval_async(self, value, display=True):
-        self.validate(value, display)
-        for vld in self.form_vlds:  # 'vld' is a tuple of (ctx, xml)
-            yield from check_vld(self, self.col_defn.short_descr, vld, value)
-        if self.value_changed(value):
-            self.continue_setval(value, display)
-
-    def validate(self, value, display):
+    def validate(self, value, display=True):
         db_obj = self.db_obj
         col_defn = self.col_defn
 
@@ -339,7 +336,7 @@ class Field:
         for descr, errmsg, col_chk in col_defn.col_chks:
             chk_constraint(self, col_chk, value=value, errmsg=errmsg)  # can raise AibError
 
-    def continue_setval(self, value, display):
+    def continue_setval(self, value, display=True):
 
         try:
             self.db_obj.check_perms('amend', self.col_defn.row_id)

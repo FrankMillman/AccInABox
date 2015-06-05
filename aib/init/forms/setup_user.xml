@@ -60,7 +60,7 @@
       <col/>
       <label value="Password:"/>
       <col/>
-      <button btn_id="btn_pwd" btn_label="Enter/amend password" btn_enabled="true"
+      <button btn_id="btn_pwd" btn_label="Enter / amend password" btn_enabled="true"
           btn_validate="true" btn_default="false" action="
         <<action>>
           <<sub_form form_name=`_sys.chg_pwd_form`>>
@@ -78,7 +78,7 @@
           <<validations>>
             <<validation>>
               <<case>>
-                <<compare src=`user.password` op=`ne` tgt=`$None`/>>
+                <<compare src=`user.password` op=`is_not` tgt=`$None`/>>
                 <<default>>
                   <<error head=`Password` body=`You must enter a password`/>>
                 <</default>>

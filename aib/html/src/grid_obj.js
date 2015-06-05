@@ -18,11 +18,6 @@
     return getCaret(this);
     };
 
-//  input.set_readonly = function(state) {
-//    input.readonly = state;
-//    input.aib_obj.set_readonly(input, state);
-//    };
-
   input.set_dflt_val = function(value) {
     var grid = this.grid;
     var cell = grid.grid_rows[grid.active_row-grid.first_grid_row].grid_cols[this.col];

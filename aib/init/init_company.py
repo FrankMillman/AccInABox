@@ -302,6 +302,7 @@ def setup_menus(context, conn, company, company_name):
         ['System setup', 'menu', [
             ['Table definitions', 'grid', 'db_tables', '_sys.db_tables'],
             ['Table combo', 'form', '_sys.setup_table_combo'],
+            ['Table tree', 'form', '_sys.setup_table_tree'],
             ['Form definitions', 'grid', 'sys_form_defns', '_sys.form_list'],
             ['Menu definitions', 'form', '_sys.menu_setup'],
             ]],

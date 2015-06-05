@@ -38,25 +38,25 @@ function create_tree(container, frame, toolbar, hide_root){
     toolbar.style.border = '1px solid lightgrey';
     toolbar.style.height = '28px';
 
-    var app = tree.add_toolbar_btn(toolbar, 'Append', 'Append (Insert)');
+    var app = tree.add_toolbar_btn(toolbar, 'Add', 'Append node (Insert)');
     app.onclick = function() {
       tree.req_append_node();
       tree.focus();
       };
 
-    var ins = tree.add_toolbar_btn(toolbar, 'Ins', 'Insert (Ctrl+Insert)');
+    var ins = tree.add_toolbar_btn(toolbar, 'Ins', 'Insert node (Ctrl+Insert)');
     ins.onclick = function() {
       tree.req_insert_node();
       tree.focus();
       };
 
-    var del = tree.add_toolbar_btn(toolbar, 'Del', 'Delete (Ctrl+Delete)');
+    var del = tree.add_toolbar_btn(toolbar, 'Del', 'Delete node (Ctrl+Delete)');
     del.onclick = function() {
       tree.req_delete_node();
       tree.focus();
       };
 
-    var move = tree.add_toolbar_btn(toolbar, 'Move', 'Move node (F3)');
+    var move = tree.add_toolbar_btn(toolbar, 'Move', 'Move node (Not implemented)');
     move.onclick = function() {
       tree.move_node();
       tree.focus();
@@ -392,7 +392,7 @@ function create_tree(container, frame, toolbar, hide_root){
     else {
       this.req_args = [node_id, seq];
       var args = [null, 'Insert?', 'What do you want to insert?',
-        [this.combo[0], this.combo[1], 'Cancel'], 'Cancel', 'Cancel', this.send_req_insert]
+        [this.combo[0], this.combo[1], 'Cancel'], this.combo[0], 'Cancel', this.send_req_insert]
       ask_question(args);
       };
     };

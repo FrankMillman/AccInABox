@@ -14,6 +14,7 @@ function setup_form(args) {
   var save_vbox = [];
   var subtype_name = null;
   var label = null;
+  var last_parent = null;  // keep track of last parent to decide where to append 'dummy'
 
   for (var i=0, args_length=args.length; i<args_length; i++) {
     var elem = args[i];
@@ -409,6 +410,7 @@ function setup_form(args) {
         block.style.clear = 'left';
         block.style.textAlign = 'center';
         page.block = block;
+        last_parent = block;
         block.end_block = function() {
           if (this.childNodes.length === 1)
             this.firstChild.style[cssFloat] = 'none';
@@ -533,6 +535,7 @@ function setup_form(args) {
           col.colSpan = elem[1].colspan;
         if (elem[1].rowspan)
           col.rowSpan = elem[1].rowspan;
+        last_parent = col;
         break;
         };
       case 'text': {
@@ -571,7 +574,7 @@ function setup_form(args) {
         };
       case 'dummy': {
         var dummy = create_input(frame, elem[1], null);
-        page.appendChild(dummy);
+        last_parent.appendChild(dummy);
         break;
         };
       case 'button_row': {
@@ -581,14 +584,16 @@ function setup_form(args) {
         button_row.style.clear = 'left';
         page.appendChild(button_row);
         for (var j=0, tot_buttons=elem[1].length; j<tot_buttons; j++) {
-          var button = create_button(frame, elem[1][j][1]);
-          button_row.appendChild(button);
-          button.style.marginRight = '10px';
-//          button_row.appendChild(button.parentNode);
-//          // don't know why +4, but otherwise Chrome truncates 'Change password'
-//          button.parentNode.style.width = (button.offsetWidth + 4) + 'px';
-//          button.parentNode.style.height = button.offsetHeight + 'px';
-//          button.parentNode.style.marginRight = '10px';
+          var btn_elem = elem[1][j];
+          if (btn_elem[0] === 'dummy') {
+            var dummy = create_input(frame, btn_elem[1], null);
+            button_row.appendChild(dummy);
+            }
+          else if (btn_elem[0] === 'button') {
+            var button = create_button(frame, btn_elem[1]);
+            button_row.appendChild(button);
+            button.style.marginRight = '10px';
+            };
           };
         break;
         };
@@ -597,9 +602,6 @@ function setup_form(args) {
         if (col.childNodes.length)
           text.style.marginLeft = '5px';
         col.appendChild(button);
-//        col.appendChild(button.parentNode);
-//        button.parentNode.style.width = (button.offsetWidth + 4) + 'px';
-//        button.parentNode.style.height = button.offsetHeight + 'px';
         break;
         };
       case 'nb_start': {
@@ -1113,6 +1115,7 @@ function setup_form(args) {
             };
           };
         frame.page.end_page();
+
         var page = save_pages.pop();
         var frame = save_frames.pop();
         var block = save_blocks.pop();

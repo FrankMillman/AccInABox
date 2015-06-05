@@ -109,6 +109,7 @@
         <xs:element ref="frame_methods"/>
       </xs:sequence>
       <xs:attribute name="main_object"/>
+      <xs:attribute name="obj_descr"/>
       <xs:attribute name="on_start_form"/>
     </xs:complexType>
   </xs:element>
@@ -235,6 +236,7 @@
         <xs:element ref="grid_methods" minOccurs="0"/>
       </xs:sequence>
       <xs:attribute name="data_object" use="required"/>
+      <xs:attribute name="obj_descr"/>
       <xs:attribute name="growable" type="xs:boolean"/>
       <xs:attribute name="num_grid_rows" type="xs:integer"/>
       <xs:attribute name="auto_startrow" type="xs:boolean"/>
@@ -311,6 +313,7 @@
         <xs:element ref="frame_methods" minOccurs="0"/>
       </xs:sequence>
       <xs:attribute name="main_object"/>
+      <xs:attribute name="obj_descr"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="tree">
@@ -342,6 +345,7 @@
         <xs:element ref="frame_methods" minOccurs="0"/>
       </xs:sequence>
       <xs:attribute name="main_object" use="required"/>
+      <xs:attribute name="obj_descr"/>
       <xs:attribute name="combo_type"/>
     </xs:complexType>
   </xs:element>

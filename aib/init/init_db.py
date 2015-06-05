@@ -367,7 +367,7 @@ def setup_fkeys(context):
     db_col.save()
 
     # can only do this after sys_form_defns has been set up
-    db_col = db.api.get_db_object(context, '_sys', 'db_columns')
+    db_col.init()
     db_col.setval('table_name', 'db_tables')
     db_col.setval('col_name', 'setup_form')
     db_col.setval('fkey', ['sys_form_defns', 'form_name', None, None, False])
@@ -418,6 +418,7 @@ def setup_forms(context):
     setup_form('setup_user', 'Setup users', table_name='dir_users')
     setup_form('setup_table', 'Setup database tables', table_name='db_tables')
     setup_form('setup_table_combo', 'Setup database tables')
+    setup_form('setup_table_tree', 'Setup database tables')
     setup_form('setup_table_dbcols', 'Setup database columns')
     setup_form('upd_checks', 'Update checks')
     setup_form('del_checks', 'Delete checks')
@@ -444,6 +445,7 @@ def setup_menus(context):
         ['System setup', 'menu', [
             ['Table definitions', 'grid', 'db_tables', '_sys.db_tables'],
             ['Table combo', 'form', '_sys.setup_table_combo'],
+            ['Table tree', 'form', '_sys.setup_table_tree'],
             ['Form definitions', 'grid', 'sys_form_defns', '_sys.form_list'],
             ['Menu definitions', 'form', '_sys.menu_setup'],
             ]],

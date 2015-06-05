@@ -273,10 +273,6 @@ class GuiTreeCombo(GuiTreeCommon):
                 yield from ht.form_xml.exec_xml(
                     self.tree_frame, self.tree_frame.methods['do_save'])
 
-#       self.db_obj.init()
-#       self.db_obj.setval('type', node_type)
-#       self.db_obj.setval('data_row_id', data_row_id)
-#       if self.db_obj.getval('type') == 'group':
         if node_type == 'group':
             self.group.init()
             self.group.setval('row_id', data_row_id)

@@ -6,7 +6,7 @@ parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
 from random import randint
 import itertools
 from copy import copy
-from collections import OrderedDict
+from collections import OrderedDict as OD
 
 import logging
 logger = logging.getLogger(__name__)
@@ -403,7 +403,7 @@ class Form:
 #                   db_obj.setup_hook(hook)
             cursor = obj_xml.get('cursor')
             if cursor is not None:
-                db_obj.default_cursor = cursor
+                db_obj.default_cursor = cursor  # e.g. users_roles.xml
 
     def setup_mem_objects(self, mem_objects):
         if mem_objects is None:
@@ -509,6 +509,16 @@ class Form:
 
         self.session.request.send_gui(self, gui)
 
+#       for obj in gui:
+#           if obj[0] == 'button_row':
+#               for btn in obj[1]:
+#                   print('{:<9} {}'.format(btn[0], btn[1]['ref']))
+#           elif obj[1] is not None:
+#               if 'subtype_id' in obj[1]:
+#                   print('{:<9} "{}"'.format('subtype', obj[1]['subtype_id']))
+#               elif 'ref' in obj[1]:
+#                   print('{:<9} {}'.format(obj[0], obj[1]['ref']))
+
 #       for obj_id in range(len(self.obj_dict)):
 #           obj = self.obj_dict[obj_id]
 #           print(obj_id, obj.ref, getattr(obj, 'pos', None), obj)
@@ -548,7 +558,7 @@ class Form:
 
     @asyncio.coroutine
     def end_form(self, state):
-        return_params = {}  # data to be returned on completion
+        return_params = OD()  # data to be returned on completion
         output_params = self.form_defn.find('output_params')
         if output_params is not None:
             for output_param in output_params.findall('output_param'):
@@ -700,7 +710,7 @@ class Frame:
         self.company = form.company
         self.ctrl_grid = ctrl_grid
         self.obj_list = []
-        self.subtype_records = {}
+        self.subtype_records = OD()
 
         self.data_objects = form.data_objects
 
@@ -720,6 +730,7 @@ class Frame:
 
         self.main_obj_name = frame_xml.get('main_object')  # else None
         self.db_obj = self.data_objects.get(self.main_obj_name)  # else None
+        self.obj_descr = frame_xml.get('obj_descr')  # else None
 
         toolbar = frame_xml.find('toolbar')
         if toolbar is not None:
@@ -787,7 +798,9 @@ class Frame:
                 tool_attr = {'type': tool_type, 'ref':  tb_text.ref,
                     'lng': tool.get('lng')}
             elif tool_type in ('btn', 'img'):
-                tb_btn = ht.gui_objects.GuiTbButton(self, tool)
+                action = etree.fromstring(
+                    tool.get('action'), parser=parser)
+                tb_btn = ht.gui_objects.GuiTbButton(self, action)
                 tool_attr = {'type': tool_type, 'ref':  tb_btn.ref,
                     'tip': tool.get('tip'), 'name': tool.get('name'),
                     'label': tool.get('label'), 'shortcut': tool.get('shortcut')}
@@ -891,7 +904,7 @@ class Frame:
                     validations = etree.fromstring(
                         validations, parser=parser)
                     for vld in validations.findall('validation'):
-                        fld.form_vlds.append((self, vld))
+                        gui_obj.form_vlds.append(vld)
 
                 after = element.get('after')
                 if after is not None:
@@ -921,6 +934,12 @@ class Frame:
                     'help_msg': fld.col_defn.long_descr, 'value': value}))
                 fld.notify_form(gui_obj)
                 self.flds_notified.append((fld, gui_obj))
+
+                if subtype is not None:
+                    subtype_obj, active = subtype
+                    subtype_obj.append(gui_obj)
+                    gui_obj.hidden = not active
+
             elif element.tag == 'button':
                 btn_label = element.get('btn_label')
                 lng = element.get('lng')
@@ -939,7 +958,12 @@ class Frame:
                     validation = etree.fromstring(
                         validation, parser=parser)
                     for vld in validation.findall('validation'):
-                        button.form_vlds.append((self, vld))
+                        button.form_vlds.append(vld)
+
+                if subtype is not None:
+                    subtype_obj, active = subtype
+                    subtype_obj.append(button)
+                    button.hidden = not active
 
             elif element.tag == 'nb_start':
                 gui.append(('nb_start', None))
@@ -984,13 +1008,19 @@ class Frame:
                     validation = etree.fromstring(
                         validation, parser=parser)
                     for vld in validation.findall('validation'):
-                        gui_obj.form_vlds.append((self, vld))
+                        gui_obj.form_vlds.append(vld)
 
                 after = element.get('after')
                 if after is not None:
                     gui_obj.after_input = etree.fromstring(
                         after, parser=parser)
 
+                if subtype is not None:
+                    subtype_obj, active = subtype
+                    subtype_obj.append(gui_obj)
+                    gui_obj.hidden = not active
+
+    """
     def setup_buttonrow(self, button_row, gui):
 #       validate = button_row.get('validate') != 'false'  # default to True
         validate = button_row.get('validate') == 'true'
@@ -999,7 +1029,7 @@ class Frame:
 
         # store the *last* occurence of each button id
         # this allows a customised button to override a template button
-        button_dict = OrderedDict()
+        button_dict = OD()
         for btn in button_row.findall('button'):
             btn_id = btn.get('btn_id')
             button_dict[btn_id] = btn
@@ -1020,11 +1050,45 @@ class Frame:
             self.btn_dict[btn_id] = button
         if button_list:
             gui.append(('button_row', button_list))
+    """
+
+    def setup_buttonrow(self, button_row, gui):
+        # store the *last* occurence of each button id
+        # this allows a customised button to override a template button
+        button_dict = OD()
+        for btn in button_row.findall('button'):
+            btn_id = btn.get('btn_id')
+            button_dict[btn_id] = btn
+
+        if not button_dict:
+            return
+
+        button_list = []
+
+        validate = button_row.get('validate') == 'true'
+        if validate:  # create dummy field to force validation of last field
+            ht.gui_objects.GuiDummy(self, button_list)
+
+        for btn_id in button_dict:
+            btn = button_dict[btn_id]
+            btn_label = btn.get('btn_label')
+            lng = btn.get('lng')
+            enabled = (btn.get('btn_enabled') == 'true')
+            must_validate = (btn.get('btn_validate') == 'true')
+            default = (btn.get('btn_default') == 'true')
+            help_msg = btn.get('help_msg', '')
+            action = etree.fromstring(
+                btn.get('action'), parser=parser)
+            button = ht.gui_objects.GuiButton(self, button_list, btn_label,
+                lng, enabled, must_validate, default, help_msg, action)
+            self.btn_dict[btn_id] = button
+
+        gui.append(('button_row', button_list))
 
     def setup_methods(self, methods, gui):
         # store the *last* occurence of each method name
         # this allows a customised method to override a template method
-        method_dict = OrderedDict()
+        method_dict = OD()
         for method in methods.findall('method'):
             method_name = method.get('name')
             method_dict[method_name] = method
@@ -1062,7 +1126,9 @@ class Frame:
         # self.subtype_records = dict - key=subtype name, value=list, of which -
         #   1st element = active subtype (used to hide/show objects when active subtype changes)
         #   2nd element = dict - key=subtype value, value=list of gui objects for subtype
-        self.subtype_records[subtype] = [None, {None: []}]
+#       self.subtype_records[subtype] = [None, {None: []}]
+        self.subtype_records[subtype] = [None, OD()]
+        self.subtype_records[subtype][1][None] = []
 
         subtype_gui = []  # build up the gui elements needed in a separate array
         subtype_gui.append(('panel',
@@ -1079,6 +1145,9 @@ class Frame:
             self.subtype_records[subtype][1][subtype_id] = []
             subtype_obj = self.subtype_records[subtype][1][subtype_id]
             active = (subtype_id == subtype_fld._value)
+
+            if active:
+                self.subtype_records[subtype][0] = subtype_fld._value
 
             subtype_gui.append(('panel',
                 {'title': '', 'ratio': None, 'gap': 8,
@@ -1119,6 +1188,12 @@ class Frame:
                 subtype_obj.append(gui_obj)
 
         if subtype_gui:
+#           for obj in subtype_gui:
+#               if obj[1] is not None:
+#                   if 'subtype_id' in obj[1]:
+#                       print('{} "{}"'.format(obj[0], obj[1]['subtype_id']))
+#                   elif 'ref' in obj[1]:
+#                       print('{} {}'.format(obj[0], obj[1]['ref']))
             gui.append(('start_subtype', subtype))
             gui.extend(subtype_gui)
             gui.append(('end_subtype', None))
@@ -1132,7 +1207,9 @@ class Frame:
         # self.subtype_records = dict - key=subtype name, value=list, of which -
         #   1st element = active subtype (used to hide/show objects when active subtype changes)
         #   2nd element = dict - key=subtype value, value=list of gui objects for subtype
+
         active_subtype_id = subtype_records[0]
+
         if value == active_subtype_id:
             return
 
@@ -1144,6 +1221,7 @@ class Frame:
         new_subtype = subtype_records[1][value]
         for gui_obj in new_subtype:
             gui_obj.hidden = False
+            gui_obj._redisplay()
 
 #       # send message to client to hide active subtype and show new subtype
 #       self.session.set_subtype(self, subtype, value)
@@ -1356,7 +1434,7 @@ class Frame:
     def check_children(self, db_obj):
         # check that no child is 'dirty' before saving parent
         # children are always in a grid
-        # if there is there is a grid_frame, it could also contain a grid,
+        # if there is a grid_frame, it could also contain a grid,
         #   so the check has to be carried out recursively
         @asyncio.coroutine
         def check(frame):

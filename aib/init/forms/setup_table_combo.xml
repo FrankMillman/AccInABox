@@ -265,17 +265,19 @@
               <</action>>
             "/>
           <col/>
-          <button lng="150" btn_id="form_defn" btn_label="Form definition"
+          <button lng="150" btn_id="form_defn" btn_label="Sequence"
             btn_enabled="true" btn_validate="true" action="
               <<action>>
-                <<inline_form form_name=`_sys.Form setup`/>>
+                <<!--inline_form form_name=`_sys.table_sequence`/-->>
               <</action>>
             "/>
           <row/>
           <col/>
-          <label value="Form definition:"/>
+          <label value="Default cursor:"/>
+          <input fld="db_table.default_cursor" lng="100"/>
           <col/>
-          <input fld="db_table.setup_form" lng="150"/>
+          <label value="Form definition:"/>
+          <input fld="db_table.setup_form" lng="100"/>
         </body>
         <button_row validate="true" template="Tree_Frame">
           <button btn_id="create_table" btn_label="Create table" btn_enabled="true"

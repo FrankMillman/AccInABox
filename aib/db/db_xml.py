@@ -221,6 +221,7 @@ def setup_disp_name(db_obj, xml):
     if table_key in tables_open:
         del tables_open[table_key]
 
+""" - moved to custom.table_setup.py
 # called from table_formview
 @asyncio.coroutine
 def setup_audit_cols(caller, xml):
@@ -273,3 +274,4 @@ def create_table(caller, xml):
     with db_table.context.db_session as conn:
         db.create_table.create_table(conn, db_table.data_company,
             db_table.getval('table_name'))
+"""

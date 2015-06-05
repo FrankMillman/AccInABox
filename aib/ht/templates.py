@@ -519,7 +519,6 @@ class Grid_Frame:  # template for a grid_frame
             '&lt;action&gt;'
               '&lt;check_children obj_name=&quot;{obj_name}&quot;/&gt;'
               '&lt;save_obj obj_name=&quot;{obj_name}&quot;/&gt;'
-              '&lt;after_save/&gt;'  # check position of grid row after save
             '&lt;/action&gt;'
           '"/>'
           '<method name="do_restore" action="'

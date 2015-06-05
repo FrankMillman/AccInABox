@@ -2,7 +2,6 @@ import importlib
 import asyncio
 import operator
 import hashlib
-from errors import AibError
 
 @asyncio.coroutine
 def get_form_dflt(obj, dflt):
@@ -113,6 +112,7 @@ def compare(ctx, obj, value, xml):
     op = getattr(operator, xml.get('op'))
     return op(source_value, target_value)
 
+@asyncio.coroutine
 def ask(ctx, obj, value, xml):
     answers = []
     callbacks = {}
@@ -129,9 +129,3 @@ def ask(ctx, obj, value, xml):
         ctx, title, question, answers, default, escape)
     answer = callbacks[ans]
     yield from on_answer(ctx, obj, value, answer)
-
-def error(ctx, obj, value, xml):
-    raise AibError(
-        head=xml.get('head') or None,
-        body=xml.get('body').replace('$value', value or '') or None
-        )

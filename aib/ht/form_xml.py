@@ -12,7 +12,7 @@ from start import log, debug
 
 @asyncio.coroutine
 def on_click(caller, btn):  # caller can be frame or grid
-    for xml in btn.xml:
+    for xml in btn.action:
         if debug: log.write('CLICK {} {}\n\n'.format(caller, xml.tag))
         yield from globals()[xml.tag](caller, xml)
         if caller.session.request.db_events:
@@ -50,6 +50,7 @@ def chk_db_events(caller):
 
 #----------------------------------------------------------------------
 # the following functions are called via their xml.tag, using globals()
+# they are coroutines, and use the @asyncio.coroutine decorator
 #----------------------------------------------------------------------
 
 @asyncio.coroutine
@@ -59,13 +60,7 @@ def case(caller, xml):
             for step in child:
                 if debug: log.write('STEP {} {}\n\n'.format(caller, step.tag))
                 yield from globals()[step.tag](caller, step)
-#               if caller.session.request.db_events:
-#                   yield from chk_db_events(caller)
             break
-
-def obj_exists(caller, xml):
-    obj_name = xml.get('obj_name')
-    return caller.data_objects[obj_name].exists
 
 @asyncio.coroutine
 def repos_row(grid, xml):
@@ -75,95 +70,6 @@ def repos_row(grid, xml):
     # purpose - locate the existing record in the grid and move to it
     if grid.inserted:
         yield from grid.repos_row()
-
-"""
-def any_data_changed(caller, xml):
-    if caller.db_obj is None:
-        return False
-    if caller.data_changed():
-        return True
-    for grid in caller.grids:
-        if grid.data_changed():
-            return True
-        if grid.grid_frame is not None:
-            if any_data_changed(grid.grid_frame, xml):
-                return True
-    return False
-
-def data_changed(caller, xml):
-    obj_name = xml.get('obj_name')
-    db_obj = caller.data_objects[obj_name]
-    return caller.data_changed(db_obj)
-"""
-
-def fld_changed(caller, xml):
-    # assume this is only called from after_input()
-    # _before_input has been set up before calling after_input()
-    dbobj_name, fld_name = xml.get('name').split('.')
-    dbobj = caller.data_objects[dbobj_name]
-    fld = dbobj.getfld(fld_name)
-    return fld.getval() != fld._before_input
-
-def data_changed(caller, xml):
-    return caller.data_changed()
-
-def has_gridframe(caller, xml):
-    if caller.grid_frame is not None:
-        print('has_gridframe() - DO WE GET HERE?')
-    return caller.grid_frame is not None
-
-def row_inserted(caller, xml):
-    # called from grid
-    return caller.inserted == 1
-
-def frame_row_inserted(caller, xml):
-    # called from frame
-    if caller.ctrl_grid is None:
-        return False
-    return caller.ctrl_grid.inserted == 1
-
-def node_inserted(caller, xml):
-    return caller.parent.node_inserted
-
-def compare(caller, xml):
-    """
-    <compare src="pwd_var.pwd1" op="eq" tgt="">
-    """
-    source = xml.get('src')
-    if '.' in source:
-        source_objname, source_colname = source.split('.')
-        source_record = caller.data_objects[source_objname]
-        source_field = source_record.getfld(source_colname)
-        source_value = source_field.getval()
-    else:
-        source_value = source
-
-    target = xml.get('tgt')
-    if target == '$None':
-        target_value = None
-    elif target == '$True':
-        target_value = True
-    elif target == '$False':
-        target_value = False
-    elif target.startswith('eval('):
-        target_value = literal_eval(target[5:-1])
-    elif '.' in target:
-        target_objname, target_colname = target.split('.')
-        target_record = caller.data_objects[target_objname]
-        target_field = target_record.getfld(target_colname)
-        target_value = target_field.getval()
-    else:
-        target_value = target
-
-#   print('"{}" {} "{}"'.format(source_value, xml.get('op'), target_value))
-
-    op = getattr(operator, xml.get('op'))
-    return op(source_value, target_value)
-
-def btn_has_label(caller, xml):
-    btn_id = xml.get('btn_id')
-    btn = caller.btn_dict[btn_id]
-    return btn.label == xml.get('label')
 
 @asyncio.coroutine
 def init_obj(caller, xml):
@@ -247,10 +153,11 @@ def validate_save(caller, xml):
 def validate_all(caller, xml):
     yield from caller.validate_all()
 
-@asyncio.coroutine
-def after_save(caller, xml):
-    # called by grid_frame do_save()
-    yield from caller.parent.after_save()
+# don't think this is ever called [2015-05-18]
+#@asyncio.coroutine
+#def after_save(caller, xml):
+#    # called by grid_frame do_save()
+#    yield from caller.parent.after_save()
 
 @asyncio.coroutine
 def gridframe_dosave(caller, xml):
@@ -274,10 +181,12 @@ def check_children(frame, xml):
 def save_obj(frame, xml):
     db_obj = frame.data_objects.get(xml.get('obj_name'))
     if frame.ctrl_grid is not None:
-        if frame.frame_type != 'grid_frame':
+        if frame.frame_type == 'grid_frame':
+            yield from frame.ctrl_grid.save_row()
+        else:
             yield from frame.ctrl_grid.try_save()
-            return
-    yield from frame.save_obj(db_obj)
+    else:
+        yield from frame.save_obj(db_obj)
 
 @asyncio.coroutine
 def save_row(grid, xml):
@@ -528,15 +437,21 @@ def ask(caller, xml):
     escape = xml.get('escape')
     question = xml.get('question')
     if '{obj_descr}' in question:
-        if isinstance(caller, ht.gui_grid.GuiGrid):
-            obj = caller.obj_list[0]
+        if caller.obj_descr is not None:
+            obj_name, col_name = caller.obj_descr.split('.')
+            db_obj = caller.data_objects[obj_name]
+            fld = db_obj.getfld(col_name)
+        elif isinstance(caller, ht.gui_grid.GuiGrid):
+            gui_obj = caller.obj_list[0]
+            fld = gui_obj.fld
         else:
             if caller.frame_type == 'grid_frame':
-                obj = caller.ctrl_grid.obj_list[0]
+                gui_obj = caller.ctrl_grid.obj_list[0]
             else:
-                obj = caller.obj_list[0]
+                gui_obj = caller.obj_list[0]
+            fld = gui_obj.fld
         question = question.replace(
-            '{obj_descr}', repr(obj.fld.getval()))
+            '{obj_descr}', repr(fld.getval()))
     for response in xml.findall('response'):
         ans = response.get('ans')
         answers.append(ans)
@@ -668,3 +583,101 @@ def return_from_subform(caller, state, output_params, calling_xml):
 def find_row(caller, xml):
     grid_ref, row = caller.btn_args
     print('FIND ROW', xml.get('name'), 'row={}'.format(row))
+
+#------------------------------------------------------------------------
+# the following are boolean functions called from case(), using globals()
+# they are not coroutines, so do not use the @asyncio.coroutine decorator
+#------------------------------------------------------------------------
+
+"""
+def any_data_changed(caller, xml):
+    if caller.db_obj is None:
+        return False
+    if caller.data_changed():
+        return True
+    for grid in caller.grids:
+        if grid.data_changed():
+            return True
+        if grid.grid_frame is not None:
+            if any_data_changed(grid.grid_frame, xml):
+                return True
+    return False
+
+def data_changed(caller, xml):
+    obj_name = xml.get('obj_name')
+    db_obj = caller.data_objects[obj_name]
+    return caller.data_changed(db_obj)
+"""
+
+def obj_exists(caller, xml):
+    obj_name = xml.get('obj_name')
+    return caller.data_objects[obj_name].exists
+
+def fld_changed(caller, xml):
+    # assume this is only called from after_input()
+    # _before_input has been set up before calling after_input()
+    dbobj_name, fld_name = xml.get('name').split('.')
+    dbobj = caller.data_objects[dbobj_name]
+    fld = dbobj.getfld(fld_name)
+    return fld.getval() != fld._before_input
+
+def data_changed(caller, xml):
+    return caller.data_changed()
+
+def has_gridframe(caller, xml):
+    if caller.grid_frame is not None:
+        print('has_gridframe() - DO WE GET HERE?')
+    return caller.grid_frame is not None
+
+def row_inserted(caller, xml):
+    # called from grid
+    return caller.inserted == 1
+
+def frame_row_inserted(caller, xml):
+    # called from frame
+    if caller.ctrl_grid is None:
+        return False
+    return caller.ctrl_grid.inserted == 1
+
+def node_inserted(caller, xml):
+    return caller.parent.node_inserted
+
+def compare(caller, xml):
+    """
+    <compare src="pwd_var.pwd1" op="eq" tgt="">
+    """
+    source = xml.get('src')
+    if '.' in source:
+        source_objname, source_colname = source.split('.')
+        source_record = caller.data_objects[source_objname]
+        source_field = source_record.getfld(source_colname)
+        source_value = source_field.getval()
+    else:
+        source_value = source
+
+    target = xml.get('tgt')
+    if target == '$None':
+        target_value = None
+    elif target == '$True':
+        target_value = True
+    elif target == '$False':
+        target_value = False
+    elif target.startswith('eval('):
+        target_value = literal_eval(target[5:-1])
+    elif '.' in target:
+        target_objname, target_colname = target.split('.')
+        target_record = caller.data_objects[target_objname]
+        target_field = target_record.getfld(target_colname)
+        target_value = target_field.getval()
+    else:
+        target_value = target
+
+#   print('"{}" {} "{}"'.format(source_value, xml.get('op'), target_value))
+
+    op = getattr(operator, xml.get('op'))
+    return op(source_value, target_value)
+
+def btn_has_label(caller, xml):
+    btn_id = xml.get('btn_id')
+    btn = caller.btn_dict[btn_id]
+    return btn.label == xml.get('label')

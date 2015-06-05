@@ -61,6 +61,7 @@ class GuiGrid:
         self.obj_name = element.get('data_object')
         self.db_obj = parent.data_objects[self.obj_name]
         self.db_obj.check_perms('select')
+        self.obj_descr = element.get('obj_descr')  # else None
 
         #self.db_obj.init()   # in case form closed and re-opened (why?)
         self.parent = parent
@@ -264,7 +265,7 @@ class GuiGrid:
                 if validation is not None:
                     validations = etree.fromstring(validation, parser=parser)
                     for vld in validations.findall('validation'):
-                        fld.form_vlds.append((self, vld))
+                        gui_obj.form_vlds.append(vld)
 
                 if after is not None:
                     gui_obj.after_input = etree.fromstring(
@@ -344,7 +345,9 @@ class GuiGrid:
                 tool_attr = {'type': tool_type, 'ref':  tb_text.ref,
                     'lng': tool.get('lng')}
             elif tool_type in ('btn', 'img'):
-                tb_btn = ht.gui_objects.GuiTbButton(self, tool)
+                action = etree.fromstring(
+                    tool.get('action'), parser=parser)
+                tb_btn = ht.gui_objects.GuiTbButton(self, action)
                 tool_attr = {'type': tool_type, 'ref':  tb_btn.ref,
                     'tip': tool.get('tip'), 'name': tool.get('name'),
                     'label': tool.get('label'), 'shortcut': tool.get('shortcut')}
@@ -880,12 +883,6 @@ class GuiGrid:
         if debug:
             log.write('SAVED {}\n\n'.format(self.db_obj))
 
-        # after_save has been split so that it can be called independently
-        #   when saving a grid_frame
-        yield from self.after_save()
-
-    @asyncio.coroutine
-    def after_save(self):
         if self.inserted:
             self.no_rows += 1
             new_row = self.db_obj.cursor_row
@@ -902,12 +899,6 @@ class GuiGrid:
                     self.ref, new_row, first_col_obj.ref)
             self.inserted = 0
             self.current_row = new_row
-
-#   def do_restore(self):
-#       if 'do_restore' in self.methods:
-#           ht.form_xml.exec_xml(self, self.methods['do_restore'])
-#       else:
-#           self.db_obj.restore()
 
     @asyncio.coroutine
     def validate(self, save):

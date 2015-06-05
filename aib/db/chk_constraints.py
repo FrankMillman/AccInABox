@@ -23,10 +23,16 @@ def chk_constraint(ctx, constraint, value=None, errmsg=None):
             new_check.append(lbr)
         if src == '$value':
             src_val = value
+        elif src == '$orig':
+            src_val = fld.get_orig()
+        elif src == '$exists':
+            src_val = db_obj.exists
         else:
             src_val = db_obj.getval(src)
         if tgt == '':
             tgt_val = None
+        elif tgt == '$orig':
+            tgt_val = fld.get_orig()
         elif tgt in db_obj.fields:
             tgt_val = db_obj.getval(tgt)
         else:

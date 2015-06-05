@@ -1,6 +1,4 @@
 import asyncio
-from lxml import etree
-parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
 
 import db.api
 import ht.form_xml
@@ -36,6 +34,7 @@ class GuiCtrl:
         self.form_dflt = None
         self.after_input = None
         self.pwd = ''  # over-ridden with 'seed' if type is pwd
+        self.form_vlds = []
 #       self.choices = None  # over-ridden if type is GuiChoice
 #       fld.notify_form(self)
 #       if fld._value:
@@ -83,26 +82,37 @@ class GuiCtrl:
             yield from self.fld.setval_async(self.fld.getval())  # can raise AibError
         """
 
+        fld = self.fld
+
         if self.ref in temp_data:  # user has entered a value
-            value = self.fld.str_to_val(temp_data[self.ref])
+            value = fld.str_to_val(temp_data[self.ref])
             del temp_data[self.ref]
         else:  # not in temp_data - get current value, or if None, default value
-            value = self.fld.getval()
+            value = fld.getval()
             if value is None:
-                value = self.fld.get_dflt()
+                value = fld.get_dflt()
 
         if self.after_input is not None:  # steps to perform after input
-            self.fld._before_input = self.fld.getval()  # used in after_input()
+            fld._before_input = fld.getval()  # used in after_input()
 
-        yield from self.fld.setval_async(value)  # can raise AibError
+        # this is a copy of setval() in db.object_fields, with the addition
+        #   of checking any 'form' validations
+        fld.validate(value)
+        for vld in self.form_vlds:
+            yield from check_vld(
+                fld, fld.col_defn.short_descr, self.parent, vld, value)
+        if fld.value_changed(value):
+            fld.continue_setval(value)
 
         if self.after_input is not None:  # steps to perform after input
             yield from ht.form_xml.after_input(self)
-            del self.fld._before_input
+            del fld._before_input
 
-    def _redisplay(self):  # must only be called from db module
+    def _redisplay(self):  # may only be called from db module or set_subtype
         if self.pwd:
             return  # do not send password back to client
+        if self.hidden:
+            return  # do not send hidden objects back to client
         value = self.fld.val_to_str()  # prepare value for display
         if hasattr(self.parent, 'current_row'):  # grid object
             if self.parent.current_row is None:
@@ -291,6 +301,7 @@ class GuiDummy:  # dummy field to force validation of last real field
         self.form_dflt = None
         self.after_input = None
         self.col_name = 'dummy'
+        self.hidden = False  # for 'subtype' gui objects
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
         self.pos = pos
@@ -300,10 +311,15 @@ class GuiDummy:  # dummy field to force validation of last real field
     def __str__(self):
         return 'dummy'
 
+    def _redisplay(self):
+        pass  # could be called from set_subtype
+
     @asyncio.coroutine
     def validate(self, temp_data, tab=False):
-        for vld in self.form_vlds:  # 'vld' is a tuple of (ctx, xml)
-            yield from check_vld(self, 'Dummy', vld)
+        if self.hidden:  # unused subtype fields
+            return
+        for vld in self.form_vlds:
+            yield from check_vld(self, 'Dummy', self.parent, vld)
         if self.after_input is not None:  # steps to perform after input
             yield from ht.form_xml.after_input(self)
 
@@ -314,10 +330,9 @@ class GuiButton:
 #       self.root_id = form.root_id
 #       self.form_id = form.form_id
         self.parent = parent
-#       self.xml = element
-#       self.xml = etree.fromstring(element.get('action'), parser=parser)
+        self.hidden = False  # for 'subtype' gui objects
         self.form_vlds = []
-        self.xml = action
+        self.action = action
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
         self.pos = pos
@@ -340,10 +355,15 @@ class GuiButton:
     def __str__(self):
         return "Button: '{}'".format(self.label)
 
+    def _redisplay(self):
+        pass  # could be called from set_subtype
+
     @asyncio.coroutine
     def validate(self, temp_data, tab=False):
-        for vld in self.form_vlds:  # 'vld' is a tuple of (ctx, xml)
-            yield from check_vld(self, self.label, vld)
+        if self.hidden:  # unused subtype fields
+            return
+        for vld in self.form_vlds:
+            yield from check_vld(self, self.label, self.parent, vld)
 
     def change_button(self, attr, value):
         # attr can be enabled/default/label/show
@@ -370,7 +390,7 @@ class GuiNbButton:  # Notebook button (prev/next page)
 #       self.root_id = form.root_id
 #       self.form_id = form.form_id
 #       self.frame = frame
-        self.xml = element
+        self.action = element
         self.must_validate = False
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
@@ -384,12 +404,12 @@ class GuiNbButton:  # Notebook button (prev/next page)
 """
 
 class GuiTbButton:  # Toolbar button
-    def __init__(self, parent, element):
+    def __init__(self, parent, action):
 #       self.root_id = form.root_id
 #       self.form_id = form.form_id
 #       self.frame = frame
         self.parent = parent
-        self.xml = etree.fromstring(element.get('action'), parser=parser)
+        self.action = action
         ref, pos = parent.form.add_obj(parent, self, add_to_list=False)
         self.ref = ref
         #self.pos = pos

@@ -1,41 +1,40 @@
 import asyncio
+import importlib
 import operator
 import hashlib
 from errors import AibError
 
 @asyncio.coroutine
-def check_vld(obj, descr, vld, value=None):
-    ctx, vld = vld
+def check_vld(fld, descr, ctx, vld, value=None):
+#   ctx, vld = vld
     for xml in vld:
-        yield from globals()[xml.tag](ctx, obj, value, xml)
+        yield from globals()[xml.tag](ctx, fld, value, xml)
 
 @asyncio.coroutine
-def on_answer(ctx, obj, value, elem):
+def on_answer(ctx, fld, value, elem):
     for xml in elem:
-        yield from globals()[xml.tag](ctx, obj, value, xml)
+        yield from globals()[xml.tag](ctx, fld, value, xml)
 
 #----------------------------------------------------------------------
 # the following functions are called via their xml.tag, using globals()
+# they are coroutines, and use the @asyncio.coroutine decorator
 #----------------------------------------------------------------------
 
-def obj_exists(ctx, obj, value, xml):
-    """
-    <obj_exists obj_name="db_table"/>
-    """
-    target = xml.get('obj_name')
-    target_record = ctx.data_objects[target]
-    return target_record.exists
-
-def node_inserted(ctx, obj, value, xml):
-    return bool(ctx.parent.node_inserted)  # False, or tuple of (parent_id, seq)
+@asyncio.coroutine
+def case(ctx, fld, value, xml):
+    for child in xml:
+        if child.tag == 'default' or globals()[child.tag](ctx, fld, value, child):
+            for step in child:
+                yield from globals()[step.tag](ctx, fld, value, step)
+            break
 
 @asyncio.coroutine
-def init_obj(ctx, obj, value, xml):
+def init_obj(ctx, fld, value, xml):
     obj_name = xml.get('obj_name')
     ctx.data_objects.get(obj_name).init()
 
 @asyncio.coroutine
-def select_row(ctx, obj, value, xml):
+def select_row(ctx, fld, value, xml):
     """
     <select_row obj_name="dir_user" key="user_row_id" value="var.user"/>
     """
@@ -53,14 +52,44 @@ def select_row(ctx, obj, value, xml):
     db_obj.select_row({key_field: key_value})
 
 @asyncio.coroutine
-def case(ctx, obj, value, xml):
-    for child in xml:
-        if child.tag == 'default' or globals()[child.tag](ctx, obj, value, child):
-            for step in child:
-                yield from globals()[step.tag](ctx, obj, value, step)
-            break
+def pyfunc(ctx, fld, value, xml):
+    func_name = xml.get('name')
+    if '.' in func_name:
+        module_name, func_name = func_name.rsplit('.', 1)
+        module = importlib.import_module(module_name)
+        getattr(module, func_name)(ctx, fld, value, xml)
 
-def compare(ctx, obj, value, xml):
+@asyncio.coroutine
+def ask(ctx, fld, value, xml):
+    answers = []
+    callbacks = {}
+
+    title = xml.get('title')
+    default = xml.get('enter')
+    escape = xml.get('escape')
+    question = xml.get('question')
+    for response in xml.findall('response'):
+        ans = response.get('ans')
+        answers.append(ans)
+        callbacks[ans] = response
+    ans = yield from ctx.session.request.ask_question(
+        ctx, title, question, answers, default, escape)
+    answer = callbacks[ans]
+    yield from on_answer(ctx, fld, value, answer)
+
+@asyncio.coroutine
+def error(ctx, fld, value, xml):
+    raise AibError(
+        head=xml.get('head') or None,
+        body=xml.get('body').replace('$value', value or '') or None
+        )
+
+#------------------------------------------------------------------------
+# the following are boolean functions called from case(), using globals()
+# they are not coroutines, so do not use the @asyncio.coroutine decorator
+#------------------------------------------------------------------------
+
+def compare(ctx, fld, value, xml):
     """
     <compare src="$value" op="ne" tgt="pwd_var.pwd1"/>
     """
@@ -102,25 +131,13 @@ def compare(ctx, obj, value, xml):
     op = getattr(operator, xml.get('op'))
     return op(source_value, target_value)
 
-def ask(ctx, obj, value, xml):
-    answers = []
-    callbacks = {}
+def obj_exists(ctx, fld, value, xml):
+    """
+    <obj_exists obj_name="db_table"/>
+    """
+    target = xml.get('obj_name')
+    target_record = ctx.data_objects[target]
+    return target_record.exists
 
-    title = xml.get('title')
-    default = xml.get('enter')
-    escape = xml.get('escape')
-    question = xml.get('question')
-    for response in xml.findall('response'):
-        ans = response.get('ans')
-        answers.append(ans)
-        callbacks[ans] = response
-    ans = yield from ctx.session.request.ask_question(
-        ctx, title, question, answers, default, escape)
-    answer = callbacks[ans]
-    yield from on_answer(ctx, obj, value, answer)
-
-def error(ctx, obj, value, xml):
-    raise AibError(
-        head=xml.get('head') or None,
-        body=xml.get('body').replace('$value', value or '') or None
-        )
+def node_inserted(ctx, fld, value, xml):
+    return bool(ctx.parent.node_inserted)  # False, or tuple of (parent_id, seq)

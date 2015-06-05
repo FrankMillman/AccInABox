@@ -188,7 +188,6 @@
               <<check_children obj_name=`db_cur`/>>
               <<pyfunc name=`custom.cursor_fields.dump_cur_flds`/>>
               <<save_obj obj_name=`db_cur`/>>
-              <<after_save/>>
             <</action>>
           "/>
           <method name="do_restore" action="

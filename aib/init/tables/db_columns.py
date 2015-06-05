@@ -179,7 +179,7 @@ cols.append ({
     'max_len'    : 5,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
+    'dflt_val'   : 'TEXT',
     'col_chks'   : None,
     'fkey'       : None,
     'choices'    : [
@@ -267,7 +267,7 @@ cols.append ({
     'max_len'    : 1,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
+    'dflt_val'   : 'N',
     'col_chks'   : None,
     'fkey'       : None,
     'choices'    : [

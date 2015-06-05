@@ -5,7 +5,7 @@
   <mem_objects/>
   <input_params/>
   <output_params/>
-  <frame main_object="db_col">
+  <frame main_object="db_col" obj_descr="db_col.col_name">
     <toolbar template="Setup_Form"/>
     <body>
       <block/>
