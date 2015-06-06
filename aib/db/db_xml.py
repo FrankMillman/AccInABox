@@ -28,20 +28,31 @@ def case(db_obj, xml):
 
 def compare(db_obj, xml):
     """
-    <compare src="col_type" op="eq" tgt="user">
+    <compare src="col_type" op="eq" tgt="'user'">
     """
     source = xml.get('src')
     source_field = db_obj.getfld(source)
     source_value = source_field.getval()
 
     target = xml.get('tgt')
-    if '.' in target:
-        target_objname, target_colname = target.split('.')
-        target_record = form.data_objects[target_objname]
-        target_field = target_record.getfld(target_colname)
-        target_value = target_field.getval()
-    else:
-        target_value = target
+    if target.startswith("'"):  # literal string
+        target_value = target[1:-1]
+    else:  # assume it is a column name
+        if target.endswith('$orig'):
+            orig = True
+            target = target[:-5]
+        else:
+            orig = False
+        if '.' in target:
+            target_objname, target_colname = target.split('.')
+            target_obj = form.data_objects[target_objname]
+            target_field = target_obj.getfld(target_colname)
+        else:
+            target_field = db_obj.getfld(target)
+        if orig:
+            target_value = target_field.get_orig()
+        else:
+            target_value = target_field.getval()
 
     #print('"{0}" {1} "{2}"'.format(source_value, xml.get('op'), target_value))
 
@@ -126,24 +137,28 @@ def create_company(db_obj, xml):
             db_obj.getval('company_id'), db_obj.getval('company_name'))
 
 def add_column(db_obj, xml):
+    column = [fld.getval() for fld in db_obj.select_cols]
     with db_obj.context.db_session as conn:
-        sql = 'ALTER TABLE {}.{} ADD {} {}'.format(
-            db_obj.db_table.defn_company,
+        col = db.create_table.setup_column(conn, column)
+        sql = 'ALTER TABLE {}.{} ADD {}'.format(
+            db_obj.db_table.data_company,
             db_obj.getval('table_name'),
-            db_obj.getval('col_name'),
-            db_obj.getval('data_type'))
-        conn.cur.execute(conn.convert_string(sql))
+            col)
+        conn.cur.execute(sql)
         sql = 'SELECT audit_trail FROM {}.db_tables WHERE table_name = {}'.format(
             db_obj.db_table.defn_company, conn.param_style)
         conn.cur.execute(sql, [db_obj.getval('table_name')])
         audit_trail = conn.cur.fetchone()[0]
         if audit_trail:
-            sql = 'ALTER TABLE {}.{}_audit ADD {} {}'.format(
-                db_obj.db_table.defn_company,
+            sql = 'ALTER TABLE {}.{}_audit ADD {}'.format(
+                db_obj.db_table.data_company,
                 db_obj.getval('table_name'),
-                db_obj.getval('col_name'),
-                db_obj.getval('data_type'))
-            conn.cur.execute(conn.convert_string(sql))
+                col.replace(' NOT NULL', ''))  # allow null in audit column
+            conn.cur.execute(sql)
+
+def amend_allow_null(db_obj, xml):
+    with db_obj.context.db_session as conn:
+        conn.amend_allow_null(db_obj)
 
 def setup_disp_name(db_obj, xml):
     choices = db_obj.getval('choices')

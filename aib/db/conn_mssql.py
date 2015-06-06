@@ -1,6 +1,9 @@
 import pyodbc
 from datetime import datetime
 
+from errors import AibError
+import db.create_table
+
 def customise(DbConn, db_params):
     # add db-specific methods to DbConn class
     DbConn.init = init
@@ -16,6 +19,7 @@ def customise(DbConn, db_params):
     DbConn.create_index = create_index
     DbConn.tree_select = tree_select
     DbConn.escape_string = escape_string
+    DbConn.amend_allow_null = amend_allow_null
     # create class attributes from db parameters
     DbConn.database = db_params['database']
     DbConn.user = db_params['user']
@@ -33,7 +37,7 @@ def init(self, pos):
     self.func_prefix = 'dbo.'
     self.concat = '+'
     self.repeat = 'replicate'
-    self.exception = pyodbc.DatabaseError
+    self.exception = (pyodbc.DatabaseError, pyodbc.IntegrityError)
     self.msg_pos = 0
     # SQL Server 2000/2005 does not have a Date type - apparently 2008 does
     self.now = datetime.now
@@ -363,3 +367,17 @@ def tree_select(self, company_id, table_name, start_col, start_value,
 
 def escape_string():
     return ''
+
+def amend_allow_null(self, db_obj):
+    column = [fld.getval() for fld in db_obj.select_cols]
+
+    col = db.create_table.setup_column(self, column)
+    sql = 'ALTER TABLE {}.{} ALTER COLUMN {}'.format(
+        db_obj.data_company,
+        db_obj.getval('table_name'),
+        col)
+    try:
+        self.exec_sql(sql)
+    except self.exception as err:
+        raise AibError(head='Alter {}'.format(db_obj.table_name),
+            body=str(err))

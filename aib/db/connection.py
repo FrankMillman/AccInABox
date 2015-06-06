@@ -635,10 +635,11 @@ class DbSession:
 
     def __exit__(self, type, exc, tb):
         if type is not None:  # an exception occurred
-            self.conn.cur.close()
-            self.conn.release(rollback=True)  # rollback, return connection to pool
-            self.conn = None
-            self.no_connections = 0
+            if self.conn is not None:  # can happen if > 1 exception raised
+                self.conn.cur.close()
+                self.conn.release(rollback=True)  # rollback, return connection to pool
+                self.conn = None
+                self.no_connections = 0
             return  # will reraise exception
         self.no_connections -= 1
         if not self.no_connections:

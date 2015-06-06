@@ -3,6 +3,8 @@ import psycopg2
 import psycopg2.extensions  # so that strings are returned as unicode
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
 
+from errors import AibError
+
 # bytea data is usually returned as a 'memoryview'
 # this creates a problem - after a roundtrip to the database, it no
 #   longer compares equal to the original object
@@ -30,6 +32,7 @@ def customise(DbConn, db_params):
     DbConn.create_index = create_index
     DbConn.tree_select = tree_select
     DbConn.escape_string = escape_string
+    DbConn.amend_allow_null = amend_allow_null
     # create class attributes from db parameters
     DbConn.database = db_params['database']
     DbConn.host = db_params['host']
@@ -360,3 +363,17 @@ def tree_select(self, company_id, table_name, start_col, start_value,
 
 def escape_string():
     return ''
+
+def amend_allow_null(self, db_obj):
+    allow_null = db_obj.getfld('allow_null').getval()
+    print('SET allow_null =', allow_null)
+    sql = 'ALTER TABLE {}.{} ALTER COLUMN {} {}'.format(
+        db_obj.data_company,
+        db_obj.getval('table_name'),
+        db_obj.getval('col_name'),
+        'DROP NOT NULL' if allow_null else 'SET NOT NULL')
+    try:
+        self.exec_sql(sql)
+    except self.exception as err:
+        raise AibError(head='Alter {}'.format(db_obj.table_name),
+            body=str(err))

@@ -3,6 +3,8 @@ import os
 from datetime import date, datetime, timedelta
 from decimal import Decimal as D
 
+import db.create_table
+
 def customise(DbConn, db_params):
     # add db-specific methods to DbConn class
     DbConn.init = init
@@ -26,6 +28,7 @@ def customise(DbConn, db_params):
     DbConn.create_index = create_index
     DbConn.tree_select = tree_select
     DbConn.escape_string = escape_string
+    DbConn.amend_allow_null = amend_allow_null
     # create class attributes from db parameters
     DbConn.database = db_params['database']
 
@@ -40,6 +43,9 @@ def subfield(string, delim, occurrence):
     eg select subfield('abc/123/xyz','/',3) returns ''
     """
 
+    """
+    # this logic matches the functions written for msql and psql,
+    #   because they do not have a string method to do this
     ans = ''
     found = 0
     for ch in string:
@@ -50,6 +56,9 @@ def subfield(string, delim, occurrence):
         elif found == occurrence:
             ans += ch
     return ans
+    """
+    # python does have a suitable string method, so use it
+    return string.split(delim)[occurrence]
 
 def repeat(string, times):
     return string * times
@@ -531,3 +540,43 @@ def escape_string():
     # in a LIKE clause, literals '%' and '_' amust be escaped with '\'
     # sqlite3 requires the escape character to be specified
     return " ESCAPE '\'"
+
+def amend_allow_null(self, db_obj):
+    # sqlite3 does not allow changing NULL/NOT NULL by using ALTER TABLE
+    # it does provide a complicated workaround by allowing you to replace
+    #   the entire 'CREATE TABLE' statement in the sqlite master table
+    # see https://www.sqlite.org/lang_altertable.html for details
+
+    # it has a shortcoming - if you change a column from NULL to NOT NULL,
+    #   and there are rows in the database containing NULL, it does not
+    #   raise an error, which results in a failure of integrity
+
+    company = db_obj.data_company
+    table_name = db_obj.getval('table_name')
+
+    # use exec_sql here to ensure that the company is 'attached'
+    cur = self.exec_sql('PRAGMA {}.schema_version'.format(company))
+    schema_version = cur.fetchone()[0]
+
+    # normally the statement starts with 'CREATE company.table_name'
+    # in this case we are updating the schema in company.sqlite_master
+    # it expects the statement to start with 'CREATE table_name'
+    # therefore we strip off the leading 'company.'
+    new_schema = (
+        db.create_table.create_table(
+            self, company, table_name, return_sql=True)
+        .replace('{}.'.format(company), '')
+        )
+
+    cur.execute('PRAGMA writable_schema=ON')
+    cur.execute(
+        'UPDATE {0}.sqlite_master SET sql = {1} '
+        'WHERE type = {1} AND name = {1}'
+        .format(company, self.param_style),
+        (new_schema, 'table', table_name)
+        )
+    cur.execute(
+        'PRAGMA {}.schema_version={}'.format(
+        company, schema_version+1)
+        )
+    cur.execute('PRAGMA writable_schema=OFF')

@@ -5,7 +5,7 @@ from errors import AibError
 
 #-----------------------------------------------------------------------------
 
-def create_table(conn, company_id, table_name):
+def create_table(conn, company_id, table_name, return_sql=False):
     conn.cur.execute(
         "SELECT * FROM {}.db_tables WHERE table_name = {}"
         .format(company_id, conn.param_style), (table_name,))
@@ -23,7 +23,10 @@ def create_table(conn, company_id, table_name):
         .format(defn_comp, defn_comp, conn.param_style), (table_name,))
     db_columns = conn.cur.fetchall()
 
-    _create_table(conn, company_id, table_defn, db_columns)
+    sql = _create_table(conn, company_id, table_defn, db_columns, return_sql)
+
+    if return_sql:
+        return sql
 
 # special method to 'bootstrap' creation of db_* tables
 # cannot read db_tables and db_columns as they don't exist yet
@@ -31,12 +34,14 @@ def create_table(conn, company_id, table_name):
 def create_orig_table(conn, company_id, table_defn, db_columns):
     _create_table(conn, company_id, table_defn, db_columns)
 
-def _create_table(conn, company_id, table_defn, db_columns):
+def _create_table(conn, company_id, table_defn, db_columns, return_sql=False):
     cols = []
     pkeys = []
     alt_keys = []
     fkeys = []
     for column in db_columns:
+        col = setup_column(conn, column)
+        """
         col = '{} {}'.format(column[COL_NAME],
             conn.convert_string(column[DATA_TYPE], column[DB_SCALE]))
         if not column[ALLOW_NULL]:
@@ -45,6 +50,7 @@ def _create_table(conn, company_id, table_defn, db_columns):
             default = column[DFLT_VAL]  # ugly - default has 2 definitions!
             if default is not None:
                 col += ' DEFAULT {}'.format(conn.convert_string(default))
+        """
         cols.append(col)
         if (column[KEY_FIELD] == 'Y' and column[DATA_TYPE] != 'AUTO'):
             pkeys.append(column[COL_NAME])
@@ -73,6 +79,9 @@ def _create_table(conn, company_id, table_defn, db_columns):
     create = 'CREATE TABLE {}.{}'.format(company_id, table_defn[TABLE_NAME])
     sql = '{} ({}{}{});'.format(create, cols, primary_key, foreign_key)
 
+    if return_sql:
+        return sql
+
     conn.cur.execute(sql)
 
     if alt_keys:
@@ -82,7 +91,10 @@ def _create_table(conn, company_id, table_defn, db_columns):
 
     if table_defn[AUDIT_TRAIL]:
         create = 'CREATE TABLE {}.{}_audit'.format(company_id, table_defn[TABLE_NAME])
-        sql = '{} ({}{});'.format(create, cols, primary_key)
+        sql = '{} ({}{});'.format(
+            create,
+            cols.replace(' NOT NULL', ''),  # allow nulls in audit columns
+            primary_key)
         conn.cur.execute(sql)
 
         sql = 'CREATE TABLE {}.{}_audit_xref'.format(company_id, table_defn[TABLE_NAME])
@@ -96,6 +108,17 @@ def _create_table(conn, company_id, table_defn, db_columns):
 
         sql = '{} ({});'.format(sql, ', '.join(cols))
         conn.cur.execute(sql)
+
+def setup_column(conn, column):
+    col = '{} {}'.format(column[COL_NAME],
+        conn.convert_string(column[DATA_TYPE], column[DB_SCALE]))
+    if not column[ALLOW_NULL]:
+        col += ' NOT NULL'
+    if column[GENERATED]:
+        default = column[DFLT_VAL]  # ugly - default has 2 definitions!
+        if default is not None:
+            col += ' DEFAULT {}'.format(conn.convert_string(default))
+    return col
 
 #-----------------------------------------------------------------------------
 
