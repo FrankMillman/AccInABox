@@ -1,6 +1,7 @@
+import importlib
 from json import loads
 from ast import literal_eval
-import operator
+#import operator
 import re
 
 from errors import AibError
@@ -17,29 +18,36 @@ def chk_constraint(ctx, constraint, value=None, errmsg=None):
         descr = db_obj.db_table.short_descr
     new_check = []
     for test, lbr, src, chk, tgt, rbr in constraint:
-        if test in ('and', 'or'):
+        if test in ('and', 'or'):  # else must be 'check'
             new_check.append(test)
         if lbr == '(':
             new_check.append(lbr)
+
         if src == '$value':
             src_val = value
         elif src == '$orig':
             src_val = fld.get_orig()
         elif src == '$exists':
             src_val = db_obj.exists
+        elif src.endswith('$orig'):
+            src_val = db_obj.get_orig(src[:-5])
         else:
             src_val = db_obj.getval(src)
+
         if tgt == '':
             tgt_val = None
         elif tgt == '$orig':
             tgt_val = fld.get_orig()
+        elif tgt.endswith('$orig'):
+            tgt_val = db_obj.get_orig(tgt[:-5])
         elif tgt in db_obj.fields:
             tgt_val = db_obj.getval(tgt)
         else:
             tgt_val = literal_eval(tgt)
+
         chk, err = CHKS[chk]
         try:
-            result = chk(src_val, tgt_val)
+            result = chk(db_obj, fld, src_val, tgt_val)
         except ValueError as e:
             result = False
             err = e.args[0]
@@ -66,27 +74,26 @@ def chk_constraint(ctx, constraint, value=None, errmsg=None):
         errmsg = 'constraint {} is invalid'.format(constraint)
         raise AibError(head=descr, body=errmsg)
 
-def enum(value, args):
+def enum(db_obj, fld, value, args):
     # [['enum', ['aaa', 'bbb', 'ccc']]
     return value in args
 
-def pattern(value, args):
+def pattern(db_obj, fld, value, args):
     return bool(re.match(args+'$', value))  #  $ means end of string
 
-def cdv(value, args):
+def cdv(db_obj, fld, value, args):
     # this cannot work as is - is value a string or an int?
     # it will be easy to get working when needed, so leave for now
     weights, cdv_mod = args
     base, chkdig = value[:-1], value[-1]
-#   tot = sum(operator.mul(b, w) for b, w in zip(base, weights))
     tot = sum((b * w) for b, w in zip(base, weights))
     mod = tot % cdv_mod
     return mod == chkdig
 
-def nospace(value, args):
+def nospace(db_obj, fld, value, args):
     return value.isalnum()
 
-def nexist(value, args):
+def nexist(db_obj, fld, value, args):
     table_name, where = args
 
     where_clause = 'WHERE'
@@ -105,9 +112,6 @@ def nexist(value, args):
         elif expr.lower() == '$value':
             params.append(value)
             expr = '?'
-#       elif expr.startswith("c'"):  # expr is a column name
-#           expr = expr[2:-1]  # strip leading "c'" and trailing "'"
-#           expr = 'a.{}'.format(expr)
         elif expr.startswith("'"):  # expr is a literal string
             params.append(expr[1:-1])
             col = 'LOWER({})'.format(col)
@@ -119,10 +123,6 @@ def nexist(value, args):
             raise NotImplementedError  # does this ever happen
         elif expr.startswith('?'):  # get user input
             raise NotImplementedError  # does this ever happen
-#       else:  # must be literal string
-#           params.append(expr)
-#           col = 'LOWER({})'.format(col)
-#           expr = 'LOWER(?)'
         else:  # must be a column name
             expr = 'a.{}'.format(expr)
 
@@ -140,6 +140,16 @@ def nexist(value, args):
             conn.param_style) , chk_val)
     return conn.cur.fetchone()[0] == 0
 
+def pyfunc(db_obj, fld, src_val, tgt_val):
+    func_name = tgt_val
+    if '.' in func_name:
+        module_name, func_name = func_name.rsplit('.', 1)
+        module = importlib.import_module(module_name)
+        getattr(module, func_name)(db_obj, fld, src_val)
+    else:
+        globals()[func_name](db_obj, fld, src_val)
+
+"""
 CHKS = {
     '=': (operator.eq, '$src must equal $tgt'),
     '!=': (operator.ne, '$src must not equal $tgt'),
@@ -159,54 +169,45 @@ CHKS = {
 #   'is xml': (is_xml, ''),
     'nexist': (nexist, '$src must not exist on $tgt')
     }
-
-#--------------------------------------------------------------------
-"""
-import operator
-ops = {
-  'in':lambda x,y: x in y,  # operator.contains has the args backwards
-  '==':operator.eq, # or use '=' for more SQL-like syntax
-  '<':operator.lt,
-  '>':operator.gt,
-}
-
-op, value = 'in', "('abc', 'xyz')"
-x = 'abc'
-
-if ops[op](x,ast.literal_eval(value)):
-  print("Constraint passed")
-else:
-  print("Ignore this one")
-
-ChrisA
 """
 
-#--------------------------------------------------------------------
-"""
-import operator
-OPERATORS = {
-    '=': operator.eq,
-    'is': operator.is_,
-    '<': operator.lt,
-    # etc.
+CHKS = {
+    '=': (lambda db_obj, fld, src_val, tgt_val: src_val == tgt_val, '$src must equal $tgt'),
+    '!=': (lambda db_obj, fld, src_val, tgt_val: src_val != tgt_val, '$src must not equal $tgt'),
+    '<': (lambda db_obj, fld, src_val, tgt_val: src_val < tgt_val, '$src must be less than $tgt'),
+    '>': (lambda db_obj, fld, src_val, tgt_val: src_val > tgt_val, '$src must be greater than $tgt'),
+    '<=': (lambda db_obj, fld, src_val, tgt_val: src_val <= tgt_val, '$src must be less than or equal to $tgt'),
+    '>=': (lambda db_obj, fld, src_val, tgt_val: src_val >= tgt_val, '$src must greater than or equal to $tgt'),
+    'is': (lambda db_obj, fld, src_val, tgt_val: src_val is tgt_val, '$src must be $tgt'),
+    'is not': (lambda db_obj, fld, src_val, tgt_val: src_val is not tgt_val, '$src must not be $tgt'),
+    'in': (lambda db_obj, fld, src_val, tgt_val: src_val in tgt_val, '$src must be one of $tgt'),
+    'not in': (lambda db_obj, fld, src_val, tgt_val: src_val not in tgt_val, '$src must not be one of $tgt'),
+    'matches': (lambda db_obj, fld, src_val, tgt_val: bool(re.match(tgt_val+'$', src_val)),  'Value must match the pattern $tgt'),
+    'cdv': (cdv,  '$src fails the check digit test $tgt'),
+    'nospace': (nospace,  '$src may not contain spaces'),
+    'nexist': (nexist, '$src must not exist on $tgt'),
+    'pyfunc': (pyfunc, None),
     }
 
-def eval_op(column_name, op, literal):
-    value = lookup(column_name)  # whatever...
-    return OPERATORS[op](value, literal)
+def check_not_null(db_obj, fld, value):
+    # called from db_columns.update_chks
+    allow_null = db_obj.getfld('allow_null')
+    if value is allow_null.get_orig():
+        return  # value not changed
+    if value is True:
+        return  # allow null - no implications
+    if allow_null.get_orig() is None:
+        return  # new field
+    sql = (
+        'SELECT COUNT(*) FROM {}.{} WHERE {} IS NULL'
+        .format(db_obj.data_company, db_obj.getval('table_name'), db_obj.getval('col_name'))
+        )
+    with db_obj.context.db_session as conn:
+        cur = conn.exec_sql(sql)
+        if cur.fetchone()[0] != 0:
+            raise AibError(
+                head=db_obj.getval('col_name'),
+                body='Cannot unset allow_null - NULLs exist in {}'
+                    .format(db_obj.getval('table_name'))
+                )
 
-result = False
-# first row has bool_op = 'or'
-
-for (bool_op, column_name, comparison_op, literal) in sequence:
-    flag = eval_op(column_name, comparison_op, literal)
-    if bool_op == 'and':
-        result = result and flag
-    else: 
-        assert bool_op == 'or'
-        result = result or flag
-    # Lazy processing?
-    if result:
-        break
-
-"""

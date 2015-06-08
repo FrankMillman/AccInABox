@@ -11,6 +11,13 @@ table = {
     'default_cursor': None,
     'setup_form'    : None,
     'upd_chks'      : None,
+    'upd_chks'      : [[
+                        'check_not_null',
+                        'Cannot disallow null - NULLs are present',
+                        [
+                            ['check', '', 'allow_null', 'pyfunc', "'check_not_null'", ''],
+                        ],
+                      ]],
     'del_chks'      : None,
     'table_hooks'   : etree.fromstring(
         '<hooks>'

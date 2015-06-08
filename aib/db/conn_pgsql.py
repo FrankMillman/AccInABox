@@ -366,7 +366,6 @@ def escape_string():
 
 def amend_allow_null(self, db_obj):
     allow_null = db_obj.getfld('allow_null').getval()
-    print('SET allow_null =', allow_null)
     sql = 'ALTER TABLE {}.{} ALTER COLUMN {} {}'.format(
         db_obj.data_company,
         db_obj.getval('table_name'),

@@ -3,6 +3,7 @@ import os
 from datetime import date, datetime, timedelta
 from decimal import Decimal as D
 
+from errors import AibError
 import db.create_table
 
 def customise(DbConn, db_params):
@@ -550,6 +551,10 @@ def amend_allow_null(self, db_obj):
     # it has a shortcoming - if you change a column from NULL to NOT NULL,
     #   and there are rows in the database containing NULL, it does not
     #   raise an error, which results in a failure of integrity
+    # can execute 'PRAGMA integrity_check' to look for such casss, and
+    #   reject the change if result is not 'ok'
+    # additionally, call chk_constraint before updating, to ensure
+    #   no NULL rows exist in database
 
     company = db_obj.data_company
     table_name = db_obj.getval('table_name')
@@ -575,6 +580,13 @@ def amend_allow_null(self, db_obj):
         .format(company, self.param_style),
         (new_schema, 'table', table_name)
         )
+    cur.execute('PRAGMA integrity_check')
+    result = cur.fetchone()[0]
+    if result != 'ok':
+        raise AibError(
+            head='Integrity check failure',
+            body='Cannot reset allow_null - {}'.format(result)
+            )
     cur.execute(
         'PRAGMA {}.schema_version={}'.format(
         company, schema_version+1)
