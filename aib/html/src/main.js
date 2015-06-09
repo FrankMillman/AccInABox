@@ -301,7 +301,7 @@ function exec_callbacks() {
 //    debug3('CALLBACK ' + callbacks[0][0]);
   while (callbacks.length) {
     callback = callbacks.pop();
-    var ctx = callback.shift();  // shift removes first element
+    var ctx = callback.shift();  // shift removes and returns first element
     var func = callback.shift();  // callback now contains arguments
     func.apply(ctx, callback);
     };

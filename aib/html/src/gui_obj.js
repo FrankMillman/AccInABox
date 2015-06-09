@@ -231,7 +231,8 @@ function create_input(frame, json_elem, label) {
     return input.aib_obj.onpresskey(input, e);
     };
 
-  input.onfocus = function() {got_focus(input)};
+  if (input.onfocus === null)  // already set on bool, sxml
+    input.onfocus = function() {got_focus(input)};
   //input.onfocus = function() {input.aib_obj.onfocus(input)};
   input.got_focus = function() {
     input.aib_obj.got_focus(input);
@@ -698,9 +699,17 @@ function setup_bool(label, json_elem) {
   bool.onmousedown = function() {bool.mouse_down = true};
   bool.onmouseup = function() {bool.mouse_down = false};
 
+  bool.onfocus = function() {
+    bool.has_focus = true;  // gets reset in aib_obj.after_lost_focus()
+    if (bool.mouse_down)
+      return;  // will set focus from onclick()
+    got_focus(bool);
+    };
+
   bool.onclick = function() {
     if (bool.frame.form.disable_count) return false;
     if (!bool.amendable()) return false;
+    bool.frame.set_amended(true);  // to force sending got_focus
     if (bool.frame.form.current_focus !== bool) {
       callbacks.push([bool, bool.after_click]);
       if (bool.has_focus)  // can't call focus() - it will be ignored!
@@ -1002,6 +1011,13 @@ function setup_sxml(json_elem) {
 
   sxml.onmousedown = function() {sxml.mouse_down = true};
   sxml.onmouseup = function() {sxml.mouse_down = false};
+
+  sxml.onfocus = function() {
+    sxml.has_focus = true;
+    if (sxml.mouse_down)
+      return;  // will set focus from onclick()
+    got_focus(sxml);
+    };
 
   sxml.onclick = function() {
     if (sxml.frame.form.current_focus !== sxml) {

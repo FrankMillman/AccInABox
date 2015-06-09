@@ -612,38 +612,13 @@ class DbObject:
         # assume we are trying to create a new db_obj
         self.check_perms('insert')
 
-        #
-        # assert self.dirty is True  # remove when satisfied
-        #
-        # it is *not* True
-        # select_row() is called when we call setval() on a key field
-        # but it is called as part of the validation process
-        # therefore at this point, setval() has not completed
-        # therefore at this point, self.dirty has not been set to True
-        # if setval() does complete, it will be set to True
-
         self.exists = False
         for fld in self.fields.values():  # initialise fields
+            # is this necessary?
+            if fld._orig is not None:
+                # if this prints, then it is necessary!
+                print('db.on_select', fld.col_name, fld._orig)
             fld._orig = None
-            fld.amendable = True  # [?]
-
-            # is this necessary? remove for now [09/06/2012]
-#           if display:
-#               for obj in fld.gui_obj:
-#                   obj._redisplay()
-
-#           for key_fld in fld.table_keys:
-#               for obj in key_fld.gui_obj:
-#                   obj.set_readonly(True)
-
-#?#
-##      for callback in self.on_read_func:  # frame method
-##          callback.on_read(self)
-#       for caller, method in self.on_read_func:  # frame methods
-#           caller.session.request.db_events.append((caller, method))
-#       for after_read in self.after_read_xml:  # table hook
-#           db.db_xml.table_hook(self, after_read)
-#?#
 
     def init(self, *, display=True, init_vals=None):
         # if not None, init_vals is a dict of col_name, value pairs

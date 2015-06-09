@@ -1010,10 +1010,10 @@ AibDate.prototype.grid_after_cal = function(date, new_date) {
 function AibBool() {};
 AibBool.prototype = new AibCtrl();
 AibBool.prototype.got_focus = function(bool) {
-  bool.has_focus = true;
-  if (bool.mouse_down)
-    return;  // will set focus from onclick()
-  got_focus(bool);
+//  bool.has_focus = true;
+//  if (bool.mouse_down)
+//    return;  // will set focus from onclick()
+//  got_focus(bool);
   };
 AibBool.prototype.after_got_focus = function(bool) {
   bool.style.border = '1px solid black';
@@ -1103,7 +1103,7 @@ AibBool.prototype.chkbox_change = function(bool) {
 
   var args = [bool.ref];
   send_request('cb_checked', args);
-  bool.frame.set_amended(true);
+  //bool.frame.set_amended(true);
   bool.current_value = bool.value;
   };
 //AibBool.prototype.data_changed = function(bool, value) {
@@ -1729,10 +1729,10 @@ AibSpin.prototype.set_value_from_server = function(spin, value) {
 function AibSxml() {};
 AibSxml.prototype = new AibCtrl();
 AibSxml.prototype.got_focus = function(sxml) {
-  sxml.has_focus = true;
-  if (sxml.mouse_down)
-    return;  // will set focus from onclick()
-  got_focus(sxml);
+//  sxml.has_focus = true;
+//  if (sxml.mouse_down)
+//    return;  // will set focus from onclick()
+//  got_focus(sxml);
   };
 AibSxml.prototype.after_got_focus = function(sxml) {
   sxml.style.border = '1px solid black';

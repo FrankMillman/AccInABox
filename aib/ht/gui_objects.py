@@ -84,6 +84,13 @@ class GuiCtrl:
 
         fld = self.fld
 
+        # do not call setval() if non_amendable and db_obj exists [2015-06-09]
+        # reason - if user moves back to key field, then moves forward, calling setval
+        #   on the key field will trigger read_row, which will over-write any changes
+        # not sure if this logic belongs in the ht module or in the db module
+        if not fld.col_defn.allow_amend and fld.db_obj.exists:
+            return
+
         if self.ref in temp_data:  # user has entered a value
             value = fld.str_to_val(temp_data[self.ref])
             del temp_data[self.ref]
