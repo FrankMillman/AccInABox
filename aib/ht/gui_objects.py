@@ -61,27 +61,6 @@ class GuiCtrl:
         if self.hidden:  # unused subtype fields
             return
 
-        """
-        if self.ref in temp_data:
-#           self.fld.setval(self.fld.str_to_val(
-#               temp_data[self.ref]))  # can raise AibError
-#           del temp_data[self.ref]  # only delete if previous line passes
-            value = temp_data[self.ref]
-            del temp_data[self.ref]
-            yield from self.fld.setval_async(self.fld.str_to_val(value))  # can raise AibError
-#       else:  # not in temp_data - get current value, or if None, default value
-##          value = self.fld.getval()
-##          if value is None:
-##              if self.fld.col_defn.dflt_val is not None:
-##                  value = self.fld.get_dflt(self.fld.col_defn.dflt_val)
-##              else:
-##                  value = self.fld.str_to_val('')
-#           value = self.fld.get_dflt()
-#           self.fld.setval(value)  # can raise AibError
-        else:  # not in temp_data - use current value
-            yield from self.fld.setval_async(self.fld.getval())  # can raise AibError
-        """
-
         fld = self.fld
 
         # do not call setval() if non_amendable and db_obj exists [2015-06-09]
@@ -89,6 +68,7 @@ class GuiCtrl:
         #   on the key field will trigger read_row, which will over-write any changes
         # not sure if this logic belongs in the ht module or in the db module
         if not fld.col_defn.allow_amend and fld.db_obj.exists:
+            assert self.ref not in temp_data  # user should not be able to enter a value
             return
 
         if self.ref in temp_data:  # user has entered a value
