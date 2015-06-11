@@ -449,6 +449,8 @@ class Form:
                     col_defn.get('sql')
                     )
 
+            db_obj.setup_virt_cols()
+
     def setup_input_attr(self, input_params):
         if input_params is None:
             return  # can happen with inline form

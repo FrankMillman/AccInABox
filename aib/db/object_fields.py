@@ -188,20 +188,20 @@ class Field:
         print()
         print(sql)
         print()
+        print(self.deps)
+        print()
         """
         for dep in self.deps:
             fld = self.db_obj.getfld(dep[2:])  # remove 'a.' prefix
             val = repr(fld.getval())
             if val == 'None':
-                sql = sql.replace('= '+dep, 'is null', 1)  # only replace first occurrence
-                sql = sql.replace(dep, 'null', 1)  # syntax for function call (no leading =)
+                sql = sql.replace(dep, "''")
             elif val == 'True':
                 sql = sql.replace(dep, '1')
             elif val == 'False':
                 sql = sql.replace(dep, '0')
             else:
-#               sql = sql.replace(dep, val, 1)  # only replace first occurrence
-                sql = sql.replace(dep, val)  # replace all occurrences
+                sql = sql.replace(dep, val)
         """
         print()
         print(sql)

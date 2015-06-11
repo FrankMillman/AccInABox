@@ -1069,8 +1069,6 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     grid.start_in_progress = true;  // don't send 'start_row' to server
     grid.start_row(row);
     grid.start_in_progress = false;
-    if (grid.amended())
-      debug3('why is grid_amended true here?');
     grid.set_amended(false);
     grid.highlight_active_cell();
     };

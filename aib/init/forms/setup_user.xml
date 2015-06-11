@@ -58,9 +58,9 @@
       <input fld="user.sys_admin"/>
       <row/>
       <col/>
-      <label value="Password:"/>
+      <label value="Set password:"/>
       <col/>
-      <button btn_id="btn_pwd" btn_label="Enter / amend password" btn_enabled="true"
+      <button btn_id="btn_pwd" btn_label=" <<Press>> " btn_enabled="true"
           btn_validate="true" btn_default="false" action="
         <<action>>
           <<sub_form form_name=`_sys.chg_pwd_form`>>

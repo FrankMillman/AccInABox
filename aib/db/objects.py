@@ -169,7 +169,6 @@ class DbObject:
         self.init_vals = {}  # can be over-ridden in init()
         self.cursor = None
         self.cursor_row = None
-        self.virt_list = []
         self.children = {}  # store reference to any child records
         self.on_clean_func = []  # function(s) to call on clean
         self.on_amend_func = []  # function(s) to call on amend
@@ -1199,6 +1198,7 @@ class MemObject(DbObject):
 
         self.primary_keys = [self.fields['row_id']]
         self.alt_keys = []
+        self.virt_cols = []
 
     def get_cursor(self):
 #       print('GET CURSOR', self.table_name)
@@ -1344,7 +1344,15 @@ class MemObject(DbObject):
         if value is not None:
             field._value = value
 
+        if field.sql is not None:
+            self.virt_cols.append(field)
+
         return field
+
+    def setup_virt_cols(self):
+        print([fld.col_name for fld in self.select_cols])
+        for fld in self.virt_cols:
+            self.setup_virtual(fld.col_defn, fld)
 
     def delete(self):
         # for each child (if any), delete rows
@@ -1635,7 +1643,6 @@ class MemTable(DbTable):
         self.col_list = []  # maintain sorted list of column names
         self.subtypes = OD()  # insert col_name: col_names if col is subtype
         self.primary_keys = []
-        self.virt_list = []
         self.audit_trail = None
         if upd_chks is None:
             self.upd_chks = []

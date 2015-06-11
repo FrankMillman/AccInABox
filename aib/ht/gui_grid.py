@@ -583,7 +583,6 @@ class GuiGrid:
             self.parent, title, question, answers, default, escape)
 
         if ans == 'Yes':
-
             try:
                 self.db_obj.delete()
                 self.no_rows -= 1
@@ -591,8 +590,9 @@ class GuiGrid:
                 first_col_obj = self.obj_list[self.grid_cols[0]]
                 self.session.request.send_cell_set_focus(self.ref, row, first_col_obj.ref)
                 raise
-
             yield from self.delete_gui_row(row)
+        elif not self.data_changed():
+            self.reset_current_row()
 
     @asyncio.coroutine
     def delete_gui_row(self, row):

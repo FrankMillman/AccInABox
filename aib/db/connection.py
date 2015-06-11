@@ -370,6 +370,8 @@ class Conn:
             if fld.sql:
                 sql = fld.sql.replace('$fx_', self.func_prefix)
                 sql = sql.replace('{company}', db_obj.data_company)
+                if alias != 'a':
+                    sql = sql.replace('a.', '{}.'.format(alias))
                 columns.append('({}) as {}'.format(sql, fld.col_name))
             else:
                 columns.append('{}.{}'.format(alias, fld.col_name))
@@ -407,6 +409,8 @@ class Conn:
                 if fld.sql:
                     sql = fld.sql.replace('$fx_', self.func_prefix)
                     sql = sql.replace('{company}', db_obj.data_company)
+                    if alias != 'a':
+                        sql = sql.replace('a.', '{}.'.format(alias))
                     col = '({})'.format(sql)
                 elif fld.col_defn.data_type == 'TEXT':
                     col = 'LOWER({}.{})'.format(alias, fld.col_name)
@@ -529,7 +533,11 @@ class Conn:
                 """
                 fld, alias = get_fld_alias(col_name)
                 if fld.sql:
-                    order_list.append('({}){}'.format(fld.sql, desc))
+                    sql = fld.sql.replace('$fx_', self.func_prefix)
+                    sql = sql.replace('{company}', db_obj.data_company)
+                    if alias != 'a':
+                        sql = sql.replace('a.', '{}.'.format(alias))
+                    order_list.append('({}){}'.format(sql, desc))
                 else:
                     order_list.append('{}.{}{}'.format(alias, fld.col_name, desc))
 
@@ -549,7 +557,8 @@ class Conn:
         data_company = tgt_fld.db_obj.data_company
 
 #       assume only single keys for now
-        alias = chr(98+len(self.joins))  # b,c,d ...
+#       alias = chr(98+len(self.joins))  # b,c,d ...
+        alias = '_' * (len(self.joins) + 1)  # '_', '__', etc
         test = '{}.{} = a.{} '.format(alias, tgt_fld.col_name, src_colname)
         self.tablenames += ' LEFT JOIN {}.{} {} ON {}'.format(
             data_company, tgt_table, alias, test)
