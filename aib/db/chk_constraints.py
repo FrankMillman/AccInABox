@@ -190,14 +190,14 @@ CHKS = {
     }
 
 def check_not_null(db_obj, fld, value):
-    # called from db_columns.update_chks
+    # called from db_columns.upd_chks
     allow_null = db_obj.getfld('allow_null')
-    if value is allow_null.get_orig():
+    if value == allow_null.get_orig():
         return  # value not changed
     if value is True:
-        return  # allow null - no implications
+        return  # changed to 'allow null' - no implications
     if allow_null.get_orig() is None:
-        return  # new field
+        return  # new field - no existing data to check
     sql = (
         'SELECT COUNT(*) FROM {}.{} WHERE {} IS NULL'
         .format(db_obj.data_company, db_obj.getval('table_name'), db_obj.getval('col_name'))
@@ -210,4 +210,3 @@ def check_not_null(db_obj, fld, value):
                 body='Cannot unset allow_null - NULLs exist in {}'
                     .format(db_obj.getval('table_name'))
                 )
-

@@ -270,49 +270,6 @@ class Conn:
             self.tablenames = '{}.{} a'.format(data_company, table_name)
         self.joins = {}
 
-        """
-        columns = ''
-        for col in cols:
-            if col is None:
-                columns += 'NULL, '  # literal virtual column returned None
-            elif not isinstance(col, str):  # must be int, dec, date
-                columns += '{}, '.format(col)
-            elif col.startswith("'"):  # literal string
-                columns += '{}, '.format(col)
-            elif col.startswith('('):  # expression
-                columns += '{}, '.format(col)
-            elif '.' in col:  # fkey_col.target_col
-                join_column, col = col.split('.')
-                if join_column not in self.joins:
-                    self.build_join(db_obj, join_column)
-                join_alias = self.joins[join_column]
-                columns += '{}.{}, '.format(join_alias, col)
-            elif col.lower() == 'null':
-                columns += 'NULL, '  # placeholder for alternate column
-            elif col == '*':
-                columns += 'a.*, '  # all columns
-            else:
-                sql = getattr(db_obj.getfld(col), 'sql', None)
-                if sql is not None:
-                    while '_param_' in sql:
-                        sql = sql.replace('_param_', param.pop(0), 1)
-                    columns += '({}), '.format(sql)
-                else:
-                    columns += 'a.{}, '.format(col)
-        columns = columns[:-2]  # strip trailing ', '
-        """
-##      columns = ''
-##      for col in cols:
-##          if col.sql:
-##              columns += '({}) as {}, '.format(col.sql, col.col_name)
-##          else:
-##              columns += 'a.{}, '.format(col.col_name)
-##      columns = columns[:-2]  # strip trailing ', '
-#       columns = ', '.join(
-#           ['({}) as {}'.format(col.sql, col.col_name) if col.sql is not None
-#               else 'a.{}'.format(col.col_name)
-#               for col in cols])
-
         def get_fld_alias(col_name):
             if '>' in col_name:
                 src_colname, tgt_colname = col_name.split('>')
@@ -328,10 +285,6 @@ class Conn:
                 if fld.col_defn.col_type == 'alt':
                     src_fld = fld.foreign_key['true_src']
                     col_name = src_fld.col_name
-#                   tgt_fld = src_fld.foreign_key['tgt_field']
-#                   tgt_rec = tgt_fld.db_obj
-#                   fld = tgt_rec.getfld(tgt_colname)
-#                   fld = tgt_fld
                     if col_name not in self.joins:
                         tgt_fld = src_fld.foreign_key['tgt_field']
                         self.build_join(db_obj, col_name, tgt_fld)
@@ -339,6 +292,26 @@ class Conn:
                 else:
                     alias = 'a'
             return fld, alias
+
+        def convert_sql(sql):
+            sql = fld.sql.replace('$fx_', self.func_prefix)
+            sql = sql.replace('{company}', db_obj.data_company)
+            if alias != 'a':
+                # convert all 'a.' into new_prefix
+                # but only if substring begins with 'a.'
+                # ignore if previous chr is not in valid_lead_chrs
+                new_prefix = '{}.'.format(alias)
+                valid_lead_chrs = ' ,()-+=|'  # any others?
+                start = 0
+                while 'a.' in sql[start:]:
+                    pos = sql[start:].index('a.')
+                    if pos > 0:
+                        if sql[start:][pos-1] not in valid_lead_chrs:
+                            start += (pos+2)
+                            continue
+                    sql = sql[:start+pos] + new_prefix + sql[start+pos+2:]
+                    start += (pos+2)
+            return sql
 
         columns = []
         for col_name in col_names:
@@ -368,10 +341,7 @@ class Conn:
             """
             fld, alias = get_fld_alias(col_name)
             if fld.sql:
-                sql = fld.sql.replace('$fx_', self.func_prefix)
-                sql = sql.replace('{company}', db_obj.data_company)
-                if alias != 'a':
-                    sql = sql.replace('a.', '{}.'.format(alias))
+                sql = convert_sql(fld.sql)
                 columns.append('({}) as {}'.format(sql, fld.col_name))
             else:
                 columns.append('{}.{}'.format(alias, fld.col_name))
@@ -407,10 +377,7 @@ class Conn:
                 fld, alias = get_fld_alias(col_name)
 
                 if fld.sql:
-                    sql = fld.sql.replace('$fx_', self.func_prefix)
-                    sql = sql.replace('{company}', db_obj.data_company)
-                    if alias != 'a':
-                        sql = sql.replace('a.', '{}.'.format(alias))
+                    sql = convert_sql(fld.sql)
                     col = '({})'.format(sql)
                 elif fld.col_defn.data_type == 'TEXT':
                     col = 'LOWER({}.{})'.format(alias, fld.col_name)
@@ -533,10 +500,7 @@ class Conn:
                 """
                 fld, alias = get_fld_alias(col_name)
                 if fld.sql:
-                    sql = fld.sql.replace('$fx_', self.func_prefix)
-                    sql = sql.replace('{company}', db_obj.data_company)
-                    if alias != 'a':
-                        sql = sql.replace('a.', '{}.'.format(alias))
+                    sql = convert_sql(fld.sql)
                     order_list.append('({}){}'.format(sql, desc))
                 else:
                     order_list.append('{}.{}{}'.format(alias, fld.col_name, desc))

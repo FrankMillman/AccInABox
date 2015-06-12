@@ -1350,7 +1350,6 @@ class MemObject(DbObject):
         return field
 
     def setup_virt_cols(self):
-        print([fld.col_name for fld in self.select_cols])
         for fld in self.virt_cols:
             self.setup_virtual(fld.col_defn, fld)
 
