@@ -146,7 +146,7 @@ def add_column(db_obj, xml):
             col)
         conn.cur.execute(sql)
         sql = 'SELECT audit_trail FROM {}.db_tables WHERE table_name = {}'.format(
-            db_obj.db_table.defn_company, conn.param_style)
+            db_obj.db_table.data_company, conn.param_style)
         conn.cur.execute(sql, [db_obj.getval('table_name')])
         audit_trail = conn.cur.fetchone()[0]
         if audit_trail:
