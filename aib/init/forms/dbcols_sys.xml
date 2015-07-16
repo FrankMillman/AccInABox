@@ -1,5 +1,6 @@
 <form name="dbcols_sys">
   <db_objects>
+    <db_obj name="db_col" table_name="db_columns" formview_obj="true"/>
     <db_obj name="db_table" table_name="db_tables" fkey="db_col.table_id"/>
   </db_objects>
   <mem_objects/>
@@ -145,14 +146,12 @@
     </body>
     <button_row validate="true" template="Setup_Form"/>
     <frame_methods template="Setup_Form">
-      <method name="do_save" action="
+      <method name="before_save" action="
         <<action>>
-          <<check_children obj_name=`db_col`/>>
           <<assign>>
             <<source>>sys<</source>>
             <<target>>db_col.col_type<</target>>
           <</assign>>
-          <<save_obj obj_name=`db_col`/>>
         <</action>>
       "/>
     </frame_methods>

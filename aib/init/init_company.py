@@ -154,6 +154,12 @@ def setup_other_tables(context, conn, company):
     db_cur = db.api.get_db_object(context, company, 'db_cursors')
     tables = [
         'adm_periods',
+        'adm_msg_types',
+        'org_parties',
+        'org_addresses',
+        'org_messaging',
+        'org_phone_nos',
+        'org_contacts',
         ]
     for table_name in tables:
         setup_table(db_tbl, db_col, table_name)
@@ -281,6 +287,7 @@ def setup_forms(context, conn, company):
             db_table.save()
 
     setup_form('setup_periods', 'Set up financial periods')
+    setup_form('setup_party', 'Set up parties')
 
 def setup_menus(context, conn, company, company_name):
     db_obj = db.api.get_db_object(context, company, 'sys_menu_defns')
@@ -313,10 +320,10 @@ def setup_menus(context, conn, company, company_name):
         ['Administration', 'menu', [
             ['Admin parameters', 'form', '_sys.setup_params'],
             ['Setup financial periods', 'form', 'setup_periods'],
+            ['Setup message types', 'grid', 'adm_msg_types', 'msg_types'],
             ]],
         ['Organisations', 'menu', [
-            ['Organisations', 'grid', 'org_parties', 'parties'],
-            ['Addresses', 'grid', 'org_parties', 'addresses'],
+            ['Setup parties', 'grid', 'org_parties', 'parties'],
             ]],
         ['Accounts receivable', 'menu', [
             ['AR setup', 'menu', [
@@ -357,6 +364,11 @@ def setup_menus(context, conn, company, company_name):
     parse_menu(menu, None)
 
 def setup_init_data(context, conn, company):
+
+    db_table = db.api.get_db_object(context, company, 'db_tables')
+    db_table.setval('table_name', 'org_parties')
+    db_table.setval('setup_form', 'setup_party')
+    db_table.save()
 
     acc_role = db.api.get_db_object(context, company, 'acc_roles')
     acc_role.setval('role', 'admin')

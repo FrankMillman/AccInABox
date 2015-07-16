@@ -557,7 +557,7 @@ function setup_form(args) {
         break;
         };
       case 'input': {
-        var input = create_input(frame, elem[1], label);
+        var input = create_input(frame, page, elem[1], label);
         if (col.childNodes.length)
           input.style.marginLeft = '5px';
         col.appendChild(input);
@@ -573,7 +573,7 @@ function setup_form(args) {
         break;
         };
       case 'dummy': {
-        var dummy = create_input(frame, elem[1], null);
+        var dummy = create_input(frame, page, elem[1], null);
         last_parent.appendChild(dummy);
         break;
         };
@@ -586,7 +586,7 @@ function setup_form(args) {
         for (var j=0, tot_buttons=elem[1].length; j<tot_buttons; j++) {
           var btn_elem = elem[1][j];
           if (btn_elem[0] === 'dummy') {
-            var dummy = create_input(frame, btn_elem[1], null);
+            var dummy = create_input(frame, page, btn_elem[1], null);
             button_row.appendChild(dummy);
             }
           else if (btn_elem[0] === 'button') {
@@ -595,12 +595,13 @@ function setup_form(args) {
             button.style.marginRight = '10px';
             };
           };
+        last_parent = button_row;
         break;
         };
       case 'button': {
         var button = create_button(frame, elem[1]);
         if (col.childNodes.length)
-          text.style.marginLeft = '5px';
+          button.style.marginLeft = '5px';
         col.appendChild(button);
         break;
         };
@@ -631,15 +632,15 @@ function setup_form(args) {
             var new_focus = new_page.first_obj;
           if (back)
             this.frame.form.tabdir = -1;
-          if (this.frame.amended()) {
-            callbacks.push([this, this.after_new_page, new_pos, new_focus]);
-            got_focus(new_focus);  // trigger 'got_focus', even though it hasn't!
-            }
-          else {
-            this.after_new_page(new_pos, new_focus);
-            };
-          };
-        notebook.after_new_page = function(new_pos, new_focus) {
+//          if (this.frame.amended()) {
+//            callbacks.push([this, this.after_new_page, new_pos, new_focus]);
+//            got_focus(new_focus);  // trigger 'got_focus', even though it hasn't!
+//            }
+//          else {
+//            this.after_new_page(new_pos, new_focus);
+//            };
+//          };
+//        notebook.after_new_page = function(new_pos, new_focus) {
           var current_page = this.childNodes[this.current_pos];
           current_page.style.display = 'none';
           var current_tab = this.tabs.childNodes[this.current_pos-1]
@@ -651,7 +652,13 @@ function setup_form(args) {
           new_tab.style.borderBottom = '1px solid transparent';
           new_tab.style.color = 'black';
           this.current_pos = new_pos;
-          new_focus.focus();
+          //new_focus.focus();
+          if (!this.frame.form.focus_from_server) {
+            var pos = new_focus.pos;
+            while (this.frame.obj_list[pos].offsetHeight === 0)
+              pos += this.frame.form.tabdir;  // look for next available object
+            this.frame.obj_list[pos].focus();
+            };
           };
         break;
         };
@@ -672,24 +679,42 @@ function setup_form(args) {
           notebook.req_new_page(this.pos+1, false);
           };
         notebook.tabs.appendChild(tab);
-
         var nb_page = document.createElement('div');
-        //nb_page.style.background = 'pink';
+        notebook.appendChild(nb_page);
+
+        //var back_btn_div = document.createElement('div');
+        var back_btn_div = document.createElement('span');
+        nb_page.appendChild(back_btn_div);
+        back_btn_div.style.display = 'inline-block';
+        back_btn_div.style.width = '25px';
+        //back_btn_div.style[cssFloat] = 'left';
+        //back_btn_div.style.background = 'blue';
+
         var page = create_page();
         nb_page.appendChild(page);
+        //page.style[cssFloat] = 'left';
+        page.style.verticalAlign = 'top';
+        //page.style.background = 'lightcyan';
+        //nb_page.style.background = 'green';
+
+        //var fwd_btn_div = document.createElement('div');
+        var fwd_btn_div = document.createElement('span');
+        nb_page.appendChild(fwd_btn_div);
+        fwd_btn_div.style.display = 'inline-block';
+        fwd_btn_div.style.width = '25px';
+        //fwd_btn_div.style[cssFloat] = 'right';
+        //fwd_btn_div.style.background = 'blue';
+
+        nb_page.label = elem[1].label;
         nb_page.page = page;
+        page.nb_page = nb_page;
         nb_page.style.textAlign = 'center';
         page.style.textAlign = 'left';
         nb_page.frame = frame;
         page.frame = frame;
-        nb_page.pos = notebook.childNodes.length;  // starts from 1, 0 is 'tabs'
-        nb_page.first_obj = frame.obj_list.length;
+        nb_page.pos = tab.pos+1;  //notebook.childNodes.length-1;  // starts from 1, 0 is 'tabs'
+        nb_page.first_obj_pos = frame.obj_list.length;
         notebook.save_page.sub_pages.push(page);
-        //page.style.background = 'lightcyan';
-        var nb_btns = document.createElement('div');
-        nb_btns.style.height = '24px';
-        nb_page.appendChild(nb_btns);
-        nb_page.btns = nb_btns;
 
         nb_page.onkeydown = function(e) {
           if (this.frame.form.disable_count) return false;
@@ -712,14 +737,13 @@ function setup_form(args) {
             };
           };
 
-//        var button_row = document.createElement('div');
-//        button_row.style.verticalAlign = 'bottom';
-////        nb_page.appendChild(button_row);
-//        nb_page.button_row = button_row;
-
-        nb_page.create_btn = function(back) {
+        nb_page.create_btn = function(back, help_msg) {
           var nb_btn = document.createElement('div');
+          this.childNodes[back ? 0 : 2].appendChild(nb_btn);
           nb_btn.style.backgroundImage = 'url(' + (back ? iPrev_src : iNext_src) + ')';
+          nb_btn.style.position = 'relative';
+          nb_btn.style.top = '50%';
+          //nb_btn.style.transform = 'translateY(-50%)';
 
           nb_btn.pos = frame.obj_list.length;
           frame.obj_list.push(nb_btn);
@@ -732,13 +756,9 @@ function setup_form(args) {
           nb_btn.style.border = '1px solid transparent';
           nb_btn.style.padding = '1px';
           nb_btn.style.margin = '2px';
-          nb_btn.title = back ? 'Previous tab' : 'Next tab';
-
-//          nb_btn.style.position = 'absolute';
-//          nb_btn.style[back ? 'left' : 'right'] = '10px';
-//          nb_btn.style.bottom = '10px';
-          nb_btn.style[cssFloat] = back ? 'left' : 'right';
-          this.btns.appendChild(nb_btn);
+          nb_btn.active_frame = this.frame;
+          nb_btn.help_msg = help_msg;
+          nb_btn.title = help_msg;
 
           nb_btn.onkeydown = function(e) {
             if (this.frame.form.disable_count) return false;
@@ -754,8 +774,11 @@ function setup_form(args) {
           nb_btn.onfocus = function() {
             if (this.frame.form.disable_count) return;
             this.style.border = '1px solid grey'
+            got_focus(this);
             };
           nb_btn.onblur = function() {this.style.border = '1px solid transparent'};
+          nb_btn.got_focus = function() {};
+          nb_btn.lost_focus = function() {return true};
 
           nb_btn.onclick = function(e) {
             if (this.frame.form.disable_count) return false;
@@ -765,26 +788,34 @@ function setup_form(args) {
           };
 
         nb_page.end_nb_page = function() {
-//          this.button_row.style.clear = 'left';
-//          this.appendChild(this.button_row);
-          this.first_obj = frame.obj_list[this.first_obj];
+          this.first_obj = frame.obj_list[this.first_obj_pos];
+          if (this.first_obj === undefined)  // use 'Back' button instead
+            this.first_obj = frame.obj_list[this.first_obj_pos-1];
           var last_obj = frame.obj_list.length - 1;
           while (frame.obj_list[last_obj].tabIndex === -1)
             last_obj -= 1;  // look for prev enabled object
           this.last_obj = frame.obj_list[last_obj];
           };
 
-        if (notebook.childNodes.length > 1) {
-          notebook.lastChild.end_nb_page();
-          notebook.lastChild.create_btn(false);
-          nb_page.create_btn(true);
-          nb_page.first_obj += 2;
+        if (notebook.childNodes.length > 2) {
+          var prev_page = notebook.childNodes[notebook.childNodes.length-2];
+          prev_page.end_nb_page();
+          prev_page.create_btn(false, 'Forward to ' + nb_page.label);
+          nb_page.create_btn(true, 'Back to ' + prev_page.label);
+          nb_page.first_obj_pos += 2;
           };
-        notebook.appendChild(nb_page);
+//        notebook.appendChild(nb_page);
         break;
         };
       case 'nb_end': {
-        debug4('here');  // IE8 bug - form_setup_gui too narrow - this fixes it!
+        // obscure IE8 bug [2015-07-05]
+        // if there is a grid, and we add a toolbar, we adjust the size of the grid
+        // IE8 does not recalculate grid.offsetWidth immediately, and by the time
+        //   it gets round to it, the nb_page is hidden, so it does not adjust
+        //   the width of the notebook
+        // for some reason, writing anything to the screen at this point enables
+        //   it to recalculate grid.offsetWidth immediately (!)
+        debug4('here');
         notebook.lastChild.end_nb_page();
 
 //      next bit is dodgy!
@@ -843,6 +874,11 @@ function setup_form(args) {
         for (var j=1, child_length=notebook.childNodes.length; j<child_length; j++) {
           var nb_page = notebook.childNodes[j];
           nb_page.style.height = max_ht + 'px';
+          nb_page.firstChild.style.height = (max_ht - 2) + 'px';
+          nb_page.lastChild.style.height = (max_ht - 2) + 'px';
+          //nb_page.childNodes[0].style[cssFloat] = 'left';
+          //nb_page.childNodes[1].style[cssFloat] = 'left';
+          //nb_page.childNodes[2].style[cssFloat] = 'left';
           };
 
         var no_tabs = notebook.tabs.childNodes.length;
@@ -892,13 +928,12 @@ function setup_form(args) {
         main_grid.create_grid_toolbar(elem[1]);
         var toolbar = main_grid.childNodes[0];
         var grid = main_grid.childNodes[1];
-        var diff = toolbar.offsetWidth - grid.offsetWidth;
-        if (diff > -20)  // initial size of row_count is based on '0/0'
-          diff += 20;  // this allows for extra digits - very arbitrary!
+        var toolbar_width = toolbar.offsetWidth + 20  // allow for extra digits
+        var diff = toolbar_width - grid.offsetWidth;
         if (diff > 0)
           grid.change_size(diff);
-        else
-          toolbar.style.width = (grid.offsetWidth-2) + 'px';
+//        else
+//          toolbar.style.width = (grid.offsetWidth-2) + 'px';
         break;
         };
       case 'grid_frame': {
@@ -996,17 +1031,14 @@ function setup_form(args) {
         // store box.height for tree.js, so it knows when to overflow
         box.height = box.offsetHeight;
 
-        var toolbar=elem[1].toolbar, tree_data = elem[1].tree_data,
-          hide_root=elem[1].hide_root;
+        var tree = create_tree(box, frame, page, elem[1].toolbar, elem[1].hide_root);
+        tree.ref = elem[1].ref
+        frame.obj_list.push(tree);
+        frame.form.obj_dict[tree.ref] = tree;
+        var tree_data = elem[1].tree_data;
         for (var j=0, lng=tree_data.length; j<lng; j++) {
           var arg = tree_data[j];
           var node_id=arg[0], parent_id=arg[1], text=arg[2], expandable=arg[3];
-          if (j === 0) {
-            var tree = create_tree(box, frame, toolbar, hide_root);
-            tree.ref = elem[1].ref
-            frame.obj_list.push(tree);
-            frame.form.obj_dict[tree.ref] = tree;
-            };
           tree.add_node(parent_id, node_id, expandable, text, (j===0));
           };
         tree.onselected = function(node) {

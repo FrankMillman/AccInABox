@@ -2,10 +2,10 @@ from lxml import etree
 
 # table definition
 table = {
-    'table_name'    : 'adm_periods',
-    'group_code'    : 'adm',
-    'short_descr'   : 'Financial periods',
-    'long_descr'    : 'Financial periods for this company',
+    'table_name'    : 'org_phone_nos',
+    'group_code'    : 'org',
+    'short_descr'   : 'Phone numbers',
+    'long_descr'    : 'Phone numbers',
     'audit_trail'   : True,
     'table_created' : True,
     'default_cursor': None,
@@ -76,34 +76,34 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'period_no',
+    'col_name'   : 'party_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Period number',
-    'long_descr' : 'Period number',
-    'col_head'   : 'Period',
+    'short_descr': 'Party row id',
+    'long_descr' : 'Party row id',
+    'col_head'   : 'Party',
     'key_field'  : 'A',
     'generated'  : False,
     'allow_null' : False,
     'allow_amend': False,
-    'max_len'    : 0,
+    'max_len'    : 15,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'col_chks'   : None,
-    'fkey'       : None,
+    'fkey'       : ['org_parties', 'row_id', 'party_id', 'party_id', True],
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'year_no',
-    'data_type'  : 'INT',
-    'short_descr': 'Year number',
-    'long_descr' : 'Year number',
-    'col_head'   : 'Year',
-    'key_field'  : 'N',
+    'col_name'   : 'phone_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Phone type',
+    'long_descr' : 'Phone type',
+    'col_head'   : 'Type',
+    'key_field'  : 'A',
     'generated'  : False,
     'allow_null' : False,
     'allow_amend': False,
-    'max_len'    : 0,
+    'max_len'    : 12,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
@@ -112,36 +112,16 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'closing_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Closing date',
-    'long_descr' : 'Closing date',
-    'col_head'   : 'Date',
+    'col_name'   : 'phone_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Phone number',
+    'long_descr' : 'Phone number',
+    'col_head'   : 'Phone number',
     'key_field'  : 'N',
     'generated'  : False,
     'allow_null' : False,
     'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : '0',
-    'col_chks'   : [['no_amd', 'Date cannot be amended if period closed',
-        [['check', '', 'period_closed', '!=', 'True', ''],
-        ['or', '', '$value', '=', 'closing_date', '']]]],
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'period_closed',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Period closed?',
-    'long_descr' : 'Period closed?',
-    'col_head'   : 'Closed?',
-    'key_field'  : 'N',
-    'generated'  : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
+    'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
@@ -155,18 +135,3 @@ virt = []
 
 # cursor definitions
 cursors = []
-
-"""
-cursors.append({
-    'cursor_name': 'periods',
-    'descr': 'Periods',
-    'columns': [
-        ('period_no', 600, False, True, False, False, None, None),
-        ('year_no', 60, False, True, False, False, None, None),
-        ('closing_date', 120, True, True, False, False, None, None),
-        ],
-    'filter': [],
-    'sequence': [('period_no', False)],
-    'default': True
-    })
-"""

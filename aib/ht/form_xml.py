@@ -172,10 +172,12 @@ def gridframe_dosave(caller, xml):
     # if try to save grid, and grid has grid_frame, invoke grid_frame's do_save
     yield from exec_xml(caller.grid_frame, caller.grid_frame.methods['do_save'])
 
+"""
 @asyncio.coroutine
 def check_children(frame, xml):
-    db_obj = frame.data_objects.get(xml.get('obj_name'))
-    yield from frame.check_children(db_obj)
+#   db_obj = frame.data_objects.get(xml.get('obj_name'))
+#   yield from frame.check_children(db_obj)
+    yield from frame.check_children()
 
 @asyncio.coroutine
 def save_obj(frame, xml):
@@ -191,6 +193,16 @@ def save_obj(frame, xml):
 @asyncio.coroutine
 def save_row(grid, xml):
     yield from grid.save_row()
+"""
+
+@asyncio.coroutine
+def save(caller, xml):
+    yield from caller.save()
+
+@asyncio.coroutine
+def save_obj(caller, xml):
+    db_obj = caller.data_objects.get(xml.get('obj_name'))
+    yield from caller.save_obj(db_obj)
 
 @asyncio.coroutine
 def req_formview(grid, xml):
@@ -241,6 +253,7 @@ def row_selected(grid, xml):
 def do_navigate(caller, xml):
     yield from caller.do_navigate()
 
+"""
 @asyncio.coroutine
 def tree_before_save(caller, xml):
     yield from caller.tree.before_save()
@@ -248,6 +261,7 @@ def tree_before_save(caller, xml):
 @asyncio.coroutine
 def update_node(caller, xml):
     yield from caller.tree.update_node()
+"""
 
 @asyncio.coroutine
 def delete_node(caller, xml):

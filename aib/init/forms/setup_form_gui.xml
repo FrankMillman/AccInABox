@@ -88,11 +88,12 @@
                 [`pwd`, false], [`readonly`, false], [`reverse`, false], [`choice`, false],
                 [`lookup`, false], [`validation`, false], [`after`, false]], [[`fld`, ``]]]
             ,[`display`, `Display field`, [[`fld`, true], [`lng`, true]], [[`fld`, ``]]]
+            ,[`string`, `String value`, [[`value`, true], [`lng`, true]], [[`value`, ``]]]
             ,[`button`, `Button`, [[`btn_id`, true], [`btn_label`, true], [`lng`, false],
                 [`btn_enabled`, true], [`btn_validate`, true], [`action`, true]],
                 [[`btn_label`, ``]]]
             ,[`nb_start`, `Notebook start`, [], []]
-            ,[`nb_page`, `Notebook page`, [[`label`, true]], []]
+            ,[`nb_page`, `Notebook page`, [[`label`, true]], [[`label`, ``]]]
             ,[`nb_end`, `Notebook end`, [], []]
             ,[`grid`, `Data grid`, [[`data_object`, true], [`growable`, false],
                 [`num_grid_rows`, false], [`cursor`, false], [`cur_cols`, false],
@@ -333,7 +334,7 @@
       <grid data_object="body" growable="true" num_grid_rows="12">
         <toolbar template="Grid"/>
         <cur_columns>
-          <cur_col col_name="type" lng="80"/>
+          <cur_col col_name="type" lng="120"/>
           <cur_col col_name="display_name" lng="150" expand="true" readonly="true" skip="true"/>
         </cur_columns>
         <cur_filter/>
@@ -531,11 +532,9 @@
           <<pyfunc name=`custom.formdefn_funcs.load_frame`/>>
         <</action>>
       "/>
-      <method name="do_save" action="
+      <method name="before_save" action="
         <<action>>
-          <<check_children obj_name=`form`/>>
           <<pyfunc name=`custom.formdefn_funcs.dump_frame`/>>
-          <<save_obj obj_name=`form`/>>
         <</action>>
       "/>
       <method name="do_restore" action="

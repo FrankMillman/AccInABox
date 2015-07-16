@@ -148,6 +148,10 @@ function set_focus(args) {
   obj.frame.form.focus_from_server = true;
   obj.frame.form.setting_focus = obj;  // IE workaround - delays actually setting focus!
   obj.frame.err_flag = err_flag;
+  if (obj.nb_page !== null)
+    // ensure object visible
+    if (obj.nb_page.pos !== obj.nb_page.parentNode.current_pos)
+      obj.nb_page.parentNode.req_new_page(obj.nb_page.pos, false)
   obj.focus();
   };
 
@@ -272,9 +276,11 @@ function set_subtype(args) {
   var frame_ref = args[0], subtype_name = args[1], subtype_id = args[2];
   var frame = get_obj(frame_ref);
   var subtype = frame.subtypes[subtype_name];
-  subtype[subtype._active_box].style.display = 'none';
-  subtype[subtype_id].style.display = 'block';
-  subtype._active_box = subtype_id;
+  if (subtype._active_box !== subtype_id) {
+    subtype[subtype._active_box].style.display = 'none';
+    subtype[subtype_id].style.display = 'block';
+    subtype._active_box = subtype_id;
+    };
   };
 
 function exception(args) {

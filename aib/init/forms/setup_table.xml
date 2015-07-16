@@ -1,8 +1,6 @@
 <form name="setup_table">
   <db_objects>
-<!--
-    <db_obj name="db_table" table_name="db_tables"/>
--->
+    <db_obj name="db_table" table_name="db_tables" formview_obj="true"/>
 <!--
     <db_obj name="db_col_sys" table_name="db_columns" parent="db_table"/>
     <db_obj name="db_col_user" table_name="db_columns" parent="db_table"/>
@@ -93,10 +91,7 @@
               <</compare>>
             <</case>>
           <</action>>
-        "/>
-
-      <dummy
-        validation="
+        " validation="
           <<validations>>
             <<validation>>
               <<case>>

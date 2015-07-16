@@ -1,8 +1,10 @@
 function create_page() {
-  var page = document.createElement('div');
+  //var page = document.createElement('diz');
+  var page = document.createElement('span');
   page.style.display = 'inline-block';
   page.style.padding = '0px 10px 10px 10px';
   page.block = null;
+  page.nb_page = null;  // will be overridden if it is a notebook page
   page.sub_pages = [];
 
   page.kbd_shortcuts = {};
@@ -85,7 +87,7 @@ function create_page() {
   return page;
   };
 
-function create_input(frame, json_elem, label) {
+function create_input(frame, page, json_elem, label) {
   switch (json_elem.type) {
     case 'text':
       if (json_elem.lkup) {
@@ -129,6 +131,7 @@ function create_input(frame, json_elem, label) {
       var input = document.createElement('span');
       input.aib_obj = new AibDummy();
       input.tabIndex = 0;
+      input.dummy = true;  // ok to set focus here
       var return_elem = input;
       break;
     };
@@ -144,6 +147,7 @@ function create_input(frame, json_elem, label) {
   frame.form.obj_dict[json_elem.ref] = input;
 
   input.frame = frame;
+  input.nb_page = page.nb_page;
   input.active_frame = frame;
   input.ref = json_elem.ref;
   input.help_msg = json_elem.help_msg;
@@ -247,7 +251,7 @@ function create_input(frame, json_elem, label) {
     };
 
   input.lost_focus = function() {
-    //debug3(input.help_msg + ' lost focus');
+    //debug3(input.ref + ' ' + input.help_msg + ' lost focus');
     if (!input.aib_obj.before_lost_focus(input))  // failed validation (date)
       return false;
 //    if (input.aib_obj.data_changed(input, input.current_value) && !input.frame.form.internal)
@@ -1002,6 +1006,7 @@ function setup_sxml(json_elem) {
   frame.obj_list.push(sxml);
   frame.form.obj_dict[json_elem.ref] = sxml;
   sxml.frame = frame;
+  sxml.nb_page = frame.page.nb_page;
   sxml.active_frame = frame;
   sxml.ref = json_elem.ref;
   sxml.help_msg = json_elem.help_msg;
@@ -1079,12 +1084,13 @@ function create_display(frame, json_elem, label) {
   display.appendChild(text);
   //display.style.marginRight = '10px';
   display.style.width = json_elem.lng + 'px';
-  display.display = true;  // used in start_form() to prevent setting focus here
+  display.display = true;  // used in start_frame() to prevent setting focus here
 
   display.pos = frame.obj_list.length;
   frame.obj_list.push(display);
   frame.form.obj_dict[json_elem.ref] = display;
   display.frame = frame;
+  display.nb_page = frame.page.nb_page;
   display.active_frame = frame;
   display.ref = json_elem.ref;
   display.text = text;
@@ -1154,6 +1160,7 @@ function create_button(frame, json_elem) {
   frame.obj_list.push(button);
   frame.form.obj_dict[json_elem.ref] = button;
   button.frame = frame;
+  button.nb_page = frame.page.nb_page;
   button.active_frame = frame;
   button.ref = json_elem.ref;
   button.help_msg = json_elem.help_msg;

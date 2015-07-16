@@ -1,7 +1,7 @@
 <form name="setup_form">
 
   <db_objects>
-    <db_obj name="form" table_name="sys_form_defns"/>
+    <db_obj name="form" table_name="sys_form_defns" formview_obj="true"/>
   </db_objects>
   <mem_objects/>
   <input_params/>

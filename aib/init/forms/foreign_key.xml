@@ -96,11 +96,9 @@
           <<pyfunc name=`custom.foreign_key.load_fkey`/>>
         <</action>>
       "/>
-      <method name="do_save" action="
+      <method name="before_save" action="
         <<action>>
-          <<check_children obj_name=`var`/>>
           <<pyfunc name=`custom.foreign_key.dump_fkey`/>>
-          <<save_obj obj_name=`var`/>>
         <</action>>
       "/>
       <method name="do_restore" action="

@@ -125,8 +125,9 @@ class GuiTree(GuiTreeCommon):
     def on_req_insert_node(self, parent_id, seq, combo_type=None):
         if not parent_id:
             raise AibError(head='Error', body='Cannot create new root')
-        self.node_inserted = (parent_id, seq)  # retain for before_save() below
-        self.db_obj.init()
+#       self.node_inserted = (parent_id, seq)  # retain for before_save() below
+        self.node_inserted = True
+        self.db_obj.init(init_vals={'parent_id': parent_id, 'seq': seq})
         self.session.request.send_insert_node(self.ref, parent_id, seq, -1)
         if self.tree_frame is not None:
             yield from self.tree_frame.restart_frame()
@@ -149,12 +150,12 @@ class GuiTree(GuiTreeCommon):
     def on_move_node(self, node_id, parent_id, seq):
         pass
 
-    @asyncio.coroutine
-    def before_save(self):  # called from frame_methods before save
-        if self.node_inserted:  # set up in on_req_insert_node() above
-            parent_id, seq = self.node_inserted
-            self.db_obj.setval('parent_id', parent_id)
-            self.db_obj.setval('seq', seq)
+#   @asyncio.coroutine
+#   def before_save(self):  # called from frame_methods before save
+#       if self.node_inserted:  # set up in on_req_insert_node() above
+#           parent_id, seq = self.node_inserted
+#           self.db_obj.setval('parent_id', parent_id)
+#           self.db_obj.setval('seq', seq)
 
     @asyncio.coroutine
     def update_node(self):  # called from frame_methods after save
@@ -288,21 +289,28 @@ class GuiTreeCombo(GuiTreeCommon):
         if parent_id == '0_group':
             raise AibError(head='Error', body='Cannot create new root')
         parent_num = int(parent_id.split('_')[0])
+        self.node_inserted = True
         if node_type == 'group':
-            self.node_inserted = (parent_num, seq, 'group')  # retain for before_save() below
-            #self.db_obj.init(init_vals=
-            #    {'parent_num': parent_num, 'seq': seq, 'type': 'group'})
-            #self.group.init(init_vals={'parent_id': parent_num, 'seq': seq})
-            self.db_obj.init()
-            self.group.init()
+            # don't know why this was changed [2015-07-11]
+            # initially we set up parent_num and seq as init_vals
+            # then it was changed to populate the fields in 'before_save'
+            # don't know when or why
+            # it causes a problem with saving 'db_table' in setup_table_tree
+            # reverted to original method - it seems to be working ok
+            #self.node_inserted = (parent_num, seq, 'group')  # retain for before_save() below
+            self.db_obj.init(init_vals=
+                {'parent_num': parent_num, 'seq': seq, 'type': 'group'})
+            self.group.init(init_vals={'parent_id': parent_num, 'seq': seq})
+            #self.db_obj.init()
+            #self.group.init()
             self.tree_frame = self.tree_frames['group']
         else:  # must be 'member'
-            self.node_inserted = (parent_num, seq, 'member')  # retain for before_save() below
-            #self.db_obj.init(init_vals=
-            #    {'parent_num': parent_num, 'seq': seq, 'type': 'member'})
-            #self.member.init(init_vals={'parent_id': parent_num, 'seq': seq})
-            self.db_obj.init()
-            self.member.init()
+            #self.node_inserted = (parent_num, seq, 'member')  # retain for before_save() below
+            self.db_obj.init(init_vals=
+                {'parent_num': parent_num, 'seq': seq, 'type': 'member'})
+            self.member.init(init_vals={'parent_id': parent_num, 'seq': seq})
+            #self.db_obj.init()
+            #self.member.init()
             self.tree_frame = self.tree_frames['member']
         self.session.request.send_insert_node(self.ref, parent_id, seq, -1)
         yield from self.tree_frame.restart_frame()
@@ -333,19 +341,19 @@ class GuiTreeCombo(GuiTreeCommon):
     def on_move_node(self, node_id, parent_id, seq):
         pass
 
-    @asyncio.coroutine
-    def before_save(self):  # called from frame_methods before save
-        if self.node_inserted:  # set up in on_req_insert_node() above
-            parent_num, seq, type = self.node_inserted
-            self.db_obj.setval('parent_num', parent_num)
-            self.db_obj.setval('seq', seq)
-            self.db_obj.setval('type', type)
-            if type == 'group':
-                self.group.setval('parent_id', parent_num)
-                self.group.setval('seq', seq)
-            elif type == 'member':
-                self.member.setval('parent_id', parent_num)
-                self.member.setval('seq', seq)
+#   @asyncio.coroutine
+#   def before_save(self):  # called from frame_methods before save
+#       if self.node_inserted:  # set up in on_req_insert_node() above
+#           parent_num, seq, type = self.node_inserted
+#           self.db_obj.setval('parent_num', parent_num)
+#           self.db_obj.setval('seq', seq)
+#           self.db_obj.setval('type', type)
+#           if type == 'group':
+#               self.group.setval('parent_id', parent_num)
+#               self.group.setval('seq', seq)
+#           elif type == 'member':
+#               self.member.setval('parent_id', parent_num)
+#               self.member.setval('seq', seq)
 
     @asyncio.coroutine
     def update_node(self):  # called from frame_methods after save

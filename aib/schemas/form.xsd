@@ -28,6 +28,7 @@
       <xs:attribute name="parent"/>
       <xs:attribute name="fkey"/>
       <xs:attribute name="cursor"/>
+      <xs:attribute name="formview_obj" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="mem_objects">
@@ -59,10 +60,10 @@
       <xs:attribute name="long_descr"/>
       <xs:attribute name="col_head"/>
       <xs:attribute name="key_field" use="required"/>
-      <xs:attribute name="allow_null" use="required" type="xs:boolean"/>
-      <xs:attribute name="allow_amend" use="required" type="xs:boolean"/>
-      <xs:attribute name="max_len" use="required" type="xs:integer"/>
-      <xs:attribute name="db_scale" use="required" type="xs:integer"/>
+      <xs:attribute name="allow_null" type="xs:boolean"/>
+      <xs:attribute name="allow_amend" type="xs:boolean"/>
+      <xs:attribute name="max_len" type="xs:integer"/>
+      <xs:attribute name="db_scale" type="xs:integer"/>
       <xs:attribute name="scale_ptr"/>
       <xs:attribute name="dflt_val"/>
       <xs:attribute name="col_chks"/>

@@ -61,8 +61,6 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
   grid.appendChild(grid_head);
   for (var i=0, num_cols=grid.num_cols; i<num_cols; i++) {
     var col_defn = col_defns[i];
-    if (i === grid.expand_col)
-      col_defn.lng += 17;  // add space for scrollbar
 
     if (col_defn[0] === 'input')
       col_defn = col_defn[1];
@@ -73,6 +71,9 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //      input.grid = grid;
       var btn_lng = 0;
       };
+
+    if (i === grid.expand_col)
+      col_defn.lng += 17;  // add space for scrollbar
 
     switch (col_defn.type) {
       case 'text':
@@ -1113,6 +1114,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       grid_rows[j].grid_cols[expand_col].style.width = first_cell.style.width;
     };
 
+/*
   grid.tab_to_ctrl = function(tabdir) {
     var pos = grid.pos + tabdir;  // tab = 1, shift+tab = -1
     if (pos < 0) {
@@ -1129,6 +1131,27 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       pos = 0;  // wrap to start
     while (grid.frame.obj_list[pos].offsetHeight === 0)
       pos += tabdir;  // look for next available object
+    setTimeout(function() {grid.frame.obj_list[pos].focus()}, 0);
+    };
+*/
+
+  grid.tab_to_ctrl = function(tabdir) {
+    var pos = grid.pos + tabdir;  // tab = 1, shift+tab = -1
+    while (grid.frame.obj_list[pos].offsetHeight === 0) {
+      pos += tabdir;  // look for next available object
+      if (pos < 0) {
+        if (grid.frame.type === 'grid_frame') {
+          var ctrl_grid = grid.frame.ctrl_grid;
+          ctrl_grid.focus();
+          ctrl_grid.req_cell_focus(ctrl_grid.active_row, ctrl_grid.num_cols-1);
+          return;
+          }
+        else  // wrap to end
+          pos = grid.frame.obj_list.length-1
+        }
+      else if (pos === grid.frame.obj_list.length)
+        pos = 0;  // wrap to start
+      };
     setTimeout(function() {grid.frame.obj_list[pos].focus()}, 0);
     };
 

@@ -84,7 +84,7 @@ class GuiCtrl:
 
         # this is a copy of setval() in db.object_fields, with the addition
         #   of checking any 'form' validations
-        fld.validate(value)
+        value = fld.validate(value)
         for vld in self.form_vlds:
             yield from check_vld(
                 fld, fld.col_defn.short_descr, self.parent, vld, value)
@@ -98,8 +98,6 @@ class GuiCtrl:
     def _redisplay(self):  # may only be called from db module or set_subtype
         if self.pwd:
             return  # do not send password back to client
-        if self.hidden:
-            return  # do not send hidden objects back to client
         value = self.fld.val_to_str()  # prepare value for display
         if hasattr(self.parent, 'current_row'):  # grid object
             if self.parent.current_row is None:
@@ -267,8 +265,6 @@ class GuiDisplay:
         pass
 
     def _redisplay(self):
-        if self.hidden:
-            return  # do not send hidden objects back to client
         value = self.fld.val_to_str()  # prepare value for display
         if hasattr(self.parent, 'current_row'):  # grid object
             value = (self.parent.current_row, value)

@@ -23,7 +23,7 @@ function show_cal(parent, current_value, callback) {
   root.push(calendar);
   calendar.style.zIndex = (root.zindex*100) + root.length;
   calendar.save_current_form = current_form;
-  calendar.current_focus = calendar.page;
+  calendar.current_focus = calendar.cal_page;
   current_form = calendar;
   calendar.parent = parent;
   calendar.callback = callback;
@@ -39,7 +39,7 @@ function show_cal(parent, current_value, callback) {
   calendar.current_day = date.getDate();
   var dates = calendar.get_dates(date);
   for (var i=0; i<42; i++) {
-    var dd = calendar.page.childNodes[i];
+    var dd = calendar.cal_page.childNodes[i];
     dd.innerHTML = dates[i];
     if (dates[i] == calendar.current_day) {
       dd.style.background = 'darkblue';
@@ -52,7 +52,7 @@ function show_cal(parent, current_value, callback) {
   calendar.data_mth.set_value_from_server(calendar.current_month);
   calendar.data_yr.set_value_from_server(calendar.current_year);
 
-  setTimeout(function() {calendar.page.focus()}, 0);
+  setTimeout(function() {calendar.cal_page.focus()}, 0);
 
   };
 
@@ -92,6 +92,10 @@ var frame = {}  // new Object()
 frame.obj_list = [];
 frame.form = calendar;
 frame.form.obj_dict = {};
+var page = create_page();
+frame.page = page;
+page.frame = frame;
+
 //frame._amended = false;
 frame.set_amended = function(state) {
   this._amended = state;
@@ -125,19 +129,19 @@ calendar.get_dates = function(date) {
 
 calendar.onchange_yr = function(option_selected) {
   if (option_selected != calendar.current_year) {
-    var dd = calendar.page.childNodes[calendar.current_day+calendar.first_day-1];
+    var dd = calendar.cal_page.childNodes[calendar.current_day+calendar.first_day-1];
     dd.style.background = 'white';
     dd.style.color = 'black';
     calendar.current_year = option_selected;
     var date = new Date(calendar.current_year, calendar.current_month, 1);
     var dates = calendar.get_dates(date);
     for (var i=0; i<42; i++) {
-      var dd = calendar.page.childNodes[i];
+      var dd = calendar.cal_page.childNodes[i];
       dd.innerHTML = dates[i];
       };
     if (calendar.current_day > calendar.last_day)
       calendar.current_day = calendar.last_day;
-    var dd = calendar.page.childNodes[calendar.current_day+calendar.first_day-1];
+    var dd = calendar.cal_page.childNodes[calendar.current_day+calendar.first_day-1];
     dd.style.background = 'grey';
     dd.style.color = 'white';
     };
@@ -146,14 +150,14 @@ calendar.onchange_yr = function(option_selected) {
 calendar.onchange_mth = function(option_selected) {
   if (calendar.current_month === undefined) return;
   if (option_selected != calendar.current_month) {
-    var dd = calendar.page.childNodes[calendar.current_day+calendar.first_day-1];
+    var dd = calendar.cal_page.childNodes[calendar.current_day+calendar.first_day-1];
     dd.style.background = 'white';
     dd.style.color = 'black';
     calendar.current_month = option_selected;
     var date = new Date(calendar.current_year, calendar.current_month, 1);
     var dates = calendar.get_dates(date);
     for (var i=0; i<42; i++) {
-      var dd = calendar.page.childNodes[i];
+      var dd = calendar.cal_page.childNodes[i];
       dd.innerHTML = dates[i];
       };
     // TODO
@@ -162,24 +166,24 @@ calendar.onchange_mth = function(option_selected) {
     // at present we have lost that information, so cannot be done
     if (calendar.current_day > calendar.last_day)
       calendar.current_day = calendar.last_day;
-    var dd = calendar.page.childNodes[calendar.current_day+calendar.first_day-1];
+    var dd = calendar.cal_page.childNodes[calendar.current_day+calendar.first_day-1];
     dd.style.background = 'grey';
     dd.style.color = 'white';
     };
-  // timeout 50 - wait for 'choice' to get focus, then move focus to 'page'
-  // timeout 0 - set focus to 'page', then reset focus back to 'choice'
+  // timeout 50 - wait for 'choice' to get focus, then move focus to 'cal_page'
+  // timeout 0 - set focus to 'cal_page', then reset focus back to 'choice'
   // 0 is preferable, otherwise you cannot move up/down with arrow keys
-  //   to select calendar month - it keeps setting focus back to page!
-  setTimeout(function() {page.focus()}, 0);
+  //   to select calendar month - it keeps setting focus back to cal_page!
+  setTimeout(function() {cal_page.focus()}, 0);
   };
 
 calendar.onchange_day = function(option_selected) {
   if (option_selected != calendar.current_day) {
-    var dd = calendar.page.childNodes[calendar.current_day+calendar.first_day-1];
+    var dd = calendar.cal_page.childNodes[calendar.current_day+calendar.first_day-1];
     dd.style.background = 'white';
     dd.style.color = 'black';
     calendar.current_day = option_selected;
-    var dd = calendar.page.childNodes[calendar.current_day+calendar.first_day-1];
+    var dd = calendar.cal_page.childNodes[calendar.current_day+calendar.first_day-1];
     dd.style.background = 'darkblue';
     dd.style.color = 'white';
     };
@@ -203,7 +207,7 @@ var choices = [[0, 'Jan'], [1, 'Feb'], [2, 'Mar'], [3, 'Apr'], [4, 'May'], [5, '
 args.choices = [null, choices];
 args.callback = calendar.onchange_mth;
 
-var data_mth = create_input(frame, args, null);
+var data_mth = create_input(frame, page, args, null);
 //data_mth.choice.onfocus = function() {data_mth.choice.after_got_focus()};
 data_mth.style.marginLeft = '20px';
 data_row.appendChild(data_mth);
@@ -222,7 +226,7 @@ args.min = 1900;
 args.max = 2100;
 args.callback = calendar.onchange_yr;
 
-var data_yr = create_input(frame, args, null);
+var data_yr = create_input(frame, page, args, null);
 //data_yr.spin.onfocus = function() {data_yr.spin.after_got_focus()};
 data_yr.style.marginLeft = '30px';
 data_row.appendChild(data_yr);
@@ -230,9 +234,9 @@ calendar.data_yr = data_yr.childNodes[0];
 
 month.appendChild(data_row);
 
-var page_width = 210;
-var dd_width = page_width / 7;
-month.style.width = page_width + 'px';
+var cal_page_width = 210;
+var dd_width = cal_page_width / 7;
+month.style.width = cal_page_width + 'px';
 
 var days = document.createElement('div');
 days.style.marginTop = '5px';
@@ -252,24 +256,24 @@ for (var i=0; i<7; i++) {
   };
 month.appendChild(days);
 
-var page = document.createElement('div');
-month.appendChild(page);
-calendar.page = page;
-page.form = calendar;
-page.frame = frame;
-page.active_frame = frame;
-page.help_msg = 'Page';
-page.tabIndex = 0;
-page.style.height = '126px';
-page.style.width = page_width + 'px';
-page.style.borderTop = '1px solid grey';
-page.style.borderBottom = '1px solid grey';
-page.style.outline = '0px solid transparent';  // suppress outline on focus
+var cal_page = document.createElement('div');
+month.appendChild(cal_page);
+calendar.cal_page = cal_page;
+cal_page.form = calendar;
+cal_page.frame = frame;
+cal_page.active_frame = frame;
+cal_page.help_msg = 'cal_page';
+cal_page.tabIndex = 0;
+cal_page.style.height = '126px';
+cal_page.style.width = cal_page_width + 'px';
+cal_page.style.borderTop = '1px solid grey';
+cal_page.style.borderBottom = '1px solid grey';
+cal_page.style.outline = '0px solid transparent';  // suppress outline on focus
 
-page.ref = '2';
-page.pos = frame.obj_list.length;
-frame.obj_list.push(page);
-frame.form.obj_dict[page.ref] = page;
+cal_page.ref = '2';
+cal_page.pos = frame.obj_list.length;
+frame.obj_list.push(cal_page);
+frame.form.obj_dict[cal_page.ref] = cal_page;
 
 for (var i=0; i<42; i++) {
   var dd = document.createElement('div');
@@ -286,25 +290,25 @@ for (var i=0; i<42; i++) {
     if (this.innerHTML != '&nbsp;')
       calendar.onchange_day(+this.innerHTML);
     };
-  page.appendChild(dd);
+  cal_page.appendChild(dd);
   };
 
-page.onfocus = function(e) {got_focus(page)};
+cal_page.onfocus = function(e) {got_focus(cal_page)};
 
-page.got_focus = function() {
-  var dd = page.childNodes[calendar.current_day+calendar.first_day-1];
+cal_page.got_focus = function() {
+  var dd = cal_page.childNodes[calendar.current_day+calendar.first_day-1];
   dd.style.background = 'darkblue';
   dd.style.color = 'white';
   };
 
-page.lost_focus = function() {
-  var dd = page.childNodes[calendar.current_day+calendar.first_day-1];
+cal_page.lost_focus = function() {
+  var dd = cal_page.childNodes[calendar.current_day+calendar.first_day-1];
   dd.style.background = 'grey';
   dd.style.color = 'white';
   return true;
   };
 
-page.onkey = function(e) {
+cal_page.onkey = function(e) {
   if (!e) e=window.event;
   if (e.altKey || e.ctrlKey)
     return;
@@ -348,9 +352,9 @@ page.onkey = function(e) {
   };
 
 if (navigator.appName == 'Opera')
-  page.onkeypress = page.onkey
+  cal_page.onkeypress = cal_page.onkey
 else
-  page.onkeydown = page.onkey;
+  cal_page.onkeydown = cal_page.onkey;
 
 var button_row = document.createElement('div');
 button_row.style.padding = '10px';
@@ -393,7 +397,7 @@ calendar.close_window = function(new_date) {
   calendar.data_mth.aib_obj.close_dropdown(calendar.data_mth);
   //if (new_date != null)
   //  calendar.parent.current_value = new_date;
-  var dd = calendar.page.childNodes[calendar.current_day+calendar.first_day-1];
+  var dd = calendar.cal_page.childNodes[calendar.current_day+calendar.first_day-1];
   dd.style.background = 'white';
   dd.style.color = 'black';
   document.body.removeChild(calendar);

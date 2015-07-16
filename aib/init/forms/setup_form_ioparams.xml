@@ -129,11 +129,9 @@
           <<pyfunc name=`custom.formdefn_funcs.load_ioparams`/>>
         <</action>>
       "/>
-      <method name="do_save" action="
+      <method name="before_save" action="
         <<action>>
-          <<check_children obj_name=`form`/>>
           <<pyfunc name=`custom.formdefn_funcs.dump_ioparams`/>>
-          <<save_obj obj_name=`form`/>>
         <</action>>
       "/>
       <method name="do_restore" action="

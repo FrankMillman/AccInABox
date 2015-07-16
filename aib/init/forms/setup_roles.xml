@@ -197,7 +197,7 @@
                     <<action>>
                       <<case>>
                         <<fld_changed name=`col_view.view_ok`>>
-                          <<call method=`do_save`/>>
+                          <<save/>>
                         <</fld_changed>>
                       <</case>>
                     <</action>>
@@ -206,7 +206,7 @@
                     <<action>>
                       <<case>>
                         <<fld_changed name=`col_view.amend_ok`>>
-                          <<call method=`do_save`/>>
+                          <<save/>>
                         <</fld_changed>>
                       <</case>>
                     <</action>>
@@ -224,11 +224,9 @@
                   <<pyfunc name=`custom.table_perms.load_col_perms`/>>
                 <</action>>
               "/>
-              <method name="do_save" action="
+              <method name="before_save" action="
                 <<action>>
-                  <<check_children obj_name=`tbl_view`/>>
                   <<pyfunc name=`custom.table_perms.dump_col_perms`/>>
-                  <<save_obj obj_name=`tbl_view`/>>
                 <</action>>
               "/>
             </frame_methods>
@@ -241,13 +239,9 @@
               <<pyfunc name=`custom.table_perms.load_table_perms`/>>
             <</action>>
           "/>
-          <method name="do_save" action="
+          <method name="after_save" action="
             <<action>>
-              <<tree_before_save/>>
-              <<check_children obj_name=`role`/>>
-              <<save_obj obj_name=`role`/>>
               <<pyfunc name=`custom.table_perms.dump_table_perms`/>>
-              <<update_node/>>
             <</action>>
           "/>
         </frame_methods>

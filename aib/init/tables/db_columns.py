@@ -149,7 +149,7 @@ cols.append ({
     'max_len'    : 5,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
+    'dflt_val'   : 'sys',
     'col_chks'   : None,
     'fkey'       : None,
     'choices'    : [

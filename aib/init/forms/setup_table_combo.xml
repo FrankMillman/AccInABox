@@ -132,7 +132,7 @@
             help_msg = "Save header before proceeding"
             btn_enabled="true" btn_validate="true" action="
               <<action>>
-                <<call method=`do_save`/>>
+                <<save_obj obj_name=`db_table`/>>
                 <<change_button>>
                   <<btn_dflt btn_id=`btn_rgt`/>>
                 <</change_button>>
@@ -167,10 +167,7 @@
                   <</compare>>
                 <</case>>
               <</action>>
-            "/>
-
-          <dummy
-            validation="
+            " validation="
               <<validations>>
                 <<validation>>
                   <<case>>

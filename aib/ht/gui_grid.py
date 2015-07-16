@@ -805,7 +805,8 @@ class GuiGrid:
         elif not self.data_changed():
             self.reset_current_row()
         elif save:  # user requested save
-            yield from self.try_save()
+            #yield from self.try_save()
+            yield from self.save(self.grid_frame)
         else:
 
             if debug:
@@ -827,7 +828,8 @@ class GuiGrid:
                 self.parent, title, question, answers, default, escape)
 
             if ans == 'Yes':
-                yield from self.try_save()
+                #yield from self.try_save()
+                yield from self.save(self.grid_frame)
             elif ans == 'No':
                 yield from self.dont_save()
             else:
@@ -850,6 +852,7 @@ class GuiGrid:
             log.write('DONT SAVE\n\n')
         self.reset_current_row()
 
+    """
     @log_func
     @asyncio.coroutine
     def try_save(self):
@@ -867,7 +870,9 @@ class GuiGrid:
 
         if self.form_active is None and self.grid_frame is None:  # else we are still on same row
             self.reset_current_row()
+    """
 
+    """
     @log_func
     @asyncio.coroutine
     def save_row(self):
@@ -882,6 +887,17 @@ class GuiGrid:
             raise
         if debug:
             log.write('SAVED {}\n\n'.format(self.db_obj))
+
+        # by definition, a grid has a cursor
+        # when object is saved, if cursor is not None, cursor.insert_row
+        #   or cursor.update_row is called
+        # if insert, it finds the gap where the row should be inserted,
+        #   inserts it there, and resets db_obj.cursor_row accordingly
+        # therefore at this point, db_obj.cursor_row may not be equal to
+        #   self.current_row
+        # if they are not equal, must send a message to client telling
+        #   it to re-position the row to the new position, and then
+        #   reset self.current_Row
 
         if self.inserted:
             self.no_rows += 1
@@ -899,6 +915,60 @@ class GuiGrid:
                     self.ref, new_row, first_col_obj.ref)
             self.inserted = 0
             self.current_row = new_row
+    """
+
+    @log_func
+    @asyncio.coroutine
+    def save(self, frame=None):
+        yield from self.validate_all()
+        if 'before_save' in self.methods:
+            yield from ht.form_xml.exec_xml(self, self.methods['before_save'])
+        if frame is not None and 'before_save' in frame.methods:
+            yield from ht.form_xml.exec_xml(frame, frame.methods['before_save'])
+#       if frame is not None and 'do_save' in frame.methods:
+#           yield from ht.form_xml.exec_xml(frame, frame.methods['do_save'])
+#       elif 'do_save' in self.methods:
+#           yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
+#       else:
+#           db_obj.save()
+        if frame is not None:
+            yield from ht.form_xml.exec_xml(frame, frame.methods['do_save'])
+        else:
+            yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
+        if 'after_save' in self.methods:
+            yield from ht.form_xml.exec_xml(self, self.methods['after_save'])
+        if frame is not None and 'after_save' in frame.methods:
+            yield from ht.form_xml.exec_xml(frame, frame.methods['after_save'])
+        if self.inserted:
+            # by definition, a grid has a cursor
+            # when object is saved, cursor.insert_row/update_row is called
+            # if insert, it finds the gap where the row should be inserted,
+            #   inserts it there, and resets db_obj.cursor_row accordingly
+            # so at this point, db_obj.cursor_row may not = self.current_row
+            # if they are not equal, must send a message to client telling
+            #   it to re-position the row to the new position, and then
+            #   reset self.current_row
+            self.no_rows += 1
+            new_row = self.db_obj.cursor_row
+            self.session.request.check_redisplay()  # must do this first
+            # move_row serves two purposes -
+            #   - if new row inserted in new position, tell client to move it
+            #   - if new row appended, tell client to append new blank row
+            if new_row != self.current_row or self.inserted == -1:
+                self.session.request.send_move_row(self.ref, self.current_row, new_row)
+            # if req_cell_focus, and row moved, set focus on 'moved' row instead
+            if new_row != self.current_row:
+                first_col_obj = self.obj_list[self.grid_cols[0]]
+                self.session.request.send_cell_set_focus(
+                    self.ref, new_row, first_col_obj.ref)
+            self.inserted = 0
+            self.current_row = new_row
+        if frame is None:  # else we are still on same row
+            self.reset_current_row()
+
+    @asyncio.coroutine
+    def save_obj(self, db_obj):
+        db_obj.save()
 
     @asyncio.coroutine
     def validate(self, save):

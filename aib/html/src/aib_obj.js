@@ -1458,13 +1458,13 @@ AibChoice.prototype.onkey = function(choice, e) {
   else if ((e.keyCode === 37) || (e.keyCode === 38)) {  // left|up
     if (choice.ndx > 0) {
       this.after_selection(choice, choice.ndx-1)
-      setTimeout(function() {choice.focus()}, 0);
+      //setTimeout(function() {choice.focus()}, 0);
       };
     }
   else if ((e.keyCode === 39) || (e.keyCode === 40)) {  // right|down
     if (choice.ndx < (choice.values.length-1)) {
       this.after_selection(choice, choice.ndx+1);
-      setTimeout(function() {choice.focus()}, 0);
+      //setTimeout(function() {choice.focus()}, 0);
       };
     };
   };
@@ -1844,25 +1844,26 @@ AibDummy.prototype = new AibCtrl();
 AibDummy.prototype.got_focus = function(dummy) {
   if (dummy.frame.form.err_flag)
     dummy.frame.form.tabdir = -1;  // dummy failed vld, set focus on prev field
-  got_focus(dummy);
   };
 AibDummy.prototype.after_got_focus = function(dummy) {
-//  if (dummy.frame.amended())
-//    callbacks.push([this, this.go_to_next, dummy]);
-//  else {
-//    that = this;
-//    setTimeout(function() {that.go_to_next(dummy)}, 0);
-//    };
-//  };
-//AibDummy.prototype.go_to_next = function(dummy) {
   if (dummy.frame.form.current_focus !== dummy ||
       dummy.frame.form.setting_focus !== dummy)
     return;  // focus reset by server
   var pos = dummy.pos + dummy.frame.form.tabdir;  // tab = 1, shift+tab = -1
-  var obj = dummy.frame.obj_list[pos]
-  while (dummy.frame.obj_list[pos].offsetHeight === 0)
+  while (true) {
+    var obj = dummy.frame.obj_list[pos];
+    if ((obj.offsetHeight > 0) || // or dummy obj, provided not on hidden notebook page
+      (obj.dummy && (
+        obj.nb_page === null ||
+        obj.nb_page.pos === obj.nb_page.parentNode.current_pos
+        )))
+      break;
     pos += dummy.frame.form.tabdir;  // look for next available object
-  dummy.frame.obj_list[pos].focus();
+    };
+  if (obj.dummy)
+    got_focus(obj);
+  else
+    obj.focus();
   };
 AibDummy.prototype.before_lost_focus = function(dummy) {
   return true;

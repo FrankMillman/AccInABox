@@ -1,8 +1,6 @@
 <form name="setup_user">
   <db_objects>
-<!--
-    <db_obj name="user" table_name="dir_users"/>
--->
+    <db_obj name="user" table_name="dir_users" formview_obj="true"/>
     <db_obj name="company" table_name="dir_companies"/>
     <db_obj name="user_comps" table_name="dir_users_companies" parent="user"/>
   </db_objects>
@@ -105,7 +103,7 @@
                       <</assign>>
                     <</compare>>
                   <</case>>
-                  <<call method=`do_save`/>>
+                  <<save/>>
                 <</fld_changed>>
               <</case>>
             <</action>>
@@ -114,7 +112,7 @@
             <<action>>
               <<case>>
                 <<fld_changed name=`user_comp_view.comp_admin`>>
-                  <<call method=`do_save`/>>
+                  <<save/>>
                 <</fld_changed>>
               <</case>>
             <</action>>
@@ -133,10 +131,8 @@
           <<pyfunc name=`custom.user_companies.load_user_comps`/>>
         <</action>>
       "/>
-      <method name="do_save" action="
+      <method name="after_save" action="
         <<action>>
-          <<check_children obj_name=`user`/>>
-          <<save_obj obj_name=`user`/>>
           <<pyfunc name=`custom.user_companies.dump_user_comps`/>>
         <</action>>
       "/>

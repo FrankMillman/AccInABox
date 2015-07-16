@@ -121,9 +121,8 @@
               <<pyfunc name=`custom.finperiod_funcs.on_start_row`/>>
             <</action>>
           "/>
-          <method name="do_save" action="
+          <method name="after_save" action="
             <<action>>
-              <<save_row/>>
               <<pyfunc name=`custom.finperiod_funcs.after_save_row`/>>
             <</action>>
           "/>

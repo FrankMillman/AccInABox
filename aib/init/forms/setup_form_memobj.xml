@@ -99,10 +99,10 @@
         choices="[false, false, [[`A`, `Alt`, [], []], [`N`, `No`, [], []]]]"/>
       <mem_col col_name="allow_null" data_type="BOOL" short_descr="Allow null"
         long_descr="Allow null" col_head="" key_field="N" allow_null="false"
-        allow_amend="true" max_len="0" db_scale="0"/>
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
       <mem_col col_name="allow_amend" data_type="BOOL" short_descr="Allow amend"
         long_descr="Allow amend" col_head="" key_field="N" allow_null="false"
-        allow_amend="true" max_len="0" db_scale="0"/>
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
       <mem_col col_name="max_len" data_type="INT" short_descr="Max length"
         long_descr="Maximum length" col_head="" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0" dflt_val="0"/>
@@ -339,11 +339,9 @@
           <<pyfunc name=`custom.formdefn_funcs.load_mem_objects`/>>
         <</action>>
       "/>
-      <method name="do_save" action="
+      <method name="before_save" action="
         <<action>>
-          <<check_children obj_name=`form`/>>
           <<pyfunc name=`custom.formdefn_funcs.dump_mem_objects`/>>
-          <<save_obj obj_name=`form`/>>
         <</action>>
       "/>
       <method name="do_restore" action="

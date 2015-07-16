@@ -2,13 +2,13 @@ from lxml import etree
 
 # table definition
 table = {
-    'table_name'    : 'adm_periods',
-    'group_code'    : 'adm',
-    'short_descr'   : 'Financial periods',
-    'long_descr'    : 'Financial periods for this company',
+    'table_name'    : 'org_parties',
+    'group_code'    : 'org',
+    'short_descr'   : 'Parties',
+    'long_descr'    : 'Directory of third parties dealing with this entity',
     'audit_trail'   : True,
     'table_created' : True,
-    'default_cursor': None,
+    'default_cursor': 'parties',
     'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : None,
@@ -76,16 +76,16 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'period_no',
-    'data_type'  : 'INT',
-    'short_descr': 'Period number',
-    'long_descr' : 'Period number',
-    'col_head'   : 'Period',
+    'col_name'   : 'party_id',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Party id',
+    'long_descr' : 'Party id',
+    'col_head'   : 'Party',
     'key_field'  : 'A',
     'generated'  : False,
     'allow_null' : False,
     'allow_amend': False,
-    'max_len'    : 0,
+    'max_len'    : 15,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
@@ -94,60 +94,29 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'year_no',
-    'data_type'  : 'INT',
-    'short_descr': 'Year number',
-    'long_descr' : 'Year number',
-    'col_head'   : 'Year',
+    'col_name'   : 'party_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Party type',
+    'long_descr' : 'Party type',
+    'col_head'   : 'Type',
     'key_field'  : 'N',
     'generated'  : False,
     'allow_null' : False,
     'allow_amend': False,
-    'max_len'    : 0,
+    'max_len'    : 12,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'col_chks'   : None,
     'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'closing_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Closing date',
-    'long_descr' : 'Closing date',
-    'col_head'   : 'Date',
-    'key_field'  : 'N',
-    'generated'  : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : '0',
-    'col_chks'   : [['no_amd', 'Date cannot be amended if period closed',
-        [['check', '', 'period_closed', '!=', 'True', ''],
-        ['or', '', '$value', '=', 'closing_date', '']]]],
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'period_closed',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Period closed?',
-    'long_descr' : 'Period closed?',
-    'col_head'   : 'Closed?',
-    'key_field'  : 'N',
-    'generated'  : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'col_chks'   : None,
-    'fkey'       : None,
-    'choices'    : None,
+    'choices'    : [
+        True,  # use sub_types?
+        True,  # use display_names?
+        [
+            ['ind', 'Individual', [], []],
+            ['comp', 'Company', [], []],
+            ]
+        ],
     })
 
 # virtual column definitions
@@ -155,18 +124,14 @@ virt = []
 
 # cursor definitions
 cursors = []
-
-"""
 cursors.append({
-    'cursor_name': 'periods',
-    'descr': 'Periods',
+    'cursor_name': 'parties',
+    'descr': 'Parties',
     'columns': [
-        ('period_no', 600, False, True, False, False, None, None),
-        ('year_no', 60, False, True, False, False, None, None),
-        ('closing_date', 120, True, True, False, False, None, None),
+        ('party_id', 100, False, False, False, False, None, None, None, None),
+        ('display_name', 260, True, True, False, False, None, None, None, None),
         ],
     'filter': [],
-    'sequence': [('period_no', False)],
+    'sequence': [('party_id', False)],
     'default': True
     })
-"""

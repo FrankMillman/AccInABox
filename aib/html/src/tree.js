@@ -1,12 +1,14 @@
 // CREATE TREE
 
-function create_tree(container, frame, toolbar, hide_root){
+function create_tree(container, frame, page, toolbar, hide_root){
 
   var tree = document.createElement('div');
   //tree.type = 'tree';
   tree.frame = frame;
+  if (page !== null)
+    tree.nb_page = page.nb_page;
   tree.active_frame = frame;
-  tree.help_msg = '\xa0';
+  tree.help_msg = '';
   tree.toolbar = toolbar;
   tree.hide_root = hide_root;
   tree.toolbar = toolbar;
@@ -247,7 +249,7 @@ function create_tree(container, frame, toolbar, hide_root){
       setTimeout(function() {tree.write()}, 0);
       }
     else {
-      if (active_node.level > 1) {
+      if ((active_node.level - hide_root) > 1) {
         active_node.text_span.style.color = this.style.color;
         active_node.text_span.style.background = this.style.background;
         active_node = active_node.parent;
@@ -305,7 +307,7 @@ function create_tree(container, frame, toolbar, hide_root){
           break;
           };
       if (active_node.pos === 0)
-        if (active_node.parent.level === 0)
+        if ((active_node.parent.level - hide_root) === 0)
           break;  // at top of tree
       else {
         active_node = active_node.parent;
@@ -317,6 +319,11 @@ function create_tree(container, frame, toolbar, hide_root){
       };
     if (orig_node != null)  // no ok node found - leave original
       active_node = orig_node;
+
+    var node_top = active_node.getBoundingClientRect().top;
+    var this_top = this.getBoundingClientRect().top;
+    if (node_top < this_top)
+      this.scrollTop -= active_node.offsetHeight;
 
     active_node.text_span.style.color = 'lightcyan';
     active_node.text_span.style.background = 'darkblue';
@@ -344,14 +351,20 @@ function create_tree(container, frame, toolbar, hide_root){
         orig_node = null;  // new node is ok
         break;
         };
-      if (active_node.parent.level === 0) {
-        break;  // parent is root
-        };
+      //if (active_node.parent.level === 0)
+      //  break;  // parent is root
+      if ((active_node.parent.level - hide_root) === 0)
+        break;  // at top of tree
       active_node = active_node.parent;  // move up a level
       skip_expand = true;  // do not follow next expansion
       };
     if (orig_node != null)  // no ok node found - leave original
       active_node = orig_node;
+
+    var node_bottom = active_node.getBoundingClientRect().bottom;
+    var this_bottom = this.getBoundingClientRect().bottom;
+    if (node_bottom > this_bottom)
+      this.scrollTop += active_node.offsetHeight;
 
     active_node.text_span.style.color = 'lightcyan';
     active_node.text_span.style.background = 'darkblue';

@@ -5,7 +5,7 @@ from lxml import etree
 parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
 from random import randint
 import itertools
-from copy import copy
+#from copy import copy
 from collections import OrderedDict as OD
 
 import logging
@@ -199,9 +199,9 @@ class Form:
             title = form_defn.getval('title')
             form_defn = self.form_defn = form_defn.getval('form_xml')
             self.data_objects = {}
-            if formview_obj:
-                main_object = form_defn.find('frame').get('main_object')
-                self.data_objects[main_object] = formview_obj
+#           if formview_obj:
+#               main_object = form_defn.find('frame').get('main_object')
+#               self.data_objects[main_object] = formview_obj
 
         if grid_tablename is not None:  # passed in if setup_grid
             grid_obj = db.api.get_db_object(
@@ -209,6 +209,7 @@ class Form:
             self.data_objects['grid_obj'] = grid_obj
 
         self.cursor_name = cursor_name
+        self.formview_obj = formview_obj
 
         input_params = form_defn.find('input_params')
         self.setup_input_obj(input_params)
@@ -375,8 +376,13 @@ class Form:
             return  # can happen with inline form
         for obj_xml in db_objects:
             obj_name = obj_xml.get('name')
-            if obj_name in self.data_objects:
+
+#           if obj_name in self.data_objects:
+#               continue  # passed in as formview or lookdown
+            if obj_xml.get('formview_obj') == 'true':
+                self.data_objects[obj_name] = self.formview_obj
                 continue  # passed in as formview or lookdown
+
             db_parent = obj_xml.get('parent')
             if db_parent is not None:
                 db_parent = self.data_objects[db_parent]
@@ -766,7 +772,8 @@ class Frame:
             if template_name is not None:
                 template = getattr(ht.templates, template_name)  # class
                 xml = getattr(template, 'button_row')  # class attribute
-                xml = etree.fromstring(xml, parser=parser)
+                xml = etree.fromstring(
+                    xml.replace('{obj_name}', self.main_obj_name), parser=parser)
                 button_row[:0] = xml[0:]  # insert template buttons before any others
 # is this necessary?
 #               del button_row.attrib['template']  # to prevent re-substitution
@@ -999,9 +1006,8 @@ class Frame:
                 self.tree.tree_frame = Frame(self.form, element, None, gui, tree=self.tree)
                 gui.append(('tree_frame_end', None))
             elif element.tag == 'subtype_panel':
-                subtype = element.get('subtype')
                 lng = int(element.get('lng', '120'))  # field length 120 if not specified
-                self.setup_subtype(element, subtype, lng, gui)
+                self.setup_subtype(element, element.get('subtype'), lng, gui)
             elif element.tag == 'dummy':
                 gui_obj = ht.gui_objects.GuiDummy(self, gui)
 
@@ -1021,38 +1027,6 @@ class Frame:
                     subtype_obj, active = subtype
                     subtype_obj.append(gui_obj)
                     gui_obj.hidden = not active
-
-    """
-    def setup_buttonrow(self, button_row, gui):
-#       validate = button_row.get('validate') != 'false'  # default to True
-        validate = button_row.get('validate') == 'true'
-        if validate:  # create dummy field to force validation of last field
-            ht.gui_objects.GuiDummy(self, gui)
-
-        # store the *last* occurence of each button id
-        # this allows a customised button to override a template button
-        button_dict = OD()
-        for btn in button_row.findall('button'):
-            btn_id = btn.get('btn_id')
-            button_dict[btn_id] = btn
-
-        button_list = []
-        for btn_id in button_dict:
-            btn = button_dict[btn_id]
-            btn_label = btn.get('btn_label')
-            lng = btn.get('lng')
-            enabled = (btn.get('btn_enabled') == 'true')
-            must_validate = (btn.get('btn_validate') == 'true')
-            default = (btn.get('btn_default') == 'true')
-            help_msg = btn.get('help_msg', '')
-            action = etree.fromstring(
-                btn.get('action'), parser=parser)
-            button = ht.gui_objects.GuiButton(self, button_list, btn_label,
-                lng, enabled, must_validate, default, help_msg, action)
-            self.btn_dict[btn_id] = button
-        if button_list:
-            gui.append(('button_row', button_list))
-    """
 
     def setup_buttonrow(self, button_row, gui):
         # store the *last* occurence of each button id
@@ -1129,8 +1103,10 @@ class Frame:
         #   1st element = active subtype (used to hide/show objects when active subtype changes)
         #   2nd element = dict - key=subtype value, value=list of gui objects for subtype
 #       self.subtype_records[subtype] = [None, {None: []}]
-        self.subtype_records[subtype] = [None, OD()]
-        self.subtype_records[subtype][1][None] = []
+#       self.subtype_records[subtype] = [None, OD()]
+        self.subtype_records[subtype] = ['', OD()]
+#       self.subtype_records[subtype][1][None] = []
+        self.subtype_records[subtype][1][''] = []
 
         subtype_gui = []  # build up the gui elements needed in a separate array
         subtype_gui.append(('panel',
@@ -1226,7 +1202,7 @@ class Frame:
             gui_obj._redisplay()
 
 #       # send message to client to hide active subtype and show new subtype
-#       self.session.set_subtype(self, subtype, value)
+        self.session.request.set_subtype(self, subtype, value)
 
     @asyncio.coroutine
     def on_req_cancel(self):
@@ -1433,7 +1409,7 @@ class Frame:
             yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
 
     @asyncio.coroutine
-    def check_children(self, db_obj):
+    def check_children(self):
         # check that no child is 'dirty' before saving parent
         # children are always in a grid
         # if there is a grid_frame, it could also contain a grid,
@@ -1468,9 +1444,40 @@ class Frame:
                         raise AibError(head=None, body=None)  # stop processing messages
         yield from check(self)
 
+#   @asyncio.coroutine
+#   def save_obj(self, db_obj):
+#       db_obj.save()
+
+    @asyncio.coroutine
+    def save(self):
+        yield from self.validate_all()
+        yield from self.check_children()
+        if self.ctrl_grid is not None:
+            yield from self.ctrl_grid.save(self)
+            return
+#       if self.frame_type == 'tree_frame':
+#           yield from self.tree.before_save()
+        if 'before_save' in self.methods:
+            yield from ht.form_xml.exec_xml(self, self.methods['before_save'])
+#       if self.ctrl_grid is not None:
+#           yield from self.ctrl_grid.save_obj(self, db_obj)
+#       elif 'do_save' in self.methods:
+#           yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
+#       else:
+#           db_obj.save()
+        yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
+        if 'after_save' in self.methods:
+            yield from ht.form_xml.exec_xml(self, self.methods['after_save'])
+#       if self.frame_type == 'tree_frame':
+#           yield from self.tree.update_node()
+
     @asyncio.coroutine
     def save_obj(self, db_obj):
+#       if self.frame_type == 'tree_frame':
+#           yield from self.tree.before_save()
         db_obj.save()
+        if self.frame_type == 'tree_frame':
+            yield from self.tree.update_node()
 
     @asyncio.coroutine
     def handle_restore(self):

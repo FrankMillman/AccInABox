@@ -569,7 +569,8 @@ class DbObject:
                     obj._redisplay()
                 if fld.gui_subtype is not None:
                     frame, subtype = fld.gui_subtype
-                    frame.set_subtype(subtype, dat)
+#                   frame.set_subtype(subtype, dat)
+                    frame.set_subtype(subtype, fld.val_to_str(dat))
 
             # if fld has foreign_key which has changed, re-read foreign db_obj
             if fld.foreign_key:
@@ -590,8 +591,9 @@ class DbObject:
         self.init_vals = {}  # to prevent re-use on restore()
         self.exists = True
         if self.dirty:
-            for caller, method in self.on_clean_func:  # frame methods
-                caller.session.request.db_events.append((caller, method))
+            if display:
+                for caller, method in self.on_clean_func:  # frame methods
+                    caller.session.request.db_events.append((caller, method))
 # cannot call this here [2015-03-04]
 # we may re-read the contents of the grid for other purposes (e.g. fin_periods)
 # we do not want on_read to be triggered for each read
@@ -652,7 +654,8 @@ class DbObject:
                     obj._redisplay()
                 if fld.gui_subtype is not None:
                     frame, subtype = fld.gui_subtype
-                    frame.set_subtype(subtype, fld._value)
+#                   frame.set_subtype(subtype, fld._value)
+                    frame.set_subtype(subtype, fld.val_to_str())
 
         self.exists = False
         for after_init in self.after_init_xml:
@@ -669,8 +672,9 @@ class DbObject:
 
         if not self.mem_obj and not self.exists:
             self.init(display=display, init_vals=self.init_vals)
-            for caller, method in self.on_clean_func:  # frame methods
-                caller.session.request.db_events.append((caller, method))
+            if display:
+                for caller, method in self.on_clean_func:  # frame methods
+                    caller.session.request.db_events.append((caller, method))
             return
 
         for fld in self.fields.values():
@@ -704,10 +708,12 @@ class DbObject:
                         obj._redisplay()
                     if fld.gui_subtype is not None:
                         frame, subtype = fld.gui_subtype
-                        frame.set_subtype(subtype, fld._value)
+#                       frame.set_subtype(subtype, fld._value)
+                        frame.set_subtype(subtype, fld.val_to_str())
 
-        for caller, method in self.on_clean_func:  # frame methods
-            caller.session.request.db_events.append((caller, method))
+        if display:
+            for caller, method in self.on_clean_func:  # frame methods
+                caller.session.request.db_events.append((caller, method))
         for after_restore in self.after_restore_xml:
             db.db_xml.table_hook(self, after_restore)
         self.dirty = False
@@ -716,7 +722,7 @@ class DbObject:
 #       for child in self.children.values():
 #           child.dirty = False
 
-    def save(self):
+    def save(self, display=True):
         if self.db_table.read_only:
 #           raise IOError('{} is read only - no updates allowed'
 #               .format(self.table_name))
@@ -796,8 +802,9 @@ class DbObject:
 
         for after_save in self.after_save_xml:
             db.db_xml.table_hook(self, after_save)
-        for caller, method in self.on_clean_func:  # frame methods
-            caller.session.request.db_events.append((caller, method))
+        if display:
+            for caller, method in self.on_clean_func:  # frame methods
+                caller.session.request.db_events.append((caller, method))
 
         self.init_vals = {}  # to prevent re-use on restore()
         self.dirty = False
@@ -855,6 +862,7 @@ class DbObject:
         self.check_perms('update')
 
         # read in current row with lock, for optimistic concurrency control
+        # also values are used to setup up audit trail with 'prev' values
         cols = ', '.join([fld.col_name for fld in self.flds_to_update])
         if self.mem_obj:
             table_name = self.table_name
@@ -1296,7 +1304,7 @@ class MemObject(DbObject):
                         sql_elem = []
                         for disp_name, separator in disp_names:
                             sql_elem.append("a." + disp_name)
-                            if separator != '':
+                            if separator:  # if not '' or None
                                 sql_elem.append("'{}'".format(separator))
                         virt_sql += " || ".join(sql_elem)  # || is concat in sqlite3
                 if virt_sql != "":
@@ -1339,7 +1347,8 @@ class MemObject(DbObject):
         # update list of fields belonging to this db_obj
         self.fields[col_name] = field
         self.select_cols.append(field)
-        self.flds_to_update.append(field)
+        if col.sql is None:
+            self.flds_to_update.append(field)
 
         if value is not None:
             field._value = value

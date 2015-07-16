@@ -320,7 +320,12 @@ class Cursor:
            print('find_row', current_row, search_str, rowno, self.pos, self.row_data)
         found = True
         while True:
-            if self.row_data[self.pos] != search_str:
+#           if self.row_data[self.pos] != search_str:
+            try:  # if strings, set to lower case before comparing
+                equal = self.row_data[self.pos].lower() == search_str.lower()
+            except AttributeError:  # 'int' type has no Attribute lower()
+                equal = self.row_data[self.pos] == search_str
+            if not equal:
                 found = False  # can happen if item not in 'where'
                 break
             # if multi-part key, check that all key fields match

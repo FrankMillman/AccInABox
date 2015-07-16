@@ -257,7 +257,7 @@ class Field:
         #   1. fld.validate()
         #   2. perform any extra validations
         #   3. if fld.value_changed(), call fld.continue_setval()
-        self.validate(value, display)
+        value = self.validate(value, display)
         if self.value_changed(value):
             self.continue_setval(value, display)
 
@@ -336,6 +336,8 @@ class Field:
         for descr, errmsg, col_chk in col_defn.col_chks:
             chk_constraint(self, col_chk, value=value, errmsg=errmsg)  # can raise AibError
 
+        return value
+
     def continue_setval(self, value, display=True):
 
         try:
@@ -351,8 +353,9 @@ class Field:
         # if we get here, all validations have passed
         if not self.db_obj.dirty:
             self.db_obj.dirty = True
-            for caller, method in self.db_obj.on_amend_func:
-                caller.session.request.db_events.append((caller, method))
+            if display:
+                for caller, method in self.db_obj.on_amend_func:
+                    caller.session.request.db_events.append((caller, method))
 
         if True:  #self.db_obj.exists:
             # should we only do this if db_obj exists?

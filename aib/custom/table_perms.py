@@ -19,7 +19,7 @@ def load_table_perms(caller, xml):
                 'table_name': db_table.getval('table_name'),
                 'descr': db_table.getval('short_descr') or 'None',
                 })
-            tbl_view.save()
+            tbl_view.save(display=False)
 
     # we need to store orig at start, to compare at end to see what changed
     tbl_orig.delete_all()  # initialise
@@ -39,50 +39,54 @@ def load_table_perms(caller, xml):
     all_tbl_views = tbl_view.select_many(where=[], order=[])
     for _ in all_tbl_views:
         if role.exists and role.getval('parent_id') is None:  # company administrator
-            tbl_view.setval('sel_ok', True)
-            tbl_view.setval('ins_ok', True)
-            tbl_view.setval('upd_ok', True)
-            tbl_view.setval('del_ok', True)
-            tbl_view.setval('sel_dsp', 'Y')
-            tbl_view.setval('ins_dsp', 'Y')
-            tbl_view.setval('upd_dsp', 'Y')
-            tbl_view.setval('del_dsp', 'Y')
+            tbl_view.setval('sel_ok', True, display=False)
+            tbl_view.setval('ins_ok', True, display=False)
+            tbl_view.setval('upd_ok', True, display=False)
+            tbl_view.setval('del_ok', True, display=False)
+            tbl_view.setval('sel_dsp', 'Y', display=False)
+            tbl_view.setval('ins_dsp', 'Y', display=False)
+            tbl_view.setval('upd_dsp', 'Y', display=False)
+            tbl_view.setval('del_dsp', 'Y', display=False)
         else:
             tbl_orig.init()
             tbl_orig.setval('table_id', tbl_view.getval('table_id'))
             if tbl_orig.exists:
                 sel_ok = tbl_orig.getval('sel_ok')
-                tbl_view.setval('sel_ok', sel_ok)
+                tbl_view.setval('sel_ok', sel_ok, display=False)
                 tbl_view.setval('sel_dsp',
-                    'Y' if sel_ok is True else'N' if sel_ok is False else 'C')
+                    'Y' if sel_ok is True else'N' if sel_ok is False else 'C',
+                    display=False)
                 ins_ok = tbl_orig.getval('ins_ok')
-                tbl_view.setval('ins_ok', ins_ok)
-                tbl_view.setval('ins_dsp', 'Y' if ins_ok is True else'N')
+                tbl_view.setval('ins_ok', ins_ok, display=False)
+                tbl_view.setval('ins_dsp', 'Y' if ins_ok is True else'N',
+                    display=False)
                 upd_ok = tbl_orig.getval('upd_ok')
-                tbl_view.setval('upd_ok', upd_ok)
+                tbl_view.setval('upd_ok', upd_ok, display=False)
                 tbl_view.setval('upd_dsp',
-                    'Y' if upd_ok is True else'N' if upd_ok is False else 'C')
+                    'Y' if upd_ok is True else'N' if upd_ok is False else 'C',
+                    display=False)
                 del_ok = tbl_orig.getval('del_ok')
-                tbl_view.setval('del_ok', del_ok)
-                tbl_view.setval('del_dsp', 'Y' if del_ok is True else'N')
+                tbl_view.setval('del_ok', del_ok, display=False)
+                tbl_view.setval('del_dsp', 'Y' if del_ok is True else'N',
+                    display=False)
             else:
-                tbl_view.setval('sel_ok', False)
-                tbl_view.setval('ins_ok', False)
-                tbl_view.setval('upd_ok', False)
-                tbl_view.setval('del_ok', False)
-                tbl_view.setval('sel_dsp', 'N')
-                tbl_view.setval('ins_dsp', 'N')
-                tbl_view.setval('upd_dsp', 'N')
-                tbl_view.setval('del_dsp', 'N')
-        tbl_view.save()
+                tbl_view.setval('sel_ok', False, display=False)
+                tbl_view.setval('ins_ok', False, display=False)
+                tbl_view.setval('upd_ok', False, display=False)
+                tbl_view.setval('del_ok', False, display=False)
+                tbl_view.setval('sel_dsp', 'N', display=False)
+                tbl_view.setval('ins_dsp', 'N', display=False)
+                tbl_view.setval('upd_dsp', 'N', display=False)
+                tbl_view.setval('del_dsp', 'N', display=False)
+        tbl_view.save(display=False)
     # tbl_view is a child of role
     # tbl_view.setval() sets tbl_view to dirty, and so also sets role to dirty
     # calling role.restore() resets it to clean
-    role.restore(display=False)
+    role.restore()
 
 @asyncio.coroutine
 def dump_table_perms(caller, xml):
-    # called from setup_roles 'do_save'
+    # called from setup_roles 'after_save'
     role = caller.data_objects['role']
     tbl_perms = caller.data_objects['tbl_perms']
     tbl_view = caller.data_objects['tbl_view']
@@ -155,7 +159,7 @@ def dump_table_perms(caller, xml):
 
 @asyncio.coroutine
 def load_col_perms(caller, xml):
-    # called from setup_roles.grid_frame 'on_start_form'
+    # called from setup_roles.grid_frame 'on_start_frame'
     role = caller.data_objects['role']
     tbl_view = caller.data_objects['tbl_view']
     db_col = caller.data_objects['db_col']
@@ -269,7 +273,7 @@ def check_upd_ok(caller, xml):
 
 @asyncio.coroutine
 def dump_col_perms(caller, xml):
-    # called from setup_roles.tree_frame 'do_save'
+    # called from setup_roles.tree_frame 'before_save'
     role = caller.data_objects['role']
     tbl_view = caller.data_objects['tbl_view']
     col_view = caller.data_objects['col_view']
