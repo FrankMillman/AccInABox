@@ -29,7 +29,7 @@ def init(self, pos):
     conn = pyodbc.connect(
 #       'driver={0};server={1};database={2};uid={3};pwd={4}'.format
 #       ('sql server', '(local)', self.database, self.user, self.pwd))
-        driver='sql server', server='(local)', database=self.database,
+        driver='sql server', server='np:(local)', database=self.database,
         user=self.user, password=self.pwd)
     self.conn = conn
     self.cursor = conn.cursor
