@@ -33,7 +33,12 @@
   </mem_objects>
   <input_params/>
   <output_params/>
-  <frame main_object="user">
+  <frame main_object="user" on_start_form="
+      <<action>>
+        <<pyfunc name=`custom.user_companies.on_start_form`/>>
+        <<continue_form/>>
+      <</action>>
+      ">
     <toolbar template="Setup_Form"/>
     <body>
       <block/>

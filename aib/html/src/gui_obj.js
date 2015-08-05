@@ -690,6 +690,7 @@ function setup_bool(label, json_elem) {
   if (window.SVGSVGElement !== undefined) {
     var NS='http://www.w3.org/2000/svg';
     var svg=document.createElementNS(NS,'svg');
+    svg.setAttribute('focusable', false);  // IE11 workaround
     bool.appendChild(svg);
     };
 

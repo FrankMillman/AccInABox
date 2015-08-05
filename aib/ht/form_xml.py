@@ -561,7 +561,7 @@ def end_form(caller, xml):
 
     if form.callback is not None:
         if form.parent is not None:  # closing a sub-form
-            log.write('RETURN {} {} {}\n\n'.format(state, return_params, form.callback))
+#           log.write('RETURN {} {} {}\n\n'.format(state, return_params, form.callback))
             yield from form.callback[0](form.parent, state, return_params, *form.callback[1:])
         else:  # return to calling process(?)
             form.callback[0](caller.session, state, return_params, *form.callback[1:])

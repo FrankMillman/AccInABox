@@ -98,7 +98,12 @@
   <input_params/>
   <output_params/>
 
-  <frame main_object="role">
+  <frame main_object="role" on_start_form="
+      <<action>>
+        <<pyfunc name=`custom.table_perms.on_start_form`/>>
+        <<continue_form/>>
+      <</action>>
+      ">
     <toolbar/>
     <body>
       <block/>

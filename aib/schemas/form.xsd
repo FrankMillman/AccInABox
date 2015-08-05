@@ -164,6 +164,7 @@
       <xs:element ref="tree_combo"/>
       <xs:element ref="tree_frame"/>
       <xs:element ref="subtype_panel"/>
+      <xs:element ref="button_row"/>
     </xs:choice>
   </xs:group>
   <xs:element name="string">

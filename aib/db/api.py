@@ -52,27 +52,9 @@ def get_fkey_object(db_session, table_name, src_obj, src_colname):
     return db.objects.get_fkey_object(
         db_session, table_name, src_obj, src_colname)
 
-def get_mem_object(db_session, active_company, table_name, parent=None,
-        upd_chks=None, del_chks=None, sequence=None):
+def get_mem_object(db_session, active_company, table_name, parent=None, table_defn=None):
     return db.objects.get_mem_object(db_session, active_company,
-        table_name, parent, upd_chks, del_chks, sequence)
-
-#def select_rows(conn, db_obj, cols, where=None, order=None,
-#        limit=0, lock=False, param=None):
-#    return conn.full_select(
-#        db_obj, cols, where, order, limit, lock, param)
-
-#def get_data(db_obj):
-#    return str(db_obj)
-
-#def set_col_val(db_obj, col_name, value):
-#    db_obj.setval(col_name, value)
-
-#def get_col_val(db_obj, col_name):
-#    return db_obj.getval(col_name)
-
-#def exec_sql(conn, sql):
-#    return conn.exec_sql(sql)
+        table_name, parent, table_defn)
 
 def close_all_connections():
     db.connection.close_all_connections()

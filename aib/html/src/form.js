@@ -365,7 +365,7 @@ function setup_form(args) {
           frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
 
         frame.set_amended = function(state) {
-          //debug3('fset1 ' + frame.ref + ' ' + state);
+          //debug3('fset1 ' + this.ref + ' ' + state);
           this._amended = state;
           };
 
@@ -1106,7 +1106,7 @@ function setup_form(args) {
         tree.tree_frame = frame;
 
         frame.set_amended = function(state) {
-          //debug3('fset3 ' + frame.ref + ' ' + state);
+          //debug3('fset3 ' + this.ref + ' ' + state);
           this._amended = state;
           };
 

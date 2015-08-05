@@ -83,7 +83,7 @@ class GuiTree(GuiTreeCommon):
 #           tree_data = list(
 #               conn.full_select(self.db_obj, select_cols, where, order))
             # pyodbc returns a pyodbc.Row object, which cannot be JSON'd!
-            # this turns each row into a regular tuple
+            # here we turn each row into a regular tuple
             tree_data = [tuple(_) for _ in
                 conn.full_select(self.db_obj, select_cols, where, order)]
 
@@ -229,6 +229,8 @@ class GuiTreeCombo(GuiTreeCommon):
                 "ORDER BY parent_num, seq"
                 .format(conn.concat, self.db_obj.table_name)
                 )
+            # pyodbc returns a pyodbc.Row object, which cannot be JSON'd!
+            # here we turn each row into a regular tuple
             tree_data = [tuple(_) for _ in
                 conn.cur.execute(sql)]
 

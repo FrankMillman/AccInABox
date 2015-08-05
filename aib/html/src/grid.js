@@ -352,7 +352,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     input.lng = col_defn.lng;
 
     input.set_readonly = function(state) {
-      input.readonly = state;
+      this.readonly = state;
       //input.aib_obj.set_readonly(input, state);
       };
 

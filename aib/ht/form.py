@@ -258,99 +258,6 @@ class Form:
         get history
     """
 
-    """
-    def setup_formview(self, db_obj, form_defn):
-        # substitute form elements from table's custom form definition
-        #
-        # we use 'copy' because if you extract elements from 'a' and
-        #   add them to 'b', lxml physically removes them from 'a',
-        #   so if you re-use the form (switch from list_view to form_view
-        #   then back to list_view then back to form_view) they are gone!
-        custom_form = copy(db_obj.db_table.form_xml)
-        if custom_form is None:
-            raise AibError(head=db_obj.table_name,
-                body='No form definition set up')
-
-        custom_db_objs = custom_form.find('db_objects')
-        if custom_db_objs is not None:
-            db_obj_xml = form_defn.find('db_objects')
-            # for each db_obj, if it exists, replace it, else append it
-            for custom_db_obj in custom_db_objs:
-                for pos, db_objxml in enumerate(db_obj_xml):
-                    if custom_db_obj.get('name') == db_objxml.get('name'):
-                        db_obj_xml[pos] = custom_db_obj
-                        break
-                else:
-                    db_obj_xml.append(custom_db_obj)
-
-        custom_mem_objs = custom_form.find('mem_objects')
-        if custom_mem_objs is not None:
-            mem_obj_xml = form_defn.find('mem_objects')
-            # for each mem_obj, if it exists, replace it, else append it
-            for custom_mem_obj in custom_mem_objs:
-                for pos, mem_objxml in enumerate(mem_obj_xml):
-                    if custom_mem_obj.get('name') == mem_objxml.get('name'):
-                        mem_obj_xml[pos] = custom_mem_obj
-                        break
-                else:
-                    mem_obj_xml.append(custom_mem_obj)
-
-        custom_params = custom_form.find('input_params')
-        if custom_params is not None:
-            input_params = form_defn.find('input_params')
-            # for each param, if it exists, replace it, else append it
-            for custom_param in custom_params:
-                for pos, input_param in enumerate(input_params):
-                    if custom_param.get('name') == input_param.get('name'):
-                        input_params[pos] = custom_param
-                        break
-                else:
-                    input_params.append(custom_param)
-
-        custom_params = custom_form.find('output_params')
-        if custom_params is not None:
-            output_params = form_defn.find('output_params')
-            # for each param, if it exists, replace it, else append it
-            for custom_param in custom_params:
-                for pos, output_param in enumerate(output_params):
-                    if custom_param.get('name') == output_param.get('name'):
-                        output_params[pos] = custom_param
-                        break
-                else:
-                    output_params.append(custom_param)
-
-        custom_frame = custom_form.find('frame')  # must exist
-        custom_body = custom_frame.find('body')
-        form_defn.find('frame').find('body')[:] = custom_body[:]
-
-        custom_button_row = custom_frame.find('button_row')
-        if custom_button_row is not None:
-            button_row = form_defn.find('frame').find('button_row')
-            # for each button, if it exists, replace it, else append it
-            for custom_button in custom_button_row:
-                for pos, button in enumerate(button_row):
-                    if custom_button.get('btn_id') == button.get('btn_id'):
-                        button_row[pos] = custom_button
-                        break
-                else:
-                    button_row.append(custom_button)
-
-        custom_methods = custom_frame.find('frame_methods')
-        if custom_methods is not None:
-            frame_methods = form_defn.find('frame').find('frame_methods')
-            # for each method, if it exists, replace it, else append it
-            for custom_method in custom_methods:
-                for pos, method in enumerate(frame_methods):
-                    if custom_method.get('name') == method.get('name'):
-                        frame_methods[pos] = custom_method
-                        break
-                else:
-                    frame_methods.append(custom_method)
-
-        for inline_form in custom_form.findall('inline_form'):
-            form_defn.append(inline_form)
-    """
-
     def setup_input_obj(self, input_params):
         if input_params is None:
             return  # can happen with inline form
@@ -369,9 +276,6 @@ class Form:
                         raise AibError(head=head, body=body)
 
     def setup_db_objects(self, db_objects):
-        # if fkeys is True, only set up objects with fkey
-        # if fkeys is False, only set up objects without fkey
-        # reason - can have a db_obj with fkey to a mem_obj
         if db_objects is None:
             return  # can happen with inline form
         for obj_xml in db_objects:
@@ -416,46 +320,12 @@ class Form:
             return  # can happen with inline form
         for obj_xml in mem_objects:
             obj_name = obj_xml.get('name')
-            company = obj_xml.get('company', self.company)
             db_parent = obj_xml.get('parent')
             if db_parent is not None:
                 db_parent = self.data_objects[db_parent]
-            upd_chks = obj_xml.get('upd_chks')
-            del_chks = obj_xml.get('del_chks')
-            sequence = obj_xml.get('sequence')
             db_obj = db.api.get_mem_object(self,
-                company, obj_name, db_parent, upd_chks, del_chks, sequence)
+                self.company, obj_name, db_parent, obj_xml)
             self.data_objects[obj_name] = db_obj
-            hooks = obj_xml.get('hooks')
-            if hooks is not None:
-                hooks = etree.fromstring(hooks, parser=parser)
-                for hook in hooks:
-                    db_obj.setup_hook(hook)
-
-            for col_defn in obj_xml.findall('mem_col'):
-                db_obj.add_mem_column(
-                    col_defn.get('col_name'),
-                    col_defn.get('data_type'),
-                    col_defn.get('short_descr'),
-                    col_defn.get('long_descr'),
-                    col_defn.get('col_head'),
-                    col_defn.get('key_field'),
-                    col_defn.get('allow_null') == 'true',
-                    col_defn.get('allow_amend') == 'true',
-                    int(col_defn.get('max_len')),
-                    int(col_defn.get('db_scale')),
-                    col_defn.get('scale_ptr'),
-                    col_defn.get('dflt_val'),
-                    col_defn.get('col_chks'),
-                    (
-                        col_defn.get('fkey').replace('{company}', company)
-                          if col_defn.get('fkey') is not None else None
-                          ),
-                    col_defn.get('choices'),
-                    col_defn.get('sql')
-                    )
-
-            db_obj.setup_virt_cols()
 
     def setup_input_attr(self, input_params):
         if input_params is None:
@@ -602,7 +472,7 @@ class Form:
 
         if self.callback is not None:
             if self.parent is not None:  # closing a sub-form
-                log.write('RETURN {} {} {}\n\n'.format(state, return_params, self.callback))
+#               log.write('RETURN {} {} {}\n\n'.format(state, return_params, self.callback))
                 yield from self.callback[0](self.parent, state, return_params, *self.callback[1:])
             else:  # return to calling process(?)
                 self.callback[0](session, state, return_params, *self.callback[1:])
@@ -767,30 +637,10 @@ class Frame:
 
         button_row = frame_xml.find('button_row')
         if button_row is not None:
-            # if a template is specified, insert template buttons
-            template_name = button_row.get('template')
-            if template_name is not None:
-                template = getattr(ht.templates, template_name)  # class
-                xml = getattr(template, 'button_row')  # class attribute
-                xml = etree.fromstring(
-                    xml.replace('{obj_name}', self.main_obj_name), parser=parser)
-                button_row[:0] = xml[0:]  # insert template buttons before any others
-# is this necessary?
-#               del button_row.attrib['template']  # to prevent re-substitution
             self.setup_buttonrow(button_row, gui)
 
         methods = frame_xml.find('frame_methods')
         if methods is not None:
-            # if a template is specified, insert template methods
-            template_name = methods.get('template')
-            if template_name is not None:
-                template = getattr(ht.templates, template_name)  # class
-                xml = getattr(template, 'frame_methods')  # class attribute
-                xml = etree.fromstring(
-                    xml.replace('{obj_name}', self.main_obj_name), parser=parser)
-                methods[:0] = xml[0:]  # insert template methods before any others
-# is this necessary?
-#               del methods.attrib['template']  # to prevent re-substitution
             self.setup_methods(methods, gui)
 
     def __str__(self):
@@ -1028,7 +878,21 @@ class Frame:
                     subtype_obj.append(gui_obj)
                     gui_obj.hidden = not active
 
+            elif element.tag == 'button_row':
+                self.setup_buttonrow(element, gui)
+
     def setup_buttonrow(self, button_row, gui):
+        # if a template is specified, insert template buttons
+        template_name = button_row.get('template')
+        if template_name is not None:
+            template = getattr(ht.templates, template_name)  # class
+            xml = getattr(template, 'button_row')  # class attribute
+            xml = etree.fromstring(
+                xml.replace('{obj_name}', self.main_obj_name), parser=parser)
+            button_row[:0] = xml[0:]  # insert template buttons before any others
+# is this necessary?
+#           del button_row.attrib['template']  # to prevent re-substitution
+
         # store the *last* occurence of each button id
         # this allows a customised button to override a template button
         button_dict = OD()
@@ -1062,6 +926,17 @@ class Frame:
         gui.append(('button_row', button_list))
 
     def setup_methods(self, methods, gui):
+        # if a template is specified, insert template methods
+        template_name = methods.get('template')
+        if template_name is not None:
+            template = getattr(ht.templates, template_name)  # class
+            xml = getattr(template, 'frame_methods')  # class attribute
+            xml = etree.fromstring(
+                xml.replace('{obj_name}', self.main_obj_name), parser=parser)
+            methods[:0] = xml[0:]  # insert template methods before any others
+# is this necessary?
+#           del methods.attrib['template']  # to prevent re-substitution
+
         # store the *last* occurence of each method name
         # this allows a customised method to override a template method
         method_dict = OD()

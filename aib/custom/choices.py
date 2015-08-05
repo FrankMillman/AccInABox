@@ -2,7 +2,7 @@ import asyncio
 
 @asyncio.coroutine
 def load_choices(caller, xml):
-    # called from choices 'on_start_form'
+    # called from choices 'on_start_frame'
     var = caller.data_objects['var']
     choice_codes = caller.data_objects['choice_codes']
     sub_types = caller.data_objects['sub_types']

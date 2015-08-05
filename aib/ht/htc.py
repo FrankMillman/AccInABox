@@ -143,6 +143,9 @@ class Session:
             #   connection, so we would lose the results of the first select
             for company, comp_name, comp_admin in list(self.select_companies(conn)):
 
+                if comp_admin:
+                    self.perms[company] = '_admin_'  # allow full permissions
+
                 menu_prefix = '{}{}'.format(company, DEL)
                 comp_menu = []
                 comp_menu.append((

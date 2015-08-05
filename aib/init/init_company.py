@@ -315,7 +315,7 @@ def setup_menus(context, conn, company, company_name):
             ]],
         ['Access control', 'menu', [
             ['Setup roles', 'form', '_sys.setup_roles'],
-            ['Setup uses roles', 'form', '_sys.users_roles'],
+            ['Setup users roles', 'form', '_sys.users_roles'],
             ]],
         ['Administration', 'menu', [
             ['Admin parameters', 'form', '_sys.setup_params'],

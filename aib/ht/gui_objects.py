@@ -41,7 +41,7 @@ class GuiCtrl:
 #           self._redisplay()
 
         try:
-            fld.db_obj.check_perms('amend')
+            fld.db_obj.check_perms('amend', fld.col_defn.row_id)
             self.amend_ok = True
         except AibDenied:
             self.amend_ok = False

@@ -52,7 +52,9 @@ AibCtrl.prototype.got_focus = function(ctrl) {
   else
     inp.className = 'focus_background';
 
-  //inp.focus();
+  // next line was removed in 0.1.7, replaced in 0.1.9
+  // latest version of Chrome requires it [2015-07-30]
+  inp.focus();
   //got_focus(ctrl);
   };
 AibCtrl.prototype.set_cell_value_from_server = function(grid, row, col, value) {

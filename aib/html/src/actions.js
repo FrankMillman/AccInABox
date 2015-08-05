@@ -134,6 +134,7 @@ function reset(args) {
   };
 
 function set_readonly(args) {
+  //debug3('readonly ' + JSON.stringify(args));
   for (var i=0, l=args.length; i<l; i++) {
     var ref = args[i][0], state = args[i][1];
     var obj = get_obj(ref);
