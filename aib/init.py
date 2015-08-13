@@ -86,7 +86,8 @@ def setup_db(cfg):
     db_session = db.api.start_db_session()
     user_row_id = 1
     sys_admin = True
-    with db_session as conn:
+    with db_session as db_mem_conn:
+        conn = db_mem_conn.db
         init.init_db.init_database(__main__, conn)
 
 if __name__ == '__main__':

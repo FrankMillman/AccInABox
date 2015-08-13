@@ -3,7 +3,7 @@
   <db_objects/>
   <mem_objects>
 
-    <mem_obj name="form" descr="Variables used in form">
+    <mem_obj name="form_db" descr="Variables used in form">
       <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
         long_descr="Form name" col_head="Name" key_field="N" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"/>
@@ -15,12 +15,12 @@
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="dbobj" descr="Db objects used in form" parent="form"
+    <mem_obj name="dbobj" descr="Db objects used in form" parent="form_db"
         sequence="[`seq`, [], null]">
       <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
         long_descr="Form name" col_head="Name" key_field="N" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`form`, `form_name`, null, null, true]"/>
+        fkey="[`form_db`, `form_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -69,16 +69,16 @@
   </mem_objects>
 
   <input_params>
-    <input_param name="form_name" type="data_attr" target="form.form_name" required="true"/>
-    <input_param name="title" type="data_attr" target="form.title" required="true"/>
-    <input_param name="form_xml" type="data_attr" target="form.form_xml" required="true"/>
+    <input_param name="form_name" type="data_attr" target="form_db.form_name" required="true"/>
+    <input_param name="title" type="data_attr" target="form_db.title" required="true"/>
+    <input_param name="form_xml" type="data_attr" target="form_db.form_xml" required="true"/>
   </input_params>
 
   <output_params>
-    <output_param name="form_xml" type="data_attr" source="form.form_xml"/>
+    <output_param name="form_xml" type="data_attr" source="form_db.form_xml"/>
   </output_params>
 
-  <frame main_object="form">
+  <frame main_object="form_db">
     <toolbar/>
     <body>
       <block/>
@@ -87,11 +87,11 @@
       <col/>
       <label value="Form name:"/>
       <col/>
-      <display fld="form.form_name" lng="160"/>
+      <display fld="form_db.form_name" lng="160"/>
       <col/>
       <label value="Title:"/>
       <col/>
-      <display fld="form.title" lng="250"/>
+      <display fld="form_db.title" lng="250"/>
       <block/>
       <grid data_object="dbobj" growable="true" num_grid_rows="3">
         <toolbar template="Grid"/>
@@ -163,7 +163,7 @@
       <method name="do_restore" action="
         <<action>>
           <<pyfunc name=`custom.formdefn_funcs.restore_db_objects`/>>
-          <<restore_obj obj_name=`form`/>>
+          <<restore_obj obj_name=`form_db`/>>
         <</action>>
       "/>
     </frame_methods>

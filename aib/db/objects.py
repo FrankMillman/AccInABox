@@ -5,7 +5,7 @@ This module contains classes that represent the following database objects -
 * :class:`~db.objects.MemObject` - a subclass of DbObject that exists only in memory
 """
 
-from json import loads
+from json import loads, dumps
 from lxml import etree
 import gzip
 from datetime import datetime
@@ -20,6 +20,7 @@ import db.connection
 import db.db_xml
 from db.chk_constraints import chk_constraint
 from errors import AibError, AibDenied
+from start import log_db, db_log
 
 # should 'tables_open' be in db.objects or ht.htc.Session()
 # if server is long-running, the former would prevent changes being picked up
@@ -95,7 +96,8 @@ def get_db_table(context, active_company, table_name):
         'read_only', 'default_cursor', 'setup_form']
     where = [('WHERE', '', 'table_name', '=', table_name, '')]
 
-    with context.db_session as conn:
+    with context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         try:
             # next line only works if exactly one row is selected
             ((table_id, table_name, short_descr, audit_trail, upd_chks, del_chks,
@@ -129,7 +131,8 @@ def get_db_table(context, active_company, table_name):
     if defn_company is None:
         defn_company = db_company
     else:
-        with context.db_session as conn:
+        with context.db_session as db_mem_conn:
+            conn = db_mem_conn.db
             try:
                 # next line only works if exactly one row is selected
                 # NB don't overwrite defn_company or data_company [2014-07-25]
@@ -492,11 +495,14 @@ class DbObject:
         #   connection, and the cursor would be over-written
 
         if self.mem_obj:
-            session = self.context.mem_session
-            conn = db.connection._get_mem_connection(session.mem_id)
+            mem_id = self.context.mem_id
+            conn = db.connection._get_mem_connection(mem_id)
         else:
             conn = db.connection._get_connection()
         conn.cur = conn.cursor()
+
+        if log_db:
+            db_log.write('{}: START many\n'.format(id(conn)))
 
         select_cols = [fld.col_name for fld in self.select_cols]
         cur = conn.full_select(self, select_cols, where, order, debug=debug)
@@ -505,6 +511,9 @@ class DbObject:
             yield None  # throw-away value
 
         conn.release()
+
+        if log_db:
+            db_log.write('{}: CLOSE many\n\n'.format(id(conn)))
 
     def select_row(self, keys, display=True, debug=False):
         where = []
@@ -545,11 +554,11 @@ class DbObject:
                     return  # row not changed since last select
         self.where = where
 
-        if self.mem_obj:
-            session = self.context.mem_session
-        else:
-            session = self.context.db_session
-        with session as conn:
+        with self.context.db_session as db_mem_conn:
+            if self.mem_obj:
+                conn = db_mem_conn.mem
+            else:
+                conn = db_mem_conn.db
             try:
                 select_cols = [fld.col_name for fld in self.select_cols]
                 # next line only works if exactly one row is selected
@@ -630,20 +639,13 @@ class DbObject:
     def on_select_failed(self, display):
         # assume we are trying to create a new db_obj
         self.check_perms('insert')
-
         self.exists = False
-        for fld in self.fields.values():  # initialise fields
-            # is this necessary?
-            if fld._orig is not None:
-                # if this prints, then it is necessary!
-                print('db.on_select', fld.col_name, fld._orig)
-            fld._orig = None
 
     def init(self, *, display=True, init_vals=None):
         # if not None, init_vals is a dict of col_name, value pairs
         #   used to initialise db_obj fields (see ht.gui_tree for example)
         # purpose -  set initial values, do *not* set db_obj.dirty to True
-        self.init_vals = {} if init_vals is None else init_vals
+        self.init_vals = init_vals if init_vals is not None else {}
 
         for fld in self.fields.values():
             # store existing data as 'prev' for data-entry '\' function
@@ -667,12 +669,19 @@ class DbObject:
             if fld.fkey_parent is not None:
                 fld._value = fld.fkey_parent._value
 
+            # not thought through [2015-08-07]
+            # seems to work ok [2015-08-12]
+            if fld.table_keys:
+                if fld._value is not None:
+                    fld.read_row(fld._value, display=display)
+                    if self.exists:
+                        return
+
             if display:
                 for obj in fld.gui_obj:
                     obj._redisplay()
                 if fld.gui_subtype is not None:
                     frame, subtype = fld.gui_subtype
-#                   frame.set_subtype(subtype, fld._value)
                     frame.set_subtype(subtype, fld.val_to_str())
 
         self.exists = False
@@ -795,11 +804,11 @@ class DbObject:
         for descr, errmsg, upd_chk in self.db_table.upd_chks:
             chk_constraint(self, upd_chk, errmsg=errmsg)  # will raise AibError on fail
 
-        if self.mem_obj:
-            session = self.context.mem_session
-        else:
-            session = self.context.db_session
-        with session as conn:
+        with self.context.db_session as db_mem_conn:
+            if self.mem_obj:
+                conn = db_mem_conn.mem
+            else:
+                conn = db_mem_conn.db
 
             if self.db_table.sequence is not None:
                 self.increment_seq(conn)
@@ -881,7 +890,7 @@ class DbObject:
         try:
             conn.insert_row(self, cols, vals, generated_flds)
         except conn.exception as err:
-            raise AibError(head='Delete {}'.format(self.table_name),
+            raise AibError(head='Insert {}'.format(self.table_name),
                 body=str(err))
 
     def update(self, conn):
@@ -905,6 +914,8 @@ class DbObject:
         order = None
         sql = conn.form_sql(cols, table_name, where, order, lock=True)
 
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(conn), sql, key_vals))
         conn.cur.execute(sql, key_vals)
         row, = conn.cur
         for fld, dat in zip(self.flds_to_update, row):
@@ -920,7 +931,7 @@ class DbObject:
             try:
                 conn.update_row(self, cols, vals)
             except conn.exception as err:
-                raise AibError(head='Delete {}'.format(self.table_name),
+                raise AibError(head='Update {}'.format(self.table_name),
                     body=str(err))
 
     def delete(self):
@@ -936,11 +947,11 @@ class DbObject:
 
         self.restore(display=False)  # remove unsaved changes, to ensure valid audit trail
 
-        if self.mem_obj:
-            session = self.context.mem_session
-        else:
-            session = self.context.db_session
-        with session as conn:
+        with self.context.db_session as db_mem_conn:
+            if self.mem_obj:
+                conn = db_mem_conn.mem
+            else:
+                conn = db_mem_conn.db
             for before_delete in self.db_table.before_delete_xml:
                 db.db_xml.table_hook(self, before_delete)
             try:
@@ -1015,6 +1026,8 @@ class DbObject:
                     params.append(self.getfld(group).getval())
                     test = 'AND'
 
+            if log_db:
+                db_log.write('{}: {}; {}\n'.format(id(conn), sql, params))
             conn.cur.execute(sql, params)
             seq = conn.cur.fetchone()[0] + 1
             self.setval(seq_col_name, seq)
@@ -1061,8 +1074,12 @@ class DbObject:
                 sql_2 += ' AND {} = {}'.format(group, conn.param_style)
             params.append(self.getfld(group).getval())
 
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(conn), sql_1, params))
         conn.cur.execute(sql_1, params)
         if combo is not None:
+            if log_db:
+                db_log.write('{}: {}; {}\n'.format(id(conn), sql_2, params))
             conn.cur.execute(sql_2, params)
 
     def decrement_seq(self, conn):  # called after delete
@@ -1088,8 +1105,12 @@ class DbObject:
                 sql_2 += ' AND {} = {}'.format(group, conn.param_style)
             params.append(self.getfld(group).getval())
 
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(conn), sql_1, params))
         conn.cur.execute(sql_1, params)
         if combo is not None:
+            if log_db:
+                db_log.write('{}: {}; {}\n'.format(id(conn), sql_2, params))
             conn.cur.execute(sql_2, params)
 
     def check_perms(self, perm_type, col_id=None):
@@ -1167,7 +1188,8 @@ class DbObject:
             .format(company, user_row_id)
             )
 
-        with self.context.db_session as conn:
+        with self.context.db_session as db_mem_conn:
+            conn = db_mem_conn.db
             conn.cur = conn.exec_sql(sql)
             for table_id, sel_new, ins_new, upd_new, del_new in conn.cur:
                 sel_new = loads(sel_new)
@@ -1224,7 +1246,8 @@ class MemObject(DbObject):
 
 #       self.conn = db.connection.MemConn()
 #       cur = self.conn.cursor()
-#       with self.context.mem_session as conn:
+#       with self.context.db_session as db_mem_conn:
+#           conn = db_mem_conn.mem
 #           conn.cur.execute(
 #               'CREATE TABLE {} (row_id INTEGER PRIMARY KEY)'
 #               .format(self.table_name))
@@ -1295,7 +1318,8 @@ class MemObject(DbObject):
         if col_name != 'row_id':  # row_id already set up
             sql = 'ALTER TABLE {} ADD {} {}'.format(
                 self.table_name, col_name, data_type)
-            with self.context.mem_session as conn:
+            with self.context.db_session as db_mem_conn:
+                conn = db_mem_conn.mem
                 conn.cur.execute(conn.convert_string(sql))
 
         if col.col_chks is None:
@@ -1392,9 +1416,52 @@ class MemObject(DbObject):
         return field
     '''
 
-    def setup_virt_cols(self):
-        for fld in self.virt_cols:
-            self.setup_virtual(fld.col_defn, fld)
+    def clone_db_col(self, conn, col):
+
+            if col.col_name in self.fields:
+                return  # already cloned
+
+            col_flds = (
+                col.col_name,
+                col.data_type,
+                col.short_descr,
+                col.long_descr,
+                col.col_head,
+                col.key_field,
+                col.generated,
+                col.allow_null,
+                col.allow_amend,
+                col.max_len,
+                col.db_scale,
+                col.scale_ptr,
+                col.dflt_val,
+                None if col.col_chks is None else dumps(col.col_chks),
+                None if col.fkey is None else dumps(col.fkey),
+                None if col.choices is None else dumps(col.choices),
+                col.sql,
+                )
+            col_defn = self.db_table.add_mem_column(conn, col_flds)
+
+            if col_defn is None:  # can happen is col_name already exists
+                # if it exists, find it and set up field
+                for col_defn in self.db_table.col_list:
+                    if col_defn.col_name == col.col_name:
+                        break
+                else:
+                    return
+
+            if col.key_field != 'N':
+                col_defn.table_keys = [col_defn]  # cannot handle composite keys!
+
+            field = db.object_fields.DATA_TYPES[col_defn.data_type](self, col_defn)
+            self.fields[col_defn.col_name] = field
+            self.select_cols.append(field)  # excludes any 'alt_src' columns
+            if col_defn.sql is not None:
+                self.setup_virtual(col_defn, field)
+            else:
+                self.flds_to_update.append(field)
+            field.table_keys = [self.fields[col_defn.col_name]
+                for col_defn in col_defn.table_keys]
 
     def delete(self):
         # for each child (if any), delete rows
@@ -1456,8 +1523,8 @@ class MemObject(DbObject):
 #       all_cols = self.select_many(where=[], order=[])
 #       for _ in all_cols:
 #           self.delete()
-        session = self.context.mem_session
-        with session as conn:
+        with self.context.db_session as db_mem_conn:
+            conn = db_mem_conn.mem
             conn.delete_all(self)
         self.init(display=False)
         for caller, method in self.on_clean_func:  # frame methods
@@ -1625,7 +1692,8 @@ class DbTable:
         where.append(('AND', '', 'deleted_id', '=', 0, ''))
         order = ['col_type', 'seq']
 
-        with context.db_session as conn:
+        with context.db_session as db_mem_conn:
+            conn = db_mem_conn.db
             for row in conn.simple_select(defn_company, table, cols, where, order):
                 col = Column(row)
                 col.table_name = table_name
@@ -1678,7 +1746,8 @@ class DbTable:
             ('WHERE', '', 'table_name', '=', self.table_name, ''),
             ('AND', '', 'deleted_id', '=', 0, '')]
 
-        with context.db_session as conn:
+        with context.db_session as db_mem_conn:
+            conn = db_mem_connnn.db
 #           rows = conn.simple_select(defn_company, table, cols, where)
 #           for row in rows:
             for row in conn.simple_select(defn_company, table, cols, where):
@@ -1772,10 +1841,11 @@ class MemTable(DbTable):
             for hook in hooks:
                 self.setup_hook(hook)
 
-        with context.mem_session as conn:
+        with context.db_session as db_mem_conn:
+            conn = db_mem_conn.mem
             conn.cur.execute(
                 'CREATE TABLE {} (row_id INTEGER PRIMARY KEY)'
-                .format(self.table_name))
+                .format(table_name))
 
             col_flds = (
                 'row_id',  # col_name

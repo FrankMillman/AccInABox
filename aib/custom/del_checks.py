@@ -2,7 +2,7 @@ import asyncio
 
 @asyncio.coroutine
 def load_checks(caller, xml):
-    # called from del_checks 'on_start_form'
+    # called from del_checks 'on_start_frame'
     var = caller.data_objects['var']
     del_checks = caller.data_objects['del_checks']
     steps = caller.data_objects['steps']

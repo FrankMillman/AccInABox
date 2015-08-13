@@ -2,12 +2,12 @@ import asyncio
 import db.api
 
 @asyncio.coroutine
-def on_start_form(caller, xml):
-    # called from setup_roles 'on_start_form'
+def before_start_form(caller, xml):
+    # called from setup_roles 'before_start_form'
     db_table = caller.data_objects['db_table']
 
-    # get a reference to tbl_view that is independent of gui to avoid triggering methods
-    tbl_view_setup = db.api.get_mem_object(caller.form, caller.company, 'tbl_view')
+    # get an alias to tbl_view that is independent of gui to avoid triggering methods
+    tbl_view_setup = db.api.get_mem_object(caller.root, caller.company, 'tbl_view')
     # save reference for use below
     caller.data_objects['tbl_view_setup'] = tbl_view_setup
 

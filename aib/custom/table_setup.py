@@ -53,7 +53,8 @@ def create_table(caller, xml):
     db_table = caller.data_objects['db_table']
     if db_table.getval('data_company') is not None:
         return  # using table set up in another company
-    with db_table.context.db_session as conn:
+    with db_table.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         db.create_table.create_table(conn, db_table.data_company,
             db_table.getval('table_name'))
 
@@ -61,8 +62,8 @@ def chk_table_name(ctx, fld, value, xml):
     # called as validation of table_name if using defn_company
     db_table = ctx.data_objects['db_table']
     defn_comp = db_table.getval('defn_company')
-    db_session = db_table.context.db_session
-    with db_session as conn:
+    with db_table.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         sql = (
             'SELECT short_descr, audit_trail FROM {}.db_tables WHERE table_name = {}'
             .format(defn_comp, conn.param_style)

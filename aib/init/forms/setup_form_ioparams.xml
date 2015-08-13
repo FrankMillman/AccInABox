@@ -4,7 +4,7 @@
 
   <mem_objects>
 
-    <mem_obj name="form" descr="Variables used in form">
+    <mem_obj name="form_io" descr="Variables used in form">
       <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
         long_descr="Form name" col_head="Name" key_field="N" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"/>
@@ -16,12 +16,12 @@
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="inputs" descr="Input parameters" parent="form"
+    <mem_obj name="inputs" descr="Input parameters" parent="form_io"
         sequence="[`seq`, [], null]">
-      <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
-        long_descr="Form id" col_head="Form name" key_field="A" allow_null="false"
-        allow_amend="false" max_len="20" db_scale="0"
-        fkey="[`form`, `row_id`, null, null, true]"/>
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name" col_head="Name" key_field="N" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`form_io`, `form_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -41,12 +41,12 @@
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="outputs" descr="Output parameters" parent="form"
+    <mem_obj name="outputs" descr="Output parameters" parent="form_io"
         sequence="[`seq`, [], null]">
-      <mem_col col_name="form_id" data_type="INT" short_descr="Form id"
-        long_descr="Form id" col_head="Form name" key_field="A" allow_null="false"
-        allow_amend="false" max_len="20" db_scale="0"
-        fkey="[`form`, `row_id`, null, null, true]"/>
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name" col_head="Name" key_field="N" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"
+        fkey="[`form_io`, `form_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -66,16 +66,16 @@
   </mem_objects>
 
   <input_params>
-    <input_param name="form_name" type="data_attr" target="form.form_name" required="true"/>
-    <input_param name="title" type="data_attr" target="form.title" required="true"/>
-    <input_param name="form_xml" type="data_attr" target="form.form_xml" required="true"/>
+    <input_param name="form_name" type="data_attr" target="form_io.form_name" required="true"/>
+    <input_param name="title" type="data_attr" target="form_io.title" required="true"/>
+    <input_param name="form_xml" type="data_attr" target="form_io.form_xml" required="true"/>
   </input_params>
 
   <output_params>
-    <output_param name="form_xml" type="data_attr" source="form.form_xml"/>
+    <output_param name="form_xml" type="data_attr" source="form_io.form_xml"/>
   </output_params>
 
-  <frame main_object="form">
+  <frame main_object="form_io">
     <toolbar/>
     <body>
       <block/>
@@ -84,12 +84,12 @@
       <col/>
       <label value="Form name:"/>
       <col/>
-      <display fld="form.form_name" lng="160"/>
+      <display fld="form_io.form_name" lng="160"/>
       <row/>
       <col/>
       <label value="Title:"/>
       <col/>
-      <display fld="form.title" lng="250"/>
+      <display fld="form_io.title" lng="250"/>
       <block/>
       <string value="Inputs:" lng="75"/>
       <grid data_object="inputs" growable="true" num_grid_rows="5">
@@ -137,7 +137,7 @@
       <method name="do_restore" action="
         <<action>>
           <<pyfunc name=`custom.formdefn_funcs.restore_ioparams`/>>
-          <<restore_obj obj_name=`form`/>>
+          <<restore_obj obj_name=`form_io`/>>
         <</action>>
       "/>
     </frame_methods>

@@ -3,9 +3,10 @@ import datetime as dt
 
 @asyncio.coroutine
 def get_no_periods(caller, xml):
-    # called from on_start_form
+    # called from after_start_form
     sql = "SELECT COUNT(*) FROM {}.adm_periods".format(caller.company)
-    with caller.db_session as conn:
+    with caller.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         count_per = conn.exec_sql(sql).fetchone()[0]
     var = caller.data_objects['var']
     var.setval('count_per', count_per)
@@ -19,7 +20,8 @@ def get_no_periods(caller, xml):
             "SELECT year_no FROM {}.adm_periods WHERE period_no = {}"
             .format(caller.company, count_per-1)
             )
-        with caller.db_session as conn:
+        with caller.db_session as db_mem_conn:
+            conn = db_mem_conn.db
             year_no = conn.exec_sql(sql).fetchone()[0]
         var.setval('curr_year', year_no)
         var.setval('end_year', year_no)
@@ -65,7 +67,8 @@ def load_fin_periods(caller, xml):
     fin_period.delete_all()
 
     if curr_year > end_year:  # starting a new year
-        with caller.db_session as conn:
+        with caller.db_session as db_mem_conn:
+            conn = db_mem_conn.db
             sql = (
                 "SELECT closing_date FROM {}.adm_periods WHERE period_no = {}"
                 .format(caller.company, count_per-1)
@@ -75,7 +78,8 @@ def load_fin_periods(caller, xml):
         var.setval('ye_date', '    New financial year    ')
         var.setval('ye_per_no', None)
     else:
-        with caller.db_session as conn:
+        with caller.db_session as db_mem_conn:
+            conn = db_mem_conn.db
             sql = (
                 "SELECT a.row_id, "
 #               "(SELECT {0}date_func( b.closing_date, '+', 1 ) "
@@ -198,7 +202,8 @@ def after_save_row(caller, xml):
 
         if curr_year > end_year:  # starting a new year
             # remove periods after this one (if any)
-            with caller.form.mem_session as conn:
+            with caller.db_session as db_mem_conn:
+                conn = db_mem_conn.mem
                 conn.exec_sql(
                     "DELETE FROM fin_period WHERE per_no > {}"
                     .format(fin_period.getval('per_no'))

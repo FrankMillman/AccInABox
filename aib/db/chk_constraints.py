@@ -5,6 +5,7 @@ from ast import literal_eval
 import re
 
 from errors import AibError
+from start import log_db, db_log
 
 def chk_constraint(ctx, constraint, value=None, errmsg=None):
     # can be a column constraint (col_chk) or a table constraint (upd_chk or del_chk)
@@ -133,11 +134,17 @@ def nexist(db_obj, fld, value, args):
 
     if chk_val == '$value':
         chk_val = value
-    with db_obj.db_session as conn:
-        conn.cur.execute(
-            'SELECT COUNT(*) FROM {}.{} WHERE {} = {}'
-            .format(company, db_obj.data_table, fld.col_name,
-            conn.param_style) , chk_val)
+    with db_obj.db_session as db_mem_conn:
+        sql = 'SELECT COUNT(*) FROM {}.{} WHERE {} = {}'.format(
+            company, db_obj.data_table, fld.col_name, conn.param_style)
+        if log_db:
+            db_log.write('{}, {}\n\n'.format(sql, chk_val))
+        conn = db_mem_conn.db
+#       conn.cur.execute(
+#           'SELECT COUNT(*) FROM {}.{} WHERE {} = {}'
+#           .format(company, db_obj.data_table, fld.col_name,
+#           conn.param_style) , chk_val)
+        conn.cur.execute(sql, [chk_val])
     return conn.cur.fetchone()[0] == 0
 
 def pyfunc(db_obj, fld, src_val, tgt_val):
@@ -202,7 +209,8 @@ def check_not_null(db_obj, fld, value):
         'SELECT COUNT(*) FROM {}.{} WHERE {} IS NULL'
         .format(db_obj.data_company, db_obj.getval('table_name'), db_obj.getval('col_name'))
         )
-    with db_obj.context.db_session as conn:
+    with db_obj.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         cur = conn.exec_sql(sql)
         if cur.fetchone()[0] != 0:
             raise AibError(

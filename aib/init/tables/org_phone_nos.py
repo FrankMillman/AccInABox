@@ -116,7 +116,7 @@ cols.append ({
     'data_type'  : 'TEXT',
     'short_descr': 'Phone number',
     'long_descr' : 'Phone number',
-    'col_head'   : 'Phone number',
+    'col_head'   : 'Number',
     'key_field'  : 'N',
     'generated'  : False,
     'allow_null' : False,

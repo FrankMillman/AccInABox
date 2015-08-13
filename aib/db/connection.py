@@ -1,9 +1,14 @@
 import importlib
 import threading
 from datetime import datetime
+from collections import namedtuple
+DbMemConn = namedtuple('Conn', 'db mem')
+
 
 import logging
 logger = logging.getLogger(__name__)
+
+from start import log_db, db_log
 
 #-----------------------------------------------------------------------------
 
@@ -73,7 +78,7 @@ def _add_connections(n):
 
 def _get_mem_connection(mem_id):
     with connection_lock:
-        if not mem_id in mem_conn_dict:
+        if mem_id not in mem_conn_dict:
             mem_conn_dict[mem_id] = ([], [])  # conn_list, conn_active
         mem_conn = mem_conn_dict[mem_id]
         mem_conn_list = mem_conn[0]
@@ -168,6 +173,8 @@ class Conn:
         sql = sql.replace('$fx_', self.func_prefix)
         if params is None:
             params = []
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
         self.cur.execute(sql, params)
         return self.cur
 
@@ -197,7 +204,7 @@ class Conn:
 
             sql += where_clause
         if order:
-            order_clause = ' ORDER BY'
+            order_clause = ' ORDER BY '
             for ord_col in order:
 ############################################
 #               if isinstance(ord_col, tuple):
@@ -210,7 +217,7 @@ class Conn:
 ############################################
                 col_name = ord_col
                 desc = ''
-                order_clause += ' {}{}, '.format(col_name, desc)
+                order_clause += '{}{}, '.format(col_name, desc)
             sql += order_clause[:-2]
 
         if debug:
@@ -219,6 +226,8 @@ class Conn:
 
 #       print('SIMP', sql, params)
 
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
         try:
             self.cur.execute(sql, params)
         except self.exception as err:
@@ -248,6 +257,8 @@ class Conn:
            logger.debug((sql, params))
            print(sql, params)
 
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
         try:
             self.cur.execute(sql, params)
         except self.exception as err:
@@ -575,86 +586,81 @@ class DbSession:
 
     A DbSession must be acquired prior to any database access.
 
-    It is acquired by calling :func:`~db.api.start_db_session` and passing
-    it a user id. The function creates an instance of this class, and
-    returns it to the caller.
+    It is acquired by calling :func:`~db.api.start_db_session`. The function
+    creates an instance of this class, and returns it to the caller.
 
-    __enter__ is called when 'with db_session as conn' is executed -
+    __enter__ is called when 'with db_session as db_mem_conn' is executed -
 
     * check if the session has an active database connection. If not,
-      acquire a connection from the connection pool
+      acquire a db connection from the connection pool and an in-memory
+      connection from the mem_conn pool
     * increment 'no_connections' to keep track of how many times
       we have been called
-    * return the connection to the caller
+    * return a tuple containing the db connection and the in-memory
+      connection to the caller
 
     __exit__ is called when the 'with' code block ends -
 
     * decrement 'no_connections'
     * if the number of connections becomes zero -
-      * return the connection to the connection pool
+      * release both connections, which causes them to be 'committed'
+        and then returned to their respective pools 
     """
-    def __init__(self):
-        self.conn = None
-        self.no_connections = 0
-
-    def __enter__(self):
-        if self.conn is None:
-            self.conn = _get_connection()
-            self.conn.cur = self.conn.cursor()
-            # all updates in same transaction use same timestamp
-            self.conn.timestamp = datetime.now()
-        self.no_connections += 1
-        return self.conn
-
-    def __exit__(self, type, exc, tb):
-        if type is not None:  # an exception occurred
-            if self.conn is not None:  # can happen if > 1 exception raised
-                self.conn.cur.close()
-                self.conn.release(rollback=True)  # rollback, return connection to pool
-                self.conn = None
-                self.no_connections = 0
-            return  # will reraise exception
-        self.no_connections -= 1
-        if not self.no_connections:
-            self.conn.cur.close()
-            self.conn.release()  # commit, return connection to pool
-            self.conn = None
-
-#----------------------------------------------------------------------------
-
-class MemSession:
-    """
-    A context manager for a :memory: database.
-    """
-    def __init__(self, mem_id):
-
+    def __init__(self, mem_id=None):
         self.mem_id = mem_id
-#       self.conn = MemConn()
-#       self.conn.cur = self.conn.cursor()
-        self.conn = None
+        self.db_mem_conn = None
         self.no_connections = 0
 
     def __enter__(self):
-        if self.conn is None:
-            self.conn = _get_mem_connection(self.mem_id)
-            self.conn.cur = self.conn.cursor()
+        if self.db_mem_conn is None:
+
             # all updates in same transaction use same timestamp
-            self.conn.timestamp = datetime.now()
+            timestamp = datetime.now()
+            db_conn = _get_connection()
+            db_conn.cur = db_conn.cursor()
+            db_conn.timestamp = timestamp
+            if self.mem_id is not None:
+                mem_conn = _get_mem_connection(self.mem_id)
+                mem_conn.cur = mem_conn.cursor()
+                mem_conn.timestamp = timestamp
+            else:
+                mem_conn = None
+            self.db_mem_conn = DbMemConn(db_conn, mem_conn)
+
+            if log_db:
+                db_log.write('{}: START\n'.format(id(db_conn)))
+
         self.no_connections += 1
-        return self.conn
+        return self.db_mem_conn
 
     def __exit__(self, type, exc, tb):
         if type is not None:  # an exception occurred
-            self.conn.cur.close()
-            self.conn.release(rollback=True)  # rollback, return connection to pool
-            self.conn = None
-            self.no_connections = 0
+            if self.db_mem_conn is not None:  # can happen if > 1 exception raised
+                db_conn, mem_conn = self.db_mem_conn
+                db_conn.cur.close()
+                db_conn.release(rollback=True)  # rollback, return connection to pool
+                if mem_conn is not None:
+                    mem_conn.cur.close()
+                    mem_conn.release(rollback=True)  # rollback, return connection to pool
+                self.db_mem_conn = None
+                self.no_connections = 0
+                if log_db:
+                    db_log.write('{}: ROLLBACK\n\n'.format(id(db_conn)))
             return  # will reraise exception
+
         self.no_connections -= 1
         if not self.no_connections:
-            self.conn.cur.close()
-            self.conn.release()  # commit, return connection to pool
-            self.conn = None
+            db_conn, mem_conn = self.db_mem_conn
+            db_conn.cur.close()
+            db_conn.release()  # commit, return connection to pool
+            if mem_conn is not None:
+                mem_conn.cur.close()
+                mem_conn.release()  # commit, return connection to pool
+            self.db_mem_conn = None
+            if log_db:
+                db_log.write('{}: COMMIT\n\n'.format(id(db_conn)))
 
     def close(self):  # called from ht.form.close_form()
         _close_mem_connections(self.mem_id)
+
+#----------------------------------------------------------------------------

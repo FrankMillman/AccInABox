@@ -81,7 +81,8 @@ def db_data(obj, xml):
     src_val = obj_rec.getval(xml.find('src_val').text)
     cols = [xml.find('tgt_col').text]
     where = [('WHERE', '', xml.find('src_col').text, '=', repr(src_val), '')]
-    with obj_rec.context.db_session as conn:
+    with obj_rec.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         rows = conn.full_select(tgt_obj, cols, where=where)
     return rows.fetchone()[0]
 
@@ -132,13 +133,15 @@ def pyfunc(db_obj, xml):
         globals()[func_name](db_obj, xml)
 
 def create_company(db_obj, xml):
-    with db_obj.context.db_session as conn:
+    with db_obj.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         init_company(db_obj.context, conn,
             db_obj.getval('company_id'), db_obj.getval('company_name'))
 
 def add_column(db_obj, xml):
     column = [fld.getval() for fld in db_obj.select_cols]
-    with db_obj.context.db_session as conn:
+    with db_obj.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         col = db.create_table.setup_column(conn, column)
         sql = 'ALTER TABLE {}.{} ADD {}'.format(
             db_obj.db_table.data_company,
@@ -157,7 +160,8 @@ def add_column(db_obj, xml):
             conn.cur.execute(sql)
 
 def amend_allow_null(db_obj, xml):
-    with db_obj.context.db_session as conn:
+    with db_obj.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         conn.amend_allow_null(db_obj)
 
 def setup_disp_name(db_obj, xml):
@@ -167,7 +171,8 @@ def setup_disp_name(db_obj, xml):
     if not choices[1]:  # [0]=use_subtypes, [1]=use_displaynames
         return
 
-    with db_obj.context.db_session as conn:
+    with db_obj.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         concat = conn.concat
 
     col_name = db_obj.getval('col_name')
@@ -269,7 +274,8 @@ def create_table(caller, xml):
     db_table = caller.data_objects['db_table']
     if db_table.getval('data_company') is not None:
         return  # using table set up in another company
-    with db_table.context.db_session as conn:
+    with db_table.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         db.create_table.create_table(conn, db_table.data_company,
             db_table.getval('table_name'))
 """

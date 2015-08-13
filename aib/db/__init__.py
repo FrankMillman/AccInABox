@@ -3,7 +3,7 @@ The "db" package is responsible for all database activity.
 
 It can talk to the following RDMS's -
 
-* MS Sql Server 2005
+* MS Sql Server
 * PostgreSQL on Linux
 * sqlite3
 

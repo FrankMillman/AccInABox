@@ -2,7 +2,7 @@ import asyncio
 
 @asyncio.coroutine
 def load_cur_flds(caller, xml):
-    # called from cursor_form 'on_start_form'
+    # called from cursor_form 'on_start_frame'
     db_cur = caller.data_objects['db_cur']
     cur_col = caller.data_objects['column']
     cur_filter = caller.data_objects['filter']

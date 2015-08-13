@@ -73,7 +73,8 @@ class GuiTree(GuiTreeCommon):
         # if this beomes a problem due to table size, we can change it
         #   to only select root + one level, and wait for the user to
         #   expand a level, whereupon we select and upload those rows
-        with self.form.db_session as conn:
+        with self.form.db_session as db_mem_conn:
+            conn = db_mem_conn.db
             select_cols = ['row_id', 'parent_num', 'descr', 'expandable']
             if self.db_obj.db_table.audit_trail:
                 where = [('WHERE', '', 'deleted_id', '=', 0, '')]
@@ -205,7 +206,8 @@ class GuiTreeCombo(GuiTreeCommon):
                 self.member_code, self.member_descr)
             )
 
-        with self.form.db_session as conn:
+        with self.form.db_session as db_mem_conn:
+            conn = db_mem_conn.db
             for row_id, node_type, code, descr, parent_num, seq in conn.exec_sql(sql):
                 self.db_obj.init()
                 self.db_obj.setval('type', node_type)
@@ -221,7 +223,7 @@ class GuiTreeCombo(GuiTreeCommon):
         # if this beomes a problem due to table size, we can change it
         #   to only select root + one level, and wait for the user to
         #   expand a level, whereupon we select and upload those rows
-        with self.form.mem_session as conn:
+            conn = db_mem_conn.mem
             sql = (
                 "SELECT data_row_id{0}'_'{0}type as node_id, "
                 "parent_num{0}'_group' as parent_id, "

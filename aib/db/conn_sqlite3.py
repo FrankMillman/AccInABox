@@ -5,6 +5,7 @@ from decimal import Decimal as D
 
 from errors import AibError
 import db.create_table
+from start import log_db, db_log
 
 def customise(DbConn, db_params):
     # add db-specific methods to DbConn class
@@ -32,6 +33,7 @@ def customise(DbConn, db_params):
     DbConn.amend_allow_null = amend_allow_null
     # create class attributes from db parameters
     DbConn.database = db_params['database']
+    DbConn.callback = callback
 
 def subfield(string, delim, occurrence):
     """
@@ -115,6 +117,7 @@ def init(self, pos, mem_id=None):
     conn.create_function('repeat', 2, repeat)
     conn.create_function('zfill', 2, zfill)
     conn.create_function('date_func', 3, date_func)
+
     self.conn = conn
     self.cursor = conn.cursor
     self.param_style = '?'
@@ -127,6 +130,13 @@ def init(self, pos, mem_id=None):
     self.now = datetime.now
     self.today = date.today
     self.companies = {}
+
+#   conn.set_trace_callback(self.callback)
+
+#sql_log = open('sql_log.txt', 'w', errors='backslashreplace')
+def callback(self, sql_cmd):
+    sql_log.write('{}: {}\n'.format(id(self), sql_cmd))
+    sql_log.flush()
 
 def form_sql(self, columns, tablenames, where_clause='',
         order_clause='', limit=0, offset=0, lock=False):
@@ -141,7 +151,8 @@ def form_sql(self, columns, tablenames, where_clause='',
     if offset:
         sql += ' OFFSET {}'.format(offset)
     if lock:
-        self.cur.execute('BEGIN IMMEDIATE')
+        if not self.conn.in_transaction:
+           self.cur.execute('BEGIN IMMEDIATE')
     return sql
 
 def attach_company(self, company):
@@ -221,6 +232,8 @@ def insert_row(self, db_obj, cols, vals, generated_flds):
     sql = ('INSERT INTO {} ({}) VALUES ({})'.format(table_name,
         ', '.join(cols), ', '.join([self.param_style]*len(cols))))
 
+    if log_db:
+        db_log.write('{}: {}; {}\n'.format(id(self), sql, vals))
     self.cur.execute(sql, vals)
 
     key_cols = []  # if there are generated fields, build
@@ -245,6 +258,8 @@ def insert_row(self, db_obj, cols, vals, generated_flds):
         sql = 'SELECT {} FROM {} WHERE {}'.format(
             ', '.join([fld.col_name for fld in generated_flds]),
             table_name, where)
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, key_vals))
         self.cur.execute(sql, key_vals)
         vals_generated = self.cur.fetchone()
         for fld, val in zip(generated_flds, vals_generated):
@@ -257,9 +272,11 @@ def insert_row(self, db_obj, cols, vals, generated_flds):
         sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
                 "({2}, {2}, {2}, 'add')".format(
             table_name, cols, self.param_style))
+        params = (data_row_id, db_obj.context.user_row_id, self.timestamp)
 
-        self.cur.execute(sql,
-            (data_row_id, db_obj.context.user_row_id, self.timestamp))
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
+        self.cur.execute(sql, params)
         xref_row_id = self.cur.lastrowid
 
         db_obj.setval('created_id', xref_row_id)
@@ -267,6 +284,8 @@ def insert_row(self, db_obj, cols, vals, generated_flds):
             'UPDATE {} SET created_id = {} WHERE row_id = {}'
             .format(table_name, xref_row_id, data_row_id)
             )
+        if log_db:
+            db_log.write('{}: {};\n'.format(id(self), sql))
         self.cur.execute(sql)
 
 def update_row(self, db_obj, cols, vals):
@@ -289,6 +308,8 @@ def update_row(self, db_obj, cols, vals):
         for col_name in key_cols])
     vals.extend(key_vals)
     sql = "UPDATE {} SET {} WHERE {}".format(table_name, update, where)
+    if log_db:
+        db_log.write('{}: {}; {}\n'.format(id(self), sql, vals))
     self.cur.execute(sql, vals)
 
     if db_table.audit_trail:
@@ -306,6 +327,8 @@ def update_row(self, db_obj, cols, vals):
             table_name, ', '.join(cols),
             ', '.join([self.param_style]*len(cols))))
 
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, vals))
         self.cur.execute(sql, vals)
         audit_row_id = self.cur.lastrowid
 
@@ -314,8 +337,10 @@ def update_row(self, db_obj, cols, vals):
         sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
             "({2}, {2}, {2}, {2}, 'chg')".format(
             table_name, cols, self.param_style))
-        self.cur.execute(sql, (data_row_id, audit_row_id,
-            db_obj.context.user_row_id, self.timestamp))
+        params = (data_row_id, audit_row_id, db_obj.context.user_row_id, self.timestamp)
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
+        self.cur.execute(sql, params)
 
 def delete_row(self, db_obj):
     db_table = db_obj.db_table
@@ -332,13 +357,17 @@ def delete_row(self, db_obj):
         sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
                 "({2}, {2}, {2}, 'del')".format(
             table_name, cols, self.param_style))
-        self.cur.execute(sql,
-            (data_row_id, db_obj.context.user_row_id, self.timestamp))
+        params = (data_row_id, db_obj.context.user_row_id, self.timestamp)
+        if log_db:
+            db_log.write('{}: {}; {}'.format(id(self), sql, params))
+        self.cur.execute(sql, params)
         xref_row_id = self.cur.lastrowid
         db_obj.setval('deleted_id', xref_row_id)
         sql = (
             'UPDATE {} SET deleted_id = {} WHERE row_id = {}'
             .format(table_name, xref_row_id, data_row_id))
+        if log_db:
+            db_log.write('{}: {};'.format(id(self), sql))
         self.cur.execute(sql)
 
     else:
@@ -352,6 +381,8 @@ def delete_row(self, db_obj):
             for col_name in key_cols])
 
         sql = "delete from {} where {}".format(table_name, where)
+        if log_db:
+            db_log.write('{}: {}; {}'.format(id(self), sql, key_vals))
         self.cur.execute(sql, key_vals)
 
 def delete_all(self, db_obj):
@@ -362,6 +393,8 @@ def delete_all(self, db_obj):
         return  # can only delete all from mem_obj
 
     sql = "DELETE FROM {}".format(table_name)
+    if log_db:
+        db_log.write('{}: {};\n'.format(id(self), sql))
     self.cur.execute(sql)
 
 def convert_string(self, string, db_scale=None):

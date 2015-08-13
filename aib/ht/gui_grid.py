@@ -921,24 +921,19 @@ class GuiGrid:
     @asyncio.coroutine
     def save(self, frame=None):
         yield from self.validate_all()
-        if 'before_save' in self.methods:
-            yield from ht.form_xml.exec_xml(self, self.methods['before_save'])
-        if frame is not None and 'before_save' in frame.methods:
-            yield from ht.form_xml.exec_xml(frame, frame.methods['before_save'])
-#       if frame is not None and 'do_save' in frame.methods:
-#           yield from ht.form_xml.exec_xml(frame, frame.methods['do_save'])
-#       elif 'do_save' in self.methods:
-#           yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
-#       else:
-#           db_obj.save()
-        if frame is not None:
-            yield from ht.form_xml.exec_xml(frame, frame.methods['do_save'])
-        else:
-            yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
-        if 'after_save' in self.methods:
-            yield from ht.form_xml.exec_xml(self, self.methods['after_save'])
-        if frame is not None and 'after_save' in frame.methods:
-            yield from ht.form_xml.exec_xml(frame, frame.methods['after_save'])
+        with self.parent.db_session as db_mem_conn:
+            if 'before_save' in self.methods:
+                yield from ht.form_xml.exec_xml(self, self.methods['before_save'])
+            if frame is not None and 'before_save' in frame.methods:
+                yield from ht.form_xml.exec_xml(frame, frame.methods['before_save'])
+            if frame is not None:
+                yield from ht.form_xml.exec_xml(frame, frame.methods['do_save'])
+            else:
+                yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
+            if 'after_save' in self.methods:
+                yield from ht.form_xml.exec_xml(self, self.methods['after_save'])
+            if frame is not None and 'after_save' in frame.methods:
+                yield from ht.form_xml.exec_xml(frame, frame.methods['after_save'])
         if self.inserted:
             # by definition, a grid has a cursor
             # when object is saved, cursor.insert_row/update_row is called

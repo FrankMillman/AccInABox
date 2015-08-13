@@ -31,14 +31,19 @@ logging.basicConfig(format=format, datefmt=datefmt)
 log = sys.stderr
 debug = False
 
-import db.api
-#import bp.bpm
-import ht.htc
+#db_log = open('db_log.txt', 'w', errors='backslashreplace')
+db_log = sys.stderr
+log_db = False
 
 #sys.stdout = open('/dev/null', 'w')
 #sys.stdout = open('nul', 'w')
 
 def start():
+
+    import db.api
+    #import bp.bpm
+    import ht.htc
+
     if len(sys.argv) == 2:
         cfg_name = sys.argv[1]
     else:
@@ -64,6 +69,14 @@ def start():
 
 def stop(htc_args):
     input(_('Press <enter> to stop\n'))
+
+    if log_db:
+        db_log.flush()
+        db_log.close()
+
+    import db.api
+    import ht.htc
+
     ht.htc.stop(htc_args)  # tell human task client to terminate
     db.api.close_all_connections()
 
@@ -81,6 +94,8 @@ sys.excepthook = excepthook
 """
 
 def check_versions():
+
+    import db.api
 
     from releases import program_version_info, datamodel_version_info
 

@@ -4,7 +4,7 @@
 
   <mem_objects>
 
-    <mem_obj name="form" descr="Variables used in form">
+    <mem_obj name="form_gui" descr="Variables used in form">
       <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
         long_descr="Form name" col_head="Name" key_field="N" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"/>
@@ -26,25 +26,28 @@
       <mem_col col_name="main_object" data_type="TEXT" short_descr="Main db object"
         long_descr="Main db object" col_head="Main obj" key_field="N"
         allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
-      <mem_col col_name="on_start_form" data_type="SXML" short_descr="Start method"
-        long_descr="Method called on start of form" col_head="Template" key_field="N"
+      <mem_col col_name="before_start_form" data_type="SXML" short_descr="Before start method"
+        long_descr="Method called before start of form" col_head="Template" key_field="N"
+        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="after_start_form" data_type="SXML" short_descr="After start method"
+        long_descr="Method called after start of form" col_head="Template" key_field="N"
         allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="method_template" data_type="TEXT" short_descr="Method template"
         long_descr="Template for frame methods" col_head="" key_field="N"
         allow_null="true" allow_amend="true" max_len="120" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="tool" descr="Toolbar elements" parent="form"
+    <mem_obj name="tool" descr="Toolbar elements" parent="form_gui"
         sequence="[`seq`, [], null]">
       <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
-        long_descr="Form name" col_head="Name" key_field="A" allow_null="false"
+        long_descr="Form name" col_head="Name" key_field="N" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`form`, `form_name`, null, null, true]"/>
+        fkey="[`form_gui`, `form_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
-        long_descr="Sequence" col_head="Seq" key_field="N"
+        long_descr="Sequence" col_head="Seq" key_field="A"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="type" data_type="TEXT" short_descr="Tool type"
-        long_descr="Tool type" col_head="Tool type" key_field="A" allow_null="false"
+        long_descr="Tool type" col_head="Tool type" key_field="N" allow_null="false"
         allow_amend="false" max_len="80" db_scale="0"/>
       <mem_col col_name="label" data_type="TEXT" short_descr="Tool label"
         long_descr="Tool label" col_head="Tool label" key_field="N" allow_null="true"
@@ -63,14 +66,14 @@
         allow_amend="true" max_len="120" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="body" descr="Body definition elements" parent="form"
+    <mem_obj name="body" descr="Body definition elements" parent="form_gui"
         sequence="[`seq`, [], null]">
       <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
-        long_descr="Form name" col_head="Name" key_field="A" allow_null="false"
+        long_descr="Form name" col_head="Name" key_field="N" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`form`, `form_name`, null, null, true]"/>
+        fkey="[`form_gui`, `form_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
-        long_descr="Sequence" col_head="Seq" key_field="N"
+        long_descr="Sequence" col_head="Seq" key_field="A"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="type" data_type="TEXT" short_descr="Type"
         long_descr="Gui object type" col_head="Type" key_field="N" allow_null="false"
@@ -187,17 +190,17 @@
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="button" descr="Button" parent="form"
+    <mem_obj name="button" descr="Button" parent="form_gui"
         sequence="[`seq`, [], null]">
       <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
-        long_descr="Form name" col_head="Name" key_field="A" allow_null="false"
+        long_descr="Form name" col_head="Name" key_field="N" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`form`, `form_name`, null, null, true]"/>
+        fkey="[`form_gui`, `form_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
-        long_descr="Sequence" col_head="Seq" key_field="N"
+        long_descr="Sequence" col_head="Seq" key_field="A"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="btn_id" data_type="TEXT" short_descr="Button id"
-        long_descr="Button id" col_head="Button id" key_field="A" allow_null="false"
+        long_descr="Button id" col_head="Button id" key_field="N" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"/>
       <mem_col col_name="btn_label" data_type="TEXT" short_descr="Button label"
         long_descr="Button label" col_head="Label" key_field="N" allow_null="false"
@@ -219,17 +222,17 @@
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="frame_method" descr="Frame method" parent="form"
+    <mem_obj name="frame_method" descr="Frame method" parent="form_gui"
         sequence="[`seq`, [], null]">
       <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
-        long_descr="Form name" col_head="Name" key_field="A" allow_null="false"
+        long_descr="Form name" col_head="Name" key_field="N" allow_null="false"
         allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`form`, `form_name`, null, null, true]"/>
+        fkey="[`form_gui`, `form_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
-        long_descr="Sequence" col_head="Seq" key_field="N"
+        long_descr="Sequence" col_head="Seq" key_field="A"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
       <mem_col col_name="name" data_type="TEXT" short_descr="Method name"
-        long_descr="Method name" col_head="Name" key_field="A" allow_null="false"
+        long_descr="Method name" col_head="Name" key_field="N" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"/>
       <mem_col col_name="obj_name" data_type="TEXT" short_descr="Object name"
         long_descr="Object name (used in on_clean/on_amend/on_read/on_delete)"
@@ -243,16 +246,16 @@
   </mem_objects>
 
   <input_params>
-    <input_param name="form_name" type="data_attr" target="form.form_name" required="true"/>
-    <input_param name="title" type="data_attr" target="form.title" required="true"/>
-    <input_param name="form_xml" type="data_attr" target="form.form_xml" required="true"/>
+    <input_param name="form_name" type="data_attr" target="form_gui.form_name" required="true"/>
+    <input_param name="title" type="data_attr" target="form_gui.title" required="true"/>
+    <input_param name="form_xml" type="data_attr" target="form_gui.form_xml" required="true"/>
   </input_params>
 
   <output_params>
-    <output_param name="form_xml" type="data_attr" source="form.form_xml"/>
+    <output_param name="form_xml" type="data_attr" source="form_gui.form_xml"/>
   </output_params>
 
-  <frame main_object="form">
+  <frame main_object="form_gui">
     <toolbar/>
     <body>
       <block/>
@@ -261,11 +264,11 @@
       <col/>
       <label value="Form name:"/>
       <col/>
-      <display fld="form.form_name" lng="160"/>
+      <display fld="form_gui.form_name" lng="160"/>
       <col/>
       <label value="Title:"/>
       <col/>
-      <display fld="form.title" lng="250"/>
+      <display fld="form_gui.title" lng="250"/>
       <block/>
       <nb_start/>
       <nb_page label="Toolbar"/>
@@ -276,7 +279,7 @@
       <col/>
       <label value="Template:"/>
       <col/>
-      <input fld="form.tb_template" lng="120"/>
+      <input fld="form_gui.tb_template" lng="120"/>
       <grid data_object="tool" growable="true" num_grid_rows="5">
         <toolbar template="Grid"/>
         <cur_columns>
@@ -431,12 +434,12 @@
       <col/>
       <label value="Template:"/>
       <col/>
-      <input fld="form.btn_template" lng="120"/>
+      <input fld="form_gui.btn_template" lng="120"/>
       <row/>
       <col/>
       <label value="Validate?"/>
       <col/>
-      <input fld="form.btn_validate"/>
+      <input fld="form_gui.btn_validate"/>
       <grid data_object="button" growable="true" num_grid_rows="5">
         <toolbar template="Grid"/>
         <cur_columns>
@@ -495,17 +498,22 @@
       <col/>
       <label value="Main db object:"/>
       <col/>
-      <input fld="form.main_object" lng="120"/>
+      <input fld="form_gui.main_object" lng="120"/>
       <row/>
       <col/>
-      <label value="Start method:"/>
+      <label value="Before start method:"/>
       <col/>
-      <input fld="form.on_start_form" lng="400" height="5"/>
+      <input fld="form_gui.before_start_form" lng="400" height="5"/>
+      <row/>
+      <col/>
+      <label value="After start method:"/>
+      <col/>
+      <input fld="form_gui.after_start_form" lng="400" height="5"/>
       <row/>
       <col/>
       <label value="Template:"/>
       <col/>
-      <input fld="form.method_template" lng="120"/>
+      <input fld="form_gui.method_template" lng="120"/>
       <block/>
       <vbox/>
       <string value="Frame methods:" lng="120"/>
@@ -540,7 +548,7 @@
       <method name="do_restore" action="
         <<action>>
           <<pyfunc name=`custom.formdefn_funcs.restore_frame`/>>
-          <<restore_obj obj_name=`form`/>>
+          <<restore_obj obj_name=`form_gui`/>>
         <</action>>
       "/>
     </frame_methods>

@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 import db.objects
 from db.chk_constraints import chk_constraint
 from errors import AibError, AibDenied
+from start import log_db, db_log
 
 debug = 0
 
@@ -209,14 +210,16 @@ class Field:
         print()
         """
 
-        if self.db_obj.mem_obj:
-            session = self.db_obj.context.mem_session
-        else:
-            session = self.db_obj.context.db_session
-        with session as conn:
+        with self.db_obj.context.db_session as db_mem_conn:
+            if self.db_obj.mem_obj:
+                conn = db_mem_conn.mem
+            else:
+                conn = db_mem_conn.db
             try:
                 # next line only works if exactly one row is selected
 #               cur = conn.cursor()
+                if log_db:
+                    db_log.write('{}: {};\n'.format(id(conn), sql))
                 conn.cur.execute(sql)
                 row, = conn.cur
                 self.setval(row[0])

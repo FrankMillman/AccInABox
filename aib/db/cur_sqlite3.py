@@ -1,3 +1,5 @@
+from start import log_db, db_log
+
 def customise(DbCursor):
     # add db-specific methods to DbCursor class
     DbCursor.create_cursor = create_cursor
@@ -9,6 +11,10 @@ def customise(DbCursor):
     DbCursor.close = close
 
 def create_cursor(self, sql, params):
+
+    if log_db:
+        db_log.write('{}: {}; {}\n\n'.format(id(self.conn), sql, params))
+
     if self.debug:
         print(sql, params)
     self.cur.execute(sql, params)

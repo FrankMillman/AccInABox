@@ -88,9 +88,12 @@ class Root:
         self.form_list = []  # list of forms for this root
         # the following are common to all forms under this root
         # see 'property' methods at end of Form definition
+        self.mem_id = id(self)
         self.session = session
-        self.db_session = db.api.start_db_session()
+        self.db_session = db.api.start_db_session(self.mem_id)
         #self.data_objects = {}
+        self.sys_admin = session.sys_admin
+        self.user_row_id = session.user_row_id
 
 class Form:
     def __init__(self, company, form_name, parent=None, data_inputs=None,
@@ -168,11 +171,6 @@ class Form:
             self.root = self.parent.form.root
         self.ref = '{}_{}'.format(self.root.ref, len(self.root.form_list))
         self.root.form_list.append(self)
-#       self.session = session
-
-        #self.data_objects = self.root.data_objects
-        #self.db_session = db.api.start_db_session()
-        self.mem_session = db.api.start_mem_session(id(self))
 
         if self.inline is not None:  # form defn is passed in as parameter
             form_defn = self.form_defn = self.inline
@@ -205,7 +203,7 @@ class Form:
 
         if grid_tablename is not None:  # passed in if setup_grid
             grid_obj = db.api.get_db_object(
-                self, self.company, grid_tablename)
+                self.root, self.company, grid_tablename)
             self.data_objects['grid_obj'] = grid_obj
 
         self.cursor_name = cursor_name
@@ -300,7 +298,7 @@ class Form:
                 db_obj = db.api.get_fkey_object(
                     self, table_name, src_obj, src_colname)
             else:
-                db_obj = db.api.get_db_object(self,
+                db_obj = db.api.get_db_object(self.root,
                     company, table_name, db_parent)
 
             self.data_objects[obj_name] = db_obj
@@ -323,8 +321,8 @@ class Form:
             db_parent = obj_xml.get('parent')
             if db_parent is not None:
                 db_parent = self.data_objects[db_parent]
-            db_obj = db.api.get_mem_object(self,
-                self.company, obj_name, db_parent, obj_xml)
+            db_obj = db.api.get_mem_object(self.root,
+                self.company, obj_name, parent=db_parent, table_defn=obj_xml)
             self.data_objects[obj_name] = db_obj
 
     def setup_input_attr(self, input_params):
@@ -375,14 +373,19 @@ class Form:
         
     @asyncio.coroutine
     def setup_form(self, form_defn, title):
-        gui = []  # list of elements to send to client for rendering
-
-        if self.parent is None:
-            gui.append(('root', {'root_id': self.root.ref}))
-
-        gui.append(('form', {'title':title, 'form_id': self.ref}))
 
         frame_xml = form_defn.find('frame')
+
+        before_start_form = frame_xml.get('before_start_form')
+        if before_start_form is not None:
+            action = etree.fromstring(before_start_form, parser=parser)
+            yield from ht.form_xml.exec_xml(self, action)
+
+        gui = []  # list of elements to send to client for rendering
+        if self.parent is None:
+            gui.append(('root', {'root_id': self.root.ref}))
+        gui.append(('form', {'title':title, 'form_id': self.ref}))
+
         frame = Frame(self, frame_xml, self.ctrl_grid, gui)
 
         self.session.request.send_gui(self, gui)
@@ -408,11 +411,11 @@ class Form:
 #                   show_obj_list(sub_obj)
 #       show_obj_list(self)
 
-        on_start_form = frame_xml.get('on_start_form')
-        if on_start_form is not None:
-            action = etree.fromstring(on_start_form, parser=parser)
+        after_start_form = frame_xml.get('after_start_form')
+        if after_start_form is not None:
+            action = etree.fromstring(after_start_form, parser=parser)
             yield from ht.form_xml.exec_xml(self, action)
-            # on_start_form must call continue_form if it wants to continue
+            # after_start_form must call continue_form if it wants to continue
         else:
             yield from self.continue_form()
 
@@ -517,11 +520,11 @@ class Form:
                     subtype_fld.gui_subtype = None
 
             self.obj_dict = None
-            self.mem_session.close()
 
         del self.root.form_list[-1]
 
         if self.parent is None:
+            self.db_session.close()
             del self.session.active_roots[self.root.ref]
             self.root = None  # remove circular reference
 
@@ -534,6 +537,10 @@ class Form:
 #   [2013-10-08] Make shared properties read-only (only implement getters)
 
     @property
+    def mem_id(self):
+        return self.root.mem_id
+
+    @property
     def session(self):
         return self.root.session
 
@@ -543,11 +550,11 @@ class Form:
 
     @property
     def user_row_id(self):
-        return self.session.user_row_id
+        return self.root.user_row_id
 
     @property
     def sys_admin(self):
-        return self.session.sys_admin
+        return self.root.sys_admin
 
     @property
     def perms(self):
@@ -1319,37 +1326,22 @@ class Frame:
                         raise AibError(head=None, body=None)  # stop processing messages
         yield from check(self)
 
-#   @asyncio.coroutine
-#   def save_obj(self, db_obj):
-#       db_obj.save()
-
     @asyncio.coroutine
     def save(self):
         yield from self.validate_all()
         yield from self.check_children()
-        if self.ctrl_grid is not None:
-            yield from self.ctrl_grid.save(self)
-            return
-#       if self.frame_type == 'tree_frame':
-#           yield from self.tree.before_save()
-        if 'before_save' in self.methods:
-            yield from ht.form_xml.exec_xml(self, self.methods['before_save'])
-#       if self.ctrl_grid is not None:
-#           yield from self.ctrl_grid.save_obj(self, db_obj)
-#       elif 'do_save' in self.methods:
-#           yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
-#       else:
-#           db_obj.save()
-        yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
-        if 'after_save' in self.methods:
-            yield from ht.form_xml.exec_xml(self, self.methods['after_save'])
-#       if self.frame_type == 'tree_frame':
-#           yield from self.tree.update_node()
+        with self.db_session as db_mem_conn:
+            if self.ctrl_grid is not None:
+                yield from self.ctrl_grid.save(self)
+                return
+            if 'before_save' in self.methods:
+                yield from ht.form_xml.exec_xml(self, self.methods['before_save'])
+            yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
+            if 'after_save' in self.methods:
+                yield from ht.form_xml.exec_xml(self, self.methods['after_save'])
 
     @asyncio.coroutine
     def save_obj(self, db_obj):
-#       if self.frame_type == 'tree_frame':
-#           yield from self.tree.before_save()
         db_obj.save()
         if self.frame_type == 'tree_frame':
             yield from self.tree.update_node()

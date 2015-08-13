@@ -111,7 +111,8 @@
       </xs:sequence>
       <xs:attribute name="main_object"/>
       <xs:attribute name="obj_descr"/>
-      <xs:attribute name="on_start_form"/>
+      <xs:attribute name="before_start_form"/>
+      <xs:attribute name="after_start_form"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="toolbar">

@@ -64,7 +64,7 @@
   <input_params/>
   <output_params/>
 
-  <frame main_object="fin_year" on_start_form="
+  <frame main_object="fin_year" after_start_form="
       <<action>>
         <<pyfunc name=`custom.finperiod_funcs.get_no_periods`/>>
         <<case>>

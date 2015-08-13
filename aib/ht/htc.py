@@ -138,7 +138,8 @@ class Session:
         root_id = '_root'
         client_menu.append((root_id, None, 'root', True))
         db_session = db.api.start_db_session()
-        with db_session as conn:
+        with db_session as db_mem_conn:
+            conn = db_mem_conn.db
             # we use list(...) because we use a nested select on the same
             #   connection, so we would lose the results of the first select
             for company, comp_name, comp_admin in list(self.select_companies(conn)):

@@ -2,35 +2,26 @@
   <db_objects>
     <db_obj name="party" table_name="org_parties" formview_obj="true"/>
     <db_obj name="addr" table_name="org_addresses" parent="party"/>
-    <db_obj name="messaging" table_name="org_messaging" parent="party"/>
+    <db_obj name="msg" table_name="org_messaging" parent="party"/>
     <db_obj name="phone" table_name="org_phone_nos" parent="party"/>
     <db_obj name="contact" table_name="org_contacts" parent="party"/>
-    <db_obj name="msg_types" table_name="adm_msg_types" fkey="messaging.message_type"/>
+    <db_obj name="msg_types" table_name="adm_msg_types"/>
   </db_objects>
   <mem_objects>
     <mem_obj name="addr_types" descr="Address types">
-      <mem_col col_name="addr_type" data_type="TEXT" short_descr="Address type"
+      <mem_col col_name="address_type" data_type="TEXT" short_descr="Address type"
         long_descr="Address type" col_head="Addr type" key_field="A"
         allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
         long_descr="Description" col_head="Description" key_field="N"
         allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
-    </mem_obj>
-    <mem_obj name="mem_addr" descr="Mem object to store Address details">
-      <!-- mem_col col_name="addr_type" data_type="TEXT" short_descr="Address type"
-        long_descr="Address type" col_head="Addr type" key_field="A"
-        allow_null="false" allow_amend="false" max_len="0" db_scale="0"/ -->
-      <mem_col col_name="addr_type" data_type="TEXT" short_descr="Address type"
-        long_descr="Address type" col_head="Addr type" key_field="A"
-        allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
-      <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
-        long_descr="Description" col_head="Addr type" key_field="N"
-        allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
       <mem_col col_name="disp_addr" data_type="TEXT" short_descr="Display address"
         long_descr="Display address" col_head="Address" key_field="N"
         allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
-    <mem_obj name="mem_msg_types" descr="Mem object to store message types">
+    <mem_obj name="mem_addr" descr="Mem object to store Address details" parent="party">
+    </mem_obj>
+    <mem_obj name="mem_msg" descr="Mem object to store Messaging details" parent="party">
       <mem_col col_name="msg_type_id" data_type="INT" short_descr="Message type"
         long_descr="Message type" col_head="Msg type" key_field="A"
         allow_null="false" allow_amend="false" max_len="0" db_scale="0"
@@ -42,13 +33,34 @@
         long_descr="Message address" col_head="Address" key_field="N"
         allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
+    <mem_obj name="mem_phone" descr="Mem object to store Phone No details" parent="party">
+      <mem_col col_name="phone_type" data_type="TEXT" short_descr="Phone type"
+        long_descr="Phone type" col_head="Type" key_field="A"
+        allow_null="false" allow_amend="false" max_len="12" db_scale="0"/>
+      <mem_col col_name="phone_number" data_type="TEXT" short_descr="Phone number"
+        long_descr="Phone number" col_head="Number" key_field="N"
+        allow_null="true" allow_amend="true" max_len="30" db_scale="0"/>
+    </mem_obj>
+    <mem_obj name="mem_contact" descr="Mem object to store Contact details" parent="party">
+      <mem_col col_name="contact_name" data_type="TEXT" short_descr="Contact name"
+        long_descr="Contact name" col_head="Name" key_field="A"
+        allow_null="false" allow_amend="false" max_len="30" db_scale="0"/>
+      <mem_col col_name="position" data_type="TEXT" short_descr="Position"
+        long_descr="Position" col_head="Position" key_field="N"
+        allow_null="true" allow_amend="true" max_len="30" db_scale="0"/>
+      <mem_col col_name="phone_number" data_type="TEXT" short_descr="Phone number"
+        long_descr="Phone number" col_head="Phone" key_field="N"
+        allow_null="true" allow_amend="true" max_len="30" db_scale="0"/>
+      <mem_col col_name="email_address" data_type="TEXT" short_descr="Email address"
+        long_descr="Email address" col_head="Email" key_field="N"
+        allow_null="true" allow_amend="true" max_len="30" db_scale="0"/>
+    </mem_obj>
   </mem_objects>
   <input_params/>
   <output_params/>
-  <frame main_object="party" on_start_form="
+  <frame main_object="party" before_start_form="
       <<action>>
-        <<pyfunc name=`custom.party_setup.on_start_form`/>>
-        <<continue_form/>>
+        <<pyfunc name=`custom.party_setup.before_start_form`/>>
       <</action>>
       ">
     <toolbar template="Setup_Form"/>
@@ -66,296 +78,102 @@
       <label value="Party type:"/>
       <col/>
       <input fld="party.party_type" lng="160"/>
+      <block/>
+      <nb_start/>
 
+      <nb_page label="Details"/>
       <block/>
       <subtype_panel subtype="party.party_type"/>
+
+      <nb_page label="Addresses"/>
       <block/>
-      <dummy after="
-        <<action>>
-          <<save/>>
-        <</action>>
-        "/>
-      <panel/>
-      <row/>
-      <col/>
-      <button lng="150" btn_id="addr" btn_label="Addresses"
-          btn_enabled="true" btn_validate="true" action="
-        <<action>>
-          <<inline_form form_name=`Addresses`>>
-            <<on_return>>
-              <<return state=`cancelled`/>>
-              <<return state=`completed`/>>
-            <</on_return>>
-          <</inline_form>>
-        <</action>>
-        "/>
-      <col/>
-      <button lng="150" btn_id="addr" btn_label="Messaging"
-          btn_enabled="true" btn_validate="true" action="
-        <<action>>
-          <<inline_form form_name=`Messaging`>>
-            <<on_return>>
-              <<return state=`cancelled`/>>
-              <<return state=`completed`/>>
-            <</on_return>>
-          <</inline_form>>
-        <</action>>
-        "/>
-      <row/>
-      <col/>
-      <button lng="150" btn_id="addr" btn_label="Phone nos"
-          btn_enabled="true" btn_validate="true" action="
-        <<action>>
-          <<inline_form form_name=`Phone nos`>>
-            <<on_return>>
-              <<return state=`cancelled`/>>
-              <<return state=`completed`/>>
-            <</on_return>>
-          <</inline_form>>
-        <</action>>
-        "/>
-      <col/>
-      <button lng="150" btn_id="addr" btn_label="Contacts"
-          btn_enabled="true" btn_validate="true" action="
-        <<action>>
-          <<inline_form form_name=`Contacts`>>
-            <<on_return>>
-              <<return state=`cancelled`/>>
-              <<return state=`completed`/>>
-            <</on_return>>
-          <</inline_form>>
-        <</action>>
-        "/>
+      <grid data_object="addr_types" growable="false" num_grid_rows="5">
+        <toolbar/>
+        <cur_columns>
+          <cur_col col_name="descr" lng="120"/>
+          <cur_col col_name="disp_addr" lng="200" expand="true" skip="true"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence/>
+        <grid_methods template="Grid">
+          <method name="on_start_row" action="
+            <<action>>
+              <<pyfunc name=`custom.party_setup.on_start_addr`/>>
+            <</action>>
+          "/>
+        </grid_methods>
+      </grid>
+      <grid_frame main_object="mem_addr">
+        <body>
+          <block/>
+          <subtype_panel subtype="mem_addr.address_type"/>
+        </body>
+        <button_row validate="true" template="Grid_Frame"/>
+        <frame_methods template="Grid_Frame">
+          <method name="after_save" action="
+            <<action>>
+              <<pyfunc name=`custom.party_setup.save_mem_addr`/>>
+            <</action>>
+          "/>
+        </frame_methods>
+      </grid_frame>
+
+      <nb_page label="Messaging"/>
+      <block/>
+      <grid data_object="mem_msg" growable="false" num_grid_rows="5">
+        <toolbar/>
+        <cur_columns>
+          <cur_col col_name="descr" lng="200" skip="true"/>
+          <cur_col col_name="message_addr" lng="300" expand="true"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence/>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <nb_page label="Phone nos"/>
+      <block/>
+      <grid data_object="mem_phone" growable="true" num_grid_rows="5">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="phone_type" lng="120"/>
+          <cur_col col_name="phone_number" lng="300" expand="true"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence/>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <nb_page label="Contacts"/>
+      <block/>
+      <grid data_object="mem_contact" growable="true" num_grid_rows="5">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="contact_name" lng="120"/>
+          <cur_col col_name="position" lng="200" expand="true"/>
+          <cur_col col_name="phone_number" lng="200"/>
+          <cur_col col_name="email_address" lng="200"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence/>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <nb_end/>
 
     </body>
-
     <button_row validate="true" template="Setup_Form"/>
-
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
         <<action>>
           <<pyfunc name=`custom.party_setup.on_start_frame`/>>
         <</action>>
       "/>
+      <method name="after_save" action="
+        <<action>>
+          <<pyfunc name=`custom.party_setup.after_save_party`/>>
+        <</action>>
+      "/>
     </frame_methods>
   </frame>
-
-  <inline_form form_name="Addresses">
-    <frame main_object="party">
-      <toolbar/>
-      <body>
-        <block/>
-        <panel/>
-        <row/>
-        <col/>
-        <label value="Party Id:"/>
-        <col/>
-        <input fld="party.party_id" lng="60"/>
-        <display fld="party.display_name" lng="160"/>
-        <block/>
-        <grid data_object="mem_addr" growable="false" num_grid_rows="5">
-          <toolbar/>
-          <cur_columns>
-            <cur_col col_name="descr" lng="120"/>
-            <cur_col col_name="disp_addr" lng="200" expand="true" skip="true"/>
-          </cur_columns>
-          <cur_filter/>
-          <cur_sequence/>
-          <grid_methods template="Grid">
-            <method name="on_start_row" action="
-              <<action>>
-                <<pyfunc name=`custom.party_setup.on_start_addr`/>>
-              <</action>>
-            "/>
-          </grid_methods>
-        </grid>
-        <grid_frame main_object="addr">
-          <body>
-            <block/>
-            <subtype_panel subtype="addr.address_type"/>
-          </body>
-          <button_row validate="true" template="Grid_Frame"/>
-          <frame_methods template="Grid_Frame">
-            <method name="before_save" action="
-              <<action>>
-                <<pyfunc name=`custom.party_setup.do_save_addr`/>>
-              <</action>>
-            "/>
-          </frame_methods>
-        </grid_frame>
-      </body>
-      <button_row validate="true">
-        <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
-            btn_validate="true" btn_default="true" lng="60" action="
-          <<action>>
-            <<call method=`on_req_cancel`/>>
-          <</action>>
-        "/>
-      </button_row>
-      <frame_methods>
-        <method name="on_req_cancel" action="
-          <<action>>
-            <<end_form state=`completed`/>>
-          <</action>>
-        "/>
-        <method name="on_req_close" action="
-          <<action>>
-            <<end_form state=`completed`/>>
-          <</action>>
-        "/>
-      </frame_methods>
-    </frame>
-  </inline_form>
-
-  <inline_form form_name="Messaging">
-    <frame main_object="party">
-      <toolbar/>
-      <body>
-        <block/>
-        <panel/>
-        <row/>
-        <col/>
-        <label value="Party Id:"/>
-        <col/>
-        <input fld="party.party_id" lng="60"/>
-        <display fld="party.display_name" lng="160"/>
-        <block/>
-        <grid data_object="mem_msg_types" growable="false" num_grid_rows="5">
-          <toolbar/>
-          <cur_columns>
-            <cur_col col_name="descr" lng="160" skip="true"/>
-            <cur_col col_name="message_addr" lng="200" expand="true"/>
-          </cur_columns>
-          <cur_filter/>
-          <cur_sequence/>
-          <grid_methods template="Grid">
-            <method name="after_save" action="
-              <<action>>
-                <<pyfunc name=`custom.party_setup.save_message_type`/>>
-              <</action>>
-            "/>
-          </grid_methods>
-        </grid>
-      </body>
-      <button_row validate="true">
-        <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
-            btn_validate="true" btn_default="true" lng="60" action="
-          <<action>>
-            <<call method=`on_req_cancel`/>>
-          <</action>>
-        "/>
-      </button_row>
-      <frame_methods>
-        <method name="on_req_cancel" action="
-          <<action>>
-            <<end_form state=`completed`/>>
-          <</action>>
-        "/>
-        <method name="on_req_close" action="
-          <<action>>
-            <<end_form state=`completed`/>>
-          <</action>>
-        "/>
-      </frame_methods>
-    </frame>
-  </inline_form>
-
-  <inline_form form_name="Phone nos">
-    <frame main_object="party">
-      <toolbar/>
-      <body>
-        <block/>
-        <panel/>
-        <row/>
-        <col/>
-        <label value="Party Id:"/>
-        <col/>
-        <input fld="party.party_id" lng="60"/>
-        <display fld="party.display_name" lng="160"/>
-        <block/>
-        <grid data_object="phone" growable="true" num_grid_rows="5">
-          <toolbar/>
-          <cur_columns>
-            <cur_col col_name="phone_type" lng="160"/>
-            <cur_col col_name="phone_number" lng="200" expand="true"/>
-          </cur_columns>
-          <cur_filter/>
-          <cur_sequence/>
-          <grid_methods template="Grid">
-          </grid_methods>
-        </grid>
-      </body>
-      <button_row validate="true">
-        <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
-            btn_validate="true" btn_default="true" lng="60" action="
-          <<action>>
-            <<call method=`on_req_cancel`/>>
-          <</action>>
-        "/>
-      </button_row>
-      <frame_methods>
-        <method name="on_req_cancel" action="
-          <<action>>
-            <<end_form state=`completed`/>>
-          <</action>>
-        "/>
-        <method name="on_req_close" action="
-          <<action>>
-            <<end_form state=`completed`/>>
-          <</action>>
-        "/>
-      </frame_methods>
-    </frame>
-  </inline_form>
-
-  <inline_form form_name="Contacts">
-    <frame main_object="party">
-      <toolbar/>
-      <body>
-        <block/>
-        <panel/>
-        <row/>
-        <col/>
-        <label value="Party Id:"/>
-        <col/>
-        <input fld="party.party_id" lng="60"/>
-        <display fld="party.display_name" lng="160"/>
-        <block/>
-        <grid data_object="contact" growable="true" num_grid_rows="5">
-          <toolbar/>
-          <cur_columns>
-            <cur_col col_name="contact_name" lng="160" expand="true"/>
-            <cur_col col_name="position" lng="200"/>
-            <cur_col col_name="phone_number" lng="200"/>
-            <cur_col col_name="email_address" lng="200"/>
-          </cur_columns>
-          <cur_filter/>
-          <cur_sequence/>
-          <grid_methods template="Grid">
-          </grid_methods>
-        </grid>
-      </body>
-      <button_row validate="true">
-        <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
-            btn_validate="true" btn_default="true" lng="60" action="
-          <<action>>
-            <<call method=`on_req_cancel`/>>
-          <</action>>
-        "/>
-      </button_row>
-      <frame_methods>
-        <method name="on_req_cancel" action="
-          <<action>>
-            <<end_form state=`completed`/>>
-          <</action>>
-        "/>
-        <method name="on_req_close" action="
-          <<action>>
-            <<end_form state=`completed`/>>
-          <</action>>
-        "/>
-      </frame_methods>
-    </frame>
-  </inline_form>
-
 </form>

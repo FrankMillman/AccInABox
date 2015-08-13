@@ -1,5 +1,6 @@
 from collections import defaultdict
 import importlib
+from start import log_db, db_log
 
 import db.connection
 from errors import AibError
@@ -53,10 +54,14 @@ class Cursor:
         self.db_obj.check_perms('select')
 
         if self.db_obj.mem_obj:
-            session = self.db_obj.context.mem_session
-            self.conn = db.connection._get_mem_connection(session.mem_id)
+            mem_id = self.db_obj.context.mem_id
+            self.conn = db.connection._get_mem_connection(mem_id)
         else:
             self.conn = db.connection._get_connection()
+
+        if log_db:
+            db_log.write('{}: START cursor\n'.format(id(self.conn)))
+
         self.cur = self.conn.cursor()
 
         sql, params = self.build_sql(where, order, param)

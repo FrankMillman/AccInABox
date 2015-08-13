@@ -3,12 +3,12 @@ import asyncio
 import db.api
 
 @asyncio.coroutine
-def on_start_form(caller, xml):
-    # called from setup_user 'on_start_form'
+def before_start_form(caller, xml):
+    # called from setup_user 'before_start_form'
     comp = caller.data_objects['company']
 
-    # get a reference to user_comp_view that is independent of gui to avoid triggering methods
-    user_comp_setup = db.api.get_mem_object(caller.form, caller.company, 'user_comp_view')
+    # get an alias to user_comp_view that is independent of gui to avoid triggering methods
+    user_comp_setup = db.api.get_mem_object(caller.root, caller.company, 'user_comp_view')
     # save reference for use below
     caller.data_objects['user_comp_setup'] = user_comp_setup
 

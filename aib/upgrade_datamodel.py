@@ -53,7 +53,8 @@ def upd_form_defn(conn, company, form_name):
 
 def upgrade_0_1_1(db_session):
     print('upgrading to 0.1.1')
-    with db_session as conn:
+    with db_session as db_mem_conn:
+        conn = db_mem_conn.db
 
         # update db_tables.sys_menu_defns with new hooks
         db_table = db.api.get_db_object(__main__, '_sys', 'db_tables')
@@ -189,7 +190,8 @@ def upgrade_0_1_1(db_session):
 
 def upgrade_0_1_2(db_session):
     print('upgrading to 0.1.2')
-    with db_session as conn:
+    with db_session as db_mem_conn:
+        conn = db_mem_conn.db
 
         # insert new form definition 'menu_setup'
         form_name = 'menu_setup'
@@ -224,7 +226,8 @@ def upgrade_0_1_2(db_session):
 
 def upgrade_0_1_3(db_session, company):
     print('upgrading to 0.1.3')
-    with db_session as conn:
+    with db_session as db_mem_conn:
+        conn = db_mem_conn.db
 
         # upd db_columns.dir_users.display_name - allow_null -> True
         sql = (
@@ -416,7 +419,8 @@ def upgrade_0_1_4(db_session):
 
 def upgrade_0_1_5(db_session, company):
     print('upgrading to 0.1.5')
-    with db_session as conn:
+    with db_session as db_mem_conn:
+        conn = db_mem_conn.db
 
         form_names = ('setup_user', 'setup_roles')
         for form_name in form_names:

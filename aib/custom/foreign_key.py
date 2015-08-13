@@ -2,7 +2,7 @@ import asyncio
 
 @asyncio.coroutine
 def load_fkey(caller, xml):
-    # called from foreign_key 'on_start_form'
+    # called from foreign_key 'on_start_frame'
     var = caller.data_objects['var']
     fkey_flds = caller.data_objects['fkey_flds']
 
