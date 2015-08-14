@@ -68,7 +68,7 @@
       <<action>>
         <<pyfunc name=`custom.finperiod_funcs.get_no_periods`/>>
         <<case>>
-          <<compare src=`var.count_per` op=`eq` tgt=`eval(0)`>>
+          <<compare src=`var.count_per` op=`eq` tgt=`int(0)`>>
             <<inline_form form_name=`Opening date`>>
               <<on_return>>
                 <<return state=`cancelled`>>

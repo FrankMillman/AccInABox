@@ -376,6 +376,8 @@ def assign(caller, xml):
             value_to_assign = True
         elif source == '$False':
             value_to_assign = False
+        elif source.startswith('int('):
+            value_to_assign = literal_eval(source[4:-1])
         else:  # literal value
             value_to_assign = source
         if hash_type is not None:
@@ -668,6 +670,8 @@ def compare(caller, xml):
         source_value = source_field.getval()
     else:
         source_value = source
+    if source.startswith('int('):
+        source_value = literal_eval(source[4:-1])
 
     target = xml.get('tgt')
     if target == '$None':
@@ -676,8 +680,8 @@ def compare(caller, xml):
         target_value = True
     elif target == '$False':
         target_value = False
-    elif target.startswith('eval('):
-        target_value = literal_eval(target[5:-1])
+    elif target.startswith('int('):
+        target_value = literal_eval(target[4:-1])
     elif '.' in target:
         target_objname, target_colname = target.split('.')
         target_record = caller.data_objects[target_objname]
