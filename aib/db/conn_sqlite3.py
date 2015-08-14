@@ -152,7 +152,9 @@ def form_sql(self, columns, tablenames, where_clause='',
         sql += ' OFFSET {}'.format(offset)
     if lock:
         if not self.conn.in_transaction:
-           self.cur.execute('BEGIN IMMEDIATE')
+            if log_db:
+                db_log.write('BEGIN IMMEDIATE')
+            self.cur.execute('BEGIN IMMEDIATE')
     return sql
 
 def attach_company(self, company):

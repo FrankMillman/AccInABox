@@ -2,7 +2,7 @@
 
   <db_objects/>
   <mem_objects>
-    <mem_obj name="var" descr="Variable to store fkey_flds">
+    <mem_obj name="fk_var" descr="Variable to store fkey_flds">
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
         long_descr="Table name" col_head="" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
@@ -17,11 +17,11 @@
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="fkey_flds" descr="Foreign key fields" parent="var">
+    <mem_obj name="fkey_flds" descr="Foreign key fields" parent="fk_var">
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
         long_descr="Table name" col_head="" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"
-        fkey="[`var`, `table_name`, null, null, true]"/>
+        fkey="[`fk_var`, `table_name`, null, null, true]"/>
       <mem_col col_name="tgt_table" data_type="TEXT" short_descr="Target table"
         long_descr="Target table name" col_head="Tgt table" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
@@ -41,13 +41,13 @@
   </mem_objects>
 
   <input_params>
-    <input_param name="table_name" type="data_attr" target="var.table_name"/>
-    <input_param name="col_name" type="data_attr" target="var.col_name"/>
-    <input_param name="fkey" type="data_attr" target="var.fkey" required="true"/>
+    <input_param name="table_name" type="data_attr" target="fk_var.table_name"/>
+    <input_param name="col_name" type="data_attr" target="fk_var.col_name"/>
+    <input_param name="fkey" type="data_attr" target="fk_var.fkey" required="true"/>
   </input_params>
 
   <output_params>
-    <output_param name="fkey" type="data_attr" source="var.fkey"/>
+    <output_param name="fkey" type="data_attr" source="fk_var.fkey"/>
   </output_params>
 
   <frame main_object="fkey_flds">
@@ -59,7 +59,7 @@
       <col/>
       <label value="Column:"/>
       <col/>
-      <display fld="var.full_col_name" lng="250"/>
+      <display fld="fk_var.full_col_name" lng="250"/>
       <block/>
       <panel/>
       <row/>
@@ -104,7 +104,7 @@
       <method name="do_restore" action="
         <<action>>
           <<pyfunc name=`custom.foreign_key.restore_fkey`/>>
-          <<restore_obj obj_name=`var`/>>
+          <<restore_obj obj_name=`fk_var`/>>
         <</action>>
       "/>
     </frame_methods>

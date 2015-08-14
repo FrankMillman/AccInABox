@@ -71,6 +71,10 @@ def get_mem_object(context, active_company, table_name, parent=None, table_defn=
 #def get_mem_table(context, table_name, upd_chks, del_chks, sequence):
 def get_mem_table(context, company, table_name, table_defn):
     table_key = (context, table_name.lower())
+    if table_defn is not None:
+        if table_key in tables_open:
+            raise AibError(head='Create mem table',
+                body="Another in-memory table '{}' already exists".format(table_name))
     if table_key not in tables_open:
 #       tables_open[table_key] = MemTable(context, table_name, upd_chks, del_chks, sequence)
         tables_open[table_key] = MemTable(context, company, table_name, table_defn)
@@ -225,6 +229,7 @@ class DbObject:
                 raise AibError(head='Error',
                     body='{} is not a parent of {}'.format(
                     parent.table_name, self.table_name))
+
             self.parent = (fkey_colname,
                 parent.getfld(parent_pkey))  # used in setup_fkey(), start_grid()
             parent.children[self.table_name] = self

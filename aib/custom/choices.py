@@ -3,15 +3,15 @@ import asyncio
 @asyncio.coroutine
 def load_choices(caller, xml):
     # called from choices 'on_start_frame'
-    var = caller.data_objects['var']
+    choice_var = caller.data_objects['choice_var']
     choice_codes = caller.data_objects['choice_codes']
     sub_types = caller.data_objects['sub_types']
     disp_names = caller.data_objects['disp_names']
 
-    var.setval('full_col_name', '{}.{}.choices'.format(
-        var.getval('table_name'), var.getval('col_name')))
+    choice_var.setval('full_col_name', '{}.{}.choices'.format(
+        choice_var.getval('table_name'), choice_var.getval('col_name')))
 
-    choice_data = var.getval('choices')
+    choice_data = choice_var.getval('choices')
 
 #   'choices' is a 3-element list with the following format -
 
@@ -27,12 +27,12 @@ def load_choices(caller, xml):
 #   4th element - a list of dispname elements for this choice [col_name, separator]
 
     if choice_data is None:
-        var.save()  # set to 'clean'
+        choice_var.save()  # set to 'clean'
         return
 
-    var.setval('sub_types', choice_data[0])
-    var.setval('disp_names', choice_data[1])
-    var.save()  # set to 'clean'
+    choice_var.setval('sub_types', choice_data[0])
+    choice_var.setval('disp_names', choice_data[1])
+    choice_var.save()  # set to 'clean'
 
     for seq, (code, descr, subtypes, dispnames) in enumerate(choice_data[2]):
         choice_codes.init(display=False, init_vals={
@@ -65,7 +65,7 @@ def restore_choices(caller, xml):
 @asyncio.coroutine
 def dump_choices(caller, xml):
     # called from choices 'do_save'
-    var = caller.data_objects['var']
+    choice_var = caller.data_objects['choice_var']
     choice_codes = caller.data_objects['choice_codes']
     sub_types = caller.data_objects['sub_types']
     disp_names = caller.data_objects['disp_names']
@@ -83,17 +83,17 @@ def dump_choices(caller, xml):
         choice_row.append(dispname_rows)
         choice_rows.append(choice_row)
 
-        if var.getval('sub_types'):
+        if choice_var.getval('sub_types'):
             all_subtypes = sub_types.select_many(where=[], order=[('seq', False)])
             for _ in all_subtypes:
                 subtype_rows.append([
                     sub_types.getval('col_name'), sub_types.getval('reqd')])
 
-        if var.getval('disp_names'):
+        if choice_var.getval('disp_names'):
             all_dispnames = disp_names.select_many(where=[], order=[('seq', False)])
             for _ in all_dispnames:
                 dispname_rows.append([
                     disp_names.getval('col_name'), disp_names.getval('separator')])
 
-    var.setval('choices', None if not choice_rows else
-            [var.getval('sub_types'), var.getval('disp_names'), choice_rows])
+    choice_var.setval('choices', None if not choice_rows else
+            [choice_var.getval('sub_types'), choice_var.getval('disp_names'), choice_rows])

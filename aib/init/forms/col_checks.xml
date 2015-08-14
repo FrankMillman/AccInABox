@@ -3,7 +3,7 @@
   <db_objects/>
   <mem_objects>
 
-    <mem_obj name="var" descr="Variable to store col_chks">
+    <mem_obj name="colchk_var" descr="Variable to store col_chks">
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
         long_descr="Table name" col_head="" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
@@ -18,12 +18,12 @@
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
 
-    <mem_obj name="col_checks" descr="Column checks" parent="var"
+    <mem_obj name="col_checks" descr="Column checks" parent="colchk_var"
         sequence="[`seq`, [], null]">
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
         long_descr="Table name" col_head="" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"
-        fkey="[`var`, `table_name`, null, null, true]"/>
+        fkey="[`colchk_var`, `table_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -66,16 +66,16 @@
   </mem_objects>
 
   <input_params>
-    <input_param name="table_name" type="data_attr" target="var.table_name"/>
-    <input_param name="col_name" type="data_attr" target="var.col_name"/>
-    <input_param name="col_chks" type="data_attr" target="var.col_chks" required="true"/>
+    <input_param name="table_name" type="data_attr" target="colchk_var.table_name"/>
+    <input_param name="col_name" type="data_attr" target="colchk_var.col_name"/>
+    <input_param name="col_chks" type="data_attr" target="colchk_var.col_chks" required="true"/>
   </input_params>
 
   <output_params>
-    <output_param name="col_chks" type="data_attr" source="var.col_chks"/>
+    <output_param name="col_chks" type="data_attr" source="colchk_var.col_chks"/>
   </output_params>
 
-  <frame main_object="var">
+  <frame main_object="colchk_var">
     <toolbar/>
     <body>
       <block/>
@@ -84,7 +84,7 @@
       <col/>
       <label value="Column:"/>
       <col/>
-      <display fld="var.full_col_name" lng="250"/>
+      <display fld="colchk_var.full_col_name" lng="250"/>
       <block/>
       <grid data_object="col_checks" growable="true" num_grid_rows="5">
         <toolbar template="Grid"/>
@@ -139,7 +139,7 @@
       <method name="do_restore" action="
         <<action>>
           <<pyfunc name=`custom.col_checks.restore_checks`/>>
-          <<restore_obj obj_name=`var`/>>
+          <<restore_obj obj_name=`colchk_var`/>>
         <</action>>
       "/>
     </frame_methods>

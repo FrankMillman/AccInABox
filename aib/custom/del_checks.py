@@ -3,14 +3,14 @@ import asyncio
 @asyncio.coroutine
 def load_checks(caller, xml):
     # called from del_checks 'on_start_frame'
-    var = caller.data_objects['var']
+    delchk_var = caller.data_objects['delchk_var']
     del_checks = caller.data_objects['del_checks']
     steps = caller.data_objects['steps']
 
-    var.setval('full_name', '{}.del_chks'.format(var.getval('table_name')))
-    var.save()  # set to 'clean'
+    delchk_var.setval('full_name', '{}.del_chks'.format(delchk_var.getval('table_name')))
+    delchk_var.save()  # set to 'clean'
 
-    del_chks = var.getval('del_chks')
+    del_chks = delchk_var.getval('del_chks')
     if del_chks is None:
         del_checks.init(display=False)
     else:
@@ -36,7 +36,7 @@ def restore_checks(caller, xml):
 @asyncio.coroutine
 def dump_checks(caller, xml):
     # called from del_checks 'do_save'
-    var = caller.data_objects['var']
+    delchk_var = caller.data_objects['delchk_var']
     del_checks = caller.data_objects['del_checks']
     steps = caller.data_objects['steps']
 
@@ -54,4 +54,4 @@ def dump_checks(caller, xml):
                 steps.getval('chk'), steps.getval('tgt'), steps.getval('rbr')]
             stps.append(step)
 
-    var.setval('del_chks', del_chks or None)  # if [], set to None
+    delchk_var.setval('del_chks', del_chks or None)  # if [], set to None

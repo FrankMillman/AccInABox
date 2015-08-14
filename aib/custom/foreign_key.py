@@ -3,14 +3,14 @@ import asyncio
 @asyncio.coroutine
 def load_fkey(caller, xml):
     # called from foreign_key 'on_start_frame'
-    var = caller.data_objects['var']
+    fk_var = caller.data_objects['fk_var']
     fkey_flds = caller.data_objects['fkey_flds']
 
-    var.setval('full_col_name', '{}.{}.fkey'.format(
-        var.getval('table_name'), var.getval('col_name')))
-    var.save()  # set to 'clean'
+    fk_var.setval('full_col_name', '{}.{}.fkey'.format(
+        fk_var.getval('table_name'), fk_var.getval('col_name')))
+    fk_var.save()  # set to 'clean'
 
-    fkey = var.getval('fkey')
+    fkey = fk_var.getval('fkey')
     if fkey is None:
         init_vals = None
     else:
@@ -32,7 +32,7 @@ def restore_fkey(caller, xml):
 @asyncio.coroutine
 def dump_fkey(caller, xml):
     # called from foreign_key 'do_save'
-    var = caller.data_objects['var']
+    fk_var = caller.data_objects['fk_var']
     fkey_flds = caller.data_objects['fkey_flds']
     fkey_flds.save()
 
@@ -45,6 +45,6 @@ def dump_fkey(caller, xml):
         ]
 
     if fkey == [None]*5:
-        var.setval('fkey', None)
+        fk_var.setval('fkey', None)
     else:
-        var.setval('fkey', fkey)
+        fk_var.setval('fkey', fkey)

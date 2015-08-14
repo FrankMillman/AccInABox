@@ -3,14 +3,14 @@ import asyncio
 @asyncio.coroutine
 def load_checks(caller, xml):
     # called from upd_checks 'on_start_frame'
-    var = caller.data_objects['var']
+    updchk_var = caller.data_objects['updchk_var']
     upd_checks = caller.data_objects['upd_checks']
     steps = caller.data_objects['steps']
 
-    var.setval('full_name', '{}.upd_chks'.format(var.getval('table_name')))
-    var.save()  # set to 'clean'
+    updchk_var.setval('full_name', '{}.upd_chks'.format(updchk_var.getval('table_name')))
+    updchk_var.save()  # set to 'clean'
 
-    upd_chks = var.getval('upd_chks')
+    upd_chks = updchk_var.getval('upd_chks')
     if upd_chks is None:
         upd_checks.init(display=False)
     else:
@@ -36,7 +36,7 @@ def restore_checks(caller, xml):
 @asyncio.coroutine
 def dump_checks(caller, xml):
     # called from upd_checks 'do_save'
-    var = caller.data_objects['var']
+    updchk_var = caller.data_objects['updchk_var']
     upd_checks = caller.data_objects['upd_checks']
     steps = caller.data_objects['steps']
 
@@ -54,4 +54,4 @@ def dump_checks(caller, xml):
                 steps.getval('chk'), steps.getval('tgt'), steps.getval('rbr')]
             stps.append(step)
 
-    var.setval('upd_chks', upd_chks or None)  # if [], set to None
+    updchk_var.setval('upd_chks', upd_chks or None)  # if [], set to None

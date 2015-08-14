@@ -3,15 +3,15 @@ import asyncio
 @asyncio.coroutine
 def load_checks(caller, xml):
     # called from col_checks 'on_start_frame'
-    var = caller.data_objects['var']
+    colchk_var = caller.data_objects['colchk_var']
     col_checks = caller.data_objects['col_checks']
     steps = caller.data_objects['steps']
 
-    var.setval('full_col_name', '{}.{}.col_chks'.format(
-        var.getval('table_name'), var.getval('col_name')))
-    var.save()  # set to 'clean'
+    colchk_var.setval('full_col_name', '{}.{}.col_chks'.format(
+        colchk_var.getval('table_name'), colchk_var.getval('col_name')))
+    colchk_var.save()  # set to 'clean'
 
-    col_chks = var.getval('col_chks')
+    col_chks = colchk_var.getval('col_chks')
     if col_chks is None:
         col_checks.init(display=False)
     else:
@@ -37,7 +37,7 @@ def restore_checks(caller, xml):
 @asyncio.coroutine
 def dump_checks(caller, xml):
     # called from col_checks 'do_save'
-    var = caller.data_objects['var']
+    colchk_var = caller.data_objects['colchk_var']
     col_checks = caller.data_objects['col_checks']
     steps = caller.data_objects['steps']
 
@@ -55,4 +55,4 @@ def dump_checks(caller, xml):
                 steps.getval('chk'), steps.getval('tgt'), steps.getval('rbr')]
             stps.append(step)
 
-    var.setval('col_chks', col_chks or None)  # if [], set to None
+    colchk_var.setval('col_chks', col_chks or None)  # if [], set to None

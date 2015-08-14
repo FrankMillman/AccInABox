@@ -2,7 +2,7 @@
 
   <db_objects/>
   <mem_objects>
-    <mem_obj name="var" descr="Choices fields">
+    <mem_obj name="choice_var" descr="Choices fields">
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
         long_descr="Table name" col_head="" key_field="N"
         allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
@@ -22,12 +22,12 @@
         long_descr="Table name [dot] column name" col_head="" key_field="N" allow_null="false"
         allow_amend="true" max_len="0" db_scale="0"/>
     </mem_obj>
-    <mem_obj name="choice_codes" descr="Choices codes" parent="var"
+    <mem_obj name="choice_codes" descr="Choices codes" parent="choice_var"
         sequence="[`seq`, [], null]">
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
         long_descr="Table name" col_head="" key_field="N"
         allow_null="false" allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`var`, `table_name`, null, null, true]"/>
+        fkey="[`choice_var`, `table_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -73,19 +73,19 @@
   </mem_objects>
 
   <input_params>
-    <input_param name="table_name" type="data_attr" target="var.table_name"
+    <input_param name="table_name" type="data_attr" target="choice_var.table_name"
         required="true"/>
-    <input_param name="col_name" type="data_attr" target="var.col_name"
+    <input_param name="col_name" type="data_attr" target="choice_var.col_name"
         required="true"/>
-    <input_param name="choices" type="data_attr" target="var.choices"
+    <input_param name="choices" type="data_attr" target="choice_var.choices"
         required="true"/>
   </input_params>
 
   <output_params>
-    <output_param name="choices" type="data_attr" source="var.choices"/>
+    <output_param name="choices" type="data_attr" source="choice_var.choices"/>
   </output_params>
 
-  <frame main_object="var">
+  <frame main_object="choice_var">
     <toolbar/>
     <body>
       <block/>
@@ -94,14 +94,14 @@
       <col/>
       <label value="Column:"/>
       <col colspan="2"/>
-      <display fld="var.full_col_name" lng="250"/>
+      <display fld="choice_var.full_col_name" lng="250"/>
       <row/>
       <col/>
       <label value="Use sub types?"/>
-      <input fld="var.sub_types"/>
+      <input fld="choice_var.sub_types"/>
       <col/>
       <label value="Use display names?"/>
-      <input fld="var.disp_names"/>
+      <input fld="choice_var.disp_names"/>
       <block/>
       <grid data_object="choice_codes" growable="true" num_grid_rows="10">
         <toolbar template="Grid"/>
@@ -164,7 +164,7 @@
       <method name="do_restore" action="
         <<action>>
           <<pyfunc name=`custom.choices.restore_choices`/>>
-          <<restore_obj obj_name=`var`/>>
+          <<restore_obj obj_name=`choice_var`/>>
         <</action>>
       "/>
     </frame_methods>
