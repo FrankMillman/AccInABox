@@ -189,7 +189,7 @@ CHKS = {
     'is not': (lambda db_obj, fld, src_val, tgt_val: src_val is not tgt_val, '$src must not be $tgt'),
     'in': (lambda db_obj, fld, src_val, tgt_val: src_val in tgt_val, '$src must be one of $tgt'),
     'not in': (lambda db_obj, fld, src_val, tgt_val: src_val not in tgt_val, '$src must not be one of $tgt'),
-    'matches': (lambda db_obj, fld, src_val, tgt_val: bool(re.match(tgt_val+'$', src_val)),  'Value must match the pattern $tgt'),
+    'matches': (lambda db_obj, fld, src_val, tgt_val: bool(re.match(tgt_val+'$', src_val or '')),  'Value must match the pattern $tgt'),
     'cdv': (cdv,  '$src fails the check digit test $tgt'),
     'nospace': (nospace,  '$src may not contain spaces'),
     'nexist': (nexist, '$src must not exist on $tgt'),
