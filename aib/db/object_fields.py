@@ -513,10 +513,10 @@ class Text(Field):
         else:
             return value
 
-    def val_to_str(self, value=None):
+    def val_to_str(self, value=blank):
         try:
             self.db_obj.check_perms('view', self.col_defn.row_id)
-            if value is None:
+            if value is blank:
                 value = self._value
             if value is None:
                 return ''
@@ -594,10 +594,10 @@ class Json(Text):
             return self._orig is None
         return loads(self._curr_val) == self._orig
 
-    def val_to_str(self, value=None):
+    def val_to_str(self, value=blank):
         try:
             self.db_obj.check_perms('view', self.col_defn.row_id)
-            if value is None:
+            if value is blank:
                 value = self._value
             if value is None:
                 return ''
@@ -733,10 +733,10 @@ class StringXml(Xml):
         else:
             return etree.fromstring(value, parser=self.parser)
 
-    def val_to_str(self, value=None):
+    def val_to_str(self, value=blank):
         try:
             self.db_obj.check_perms('view', self.col_defn.row_id)
-            if value is None:
+            if value is blank:
                 value = self._value
             if value is None:
                 return ''
@@ -814,10 +814,10 @@ class Integer(Field):
                 errmsg = 'Not a valid integer'
                 raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
-    def val_to_str(self, value=None):
+    def val_to_str(self, value=blank):
         try:
             self.db_obj.check_perms('view', self.col_defn.row_id)
-            if value is None:
+            if value is blank:
                 value = self._value
             if value is None:
                 return ''
@@ -895,10 +895,10 @@ class Decimal(Field):
                 raise AibError(head=self.col_defn.short_descr,
                     body='Cannot exceed {} decimals'.format(scale))
 
-    def val_to_str(self, value=None):
+    def val_to_str(self, value=blank):
         try:
             self.db_obj.check_perms('view', self.col_defn.row_id)
-            if value is None:
+            if value is blank:
                 value = self._value
             return self._format_output(value)
         except AibDenied:
@@ -959,10 +959,10 @@ class Date(Field):
                 raise AibError(head=self.col_defn.short_descr,
                     body='"{}" is not a valid date'.format(value))
 
-    def val_to_str(self, value=None):
+    def val_to_str(self, value=blank):
         try:
             self.db_obj.check_perms('view', self.col_defn.row_id)
-            if value is None:
+            if value is blank:
                 value = self._value
             elif isinstance(value, dtm):
                 value = dt(value.year, value.month, value.day)
@@ -1114,10 +1114,10 @@ class Boolean(Field):
         else:
             return bool(int(value))
 
-    def val_to_str(self, value=None):
+    def val_to_str(self, value=blank):
         try:
             self.db_obj.check_perms('view', self.col_defn.row_id)
-            if value is None:
+            if value is blank:
                 value = self._value
             if value is None:
                 return ''
