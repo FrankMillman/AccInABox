@@ -64,11 +64,12 @@ form_defns = FormDefns()
 #----------------------------------------------------------------------------
 
 @asyncio.coroutine
-def start_setupgrid(session, company, table_name, cursor_name):
+def start_setupgrid(session, company, table_name, cursor_name, adm_param):
     form = Form(company, '_sys.setup_grid')
     try:
         yield from form.start_form(
-            session, grid_tablename=table_name, cursor_name=cursor_name)
+            session, grid_tablename=table_name, cursor_name=cursor_name,
+            adm_param=adm_param)
     except AibError as err:
         form.close_form()
         raise
@@ -91,7 +92,7 @@ class Root:
         self.mem_id = id(self)
         self.session = session
         self.db_session = db.api.start_db_session(self.mem_id)
-        #self.data_objects = {}
+        self.data_objects = {}
         self.sys_admin = session.sys_admin
         self.user_row_id = session.user_row_id
 
@@ -164,7 +165,8 @@ class Form:
     def start_form(self, session,
             grid_tablename=None,   # passed in from menu_option if setup_grid
             cursor_name=None,   # passed in from menu option if setup_grid
-            formview_obj=None):   # supplied if formview or lookdown selected
+            formview_obj=None,   # supplied if formview or lookdown selected
+            adm_param=None):  # company parameters
         if self.parent is None:
             self.root = Root(session)
         else:
@@ -175,7 +177,7 @@ class Form:
         if self.inline is not None:  # form defn is passed in as parameter
             form_defn = self.form_defn = self.inline
             title = self.form_name
-            self.data_objects = self.parent.data_objects
+            #self.data_objects = self.parent.data_objects
         else:  # read form_defn from 'sys_form_defns'
             if '.' in self.form_name:
                 formdefn_company, self.form_name = self.form_name.split('.')
@@ -196,10 +198,13 @@ class Form:
                     body='Form does not exist')
             title = form_defn.getval('title')
             form_defn = self.form_defn = form_defn.getval('form_xml')
-            self.data_objects = {}
+            #self.data_objects = {}
 #           if formview_obj:
 #               main_object = form_defn.find('frame').get('main_object')
 #               self.data_objects[main_object] = formview_obj
+
+        if adm_param is not None:
+            self.data_objects['_param'] = adm_param  # use underscore to prevent clashes
 
         if grid_tablename is not None:  # passed in if setup_grid
             grid_obj = db.api.get_db_object(
@@ -318,6 +323,12 @@ class Form:
             return  # can happen with inline form
         for obj_xml in mem_objects:
             obj_name = obj_xml.get('name')
+            if obj_name in self.data_objects:
+                # - either sub_form with mem_obj created, then closed,
+                #     then re-opened - safe to re-use mem_obj
+                # - or two sub_forms use the same name for their
+                #     mem_obj - not safe to re-use, but how to tell??
+                continue  # first scenario is common, so assume that for now
             db_parent = obj_xml.get('parent')
             if db_parent is not None:
                 db_parent = self.data_objects[db_parent]
@@ -547,6 +558,10 @@ class Form:
     @property
     def db_session(self):
         return self.root.db_session
+
+    @property
+    def data_objects(self):
+        return self.root.data_objects
 
     @property
     def user_row_id(self):
@@ -1388,17 +1403,6 @@ class Frame:
 
         for grid in self.grids:
             yield from grid.start_grid()
-
-# following lines removed [2015-05-05]
-# don't know why it was there in the first place, but it causes a problem
-# if you delete a row in a child grid in a grid_frame, 'on_amend' generates a
-#   db_event on the parent which changes buttons to 'Save/Cancel', which is correct
-# this line prevents that from happening
-# remove for now, see what happens
-
-#       # next line is a bit dodgy, but it might be correct
-#       # why would there be any pending db_events?
-#       self.session.request.db_events.clear()
 
     def return_to_grid(self):
         grid = self.ctrl_grid

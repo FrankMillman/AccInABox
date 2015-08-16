@@ -46,7 +46,7 @@ class delwatcher:
 
 # cache to store menu_defn data object for each company
 db_session = db.api.start_db_session()
-sys_admin = True  # only used to read menu definitions
+sys_admin = True  # only used for the following
 
 class MenuDefns(dict):
     def __missing__(self, company):
@@ -54,6 +54,15 @@ class MenuDefns(dict):
             ht.htc, company, 'sys_menu_defns')
         return result
 menu_defns = MenuDefns()
+
+# cache to store adm_params data object for each company
+class AdmParams(dict):
+    def __missing__(self, company):
+        adm_param = db.api.get_db_object(ht.htc, company, 'adm_params')
+        adm_param.setval('company_id', company)
+        result = self[company] = adm_param
+        return result
+adm_params = AdmParams()
 
 #----------------------------------------------------------------------------
 
@@ -438,17 +447,23 @@ class RequestHandler:
         menu_defn = menu_defns[company]
         menu_defn.init()
         menu_defn.setval('row_id', int(row_id))
+
+        if company == '_sys':
+            adm_param = None
+        else:
+            adm_param = adm_params[company]
+
 #       print('SELECTED', company, menu_defn)
         opt_type = menu_defn.getval('opt_type')
         if opt_type == 'grid':
             yield from ht.form.start_setupgrid(
 #               self.session, company, option_data, self.session.user_row_id)
                 self.session, company, menu_defn.getval('table_name'),
-                menu_defn.getval('cursor_name'))
+                menu_defn.getval('cursor_name'), adm_param=adm_param)
         elif opt_type == 'form':
 #           form = ht.form.Form(company, option_data)
             form = ht.form.Form(company, menu_defn.getval('form_name'))
-            yield from form.start_form(self.session)
+            yield from form.start_form(self.session, adm_param=adm_param)
         elif opt_type == 'report':
             pass
         elif opt_type == 'process':
