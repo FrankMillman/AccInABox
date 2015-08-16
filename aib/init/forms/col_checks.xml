@@ -20,10 +20,6 @@
 
     <mem_obj name="col_checks" descr="Column checks" parent="colchk_var"
         sequence="[`seq`, [], null]">
-      <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
-        long_descr="Table name" col_head="" key_field="N" allow_null="false"
-        allow_amend="true" max_len="0" db_scale="0"
-        fkey="[`colchk_var`, `table_name`, null, null, true]"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -33,14 +29,13 @@
       <mem_col col_name="errmsg" data_type="TEXT" short_descr="Error message"
         long_descr="Error message" col_head="Error message" key_field="N" allow_null="false"
         allow_amend="true" max_len="30" db_scale="0"/>
+      <mem_col col_name="steps" data_type="JSON" short_descr="Steps"
+        long_descr="Steps" col_head="Error message" key_field="N" allow_null="false"
+        allow_amend="true" max_len="30" db_scale="0"/>
     </mem_obj>
 
     <mem_obj name="steps" descr="Steps for column checks" parent="col_checks"
-        sequence="[`seq`, [`code`], null]">
-      <mem_col col_name="code" data_type="TEXT" short_descr="Code"
-        long_descr="Code" col_head="Code" key_field="A" allow_null="false"
-        allow_amend="false" max_len="10" db_scale="0"
-        fkey="[`col_checks`, `code`, null, null, true]"/>
+        sequence="[`seq`, [], null]">
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" key_field="N"
         allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
@@ -121,7 +116,18 @@
           </grid>
         </body>
         <button_row validate="true" template="Grid_Frame"/>
-        <frame_methods template="Grid_Frame"/>
+        <frame_methods template="Grid_Frame">
+          <method name="on_start_frame" action="
+            <<action>>
+              <<pyfunc name=`custom.col_checks.load_steps`/>>
+            <</action>>
+          "/>
+          <method name="do_save" action="
+            <<action>>
+              <<pyfunc name=`custom.col_checks.dump_steps`/>>
+            <</action>>
+          "/>
+        </frame_methods>
       </grid_frame>
     </body>
     <button_row validate="true" template="Setup_Form"/>
