@@ -17,7 +17,7 @@ def init_company(context, conn, company, company_name):
     setup_forms(context, conn, company)
     setup_menus(context, conn, company, company_name)
 
-    setup_init_data(context, conn, company)
+    setup_init_data(context, conn, company, company_name)
 
 def setup_db_tables(context, conn, company):
     tables = [
@@ -153,6 +153,8 @@ def setup_other_tables(context, conn, company):
     db_col = db.api.get_db_object(context, company, 'db_columns')
     db_cur = db.api.get_db_object(context, company, 'db_cursors')
     tables = [
+        'adm_params',
+        'adm_currencies',
         'adm_periods',
         'adm_msg_types',
         'org_parties',
@@ -286,8 +288,9 @@ def setup_forms(context, conn, company):
             db_table.setval('setup_form', form_name)
             db_table.save()
 
+    setup_form('setup_params', 'Set up company parameters')
     setup_form('setup_periods', 'Set up financial periods')
-    setup_form('setup_party', 'Set up parties')
+    setup_form('setup_party', 'Set up parties', 'org_parties')
 
 def setup_menus(context, conn, company, company_name):
     db_obj = db.api.get_db_object(context, company, 'sys_menu_defns')
@@ -318,7 +321,7 @@ def setup_menus(context, conn, company, company_name):
             ['Setup users roles', 'form', '_sys.users_roles'],
             ]],
         ['Administration', 'menu', [
-            ['Admin parameters', 'form', '_sys.setup_params'],
+            ['Setup company parameters', 'form', 'setup_params'],
             ['Setup financial periods', 'form', 'setup_periods'],
             ['Setup message types', 'grid', 'adm_msg_types', 'msg_types'],
             ]],
@@ -363,12 +366,12 @@ def setup_menus(context, conn, company, company_name):
 
     parse_menu(menu, None)
 
-def setup_init_data(context, conn, company):
+def setup_init_data(context, conn, company, company_name):
 
-    db_table = db.api.get_db_object(context, company, 'db_tables')
-    db_table.setval('table_name', 'org_parties')
-    db_table.setval('setup_form', 'setup_party')
-    db_table.save()
+    adm_params = db.api.get_db_object(context, company, 'adm_params')
+    adm_params.setval('company_id', company)
+    adm_params.setval('company_name', company_name)
+    adm_params.save()
 
     acc_role = db.api.get_db_object(context, company, 'acc_roles')
     acc_role.setval('role', 'admin')
