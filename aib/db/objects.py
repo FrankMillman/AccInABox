@@ -374,6 +374,15 @@ class DbObject:
             if callback[0] == caller:
                 self.on_read_func.remove(callback)
 
+    def notify_insert(self, callback):
+        self.db_table.on_insert.append(callback)
+
+    def notify_update(self, callback):
+        self.db_table.on_update.append(callback)
+
+    def notify_delete(self, callback):
+        self.db_table.on_delete.append(callback)
+
     def getfld(self, col_name):
         if '>' in col_name:
             src_col, tgt_col = col_name.split('>')
@@ -621,11 +630,9 @@ class DbObject:
         self.init_vals = {}  # to prevent re-use on restore()
         self.exists = True
         if self.dirty:
-            for caller, method in self.on_clean_func:  # frame methods
-                if display:
+            if display:
+                for caller, method in self.on_clean_func:  # frame methods
                     caller.session.request.db_events.append((caller, method))
-                else:
-                    print('on_row_selected - DOES THIS HAPPEN?')
 # cannot call this here [2015-03-04]
 # we may re-read the contents of the grid for other purposes (e.g. fin_periods)
 # we do not want on_read to be triggered for each read
@@ -704,11 +711,9 @@ class DbObject:
 
         if not self.mem_obj and not self.exists:
             self.init(display=display, init_vals=self.init_vals)
-            for caller, method in self.on_clean_func:  # frame methods
-                if display:
+            if display:
+                for caller, method in self.on_clean_func:  # frame methods
                     caller.session.request.db_events.append((caller, method))
-                else:
-                    print('on_restore - DOES THIS HAPPEN?')
             return
 
         for fld in self.fields.values():
@@ -745,11 +750,9 @@ class DbObject:
 #                       frame.set_subtype(subtype, fld._value)
                         frame.set_subtype(subtype, fld.val_to_str())
 
-        for caller, method in self.on_clean_func:  # frame methods
-            if display:
+        if display:
+            for caller, method in self.on_clean_func:  # frame methods
                 caller.session.request.db_events.append((caller, method))
-            else:
-                print('on_restore - DOES THIS HAPPEN?')
         for after_restore in self.db_table.after_restore_xml:
             db.db_xml.table_hook(self, after_restore)
         self.dirty = False
@@ -810,6 +813,10 @@ class DbObject:
             chk_constraint(self, upd_chk, errmsg=errmsg)  # will raise AibError on fail
 
         with self.context.db_session as db_mem_conn:
+
+            self.context.db_session.after_commit.append(
+                (self.after_save_committed, display))
+
             if self.mem_obj:
                 conn = db_mem_conn.mem
             else:
@@ -835,23 +842,22 @@ class DbObject:
                 if self.cursor is not None:
                     self.cursor.insert_row(self.cursor_row)
 
-# indentation of next two lines is important
-# it must run *after* the 'with' block terminates, therefore after 'commit'
+    def after_save_committed(self, display):
+        if self.exists:  # row updated
+            for callback in self.db_table.on_update:
+                callback(self)
+        else:  # row inserted
+            for callback in self.db_table.on_insert:
+                callback(self)
 
         for after_save in self.db_table.after_save_xml:
             db.db_xml.table_hook(self, after_save)
-        for caller, method in self.on_clean_func:  # frame methods
-            if display:
+        if display:
+            for caller, method in self.on_clean_func:  # frame methods
                 caller.session.request.db_events.append((caller, method))
-            else:
-                print('on_save - DOES THIS HAPPEN?')
 
         self.init_vals = {}  # to prevent re-use on restore()
         self.dirty = False
-# don't understand this [2015-03-16]
-# better to disallow save() if any children are dirty!
-#       for child in self.children.values():
-#           child.dirty = False
         self.exists = True
 
         for fld in self.fields.values():
@@ -953,6 +959,9 @@ class DbObject:
         self.restore(display=False)  # remove unsaved changes, to ensure valid audit trail
 
         with self.context.db_session as db_mem_conn:
+
+            self.context.db_session.after_commit.append((self.after_delete_committed,))
+
             if self.mem_obj:
                 conn = db_mem_conn.mem
             else:
@@ -976,8 +985,9 @@ class DbObject:
             for caller, method in self.on_delete_func:  # frame methods
                 caller.session.request.db_events.append((caller, method))
 
-#       self.dirty = False
-#       self.exists = False
+    def after_delete_committed(self):
+        for callback in self.db_table.on_delete:
+            callback(self)
 
         # set display=False, because if we are in a grid, display=True results
         #   in blanking out the next row after they all move up one
@@ -1678,6 +1688,10 @@ class DbTable:
             for hook in hooks_xml:
                 self.setup_hook(hook)
 
+        self.on_insert = []  # callbacks to call on insert
+        self.on_update = []  # callbacks to call on update
+        self.on_delete = []  # callbacks to call on delete
+
         self.setup_form = setup_form
 
         self.parent_params = []  # if fkey has 'child=True', append
@@ -1845,6 +1859,10 @@ class MemTable(DbTable):
             hooks = etree.fromstring(hooks, parser=parser)
             for hook in hooks:
                 self.setup_hook(hook)
+
+        self.on_insert = []  # callbacks to call on insert
+        self.on_update = []  # callbacks to call on update
+        self.on_delete = []  # callbacks to call on delete
 
         with context.db_session as db_mem_conn:
             conn = db_mem_conn.mem

@@ -153,7 +153,7 @@ def form_sql(self, columns, tablenames, where_clause='',
     if lock:
         if not self.conn.in_transaction:
             if log_db:
-                db_log.write('BEGIN IMMEDIATE')
+                db_log.write('{}: BEGIN IMMEDIATE\n'.format(id(self)))
             self.cur.execute('BEGIN IMMEDIATE')
     return sql
 

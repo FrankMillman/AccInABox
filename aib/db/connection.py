@@ -193,6 +193,10 @@ class Conn:
 
                 if expr is None:
                     expr = 'null'
+                    if op == '=':
+                        op = 'is'
+                    elif op == '!=':
+                        op = 'is not'
 
                 if isinstance(expr, str) and expr.lower() == 'null':
                     pass  # don't parameterise 'null'
@@ -397,6 +401,10 @@ class Conn:
 
                 if expr is None:
                     expr = 'null'
+                    if op == '=':
+                        op = 'is'
+                    elif op == '!=':
+                        op = 'is not'
 
                 if not isinstance(expr, str):  # must be int, dec, date
                     params.append(expr)
@@ -610,6 +618,7 @@ class DbSession:
         self.mem_id = mem_id
         self.db_mem_conn = None
         self.no_connections = 0
+        self.after_commit = []
 
     def __enter__(self):
         if self.db_mem_conn is None:
@@ -644,6 +653,7 @@ class DbSession:
                     mem_conn.release(rollback=True)  # rollback, return connection to pool
                 self.db_mem_conn = None
                 self.no_connections = 0
+                self.after_commit = []
                 if log_db:
                     db_log.write('{}: ROLLBACK\n\n'.format(id(db_conn)))
             return  # will reraise exception
@@ -659,6 +669,9 @@ class DbSession:
             self.db_mem_conn = None
             if log_db:
                 db_log.write('{}: COMMIT\n\n'.format(id(db_conn)))
+            while self.after_commit:
+                callback = self.after_commit.pop(0)
+                callback[0](*callback[1:])
 
     def close(self):  # called from ht.form.close_form()
         _close_mem_connections(self.mem_id)
