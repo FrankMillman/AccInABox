@@ -51,7 +51,7 @@ class GuiCtrl:
         self.pos = pos
 
     def __str__(self):
-        return '{}.{}'.format(self.fld.db_obj.table_name, self.col_name)
+        return '{} {}.{}'.format(self.ref, self.fld.db_obj.table_name, self.col_name)
 
     @asyncio.coroutine
     def validate(self, temp_data):
@@ -255,7 +255,7 @@ class GuiDisplay:
         self.pos = pos
 
     def __str__(self):
-        return '{}.{}'.format(self.fld.db_obj.table_name, self.col_name)
+        return '{} {}.{}'.format(self.ref, self.fld.db_obj.table_name, self.col_name)
 
     @asyncio.coroutine
     def validate(self, temp_data, tab=False):
@@ -292,7 +292,7 @@ class GuiDummy:  # dummy field to force validation of last real field
             'lng': None, 'help_msg': '', 'value': ''}))
 
     def __str__(self):
-        return 'dummy'
+        return '{} dummy'.format(self.ref)
 
     def _redisplay(self):
         pass  # could be called from set_subtype
@@ -336,7 +336,7 @@ class GuiButton:
             'enabled':self.enabled, 'default':self.default, 'help_msg':help_msg}))
 
     def __str__(self):
-        return "Button: '{}'".format(self.label)
+        return "{} Button: '{}'".format(self.ref, self.label)
 
     def _redisplay(self):
         pass  # could be called from set_subtype
@@ -380,7 +380,7 @@ class GuiNbButton:  # Notebook button (prev/next page)
         self.pos = pos
 
     def __str__(self):
-        return 'Notebook button'
+        return '{} Notebook button'.format(self.ref)
 
     def validate(self, temp_data, tab=False):
         pass

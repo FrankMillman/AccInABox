@@ -31,7 +31,7 @@ def pyfunc(ctx, obj, xml):
     module = importlib.import_module(module_name)
     return getattr(module, func_name)(ctx, obj, xml)
 
-def obj_exists(ctx, obj, value, xml):
+def obj_exists(ctx, obj, xml):
     """
     <obj_exists obj_name="db_table"/>
     """
@@ -63,16 +63,16 @@ def select_row(ctx, obj, value, xml):
     db_obj.select_row({key_field: key_value})
 
 @asyncio.coroutine
-def case(ctx, obj, value, xml):
+def case(ctx, obj, xml):
     for child in xml:
-        if child.tag == 'default' or globals()[child.tag](ctx, obj, value, child):
+        if child.tag == 'default' or globals()[child.tag](ctx, obj, child):
             for step in child:
-                yield from globals()[step.tag](ctx, obj, value, step)
+                yield from globals()[step.tag](ctx, obj, step)
             break
 
-def compare(ctx, obj, value, xml):
+def compare(ctx, obj, xml):
     """
-    <compare src="$value" op="ne" tgt="pwd_var.pwd1"/>
+    <<compare src=`_param.auto_party_id` op=`is_` tgt=`$True`>>
     """
     source = xml.get('src')
     if '.' in source:
@@ -80,10 +80,6 @@ def compare(ctx, obj, value, xml):
         source_record = ctx.data_objects[source_objname]
         source_field = source_record.getfld(source_colname)
         source_value = source_field.getval()
-    elif source == '$value':
-        source_value = value
-    elif source == '$None':
-        source_value = None
     else:
         source_value = source
 
@@ -100,8 +96,10 @@ def compare(ctx, obj, value, xml):
         target_record = ctx.data_objects[target_objname]
         target_field = target_record.getfld(target_colname)
         target_value = target_field.getval()
-    elif target == '$value':
-        target_value = value
+    elif target == '$True':
+        target_value = True
+    elif target == '$False':
+        target_value = False
     elif target == '$None':
         target_value = None
     else:

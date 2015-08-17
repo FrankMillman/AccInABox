@@ -98,43 +98,46 @@ def on_start_frame(caller, xml):
             msg.init()
         mem_msg_setup.save()
 
-    if party.exists:
+    if not party.exists:
+        params = caller.data_objects['_param']
+        if params.getval('auto_party_id'):
+            party.init(init_vals={'party_id': '<new>'})
 
-        phone = caller.data_objects['phone']
-        mem_phone = caller.data_objects['mem_phone']
-        mem_phone.init()  # clear data on client
-        mem_phone_setup = caller.data_objects['mem_phone_setup']
-        mem_phone_setup.delete_all()
-        mem_phone_setup.keys = []  # to store original keys
+    phone = caller.data_objects['phone']
+    mem_phone = caller.data_objects['mem_phone']
+    mem_phone.init()  # clear data on client
+    mem_phone_setup = caller.data_objects['mem_phone_setup']
+    mem_phone_setup.delete_all()
+    mem_phone_setup.keys = []  # to store original keys
 
-        all_phone = phone.select_many(where=[], order=[], debug=True)
-        for _ in all_phone:
-            phone_type = phone.getval('phone_type')
-            mem_phone_setup.init(init_vals={
-                'phone_type': phone_type,
-                'phone_number': phone.getval('phone_number'),
-                })
-            mem_phone_setup.save()
-            mem_phone_setup.keys.append(phone_type)
+    all_phone = phone.select_many(where=[], order=[])
+    for _ in all_phone:
+        phone_type = phone.getval('phone_type')
+        mem_phone_setup.init(init_vals={
+            'phone_type': phone_type,
+            'phone_number': phone.getval('phone_number'),
+            })
+        mem_phone_setup.save()
+        mem_phone_setup.keys.append(phone_type)
 
-        contact = caller.data_objects['contact']
-        mem_contact = caller.data_objects['mem_contact']
-        mem_contact.init()  # clear data on client
-        mem_contact_setup = caller.data_objects['mem_contact_setup']
-        mem_contact_setup.delete_all()
-        mem_contact_setup.keys = []  # to store original keys
+    contact = caller.data_objects['contact']
+    mem_contact = caller.data_objects['mem_contact']
+    mem_contact.init()  # clear data on client
+    mem_contact_setup = caller.data_objects['mem_contact_setup']
+    mem_contact_setup.delete_all()
+    mem_contact_setup.keys = []  # to store original keys
 
-        all_contact = contact.select_many(where=[], order=[])
-        for _ in all_contact:
-            contact_name = contact.getval('contact_name')
-            mem_contact_setup.init(init_vals={
-                'contact_name': contact_name,
-                'position': contact.getval('position'),
-                'phone_number': contact.getval('phone_number'),
-                'email_address': contact.getval('email_address'),
-                })
-            mem_contact_setup.save()
-            mem_contact_setup.keys.append(contact_name)
+    all_contact = contact.select_many(where=[], order=[])
+    for _ in all_contact:
+        contact_name = contact.getval('contact_name')
+        mem_contact_setup.init(init_vals={
+            'contact_name': contact_name,
+            'position': contact.getval('position'),
+            'phone_number': contact.getval('phone_number'),
+            'email_address': contact.getval('email_address'),
+            })
+        mem_contact_setup.save()
+        mem_contact_setup.keys.append(contact_name)
 
 @asyncio.coroutine
 def on_start_addr(caller, xml):
@@ -150,6 +153,28 @@ def save_mem_addr(caller, xml):
     mem_addr = caller.data_objects['mem_addr']
     addr_types.setval('disp_addr', mem_addr.getval('display_name'))
     addr_types.save()
+
+@asyncio.coroutine
+def before_save_party(caller, xml):
+    # called from setup_party before_save
+    party = caller.data_objects['party']
+    if not party.exists:
+        params = caller.data_objects['_param']
+        if params.getval('auto_party_id'):
+            format = params.getval('party_id_format')
+            prefix_lng = int(format[0])
+            suffix_lng = int(format[2])
+            prefix = party.getval('display_name')[:prefix_lng].upper()
+
+            party_ids = caller.data_objects['party_ids']
+            party_ids.init(init_vals={'prefix': prefix})
+            suffix = party_ids.getval('suffix')
+            suffix += 1
+            party_ids.setval('suffix', suffix)
+            party_ids.save()
+
+            template = '{{}}{{:0>{}}}'.format(suffix_lng)
+            party.setval('party_id', template.format(prefix, suffix))
 
 @asyncio.coroutine
 def after_save_party(caller, xml):

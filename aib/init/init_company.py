@@ -158,6 +158,7 @@ def setup_other_tables(context, conn, company):
         'adm_periods',
         'adm_msg_types',
         'org_parties',
+        'org_party_ids',
         'org_addresses',
         'org_messaging',
         'org_phone_nos',
