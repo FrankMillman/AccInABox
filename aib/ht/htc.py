@@ -59,10 +59,17 @@ menu_defns = MenuDefns()
 class AdmParams(dict):
     def __missing__(self, company):
         adm_param = db.api.get_db_object(ht.htc, company, 'adm_params')
+        adm_param.notify_update(update_param)
         adm_param.setval('company_id', company)
         result = self[company] = adm_param
         return result
 adm_params = AdmParams()
+
+def update_param(db_obj):  # params have been changed - re-read from database
+    company = db_obj.data_company
+    adm_param = adm_params[company]
+    adm_param.init()
+    adm_param.setval('company_id', company)  # forces a re-read
 
 #----------------------------------------------------------------------------
 
