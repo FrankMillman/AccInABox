@@ -161,9 +161,9 @@ def before_save_party(caller, xml):
     if not party.exists:
         params = caller.data_objects['_param']
         if params.getval('auto_party_id'):
-            format = params.getval('party_id_format')
-            prefix_lng = int(format[0])
-            suffix_lng = int(format[2])
+            id_format = params.getval('party_id_format')
+            prefix_lng = int(id_format[0])
+            suffix_lng = int(id_format[2])
             prefix = party.getval('display_name')[:prefix_lng].upper()
 
             party_ids = caller.data_objects['party_ids']

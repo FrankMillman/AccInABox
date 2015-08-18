@@ -73,6 +73,9 @@ def setup_table_groups(context, conn, company):
         (4, 'sys', 'System setup', 1, 2),
         (5, 'adm', 'Adminstration', 1, 3),
         (6, 'org', 'Organisations', 1, 4),
+        (7, 'gl', 'General ledger', 1, 5),
+        (8, 'ar', 'Debtors', 1, 6),
+        (9, 'ap', 'Creditors', 1, 7),
         ]
     conn.cur.executemany(sql, params)        
 
@@ -88,6 +91,9 @@ def setup_table_groups(context, conn, company):
         (4, context.user_row_id, conn.timestamp, 'add'),
         (5, context.user_row_id, conn.timestamp, 'add'),
         (6, context.user_row_id, conn.timestamp, 'add'),
+        (7, context.user_row_id, conn.timestamp, 'add'),
+        (8, context.user_row_id, conn.timestamp, 'add'),
+        (9, context.user_row_id, conn.timestamp, 'add'),
         ]
     conn.cur.executemany(sql, params)
 
@@ -163,6 +169,7 @@ def setup_other_tables(context, conn, company):
         'org_messaging',
         'org_phone_nos',
         'org_contacts',
+        'ar_customers',
         ]
     for table_name in tables:
         setup_table(db_tbl, db_col, table_name)
@@ -292,6 +299,7 @@ def setup_forms(context, conn, company):
     setup_form('setup_params', 'Set up company parameters')
     setup_form('setup_periods', 'Set up financial periods')
     setup_form('setup_party', 'Set up parties', 'org_parties')
+    setup_form('setup_arcust', 'Set up customers', 'ar_customers')
 
 def setup_menus(context, conn, company, company_name):
     db_obj = db.api.get_db_object(context, company, 'sys_menu_defns')
@@ -332,7 +340,7 @@ def setup_menus(context, conn, company, company_name):
         ['Accounts receivable', 'menu', [
             ['AR setup', 'menu', [
                 ['AR params', 'form', 'arparam_form'],
-                ['Customers', 'grid', 'arcustomers', 'customers'],
+                ['Customers', 'grid', 'ar_customers', 'cust'],
                 ]],
             ['AR transactions', 'menu', [
                 ['Invoices', 'grid', 'artrans', 'inv'],

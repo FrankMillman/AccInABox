@@ -908,14 +908,21 @@ class Decimal(Field):
         return _format_output(self._prev)
 
     def _format_output(self, value):
-        if value is None:
+        if value is blank or value is None:
             return ''
         if self.col_defn.scale_ptr:
             scale = self.get_scale(self.col_defn.scale_ptr)
+            if scale is None:
+                scale = self.col_defn.db_scale
         else:
             scale = self.col_defn.db_scale
         output = '{{:.{}f}}'.format(scale)
         return output.format(value)
+
+    def get_scale(self, scale_ptr):
+        src_col, tgt_col = scale_ptr.split('>')
+        tgt_obj = self.db_obj.getfld(src_col).foreign_key['tgt_field'].db_obj
+        return tgt_obj.getval(tgt_col)
 
 class Date(Field):
     def __init__(self,db_obj,col_defn):

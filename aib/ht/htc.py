@@ -65,7 +65,8 @@ class AdmParams(dict):
         return result
 adm_params = AdmParams()
 
-def update_param(db_obj):  # params have been changed - re-read from database
+# callback to re-read from database if params are changed
+def update_param(db_obj):
     company = db_obj.data_company
     adm_param = adm_params[company]
     adm_param.init()

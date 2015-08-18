@@ -144,11 +144,12 @@ class GuiCtrl:
         tgt_obj = self.fld.foreign_key['tgt_field'].db_obj
         if tgt_obj.exists:
             form_name = tgt_obj.db_table.setup_form
-            data_inputs = {}  # input parameters to be passed to sub-form
-            sub_form = ht.form.Form(
-                self.parent.form.company, form_name, parent=self.parent)
-            yield from sub_form.start_form(
-                self.parent.session, formview_obj=tgt_obj)
+            if form_name is not None:
+                data_inputs = {}  # input parameters to be passed to sub-form
+                sub_form = ht.form.Form(
+                    self.parent.form.company, form_name, parent=self.parent)
+                yield from sub_form.start_form(
+                    self.parent.session, formview_obj=tgt_obj)
 
 class GuiTextCtrl(GuiCtrl):
     def __init__(self, parent, fld, readonly, skip, reverse, choices, lkup,

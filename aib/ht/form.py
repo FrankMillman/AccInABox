@@ -809,7 +809,7 @@ class Frame:
                     if element.get('choice') != 'false':  # default to 'true'
                         choices = fld.choices
                 gui_obj = ht.gui_objects.GuiDisplay(self, fld)
-                value = fld.val_to_str(fld.get_dflt())
+                value = fld.val_to_str()
                 gui.append(('display',
                     {'lng': lng, 'ref': gui_obj.ref, 'choices': choices,
                     'help_msg': fld.col_defn.long_descr, 'value': value}))

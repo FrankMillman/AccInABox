@@ -303,6 +303,7 @@ class Conn:
                     if col_name not in self.joins:
                         tgt_fld = src_fld.foreign_key['tgt_field']
                         self.build_join(db_obj, col_name, tgt_fld)
+                    fld = fld.foreign_key['tgt_field']
                     alias = self.joins[col_name]
                 else:
                     alias = 'a'

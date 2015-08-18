@@ -26,6 +26,12 @@ from start import log_db, db_log
 # if server is long-running, the former would prevent changes being picked up
 #   if the table definition was changed during run-time
 # maybe have a 'trigger' - if table/column defn changed, remove from 'tables_open'
+# [TODO - 2015-08-17]
+# use new concept of 'notify_update' to register a callback on any changes
+# see ht/htc.py adm_params for an example
+# maybe enhance concept to invoke callback if table *or* any of its children
+#   change - else we have to register a callback on every column definition
+# OTOH, one callback per column definition is probably a better idea
 tables_open = {}
 
 # db_fkeys columns

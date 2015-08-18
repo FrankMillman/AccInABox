@@ -513,10 +513,10 @@ function setup_lkup(json_elem) {
   lkdn.title = 'Call lookdown (Shift+Enter)';
   lkdn.onclick = function() {
     if (text.frame.form.disable_count) return;
-    if (!text.amendable()) {
-      text.focus();
-      return;
-      };
+//    if (!text.amendable()) {
+//      text.focus();
+//      return;
+//      };
     if (text.frame.form.current_focus !== text) {
       text.focus();  // set focus on text first
       setTimeout(function() {lkdn.afterclick()}, 0);

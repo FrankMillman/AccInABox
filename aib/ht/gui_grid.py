@@ -657,7 +657,7 @@ class GuiGrid:
                 row, self.current_row)
             yield from self.validate_all()  # ensure row is valid before showing form
 
-        form_name = (self.form_name if self.form_name
+        form_name = (self.form_name if self.form_name is not None
             else self.db_obj.db_table.setup_form)
 
         if form_name is None:
