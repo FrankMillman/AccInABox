@@ -886,6 +886,13 @@ AibDate.prototype.before_cell_lost_focus = function(date) {
   var errmsg = this.validate_string(date);  // sets up current_value if ok
   if (errmsg !== '') {
     date.valid = false;
+
+    var cell = date.cell;
+    var grid = cell.grid;
+    grid.focus_from_server = true;
+    grid.err_flag = true;
+    grid.cell_set_focus(cell.grid_row, cell.grid_col);
+
     setTimeout(function() {show_errmsg('Date', errmsg)}, 0);
     return false;
     };

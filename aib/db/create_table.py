@@ -114,10 +114,9 @@ def setup_column(conn, column):
         conn.convert_string(column[DATA_TYPE], column[DB_SCALE]))
     if not column[ALLOW_NULL]:
         col += ' NOT NULL'
-    if column[GENERATED]:
-        default = column[DFLT_VAL]  # ugly - default has 2 definitions!
-        if default is not None:
-            col += ' DEFAULT {}'.format(conn.convert_string(default))
+    default = column[DFLT_VAL]  # ugly - default has 2 definitions!
+    if default is not None:
+        col += ' DEFAULT {}'.format(conn.convert_string(default))
     return col
 
 #-----------------------------------------------------------------------------

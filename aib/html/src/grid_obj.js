@@ -78,14 +78,6 @@
   input.end_edit = function(update, reset_focus) {
     var cell = this.cell, grid = this.grid;
     //grid.edit_in_progress = false;
-    if (update) {
-      if (!input.aib_obj.before_cell_lost_focus(input))  // validation failed
-        return false;
-      // before_lost_focus() copies input.value to input.current_value
-      cell.current_value = input.current_value;
-      cell.text_node.data = input.value;
-      grid.set_amended(true);
-      };
     grid.edit_in_progress = false;
     cell.parentNode.removeChild(input);
     cell.style.display = 'inline-block';
@@ -95,6 +87,23 @@
       this_grid = grid;  // make global
       setTimeout(function() {this_grid.focus()}, 0);  // IE needs timeout!
       };
+    if (update) {
+      if (!input.aib_obj.before_cell_lost_focus(input))  // validation failed
+        return false;
+      // before_lost_focus() copies input.value to input.current_value
+      cell.current_value = input.current_value;
+      cell.text_node.data = input.value;
+      grid.set_amended(true);
+      };
+//    grid.edit_in_progress = false;
+//    cell.parentNode.removeChild(input);
+//    cell.style.display = 'inline-block';
+//    grid.onkeypress = grid.save_onkeypress;
+//    grid.onkeydown = grid.save_onkeydown;
+//    if (reset_focus) {
+//      this_grid = grid;  // make global
+//      setTimeout(function() {this_grid.focus()}, 0);  // IE needs timeout!
+//      };
     return true;
     }
 

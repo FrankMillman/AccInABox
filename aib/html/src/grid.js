@@ -663,7 +663,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       // it will be = if we are on bottom row
       // it will be > if we are tabbing off bottom row - create new bottom row
       if (new_row >= (grid.total_rows() - 1))  // if new row is bottom row
-        if (new_row === grid.active_row)  // if already on botton row
+        if (new_row === grid.active_row)  // if already on bottom row
           grid.set_amended(true);  // force sending 'cell_lost_focus'
         else  // if moving to bottom row
           new_col = 0;  // move to first column

@@ -93,7 +93,7 @@
           <<pyfunc name=`custom.finperiod_funcs.goto_prev`/>>
         <</action>>
         " shortcut="ctrl,37"/>
-      <tool type="text" fld="var.ye_date" lng="160"/>
+      <tool type="text" fld="var.ye_date" lng="200"/>
       <tool type="img" name="next" tip="Next year (Ctrl+Right)" action="
         <<action>>
           <<pyfunc name=`custom.finperiod_funcs.goto_next`/>>

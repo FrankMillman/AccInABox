@@ -16,7 +16,8 @@ function show_errmsg(caption, message) {
   current_form.disable_controls();
   errmsg.active_form = current_form;
   errmsg.current_focus = errmsg.button;
-  errmsg.button.focus();
+//  errmsg.button.focus();  // IE 11 does not like this!
+  setTimeout(function() {errmsg.button.focus()}, 0);
   current_form = errmsg;
 
   errmsg.style.zIndex = root_zindex.length * 100
