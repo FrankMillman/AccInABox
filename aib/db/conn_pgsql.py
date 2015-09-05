@@ -25,6 +25,7 @@ def customise(DbConn, db_params):
     DbConn.update_row = update_row
     DbConn.delete_row = delete_row
     DbConn.convert_string = convert_string
+    DbConn.convert_dflt = convert_dflt
     DbConn.create_functions = create_functions
     DbConn.create_company = create_company
     DbConn.create_primary_key = create_primary_key
@@ -221,6 +222,24 @@ def convert_string(self, string, db_scale=None):
         .replace('PKEY', 'PRIMARY KEY')
         .replace(':', '')  # see comment in conn_sqlite3
         )
+
+def convert_dflt(self, string, data_type):
+    if data_type == 'TEXT':
+        return repr(string)  # enclose in quotes
+    elif data_type == 'INT':
+        return string
+    elif data_type == 'DEC':
+        return string
+    elif data_type == 'BOOL':
+        if string == 'true':
+            return repr('t')
+        else:
+            return repr('f')
+    elif data_type == 'DTE':
+        if string == 'today':
+            return 'CURRENT_DATE'
+    else:
+        print('UNKNOWN', string, data_type)
 
 def create_functions(self):
 

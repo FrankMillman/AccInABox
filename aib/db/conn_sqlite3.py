@@ -23,6 +23,7 @@ def customise(DbConn, db_params):
     DbConn._build_select = DbConn.build_select
     DbConn.build_select = build_select
     DbConn.convert_string = convert_string
+    DbConn.convert_dflt = convert_dflt
     DbConn.create_functions = create_functions
     DbConn.create_company = create_company
     DbConn.create_primary_key = create_primary_key
@@ -76,31 +77,26 @@ def date_func(date_string, op, days):
     if op.lower() in ('-', 'sub'):
         return str(date(*map(int, date_string.split('-'))) - timedelta(days))
 
-# Decimal adapter (store Decimal in database as string)
-# add '#' to force sqlite3 not to convert to int if no decimals
-# else it stores '4.00' as 4, and returns it as D('4')
-#
-# TODO - test the above to see if it is necessary
-#        we have our own scaling routine, so it might handle it automatically
+# Decimal adapter (store Decimal in database as float)
 def adapt_decimal(d):
-    return '#'+str(d)
+#   return float(str(d))
+    return float(d)
 sqlite3.register_adapter(D, adapt_decimal)
 
 # Decimal converter (convert back to Decimal on return)
 def convert_decimal(s):
-    s = s.decode('utf-8')
-    return D(s[1:])  # strip off leading '#'
+    return D(s.decode('utf-8'))
 sqlite3.register_converter('DEC', convert_decimal)
 
 # Boolean adapter (store bool in database as '1'/'0')
 def adapt_bool(b):
-    return str(int(b))
+#   return str(int(b))
+    return int(b)
 sqlite3.register_adapter(bool, adapt_bool)
 
 # Boolean converter (convert back to bool on return)
 def convert_bool(s):
-    s = s.decode('utf-8')
-    return bool(int(s))
+    return bool(int(s.decode('utf-8')))
 sqlite3.register_converter('BOOL', convert_bool)
 
 def init(self, pos, mem_id=None):
@@ -209,7 +205,8 @@ def exec_sql(self, sql, params=None):
     for word in sql.split():
         if '.' in word:
             company = word.split('.')[0]
-            if len(company) > 1:  # to avoid a.col_name, ...
+#           if len(company) > 1:  # to avoid a.col_name, ...
+            if not (company.startswith('_') and company != '_sys'):  # to avoid _.col_name, ...
                 self.attach_company(company)
     return self._exec_sql(sql, params)
 
@@ -428,6 +425,22 @@ def convert_string(self, string, db_scale=None):
         .replace('PKEY', 'PRIMARY KEY')
         )
 
+def convert_dflt(self, string, data_type):
+    if data_type == 'TEXT':
+        return repr(string)  # enclose in quotes
+    elif data_type == 'INT':
+        return string
+    elif data_type == 'DEC':
+        return string
+    elif data_type == 'BOOL':
+        if string == 'true':
+            return 1
+        else:
+            return 0
+    elif data_type == 'DTE':
+        if string == 'today':
+            return "(DATE('NOW'))"
+
 def create_functions(self):
     pass
 
@@ -535,35 +548,41 @@ def tree_select_new(self, company_id, table_name, start_col, start_value,
     if group:
         select_1 += ", row_id AS _group_id"
         select_1 += ", '' AS _group_key"
-    select_2 = "temp2.*, temp._level+1"
+    select_2 = "_temp2.*, _temp._level+1"
     if sort:
-        select_2 += ", temp._path || ',' || temp2.row_id"
-        select_2 += ", temp._key || zfill(temp2.seq, 4)"
+        select_2 += ", _temp._path||','||_temp2.row_id"
+        select_2 += ", _temp._key||zfill(_temp2.seq, 4)"
     if group:
         select_2 += (
-            ", CASE WHEN temp._level < {} THEN "
-            "temp2.row_id ELSE temp._group_id END".format(group)
+            ", CASE WHEN _temp._level < {} THEN "
+            "_temp2.row_id ELSE _temp._group_id END".format(group)
             )
         select_2 += (
-            ", CASE WHEN temp._level < {} THEN "
-            "temp._group_key || zfill(temp2.seq, 4) "
-            "ELSE temp._group_key END".format(group)
+            ", CASE WHEN _temp._level < {} THEN "
+            "_temp._group_key||zfill(_temp2.seq, 4) "
+            "ELSE _temp._group_key END".format(group)
             )
     if up:
-        test = "WHERE temp.parent_id = temp2.row_id"
+        test = "WHERE _temp.parent_id = _temp2.row_id"
     else:
-        test = "WHERE temp.row_id = temp2.parent_id"
+        test = "WHERE _temp.row_id = _temp2.parent_id"
+
+    if start_value is None:
+        start_value = 'NULL'
+        op = 'IS'
+    else:
+        op = '='
 
     cte = (
-        "WITH RECURSIVE temp AS ("
+        "WITH RECURSIVE _temp AS ("
           "SELECT {0} "
           "FROM {1}.{2} "
-          "WHERE {3} = {4} "
+          "WHERE {3} {4} {5} "
           "UNION ALL "
-          "SELECT {5} "
-          "FROM temp, {1}.{2} temp2 "
-          "{6})"
-        .format(select_1, company_id, table_name, start_col,
+          "SELECT {6} "
+          "FROM _temp, {1}.{2} _temp2 "
+          "{7})"
+        .format(select_1, company_id, table_name, start_col, op,
             start_value, select_2, test))
     return cte
 
