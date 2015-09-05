@@ -41,6 +41,7 @@ log_db = False
 def start():
 
     import db.api
+    import db.objects
     #import bp.bpm
     import ht.htc
 
@@ -56,6 +57,8 @@ def start():
     db.api.config_cursor(cfg['DbParams'])
 
     check_versions()
+
+    db.objects.setup_companies()
 
 #   from wf.wfe import restart_active_processes
 #   bp.bpm.restart_active_processes()

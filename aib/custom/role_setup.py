@@ -6,6 +6,19 @@ def before_start_form(caller, xml):
     # called from setup_roles 'before_start_form'
     db_table = caller.data_objects['db_table']
 
+    tran_perms = caller.data_objects['tran_perms']
+    mem_tran_perms = caller.data_objects['mem_tran_perms']
+    with caller.db_session as db_mem_conn:
+        conn = db_mem_conn.mem
+        for col in tran_perms.db_table.col_list[5:]:  # omit row_id, cre_id, del_id, party_id
+            mem_tran_perms.clone_db_col(conn, col)
+
+    # get an alias to mem_tran_perms that is independent of gui to avoid triggering methods
+    tran_perms_setup = db.api.get_mem_object(caller.root, caller.company, 'mem_tran_perms')
+
+    # save reference for use below
+    caller.data_objects['tran_perms_setup'] = tran_perms_setup
+
     # get an alias to tbl_view that is independent of gui to avoid triggering methods
     tbl_view_setup = db.api.get_mem_object(caller.root, caller.company, 'tbl_view')
     # save reference for use below
@@ -13,18 +26,92 @@ def before_start_form(caller, xml):
 
     # set up table names and descriptions up front, if definition is local
     filter = [
-        ['WHERE', '', 'defn_company', 'IS', None, ''],
+        ('WHERE', '', 'defn_company', 'IS', None, ''),
         ]
 
-    all_tables = db_table.select_many(where=filter, order=[('table_name', False)])
+    all_tables = db_table.select_many(where=filter,
+        order=[('parent_id', False), ('table_name', False)])
     for _ in all_tables:
         table_id = db_table.getval('row_id')
         tbl_view_setup.init(init_vals={
             'table_id': table_id,
             'table_name': db_table.getval('table_name'),
             'descr': db_table.getval('short_descr') or 'None',
+            'module': db_table.getval('module'),
             })
         tbl_view_setup.save()
+
+@asyncio.coroutine
+def load_tran_perms(caller, xml):
+    # called from setup_roles 'on_start_frame'
+    role = caller.data_objects['role']
+    db_tran_type = caller.data_objects['db_tran_type']
+    tran_perms = caller.data_objects['tran_perms']
+    tran_perms_setup = caller.data_objects['tran_perms_setup']
+    tran_orig = caller.data_objects['tran_orig']
+
+    # we need to store orig at start, to compare at end to see what changed
+    tran_orig.delete_all()  # initialise
+    if role.getval('parent_id') is not None:  # not company administrator
+        if role.getval('parent_id') != 1:  # not module administrator
+            if role.exists:  # read permissions from db, populate tran_orig
+                all_tran_perms = tran_perms.select_many(where=[], order=[])
+                for _ in all_tran_perms:
+                    tran_orig.init(init_vals={
+                        'tran_id': tran_perms.getval('tran_id'),
+                        'capture_ok': tran_perms.getval('capture_ok'),
+                        'close_batch': tran_perms.getval('close_batch'),
+                        'reopen_batch': tran_perms.getval('reopen_batch'),
+                        'override_user': tran_perms.getval('override_user'),
+                        'override_period': tran_perms.getval('override_period'),
+                        })
+                    tran_orig.save()
+
+    tran_perms_setup.delete_all()
+    if role.getval('parent_id') is not None:  # not company adminstrator
+        if role.getval('parent_id') == 1:  # module' adminstrator
+            module = role.getval('role')
+        else:  # a normal 'role' - look for which 'module' is its parent
+            # should use recursive query here, but not figured out yet
+            with caller.db_session as db_mem_conn:
+                conn = db_mem_conn.db
+                parent_id = role.getval('parent_id')
+                while parent_id > 1:
+                    sql = (
+                        'SELECT role, parent_id FROM {}.acc_roles '
+                        'WHERE row_id = {}'
+                        .format(role.data_company, conn.param_style)
+                        )
+                    cur = conn.exec_sql(sql, (parent_id,))
+                    role_code, parent_id = cur.fetchone()
+            module = role_code
+
+        where = [('WHERE', '', 'module', '=', repr(module), '')]
+        order = [('parent_id', False), ('seq', False)]
+        all_types = db_tran_type.select_many(where=where, order=order)
+        for _ in all_types:
+            tran_perms_setup.init(init_vals={
+                'tran_id': db_tran_type.getval('row_id'),
+                'tran_descr': db_tran_type.getval('short_descr'),
+                })
+            if role.getval('parent_id') == 1:
+                tran_perms_setup.setval('capture_ok', True)
+                tran_perms_setup.setval('close_batch', True)
+                tran_perms_setup.setval('reopen_batch', True)
+                tran_perms_setup.setval('override_user', True)
+                tran_perms_setup.setval('override_period', True)
+            elif role.exists:
+                tran_perms.init(init_vals={
+                    'role_id': role.getval('row_id'),
+                    'tran_id': db_tran_type.getval('row_id'),
+                    })
+                if tran_perms.exists:
+                    tran_perms_setup.setval('capture_ok', tran_perms.getval('capture_ok'))
+                    tran_perms_setup.setval('close_batch', tran_perms.getval('close_batch'))
+                    tran_perms_setup.setval('reopen_batch', tran_perms.getval('reopen_batch'))
+                    tran_perms_setup.setval('override_user', tran_perms.getval('override_user'))
+                    tran_perms_setup.setval('override_period', tran_perms.getval('override_period'))
+            tran_perms_setup.save()
 
 @asyncio.coroutine
 def load_table_perms(caller, xml):
@@ -60,6 +147,25 @@ def load_table_perms(caller, xml):
             tbl_view_setup.setval('ins_dsp', 'Y')
             tbl_view_setup.setval('upd_dsp', 'Y')
             tbl_view_setup.setval('del_dsp', 'Y')
+        elif role.exists and role.getval('parent_id') == 1:  # module administrator
+            if role.getval('role') == tbl_view_setup.getval('module'):
+                tbl_view_setup.setval('sel_ok', True)
+                tbl_view_setup.setval('ins_ok', True)
+                tbl_view_setup.setval('upd_ok', True)
+                tbl_view_setup.setval('del_ok', True)
+                tbl_view_setup.setval('sel_dsp', 'Y')
+                tbl_view_setup.setval('ins_dsp', 'Y')
+                tbl_view_setup.setval('upd_dsp', 'Y')
+                tbl_view_setup.setval('del_dsp', 'Y')
+            else:
+                tbl_view_setup.setval('sel_ok', False)
+                tbl_view_setup.setval('ins_ok', False)
+                tbl_view_setup.setval('upd_ok', False)
+                tbl_view_setup.setval('del_ok', False)
+                tbl_view_setup.setval('sel_dsp', 'N')
+                tbl_view_setup.setval('ins_dsp', 'N')
+                tbl_view_setup.setval('upd_dsp', 'N')
+                tbl_view_setup.setval('del_dsp', 'N')
         else:
             tbl_orig.init()
             tbl_orig.setval('table_id', tbl_view_setup.getval('table_id'))
@@ -90,6 +196,60 @@ def load_table_perms(caller, xml):
         tbl_view_setup.save()
 
 @asyncio.coroutine
+def dump_tran_perms(caller, xml):
+    # called from setup_roles 'after_save'
+    role = caller.data_objects['role']
+
+    if role.getval('parent_id') is None:  # company administrator
+        return
+    if role.getval('parent_id') == 1:  # module administrator
+        return
+
+    tran_perms = caller.data_objects['tran_perms']
+    tran_perms_setup = caller.data_objects['tran_perms_setup']
+    tran_orig = caller.data_objects['tran_orig']
+
+    col_names = ('capture_ok', 'close_batch', 'reopen_batch',
+        'override_user', 'override_period')
+
+    def data_changed():  # remove clutter from following block
+        for col_name in col_names:
+            if tran_perms_setup.getval(col_name) != tran_orig.getval(col_name):
+                return True
+        return False
+
+    all_perms = tran_perms_setup.select_many(where=[], order=[])
+    for _ in all_perms:
+        print(tran_perms_setup)
+        tran_orig.init()
+        tran_orig.setval('tran_id', tran_perms_setup.getval('tran_id'))
+        if tran_orig.exists:
+            if data_changed():
+                tran_perms.init()
+                tran_perms.setval('tran_id', tran_perms_setup.getval('tran_id'))
+                if all(tran_perms_setup.getval(col_name) is False
+                        for col_name in col_names):
+                    tran_perms.delete()  # perms have been reset to default values
+                    tran_orig.delete()  # in case we change again without moving off row
+                else:
+                    for col_name in col_names:
+                        tran_perms.setval(col_name, tran_perms_setup.getval(col_name))
+                        tran_orig.setval(col_name, tran_perms_setup.getval(col_name))
+                    tran_perms.save()
+                    tran_orig.save()  # in case we change again without moving off row
+        else:
+            if any(tran_perms_setup.getval(col_name) is True
+                    for col_name in col_names):
+                # if values not changed from default, no need to save
+                tran_perms.init()
+                tran_perms.setval('tran_id', tran_perms_setup.getval('tran_id'))
+                for col_name in col_names:
+                    tran_perms.setval(col_name, tran_perms_setup.getval(col_name))
+                    tran_orig.setval(col_name, tran_perms_setup.getval(col_name))
+                tran_perms.save()
+                tran_orig.save()  # in case we change again without moving off row
+
+@asyncio.coroutine
 def dump_table_perms(caller, xml):
     # called from setup_roles 'after_save'
     role = caller.data_objects['role']
@@ -97,18 +257,17 @@ def dump_table_perms(caller, xml):
     tbl_view_setup = caller.data_objects['tbl_view_setup']
     tbl_orig = caller.data_objects['tbl_orig']
 
-    if role.exists and role.getval('parent_id') is None:  # company administrator
-        return  # no permissions necessary
+    if role.getval('parent_id') is None:  # company administrator
+        return
+    if role.getval('parent_id') == 1:  # module administrator
+        return
+
+    col_names = ('sel_ok', 'ins_ok', 'upd_ok', 'del_ok')
 
     def data_changed():  # remove clutter from following block
-        if tbl_view_setup.getval('sel_ok') != tbl_orig.getval('sel_ok'):
-            return True
-        if tbl_view_setup.getval('ins_ok') != tbl_orig.getval('ins_ok'):
-            return True
-        if tbl_view_setup.getval('upd_ok') != tbl_orig.getval('upd_ok'):
-            return True
-        if tbl_view_setup.getval('del_ok') != tbl_orig.getval('del_ok'):
-            return True
+        for col_name in col_names:
+            if tbl_view_setup.getval(col_name) != tbl_orig.getval(col_name):
+                return True
         return False
 
     all_tbl_views = tbl_view_setup.select_many(where=[], order=[])
@@ -128,37 +287,25 @@ def dump_table_perms(caller, xml):
                     tbl_perms.delete()  # perms have been reset to default values
                     tbl_orig.delete()  # in case we change again without moving off row
                 else:
-                    tbl_perms.setval('sel_ok', tbl_view_setup.getval('sel_ok'))
-                    tbl_perms.setval('ins_ok', tbl_view_setup.getval('ins_ok'))
-                    tbl_perms.setval('upd_ok', tbl_view_setup.getval('upd_ok'))
-                    tbl_perms.setval('del_ok', tbl_view_setup.getval('del_ok'))
+                    for col_name in col_names:
+                        tbl_perms.setval(col_name, tbl_view_setup.getval(col_name))
+                        tbl_orig.setval(col_name, tbl_view_setup.getval(col_name))
                     tbl_perms.save()
-                    # in case we change again without moving off row
-                    tbl_orig.setval('sel_ok', tbl_view_setup.getval('sel_ok'))
-                    tbl_orig.setval('ins_ok', tbl_view_setup.getval('ins_ok'))
-                    tbl_orig.setval('upd_ok', tbl_view_setup.getval('upd_ok'))
-                    tbl_orig.setval('del_ok', tbl_view_setup.getval('del_ok'))
-                    tbl_orig.save()
+                    tbl_orig.save()  # in case we change again without moving off row
         else:
             if (
                     tbl_view_setup.getval('sel_ok') is not True or
                     tbl_view_setup.getval('ins_ok') is not False or
                     tbl_view_setup.getval('upd_ok') is not False or
                     tbl_view_setup.getval('del_ok') is not False
-                    ):
+                    ):  # if values not changed from default, no need to save
                 tbl_perms.init()
                 tbl_perms.setval('table_id', tbl_view_setup.getval('table_id'))
-                tbl_perms.setval('sel_ok', tbl_view_setup.getval('sel_ok'))
-                tbl_perms.setval('ins_ok', tbl_view_setup.getval('ins_ok'))
-                tbl_perms.setval('upd_ok', tbl_view_setup.getval('upd_ok'))
-                tbl_perms.setval('del_ok', tbl_view_setup.getval('del_ok'))
+                for col_name in col_names:
+                    tbl_perms.setval(col_name, tbl_view_setup.getval(col_name))
+                    tbl_orig.setval(col_name, tbl_view_setup.getval(col_name))
                 tbl_perms.save()
-                # in case we change again without moving off row
-                tbl_orig.setval('sel_ok', tbl_view_setup.getval('sel_ok'))
-                tbl_orig.setval('ins_ok', tbl_view_setup.getval('ins_ok'))
-                tbl_orig.setval('upd_ok', tbl_view_setup.getval('upd_ok'))
-                tbl_orig.setval('del_ok', tbl_view_setup.getval('del_ok'))
-                tbl_orig.save()
+                tbl_orig.save()  # in case we change again without moving off row
 
 @asyncio.coroutine
 def load_col_perms(caller, xml):

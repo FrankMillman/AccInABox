@@ -3,7 +3,7 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'adm_params',
-    'group_code'    : 'adm',
+    'module'        : 'adm',
     'short_descr'   : 'Company parameters',
     'long_descr'    : 'Company parameters',
     'audit_trail'   : True,

@@ -3,7 +3,7 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'org_messaging',
-    'group_code'    : 'org',
+    'module'        : 'org',
     'short_descr'   : 'Messaging',
     'long_descr'    : 'Message types for sending messages',
     'audit_trail'   : True,

@@ -3,7 +3,7 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'dir_users_companies',
-    'group_code'    : 'dir',
+    'module'        : 'dir',
     'short_descr'   : 'Users/companies',
     'long_descr'    : 'Mapping of users to companies',
     'audit_trail'   : True,

@@ -3,7 +3,7 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'db_columns',
-    'group_code'    : 'db',
+    'module'        : 'db',
     'short_descr'   : 'Db columns',
     'long_descr'    : 'Database column definitions',
     'audit_trail'   : True,
@@ -260,7 +260,7 @@ cols.append ({
     'generated'  : False,
     'allow_null' : True,
     'allow_amend': True,
-    'max_len'    : 15,
+    'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,

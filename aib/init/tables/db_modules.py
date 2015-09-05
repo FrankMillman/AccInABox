@@ -2,10 +2,10 @@ from lxml import etree
 
 # table definition
 table = {
-    'table_name'    : 'db_table_groups',
-    'group_code'    : 'db',
-    'short_descr'   : 'Table groups',
-    'long_descr'    : 'Hierarchical grouping of database tables',
+    'table_name'    : 'db_modules',
+    'module'        : 'db',
+    'short_descr'   : 'Db modules',
+    'long_descr'    : 'Database modules, used to categorise db tables etc',
     'audit_trail'   : True,
     'table_created' : True,
     'default_cursor': None,
@@ -13,7 +13,7 @@ table = {
     'upd_chks'      : None,
     'del_chks'      : None,
     'table_hooks'   : None,
-    'sequence'      : ['seq', ['parent_id'], 'db_tables'],
+    'sequence'      : ['seq', ['parent_id'], None],
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -76,11 +76,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'group_code',
+    'col_name'   : 'module',
     'data_type'  : 'TEXT',
-    'short_descr': 'Group code',
-    'long_descr' : 'Group code',
-    'col_head'   : 'Group',
+    'short_descr': 'Module code',
+    'long_descr' : 'Module code',
+    'col_head'   : 'Module',
     'key_field'  : 'A',
     'generated'  : False,
     'allow_null' : False,
@@ -126,7 +126,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'col_chks'   : None,
-    'fkey'       : ['db_table_groups', 'row_id', None, None, False],
+    'fkey'       : ['db_modules', 'row_id', None, None, False],
     'choices'    : None,
     })
 cols.append ({
@@ -147,6 +147,27 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'trans',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Transactions?',
+    'long_descr' : (
+        'Does this module use transactions? '
+        'If not, it will not appear when maintaining transaction types'
+            ),
+    'col_head'   : 'Trans?',
+    'key_field'  : 'N',
+    'generated'  : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'col_chks'   : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []
@@ -156,7 +177,7 @@ virt.append ({
     'short_descr': 'Children',
     'long_descr' : 'Number of children',
     'col_head'   : '',
-    'sql'        : "SELECT count(*) FROM {company}.db_table_groups b "
+    'sql'        : "SELECT count(*) FROM {company}.db_modules b "
                    "WHERE b.parent_id = a.row_id",
     })
 virt.append ({

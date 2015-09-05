@@ -2,7 +2,7 @@ from lxml import etree
 
 # table definition
 table = {
-    'group_code'    : 'acc',
+    'module'        : 'acc',
     'table_name'    : 'acc_table_perms',
     'short_descr'   : 'Table permissions',
     'long_descr'    : 'Assign select/insert/update/delete permissions to each role',

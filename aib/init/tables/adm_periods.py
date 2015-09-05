@@ -3,7 +3,7 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'adm_periods',
-    'group_code'    : 'adm',
+    'module'        : 'adm',
     'short_descr'   : 'Financial periods',
     'long_descr'    : 'Financial periods for this company',
     'audit_trail'   : True,
@@ -124,7 +124,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '0',
+    'dflt_val'   : None,  #'0',
     'col_chks'   : [['no_amd', 'Date cannot be amended if period closed',
         [['check', '', 'period_closed', '!=', 'True', ''],
         ['or', '', '$value', '=', 'closing_date', '']]]],

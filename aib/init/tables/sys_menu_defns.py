@@ -3,7 +3,7 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'sys_menu_defns',
-    'group_code'    : 'sys',
+    'module'        : 'sys',
     'short_descr'   : 'Menu definitions',
     'long_descr'    : 'Menu definitions',
     'audit_trail'   : False,

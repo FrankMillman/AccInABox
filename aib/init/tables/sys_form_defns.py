@@ -2,7 +2,7 @@
 # table definition
 table = {
     'table_name'    : 'sys_form_defns',
-    'group_code'    : 'sys',
+    'module'        : 'sys',
     'short_descr'   : 'Form definitions',
     'long_descr'    : 'Form definitions',
     'audit_trail'   : True,
@@ -102,7 +102,7 @@ cols.append ({
     'generated'  : False,
     'allow_null' : False,
     'allow_amend': True,
-    'max_len'    : 30,
+    'max_len'    : 36,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,

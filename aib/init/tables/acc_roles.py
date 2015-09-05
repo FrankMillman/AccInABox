@@ -3,7 +3,7 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'acc_roles',
-    'group_code'    : 'acc',
+    'module'        : 'acc',
     'short_descr'   : 'Roles',
     'long_descr'    : 'Hierarchy of roles and responsibilities',
     'audit_trail'   : True,
@@ -12,6 +12,11 @@ table = {
     'setup_form'    : None,
     'upd_chks'      : None,
     'del_chks'      : None,
+    'del_chks'      : [[
+                        'not_mod',
+                        'Cannot delete module administrator',
+                        [['check', '', 'parent_id', '>', 'int(1)', '']],
+                      ]],
     'table_hooks'   : None,
     'sequence'      : ['seq', ['parent_id'], None],
     'defn_company'  : None,
@@ -148,11 +153,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'delegate',
+    'col_name'   : 'sub_roles',
     'data_type'  : 'BOOL',
-    'short_descr': 'Can delegate?',
+    'short_descr': 'Allow sub_roles?',
     'long_descr' : 'Can this role have other roles reporting to it?',
-    'col_head'   : 'Delegate',
+    'col_head'   : 'Sub_roles?',
     'key_field'  : 'N',
     'generated'  : False,
     'allow_null' : False,
@@ -183,7 +188,7 @@ virt.append ({
     'short_descr': 'Expandable?',
     'long_descr' : 'Is this node expandable?',
     'col_head'   : '',
-    'sql'        : "SELECT a.delegate",
+    'sql'        : "SELECT a.sub_roles",
     })
 virt.append ({
     'col_name'   : 'parent_num',

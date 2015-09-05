@@ -3,7 +3,7 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'db_cursors',
-    'group_code'    : 'db',
+    'module'        : 'db',
     'short_descr'   : 'Cursor definitions',
     'long_descr'    : 'Database cursor definitions',
     'audit_trail'   : True,

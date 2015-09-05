@@ -3,7 +3,7 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'acc_users_roles',
-    'group_code'    : 'acc',
+    'module'        : 'acc',
     'short_descr'   : 'User roles',
     'long_descr'    : 'Mapping of user-id to one or more roles',
     'audit_trail'   : True,

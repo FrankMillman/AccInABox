@@ -3,7 +3,7 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'org_party_ids',
-    'group_code'    : 'org',
+    'module'        : 'org',
     'short_descr'   : 'Partiy ids',
     'long_descr'    : 'Next number generator for party ids',
     'audit_trail'   : False,

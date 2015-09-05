@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 import ht.form_xml
 import db.api
+import db.objects
 #import bp.bpm
 import ht.htm
 import ht.form_xml
@@ -55,22 +56,28 @@ class MenuDefns(dict):
         return result
 menu_defns = MenuDefns()
 
-# cache to store adm_params data object for each company
-class AdmParams(dict):
-    def __missing__(self, company):
-        adm_param = db.api.get_db_object(ht.htc, company, 'adm_params')
-        adm_param.notify_update(update_param)
-        adm_param.setval('company_id', company)
-        result = self[company] = adm_param
-        return result
-adm_params = AdmParams()
+"""
+# new version that re-reads menu on any changes
+# not finished - needs more thought [2015-08-20]
 
-# callback to re-read from database if params are changed
-def update_param(db_obj):
+# cache to store menu_defn data object for each company
+class MenuDefns(dict):
+    def __missing__(self, company):
+        menu_defn = db.api.get_db_object(ht.htc, company, 'sys_menu_defns')
+        menu_defn.notify_insert(reread_menu)
+        menu_defn.notify_update(reread_menu)
+        menu_defn.notify_delete(reread_menu)
+        menu_defn.setval('company_id', company)
+        result = self[company] = menu_defn
+        return result
+menu_defns = MenuDefns()
+
+# callback to re-read from database if menu is changed
+def reread_menu(db_obj):
     company = db_obj.data_company
-    adm_param = adm_params[company]
-    adm_param.init()
-    adm_param.setval('company_id', company)  # forces a re-read
+    menu_defn = menu_defns[company]
+    menu_defn.init()
+"""
 
 #----------------------------------------------------------------------------
 
@@ -159,7 +166,8 @@ class Session:
             conn = db_mem_conn.db
             # we use list(...) because we use a nested select on the same
             #   connection, so we would lose the results of the first select
-            for company, comp_name, comp_admin in list(self.select_companies(conn)):
+#           for company, comp_name, comp_admin in list(self.select_companies(conn)):
+            for company, comp_admin, comp_name in self.select_companies(conn):
 
                 if comp_admin:
                     self.perms[company] = '_admin_'  # allow full permissions
@@ -191,6 +199,7 @@ class Session:
                 )
 
     def select_companies(self, conn):
+        """
         if self.sys_admin:
             sql = (
                 "SELECT company_id, company_name, 1 "
@@ -203,17 +212,42 @@ class Session:
                 "FROM _sys.dir_users_companies a, _sys.dir_companies b "
                 "WHERE a.company_id = b.company_id "
                 "AND a.user_row_id = {} "
+                "AND deleted_id = 0 "
                 "ORDER BY a.company_id"
                 .format(self.user_row_id)
                 )
         return conn.exec_sql(sql)
+        """
+        all_comps = db.objects.companies
+        companies = []
+        if self.sys_admin:
+            for comp_id in sorted(all_comps):
+                if comp_id == '_sys':  # must come first alphabetically
+                    companies.insert(0, (comp_id, True, all_comps[comp_id]))
+                else:
+                    companies.append((comp_id, True, all_comps[comp_id]))
+        else:
+            sql = (
+                'SELECT company_id, comp_admin '
+                'FROM _sys.dir_users_companies '
+                'WHERE user_row_id = {} '
+                'AND deleted_id = 0 '
+                'ORDER BY company_id'
+                .format(self.user_row_id)
+                )
+            for comp_id, comp_admin in conn.exec_sql(sql):
+                if comp_id == '_sys':  # must come first alphabetically
+                    companies.insert(0, (comp_id, comp_admin, all_comps[comp_id]))
+                else:
+                    companies.append((comp_id, comp_admin, all_comps[comp_id]))
+        return companies
 
     def select_options(self, conn, company):
         sql = (
-            "SELECT row_id, parent_id, descr, opt_type "
-            "FROM {}.sys_menu_defns "
-            "WHERE parent_id IS NOT NULL "
-            "ORDER BY parent_id, seq"
+            'SELECT row_id, parent_id, descr, opt_type '
+            'FROM {}.sys_menu_defns '
+            'WHERE parent_id IS NOT NULL '
+            'ORDER BY parent_id, seq'
             .format(company)
             )
         return conn.exec_sql(sql)
@@ -459,7 +493,7 @@ class RequestHandler:
         if company == '_sys':
             adm_param = None
         else:
-            adm_param = adm_params[company]
+            adm_param = db.objects.adm_params[company]
 
 #       print('SELECTED', company, menu_defn)
         opt_type = menu_defn.getval('opt_type')

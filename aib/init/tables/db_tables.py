@@ -3,7 +3,7 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'db_tables',
-    'group_code'    : 'db',
+    'module'        : 'db',
     'short_descr'   : 'Db tables',
     'long_descr'    : 'Database tables',
     'audit_trail'   : True,
@@ -13,7 +13,7 @@ table = {
     'upd_chks'      : None,
     'del_chks'      : None,
     'table_hooks'   : None,
-    'sequence'      : ['seq', ['parent_id'], 'db_table_groups'],
+    'sequence'      : ['seq', ['parent_id'], None],
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -96,9 +96,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'parent_id',
     'data_type'  : 'INT',
-    'short_descr': 'Group id',
-    'long_descr' : 'Group id',
-    'col_head'   : 'Group',
+    'short_descr': 'Module id',
+    'long_descr' : 'Module id',
+    'col_head'   : 'Module',
     'key_field'  : 'N',
     'generated'  : False,
     'allow_null' : False,
@@ -108,7 +108,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'col_chks'   : None,
-    'fkey'       : ['db_table_groups', 'row_id', 'group_code', 'group_code', False],
+    'fkey'       : ['db_modules', 'row_id', 'module', 'module', False],
     'choices'    : None,
     })
 cols.append ({

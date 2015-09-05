@@ -28,10 +28,11 @@ from start import log_db, db_log
 # maybe have a 'trigger' - if table/column defn changed, remove from 'tables_open'
 # [TODO - 2015-08-17]
 # use new concept of 'notify_update' to register a callback on any changes
-# see ht/htc.py adm_params for an example
+# see adm_params below for an example
 # maybe enhance concept to invoke callback if table *or* any of its children
 #   change - else we have to register a callback on every column definition
 # OTOH, one callback per column definition is probably a better idea
+# see first attempt below - not finished [2015-08-20]
 tables_open = {}
 
 # db_fkeys columns
@@ -49,8 +50,18 @@ def get_db_object(context, active_company, table_name, parent=None):
     Instantiate and return a :class:`~db.objects.DbObject` object.
     """
 
-    # get table instance from cache - will create if does not exist
-    db_table = get_db_table(context, active_company, table_name)
+    if '.' in table_name:
+        db_company, table_name = table_name.split('.')
+    else:
+        db_company = active_company
+    table_key = '{}.{}'.format(db_company.lower(), table_name.lower())
+
+    if table_key in tables_open:
+        db_table = tables_open[table_key]
+    else:
+        db_table = get_db_table(context, db_company, table_name)
+        tables_open[table_key] = db_table
+
     return DbObject(context, db_table.data_company, db_table, parent)
 
 def get_fkey_object(context, table_name, src_obj, src_colname):
@@ -86,20 +97,7 @@ def get_mem_table(context, company, table_name, table_defn):
         tables_open[table_key] = MemTable(context, company, table_name, table_defn)
     return tables_open[table_key]
 
-def get_db_table(context, active_company, table_name):
-    if '.' in table_name:
-        db_company, table_name = table_name.split('.')
-    else:
-        db_company = active_company
-
-    if db_company is None:  # ':memory:' table
-        table_key = table_name.lower()
-        print('*** DOES THIS HAPPEN? *** "{}"'.format(table_name))
-    else:
-        table_key = '{}.{}'.format(db_company.lower(), table_name.lower())
-    if table_key in tables_open:
-        return tables_open[table_key]
-
+def get_db_table(context, db_company, table_name):
     table = 'db_tables'
     cols = ['row_id', 'table_name', 'short_descr', 'audit_trail', 'upd_chks',
         'del_chks', 'table_hooks', 'sequence', 'defn_company', 'data_company',
@@ -163,11 +161,80 @@ def get_db_table(context, active_company, table_name):
                         body='More than one row found')
                     # should never happen - table_name is primary key
 
-    tables_open[table_key] = DbTable(
-        context, orig_tableid, table_id, table_name, short_descr, audit_trail,
-            upd_chks, del_chks, table_hooks, sequence, defn_company, data_company,
-            read_only, default_cursor, setup_form)
-    return tables_open[table_key]
+    return DbTable(context, orig_tableid, table_id, table_name, short_descr,
+        audit_trail, upd_chks, del_chks, table_hooks, sequence, defn_company,
+        data_company, read_only, default_cursor, setup_form)
+
+#-----------------------------------------------------------------------------
+
+db_session = db.connection.DbSession()
+sys_admin = True  # only used for the following
+
+"""
+# cache to store tables_open
+
+# new version that re-reads table_defn on any changes
+# not finished - needs more thought [2015-08-20]
+#
+# possibly *every* table defn and col defn msut have a callback
+#   set automatically, but only executed if table_defn is in
+#   tables_open
+# or, if we set a callback on a table defn, it automatically sets
+#   it on all col defns as well
+
+class TablesOpen(dict):
+    def __missing__(self, company):
+        table_defn = get_db_object(db.objects, company, 'adm_params')
+        table_defn.notify_update(update_table)
+        table_defn.setval('company_id', company)
+        result = self[company] = table_defn
+        return result
+tables_open = TablesOpen()
+
+# callback to re-read from database if table defn is changed
+def update_table(db_obj):
+    company = db_obj.data_company
+    adm_param = adm_params[company]
+    adm_param.init()
+    adm_param.setval('company_id', company)  # forces a re-read
+"""
+
+# cache to store adm_params data object for each company
+class AdmParams(dict):
+    def __missing__(self, company):
+        adm_param = get_db_object(db.objects, company, 'adm_params')
+        adm_param.notify_update(param_updated)
+        adm_param.setval('company_id', company)
+        result = self[company] = adm_param
+        return result
+adm_params = AdmParams()
+
+# callback to re-read from database if params are changed
+def param_updated(db_obj):
+    company = db_obj.data_company
+    adm_param = adm_params[company]
+    adm_param.init()
+    adm_param.setval('company_id', company)  # forces a re-read
+
+#-----------------------------------------------------------------------------
+
+companies = {}
+def setup_companies():
+    # called from start.py
+    # read in all company ids and names up front
+    with db_session as db_mem_conn:
+        conn = db_mem_conn.db
+        sql = 'SELECT company_id, company_name FROM _sys.dir_companies'
+        for comp_id, comp_name in conn.exec_sql(sql):
+            companies[comp_id] = comp_name
+
+    dir_comp = get_db_object(db.objects, '_sys', 'dir_companies')
+    dir_comp.notify_insert(company_updated)
+    dir_comp.notify_update(company_updated)
+
+# callback to re-read from database if company is changed
+def company_updated(db_obj):
+    companies[db_obj.getval('company_id')] = db_obj.getval('company_name')
 
 #-----------------------------------------------------------------------------
 
@@ -207,11 +274,11 @@ class DbObject:
         self.after_init_xml = []
         self.after_restore_xml = []
         self.before_save_xml = []
-        self.after_save_xml = []  # runs after 'commit'
+        self.after_save_xml = []
         self.before_insert_xml = []
-        self.after_insert_xml = []  # runs before 'commit'
+        self.after_insert_xml = []
         self.before_update_xml = []
-        self.after_update_xml = []  # runs before 'commit'
+        self.after_update_xml = []
         self.before_delete_xml = []
         self.after_delete_xml = []
         """
@@ -767,7 +834,7 @@ class DbObject:
 #       for child in self.children.values():
 #           child.dirty = False
 
-    def save(self, display=True):
+    def save(self):
         if self.db_table.read_only:
 #           raise IOError('{} is read only - no updates allowed'
 #               .format(self.table_name))
@@ -821,7 +888,7 @@ class DbObject:
         with self.context.db_session as db_mem_conn:
 
             self.context.db_session.after_commit.append(
-                (self.after_save_committed, display))
+                (self.after_save_committed,))
 
             if self.mem_obj:
                 conn = db_mem_conn.mem
@@ -848,19 +915,21 @@ class DbObject:
                 if self.cursor is not None:
                     self.cursor.insert_row(self.cursor_row)
 
-    def after_save_committed(self, display):
+            for after_save in self.db_table.after_save_xml:
+                db.db_xml.table_hook(self, after_save)
+
+    def after_save_committed(self):
         if self.exists:  # row updated
             for callback in self.db_table.on_update:
+                # e.g. if company updated, notify db.objects.company_updated()
                 callback(self)
         else:  # row inserted
             for callback in self.db_table.on_insert:
+                # e.g. if company inserted, notify db.objects.company_updated()
                 callback(self)
 
-        for after_save in self.db_table.after_save_xml:
-            db.db_xml.table_hook(self, after_save)
-        if display:
-            for caller, method in self.on_clean_func:  # frame methods
-                caller.session.request.db_events.append((caller, method))
+        for caller, method in self.on_clean_func:  # frame methods
+            caller.session.request.db_events.append((caller, method))
 
         self.init_vals = {}  # to prevent re-use on restore()
         self.dirty = False
@@ -1001,6 +1070,36 @@ class DbObject:
 
     def increment_seq(self, conn):  # called before save
         seq_col_name, groups, combo = self.db_table.sequence
+
+        # 'combo' may be an over-complication - not sure [2015-08-30]
+        # this is the problem it is intended to solve
+        #
+        # a combo is a situation where the 'nodes' of the tree are in one
+        #   table, and the 'leaves' are in another
+        # e.g. a file system comprising 'folders' and 'files' - they are
+        #   inherently different data types, so would be defined in different tables
+        # normally all 'leaves' would be sorted after all 'nodes' in a given
+        #   sub-tree, but what if you wanted to intersperse them?
+        #
+        # e.g. a menu system - if entries of type 'menu' were in a different
+        #   table from 'menu options', this might apply
+        #
+        # the problem then is that if you append or insert a new row or change
+        #   the sequence of an existing one, you must update the sequence numbers
+        #   by considering the merged tables as a single table
+        #
+        # we do not have this situaion at present - menu options are stored in
+        #   the same table as menu definitions
+        #
+        # the only 'combo' situation we have is 'db_modules', which is used as a
+        #   grouping for db_tables, sys_menus, acc_roles, db_tran_types, etc
+        #
+        # it would not be practical to allow an interspersed tree here, as all the
+        #   other tables would be affected and it would be difficult to maintain
+        #
+        # therefore we do not make use of 'combo' at present, but leave the code
+        #   here in case a situation crops up in the future where we need it
+
         seq = self.getfld(seq_col_name)
         orig_seq = seq.get_orig()
         new_seq = seq.getval()
@@ -1106,6 +1205,9 @@ class DbObject:
     def decrement_seq(self, conn):  # called after delete
         seq_col_name, groups, combo = self.db_table.sequence
 
+        # 'combo' may be an over-complication - not sure [2015-08-30]
+        # see the notes above in 'increment_seq'
+
         if self.mem_obj:
             table_name = self.table_name
         else:
@@ -1141,44 +1243,46 @@ class DbObject:
         if self.context.sys_admin:
             return  # system administrator
 
-        if self.context.perms.get(self.data_company) == '_admin_':
+        perms = self.context.session.perms
+
+        if perms.get(self.data_company) == '_admin_':
             return  # company administrator
 
-        if self.data_company not in self.context.perms:
-            self.setup_perms()
+        if self.data_company not in perms:
+            self.setup_perms(perms)
 
         ok = False
         table_id = self.db_table.orig_tableid
-        if table_id in self.context.perms[self.data_company]:
+        if table_id in perms[self.data_company]:
             if perm_type == 'select':
-                perm = self.context.perms[self.data_company][table_id][0]
+                perm = perms[self.data_company][table_id][0]
                 if perm is not False:
                     ok = True
             elif perm_type == 'view':
-                perm = self.context.perms[self.data_company][table_id][0]
+                perm = perms[self.data_company][table_id][0]
                 if perm is True:
                     ok = True
                 elif isinstance(perm, dict):
                     if str(col_id) in perm:
                         ok = True
             elif perm_type == 'insert':
-                if self.context.perms[self.data_company][table_id][1]:
+                if perms[self.data_company][table_id][1]:
                     ok = True
             elif perm_type == 'update':
-                perm = self.context.perms[self.data_company][table_id][2]
+                perm = perms[self.data_company][table_id][2]
                 if perm is not False:
                     ok = True
             elif perm_type == 'amend':
-                perm = self.context.perms[self.data_company][table_id][2]
+                perm = perms[self.data_company][table_id][2]
                 if perm is True:
                     ok = True
                 elif isinstance(perm, dict):
                     if str(col_id) in perm:
                         ok = True
             elif perm_type == 'delete':
-                if self.context.perms[self.data_company][table_id][3]:
+                if perms[self.data_company][table_id][3]:
                     ok = True
-        elif perm_type == 'select':
+        elif perm_type in ('select', 'view'):
             ok = True  # 'select' defaults to True
         if not ok:
             raise AibDenied(
@@ -1186,12 +1290,16 @@ class DbObject:
                 body='Permission denied'
                 )
 
-    def setup_perms(self):
+    def setup_perms(self, perms):
 
         company = self.data_company
         user_row_id = self.context.user_row_id
-        perms = self.context.perms
 
+        # first, check if any user roles are at level 1 in acc_roles
+        # if so, each one represents a module adminstrator, and full
+        #   rights are granted for all tables within that module
+
+        # then check for user roles with level > 1
         # user can have more than one role
         # roles could have differing permissions on the same table
         # read in all roles for this user
@@ -1201,16 +1309,39 @@ class DbObject:
         # else set it to False
         perms[company] = {}  # key=table_id, value=permissions
 
-        sql = (
-            "SELECT table_id, sel_ok, ins_ok, upd_ok, del_ok "
-            " FROM {0}.acc_table_perms a "
-            "LEFT JOIN {0}.acc_users_roles b ON b.role_id = a.role_id "
-            "WHERE a.deleted_id = 0 AND b.user_row_id = {1}"
-            .format(company, user_row_id)
-            )
-
         with self.context.db_session as db_mem_conn:
             conn = db_mem_conn.db
+
+            sql = (
+                "SELECT a.role FROM {0}.acc_roles a, {0}.acc_users_roles b "
+                "WHERE a.deleted_id = 0 AND a.parent_id = 1 "
+                "AND b.role_id = a.row_id AND b.user_row_id = {1}"
+                .format(company, user_row_id)
+                )
+            conn.cur = conn.exec_sql(sql)
+            modules = [repr(row[0]) for row in conn.cur.fetchall()]
+
+            if modules:
+                sql = (
+                    "SELECT a.row_id FROM {0}.db_tables a, {0}.db_modules b "
+                    "WHERE b.row_id = a.parent_id and b.module in ({1})"
+                    .format(company, ','.join(modules))
+                    )
+                conn.cur = conn.exec_sql(sql)
+                table_ids = [row[0] for row in conn.cur.fetchall()]
+
+                for table_id in table_ids:
+                    perms[company][table_id] = (True, True, True, True)
+
+            sql = (
+                "SELECT a.table_id, a.sel_ok, a.ins_ok, a.upd_ok, a.del_ok "
+                "FROM {0}.acc_table_perms a, {0}.acc_users_roles b, {0}.acc_roles c "
+                "WHERE a.deleted_id = 0 AND b.role_id = a.role_id "
+                "AND c.row_id = a.role_id AND c.parent_id > 1 "
+                "AND b.user_row_id = {1}"
+                .format(company, user_row_id)
+                )
+
             conn.cur = conn.exec_sql(sql)
             for table_id, sel_new, ins_new, upd_new, del_new in conn.cur:
                 sel_new = loads(sel_new)
@@ -1681,11 +1812,11 @@ class DbTable:
         self.after_init_xml = []
         self.after_restore_xml = []
         self.before_save_xml = []
-        self.after_save_xml = []  # runs after 'commit'
+        self.after_save_xml = []
         self.before_insert_xml = []
-        self.after_insert_xml = []  # runs before 'commit'
+        self.after_insert_xml = []
         self.before_update_xml = []
-        self.after_update_xml = []  # runs before 'commit'
+        self.after_update_xml = []
         self.before_delete_xml = []
         self.after_delete_xml = []
 
@@ -1852,11 +1983,11 @@ class MemTable(DbTable):
         self.after_init_xml = []
         self.after_restore_xml = []
         self.before_save_xml = []
-        self.after_save_xml = []  # runs after 'commit'
+        self.after_save_xml = []
         self.before_insert_xml = []
-        self.after_insert_xml = []  # runs before 'commit'
+        self.after_insert_xml = []
         self.before_update_xml = []
-        self.after_update_xml = []  # runs before 'commit'
+        self.after_update_xml = []
         self.before_delete_xml = []
         self.after_delete_xml = []
 

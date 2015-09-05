@@ -3,7 +3,7 @@ from lxml import etree
 # table definition
 table = {
     'table_name'    : 'adm_currencies',
-    'group_code'    : 'adm',
+    'module'        : 'adm',
     'short_descr'   : 'Currency table',
     'long_descr'    : 'Currency table',
     'audit_trail'   : True,
