@@ -671,7 +671,7 @@ class GuiGrid:
         except AibError as err:
             first_col_obj = self.obj_list[self.grid_cols[0]]
             self.session.request.send_cell_set_focus(self.ref, row, first_col_obj.ref)
-            sub_form.close_form()
+#           sub_form.close_form()
             raise
 
         self.form_active = sub_form.obj_list[0]  # main frame
@@ -934,6 +934,18 @@ class GuiGrid:
                 yield from ht.form_xml.exec_xml(self, self.methods['after_save'])
             if frame is not None and 'after_save' in frame.methods:
                 yield from ht.form_xml.exec_xml(frame, frame.methods['after_save'])
+
+        # the following assumes that this is the 'outer' context manager,
+        #   and therefore the transaction is committed at this point
+        # probably true, but not guaranteed
+        # the danger is that we could e.g. print an invoice, but a later update could
+        #   fail, causing the transaction to be rolled back, making the invoice invalid
+        # better solution is to add it as a callback to db_session.after_commit
+        # the problem with that is that it is not a coroutine, so it will not work
+        if 'after_commit' in self.methods:
+            yield from ht.form_xml.exec_xml(self, self.methods['after_commit'])
+        if frame is not None and 'after_commit' in frame.methods:
+            yield from ht.form_xml.exec_xml(frame, frame.methods['after_commit'])
         if self.inserted:
             # by definition, a grid has a cursor
             # when object is saved, cursor.insert_row/update_row is called

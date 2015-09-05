@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 import db.objects
 from db.chk_constraints import chk_constraint
+
 from errors import AibError, AibDenied
 from start import log_db, db_log
 
@@ -860,7 +861,7 @@ class Decimal(Field):
 
     def check_val(self, value):
         if value is not None:
-            if not isinstance(value, D):
+            if not isinstance(value, (int, D)):
                 errmsg = 'Not a valid Decimal type'
                 raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
@@ -868,6 +869,8 @@ class Decimal(Field):
         if value is None:
             self._value = None
         else:  # should be Decimal type
+            if isinstance(value, int):
+                value = D(value)
             if self.col_defn.scale_ptr:
                 scale = self.get_scale(self.col_defn.scale_ptr)
             else:
@@ -920,8 +923,15 @@ class Decimal(Field):
         return output.format(value)
 
     def get_scale(self, scale_ptr):
-        src_col, tgt_col = scale_ptr.split('>')
-        tgt_obj = self.db_obj.getfld(src_col).foreign_key['tgt_field'].db_obj
+        args = scale_ptr.split('>')
+        if args[0] == '_param':
+            src_obj = db.objects.adm_params[self.db_obj.data_company]
+            args = args[1:]
+        else:
+            src_obj = self.db_obj
+
+        src_col, tgt_col = args
+        tgt_obj = src_obj.getfld(src_col).foreign_key['tgt_field'].db_obj
         return tgt_obj.getval(tgt_col)
 
 class Date(Field):

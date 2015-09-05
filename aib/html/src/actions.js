@@ -187,14 +187,11 @@ function start_frame(args) {
   //debug3('start frame ' + frame.ref + ' exists=' + args[1] + ' focus=' + args[2]);
   frame.set_amended(!frame.obj_exists);
   if (frame.combo_type !== undefined) {
-    if (frame.combo_type === 'member') {
+    if (frame.combo_type === 'member')
       frame.tree.tree_frames['group'].page.style.display = 'none';
-      frame.page.style.display = 'block';
-      }
-    else {  // must be 'group'
+    else  // must be 'group'
       frame.tree.tree_frames['member'].page.style.display = 'none';
-      frame.page.style.display = 'block';
-      };
+    frame.page.style.display = 'block';
     };
   if (set_focus) {
     frame.form.tabdir = 1;  // in case 'dummy' gets focus

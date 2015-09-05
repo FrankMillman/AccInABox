@@ -179,6 +179,7 @@ class GuiTreeCombo(GuiTreeCommon):
 
         group_name = element.get('group')
         self.group = self.parent.data_objects[group_name]
+        self.group_code = element.get('group_code')
         member_name = element.get('member')
         self.member = self.parent.data_objects[member_name]
         self.member_code = element.get('member_code')
@@ -186,24 +187,27 @@ class GuiTreeCombo(GuiTreeCommon):
 
         self.tree_frames = {}  # key='group'/'member' val=tree_frame for group/member
 
+        group_where = element.get('group_filter') or ''
+
         if self.group.db_table.audit_trail:
-            group_where = ' WHERE deleted_id = 0'
-        else:
-            group_where = ''
+            if group_where:
+                group_where += ' AND deleted_id = 0'
+            else:
+                group_where = ' WHERE deleted_id = 0'
         if self.member.db_table.audit_trail:
             member_where = ' WHERE deleted_id = 0'
         else:
             member_where = ''
 
         sql = (
-            "SELECT row_id, 'group' AS type, group_code AS code, descr, "
+            "SELECT row_id, 'group' AS type, {5} AS code, descr, "
             "COALESCE(parent_id, 0) AS parent_num, seq FROM {0}.{1}{3} "
-            "UNION ALL SELECT row_id, 'member' AS type, {5} AS code, "
-            "{6} AS descr, parent_id AS parent_num, seq FROM {0}.{2}{4} "
+            "UNION ALL SELECT row_id, 'member' AS type, {6} AS code, "
+            "{7} AS descr, parent_id AS parent_num, seq FROM {0}.{2}{4} "
             "ORDER BY parent_num, seq"
             .format(self.db_obj.data_company, self.group.table_name,
                 self.member.table_name, group_where, member_where,
-                self.member_code, self.member_descr)
+                self.group_code, self.member_code, self.member_descr)
             )
 
         with self.form.db_session as db_mem_conn:
@@ -362,9 +366,10 @@ class GuiTreeCombo(GuiTreeCommon):
     @asyncio.coroutine
     def update_node(self):  # called from frame_methods after save
         self.node_inserted = False
-        if self.db_obj.getval('type') == 'group':
+        node_type = self.db_obj.getval('type')
+        if node_type == 'group':
             data_row_id = self.group.getval('row_id')
-            code = self.group.getval('group_code')
+            code = self.group.getval(self.group_code)
             text = self.group.getval('descr')
             expandable = True
             node_id = '{}_group'.format(data_row_id)
@@ -374,7 +379,8 @@ class GuiTreeCombo(GuiTreeCommon):
             text = self.member.getval(self.member_descr)
             expandable = False
             node_id = '{}_member'.format(data_row_id)
-        self.db_obj.setval('data_row_id', data_row_id)
+        self.db_obj.init(init_vals={
+            'type': node_type, 'data_row_id': data_row_id})
         self.db_obj.setval('code', code)
         self.db_obj.setval('descr', text)
         self.db_obj.setval('expandable', expandable)

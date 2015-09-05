@@ -2,7 +2,6 @@ import operator
 import hashlib
 import importlib
 import asyncio
-from ast import literal_eval
 
 from ht.form import Form
 import ht.gui_grid
@@ -334,6 +333,11 @@ def assign(caller, xml):
     source = xml.find('source')
     target = xml.find('target').text
     format = source.find('format')
+
+    #-------------------------------
+    # source could be an expression!
+    #-------------------------------
+
     if format:
         """
         <source>
@@ -360,7 +364,28 @@ def assign(caller, xml):
     else:
         hash_type = source.get('hash')
         source = source.text
-        if '.' in source:
+
+        if source.startswith('('):  # expression
+            source = source[1:-1].split(' ')
+
+            src_1_objname, src_1_colname = source[0].split('.')
+            src_1_record = caller.data_objects[src_1_objname]
+            src_1_field = src_1_record.getfld(src_1_colname)
+            val_1 = src_1_field.getval()
+
+            op = source[1]
+
+            src_2_objname, src_2_colname = source[2].split('.')
+            src_2_record = caller.data_objects[src_2_objname]
+            src_2_field = src_2_record.getfld(src_2_colname)
+            val_2 = src_2_field.getval()
+
+            if op == '+':
+                value_to_assign = val_1 + val_2
+            elif op == '*':
+                value_to_assign = val_1 * val_2
+
+        elif '.' in source:
             source_objname, source_colname = source.split('.')
             source_record = caller.data_objects[source_objname]
             source_field = source_record.getfld(source_colname)
@@ -377,7 +402,7 @@ def assign(caller, xml):
         elif source == '$False':
             value_to_assign = False
         elif source.startswith('int('):
-            value_to_assign = literal_eval(source[4:-1])
+            value_to_assign = int(source[4:-1])
         else:  # literal value
             value_to_assign = source
         if hash_type is not None:
@@ -389,10 +414,6 @@ def assign(caller, xml):
             hash_method = getattr(hashlib, hash_type)
             value_to_assign = hash_method(
                 (value_to_assign or '').encode('utf-8')).hexdigest()
-
-#-------------------------------
-# source could be an expression!
-#-------------------------------
 
     target_objname, target_colname = target.split('.')
     target_record = caller.data_objects[target_objname]
@@ -671,7 +692,7 @@ def compare(caller, xml):
     else:
         source_value = source
     if source.startswith('int('):
-        source_value = literal_eval(source[4:-1])
+        source_value = int(source[4:-1])
 
     target = xml.get('tgt')
     if target == '$None':
@@ -681,7 +702,7 @@ def compare(caller, xml):
     elif target == '$False':
         target_value = False
     elif target.startswith('int('):
-        target_value = literal_eval(target[4:-1])
+        target_value = int(target[4:-1])
     elif '.' in target:
         target_objname, target_colname = target.split('.')
         target_record = caller.data_objects[target_objname]

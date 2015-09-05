@@ -107,7 +107,7 @@ def load_fin_periods(caller, xml):
         # set last period y/e to True
         fin_period.setval('year_end', True)
         fin_period.save()
-        var.setval('ye_date', 'Year ended {}'.format(cl_date))
+        var.setval('ye_date', '    Year ended {}'.format(cl_date))
         var.setval('ye_per_no', seq + 1)
 
     # see above comments
@@ -181,12 +181,15 @@ def on_start_row(caller, xml):
         next_start_date = fin_period.getval('cl_date') + dt.timedelta(1)
         var.setval('start_date', next_start_date)
     elif var.getval('ye_per_no') is None:
-        fin_period.init(init_vals={
-            'per_no': caller.current_row + 1,
-            'op_date': var.getval('start_date'),
-            })
-        # notify client that row has been amended
-        caller.session.request.obj_to_redisplay.append((caller.ref, False))
+#       fin_period.init(init_vals={
+#           'per_no': caller.current_row + 1,
+#           'op_date': var.getval('start_date'),
+#           })
+#       # notify client that row has been amended
+#       caller.session.request.obj_to_redisplay.append((caller.ref, (False, False)))
+        fin_period.init()
+        fin_period.setval('per_no', caller.current_row + 1)
+        fin_period.setval('op_date', var.getval('start_date'))
 
 @asyncio.coroutine
 def after_save_row(caller, xml):
@@ -202,14 +205,14 @@ def after_save_row(caller, xml):
 
         if curr_year > end_year:  # starting a new year
             # remove periods after this one (if any)
-            with caller.db_session as db_mem_conn:
+            with caller.parent.db_session as db_mem_conn:
                 conn = db_mem_conn.mem
                 conn.exec_sql(
                     "DELETE FROM fin_period WHERE per_no > {}"
                     .format(fin_period.getval('per_no'))
                     )
 
-    elif fin_period.get_prev('year_end'):
+    elif fin_period.get_orig('year_end'):
         var.setval('ye_per_no', None)
         # implications?
 
@@ -244,6 +247,7 @@ def save_fin_year(caller, xml):
     curr_year = var.getval('curr_year')
     end_year = var.getval('end_year')
 
+    """
     if curr_year > end_year:  # starting a new year
         no_periods = 0
         all_per = fin_period.select_many(where=[], order=[['per_no', False]])
@@ -258,17 +262,46 @@ def save_fin_year(caller, xml):
 
         var.setval('count_per', var.getval('count_per') + no_periods)
         var.setval('end_year', curr_year)
-        var.setval('ye_date', 'Year ended {}'.format(fin_period.getval('cl_date')))
+        var.setval('ye_date', '    Year ended {}'.format(fin_period.getval('cl_date')))
 
-    else:  # amending existing year - can only change closing date
+    else:  # amending existing year
         all_per = fin_period.select_many(where=[], order=[['per_no', False]])
         for _ in all_per:
             adm_period.init()
-            adm_period.setval('row_id', fin_period.getval('per_row_id'))
-            adm_period.setval('closing_date', fin_period.getval('cl_date'))
+            per_row_id = fin_period.getval('per_row_id')
+            if per_row_id is None:  # new period added
+                adm_period.setval('period_no', count_per + fin_period.getval('row_id') - 1)
+                adm_period.setval('year_no', curr_year)
+                adm_period.setval('closing_date', fin_period.getval('cl_date'))
+                adm_period.setval('period_closed', False)
+            else:
+                adm_period.setval('row_id', per_row_id)
+                adm_period.setval('closing_date', fin_period.getval('cl_date'))
             adm_period.save()
 
-        var.setval('ye_date', 'Year ended {}'.format(fin_period.getval('cl_date')))
+        var.setval('ye_date', '    Year ended {}'.format(fin_period.getval('cl_date')))
+    """
+
+    no_periods = 0
+    all_per = fin_period.select_many(where=[], order=[['per_no', False]])
+    for _ in all_per:
+        adm_period.init()
+        per_row_id = fin_period.getval('per_row_id')
+        if per_row_id is None:  # new period added
+            adm_period.setval('period_no', count_per + fin_period.getval('row_id') - 1)
+            adm_period.setval('year_no', curr_year)
+            adm_period.setval('closing_date', fin_period.getval('cl_date'))
+            adm_period.setval('period_closed', False)
+        else:
+            adm_period.setval('row_id', per_row_id)
+            adm_period.setval('closing_date', fin_period.getval('cl_date'))
+            count_per -= 1
+        adm_period.save()
+        no_periods += 1
+
+    var.setval('count_per', var.getval('count_per') + no_periods)
+    var.setval('end_year', curr_year)
+    var.setval('ye_date', '    Year ended {}'.format(fin_period.getval('cl_date')))
 
 @asyncio.coroutine
 def restore_fin_year(caller, xml):

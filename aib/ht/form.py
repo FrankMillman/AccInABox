@@ -12,6 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import db.api
+import db.objects
 import ht.htc
 import ht.gui_objects
 import ht.gui_grid
@@ -202,6 +203,7 @@ class Form:
 #           if formview_obj:
 #               main_object = form_defn.find('frame').get('main_object')
 #               self.data_objects[main_object] = formview_obj
+        title = title.replace('{comp_name}', db.objects.companies[self.company])
 
         if adm_param is not None:
             self.data_objects['_param'] = adm_param  # use underscore to prevent clashes
@@ -1354,6 +1356,16 @@ class Frame:
             yield from ht.form_xml.exec_xml(self, self.methods['do_save'])
             if 'after_save' in self.methods:
                 yield from ht.form_xml.exec_xml(self, self.methods['after_save'])
+
+        # the following assumes that this is the 'outer' context manager,
+        #   and therefore the transaction is committed at this point
+        # probably true, but not guaranteed
+        # the danger is that we could e.g. print an invoice, but a later update could
+        #   fail, causing the transaction to be rolled back, making the invoice invalid
+        # better solution is to add it as a callback to db_session.after_commit
+        # the problem with that is that it is not a coroutine, so it will not work
+        if 'after_commit' in self.methods:
+            yield from ht.form_xml.exec_xml(self, self.methods['after_commit'])
 
     @asyncio.coroutine
     def save_obj(self, db_obj):

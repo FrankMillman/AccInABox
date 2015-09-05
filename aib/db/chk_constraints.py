@@ -32,6 +32,8 @@ def chk_constraint(ctx, constraint, value=None, errmsg=None):
             src_val = db_obj.exists
         elif src.endswith('$orig'):
             src_val = db_obj.get_orig(src[:-5])
+        elif src.startswith('int('):
+            src_val = int(src[4:-1])
         else:
             src_val = db_obj.getval(src)
 
@@ -43,6 +45,8 @@ def chk_constraint(ctx, constraint, value=None, errmsg=None):
             tgt_val = db_obj.get_orig(tgt[:-5])
         elif tgt in db_obj.fields:
             tgt_val = db_obj.getval(tgt)
+        elif tgt.startswith('int('):
+            tgt_val = int(tgt[4:-1])
         else:
             tgt_val = literal_eval(tgt)
 
