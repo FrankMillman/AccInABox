@@ -1,6 +1,6 @@
 <form name="setup_table_combo">
   <db_objects>
-    <db_obj name="db_table_group" table_name="db_table_groups"/>
+    <db_obj name="db_module" table_name="db_modules"/>
     <db_obj name="db_table" table_name="db_tables"/>
   </db_objects>
   <mem_objects>
@@ -20,12 +20,12 @@
         [`N`, `Use other table for data`, [], []]
         ]]"/>
     </mem_obj>
-    <mem_obj name="db_table_combo" descr="Combination of db_table_groups and db_tables">
+    <mem_obj name="db_table_combo" descr="Combination of db_modules and db_tables">
       <mem_col col_name="type" data_type="TEXT" short_descr="Node type"
-        long_descr="Node type:- 'group' (db_table_group), 'member' (db_table)" col_head=""
+        long_descr="Node type:- 'group' (db_module), 'member' (db_table)" col_head=""
         key_field="A" allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
       <mem_col col_name="data_row_id" data_type="INT" short_descr="Data row id"
-        long_descr="if 'group', db_table_group; if 'member', db_table" col_head=""
+        long_descr="if 'group', db_module; if 'member', db_table" col_head=""
         key_field="A" allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
       <mem_col col_name="code" data_type="TEXT" short_descr="Code"
         long_descr="Code" col_head="Code" key_field="N" allow_null="false"
@@ -50,27 +50,27 @@
     <toolbar/>
     <body>
       <block/>
-      <tree_combo data_object="db_table_combo" group="db_table_group" member="db_table"
-        member_code="table_name" member_descr="short_descr"
-        lng="250" height="350" toolbar="true"/>
-      <tree_frame main_object="db_table_group" combo_type="group">
+      <tree_combo data_object="db_table_combo" group="db_module" group_code="module"
+        member="db_table" member_code="table_name" member_descr="short_descr"
+        lng="250" height="500" toolbar="true"/>
+      <tree_frame main_object="db_module" combo_type="group">
         <toolbar/>
         <body>
           <block/>
           <panel/>
           <row/>
           <col/>
-          <label value="Group code:"/>
+          <label value="Module:"/>
           <col/>
-          <input fld="db_table_group.group_code" lng="80" validation="
+          <input fld="db_module.module" lng="80" validation="
             <<validations>>
               <<validation>>
                 <<case>>
                   <<node_inserted>>
                     <<case>>
-                      <<obj_exists obj_name=`db_table_group`>>
-                        <<init_obj obj_name=`db_table_group`/>>
-                        <<error head=`Group code` body=`'$value' already exists`/>>
+                      <<obj_exists obj_name=`db_module`>>
+                        <<init_obj obj_name=`db_module`/>>
+                        <<error head=`Module` body=`'$value' already exists`/>>
                       <</obj_exists>>
                     <</case>>
                   <</node_inserted>>
@@ -80,9 +80,14 @@
             "/>
           <row/>
           <col/>
-          <label value="Group description:"/>
+          <label value="Description:"/>
           <col/>
-          <input fld="db_table_group.descr" lng="150"/>
+          <input fld="db_module.descr" lng="150"/>
+          <row/>
+          <col/>
+          <label value="Uses transactions?"/>
+          <col/>
+          <input fld="db_module.trans"/>
         </body>
         <button_row validate="true" template="Tree_Frame"/>
         <frame_methods template="Tree_Frame">

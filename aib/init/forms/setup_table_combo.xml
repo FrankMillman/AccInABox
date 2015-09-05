@@ -34,8 +34,8 @@
     <toolbar/>
     <body>
       <block/>
-      <tree_combo data_object="db_table_combo" group="db_table_group" member="db_table"
-        member_code="table_name" member_descr="short_descr"
+      <tree_combo data_object="db_table_combo" group="db_table_group" group_code="module"
+        member="db_table" member_code="table_name" member_descr="short_descr"
         lng="250" height="350" toolbar="true"/>
       <tree_frame main_object="db_table_group" combo_type="group">
         <toolbar/>
@@ -46,7 +46,7 @@
           <col/>
           <label value="Group code:"/>
           <col/>
-          <input fld="db_table_group.group_code" lng="80" validation="
+          <input fld="db_table_group.module" lng="80" validation="
             <<validations>>
               <<validation>>
                 <<case>>

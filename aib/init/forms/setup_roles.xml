@@ -4,9 +4,64 @@
     <db_obj name="role" table_name="acc_roles"/>
     <db_obj name="db_table" table_name="db_tables"/>
     <db_obj name="db_col" table_name="db_columns"/>
+    <db_obj name="db_tran_type" table_name="db_tran_types"/>
+    <db_obj name="tran_perms" table_name="acc_tran_perms" parent="role"/>
     <db_obj name="tbl_perms" table_name="acc_table_perms" parent="role"/>
   </db_objects>
   <mem_objects>
+    <mem_obj name="mem_tran_perms" descr="List of tran permissions" parent="role">
+      <mem_col col_name="tran_id" data_type="INT" short_descr="Tran id"
+        long_descr="Tran id" col_head="" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="tran_descr" data_type="TEXT" short_descr="Description"
+        long_descr="Description" col_head="Type" key_field="N" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"/>
+<!--
+      <mem_col col_name="capture_ok" data_type="BOOL" short_descr="Capture ok?"
+        long_descr="Is this role authorised to capture this transaction?" col_head="Capture?"
+        key_field="N" allow_null="false" allow_amend="true" max_len="0"
+        db_scale="0" dflt_val="false"/>
+      <mem_col col_name="close_batch" data_type="BOOL" short_descr="Close batch?"
+        long_descr="Is this role authorised to close batches?" col_head="Close?"
+        key_field="N" allow_null="false" allow_amend="true" max_len="0"
+        db_scale="0" dflt_val="false"/>
+      <mem_col col_name="reopen_batch" data_type="BOOL" short_descr="Reopen batch?"
+        long_descr="Is this role authorised to re-open batches?" col_head="Reopen?"
+        key_field="N" allow_null="false" allow_amend="true" max_len="0"
+        db_scale="0" dflt_val="false"/>
+      <mem_col col_name="override_user" data_type="BOOL" short_descr="Override user?"
+        long_descr="Override user?" col_head="O/ride user?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
+      <mem_col col_name="override_period" data_type="BOOL" short_descr="Override period?"
+        long_descr="Does this role have permission to open a batch not in current period?"
+        col_head="O/ride per?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
+-->
+    </mem_obj>
+    <mem_obj name="tran_orig" descr="Current tran permissions">
+      <mem_col col_name="tran_id" data_type="INT" short_descr="Tran id"
+        long_descr="Tran id" col_head="" key_field="A" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="capture_ok" data_type="BOOL" short_descr="Capture ok?"
+        long_descr="Is this role authorised to capture this transaction?" col_head="Capture?"
+        key_field="N" allow_null="false" allow_amend="true" max_len="0"
+        db_scale="0" dflt_val="false"/>
+      <mem_col col_name="close_batch" data_type="BOOL" short_descr="Close batch?"
+        long_descr="Is this role authorised to close batches?" col_head="Close?"
+        key_field="N" allow_null="false" allow_amend="true" max_len="0"
+        db_scale="0" dflt_val="false"/>
+      <mem_col col_name="reopen_batch" data_type="BOOL" short_descr="Reopen batch?"
+        long_descr="Is this role authorised to re-open batches?" col_head="Reopen?"
+        key_field="N" allow_null="false" allow_amend="true" max_len="0"
+        db_scale="0" dflt_val="false"/>
+      <mem_col col_name="override_user" data_type="BOOL" short_descr="Override user?"
+        long_descr="Override user?" col_head="O/ride user?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
+      <mem_col col_name="override_period" data_type="BOOL" short_descr="Override period?"
+        long_descr="Does this role have permission to open a batch not in current period?"
+        col_head="O/ride per?" key_field="N" allow_null="false"
+        allow_amend="true" max_len="0" db_scale="0" dflt_val="false"/>
+    </mem_obj>
     <mem_obj name="tbl_view" descr="List of table permissions" parent="role">
       <mem_col col_name="table_id" data_type="INT" short_descr="Table id"
         long_descr="Table id" col_head="" key_field="A" allow_null="false"
@@ -14,6 +69,9 @@
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
         long_descr="Table name" col_head="Table" key_field="N" allow_null="false"
         allow_amend="false" max_len="20" db_scale="0"/>
+      <mem_col col_name="module" data_type="TEXT" short_descr="Module"
+        long_descr="Module" col_head="Module" key_field="N" allow_null="false"
+        allow_amend="false" max_len="12" db_scale="0"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
         long_descr="Description" col_head="Description" key_field="N" allow_null="false"
         allow_amend="false" max_len="30" db_scale="0"/>
@@ -100,7 +158,7 @@
 
   <frame main_object="role" before_start_form="
       <<action>>
-        <<pyfunc name=`custom.table_perms.before_start_form`/>>
+        <<pyfunc name=`custom.role_setup.before_start_form`/>>
       <</action>>
       ">
     <toolbar/>
@@ -135,8 +193,22 @@
           <label value="Description:"/>
           <input fld="role.descr" lng="150"/>
           <col/>
-          <label value="Can delegate?"/>
-          <input fld="role.delegate"/>
+          <label value="Sub roles?"/>
+          <input fld="role.sub_roles"/>
+          <block/>
+          <grid data_object="mem_tran_perms" growable="false" num_grid_rows="3">
+            <cur_columns>
+              <cur_col col_name="tran_descr" lng="120" readonly="true"/>
+              <cur_col col_name="capture_ok" lng="80"/>
+              <cur_col col_name="close_batch" lng="80"/>
+              <cur_col col_name="reopen_batch" lng="80"/>
+              <cur_col col_name="override_user" lng="100"/>
+              <cur_col col_name="override_period" lng="100"/>
+            </cur_columns>
+            <cur_filter/>
+            <cur_sequence/>
+            <grid_methods template="Grid"/>
+          </grid>
           <block/>
           <grid data_object="tbl_view" growable="false" num_grid_rows="16">
             <cur_columns>
@@ -174,7 +246,7 @@
                 <<action>>
                   <<case>>
                     <<fld_changed name=`tbl_view.sel_dsp`>>
-                      <<pyfunc name=`custom.table_perms.check_sel_ok`/>>
+                      <<pyfunc name=`custom.role_setup.check_sel_ok`/>>
                     <</fld_changed>>
                   <</case>>
                 <</action>>
@@ -186,7 +258,7 @@
                 <<action>>
                   <<case>>
                     <<fld_changed name=`tbl_view.upd_dsp`>>
-                      <<pyfunc name=`custom.table_perms.check_upd_ok`/>>
+                      <<pyfunc name=`custom.role_setup.check_upd_ok`/>>
                     <</fld_changed>>
                   <</case>>
                 <</action>>
@@ -225,12 +297,12 @@
             <frame_methods template="Grid_Frame">
               <method name="on_start_frame" action="
                 <<action>>
-                  <<pyfunc name=`custom.table_perms.load_col_perms`/>>
+                  <<pyfunc name=`custom.role_setup.load_col_perms`/>>
                 <</action>>
               "/>
               <method name="before_save" action="
                 <<action>>
-                  <<pyfunc name=`custom.table_perms.dump_col_perms`/>>
+                  <<pyfunc name=`custom.role_setup.dump_col_perms`/>>
                 <</action>>
               "/>
             </frame_methods>
@@ -240,12 +312,14 @@
         <frame_methods template="Tree_Frame">
           <method name="on_start_frame" action="
             <<action>>
-              <<pyfunc name=`custom.table_perms.load_table_perms`/>>
+              <<pyfunc name=`custom.role_setup.load_tran_perms`/>>
+              <<pyfunc name=`custom.role_setup.load_table_perms`/>>
             <</action>>
           "/>
           <method name="after_save" action="
             <<action>>
-              <<pyfunc name=`custom.table_perms.dump_table_perms`/>>
+              <<pyfunc name=`custom.role_setup.dump_tran_perms`/>>
+              <<pyfunc name=`custom.role_setup.dump_table_perms`/>>
             <</action>>
           "/>
         </frame_methods>

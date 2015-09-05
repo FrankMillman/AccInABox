@@ -331,6 +331,8 @@
     <xs:complexType>
       <xs:attribute name="data_object" use="required"/>
       <xs:attribute name="group" use="required"/>
+      <xs:attribute name="group_code" use="required"/>
+      <xs:attribute name="group_filter"/>
       <xs:attribute name="member" use="required"/>
       <xs:attribute name="member_code" use="required"/>
       <xs:attribute name="member_descr" use="required"/>
