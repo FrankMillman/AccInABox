@@ -920,7 +920,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     if (grid.tabbing) {
       grid.tabbing = false;
       var input = grid.obj_list[grid.active_col];
-      if (input.skip)
+      if (input.skip && !grid.start_in_progress)
         setTimeout(function() {grid.handle_tab()}, 0);
       };
 
