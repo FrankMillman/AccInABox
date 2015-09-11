@@ -327,7 +327,6 @@ cols.append ({
     'col_chks'   : [['no_change', 'Can remove company, but not change it', [
         ['check', '', '$exists', 'is', 'False', ''],
         ['or', '', '$value', 'is', 'None', ''],
-        ['or', '', '$value', '=', '$orig', ''],
         ]]],
 #   'fkey'       : ['_sys.dir_companies', 'company_id', None, None, False],
     'fkey'       : None,  # can only set this up after dir_companies created
@@ -350,7 +349,6 @@ cols.append ({
     'col_chks'   : [['no_change', 'Can remove company, but not change it', [
         ['check', '', '$exists', 'is', 'False', ''],
         ['or', '', '$value', 'is', 'None', ''],
-        ['or', '', '$value', '=', '$orig', ''],
         ]]],
 #   'fkey'       : ['_sys.dir_companies', 'company_id', None, None, False],
     'fkey'       : None,  # can only set this up after dir_companies created

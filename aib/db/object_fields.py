@@ -337,12 +337,13 @@ class Field:
                 errmsg = 'Value must be one of {}'.format(vld_choices)
                 raise AibError(head=col_defn.short_descr, body=errmsg)
 
-        for descr, errmsg, col_chk in col_defn.col_chks:
-            chk_constraint(self, col_chk, value=value, errmsg=errmsg)  # can raise AibError
-
         return value
 
     def continue_setval(self, value, display=True):
+        # we only get here if the value has changed
+
+        for descr, errmsg, col_chk in self.col_defn.col_chks:
+            chk_constraint(self, col_chk, value=value, errmsg=errmsg)  # can raise AibError
 
         try:
             self.db_obj.check_perms('amend', self.col_defn.row_id)
