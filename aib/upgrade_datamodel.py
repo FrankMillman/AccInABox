@@ -35,6 +35,8 @@ def upgrade_datamodel(db_session, old_version, new_version, company='_sys'):
         upgrade_0_1_9(db_session, company)
     if old_version < (0, 1, 10):
         upgrade_0_1_10(db_session, company)
+    if old_version < (0, 1, 11):
+        upgrade_0_1_11(db_session, company)
 
 # replace amended form definitions
 def upd_form_defn(conn, company, form_name):
@@ -292,7 +294,7 @@ def upgrade_0_1_3(db_session, company):
             db_column.setval('db_scale', param[10])
             db_column.setval('scale_ptr', None)
             db_column.setval('dflt_val', None)
-            db_column.setval('col_chks', None)
+            db_column.setval('col_checks', None)
             db_column.setval('fkey', None)
             db_column.setval('choices', None)
             db_column.setval('sql', param[11])
@@ -300,12 +302,12 @@ def upgrade_0_1_3(db_session, company):
 
         # add del_chk to dir_companies (company_id != '_sys')
         sql = (
-            'UPDATE {0}.db_tables SET del_chks = {1} WHERE table_name = {1}'
+            'UPDATE {0}.db_tables SET del_checks = {1} WHERE table_name = {1}'
             .format(company, conn.param_style)
             )
-        del_chks = []
-        del_chks.append(('CHECK', '', 'company_id', '!=', '"_sys"', ''))
-        params = [dumps(del_chks), 'dir_companies']
+        del_checks = []
+        del_checks.append(('CHECK', '', 'company_id', '!=', '"_sys"', ''))
+        params = [dumps(del_checks), 'dir_companies']
         conn.exec_sql(sql, params)
         sql = (
             'SELECT row_id FROM {}.db_tables WHERE table_name = {}'
@@ -322,10 +324,10 @@ def upgrade_0_1_3(db_session, company):
         cur = conn.exec_sql(sql, params)
         audit_row_id = cur.fetchone()[0]
         sql = (
-            'UPDATE {0}.db_tables_audit SET del_chks = {1} WHERE row_id = {1}'
+            'UPDATE {0}.db_tables_audit SET del_checks = {1} WHERE row_id = {1}'
             .format(company, conn.param_style)
             )
-        params = [dumps(del_chks), audit_row_id]
+        params = [dumps(del_checks), audit_row_id]
         conn.exec_sql(sql, params)
 
         # replace amended form definition 'login_form'
@@ -468,5 +470,24 @@ def upgrade_0_1_10(db_session, company):
     print()
     print('Please delete the database and recreate it, then run init.py')
     print()
+    import sys
+    sys.exit(0)
+
+def upgrade_0_1_11(db_session, company):
+    print()
+    print('Important notice.')
+    print('=================')
+    print()
+    print('A new version of AccInABox will be released shortly.')
+    print()
+    print('It is so different that it will be impossible to track specific changes.')
+    print()
+    print('Therefore it is proposed to delete this repository, and replace it')
+    print('  with a brand new one starting from scratch.')
+    print()
+    print('If anyone would prefer this *not* to happen, please contact me')
+    print('  urgently at frank@chagford.com')
+    print()
+    print('For now, please delete the database and recreate it, then run init.py')
     import sys
     sys.exit(0)
