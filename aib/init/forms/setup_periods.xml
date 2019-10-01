@@ -1,0 +1,230 @@
+<form name="setup_periods">
+
+  <db_objects>
+    <db_obj name="adm_period" table_name="adm_periods"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="fin_year" descr="Financial year">
+      <mem_col col_name="year_no" data_type="INT" short_descr="Year number"
+        long_descr="Year number" col_head="Year no" key_field="A"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+    </mem_obj>
+    <mem_obj name="fin_period" descr="Financial period" parent="fin_year">
+      <mem_col col_name="year_no" data_type="INT" short_descr="Year number"
+        long_descr="Year number" col_head="Year no" key_field="A"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"
+        fkey="[`fin_year`, `year_no`, null, null, true]"/>
+      <mem_col col_name="per_no" data_type="INT" short_descr="Period number"
+        long_descr="Period number" col_head="Per no" key_field="A"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="per_row_id" data_type="INT" short_descr="Period row id"
+        long_descr="Period row id" col_head="Per row id" key_field="N"
+        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="op_date" data_type="DTE" short_descr="Opening date"
+        long_descr="Opening date" col_head="Opening date" key_field="N"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="cl_date" data_type="DTE" short_descr="Closing date"
+        long_descr="Closing date" col_head="Closing date" key_field="N"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"
+        col_chks="[[`no_amd`, `Date cannot be amended if period closed`,
+        [[`check`, ``, `per_closed`, `!=`, `True`, ``],
+        [`or`, ``, `$value`, `=`, `cl_date`, ``]]]]"/>
+      <mem_col col_name="per_closed" data_type="BOOL" short_descr="Period closed?"
+        long_descr="Period closed?" col_head="Closed?" key_field="N"
+        allow_null="true" allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="year_end" data_type="BOOL" short_descr="Year end?"
+        long_descr="Year end?" col_head="Y/E?" key_field="N"
+        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
+    </mem_obj>
+    <mem_obj name="var" descr="Variables">
+      <mem_col col_name="count_per" data_type="INT" short_descr="Count of periods"
+        long_descr="Count periods - if 0, ask for start date" col_head="" key_field="N"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="curr_year" data_type="INT" short_descr="Current year"
+        long_descr="Current year" col_head="" key_field="N"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="end_year" data_type="INT" short_descr="End year"
+        long_descr="Highest year in adm_periods" col_head="" key_field="N"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Starting date"
+        long_descr="Opening date for first period" col_head="" key_field="N"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="no_periods" data_type="INT" short_descr="No of periods"
+        long_descr="Number of periods in financial year" col_head="" key_field="N"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="ye_date" data_type="TEXT" short_descr="Year end"
+        long_descr="Year ending date, in text format" col_head="" key_field="N"
+        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+      <mem_col col_name="ye_per_no" data_type="INT" short_descr="Year end period number"
+        long_descr="Year ending period number" col_head="" key_field="N"
+        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
+    </mem_obj>
+  </mem_objects>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="fin_year" after_start_form="
+      <<action>>
+        <<pyfunc name=`custom.finperiod_funcs.get_no_periods`/>>
+        <<case>>
+          <<compare src=`var.count_per` op=`eq` tgt=`int(0)`>>
+            <<inline_form form_name=`Opening date`>>
+              <<on_return>>
+                <<return state=`cancelled`>>
+                  <<end_form state=`cancelled`/>>
+                <</return>>
+                <<return state=`completed`>>
+                  <<pyfunc name=`custom.finperiod_funcs.save_start_date`/>>
+                  <<continue_form/>>
+                <</return>>
+              <</on_return>>
+            <</inline_form>>
+          <</compare>>
+          <<default>>
+            <<continue_form/>>
+          <</default>>
+        <</case>>
+      <</action>>
+      ">
+    <toolbar>
+      <tool type="img" name="prev" tip="Prev year (Ctrl+Left)" action="
+        <<action>>
+          <<pyfunc name=`custom.finperiod_funcs.goto_prev`/>>
+        <</action>>
+        " shortcut="ctrl,37"/>
+      <tool type="text" fld="var.ye_date" lng="200"/>
+      <tool type="img" name="next" tip="Next year (Ctrl+Right)" action="
+        <<action>>
+          <<pyfunc name=`custom.finperiod_funcs.goto_next`/>>
+        <</action>>
+        " shortcut="ctrl,39"/>
+    </toolbar>
+    <body>
+      <block/>
+      <grid data_object="fin_period" growable="true" num_grid_rows="13"
+          auto_startrow="true">
+        <cur_columns>
+          <cur_col col_name="per_no" lng="60" readonly="true" skip="true"/>
+          <cur_col col_name="op_date" lng="100" readonly="true" skip="true"/>
+          <cur_col col_name="cl_date" lng="100"/>
+          <cur_col col_name="per_closed" lng="60" readonly="true" skip="true"/>
+          <cur_col col_name="year_end" lng="60"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="per_no" desc="false"/>
+        </cur_sequence>
+        <grid_methods template="Grid">
+          <method name="on_start_row" action="
+            <<action>>
+              <<pyfunc name=`custom.finperiod_funcs.on_start_row`/>>
+            <</action>>
+          "/>
+          <method name="after_save" action="
+            <<action>>
+              <<pyfunc name=`custom.finperiod_funcs.after_save_row`/>>
+            <</action>>
+          "/>
+        </grid_methods>
+      </grid>
+    </body>
+    <button_row validate="true" template="Setup_Form"/>
+<!--
+    <button_row validate="true">
+      <button btn_id="btn_ok" btn_label="Ok" lng="60"
+        btn_enabled="true" btn_validate="true" btn_default="true" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      <button btn_id="btn_can" btn_label="Cancel" lng="60"
+        btn_enabled="true" btn_validate="false" btn_default="false" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+    </button_row>
+-->
+    <frame_methods template="Setup_Form">
+      <method name="on_start_frame" action="
+        <<action>>
+         <<pyfunc name=`custom.finperiod_funcs.load_fin_periods`/>>
+        <</action>>
+      "/>
+      <method name="on_req_close" action="
+        <<action>>
+         <<call method=`do_cancel`/>>
+        <</action>>
+      "/>
+      <method name="on_req_cancel" action="
+        <<action>>
+          <<call method=`do_cancel`/>>
+        <</action>>
+      "/>
+      <method name="do_cancel" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+      <method name="do_save" action="
+        <<action>>
+          <<pyfunc name=`custom.finperiod_funcs.save_fin_year`/>>
+        <</action>>
+      "/>
+      <method name="do_restore" action="
+        <<action>>
+          <<pyfunc name=`custom.finperiod_funcs.restore_fin_year`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+  <inline_form form_name="Opening date">
+    <frame main_object="var">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <text value="This is the first financial year"/>
+        <row/>
+        <col/>
+        <text value="Please enter the opening date"/>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Opening date:"/>
+        <col/>
+        <input fld="var.start_date" lng="80"/>
+      </body>
+      <button_row validate="true">
+        <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
+          btn_validate="true" btn_default="true" action="
+            <<action>>
+              <<end_form state=`completed`/>>
+            <</action>>
+          "/>
+        <button btn_id="btn_can" btn_label="Cancel" lng="60" btn_enabled="true"
+          btn_validate="false" btn_default="false" action="
+            <<action>>
+              <<end_form state=`cancelled`/>>
+            <</action>>
+          "/>
+      </button_row>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_req_close" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+</form>

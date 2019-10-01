@@ -30,6 +30,8 @@ function on_load() {
   menu_hdng.appendChild(menu_text);
   menu_div.appendChild(menu_hdng);
   document.body.appendChild(menu_div);
+  // store menu_div.height for tree.js, so it knows when to overflow
+  menu_div.height = menu_div.offsetHeight - menu_hdng.offsetHeight;
 
   favr_div = document.createElement('div');
   favr_div.style.background = 'pink';
@@ -45,16 +47,32 @@ function on_load() {
   favr_hdng.appendChild(favr_text);
   favr_div.appendChild(favr_hdng);
   favr_div.id = 'debug3';
+  favr_div.style.overflow = 'auto';
   document.body.appendChild(favr_div);
 
-  window_id = Math.random();
+//  window_id = Math.random();
+  var ca = document.cookie.split(';');
+  var name = 'session_id=';
+  for(var i=0; i<ca.length; i++) {
+    var c = ca[i];
+    while (c.charAt(0)==' ') c = c.substring(1);  // strip leading spaces
+    if (c.indexOf(name) != -1) {
+      session_id = c.substring(name.length,c.length);
+      break;
+      };
+    };
+  document.cookie = "session_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC";
   //var randomnumber=Math.floor(Math.random()*11)  // from 0-10
   //Math.floor((Math.random()*100)+1); // from 1-100
   //Math.random().toString(36).substring(2, 9);  // from 2 to 8
   send_message('get_login', null, false);
 
   tick = setInterval(
-    function() {send_message('send_req', [['tick', null]], true)},
+    function() {send_message('send_req', [['tick', null]])},
       10000);  // send 'tick' every 10 seconds
+
+  window.onbeforeunload = function() {
+    return 'This will log you off. Are you sure?';
+    };
 
   };

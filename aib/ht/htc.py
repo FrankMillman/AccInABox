@@ -11,15 +11,18 @@ import traceback
 import time
 import threading
 import asyncio
-from urllib.parse import unquote
+import urllib.parse
+import email.utils
 from json import loads, dumps
 import itertools
+import random
 
 import logging
 logger = logging.getLogger(__name__)
 
 import ht.form_xml
 import db.api
+import db.objects
 #import bp.bpm
 import ht.htm
 import ht.form_xml
@@ -28,14 +31,53 @@ from start import log, debug
 
 sessions = {}  # key=session_id, value=session instance
 
+DEL = chr(127)
+
 #----------------------------------------------------------------------------
 
 class delwatcher:
     def __init__(self, obj):
-        self.name = obj.session_key
+        self.name = obj.session_id
         print('*** session', self.name, 'created ***')
     def __del__(self):
+        pass
         print('*** session', self.name, 'deleted ***')
+
+#----------------------------------------------------------------------------
+
+# cache to store menu_defn data object for each company
+db_session = db.api.start_db_session()
+sys_admin = True  # only used for the following
+
+class MenuDefns(dict):
+    def __missing__(self, company):
+        result = self[company] = db.api.get_db_object(
+            ht.htc, company, 'sys_menu_defns')
+        return result
+menu_defns = MenuDefns()
+
+"""
+# new version that re-reads menu on any changes
+# not finished - needs more thought [2015-08-20]
+
+# cache to store menu_defn data object for each company
+class MenuDefns(dict):
+    def __missing__(self, company):
+        menu_defn = db.api.get_db_object(ht.htc, company, 'sys_menu_defns')
+        menu_defn.notify_insert(reread_menu)
+        menu_defn.notify_update(reread_menu)
+        menu_defn.notify_delete(reread_menu)
+        menu_defn.setval('company_id', company)
+        result = self[company] = menu_defn
+        return result
+menu_defns = MenuDefns()
+
+# callback to re-read from database if menu is changed
+def reread_menu(db_obj):
+    company = db_obj.data_company
+    menu_defn = menu_defns[company]
+    menu_defn.init()
+"""
 
 #----------------------------------------------------------------------------
 
@@ -53,13 +95,21 @@ class Session:
       method depending on msg_type.
     """
 
-    def __init__(self, session_key, user_row_id):
-        logger.info('{} connected'.format(session_key))
-        self.session_key = session_key
+    def __init__(self, session_id, user_row_id):
+        logger.info('{} connected'.format(session_id))
+        self.session_id = session_id
         self.user_row_id = user_row_id
+        self.save_user = None  # to store current user on change_user
+        # during the login process, the only database activity available is
+        #   to allow the user to change his own password
+        # therefore it is safe to set sys_admin to True
+        # once logged in, on_login() is called, which sets
+        #   sys_admin to the user's own value
+        self.sys_admin = True
 
         self.active_roots = {}  # active roots for this session
         self.root_id = itertools.count()  # seq id for roots created in this session
+        self.perms = {}  # key=company, value=permissions (populated on demand - db.objects)
 
 #       self.obj_to_redisplay = []
 #       self.obj_to_set_readonly = []
@@ -79,100 +129,81 @@ class Session:
         return root_id
 
     def get_obj(self, ref):
-        ref = map(int, ref.split('_'))  # returns a 'map' object
+        ref = (int(_) for _ in ref.split('_'))  # returns a 'generator' object
         root = self.active_roots[next(ref)]
         form = root.form_list[next(ref)]
         return form.obj_dict[next(ref)]
 
-    def on_login(self, session, temp_id, state, output_params):
-        if state == 'completed':
-            user_row_id = output_params['user_row_id']
-#           if user_row_id in ht.htc.active_users:  # does anyone care?
-#               raise AibError(head='Login', body='Already logged in')
-#           active_users[user_row_id] = self
-#           del active_users[self.user_row_id]
-            self.user_row_id = user_row_id
-
-# DO WE NEED THESE?
-#           self.user_row_id = dir_user.getval('user_row_id')
-#           self.sys_admin = dir_user.getval('sys_admin')
-            self.sys_admin = True
-
-#           dir_user.db_session.change_userid(user_row_id)
-
-            # notify htm that user logged in
-
-            self.after_login(session)
-
-        else:
-            self.request.send_close_program()
-            self.close()
-
-    def on_login2(self, dir_user):  # called from ht.htm.try_login
-        user_row_id = dir_user.getval('row_id')
-        active_users[user_row_id] = self
-        del active_users[self.user_row_id]
-        self.user_row_id = user_row_id
-        self.user_id = dir_user.getval('user_id')
-        self.sys_admin = dir_user.getval('sys_admin')
-        dir_user.db_session.change_userid(user_row_id)
-
     def close(self):
-#       del active_users[self.user_row_id]
         for root in list(self.active_roots.values()):
             for form in root.form_list:
                 form.close_form()
-        logger.info('{} closed'.format(self.session_key))
-        del sessions[self.session_key]
+        logger.info('{} closed'.format(self.session_id))
+        del sessions[self.session_id]
 
-    def after_login(self, session):  # called from login process if login ok
+    def on_login(self, session, state, output_params):
+        # callback from login_form - see get_login() below
+        if state != 'completed':
+            self.request.send_close_program()
+            self.close()
+            return
+
         # [TODO] get active tasks for this user from human_task_manager
 
         # search _sys.dir_users_companies for companies
         # for each company -
         #   set up user menu
-        # send initial screen to user via task client -
+        # send initial screen to client -
         #   menu, active tasks, favourites
-        self.option_dict = {}  # mapping of menu_ids to options
+
+        self.sys_admin = self.dir_user.getval('sys_admin')
+
         client_menu = []  # build menu to send to client
-        menu_id_counter = itertools.count(1)
-        root_id = next(menu_id_counter)
-        client_menu.append((0, 'root', True, root_id))
-        db_session = db.api.start_db_session(self.user_row_id)
-        with db_session as conn:
-            for company, comp_name, comp_admin in self.select_companies(conn):
+        root_id = '_root'
+        client_menu.append((root_id, None, 'root', True))
+        db_session = db.api.start_db_session()
+        with db_session as db_mem_conn:
+            conn = db_mem_conn.db
+            # we use list(...) because we use a nested select on the same
+            #   connection, so we would lose the results of the first select
+#           for company, comp_name, comp_admin in list(self.select_companies(conn)):
+            for company, comp_admin, comp_name in self.select_companies(conn):
 
-                first = True
+                if comp_admin:
+                    self.perms[company] = '_admin_'  # allow full permissions
+
+                menu_prefix = '{}{}'.format(company, DEL)
+                comp_menu = []
+                comp_menu.append((
+                    '{}{}'.format(menu_prefix, 1),  # root row_id is always 1
+                    root_id, comp_name, True))
+
                 for opt in self.select_options(conn, company):
-#                   descr, menu_type, level, _key, opt_type, opt_code = opt
-                    descr, opt_type, opt_data, _level = opt
+                    row_id, parent_id, descr, opt_type = opt
+                    expandable = (opt_type in ('root', 'menu'))
+                    comp_menu.append((
+                        '{}{}'.format(menu_prefix, row_id),  #  node_id
+                        '{}{}'.format(menu_prefix, parent_id),  # parent_id
+                        descr, expandable))
 
-                    if first:
-                        comp_id = next(menu_id_counter)
-                        client_menu.append((root_id, comp_name, True, comp_id))
-                        parent = [comp_id]
-                        parent_level = 0
-                        first = False
+                if len(comp_menu) > 1:
+                    client_menu.extend(comp_menu)
 
-                    if opt_type == '1':  #'menu':
-                        menu_id = next(menu_id_counter)
-                        parent = parent[:_level] + [menu_id]
-                        client_menu.append((parent[_level-1], descr, True, menu_id))
-                    else:  # menu_type == 'opt'
-                        opt_id = next(menu_id_counter)
-                        client_menu.append((parent[_level-1], descr, False, opt_id))
-                        self.option_dict[opt_id] = (company, descr, opt_type, opt_data)
-
-        session.request.reply.append(('start_menu', client_menu))
+        if len(client_menu) > 1:
+            session.request.reply.append(('start_menu', client_menu))
+        else:
+            raise AibError(
+                head='Login',
+                body='Sorry, no options available for {}'.format(
+                    self.dir_user.getval('user_id'))
+                )
 
     def select_companies(self, conn):
+        """
         if self.sys_admin:
             sql = (
                 "SELECT company_id, company_name, 1 "
                 "FROM _sys.dir_companies "
-# ->
-#               "WHERE company_id = '_sys' "
-# ->
                 "ORDER BY company_id"
                 )
         else:
@@ -180,24 +211,56 @@ class Session:
                 "SELECT a.company_id, b.company_name, a.comp_admin "
                 "FROM _sys.dir_users_companies a, _sys.dir_companies b "
                 "WHERE a.company_id = b.company_id "
-# ->
-#               "AND a.company_id = '_sys' "
-# ->
                 "AND a.user_row_id = {} "
+                "AND deleted_id = 0 "
                 "ORDER BY a.company_id"
                 .format(self.user_row_id)
                 )
-        return list(db.api.exec_sql(conn, sql))
+        return conn.exec_sql(sql)
+        """
+        all_comps = db.objects.companies
+        companies = []
+        if self.sys_admin:
+            for comp_id in sorted(all_comps):
+                if comp_id == '_sys':  # must come first alphabetically
+                    companies.insert(0, (comp_id, True, all_comps[comp_id]))
+                else:
+                    companies.append((comp_id, True, all_comps[comp_id]))
+        else:
+            sql = (
+                'SELECT company_id, comp_admin '
+                'FROM _sys.dir_users_companies '
+                'WHERE user_row_id = {} '
+                'AND deleted_id = 0 '
+                'ORDER BY company_id'
+                .format(self.user_row_id)
+                )
+            for comp_id, comp_admin in conn.exec_sql(sql):
+                if comp_id == '_sys':  # must come first alphabetically
+                    companies.insert(0, (comp_id, comp_admin, all_comps[comp_id]))
+                else:
+                    companies.append((comp_id, comp_admin, all_comps[comp_id]))
+        return companies
 
     def select_options(self, conn, company):
+        sql = (
+            'SELECT row_id, parent_id, descr, opt_type '
+            'FROM {}.sys_menu_defns '
+            'WHERE parent_id IS NOT NULL '
+            'ORDER BY parent_id, seq'
+            .format(company)
+            )
+        return conn.exec_sql(sql)
 
-        cte = conn.tree_select(company, 'sys_menu_defns', 'row_id', 1, sort=True)
-        sql = ("{} SELECT descr, opt_type, opt_data, _level FROM temp "
-        "WHERE _level > 0 ORDER BY _key".format(cte))
-        conn.cur.execute(sql)
-        return conn.cur
+@asyncio.coroutine
+def on_login_ok(caller, xml):
+#   called from login_form on entry of valid user_id and password
+    session = caller.session
+    dir_user = session.dir_user = caller.data_objects['dir_user']
+    session.user_row_id = dir_user.getval('row_id')
+#   don't set sys_admin yet - user may want to change his password
+#   session.sys_admin = dir_user.getval('sys_admin')
 
-dummy_id_counter = itertools.count(1)
 class RequestHandler:
     def __init__(self):
         self.reply = []
@@ -208,25 +271,36 @@ class RequestHandler:
 
     @asyncio.coroutine
     def get_login(self, writer, request):
-        session_key, message, rnd = request
+        session_id, message = request
 
-        # allocate dummy user id until logged on
-        user_row_id = -next(dummy_id_counter)  # negative id indicates dummy id
+#       # allocate dummy user id until logged on
+#       user_row_id = -next(dummy_id_counter)  # negative id indicates dummy id
+#
+#       # start new session to manage interaction with client
+#       session = self.session = Session(session_id, user_row_id)
+#       sessions[session_id] = session
+#       session.request = self
 
-        # start new session to manage interaction with client
-        session = self.session = Session(session_key, user_row_id)
-        sessions[session_key] = session
-        session.request = self
+        if session_id not in sessions:  # dangling client
+            print('ERROR - invalid session_id')
+            reply = dumps([('close_program', None)])  # tell it to stop 'ticking'
+            response = Response(writer, 200)
+            response.add_header('Content-type', 'text/html')
+            response.add_header('Transfer-Encoding', 'chunked')
+            response.send_headers()
+            response.write(reply)
+            response.write_eof()
+            return
+        self.session = sessions[session_id]
+        self.session.request = self
 
         company = '_sys'
         form_name = 'login_form'
 
-        form = ht.form.Form(company, form_name, callback=(session.on_login,),
-            caller_id=user_row_id)
-        yield from form.start_form(session, user_row_id)
+        form = ht.form.Form(company, form_name, callback=(self.session.on_login,))
+        yield from form.start_form(self.session)
 
         reply = dumps(self.reply)
-#       response = aiohttp.Response(writer, 200)
         response = Response(writer, 200)
         response.add_header('Content-type', 'text/html')
         response.add_header('Transfer-Encoding', 'chunked')
@@ -237,10 +311,9 @@ class RequestHandler:
     @asyncio.coroutine
 #   def handle_request(self, reader, writer, transport, _request_handler, request):
     def handle_request(self, writer, request):
-        session_key, messages, rnd = request
-        if session_key not in sessions:  # dangling client
+        session_id, messages = request
+        if session_id not in sessions:  # dangling client
             reply = dumps([('close_program', None)])  # tell it to stop 'ticking'
-#           response = aiohttp.Response(writer, 200)
             response = Response(writer, 200)
             response.add_header('Content-type', 'text/html')
             response.add_header('Transfer-Encoding', 'chunked')
@@ -249,7 +322,7 @@ class RequestHandler:
             response.write_eof()
             return
 
-        self.session = sessions[session_key]
+        self.session = sessions[session_id]
         self.session.request = self
 #       self.reader = reader
         self.writer = writer
@@ -259,19 +332,23 @@ class RequestHandler:
         try:
             while(messages):
                 evt_id, args = messages.pop(0)
-                if evt_id != 'tick':
-                    if debug:
+                if debug:
+                    if evt_id != 'tick':
                         log.write('recd {} {} [{}]\n\n'.format(
                             evt_id, args, len(messages)))
                 try:
                     yield from getattr(self, 'on_'+evt_id)(args)  # get method and call it
-                    #if self.db_events:  # why?
-                    for caller, action in self.db_events:
+                    local_db_events = self.db_events[:]
+                    self.db_events.clear()  # else exec_xml() processes the rest!
+                    for caller, action in local_db_events:
                         yield from ht.form_xml.exec_xml(caller, action)
-                    self.db_events.clear()
                     self.check_redisplay()
                 except AibError as err:
                     print("ERR: head='{}' body='{}'".format(err.head, err.body))
+                    local_db_events = self.db_events[:]
+                    self.db_events.clear()  # else exec_xml() processes the rest!
+                    for caller, action in local_db_events:
+                        yield from ht.form_xml.exec_xml(caller, action)
                     self.check_redisplay()
                     if err.head is not None:
                         self.reply.append(('display_error', (err.head, err.body)))
@@ -280,8 +357,15 @@ class RequestHandler:
             tb = traceback.format_exception(*sys.exc_info())  # a list of strings
             self.reply = [('exception', tb)]
         if self.reply:
+            if debug:
+                for pos, reply in enumerate(self.reply):
+                    ndx = '{}/{}'.format(pos, len(self.reply))
+                    if reply[0] in ['setup_form', 'start_menu',
+                            'start_grid', 'recv_rows', 'redisplay']:
+                        log.write('send {} {}\n\n'.format(ndx, reply[0]))
+                    else:
+                        log.write('send {} {}\n\n'.format(ndx, reply))
             reply = dumps(self.reply)
-#           response = aiohttp.Response(self.writer, 200)
             response = Response(self.writer, 200)
             response.add_header('Content-type', 'application/json; charset=utf-8')
             response.add_header('Transfer-Encoding', 'chunked')
@@ -289,7 +373,6 @@ class RequestHandler:
             response.write(reply)
             response.write_eof()
         elif self.reply is not None:  # if None do not reply - set by on_answer()
-#           response = aiohttp.Response(self.writer, 200)
             response = Response(self.writer, 200)
             response.add_header('Content-type', 'text/html')
             response.send_headers()
@@ -303,9 +386,9 @@ class RequestHandler:
         self.reply.append(('setup_form', gui))
 #       self.check_redisplay()
 
-    def start_frame(self, frame, set_frame_amended, set_focus):
+    def start_frame(self, frame_ref, set_obj_exists, set_focus):
         self.reply.append(('start_frame',
-            (frame.ref, set_frame_amended, set_focus)))
+            (frame_ref, set_obj_exists, set_focus)))
 
     def send_start_grid(self, ref, args):
         self.reply.append(('start_grid', (ref, args)))
@@ -313,11 +396,14 @@ class RequestHandler:
     def send_rows(self, ref, args):
         self.reply.append(('recv_rows', (ref, args)))
 
-    def send_set_focus(self, ref):
-        self.reply.append(('set_focus', (ref)))
+    def send_set_focus(self, ref, err_flag=False):
+        self.reply.append(('set_focus', (ref, err_flag)))
 
     def send_prev(self, ref, value):
         self.reply.append(('recv_prev', (ref, value)))
+
+    def send_dflt_val(self, obj_ref, value):
+        self.reply.append(('recv_dflt', (obj_ref, value)))
 
 #   def send_readonly(self, ref, state):
 #       self.reply.append(('set_readonly', (ref, state)))
@@ -344,19 +430,15 @@ class RequestHandler:
     @asyncio.coroutine
     def send_question(self, fut, args):
         reply = dumps([('ask_question', args)])
-#       response = aiohttp.Response(self.writer, 200)
         response = Response(self.writer, 200)
         response.add_header('Content-type', 'application/json; charset=utf-8')
         response.add_header('Transfer-Encoding', 'chunked')
         response.send_headers()
         response.write(reply)
         response.write_eof()
-#       self.reader.unset_parser()
-#       self._request_handler = None
-#       self.transport.close()
 
-    def send_cell_set_focus(self, grid_ref, row, col, err_flag=False):
-        self.reply.append(('cell_set_focus', (grid_ref, row, col, err_flag)))
+    def send_cell_set_focus(self, grid_ref, row, col_ref, dflt_val=None, err_flag=False):
+        self.reply.append(('cell_set_focus', (grid_ref, row, col_ref, dflt_val, err_flag)))
 
     def send_move_row(self, grid_ref, old_row, new_row):
         self.reply.append(('move_row', (grid_ref, old_row, new_row)))
@@ -370,6 +452,17 @@ class RequestHandler:
     def set_subtype(self, form, subtype, value):
         self.reply.append(('set_subtype',
             (form.ref, subtype, value)))
+
+    def send_insert_node(self, tree_ref, parent_id, seq, node_id):
+        self.reply.append(('insert_node',
+            (tree_ref, parent_id, seq, node_id)))
+
+    def send_update_node(self, tree_ref, node_id, text, expandable):
+        self.reply.append(('update_node',
+            (tree_ref, node_id, text, expandable)))
+
+    def send_delete_node(self, tree_ref, node_id):
+        self.reply.append(('delete_node', (tree_ref, node_id)))
 
     def send_end_form(self, form):
         if form:  # else form terminated before form created
@@ -390,22 +483,32 @@ class RequestHandler:
     @asyncio.coroutine
     def on_menuitem_selected(self, args):
         menu_id, = args
-        company, descr, option_type, option_data = self.session.option_dict[menu_id]
-        print('SELECTED {} TYPE={} ID={} COMPANY={}'.format(
-            descr, option_type, option_data, company))
-        if option_type == '3':  # grid
+#       company, descr, option_type, option_data = self.session.option_dict[menu_id]
+#       company, row_id = self.session.option_dict[menu_id]
+        company, row_id = menu_id.split(DEL)
+        menu_defn = menu_defns[company]
+        menu_defn.init()
+        menu_defn.setval('row_id', int(row_id))
+
+        if company == '_sys':
+            adm_param = None
+        else:
+            adm_param = db.objects.adm_params[company]
+
+#       print('SELECTED', company, menu_defn)
+        opt_type = menu_defn.getval('opt_type')
+        if opt_type == 'grid':
             yield from ht.form.start_setupgrid(
-                self.session, company, option_data, self.session.user_row_id)
-        elif option_type == '4':  # form
-            form = ht.form.Form(company, option_data)
-            try:
-                yield from form.start_form(self.session, self.session.user_row_id)
-            except AibError as err:
-                form.close_form()
-                raise
-        elif option_type == '5':  # report
+#               self.session, company, option_data, self.session.user_row_id)
+                self.session, company, menu_defn.getval('table_name'),
+                menu_defn.getval('cursor_name'), adm_param=adm_param)
+        elif opt_type == 'form':
+#           form = ht.form.Form(company, option_data)
+            form = ht.form.Form(company, menu_defn.getval('form_name'))
+            yield from form.start_form(self.session, adm_param=adm_param)
+        elif opt_type == 'report':
             pass
-        elif option_type == '6':  # process
+        elif opt_type == 'process':
             pass
 #           bp.bpm.init_process(company, option_data,
 #               {'user_row_id': self.session.user_row_id})
@@ -449,10 +552,11 @@ class RequestHandler:
     @asyncio.coroutine
     def on_clicked(self, args):
 #       print('clicked', args)
-        ref = args[0]
+#       ref = args[0]
+#       btn_args = args[1:]
+        ref = args.pop(0)  # remaining args (if any) are passed to on_clicked
         button = self.session.get_obj(ref)
-        btn_args = args[1:]
-        yield from button.parent.on_clicked(button, btn_args)
+        yield from button.parent.on_clicked(button, args)
 
     @asyncio.coroutine
     def on_navigate(self, args):
@@ -491,6 +595,18 @@ class RequestHandler:
         yield from obj.grid.on_cell_req_focus(obj, row, save)
 
     @asyncio.coroutine
+    def on_req_save_row(self, args):
+        # only called in rare circumstances [2015-05-02]
+        # AFAICT, it is only called by the client if on
+        #   the bottom row of a 'non-growable' grid, the
+        #   row has been amended, and the user tabs off
+        #   the grid to the next control
+        ref, = args
+        grid = self.session.get_obj(ref)
+        yield from grid.end_current_row(save=True)
+
+    """
+    @asyncio.coroutine
     def on_req_insert_row(self, args):
         ref, row = args
         grid = self.session.get_obj(ref)
@@ -514,6 +630,7 @@ class RequestHandler:
         grid_ref, row = args
         grid = self.session.get_obj(grid_ref)
         yield from grid.on_formview(row)
+    """
 
     @asyncio.coroutine
     def on_start_row(self, args):
@@ -521,6 +638,24 @@ class RequestHandler:
         grid = self.session.get_obj(grid_ref)
         grid.inserted = inserted
         yield from grid.start_row(row, display=True)
+
+    @asyncio.coroutine
+    def on_treeitem_active(self, args):
+        tree_ref, row_id = args
+        tree = self.session.get_obj(tree_ref)
+        yield from tree.on_active(row_id)
+
+    @asyncio.coroutine
+    def on_req_insert_node(self, args):
+        tree_ref, parent_id, seq, combo_type = args
+        tree = self.session.get_obj(tree_ref)
+        yield from tree.on_req_insert_node(parent_id, seq, combo_type)
+
+    @asyncio.coroutine
+    def on_req_delete_node(self, args):
+        tree_ref, node_id = args
+        tree = self.session.get_obj(tree_ref)
+        yield from tree.on_req_delete_node(node_id)
 
     @asyncio.coroutine
     def on_answer(self, args):
@@ -532,13 +667,17 @@ class RequestHandler:
 
     @asyncio.coroutine
     def on_req_close(self, data):
-        form_ref, = data
+#       frame_ref, = data  # 'frame' is always the top-level frame
+        obj_ref, = data  # could be frame or grid
         try:
-            form = self.session.get_obj(form_ref)
+#           frame = self.session.get_obj(frame_ref)
+            obj = self.session.get_obj(obj_ref)
         except IndexError:  # user clicked Close twice?
             pass
         else:
-            yield from form.on_req_close()
+            print('CLOSE', obj)
+#           yield from frame.on_req_close()
+            yield from obj.on_req_close()
 
     @asyncio.coroutine
     def on_req_cancel(self, data):
@@ -590,7 +729,7 @@ class CheckSessions(threading.Thread):
                     #session.close()  # assume connection is lost
                     sessions_to_close.append(session)  # assume connection is lost
             for session in sessions_to_close:
-                print('CLOSING', session.session_key)
+                print('CLOSING', session.session_id)
                 session.close()
             session = None  # to enable garbage collection
             sessions_to_close = None  # to enable garbage collection
@@ -601,9 +740,9 @@ class CheckSessions(threading.Thread):
 
 #----------------------------------------------------------------------------
 
+dummy_id_counter = itertools.count(1)
 def send_js(srv, path, dev):
 
-#   response = aiohttp.Response(srv.writer, 200)
     response = Response(srv, 200)
     if path == '':  #in ('', '/'):
         if dev:
@@ -613,6 +752,16 @@ def send_js(srv, path, dev):
             fname = 'init.gz'
             response.add_header('Content-type', 'text/html')
             response.add_header('Content-encoding', 'gzip')
+        session_id = str(random.SystemRandom().random())
+        response.add_header('Set-Cookie', 'session_id={};'.format(session_id))
+
+        # allocate dummy user id until logged on
+        user_row_id = -next(dummy_id_counter)  # negative id indicates dummy id
+
+        # start new session to manage interaction with client
+        session = Session(session_id, user_row_id)
+        sessions[session_id] = session
+
     else:
         fname = path
         if fname.endswith('.js'):
@@ -638,39 +787,7 @@ def send_js(srv, path, dev):
 
     response.write_eof()
 
-import asyncio
-
-"""
-import aiohttp
-import aiohttp.server
-class HttpServer(aiohttp.server.ServerHttpProtocol):
-
-    @asyncio.coroutine
-    def handle_request(self, message, payload):
-#       print('method = {!r}; path = {!r}; version = {!r}'.format(
-#           message.method, message.path, message.version))
-
-        path = message.path
-        if path.startswith('/send_req'):
-            path, args = path.split('?')
-            args = loads(unquote(args))
-            request_handler = RequestHandler()
-            yield from request_handler.handle_request(
-                self.reader, self.writer, self.transport, self._request_handler, args)
-        elif path.startswith('/get_login'):
-            path, args = path.split('?')
-            args = loads(unquote(args))
-            request_handler = RequestHandler()
-            yield from request_handler.get_login(self.writer, args)
-        elif path.startswith('/dev'):
-            path = path[4:]
-            send_js(self, path, dev=True)
-        else:
-            path = path[1:]  # strip leading '/'
-            send_js(self, path, dev=False)
-"""
-
-import email.utils
+CHUNK = 8192
 class Response:
     def __init__(self, writer, status):
         self.writer = writer
@@ -695,8 +812,8 @@ class Response:
     def write(self, data):
         CRLF = b'\r\n'
         write = self.writer.write
-        for start in range(0, len(data), 8192):
-            chunk = data[start:start+8192]
+        for start in range(0, len(data), CHUNK):
+            chunk = data[start:start+CHUNK]
             write(hex(len(chunk))[2:].encode() + CRLF)
             write(chunk.encode() + CRLF)
         write(b'0\r\n\r\n')
@@ -704,11 +821,11 @@ class Response:
     def write_file(self, fd):
         CRLF = b'\r\n'
         write = self.writer.write
-        chunk = fd.read(8192)
+        chunk = fd.read(CHUNK)
         while chunk:
             write(hex(len(chunk))[2:].encode() + CRLF)
             write(chunk + CRLF)
-            chunk = fd.read(8192)
+            chunk = fd.read(CHUNK)
         write(b'0\r\n\r\n')
 
     def write_eof(self):
@@ -720,9 +837,9 @@ def accept_client(client_reader, client_writer):
 #   def client_done(task):
 #       print("End Connection")
 
-#   print("New Connection")
+#   print("New Connection", id(client_reader), id(client_writer))
 #   task.add_done_callback(client_done)
- 
+
 @asyncio.coroutine
 def handle_client(client_reader, client_writer):
 
@@ -731,29 +848,34 @@ def handle_client(client_reader, client_writer):
     if not req_line:
         return
 #   print('Req line "{}"'.format(req_line))
+    headers = {}
     while True:
         header = yield from asyncio.wait_for(client_reader.readline(),
                                        timeout=10.0)
         if not header.rstrip():
             break
 #       print('Header "{}"'.format(header))
-        key, val = map(str.strip, header.rstrip().decode().lower().split(':', 1))
+        key, val = (_.strip() for _ in header.rstrip().decode().lower().split(':', 1))
+        headers[key] = val
 
     try:
         method, path, version = req_line.decode().split(' ')
     except ValueError:
         print('***', req_line, '***')
         raise
-#   print('method = {!r}; path = {!r}; version = {!r}'.format(method, path, version))
+
+    if method == 'POST':
+#       print('method = {!r}; path = {!r}; version = {!r}'.format(method, path, version))
+        lng = int(headers['content-length'])
+        args = yield from asyncio.wait_for(
+            client_reader.read(lng), timeout=10.0)
 
     if path.startswith('/send_req'):
-        path, args = path.split('?')
-        args = loads(unquote(args))
+        args = loads(urllib.parse.unquote(args.decode()))
         request_handler = RequestHandler()
         yield from request_handler.handle_request(client_writer, args)
     elif path.startswith('/get_login'):
-        path, args = path.split('?')
-        args = loads(unquote(args))
+        args = loads(urllib.parse.unquote(args.decode()))
         request_handler = RequestHandler()
         yield from request_handler.get_login(client_writer, args)
     elif path.startswith('/dev'):
@@ -773,11 +895,7 @@ def setup(params):
     session_check.start()
 
     loop = asyncio.get_event_loop()
-
-#   server = loop.run_until_complete(loop.create_server(HttpServer, host, port))
     server = loop.run_until_complete(asyncio.start_server(accept_client, host, port))
-
-    # update log
     logger.info('task client listening on port {}'.format(port))
 
     return (loop, server, session_check)

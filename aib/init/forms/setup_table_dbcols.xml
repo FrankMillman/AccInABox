@@ -1,0 +1,105 @@
+<form name="setup_table_dbcols">
+
+  <db_objects>
+    <db_obj name="db_col_sys" table_name="db_columns" parent="db_table"/>
+    <db_obj name="db_col_user" table_name="db_columns" parent="db_table"/>
+    <db_obj name="db_col_virt" table_name="db_columns" parent="db_table"/>
+  </db_objects>
+  <mem_objects/>
+
+  <input_params>
+    <input_param name="db_table" type="data_obj" target="db_table" required="true"/>
+  </input_params>
+  <output_params/>
+
+  <frame main_object="db_table">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Table:"/>
+      <col/>
+      <display fld="db_table.table_name" lng="160"/>
+      <col/>
+      <label value="Description:"/>
+      <col/>
+      <display fld="db_table.short_descr" lng="250"/>
+      <block/>
+      <nb_start/>
+      <nb_page label="System Columns"/>
+      <block/>
+      <grid data_object="db_col_sys" growable="true"
+          num_grid_rows="10" form_name="dbcols_sys">
+        <toolbar template="Grid_Setup"/>
+        <cur_columns>
+          <cur_col col_name="col_name" lng="120"/>
+          <cur_col col_name="short_descr" lng="200" expand="true"/>
+        </cur_columns>
+        <cur_filter>
+          <cur_fil test="where" lbr="" col_name="col_type" op="=" expr="'sys'" rbr=""/>
+        </cur_filter>
+        <cur_sequence>
+          <cur_seq col_name="seq" desc="false"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <nb_page label="User Columns"/>
+      <block/>
+      <grid data_object="db_col_user" growable="true"
+          num_grid_rows="10" form_name="dbcols_user">
+        <toolbar template="Grid_Setup"/>
+        <cur_columns>
+          <cur_col col_name="col_name" lng="120"/>
+          <cur_col col_name="short_descr" lng="200" expand="true"/>
+        </cur_columns>
+        <cur_filter>
+          <cur_fil test="where" lbr="" col_name="col_type" op="=" expr="'user'" rbr=""/>
+        </cur_filter>
+        <cur_sequence>
+          <cur_seq col_name="seq" desc="false"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <nb_page label="Virtual Columns"/>
+      <block/>
+      <grid data_object="db_col_virt" growable="true"
+          num_grid_rows="10" form_name="dbcols_virt">
+        <toolbar template="Grid_Setup"/>
+        <cur_columns>
+          <cur_col col_name="col_name" lng="120"/>
+          <cur_col col_name="short_descr" lng="200" expand="true"/>
+        </cur_columns>
+        <cur_filter>
+          <cur_fil test="where" lbr="" col_name="col_type" op="=" expr="'virt'" rbr=""/>
+        </cur_filter>
+        <cur_sequence>
+          <cur_seq col_name="seq" desc="false"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <nb_end/>
+    </body>
+    <button_row validate="true">
+      <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
+          btn_validate="true" btn_default="true" lng="60" action="
+        <<action>>
+          <<call method=`on_req_cancel`/>>
+        <</action>>
+      "/>
+    </button_row>
+    <frame_methods>
+      <method name="on_req_cancel" action="
+        <<action>>
+          <<end_form state=`completed`/>>
+        <</action>>
+      "/>
+      <method name="on_req_close" action="
+        <<action>>
+          <<end_form state=`completed`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

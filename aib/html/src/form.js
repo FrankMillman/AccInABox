@@ -13,6 +13,8 @@ function setup_form(args) {
   var save_blocks = [];
   var save_vbox = [];
   var subtype_name = null;
+  var label = null;
+  var last_parent = null;  // keep track of last parent to decide where to append 'dummy'
 
   for (var i=0, args_length=args.length; i<args_length; i++) {
     var elem = args[i];
@@ -49,8 +51,6 @@ function setup_form(args) {
         form.root = root;
         form.root_id = root_id;
         form.form_id = form_id;
-
-        form.frame = null;
 
         form.disable_count = 0;
         form.obj_dict = {};
@@ -182,7 +182,10 @@ function setup_form(args) {
           };
 
         form.req_close = function() {
-          var args = [form.form_id + '_0'];  // the 'ref' of the main frame
+          if (this.current_focus.num_cols !== undefined)  // i.e. it must be a grid
+            var args = [this.current_focus.ref];
+          else
+            var args = [this.active_frame.ref];
           send_request('req_close', args);
           };
 
@@ -258,7 +261,7 @@ function setup_form(args) {
             };
           };
 
-        document.body.onkeyup = function(e) {
+        document.onkeyup = function(e) {
           if (!e) e=window.event;
           if (e.keyCode === 13) {  // user released Enter
             if (!ignore_enter) {  // never true - document.body!
@@ -282,7 +285,8 @@ function setup_form(args) {
           if (this.root.length) {
             current_form = this.root[this.root.length-1];
             current_form.enable_controls();
-            setTimeout(function() {current_form.current_focus.focus()}, 50);
+            if (current_form.current_focus !== null)  // can be if called from on_start_form
+              setTimeout(function() {current_form.current_focus.focus()}, 50);
             //current_form.current_focus.focus();  // IE8 seems to lose focus otherwise!
             }
           else {
@@ -351,16 +355,36 @@ function setup_form(args) {
         page.frame = frame;
         form.obj_dict[frame.ref] = frame;
         form.active_frame = frame;
-        frame.frame_amended = false;
-        frame.send_focus_msg = true;  // can be over-ridden in 'start_frame'
+        frame._amended = false;
+        frame.obj_exists = false;
+        frame.err_flag = false;
 
         if (elem[1].ctrl_grid_ref === null)
           frame.ctrl_grid = null;
         else
           frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
 
-        frame.set_value_from_server = function(value) {
-          this.frame_amended = value;
+        frame.set_amended = function(state) {
+          //debug3('fset1 ' + this.ref + ' ' + state);
+          this._amended = state;
+          };
+
+        frame.amended = function() {
+          return this._amended;
+          };
+
+        frame.set_value_from_server = function(args) {
+          // notification of record becoming clean/dirty (true/false)
+//          if (value === true) {
+//            this.obj_exists = true;
+//            this.set_amended(false);
+//            }
+//          else {
+//            this.set_amended(true);
+//            };
+          var clean = args[0], exists = args[1];
+          this.set_amended(!clean);  // if clean, amended=false, if dirty, amended=true
+          this.obj_exists = exists;
           };
 
         break;
@@ -386,6 +410,7 @@ function setup_form(args) {
         block.style.clear = 'left';
         block.style.textAlign = 'center';
         page.block = block;
+        last_parent = block;
         block.end_block = function() {
           if (this.childNodes.length === 1)
             this.firstChild.style[cssFloat] = 'none';
@@ -432,13 +457,21 @@ function setup_form(args) {
         };
       case 'string': {
         var text = document.createElement('span');
+        text.style.display = 'inline-block';
         text.appendChild(document.createTextNode(elem[1].value));
-        text.style[cssFloat] = 'left';
+        text.style.fontWeight = 'bold';
         text.style.textAlign = 'left';
         text.style.marginTop = '10px';
         if (elem[1].lng)
           text.style.width = elem[1].lng + 'px'
-        block.appendChild(text);
+        if (vbox !== null)
+          vbox.appendChild(text)
+        else {
+          if (block.childNodes.length && subtype_name === null)
+            text.style.marginLeft = '10px';
+          text.style[cssFloat] = 'left';
+          block.appendChild(text);
+          };
         break;
         };
       case 'panel': {
@@ -450,7 +483,15 @@ function setup_form(args) {
           if (block.childNodes.length && subtype_name === null)
             box.style.marginLeft = '10px';
           block.appendChild(box);
-          box.style[cssFloat] = 'left';
+          // if a subtype panel, there are > 1 but only one is visible
+          // for some reason, if they are floated, it prevents the following
+          //    block from having a top margin
+          // avoiding the float fixes it, but I think it means that you cannot
+          //    have a subtype panel side-by-side with another panel
+          // if this is required, experiment with another layer, with the
+          //    outer layer floated, and the inner one with multiple divs
+          if (subtype_name === null)
+            box.style[cssFloat] = 'left';
           };
 
         var panel = document.createElement('span');
@@ -481,6 +522,7 @@ function setup_form(args) {
           if (elem[1].active === true)
             subtype._active_box = elem[1].subtype_id;
           };
+
         break;
         };
       case 'row': {
@@ -493,6 +535,7 @@ function setup_form(args) {
           col.colSpan = elem[1].colspan;
         if (elem[1].rowspan)
           col.rowSpan = elem[1].rowspan;
+        last_parent = col;
         break;
         };
       case 'text': {
@@ -514,7 +557,7 @@ function setup_form(args) {
         break;
         };
       case 'input': {
-        var input = create_input(frame, elem[1], label);
+        var input = create_input(frame, page, elem[1], label);
         if (col.childNodes.length)
           input.style.marginLeft = '5px';
         col.appendChild(input);
@@ -522,15 +565,16 @@ function setup_form(args) {
         break;
         };
       case 'display': {
-        var display = create_display(frame, elem[1]);
+        var display = create_display(frame, elem[1], label);
         if (col.childNodes.length)
           display.style.marginLeft = '5px';
         col.appendChild(display);
+        var label = null;
         break;
         };
       case 'dummy': {
-        var dummy = create_input(frame, elem[1]);
-        page.appendChild(dummy);
+        var dummy = create_input(frame, page, elem[1], null);
+        last_parent.appendChild(dummy);
         break;
         };
       case 'button_row': {
@@ -540,25 +584,25 @@ function setup_form(args) {
         button_row.style.clear = 'left';
         page.appendChild(button_row);
         for (var j=0, tot_buttons=elem[1].length; j<tot_buttons; j++) {
-          var button = create_button(frame, elem[1][j][1]);
-          button_row.appendChild(button);
-          button.style.marginRight = '10px';
-//          button_row.appendChild(button.parentNode);
-//          // don't know why +4, but otherwise Chrome truncates 'Change password'
-//          button.parentNode.style.width = (button.offsetWidth + 4) + 'px';
-//          button.parentNode.style.height = button.offsetHeight + 'px';
-//          button.parentNode.style.marginRight = '10px';
+          var btn_elem = elem[1][j];
+          if (btn_elem[0] === 'dummy') {
+            var dummy = create_input(frame, page, btn_elem[1], null);
+            button_row.appendChild(dummy);
+            }
+          else if (btn_elem[0] === 'button') {
+            var button = create_button(frame, btn_elem[1]);
+            button_row.appendChild(button);
+            button.style.marginRight = '10px';
+            };
           };
+        last_parent = button_row;
         break;
         };
       case 'button': {
         var button = create_button(frame, elem[1]);
         if (col.childNodes.length)
-          text.style.marginLeft = '5px';
+          button.style.marginLeft = '5px';
         col.appendChild(button);
-//        col.appendChild(button.parentNode);
-//        button.parentNode.style.width = (button.offsetWidth + 4) + 'px';
-//        button.parentNode.style.height = button.offsetHeight + 'px';
         break;
         };
       case 'nb_start': {
@@ -588,15 +632,15 @@ function setup_form(args) {
             var new_focus = new_page.first_obj;
           if (back)
             this.frame.form.tabdir = -1;
-          if (this.frame.frame_amended) {
-            callbacks.push([this, this.after_new_page, new_pos, new_focus]);
-            got_focus(new_focus);  // trigger 'got_focus', even though it hasn't!
-            }
-          else {
-            this.after_new_page(new_pos, new_focus);
-            };
-          };
-        notebook.after_new_page = function(new_pos, new_focus) {
+//          if (this.frame.amended()) {
+//            callbacks.push([this, this.after_new_page, new_pos, new_focus]);
+//            got_focus(new_focus);  // trigger 'got_focus', even though it hasn't!
+//            }
+//          else {
+//            this.after_new_page(new_pos, new_focus);
+//            };
+//          };
+//        notebook.after_new_page = function(new_pos, new_focus) {
           var current_page = this.childNodes[this.current_pos];
           current_page.style.display = 'none';
           var current_tab = this.tabs.childNodes[this.current_pos-1]
@@ -608,7 +652,13 @@ function setup_form(args) {
           new_tab.style.borderBottom = '1px solid transparent';
           new_tab.style.color = 'black';
           this.current_pos = new_pos;
-          new_focus.focus();
+          //new_focus.focus();
+          if (!this.frame.form.focus_from_server) {
+            var pos = new_focus.pos;
+            while (this.frame.obj_list[pos].offsetHeight === 0)
+              pos += this.frame.form.tabdir;  // look for next available object
+            this.frame.obj_list[pos].focus();
+            };
           };
         break;
         };
@@ -629,24 +679,42 @@ function setup_form(args) {
           notebook.req_new_page(this.pos+1, false);
           };
         notebook.tabs.appendChild(tab);
-
         var nb_page = document.createElement('div');
-        //nb_page.style.background = 'pink';
+        notebook.appendChild(nb_page);
+
+        //var back_btn_div = document.createElement('div');
+        var back_btn_div = document.createElement('span');
+        nb_page.appendChild(back_btn_div);
+        back_btn_div.style.display = 'inline-block';
+        back_btn_div.style.width = '25px';
+        //back_btn_div.style[cssFloat] = 'left';
+        //back_btn_div.style.background = 'blue';
+
         var page = create_page();
         nb_page.appendChild(page);
+        //page.style[cssFloat] = 'left';
+        page.style.verticalAlign = 'top';
+        //page.style.background = 'lightcyan';
+        //nb_page.style.background = 'green';
+
+        //var fwd_btn_div = document.createElement('div');
+        var fwd_btn_div = document.createElement('span');
+        nb_page.appendChild(fwd_btn_div);
+        fwd_btn_div.style.display = 'inline-block';
+        fwd_btn_div.style.width = '25px';
+        //fwd_btn_div.style[cssFloat] = 'right';
+        //fwd_btn_div.style.background = 'blue';
+
+        nb_page.label = elem[1].label;
         nb_page.page = page;
+        page.nb_page = nb_page;
         nb_page.style.textAlign = 'center';
         page.style.textAlign = 'left';
         nb_page.frame = frame;
         page.frame = frame;
-        nb_page.pos = notebook.childNodes.length;  // starts from 1, 0 is 'tabs'
-        nb_page.first_obj = frame.obj_list.length;
+        nb_page.pos = tab.pos+1;  //notebook.childNodes.length-1;  // starts from 1, 0 is 'tabs'
+        nb_page.first_obj_pos = frame.obj_list.length;
         notebook.save_page.sub_pages.push(page);
-        //page.style.background = 'lightcyan';
-        var nb_btns = document.createElement('div');
-        nb_btns.style.height = '24px';
-        nb_page.appendChild(nb_btns);
-        nb_page.btns = nb_btns;
 
         nb_page.onkeydown = function(e) {
           if (this.frame.form.disable_count) return false;
@@ -669,14 +737,13 @@ function setup_form(args) {
             };
           };
 
-//        var button_row = document.createElement('div');
-//        button_row.style.verticalAlign = 'bottom';
-////        nb_page.appendChild(button_row);
-//        nb_page.button_row = button_row;
-
-        nb_page.create_btn = function(back) {
+        nb_page.create_btn = function(back, help_msg) {
           var nb_btn = document.createElement('div');
+          this.childNodes[back ? 0 : 2].appendChild(nb_btn);
           nb_btn.style.backgroundImage = 'url(' + (back ? iPrev_src : iNext_src) + ')';
+          nb_btn.style.position = 'relative';
+          nb_btn.style.top = '50%';
+          //nb_btn.style.transform = 'translateY(-50%)';
 
           nb_btn.pos = frame.obj_list.length;
           frame.obj_list.push(nb_btn);
@@ -689,13 +756,9 @@ function setup_form(args) {
           nb_btn.style.border = '1px solid transparent';
           nb_btn.style.padding = '1px';
           nb_btn.style.margin = '2px';
-          nb_btn.title = back ? 'Previous tab' : 'Next tab';
-
-//          nb_btn.style.position = 'absolute';
-//          nb_btn.style[back ? 'left' : 'right'] = '10px';
-//          nb_btn.style.bottom = '10px';
-          nb_btn.style[cssFloat] = back ? 'left' : 'right';
-          this.btns.appendChild(nb_btn);
+          nb_btn.active_frame = this.frame;
+          nb_btn.help_msg = help_msg;
+          nb_btn.title = help_msg;
 
           nb_btn.onkeydown = function(e) {
             if (this.frame.form.disable_count) return false;
@@ -711,8 +774,11 @@ function setup_form(args) {
           nb_btn.onfocus = function() {
             if (this.frame.form.disable_count) return;
             this.style.border = '1px solid grey'
+            got_focus(this);
             };
           nb_btn.onblur = function() {this.style.border = '1px solid transparent'};
+          nb_btn.got_focus = function() {};
+          nb_btn.lost_focus = function() {return true};
 
           nb_btn.onclick = function(e) {
             if (this.frame.form.disable_count) return false;
@@ -722,26 +788,34 @@ function setup_form(args) {
           };
 
         nb_page.end_nb_page = function() {
-//          this.button_row.style.clear = 'left';
-//          this.appendChild(this.button_row);
-          this.first_obj = frame.obj_list[this.first_obj];
+          this.first_obj = frame.obj_list[this.first_obj_pos];
+          if (this.first_obj === undefined)  // use 'Back' button instead
+            this.first_obj = frame.obj_list[this.first_obj_pos-1];
           var last_obj = frame.obj_list.length - 1;
           while (frame.obj_list[last_obj].tabIndex === -1)
             last_obj -= 1;  // look for prev enabled object
           this.last_obj = frame.obj_list[last_obj];
           };
 
-        if (notebook.childNodes.length > 1) {
-          notebook.lastChild.end_nb_page();
-          notebook.lastChild.create_btn(false);
-          nb_page.create_btn(true);
-          nb_page.first_obj += 2;
+        if (notebook.childNodes.length > 2) {
+          var prev_page = notebook.childNodes[notebook.childNodes.length-2];
+          prev_page.end_nb_page();
+          prev_page.create_btn(false, 'Forward to ' + nb_page.label);
+          nb_page.create_btn(true, 'Back to ' + prev_page.label);
+          nb_page.first_obj_pos += 2;
           };
-        notebook.appendChild(nb_page);
+//        notebook.appendChild(nb_page);
         break;
         };
       case 'nb_end': {
-        debug4('here');  // IE8 bug - form_setup_gui too narrow - this fixes it!
+        // obscure IE8 bug [2015-07-05]
+        // if there is a grid, and we add a toolbar, we adjust the size of the grid
+        // IE8 does not recalculate grid.offsetWidth immediately, and by the time
+        //   it gets round to it, the nb_page is hidden, so it does not adjust
+        //   the width of the notebook
+        // for some reason, writing anything to the screen at this point enables
+        //   it to recalculate grid.offsetWidth immediately (!)
+        debug4('here');
         notebook.lastChild.end_nb_page();
 
 //      next bit is dodgy!
@@ -800,6 +874,11 @@ function setup_form(args) {
         for (var j=1, child_length=notebook.childNodes.length; j<child_length; j++) {
           var nb_page = notebook.childNodes[j];
           nb_page.style.height = max_ht + 'px';
+          nb_page.firstChild.style.height = (max_ht - 2) + 'px';
+          nb_page.lastChild.style.height = (max_ht - 2) + 'px';
+          //nb_page.childNodes[0].style[cssFloat] = 'left';
+          //nb_page.childNodes[1].style[cssFloat] = 'left';
+          //nb_page.childNodes[2].style[cssFloat] = 'left';
           };
 
         var no_tabs = notebook.tabs.childNodes.length;
@@ -849,13 +928,12 @@ function setup_form(args) {
         main_grid.create_grid_toolbar(elem[1]);
         var toolbar = main_grid.childNodes[0];
         var grid = main_grid.childNodes[1];
-        var diff = toolbar.offsetWidth - grid.offsetWidth;
-        if (diff > -20)  // initial size of row_count is based on '0/0'
-          diff += 20;  // this allows for extra digits - very arbitrary!
+        var toolbar_width = toolbar.offsetWidth + 20  // allow for extra digits
+        var diff = toolbar_width - grid.offsetWidth;
         if (diff > 0)
           grid.change_size(diff);
-        else
-          toolbar.style.width = (grid.offsetWidth-2) + 'px';
+//        else
+//          toolbar.style.width = (grid.offsetWidth-2) + 'px';
         break;
         };
       case 'grid_frame': {
@@ -888,23 +966,188 @@ function setup_form(args) {
         frame.page = page;
         page.frame = frame;
         form.obj_dict[frame.ref] = frame;
-        frame.frame_amended = false;
-        frame.send_focus_msg = true;  // can be over-ridden in 'start_frame'
+        frame._amended = false;
+        frame.obj_exists = false;
+        frame.err_flag = false;
 
         frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
         frame.ctrl_grid.grid_frame = frame;
         frame.ctrl_grid.active_frame = frame;  // override grid's active_frame
         frame.ctrl_grid.parentNode.style.border = '1px solid transparent';
 
-        frame.set_value_from_server = function(value) {
-          this.frame_amended = value;
-          this.ctrl_grid.row_amended = value;
+        frame.set_amended = function(state) {
+          //debug3('fset2 ' + this.ref + ' ' + state);
+          this._amended = state;
+          //if (state === true)
+          //  if (!this.ctrl_grid.amended())
+          //    this.ctrl_grid.set_amended(true);
+          };
+
+        frame.amended = function() {
+          return this._amended;
+          };
+
+        frame.set_value_from_server = function(args) {
+          // notification of record becoming clean/dirty (true/false)
+//          if (value === true) {
+//            this.obj_exists = true;
+//            this.set_amended(false);
+//            this.ctrl_grid.set_amended(false);
+//            }
+//          else {
+//            this.set_amended(true);
+//            this.ctrl_grid.set_amended(true);
+//            };
+          var clean = args[0], exists = args[1];
+          this.set_amended(!clean);  // if clean, amended=false, if dirty, amended=true
+          this.ctrl_grid.set_amended(!clean);
+          this.obj_exists = exists;
           };
 
         break;
         };
       case 'grid_frame_end': {
         frame.page.end_page();
+        var page = save_pages.pop();
+        var frame = save_frames.pop();
+        var block = save_blocks.pop();
+        var vbox = save_vbox.pop();
+        break;
+        };
+      case 'tree': {
+        var box = document.createElement('div');
+        box.style.marginTop = '10px';
+        if (vbox !== null)
+          vbox.appendChild(box)
+        else {
+          if (block.childNodes.length)
+            box.style.marginLeft = '10px';
+          block.appendChild(box);
+          box.style[cssFloat] = 'left';
+          };
+        box.style.width = elem[1].lng + 'px';
+        box.style.height = elem[1].height + 'px';
+        box.style.border = '1px solid grey';
+        // store box.height for tree.js, so it knows when to overflow
+        box.height = box.offsetHeight;
+
+        var tree = create_tree(box, frame, page, elem[1].toolbar, elem[1].hide_root);
+        tree.ref = elem[1].ref
+        frame.obj_list.push(tree);
+        frame.form.obj_dict[tree.ref] = tree;
+        var tree_data = elem[1].tree_data;
+        for (var j=0, lng=tree_data.length; j<lng; j++) {
+          var arg = tree_data[j];
+          var node_id=arg[0], parent_id=arg[1], text=arg[2], expandable=arg[3];
+          tree.add_node(parent_id, node_id, expandable, text, (j===0));
+          };
+        tree.onselected = function(node) {
+          };
+        tree.onactive = function(node) {
+          var args = [tree.ref, node.node_id];
+          send_request('treeitem_active', args);
+          };
+        tree.write();
+
+        tree.combo = elem[1].combo;
+        if (tree.combo !== null) {
+          var group_name = tree.combo[0];
+          var member_name = tree.combo[1];
+          tree.tree_frames = {};  // store 'group' and 'member' frames
+          };
+
+        break;
+        };
+      case 'tree_frame': {
+        save_pages.push(page);
+        save_frames.push(frame);
+        save_blocks.push(block);
+
+        var page = create_page();
+        page.style.border = '1px solid darkslategrey';
+        page.style.marginTop = '10px';
+        if (vbox !== null)
+          vbox.appendChild(page)
+        else {
+          if (block.childNodes.length)
+            page.style.marginLeft = '10px';
+          block.appendChild(page)
+          page.style[cssFloat] = 'left';
+          };
+
+        save_vbox.push(vbox);
+        vbox = null;
+
+        var frame = {}  // new Object()
+        frame.type = 'tree_frame';
+        frame.obj_list = [];
+        frame.subtypes = {};  //new Object();
+
+        frame.ref = elem[1].ref;
+        frame.form = form;
+        frame.page = page;
+        page.frame = frame;
+        form.obj_dict[frame.ref] = frame;
+        frame._amended = false;
+        frame.obj_exists = false;
+        frame.err_flag = false;
+
+        if (elem[1].combo_type !== null) {
+          frame.combo_type = elem[1].combo_type;
+          tree.tree_frames[elem[1].combo_type] = frame;
+          frame.tree = tree;
+          };
+
+//        frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
+//        frame.ctrl_grid.grid_frame = frame;
+//        frame.ctrl_grid.active_frame = frame;  // override grid's active_frame
+//        frame.ctrl_grid.parentNode.style.border = '1px solid transparent';
+        frame.ctrl_grid = null;
+        tree.tree_frame = frame;
+
+        frame.set_amended = function(state) {
+          //debug3('fset3 ' + this.ref + ' ' + state);
+          this._amended = state;
+          };
+
+        frame.amended = function() {
+          return this._amended;
+          };
+
+        frame.set_value_from_server = function(args) {
+          // notification of record becoming clean/dirty (true/false)
+//          if (value === true) {
+//            this.obj_exists = true;
+//            this.set_amended(false);
+//            }
+//          else {
+//            this.set_amended(true);
+//            };
+          var clean = args[0], exists = args[1];
+          this.set_amended(!clean);  // if clean, amended=false, if dirty, amended=true
+          this.obj_exists = exists;
+          };
+
+        break;
+        };
+      case 'tree_frame_end': {
+        if (frame.combo_type !== undefined) {
+          if (frame.combo_type === 'member') {
+            var max_fw = frame.page.offsetWidth, max_fh = frame.page.offsetHeight;
+            var group_frame = frame.tree.tree_frames['group'];
+            if (group_frame.page.offsetWidth > max_fw)
+              max_fw = group_frame.page.offsetWidth;
+            if (group_frame.page.offsetHeight > max_fh)
+              max_fh = group_frame.page.offsetHeight;
+            frame.page.style.width = max_fw + 'px';
+            frame.page.style.height = max_fh + 'px';
+            group_frame.page.style.width = max_fw + 'px';
+            group_frame.page.style.height = max_fh + 'px';
+            frame.page.style.display = 'none';
+            };
+          };
+        frame.page.end_page();
+
         var page = save_pages.pop();
         var frame = save_frames.pop();
         var block = save_blocks.pop();
@@ -940,7 +1183,7 @@ function setup_form(args) {
             subtype_box.style.display = 'none';
             };
           };
-        subtype[subtype._active_box].style.display = 'inline-block';
+        subtype[subtype._active_box].style.display = 'block';
         subtype_name = null;
         break;
         };
@@ -949,10 +1192,11 @@ function setup_form(args) {
 
   var help_msg = document.createElement('div');
   page.appendChild(help_msg);
+  help_msg.appendChild(document.createTextNode(''));
   help_msg.style.clear = 'left';
   help_msg.style.padding = '10px';
   help_msg.style.height = '18px';
-  form.help_msg = help_msg;
+  form.help_msg = help_msg.firstChild;
 
   frame.page.end_page();
 

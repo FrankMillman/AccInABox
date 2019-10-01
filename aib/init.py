@@ -10,8 +10,6 @@ from collections import OrderedDict as OD
 
 import db.api
 import init.init_db
-import init.init_forms
-import init.init_menus
 
 def get_config():
     print()
@@ -83,14 +81,21 @@ def get_htc_params():
 def setup_db(cfg):
     db.api.config_connection(cfg['DbParams'])
 
-    global db_session  # must be global - retrieved from __main__
-    db_session = db.api.start_db_session(1)
-    with db_session as conn:
-        db_session.transaction_active = True
+    # the following must be global, as they are retrieved from __main__
+    global db_session, user_row_id, sys_admin
+    db_session = db.api.start_db_session()
+    user_row_id = 1
+    sys_admin = True
+    with db_session as db_mem_conn:
+        conn = db_mem_conn.db
         init.init_db.init_database(__main__, conn)
-        init.init_forms.init_forms(__main__, conn)
-        init.init_menus.init_menus(__main__, conn)
 
 if __name__ == '__main__':
     cfg = get_config()
     setup_db(cfg)
+
+    from releases import program_version_info, datamodel_version_info
+    with open('program_version', 'w') as version_file:
+        version_file.write('.'.join(str(_) for _ in program_version_info))
+    with open('datamodel_version', 'w') as version_file:
+        version_file.write('.'.join(str(_) for _ in datamodel_version_info))

@@ -1,0 +1,18 @@
+<form name="setup_grid">
+  <db_objects/>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="grid_obj">
+    <toolbar/>
+    <body>
+      <block/>
+      <grid data_object="grid_obj" growable="true">
+        <toolbar template="Grid_Setup"/>
+        <grid_methods template="Grid"/>
+      </grid>
+    </body>
+    <button_row validate="false"/>
+    <frame_methods template="Grid"/>
+  </frame>
+</form>

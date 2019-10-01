@@ -169,12 +169,21 @@ function debug3(msg) {
   };
 */
 
-str3 = [];  //new Array();
+//str3 = [];  //new Array();
+str3 = new String();
 function debug3(msg) {
-  str3.push(msg);
-  if (str3.length > 32)
-    str3.shift();
-  document.getElementById('debug3').innerHTML = str3.join('<br>');
+//  str3.push(msg);
+//  if (str3.length > 32)
+//    str3.shift();
+//  document.getElementById('debug3').innerHTML = str3.join('<br>');
+//  if (str3.length) str3 += '<br>';
+//  str3 += msg;
+  if (str3.length) str3 = '<br>' + str3;
+  str3 = msg + str3;
+  document.getElementById('debug3').innerHTML = str3;
+  //var dbg = document.getElementById('debug3')
+  //dbg.innerHTML = str3;
+  //dbg.scrollTop = dbg.scrollHeight;  // force scroll to bottom
   };
 
 // debug4 is to handle Opera bug - remove when fixed
@@ -292,7 +301,7 @@ function exec_callbacks() {
 //    debug3('CALLBACK ' + callbacks[0][0]);
   while (callbacks.length) {
     callback = callbacks.pop();
-    var ctx = callback.shift();  // shift removes first element
+    var ctx = callback.shift();  // shift removes and returns first element
     var func = callback.shift();  // callback now contains arguments
     func.apply(ctx, callback);
     };
@@ -308,24 +317,20 @@ function exec_callbacks() {
 requests = [];
 function send_request(event_id, args) {
   if (dbg)
-    debug3('-> ' + requests.length + ' ' + event_id + ' ' + JSON.stringify(args));
+    debug3('<- ' + requests.length + ' ' + event_id + ' ' + JSON.stringify(args));
+  if (!requests.length)
+    setTimeout(function() {send_requests()}, 0);
   requests.push([event_id, args]);
-  setTimeout(function() {send_requests()}, 0);
   };
 
 function send_requests() {
-  if (requests.length) {
-    // if > 1 request, this is called > 1 times
-    // but all messages are sent during the first call
-    // so subsequent calls must do nothing
-    message = [];
-    for (var i=0; i<requests.length; i++) {
-      request = requests[i];
-      message.push([request[0], request[1]]);
-      };
-    send_message('send_req', message);
-    requests = [];
+  message = [];
+  for (var i=0; i<requests.length; i++) {
+    request = requests[i];
+    message.push([request[0], request[1]]);
     };
+  send_message('send_req', message);
+  requests = [];
   };
 
 function send_message(url, message) {
@@ -336,10 +341,12 @@ function send_message(url, message) {
       process_response(xmlhttp.responseText);
     };
 
-  var rnd = Math.random();
-  var msg = url + '?' + JSON.stringify([window_id, message, rnd]);
-  xmlhttp.open('GET', msg, true);
-  xmlhttp.send(null);
+  //var rnd = Math.random();
+  //var msg = url + '?' + JSON.stringify([session_id, message, rnd]);
+  //xmlhttp.open('GET', msg, true);
+  //xmlhttp.send(null);
+  xmlhttp.open('POST', url, true);
+  xmlhttp.send(JSON.stringify([session_id, message]));
   };
 
 function process_response(response_text) {
@@ -356,9 +363,9 @@ function process_response(response_text) {
         if (
             ['setup_form', 'start_menu', 'start_grid', 'recv_rows', 'redisplay']
             .indexOf(msg_type) !== -1)
-          debug3('<- ' + i + ' ' + msg_type)
+          debug3('-> ' + i + ' ' + msg_type)
         else
-          debug3('<- ' + i + ' ' + msg_type + ' ' + JSON.stringify(msg_args));
+          debug3('-> ' + i + ' ' + msg_type + ' ' + JSON.stringify(msg_args));
       switch(msg_type) {
         case 'ask_question': ask_question(msg_args); callback_blocked = true; break;
         case 'close_program': close_program(msg_args); break;
@@ -372,12 +379,16 @@ function process_response(response_text) {
         case 'start_frame': start_frame(msg_args); break;
         case 'start_menu': start_menu(msg_args); break;
         case 'start_grid': start_grid(msg_args); break;
+        case 'recv_dflt': recv_dflt(msg_args); break;
         case 'recv_prev': recv_prev(msg_args); break;
         case 'recv_rows': recv_rows(msg_args); break;
         case 'cell_set_focus': cell_set_focus(msg_args); break;
         case 'move_row': move_row(msg_args); break;
         case 'insert_row': insert_row(msg_args); break;
         case 'delete_row': delete_row(msg_args); break;
+        case 'insert_node': insert_node(msg_args); break;
+        case 'update_node': update_node(msg_args); break;
+        case 'delete_node': delete_node(msg_args); break;
         case 'set_subtype': set_subtype(msg_args); break;
         case 'exception': exception(msg_args); break;
         default: debug3('UNKNOWN ' + msg_type + ': ' + msg_args);

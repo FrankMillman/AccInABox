@@ -1,0 +1,36 @@
+<form name="setup_arcust">
+  <db_objects>
+    <db_obj name="cust" table_name="ar_customers" formview_obj="true"/>
+    <db_obj name="party" table_name="org_parties" fkey="cust.cust_row_id"/>
+    <db_obj name="currency" table_name="adm_currencies" fkey="cust.curr_id"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="cust">
+    <toolbar template="Setup_Form"/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Party Id:"/>
+      <col/>
+      <input fld="cust.cust_id" lng="60"/>
+      <display fld="party.display_name" lng="160"/>
+      <row/>
+      <col/>
+      <label value="Currency:"/>
+      <col/>
+      <input fld="cust.currency" lng="80"/>
+      <display fld="currency.descr" lng="160"/>
+      <row/>
+      <col/>
+      <label value="Credit limit:"/>
+      <col/>
+      <input fld="cust.credit_limit" lng="120"/>
+    </body>
+    <button_row validate="true" template="Setup_Form"/>
+    <frame_methods template="Setup_Form"/>
+  </frame>
+</form>

@@ -14,26 +14,28 @@ AibText.prototype.commonfunc = function() {will override AibCtrl commonfunc};
 //  AibCtrl       //
 ////////////////////
 function AibCtrl() {};
-AibCtrl.prototype.onfocus = function(ctrl) {
+AibCtrl.prototype.got_focus = function(ctrl) {
   var inp = ctrl.childNodes[0];
   var dsp = ctrl.childNodes[1];
-  if (ctrl.disable_count) {
+  if (!ctrl.amendable()) {
 
 //    if (ctrl.tabIndex === -1) {
     if (dsp.style.display === 'none') {
+      // can happen on navigating a form view -
+      //   switching from blank row to existing row - key field becomes not amendable
       inp.style.display = 'none';
       dsp.style.display = 'block';
       ctrl.tabIndex = 0;
       ctrl.focus();
       };
-    dsp.style.background = '#CCFFCC';
+    dsp.style.background = '#CCFFCC';  // light green
     if (dsp.txt !== undefined)
-      dsp.txt.style.background = '#B4EEB4';
+      dsp.txt.style.background = '#B4EEB4';  // slightly darker green
 
-    if (ctrl.frame.form.current_focus === ctrl)
-      ctrl.aib_obj.after_got_focus(ctrl)
-    else
-      got_focus(ctrl);
+//    if (ctrl.frame.form.current_focus === ctrl)
+//      ctrl.aib_obj.after_got_focus(ctrl)
+//    else
+//      got_focus(ctrl);
     return;
     };
 
@@ -44,13 +46,16 @@ AibCtrl.prototype.onfocus = function(ctrl) {
     ctrl.tabIndex = -1;
     };
 
-  if (ctrl.frame.form.focus_from_server)
+//  if (ctrl.frame.form.focus_from_server)
+  if (ctrl.frame.err_flag)
     inp.className = 'error_background'
   else
     inp.className = 'focus_background';
 
+  // next line was removed in 0.1.7, replaced in 0.1.9
+  // latest version of Chrome requires it [2015-07-30]
   inp.focus();
-  got_focus(ctrl);
+  //got_focus(ctrl);
   };
 AibCtrl.prototype.set_cell_value_from_server = function(grid, row, col, value) {
   var subset_row = row - grid.first_subset_row;
@@ -61,13 +66,13 @@ AibCtrl.prototype.set_cell_value_from_server = function(grid, row, col, value) {
     cell.aib_obj.set_cell_value_lost_focus(cell, value);
     };
   };
-AibCtrl.prototype.set_disabled = function(ctrl, state) {
-  var dsp = ctrl.childNodes[1];
-  if (state)  // set to disabled
-    dsp.style.color = 'grey';
-  else  // set to enabled
-    dsp.style.color = null;  //'navy';
-  };
+//AibCtrl.prototype.set_readonly = function(ctrl, state) {
+//  var dsp = ctrl.childNodes[1];
+//  if (state)  // set to readonly
+//    dsp.style.color = 'grey';
+//  else  // set to enabled
+//    dsp.style.color = '';  // reset to CSS value
+//  };
 
 ////////////////////
 //  AibText       //
@@ -77,7 +82,11 @@ AibText.prototype = new AibCtrl();
 AibText.prototype.after_got_focus = function(text) {
   var inp = text.childNodes[0];
   var dsp = text.childNodes[1];
-  if (text.disable_count) {
+  if (!text.amendable()) {
+    if (text.password !== '')
+      dsp.text.data = repeat('x', text.current_value.length);
+    else
+      dsp.text.data = text.current_value;
     dsp.style.border = '1px solid black';
     return;
     };
@@ -89,8 +98,18 @@ AibText.prototype.after_got_focus = function(text) {
   else
     setInsertionPoint(inp, 0);  //inp.value.length);
   };
+AibText.prototype.set_dflt_val = function(text, value) {
+  var inp = text.childNodes[0];
+  inp.value = value;
+  if (text.multi_line === true) {
+    inp.scrollTop = 0;
+    setInsertionPoint(inp, 0);
+    }
+  else
+    setInsertionPoint(inp, 0);  //inp.value.length);
+  };
 AibText.prototype.before_lost_focus = function(text) {
-  if (text.disable_count)
+  if (!text.amendable())
     return true;
   var inp = text.childNodes[0];
   if (text.multi_line === true)
@@ -104,13 +123,13 @@ AibText.prototype.before_lost_focus = function(text) {
 AibText.prototype.after_lost_focus = function(text) {
   var inp = text.childNodes[0];
   var dsp = text.childNodes[1];
-  if (text.disable_count) {
+//  if (text.readonly) {
     dsp.style.border = '1px solid darkgrey';
     dsp.style.background = 'transparent';
     if (dsp.txt !== undefined)
       dsp.txt.style.background = '#f5f5f5';  // very light grey
-    return;
-    };
+//    return;
+//    };
   if (text.password !== '')
     dsp.text.data = repeat('x', text.current_value.length);
   else
@@ -143,7 +162,7 @@ AibText.prototype.reset_value = function(text) {
   inp.focus();
   };
 AibText.prototype.get_value_for_server = function(text) {
-  if (text.current_value === text.form_value)
+  if ((text.current_value === text.form_value) && (text.password === ''))
     return null;  // no change
   var value = text.current_value;
   if (text.password !== '') {
@@ -179,6 +198,8 @@ AibText.prototype.set_prev_from_server = function(text, value) {
   };
 AibText.prototype.cell_data_changed = function(cell) {
   var grid = cell.grid;
+  if (!grid.subset_data.length)
+    return false;
   var subset_row = grid.first_grid_row - grid.first_subset_row + cell.grid_row;
   return cell.current_value !== grid.subset_data[subset_row][cell.grid_col];
   };
@@ -200,6 +221,9 @@ AibText.prototype.set_cell_value_got_focus = function(cell) {
 //  if (!(/\S/.test(value)))  // if cannot find a non-whitespace character
 //    value = '\xa0';  // replace with &nbsp
 //  cell.text_node.data = value;
+  };
+AibText.prototype.set_cell_dflt_val = function(cell, value) {
+  cell.text_node.data = value;
   };
 AibText.prototype.set_cell_value_lost_focus = function(cell, value) {
   cell.current_value = value;  // save for 'got_focus' and 'edit_cell'
@@ -251,15 +275,21 @@ AibNum.prototype = new AibCtrl();
 AibNum.prototype.after_got_focus = function(num) {
   var inp = num.childNodes[0];
   var dsp = num.childNodes[1];
-  if (num.disable_count) {
+  if (!num.amendable()) {
+    dsp.text.data = this.num_to_string(num, num.current_value);
     dsp.style.border = '1px solid black';
     return;
     };
   inp.value = num.current_value;  // reset from display format to input format
   setInsertionPoint(inp, 0, inp.value.length);
   };
+AibNum.prototype.set_dflt_val = function(num, value) {
+  var inp = num.childNodes[0];
+  inp.value = value;
+  setInsertionPoint(inp, 0, inp.value.length);
+  };
 AibNum.prototype.before_lost_focus = function(num) {
-  if (num.disable_count)
+  if (!num.amendable())
     return true;
   var inp = num.childNodes[0];
   num.current_value = inp.value;
@@ -409,6 +439,9 @@ AibNum.prototype.set_cell_value_got_focus = function(cell) {
 //    value = '\xa0';  // replace with &nbsp
   cell.text_node.data = value;
   };
+AibNum.prototype.set_cell_dflt_val = function(cell, value) {
+  cell.text_node.data = value;
+  };
 AibNum.prototype.set_cell_value_lost_focus = function(cell, value) {
   cell.current_value = value;  // save for 'got_focus' and 'edit_cell'
   if (cell.input.reverse)
@@ -455,7 +488,8 @@ AibDate.prototype = new AibCtrl();
 AibDate.prototype.after_got_focus = function(date) {
   var inp = date.childNodes[0];
   var dsp = date.childNodes[1];
-  if (date.disable_count) {
+  if (!date.amendable()) {
+    dsp.text.data = this.date_to_string(date, date.current_value, date.display_format);
     dsp.style.border = '1px solid black';
     return;
     };
@@ -468,15 +502,22 @@ AibDate.prototype.after_got_focus = function(date) {
   else  // returning from failed validation - leave string untouched
     date.pos = 0;
   };
+AibDate.prototype.set_dflt_val = function(date, value) {
+  var inp = date.childNodes[0];
+  inp.value = this.date_to_string(date, value, date.input_format);
+  setInsertionPoint(inp, 0, inp.value.length);
+  };
 AibDate.prototype.before_lost_focus = function(date) {
-  if (date.disable_count)
+  if (!date.amendable())
     return true;
   var inp = date.childNodes[0];
   date.valid = true;
   var errmsg = this.validate_string(date);  // sets up current_value if ok
   if (errmsg !== '') {
     date.valid = false;
+    date.focus();
     setTimeout(function() {show_errmsg('Date', errmsg)}, 0);
+    //show_errmsg('Date', errmsg);
     return false;
     };
   return true;
@@ -496,9 +537,12 @@ AibDate.prototype.after_lost_focus = function(date) {
   date.tabIndex = 0;
   };
 AibDate.prototype.validate_string = function(date) {
-  var inp = date.childNodes[0];
+  if (date.childNodes.length)  // 'date' is a gui_obj
+    var inp = date.childNodes[0];
+  else  // 'date' is a grid_obj
+    var inp = date;
   if (inp.value === date.blank) {
-    date.current_value = null;
+    date.current_value = '';
     return '';  // no error
     };
   var today = new Date();
@@ -542,16 +586,20 @@ AibDate.prototype.validate_string = function(date) {
   if (new_date.getFullYear() !== +year) {
     return msg = '"' + year + '" - Invalid year!';
     };
-  date.current_value = new_date;
+  //date.current_value = new_date;
+  date.current_value = new_date.getFullYear() + '-' +
+    zfill(new_date.getMonth()+1, 2) + '-' + zfill(new_date.getDate(), 2);
   return '';  // no error
   };
-AibDate.prototype.date_to_string = function(date, date_obj, format) {
+AibDate.prototype.date_to_string = function(date, value, format) {
   var output = '';
-  if (date_obj === null)
+  if (value === '')
     if (format === date.display_format)
       return '';
     else
       return date.blank;
+  var dt = value.split('-');
+  var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
   for (var i=0, l=format.length; i<l; i++) {
     if (format[i] === '%') {
       switch(format[i+1]) {
@@ -603,7 +651,7 @@ AibDate.prototype.test_literal = function(date, pos) {
   return false;
   };
 AibDate.prototype.show_cal = function(date) {
-  if (date.disable_count)
+  if (!date.amendable())
     return;
   show_cal(date, date.current_value, this.after_cal);
   date.selected = false;
@@ -615,37 +663,52 @@ AibDate.prototype.after_cal = function(date, new_date) {
   setTimeout(function() {date.focus()}, 0);
   };
 AibDate.prototype.handle_bs = function(date) {
-  var inp = date.childNodes[0];
+  if (date.childNodes.length)  // 'date' is a gui_obj
+    var inp = date.childNodes[0];
+  else  // 'date' is a grid_obj
+    var inp = date;
   if (date.pos > 0) {
-    date.pos -= 1;
-    while (this.test_literal(date, date.pos))
+
+    while (this.test_literal(date, date.pos-1))
       date.pos -= 1;
+    date.pos -= 1;
     inp.value =
       inp.value.substring(0, date.pos) + ' ' +
       inp.value.substring(date.pos+1);
+
+//    date.pos -= 1;
+//    while (this.test_literal(date, date.pos))
+//      date.pos -= 1;
+//    inp.value =
+//      inp.value.substring(0, date.pos) + ' ' +
+//      inp.value.substring(date.pos+1);
     };
   date.selected = false;
   };
 AibDate.prototype.handle_del = function(date) {
-  var inp = date.childNodes[0];
-  inp.value =
-    inp.value.substring(0, date.pos) + ' ' +
-    inp.value.substring(date.pos+1);
+  if (date.childNodes.length)  // 'date' is a gui_obj
+    var inp = date.childNodes[0];
+  else  // 'date' is a grid_obj
+    var inp = date;
+  if (!this.test_literal(date, date.pos))
+    inp.value =
+      inp.value.substring(0, date.pos) + ' ' +
+      inp.value.substring(date.pos+1);
   date.selected = false;
   };
 AibDate.prototype.handle_left = function(date) {
   if (date.pos > 0) {
     date.pos -= 1;
-    while (this.test_literal(date, date.pos))
-      date.pos -= 1;
+//    while (this.test_literal(date, date.pos-1))
+//      date.pos -= 1;
     };
   date.selected = false;
   };
 AibDate.prototype.handle_right = function(date) {
   if (date.pos < date.blank.length) {
     date.pos += 1;
-    while (this.test_literal(date, date.pos))
-      date.pos += 1;
+//    while (this.test_literal(date, date.pos-1))
+//      date.pos += 1;
     };
   date.selected = false;
   };
@@ -669,7 +732,10 @@ AibDate.prototype.handle_end = function(date) {
 //    };
 //  };
 AibDate.prototype.handle_keyCode = function(date, keyCode) {
-  var inp = date.childNodes[0];
+  if (date.childNodes.length)  // 'date' is a gui_obj
+    var inp = date.childNodes[0];
+  else  // 'date' is a grid_obj
+    var inp = date;
   if (date.selected) {
     inp.value = date.blank;
     date.pos = 0;
@@ -684,7 +750,10 @@ AibDate.prototype.handle_keyCode = function(date, keyCode) {
     date.pos += 1;
   };
 AibDate.prototype.onkey = function(date, e) {
-  var inp = date.childNodes[0];
+  if (date.childNodes.length)  // 'date' is a gui_obj
+    var inp = date.childNodes[0];
+  else  // 'date' is a grid_obj
+    var inp = date;
   // allow 'space' (32) for use as 'date expander'
   if (e.keyCode < 33 && e.keyCode !== 8)
     return true;
@@ -739,29 +808,30 @@ AibDate.prototype.get_value_for_server = function(date) {
   if (date.current_value === date.form_value)
     return null;  // no change
   var value = date.current_value;
-  if (value === null)
-    return ''
-  else
-    return value.getFullYear() + '-' + (zfill(value.getMonth()+1, 2))
-      + '-' + zfill(value.getDate(), 2);
+//  if (value === null)
+//    return ''
+//  else
+//    return value.getFullYear() + '-' + (zfill(value.getMonth()+1, 2))
+//      + '-' + zfill(value.getDate(), 2);
+  return value;
   };
 AibDate.prototype.set_value_from_server = function(date, value) {
   var inp = date.childNodes[0];
   var dsp = date.childNodes[1];
   if (value === '') {
-    date.current_value = null;
+    date.current_value = '';
     inp.value = '';
     dsp.text.data = '';
     }
   else {
-    var dt = value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    if (date_obj !== date.current_value) {
-      date.current_value = date_obj;
+//    var dt = value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+    if (value !== date.current_value) {
+      date.current_value = value;
       if (inp.style.display === 'none')
-        dsp.text.data = this.date_to_string(date, date_obj, date.display_format);
+        dsp.text.data = this.date_to_string(date, value, date.display_format);
       else
-        inp.value = this.date_to_string(date, date_obj, date.input_format);
+        inp.value = this.date_to_string(date, value, date.input_format);
       };
     };
   date.form_value = date.current_value;
@@ -774,13 +844,13 @@ AibDate.prototype.set_prev_from_server = function(date, value) {
     dsp.text.data = '';
     }
   else {
-    var dt = value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    if (date_obj !== date.current_value) {
+//    var dt = value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+    if (value !== date.current_value) {
       if (inp.style.display === 'none')
-        dsp.text.data = this.date_to_string(date, date_obj, date.display_format);
+        dsp.text.data = this.date_to_string(date, value, date.display_format);
       else
-        inp.value = this.date_to_string(date, date_obj, date.input_format);
+        inp.value = this.date_to_string(date, value, date.input_format);
       };
     };
   };
@@ -797,17 +867,18 @@ AibDate.prototype.reset_cell_value = function(cell) {
 //  if (!(/\S/.test(value)))  // if cannot find a non-whitespace character
 //    value = '\xa0';  // replace with &nbsp
 
-  // *** value format is 'yyyy-mm-dd ***
-  if (value === '') {
-    var date_obj = null;
-    }
-  else {
-    var dt = value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    };
+//  // *** value format is 'yyyy-mm-dd ***
+//  if (value === '') {
+//    var date_obj = null;
+//    }
+//  else {
+//    var dt = value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+//    };
+//  cell.current_value = date_obj;
 
   var date = cell.input;
-  value = this.date_to_string(date, date_obj, date.display_format);
+  value = this.date_to_string(date, value, date.display_format);
   cell.text_node.data = value;
   };
 AibDate.prototype.before_cell_lost_focus = function(date) {
@@ -815,42 +886,52 @@ AibDate.prototype.before_cell_lost_focus = function(date) {
   var errmsg = this.validate_string(date);  // sets up current_value if ok
   if (errmsg !== '') {
     date.valid = false;
+
+    var cell = date.cell;
+    var grid = cell.grid;
+    grid.focus_from_server = true;
+    grid.err_flag = true;
+    grid.cell_set_focus(cell.grid_row, cell.grid_col);
+
     setTimeout(function() {show_errmsg('Date', errmsg)}, 0);
     return false;
     };
   return true;
   };
 AibDate.prototype.set_cell_value_got_focus = function(cell) {
-  var value = cell.current_value;
+//  var date_obj = cell.current_value;
   // *** value format is 'yyyy-mm-dd ***
-  if (value === '') {
-    var date_obj = null;
-    }
-  else {
-    var dt = value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    };
+//  if (value === '') {
+//    var date_obj = null;
+//    }
+//  else {
+//    var dt = value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+//    };
 
   var date = cell.input;
-  value = this.date_to_string(date, date_obj, date.input_format);
+  value = this.date_to_string(date, cell.current_value, date.input_format);
 //  if (!(/\S/.test(value)))  // if cannot find a non-whitespace character
 //    value = '\xa0';  // replace with &nbsp
   cell.text_node.data = value;
   };
+AibDate.prototype.set_cell_dflt_val = function(cell, value) {
+  cell.text_node.data = this.date_to_string(date, value, date.input_format);
+  };
 AibDate.prototype.set_cell_value_lost_focus = function(cell, value) {
   cell.current_value = value;  // save for 'got_focus' and 'edit_cell'
 
-  // *** value format is 'yyyy-mm-dd ***
-  if (value === '') {
-    var date_obj = null;
-    }
-  else {
-    var dt = value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    };
+//  // *** value format is 'yyyy-mm-dd ***
+//  if (value === '') {
+//    var date_obj = null;
+//    }
+//  else {
+//    var dt = value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+//    };
 
   var date = cell.input;
-  value = this.date_to_string(date, date_obj, date.display_format);
+  value = this.date_to_string(date, value, date.display_format);
 //  if (!(/\S/.test(value)))  // if cannot find a non-whitespace character
 //    value = '\xa0';  // replace with &nbsp
   cell.text_node.data = value;
@@ -862,7 +943,8 @@ AibDate.prototype.get_cell_value_for_server = function(cell) {
 //  if (value === null)
 //    return ''
 //  else
-//    return value.getFullYear() + '-' + (+value.getMonth()+1) + '-' + value.getDate();
+//    return value.getFullYear() + '-' + (zfill(value.getMonth()+1, 2))
+//      + '-' + zfill(value.getDate(), 2);
   return value;
   };
 AibDate.prototype.start_edit = function(input, current_value, keyCode) {  // called from grid
@@ -889,47 +971,45 @@ AibDate.prototype.start_edit = function(input, current_value, keyCode) {  // cal
     };
   };
 AibDate.prototype.convert_prev_cell_value = function(cell, prev_value) {
-  if (prev_value === '') {
-    var date_obj = null;
-    }
-  else {
-    var dt = prev_value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    };
+//  if (prev_value === '') {
+//    var date_obj = null;
+//    }
+//  else {
+//    var dt = prev_value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+//    };
   var date = cell.input;
-  prev_value = this.date_to_string(date, date_obj, date.input_format);
+  prev_value = this.date_to_string(date, prev_value, date.input_format);
 //  if (!(/\S/.test(prev_value)))  // if cannot find a non-whitespace character
 //    prev_value = '\xa0';  // replace with &nbsp
   return prev_value;
   };
 AibDate.prototype.grid_show_cal = function(date) {
-  var value = date.cell.current_value;
+  var date_obj = date.cell.current_value;
   // *** value format is 'yyyy-mm-dd ***
-  if (value === '') {
-    var date_obj = null;
-    }
-  else {
-    var dt = value.split('-');
-    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
-    };
+//  if (value === '') {
+//    var date_obj = null;
+//    }
+//  else {
+//    var dt = value.split('-');
+//    var date_obj = new Date(dt[0], dt[1]-1, dt[2]);
+//    };
   show_cal(date, date_obj, this.grid_after_cal);
   date.selected = false;
   };
 AibDate.prototype.grid_after_cal = function(date, new_date) {
   // to investigate -
-  // 1. is row_amended always true? what if no change?
+  // 1. is grid_amended always true? what if no change?
   // 2. alternatively, could call start_edit
   //    slightly more consistent with (e.g.) backslash, and allows esc to reset
   var cell = date.cell;
   if (new_date != null) {  // else keep old date
-    cell.current_value =
-      new_date.getFullYear() + '-' + zfill((new_date.getMonth()+1), 2)
-        + '-' + zfill(new_date.getDate(), 2);
-    cell.grid.row_amended = true;
-    if (cell.grid.grid_frame !== null)
-      cell.grid.grid_frame.frame_amended = true;
+    cell.current_value = new_date;
+//      new_date.getFullYear() + '-' + zfill((new_date.getMonth()+1), 2)
+//        + '-' + zfill(new_date.getDate(), 2);
+    cell.grid.set_amended(true);
     };
-  this.set_cell_value_got_focus(cell);
+  date.aib_obj.set_cell_value_got_focus(cell);
   setTimeout(function() {cell.grid.focus()}, 0);
   };
 
@@ -938,20 +1018,29 @@ AibDate.prototype.grid_after_cal = function(date, new_date) {
 ////////////////////
 function AibBool() {};
 AibBool.prototype = new AibCtrl();
-AibBool.prototype.onfocus = function(bool) {
-  bool.has_focus = true;
-  if (bool.mouse_down)
-    return;  // will set focus from onclick()
-  got_focus(bool);
+AibBool.prototype.got_focus = function(bool) {
+//  bool.has_focus = true;
+//  if (bool.mouse_down)
+//    return;  // will set focus from onclick()
+//  got_focus(bool);
   };
 AibBool.prototype.after_got_focus = function(bool) {
   bool.style.border = '1px solid black';
-  if (bool.frame.form.focus_from_server)
+//  if (bool.frame.form.focus_from_server)
+  if (bool.frame.err_flag)
     bool.className = 'error_background'
-  else if (bool.disable_count)
+  else if (!bool.amendable())
     bool.className = 'readonly_background';
   else
     bool.className = 'focus_background';
+  };
+AibBool.prototype.set_dflt_val = function(bool, value) {
+  // don't think this will work
+  // if user tabs off, how do we know value has changed?
+  if (value === '1')
+    this.draw_chk(bool)
+  else
+    this.draw_unchk(bool);
   };
 AibBool.prototype.before_lost_focus = function(bool) {
   return true;
@@ -961,23 +1050,23 @@ AibBool.prototype.after_lost_focus = function(bool) {
   bool.style.border = '1px solid darkgrey';
   bool.has_focus = false;
   };
-AibBool.prototype.set_disabled = function(bool, state) {
-  if (state) {
-    bool.style.color = 'grey';
-//    bool.style.background = '#f0f0f0';
-    }
-  else {
-    bool.style.color = null;  //'navy';
-//    bool.style.background = '';
-    // reset so that it gets background from className
-    // works with Chrome, not with IE8
-//    bool.className = 'blur_background';
-    };
-  };
+//AibBool.prototype.set_readonly = function(bool, state) {
+//  if (state) {
+//    bool.style.color = 'grey';
+////    bool.style.background = '#f0f0f0';
+//    }
+//  else {
+//    bool.style.color = null;  //'navy';
+////    bool.style.background = '';
+//    // reset so that it gets background from className
+//    // works with Chrome, not with IE8
+////    bool.className = 'blur_background';
+//    };
+//  };
 /*
 AibBool.prototype.onclick = function(bool) {
   if (bool.frame.form.disable_count) return false;
-  if (bool.disable_count) return false;
+  if (!bool.amendable()) return false;
 //  if (bool.frame.form.current_focus !== bool) {
 //    if (bool.has_focus)
 //      got_focus(bool);  // call lost_focus(), got_focus()
@@ -985,7 +1074,7 @@ AibBool.prototype.onclick = function(bool) {
 //      bool.focus();  // set focus on bool first
 //    };
 //  bool.focus();  // in case it does not have focus - if it does, nothing will happen
-//  if (bool.frame.frame_amended && !bool.frame.form.focus_from_server) {
+//  if (bool.frame.amended() && !bool.frame.form.focus_from_server) {
 //    var args = [bool.ref];
 //    send_request('got_focus', args);
 //    };
@@ -997,7 +1086,7 @@ AibBool.prototype.onclick = function(bool) {
   };
 */
 AibBool.prototype.ondownkey = function(bool, e) {
-  if (bool.disable_count)
+  if (!bool.amendable())
     return;
   if (e.keyCode === 32)
     this.chkbox_change(bool);
@@ -1023,7 +1112,7 @@ AibBool.prototype.chkbox_change = function(bool) {
 
   var args = [bool.ref];
   send_request('cb_checked', args);
-  bool.frame.frame_amended = true;
+  //bool.frame.set_amended(true);
   bool.current_value = bool.value;
   };
 //AibBool.prototype.data_changed = function(bool, value) {
@@ -1075,10 +1164,13 @@ AibBool.prototype.set_value_from_server = function(bool, value) {
   bool.form_value = value;
   };
 AibBool.prototype.set_prev_from_server = function(bool, value) {
-  if (value === '1')
-    this.draw_chk(bool)
-  else
-    this.draw_unchk(bool);
+  if (value !== bool.current_value) {
+    bool.current_value = value;
+    if (value === '1')
+      this.draw_chk(bool)
+    else
+      this.draw_unchk(bool);
+    };
   };
 AibBool.prototype.cell_data_changed = function(cell) {
   var grid = cell.grid;
@@ -1125,9 +1217,7 @@ AibBool.prototype.grid_chkbox_change = function(cell, row) {
   var grid = cell.grid;
   var args = [cell.input.ref, row];
   send_request('cell_cb_checked', args);
-  grid.row_amended = true;
-  if (grid.grid_frame !== null)
-    grid.grid_frame.frame_amended = true;
+  grid.set_amended(true);
   };
 
 if (window.SVGSVGElement === undefined) {  // no svg - use vml (IE8)
@@ -1175,7 +1265,7 @@ AibChoice.prototype = new AibCtrl();
 AibChoice.prototype.after_got_focus = function(choice) {
   var inp = choice.childNodes[0];
   var dsp = choice.childNodes[1];
-  if (choice.disable_count) {
+  if (!choice.amendable()) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -1242,7 +1332,7 @@ AibChoice.prototype.after_selection = function(choice, option_selected) {
 //      var subtype_id = choice.current_value;
 //      var subtype = choice.frame.subtypes[subtype_name];
 //      subtype[subtype._active_box].style.display = 'none';
-//      subtype[subtype_id].style.display = 'inline-block';
+//      subtype[subtype_id].style.display = 'block';
 //      subtype._active_box = subtype_id;
 //      };
 
@@ -1282,12 +1372,10 @@ AibChoice.prototype.create_dropdown = function(choice) {
     parent.aib_obj.onselection(parent, parent.dropdown.clicked)
     };
 
-  if (document.attachEvent) {
+  if (document.attachEvent)
     document.attachEvent('onclick', dropdown.onclick);
-    }
-  else if (document.addEventListener) {
+  else if (document.addEventListener)
     document.addEventListener('click', dropdown.onclick, false);
-    };
 
   for (var i=0, l=choice.values.length; i<l; i++) {
     var row = document.createElement('div');
@@ -1362,16 +1450,10 @@ AibChoice.prototype.create_dropdown = function(choice) {
     dropdown.onkeydown = dropdown.onkey;
 
   setTimeout(function() {dropdown.focus()}, 0);
-  return dropdown;
-  };
-AibChoice.prototype.handle_escape = function(choice) {
-  pos = choice.data.indexOf(choice.form_value);
-  if (pos === -1)
-    pos = 0;
-  this.after_selection(choice, pos);
+  //return dropdown;
   };
 AibChoice.prototype.onkey = function(choice, e) {
-  if (choice.disable_count)
+  if (!choice.amendable())
     return;
   if (e.keyCode === 32) {  // space
     choice.on_selection = this.after_selection;
@@ -1385,13 +1467,13 @@ AibChoice.prototype.onkey = function(choice, e) {
   else if ((e.keyCode === 37) || (e.keyCode === 38)) {  // left|up
     if (choice.ndx > 0) {
       this.after_selection(choice, choice.ndx-1)
-      setTimeout(function() {choice.focus()}, 0);
+      //setTimeout(function() {choice.focus()}, 0);
       };
     }
   else if ((e.keyCode === 39) || (e.keyCode === 40)) {  // right|down
     if (choice.ndx < (choice.values.length-1)) {
       this.after_selection(choice, choice.ndx+1);
-      setTimeout(function() {choice.focus()}, 0);
+      //setTimeout(function() {choice.focus()}, 0);
       };
     };
   };
@@ -1411,27 +1493,19 @@ AibChoice.prototype.data_changed = function(choice) {
     return (choice.current_value !== choice.form_value);
   };
 AibChoice.prototype.reset_value = function(choice) {
-  debug3('does this ever get called?');
-//  value = choice.form_value;
-//  pos = choice.data.indexOf(value);
-//  if (pos !== choice.ndx) {
-//    choice.ndx = pos;
-//    if (pos !== -1) {
-//      choice.current_value = choice.data[pos];
-//      choice.innerHTML = choice.values[pos]
-//      }
-//    else {
-//      choice.current_value = '';
-//      choice.innerHTML = '';
-//      };
-//    };
-//  //if (value !== -1)
-//  //  choice.innerHTML = choice.values[value]
-//  //else
-//  //  choice.innerHTML = '';
-//  choice.current_value = value;
-//  choice.ndx = pos;
-//  choice.focus();
+  var inp = choice.childNodes[0];
+  var dsp = choice.childNodes[1];
+  value = choice.form_value;
+  pos = choice.data.indexOf(value);
+  if (pos !== choice.ndx) {
+    choice.ndx = pos;
+    var dsp_value = choice.values[choice.ndx];
+    if (inp.style.display === 'none')
+      dsp.text.data = dsp_value;
+    else
+      inp.innerHTML = html_esc(dsp_value);
+    choice.current_value = value;
+    };
   };
 AibChoice.prototype.get_value_for_server = function(choice) {
   //return choice.data[choice.current_value];
@@ -1445,12 +1519,12 @@ AibChoice.prototype.set_value_from_server = function(choice, value) {
 
   choice.current_value = value;
   choice.ndx = choice.data.indexOf(value);
-  value = choice.values[choice.ndx]
+  var dsp_value = choice.values[choice.ndx];
 
   if (inp.style.display === 'none')
-    dsp.text.data = value;
+    dsp.text.data = dsp_value;
   else
-    inp.innerHTML = html_esc(value);
+    inp.innerHTML = html_esc(dsp_value);
 
 /*
   // none of this is necessary, provided that we ensure that
@@ -1479,6 +1553,8 @@ AibChoice.prototype.set_value_from_server = function(choice, value) {
 */
 
   choice.form_value = value;
+  choice.callback(choice.current_value);
+
   };
 AibChoice.prototype.cell_data_changed = function(cell) {
   var grid = cell.grid;
@@ -1501,10 +1577,11 @@ AibChoice.prototype.set_cell_value_lost_focus = function(cell, value) {
   cell.current_value = value;
   pos = cell.input.data.indexOf(value);
   cell.pos = pos;
-  if (pos === -1)
-    value = '';
-  else
-    value = cell.input.values[pos];
+//  if (pos === -1)
+//    value = '';
+//  else
+//    value = cell.input.values[pos];
+  value = cell.input.values[pos];
 //  if (!(/\S/.test(value)))  // if cannot find a non-whitespace character
 //    value = '\xa0';  // replace with &nbsp
   cell.text_node.data = value;
@@ -1519,7 +1596,7 @@ AibChoice.prototype.get_cell_value_for_server = function(cell) {
   };
 AibChoice.prototype.grid_create_dropdown = function(cell) {
   choice = cell.input;
-  if (choice.readonly || !choice.allow_amend)
+  if (!choice.amendable())
     return;
   cell.parentNode.appendChild(choice);
   choice.cell = cell;
@@ -1531,7 +1608,7 @@ AibChoice.prototype.grid_create_dropdown = function(cell) {
   };
 AibChoice.prototype.grid_after_selection = function(choice, option_selected) {
   // to investigate -
-  // 1. is row_amended always true? what if no change?
+  // 1. is grid_amended always true? what if no change?
   // 2. alternatively, could call start_edit
   //    slightly more consistent with (e.g.) backslash, and allows esc to reset
   var cell = choice.cell;
@@ -1539,10 +1616,9 @@ AibChoice.prototype.grid_after_selection = function(choice, option_selected) {
     cell.current_value = choice.data[option_selected];
     cell.pos = option_selected;
     cell.text_node.data = choice.values[option_selected];
-    cell.grid.row_amended = true;
-    if (cell.grid.grid_frame !== null)
-      cell.grid.grid_frame.frame_amended = true;
+    cell.grid.set_amended(true);
     };
+  setTimeout(function() {cell.grid.focus()}, 0);
   };
 
 ////////////////////
@@ -1553,7 +1629,7 @@ AibSpin.prototype = new AibCtrl();
 AibSpin.prototype.after_got_focus = function(spin) {
   var inp = spin.childNodes[0];
   var dsp = spin.childNodes[1];
-  if (spin.disable_count) {
+  if (!spin.amendable()) {
     dsp.style.border = '1px solid black';
     return;
     };
@@ -1565,7 +1641,7 @@ AibSpin.prototype.before_lost_focus = function(spin) {
 AibSpin.prototype.after_lost_focus = function(spin) {
   var inp = spin.childNodes[0];
   var dsp = spin.childNodes[1];
-  if (spin.disable_count) {
+  if (!spin.amendable()) {
     dsp.style.border = '1px solid darkgrey';
     dsp.style.background = 'transparent';
     dsp.txt.style.background = '#f5f5f5';  // very light grey
@@ -1661,18 +1737,19 @@ AibSpin.prototype.set_value_from_server = function(spin, value) {
 ////////////////////
 function AibSxml() {};
 AibSxml.prototype = new AibCtrl();
-AibSxml.prototype.onfocus = function(sxml) {
-  sxml.has_focus = true;
-  if (sxml.mouse_down)
-    return;  // will set focus from onclick()
-  got_focus(sxml);
+AibSxml.prototype.got_focus = function(sxml) {
+//  sxml.has_focus = true;
+//  if (sxml.mouse_down)
+//    return;  // will set focus from onclick()
+//  got_focus(sxml);
   };
 AibSxml.prototype.after_got_focus = function(sxml) {
   sxml.style.border = '1px solid black';
-  if (sxml.frame.form.focus_from_server)
+//  if (sxml.frame.form.focus_from_server)
+  if (sxml.frame.err_flag)
     //sxml.className = 'error_background'
     sxml.style.background = sxml.bg_error;
-  else if (sxml.disable_count)
+  else if (!sxml.amendable())
     sxml.style.background = sxml.bg_disabled;
   else
     sxml.style.background = sxml.bg_focus;
@@ -1686,14 +1763,14 @@ AibSxml.prototype.after_lost_focus = function(sxml) {
   sxml.style.border = '1px solid darkgrey';
   sxml.has_focus = false;
   };
-AibSxml.prototype.set_disabled = function(sxml, state) {
-  if (state) {
-    sxml.style.color = 'grey';
-    }
-  else {
-    sxml.style.color = null;  //'navy';
-    };
-  };
+//AibSxml.prototype.set_readonly = function(sxml, state) {
+//  if (state) {
+//    sxml.style.color = 'grey';
+//    }
+//  else {
+//    sxml.style.color = null;  //'navy';
+//    };
+//  };
 AibSxml.prototype.ondownkey = function(sxml, e) {
   if (e.keyCode === 13) {
     sxml.onclick(sxml);
@@ -1708,7 +1785,7 @@ AibSxml.prototype.popup = function(sxml) {
   sxml_popup(sxml);
 //  var args = [sxml.ref];
 //  send_request('sxml_checked', args);
-//  sxml.frame.frame_amended = true;
+//  sxml.frame.set_amended(true);
   };
 AibSxml.prototype.data_changed = function(sxml) {
   return (sxml.current_value !== sxml.form_value);
@@ -1761,13 +1838,11 @@ AibSxml.prototype.grid_popup = function(cell, row) {
 //  var grid = cell.grid;
 //  var args = [cell.input.ref, row];
 //  send_request('cell_sxml_checked', args);
-//  grid.row_amended = true;
+//  grid.set_amended(true);
   };
 AibSxml.prototype.grid_popup_callback = function(cell, row) {
   cell.current_value = cell.value;
-  cell.grid.row_amended = true;
-  if (cell.grid.grid_frame !== null)
-    cell.grid.grid_frame.frame_amended = true;
+  cell.grid.set_amended(true);
   };
 
 ////////////////////
@@ -1775,29 +1850,29 @@ AibSxml.prototype.grid_popup_callback = function(cell, row) {
 ////////////////////
 function AibDummy() {};
 AibDummy.prototype = new AibCtrl();
-AibDummy.prototype.onfocus = function(dummy) {
-  if (dummy.frame.form.focus_from_server) {
+AibDummy.prototype.got_focus = function(dummy) {
+  if (dummy.frame.form.err_flag)
     dummy.frame.form.tabdir = -1;  // dummy failed vld, set focus on prev field
-    dummy.frame.form.focus_from_server = false;
-    };
-  got_focus(dummy);
   };
 AibDummy.prototype.after_got_focus = function(dummy) {
-//  if (dummy.frame.frame_amended)
-//    callbacks.push([this, this.go_to_next, dummy]);
-//  else {
-//    that = this;
-//    setTimeout(function() {that.go_to_next(dummy)}, 0);
-//    };
-//  };
-//AibDummy.prototype.go_to_next = function(dummy) {
   if (dummy.frame.form.current_focus !== dummy ||
       dummy.frame.form.setting_focus !== dummy)
     return;  // focus reset by server
   var pos = dummy.pos + dummy.frame.form.tabdir;  // tab = 1, shift+tab = -1
-  while (dummy.frame.obj_list[pos].offsetHeight === 0)
+  while (true) {
+    var obj = dummy.frame.obj_list[pos];
+    if ((obj.offsetHeight > 0) || // or dummy obj, provided not on hidden notebook page
+      (obj.dummy && (
+        obj.nb_page === null ||
+        obj.nb_page.pos === obj.nb_page.parentNode.current_pos
+        )))
+      break;
     pos += dummy.frame.form.tabdir;  // look for next available object
-  dummy.frame.obj_list[pos].focus();
+    };
+  if (obj.dummy)
+    got_focus(obj);
+  else
+    obj.focus();
   };
 AibDummy.prototype.before_lost_focus = function(dummy) {
   return true;

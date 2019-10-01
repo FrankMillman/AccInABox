@@ -1,0 +1,47 @@
+<form name="setup_company">
+  <db_objects>
+    <db_obj name="db_comp" table_name="dir_companies"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="db_comp">
+    <toolbar/>
+    <body>
+      <block/>
+      <grid data_object="db_comp" growable="true">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="company_id" lng="100"/>
+          <cur_col col_name="company_name" lng="260" expand="true" validation="
+            <<validations>>
+              <<validation>>
+                <<case>>
+                  <<obj_exists obj_name=`db_comp`>>
+                  <</obj_exists>>
+                  <<default>>
+                    <<ask title=`New company` enter=`No` escape=`No`
+                        question=`This will create a new company in the database&amp;#10;&amp;#10;Ok to proceed?`>>
+                      <<response ans=`No`>>
+                        <<error head=`` body=``/>>
+                      <</response>
+                      <<response ans=`Yes`>>
+                      <</response>>
+                    <</ask>>
+                  <</default>>
+                <</case>>
+              <</validation>>
+            <</validations>>
+          "/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="company_id"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+    </body>
+    <button_row validate="false"/>
+    <frame_methods template="Grid"/>
+  </frame>
+</form>

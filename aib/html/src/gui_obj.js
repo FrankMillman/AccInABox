@@ -1,13 +1,39 @@
 function create_page() {
-  var page = document.createElement('div');
+  //var page = document.createElement('diz');
+  var page = document.createElement('span');
   page.style.display = 'inline-block';
   page.style.padding = '0px 10px 10px 10px';
   page.block = null;
+  page.nb_page = null;  // will be overridden if it is a notebook page
   page.sub_pages = [];
+
+  page.kbd_shortcuts = {};
+  page.kbd_shortcuts['normal'] = {};
+  page.kbd_shortcuts['alt'] = {};
+  page.kbd_shortcuts['ctrl'] = {};
+  page.kbd_shortcuts['shift'] = {};
+
   page.onkeydown = function(e) {
-    if (this.frame.ctrl_grid === null)
-      return;
+//    if (this.frame.ctrl_grid === null)
+//      return;
     if (!e) e=window.event;
+
+    if (e.altKey)
+      var target = this.kbd_shortcuts['alt'][e.keyCode];
+    else if (e.ctrlKey)
+      var target = this.kbd_shortcuts['ctrl'][e.keyCode];
+    else if (e.shiftKey)
+      var target = this.kbd_shortcuts['shift'][e.keyCode];
+    else
+      var target = this.kbd_shortcuts['normal'][e.keyCode];
+
+    if (target !== undefined) {
+      target.onclick.call(target);
+      e.cancelBubble = true;
+      return false;
+      };
+
+/*
     if (!e.ctrlKey)
       return;
     var ctrl_grid = this.frame.ctrl_grid;
@@ -47,6 +73,7 @@ function create_page() {
           };
         break;
       };
+*/
 // if next 2 lines are needed, add them to each 'case' above, remove from here
 //      e.cancelBubble = true;
 //      return false;
@@ -60,7 +87,7 @@ function create_page() {
   return page;
   };
 
-function create_input(frame, json_elem, label) {
+function create_input(frame, page, json_elem, label) {
   switch (json_elem.type) {
     case 'text':
       if (json_elem.lkup) {
@@ -104,6 +131,7 @@ function create_input(frame, json_elem, label) {
       var input = document.createElement('span');
       input.aib_obj = new AibDummy();
       input.tabIndex = 0;
+      input.dummy = true;  // ok to set focus here
       var return_elem = input;
       break;
     };
@@ -119,11 +147,17 @@ function create_input(frame, json_elem, label) {
   frame.form.obj_dict[json_elem.ref] = input;
 
   input.frame = frame;
+  input.nb_page = page.nb_page;
   input.active_frame = frame;
   input.ref = json_elem.ref;
   input.help_msg = json_elem.help_msg;
   input.title = input.help_msg;
-  input.disable_count = 0;
+  if (label !== null)
+    label.title = input.help_msg;
+//  input.readonly = false;
+  input.readonly = json_elem.readonly;  // set in form defn
+  input.allow_amend = json_elem.allow_amend;  // set in col defn
+  input.amend_ok = json_elem.amend_ok;  // db permissions
 
   // input.form_value is value received from server
   // input.current_value is value entered by user, awaiting validation
@@ -150,7 +184,7 @@ function create_input(frame, json_elem, label) {
   input.onkeydown = function(e) {
     if (input.frame.form.disable_count) return false;
     if (!e) e=window.event;
-    if (e.ctrlKey && (e.keyCode === 70) && (input.lkup !== undefined)) {
+    if (e.ctrlKey && (e.keyCode === 70) && (input.lkup !== undefined)) {  // Ctrl+F
       input.lkup();
       e.cancelBubble = true;
       e.keyCode = 0;
@@ -159,11 +193,8 @@ function create_input(frame, json_elem, label) {
     switch(e.keyCode) {
       case 27:  // Esc
         if (input.aib_obj.data_changed(input)) {  //, input.childNodes[0].value)) {
-          if (input.aib_obj.handle_escape !== undefined) {
-            input.aib_obj.handle_escape(input);
-            }
-          else if (input.key_strokes) {
-            input.value = input.current_value;
+          if (input.key_strokes) {
+            input.firstChild.value = input.current_value;
             input.key_strokes = 0;
             }
           else
@@ -172,6 +203,7 @@ function create_input(frame, json_elem, label) {
           e.cancelBubble = true;
           return false;
           };
+        // else allow escape to bubble up to form, which sends 'req_cancel'
         break;
       case 32:  // space
         if (!input.key_strokes && input.expander !== undefined) {
@@ -203,17 +235,14 @@ function create_input(frame, json_elem, label) {
     return input.aib_obj.onpresskey(input, e);
     };
 
-  //input.onfocus = function() {got_focus(input)};
-  input.onfocus = function() {input.aib_obj.onfocus(input)};
+  if (input.onfocus === null)  // already set on bool, sxml
+    input.onfocus = function() {got_focus(input)};
+  //input.onfocus = function() {input.aib_obj.onfocus(input)};
   input.got_focus = function() {
-    if (input.frame.send_focus_msg) {  // can be set to false in start_frame()
-      if (input.frame.frame_amended && !input.frame.form.focus_from_server) {
-        var args = [input.ref];
-        send_request('got_focus', args);
-        };
-      }
-    else {  // over-ridden in 'start_frame'
-      input.frame.send_focus_msg = true;  // reset
+    input.aib_obj.got_focus(input);
+    if (input.frame.amended() && !input.frame.form.focus_from_server) {
+      var args = [input.ref];
+      send_request('got_focus', args);
       };
     input.key_strokes = 0;
     input.aib_obj.after_got_focus(input);
@@ -222,23 +251,17 @@ function create_input(frame, json_elem, label) {
     };
 
   input.lost_focus = function() {
-    //debug3(input.help_msg + ' lost focus');
+    //debug3(input.ref + ' ' + input.help_msg + ' lost focus');
     if (!input.aib_obj.before_lost_focus(input))  // failed validation (date)
       return false;
 //    if (input.aib_obj.data_changed(input, input.current_value) && !input.frame.form.internal)
     if ((input.current_value !== input.form_value) && !input.frame.form.internal)
-      input.frame.frame_amended = true;
-    if (input.frame.send_focus_msg) {  // can be set to false in start_frame()
-      if (input.frame.frame_amended && !input.frame.form.focus_from_server) {
-        var value = input.aib_obj.get_value_for_server(input);
-//        if (value !== null) {  // 'dummy' field
-          var args = [input.ref, value];
-          send_request('lost_focus', args);
-//          };
-        };
+      input.frame.set_amended(true);
+    if (input.frame.amended() && !input.frame.form.focus_from_server) {
+      var value = input.aib_obj.get_value_for_server(input);
+        var args = [input.ref, value];
+        send_request('lost_focus', args);
       };
-//    else  // over-ridden in 'start_frame'
-//      input.frame.send_focus_msg = true;  // reset
     input.aib_obj.after_lost_focus(input);
     if (input.multi_line === true)
       ignore_enter = false;
@@ -251,20 +274,53 @@ function create_input(frame, json_elem, label) {
       };
     };
 
-  input.set_disabled = function(state) {
-    input.aib_obj.set_disabled(input, state);
+  input.set_dflt_val = function(value) {
+//    this.current_value = value;
+//    if (this.frame.form.current_focus === this)
+//      this.aib_obj.after_got_focus(this);
+//    else
+//      this.aib_obj.after_lost_focus(this);
+    if (this.amendable())
+      this.aib_obj.set_dflt_val(this, value);
+    else {
+      this.current_value = value;
+      if (this.frame.form.current_focus === this)
+        this.aib_obj.after_got_focus(this);
+      else
+        this.aib_obj.after_lost_focus(this);
+      };
+    };
+
+  input.amendable = function() {
+    if (this.readonly) return false;
+    if (!this.amend_ok) return false;
+    if (!this.allow_amend && this.frame.obj_exists) return false;
+    return true;
+    };
+
+  input.set_readonly = function(state) {
+    this.readonly = state;
+    if (input.frame.form.current_focus === input) {
+      //debug3(input.ref + ': must set readonly');
+      input.aib_obj.after_lost_focus(input);
+      input.aib_obj.got_focus(input);
+      };
+//    this.aib_obj.set_readonly(this, state);
     };
 
   input.set_value_from_server = function(value) {
-    input.aib_obj.set_value_from_server(input, value);
+    this.aib_obj.set_value_from_server(this, value);
+// not sure about this
+//    input.frame.set_amended(true);
     };
 
   input.reset_value = function() {
-    input.aib_obj.reset_value(input);
+    this.aib_obj.reset_value(this);
     };
 
-  if (json_elem.readonly)
-    disable_obj(input);
+  if (json_elem.readonly) {  // not used at present
+    input.set_readonly(true);
+    };
 
   input.set_value_from_server(json_elem.value);
 
@@ -307,7 +363,7 @@ function setup_dsp(json_elem) {
   dsp.text = text_node;
 
   dsp.onclick = function() {
-    if (!dsp.parentNode.disable_count)
+    if (dsp.parentNode.amendable())
       dsp.parentNode.focus();
     };
 
@@ -425,7 +481,7 @@ function setup_lkup(json_elem) {
   lkup.title = 'Call lookup (Ctrl+F)';
   lkup.onclick = function() {
     if (text.frame.form.disable_count) return;
-    if (text.disable_count) {
+    if (!text.amendable()) {
       text.focus();
       return;
       };
@@ -457,10 +513,10 @@ function setup_lkup(json_elem) {
   lkdn.title = 'Call lookdown (Shift+Enter)';
   lkdn.onclick = function() {
     if (text.frame.form.disable_count) return;
-    if (text.disable_count) {
-      text.focus();
-      return;
-      };
+//    if (!text.amendable()) {
+//      text.focus();
+//      return;
+//      };
     if (text.frame.form.current_focus !== text) {
       text.focus();  // set focus on text first
       setTimeout(function() {lkdn.afterclick()}, 0);
@@ -480,7 +536,7 @@ function setup_lkup(json_elem) {
 
 function setup_textarea(json_elem) {
   var text = document.createElement('div');
-  text.style.width = (json_elem.lng + 4) + 'px';
+  text.style.width = (+json_elem.lng + 4) + 'px';
   text.style.height = ((json_elem.height * 17) + 4) + 'px';
   text.tabIndex = 0;
   text.password = '';
@@ -503,7 +559,7 @@ function setup_textarea(json_elem) {
 
   var dsp = document.createElement('div');
   text.appendChild(dsp);
-  dsp.style.width = (json_elem.lng + 4) + 'px';
+  dsp.style.width = (+json_elem.lng + 4) + 'px';
   dsp.style.height = ((json_elem.height * 17) + 4) + 'px';
   dsp.style.border = '1px solid darkgrey';
   dsp.style.overflow = 'hidden';
@@ -511,7 +567,7 @@ function setup_textarea(json_elem) {
   dsp.style.wordWrap = 'break-word';
 
   dsp.onclick = function() {
-    if (!dsp.parentNode.disable_count)
+    if (dsp.parentNode.amendable())
       dsp.parentNode.focus();
     };
 
@@ -601,7 +657,7 @@ function setup_date(json_elem) {
 
   cal.onclick = function() {
     if (date.frame.form.disable_count) return;
-    if (date.disable_count) {
+    if (!date.amendable()) {
       date.focus();
       return;
       };
@@ -634,6 +690,7 @@ function setup_bool(label, json_elem) {
   if (window.SVGSVGElement !== undefined) {
     var NS='http://www.w3.org/2000/svg';
     var svg=document.createElementNS(NS,'svg');
+    svg.setAttribute('focusable', false);  // IE11 workaround
     bool.appendChild(svg);
     };
 
@@ -647,9 +704,17 @@ function setup_bool(label, json_elem) {
   bool.onmousedown = function() {bool.mouse_down = true};
   bool.onmouseup = function() {bool.mouse_down = false};
 
+  bool.onfocus = function() {
+    bool.has_focus = true;  // gets reset in aib_obj.after_lost_focus()
+    if (bool.mouse_down)
+      return;  // will set focus from onclick()
+    got_focus(bool);
+    };
+
   bool.onclick = function() {
     if (bool.frame.form.disable_count) return false;
-    if (bool.disable_count) return false;
+    if (!bool.amendable()) return false;
+    bool.frame.set_amended(true);  // to force sending got_focus
     if (bool.frame.form.current_focus !== bool) {
       callbacks.push([bool, bool.after_click]);
       if (bool.has_focus)  // can't call focus() - it will be ignored!
@@ -729,7 +794,7 @@ function setup_choice(json_elem) {
       if (subtype === undefined) return;
       if (subtype._active_box !== subtype_id) {
         subtype[subtype._active_box].style.display = 'none';
-        subtype[subtype_id].style.display = 'inline-block';
+        subtype[subtype_id].style.display = 'block';
         subtype._active_box = subtype_id;
         };
       };
@@ -762,7 +827,7 @@ function setup_choice(json_elem) {
   down.onfocus = function() {choice.focus()};
   down.onclick = function() {
     if (choice.frame.form.disable_count) return;
-    if (choice.disable_count) {
+    if (!choice.amendable()) {
       choice.focus();
       return;
       };
@@ -845,7 +910,14 @@ function setup_spin(json_elem) {
     up.incr = null;
     up.up = false;
     if (spin.frame.form.disable_count) return;
-    if (spin.disable_count) {
+    if (!spin.amendable()) {
+
+      debug3('not: ro=' + spin.readonly + ' ok=' + spin.amend_ok
+        + ' allow=' + spin.allow_amend + ' exists=' + spin.frame.obj_exists);
+    //if (this.readonly) return false;
+    //if (!this.amend_ok) return false;
+    //if (!this.allow_amend && this.frame.obj_exists) return false;
+
       spin.focus();
       return;
       };
@@ -883,7 +955,7 @@ function setup_spin(json_elem) {
     dn.decr = null;
     dn.up = false;
     if (spin.frame.form.disable_count) return;
-    if (spin.disable_count) {
+    if (!spin.amendable()) {
       spin.focus();
       return;
       };
@@ -935,6 +1007,7 @@ function setup_sxml(json_elem) {
   frame.obj_list.push(sxml);
   frame.form.obj_dict[json_elem.ref] = sxml;
   sxml.frame = frame;
+  sxml.nb_page = frame.page.nb_page;
   sxml.active_frame = frame;
   sxml.ref = json_elem.ref;
   sxml.help_msg = json_elem.help_msg;
@@ -944,6 +1017,13 @@ function setup_sxml(json_elem) {
 
   sxml.onmousedown = function() {sxml.mouse_down = true};
   sxml.onmouseup = function() {sxml.mouse_down = false};
+
+  sxml.onfocus = function() {
+    sxml.has_focus = true;
+    if (sxml.mouse_down)
+      return;  // will set focus from onclick()
+    got_focus(sxml);
+    };
 
   sxml.onclick = function() {
     if (sxml.frame.form.current_focus !== sxml) {
@@ -981,7 +1061,7 @@ function setup_sxml(json_elem) {
   return sxml;
   };
 
-function create_display(frame, json_elem) {
+function create_display(frame, json_elem, label) {
   var display = document.createElement('div');
   display.style[cssFloat] = 'left';
 
@@ -1005,15 +1085,20 @@ function create_display(frame, json_elem) {
   display.appendChild(text);
   //display.style.marginRight = '10px';
   display.style.width = json_elem.lng + 'px';
-  display.display = true;  // used in start_form() to prevent setting focus here
+  display.display = true;  // used in start_frame() to prevent setting focus here
 
   display.pos = frame.obj_list.length;
   frame.obj_list.push(display);
   frame.form.obj_dict[json_elem.ref] = display;
   display.frame = frame;
+  display.nb_page = frame.page.nb_page;
   display.active_frame = frame;
   display.ref = json_elem.ref;
   display.text = text;
+  display.help_msg = json_elem.help_msg;
+  display.title = display.help_msg;
+  if (label !== null)
+    label.title = display.help_msg;
 
   display.set_value_from_server = function(value) {
     if (display.choices)
@@ -1076,12 +1161,15 @@ function create_button(frame, json_elem) {
   frame.obj_list.push(button);
   frame.form.obj_dict[json_elem.ref] = button;
   button.frame = frame;
+  button.nb_page = frame.page.nb_page;
   button.active_frame = frame;
   button.ref = json_elem.ref;
   button.help_msg = json_elem.help_msg;
+  if (button.help_msg === '') button.help_msg = '\xa0';
   button.title = button.help_msg;
   button.mouse_down = false;
   button.has_focus = false;
+  button.readonly = false;
   button.after_focus = null;
 
   button.onmousedown = function() {button.mouse_down = true};
@@ -1095,15 +1183,15 @@ function create_button(frame, json_elem) {
     got_focus(button);
     };
   button.got_focus = function() {
-    //debug3(button.label.data + ' got focus');
-    if (button.disable_count)
+    //debug3(button.label.data + ' got focus amd=' + button.frame.amended());
+    if (button.readonly)
       button.style.background = button.bg_disabled;
     else
       button.style.background = button.bg_focus;
     if (button !== button.frame.default_button)
       button.style.border = '1px solid black';
     button.frame.active_button = button;
-    if (button.frame.frame_amended) {
+    if (button.frame.amended()) {
       var args = [button.ref];
       send_request('got_focus', args);
       };
@@ -1126,7 +1214,7 @@ function create_button(frame, json_elem) {
   button.onkeydown = function(e) {
     if (button.frame.form.disable_count)
       return;
-//    if (button.disable_count) {
+//    if (button.readonly) {
 //      button.frame.form.current_focus.focus();
 //      return;
 //      };
@@ -1160,7 +1248,7 @@ function create_button(frame, json_elem) {
     //  (button.frame.form.current_focus === button) + ' ' +
     //  button.frame.form.disable_count + ' ' + button.has_focus);
     if (button.frame.form.disable_count) return;
-    if (button.disable_count) {
+    if (button.readonly) {
       button.frame.form.current_focus.focus();
       return;
       };
@@ -1190,7 +1278,7 @@ function create_button(frame, json_elem) {
 //  on the server, if 'clicked' and button.must_validate, we validate up to that point
 //  remove for now, see what happens
 
-//    if (!button.frame.frame_amended) {
+//    if (!button.frame.amended()) {
 //      var args = [button.ref];
 //      send_request('got_focus', args);
 //      };
@@ -1204,18 +1292,7 @@ function create_button(frame, json_elem) {
     var val = value[1];
     switch (attr) {
       case 'enabled':
-// can't use enable_obj()
-// server can call 'clean' multiple times, and disable
-//   the same button each time
-// enable_obj will increment the button's disable_count
-//   multiple times, which means it won't be enabled when required!
-//        if (val)
-//          //button.disabled = false;
-//          enable_obj(button);
-//        else
-//          //button.disabled = true;
-//          disable_obj(button);
-        button.set_disabled(!val);
+        button.set_readonly(!val);
         break;
       case 'label':
         button.label.data = val;
@@ -1231,12 +1308,14 @@ function create_button(frame, json_elem) {
         button.frame.default_button = button;
         break;
       case 'show':
-        var col = button.parentNode;
-//        var col = button.parentNode.parentNode;
-        col.style.height = (col.offsetHeight - 2) + 'px';
-        if (val)
+// don't know why this is here [2015-06-03]
+// removed for now
+//        var col = button.parentNode;
+////        var col = button.parentNode.parentNode;
+//        col.style.height = (col.offsetHeight - 2) + 'px';
+        if (val)  // show button
           button.style.display = 'block';
-        else {
+        else {  // hide button
           button.style.display = 'none';
           if (button.has_focus) {
             var pos = button.pos + 1;
@@ -1249,11 +1328,12 @@ function create_button(frame, json_elem) {
       };
     };
 
-  button.set_disabled = function(state) {
+  button.set_readonly = function(state) {
+    button.readonly = state;
     if (state) {
       button.style.color = 'darkgrey';  //'#b8b8b8';
-      button.disable_count = 1;
       if (button.has_focus) {
+        button.style.background = button.bg_disabled;
         var pos = button.pos + 1;
         while (button.frame.obj_list[pos].offsetHeight === 0)
           pos += 1;  // look for next available object
@@ -1262,17 +1342,13 @@ function create_button(frame, json_elem) {
       }
     else {
       button.style.color = 'navy';  //'black';  //'#101010';
-      button.disable_count = 0;
+      if (button.has_focus)
+        button.style.background = button.bg_focus;
       };
-//  button.disabled = state;
     };
 
-  if (json_elem.enabled === false) {
-    button.set_disabled(true);
-    button.disable_count = 1;
-    }
-  else
-    button.disable_count = 0;
+  if (json_elem.enabled === false)
+    button.set_readonly(true);
 
   if (json_elem['default'] === true) {
     frame.default_button = button;

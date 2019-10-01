@@ -31,14 +31,20 @@ logging.basicConfig(format=format, datefmt=datefmt)
 log = sys.stderr
 debug = False
 
-import db.api
-#import bp.bpm
-import ht.htc
+#db_log = open('db_log.txt', 'w', errors='backslashreplace')
+db_log = sys.stderr
+log_db = False
 
 #sys.stdout = open('/dev/null', 'w')
 #sys.stdout = open('nul', 'w')
 
-def main():
+def start():
+
+    import db.api
+    import db.objects
+    #import bp.bpm
+    import ht.htc
+
     if len(sys.argv) == 2:
         cfg_name = sys.argv[1]
     else:
@@ -49,6 +55,10 @@ def main():
 
     db.api.config_connection(cfg['DbParams'])
     db.api.config_cursor(cfg['DbParams'])
+
+    check_versions()
+
+    db.objects.setup_companies()
 
 #   from wf.wfe import restart_active_processes
 #   bp.bpm.restart_active_processes()
@@ -62,6 +72,14 @@ def main():
 
 def stop(htc_args):
     input(_('Press <enter> to stop\n'))
+
+    if log_db:
+        db_log.flush()
+        db_log.close()
+
+    import db.api
+    import ht.htc
+
     ht.htc.stop(htc_args)  # tell human task client to terminate
     db.api.close_all_connections()
 
@@ -78,5 +96,58 @@ def excepthook(type, value, traceback):
 sys.excepthook = excepthook
 """
 
+def check_versions():
+
+    import db.api
+
+    from releases import program_version_info, datamodel_version_info
+
+    def s_to_t(s):  # convert string '0.1.1' to tuple(0, 1, 1)
+        #return tuple(int(_) for _ in s.split('.'))
+        return tuple(map(int, s.split('.')))
+
+    def t_to_s(t):  # convert tuple(0, 1, 1) to string '0.1.1'
+        #return '.'.join(str(_) for _ in t)
+        return '.'.join(map(str, t))
+
+    progver_fn = os.path.join(os.path.dirname(__file__), 'program_version')
+    try:
+        current_program_version = open(progver_fn).read()
+    except FileNotFoundError:
+        current_program_version = '0.1.0'
+    current_program_version_info = s_to_t(current_program_version)
+
+    dataver_fn = os.path.join(os.path.dirname(__file__), 'datamodel_version')
+    try:
+        current_datamodel_version = open(dataver_fn).read()
+    except FileNotFoundError:
+        current_datamodel_version = '0.1.0'
+    current_datamodel_version_info = s_to_t(current_datamodel_version)
+
+    if (
+        program_version_info < current_program_version_info or
+        datamodel_version_info < current_datamodel_version_info
+        ):
+        sys.exit('Houston we have a problem!')
+
+    if program_version_info > current_program_version_info:
+        new_program_version = t_to_s(program_version_info)
+        open(progver_fn, 'w').write(new_program_version)
+
+    if datamodel_version_info > current_datamodel_version_info:
+        print()
+        ans = input('Database has changed - ok to upgrade? ')
+        if ans.lower() != 'y':
+            sys.exit('Upgrade cancelled')
+        # the following must be global, as they are retrieved from __main__
+        global db_session, user_row_id, sys_admin
+        db_session = db.api.start_db_session()
+        user_row_id = 1
+        sys_admin = True
+        from upgrade_datamodel import upgrade_datamodel
+        upgrade_datamodel(db_session, current_datamodel_version_info, datamodel_version_info)
+        new_datamodel_version = t_to_s(datamodel_version_info)
+        open(dataver_fn, 'w').write(new_datamodel_version)
+
 if __name__ == '__main__':
-    main()
+    start()

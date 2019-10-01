@@ -1,3 +1,5 @@
+from start import log_db, db_log
+
 def customise(DbCursor):
     # add db-specific methods to DbCursor class
     DbCursor.create_cursor = create_cursor
@@ -9,6 +11,10 @@ def customise(DbCursor):
     DbCursor.close = close
 
 def create_cursor(self, sql, params):
+
+    if log_db:
+        db_log.write('{}: {}; {}\n\n'.format(id(self.conn), sql, params))
+
     if self.debug:
         print(sql, params)
     self.cur.execute(sql, params)
@@ -26,24 +32,23 @@ def create_cursor(self, sql, params):
 
     self.cur.close()
     del self.cur
-    if self.db_obj.mem_obj:
-        del self.conn  # don't close it! there is only one connection to :memory:
-    else:
-        self.conn.release()
+#   if self.db_obj.mem_obj:
+#       del self.conn  # don't close it! there is only one connection to :memory:
+#   else:
+#       self.conn.release()
+    self.conn.release()
 
-# TO BE TESTED
 def insert_row(self, row_no):
     row_no = self.find_gap(row_no)  # where to insert new row
+    self.db_obj.cursor_row = row_no
     self.rows.insert(row_no,
         [self.db_obj.getval(col_name) for col_name in self.col_names])
     self.no_rows += 1
 
-# TO BE TESTED
 def update_row(self, row_no):
     self.rows[row_no] = [
         self.db_obj.getval(col_name) for col_name in self.col_names]
 
-# TO BE TESTED
 def delete_row(self, row_no):
     del self.rows[row_no]
     self.no_rows -= 1

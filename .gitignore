@@ -1,3 +1,8 @@
+# aib files
+aib.ini
+program_version
+datamodel_version
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

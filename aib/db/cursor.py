@@ -1,7 +1,8 @@
 from collections import defaultdict
 import importlib
+from start import log_db, db_log
 
-from db.connection import _get_connection
+import db.connection
 from errors import AibError
 
 def config_cursor(db_params):
@@ -50,10 +51,17 @@ class Cursor:
         if self.cursor_active:
             self.close()
 
+        self.db_obj.check_perms('select')
+
         if self.db_obj.mem_obj:
-            self.conn = self.db_obj.context.mem_session.conn
+            mem_id = self.db_obj.context.mem_id
+            self.conn = db.connection._get_mem_connection(mem_id)
         else:
-            self.conn = _get_connection()  # must keep connection until cursor closed
+            self.conn = db.connection._get_connection()
+
+        if log_db:
+            db_log.write('{}: START cursor\n'.format(id(self.conn)))
+
         self.cur = self.conn.cursor()
 
         sql, params = self.build_sql(where, order, param)
@@ -317,7 +325,12 @@ class Cursor:
            print('find_row', current_row, search_str, rowno, self.pos, self.row_data)
         found = True
         while True:
-            if self.row_data[self.pos] != search_str:
+#           if self.row_data[self.pos] != search_str:
+            try:  # if strings, set to lower case before comparing
+                equal = self.row_data[self.pos].lower() == search_str.lower()
+            except AttributeError:  # 'int' type has no Attribute lower()
+                equal = self.row_data[self.pos] == search_str
+            if not equal:
                 found = False  # can happen if item not in 'where'
                 break
             # if multi-part key, check that all key fields match
@@ -342,10 +355,10 @@ class Cursor:
         if self.pos == -1:
             return current_row  # i.e. return current row
         search_str = self.db_obj.getval(self.seq)
-#       g.debug = 1
+#       self.debug = True
         rowno = self.start(search_str)
-#       g.debug = 0
-#       print('findGap', current_row, search_str, rowno, self.pos, self.row_data)
+#       self.debug = False
+#       print('find_gap', current_row, search_str, rowno, self.pos, self.row_data)
         if self.row_data[self.pos] == search_str:
             for key in self.key_cols:
                 if self.row_data[key[0]] > key[1]._value:
@@ -362,9 +375,11 @@ class Cursor:
         done = 0
         while not done:
             rowno -= 1
-            if rowno < 1:
-                rowno = 1
+#           if rowno < 1:
+#               rowno = 1
+            if rowno == 1:
                 done = 1
+                break
             self._fetch_row(rowno)
             for key in self.key_cols:
                 if self.row_data[key[0]] < self.db_obj.getval(key[1]):
@@ -377,9 +392,11 @@ class Cursor:
         done = 0
         while not done:
             rowno += 1
-            if rowno > self.no_rows:
-                rowno = self.no_rows
+#           if rowno > self.no_rows:
+#               rowno = self.no_rows
+            if rowno == self.no_rows:
                 done = 1
+                break
             self._fetch_row(rowno)
             for key in self.key_cols:
                 if self.row_data[key[0]] > self.db_obj.getval(key[1]):
@@ -407,7 +424,7 @@ class Cursor:
         if self.debug:
             print('rows={} incr={}'.format(self.no_rows, incr))
         rowno = incr
-        found = 0
+        found = False
         while True:
             if rowno < 0:
                 rowno = 0
@@ -421,15 +438,16 @@ class Cursor:
                 break
             self._fetch_row(rowno)
             if self._compare(self.row_data[self.pos], search_str, 'eq'):
-                found = 1
+                found = True
                 break
             elif self._compare(self.row_data[self.pos], search_str, 'gt'):
                 rowno -= 1
                 if rowno < 0:
+                    rowno = 0
                     break
                 self._fetch_row(rowno)
                 if self._compare(self.row_data[self.pos], search_str, 'eq'):
-                    found = 1
+                    found = True
                     break
                 elif self._compare(self.row_data[self.pos], search_str, 'lt'):
                     if not self.desc:  # descending sequence (untested)
@@ -445,7 +463,7 @@ class Cursor:
                     break
                 self._fetch_row(rowno)
                 if self._compare(self.row_data[self.pos], search_str, 'eq'):
-                    found = 1
+                    found = True
                     break
                 elif self._compare(self.row_data[self.pos], search_str, 'gt'):
                     if self.desc:  # descending sequence (untested)

@@ -1,173 +1,388 @@
-import os
-import __main__
-from lxml import etree
-parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
+import asyncio
 
 import db.api
 import ht.gui_objects
 import ht.templates
+import ht.form
+from errors import AibError
+from start import log, debug
+
+def log_func(func):
+    def wrapper(*args, **kwargs):
+        if debug:
+            log.write('*{}.{}({}, {})\n\n'.format(
+                func.__module__, func.__name__,
+                ', '.join(str(arg) for arg in args),
+                kwargs))
+        return func(*args, **kwargs)
+    return wrapper
 
 #----------------------------------------------------------------------------
 
-class GuiTree:
-    def __init__(self, form, gui, element, ref):
+class GuiTreeCommon:
+    def __init__(self, parent, gui, element):
         self.must_validate = True
         self.readonly = False
+#       self.parent_type = 'tree'
+        self.tree_frame = None  # over-ridden if tree_frame exists
 
-        obj_name, col_name = element.get('source').split()
-        db_obj = form.data_objects[obj_name]
-        xml = db_obj.get_val(col_name)
+        self.data_objects = parent.data_objects
+        self.obj_name = element.get('data_object')
+        self.db_obj = parent.data_objects[self.obj_name]
+        self.parent = parent
+        self.form = parent.form
+        self.session = parent.session
+        self.node_inserted = False
+        self.methods = {}
 
-        self.session = form.session
-        self.root_id = form.root_id
-        self.form_id = form.form_id
-        self.form = form
+        ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
+        self.pos = pos
 
-class GuiXmlTree:
+    @asyncio.coroutine
+    def validate(self, save):
+        if debug:
+            log.write('validate tree {} {}\n\n'.format(
+                self.ref, self.db_obj.dirty))
+        if self.db_obj.dirty:
+            if save:
+                if self.tree_frame is not None:
+                    yield from self.tree_frame.validate_all()
+#               self.db_obj.save()
+                yield from ht.form_xml.exec_xml(self.parent, self.parent.methods['do_save'])
+            else:
+                print('DBOBJ NOT SAVED!')
 
-    xs_types = {
-        'xs:string': 'text',
-        'xs:integer': 'num',
-        'xs:boolean': 'bool'
-        }
+    def on_req_cancel(self):
+        if 'on_req_cancel' in self.methods:
+            yield from ht.form_xml.exec_xml(self, self.methods['on_req_cancel'])
+        else:
+            yield from self.parent.on_req_cancel()
 
-    def __init__(self, form, gui, element, ref):
-        self.must_validate = True
-        self.readonly = False
+    def on_req_close(self):
+        if 'on_req_close' in self.methods:
+            ht.form_xml.exec_xml(self, self.methods['on_req_close'])
+        else:
+            yield from self.parent.on_req_close()
 
-        self.session = form.session
-        self.root_id = form.root_id
-        self.form_id = form.form_id
-        self.form = form
-        self.ref = ref
+class GuiTree(GuiTreeCommon):
+    def __init__(self, parent, gui, element):
+        GuiTreeCommon.__init__(self, parent, gui, element)
 
-        obj_name, col_name = element.get('source').split('.')
-        db_obj = form.data_objects[obj_name]
-        #xml = db_obj.fields.get_item(col_name).getval()
-        xml = db_obj.getfld(col_name).getval()
+        # at present, we select and upload all the rows in the table
+        # if this beomes a problem due to table size, we can change it
+        #   to only select root + one level, and wait for the user to
+        #   expand a level, whereupon we select and upload those rows
+        with self.form.db_session as db_mem_conn:
+            conn = db_mem_conn.db
+            select_cols = ['row_id', 'parent_num', 'descr', 'expandable']
+            if self.db_obj.db_table.audit_trail:
+                where = [('WHERE', '', 'deleted_id', '=', 0, '')]
+            else:
+                where = []
+            order = [('parent_num', False), ('seq', False)]
+#           tree_data = list(
+#               conn.full_select(self.db_obj, select_cols, where, order))
+            # pyodbc returns a pyodbc.Row object, which cannot be JSON'd!
+            # here we turn each row into a regular tuple
+            tree_data = [tuple(_) for _ in
+                conn.full_select(self.db_obj, select_cols, where, order)]
 
-        xsd_path = element.get('xsd')
-        xsd = etree.parse(os.path.join(os.path.dirname(__main__.__file__),
-            xsd_path), parser=parser)
+        gui.append(('tree', {
+            'ref': self.ref,
+            'lng': element.get('lng'),
+            'height': element.get('height'),
+            'toolbar': element.get('toolbar') == 'true',
+            'hide_root': False,
+            'combo': None,
+            'tree_data': tree_data}))
 
-        root_id = element.get('root')
+    @asyncio.coroutine
+    def on_active(self, node_id):
+        self.node_inserted = False
+        if self.db_obj.dirty:
 
-        xs = '{http://www.w3.org/2001/XMLSchema}'
-        xsdict = {}
-        self.build_xsdict(xs, xsd, xsdict, root_id)
+            title = self.db_obj.table_name
+            question = 'Do you want to save the changes to {}?'.format(
+                self.db_obj.getval('descr'))
+            answers = ['Yes', 'No']
+            default = 'No'
+            escape = 'No'
 
-        help_msg = 'Enter details of form'
+            ans = yield from self.session.request.ask_question(
+                self.parent, title, question, answers, default, escape)
 
-        gui.append(('xml_tree', {'xml': xml, 'xsd': xsdict,
-            'help_msg': help_msg, 'ref': ref}))
+            if ans == 'Yes':
+                if self.tree_frame is not None:
+                    yield from self.tree_frame.validate_all()
+                yield from ht.form_xml.exec_xml(self.parent, self.parent.methods['do_save'])
 
-    def validate(self, temp_data):
+        self.db_obj.init()
+        self.db_obj.setval('row_id', node_id)
+        if self.tree_frame is not None:
+            yield from self.tree_frame.restart_frame(set_focus=False)
+
+    @asyncio.coroutine
+    def on_req_insert_node(self, parent_id, seq, combo_type=None):
+        if not parent_id:
+            raise AibError(head='Error', body='Cannot create new root')
+#       self.node_inserted = (parent_id, seq)  # retain for before_save() below
+        self.node_inserted = True
+        self.db_obj.init(init_vals={'parent_id': parent_id, 'seq': seq})
+        self.session.request.send_insert_node(self.ref, parent_id, seq, -1)
+        if self.tree_frame is not None:
+            yield from self.tree_frame.restart_frame()
+
+    @asyncio.coroutine
+    def on_req_delete_node(self, node_id=None):
+        if node_id is None:
+            pass  # deleting the node that is being inserted
+        else:
+            self.db_obj.init()
+            self.db_obj.setval('row_id', node_id)
+            if not self.db_obj.getval('parent_id'):
+                raise AibError(head='Error', body='Cannot delete root node')
+            if self.db_obj.getval('children'):
+                raise AibError(head='Error', body='Cannot delete node with children')
+            self.db_obj.delete()
+        self.session.request.send_delete_node(self.ref, node_id)
+
+    @asyncio.coroutine
+    def on_move_node(self, node_id, parent_id, seq):
         pass
 
-    def build_xsdict(self, xs, xsd, xsdict, elem_name, group=False):
-        if elem_name in xsdict:
-            return
-        xsdict[elem_name] = None  # placeholder to avoid recursion
+#   @asyncio.coroutine
+#   def before_save(self):  # called from frame_methods before save
+#       if self.node_inserted:  # set up in on_req_insert_node() above
+#           parent_id, seq = self.node_inserted
+#           self.db_obj.setval('parent_id', parent_id)
+#           self.db_obj.setval('seq', seq)
 
-        elem_list = []
-        if group:
-            elem = xsd.find(xs+"group[@name='{}']".format(elem_name))
-            appinfo = []
-            sub_elements = elem[0]
+    @asyncio.coroutine
+    def update_node(self):  # called from frame_methods after save
+        # this is called from tree_frame frame_methods
+        # could we ever have a tree without a tree_frame
+        # if yes, this would not be called
+        # on the other hand, how would we trigger a 'save' anyway?
+        # leave alone for now [2015-03-02]
+        self.node_inserted = False
+        self.session.request.send_update_node(
+            self.ref,  # tree_ref
+            self.db_obj.getval('row_id'),  # node_id
+            self.db_obj.getval('descr'),  # text
+            self.db_obj.getval('expandable')
+            )
+
+class GuiTreeCombo(GuiTreeCommon):
+    def __init__(self, parent, gui, element):
+        GuiTreeCommon.__init__(self, parent, gui, element)
+
+        group_name = element.get('group')
+        self.group = self.parent.data_objects[group_name]
+        self.group_code = element.get('group_code')
+        member_name = element.get('member')
+        self.member = self.parent.data_objects[member_name]
+        self.member_code = element.get('member_code')
+        self.member_descr = element.get('member_descr')
+
+        self.tree_frames = {}  # key='group'/'member' val=tree_frame for group/member
+
+        group_where = element.get('group_filter') or ''
+
+        if self.group.db_table.audit_trail:
+            if group_where:
+                group_where += ' AND deleted_id = 0'
+            else:
+                group_where = ' WHERE deleted_id = 0'
+        if self.member.db_table.audit_trail:
+            member_where = ' WHERE deleted_id = 0'
         else:
-            elem = xsd.find(xs+"element[@name='{}']".format(elem_name))
-            annotation = elem.find(xs+'annotation')
-            if annotation is not None:
-                appinfo = annotation.find(xs+'appinfo')
-            else:
-                appinfo = []
-            complexType = elem.find(xs+'complexType')
-            if complexType is not None and len(complexType):
-                sub_elements = complexType[0]  # skip complexType
-            else:
-                sub_elements = None
-        if sub_elements is not None:
-            if sub_elements.tag == xs+'sequence':
-                elem_list.append('$seq')
-                for sub_elem in sub_elements.iterchildren():
-                    if sub_elem.tag == xs+'element':
-                        tup = (
-                            '$elem',
-                            sub_elem.get('ref'),
-                            sub_elem.get('minOccurs', '1'),
-                            sub_elem.get('maxOccurs', '1')
-                            )
-                        elem_list.append(tup)
-                        self.build_xsdict(xs, xsd, xsdict, sub_elem.get('ref'))
-                    elif sub_elem.tag == xs+'choice':
-                        choice = [
-                            '$choice',
-                            sub_elem.get('minOccurs', '1'),
-                            sub_elem.get('maxOccurs', '1')
-                            ]
-                        tup = []
-                        for sub_sub in sub_elem.findall(xs+'element'):
-                            if sub_sub.get('ref') is not None:
-                                tup.append(sub_sub.get('ref'))
-                                self.build_xsdict(xs, xsd, xsdict, sub_sub.get('ref'))
-                        choice.append(tuple(tup))
-                        elem_list.append(tuple(choice))
-                    elif sub_elem.tag == xs+'group':
-                        tup = (
-                            '$group',
-                            sub_elem.get('ref'),
-                            sub_elem.get('minOccurs', '1'),
-                            sub_elem.get('maxOccurs', '1')
-                            )
-                        elem_list.append(tup)
-                        self.build_xsdict(xs, xsd, xsdict, sub_elem.get('ref'), group=True)
-            elif sub_elements.tag == xs+'choice':
-                choice = ['$choice',
-                    sub_elements.get('minOccurs', '1'),
-                    sub_elements.get('maxOccurs', '1')]
-                tup = []
-                for sub_elem in sub_elements.findall(xs+'element'):
-                    if sub_elem.get('ref') is not None:
-                        tup.append(sub_elem.get('ref'))
-                        self.build_xsdict(xs, xsd, xsdict, sub_elem.get('ref'))
-                choice.append(tuple(tup))
-                elem_list.append(tuple(choice))
-            elif sub_elements.tag == xs+'group':
-                elem_list.append(('$group',
-                    sub_elements.get('ref'),
-                    sub_elements.get('minOccurs', '1'),
-                    sub_elements.get('maxOccurs', '1')))
-                self.build_xsdict(xs, xsd, xsdict, sub_elements.get('ref'), group=True)
+            member_where = ''
 
-#       attr_list = []
-#       for attr in elem.findall(xs+'attribute'):
-#           attr_name = attr.get('name')
-#           attr_reqd = attr.get('use') == 'required'
-#           simple_type = attr.find(xs+'simpleType')
-#           if simple_type is not None:
-#               if simple_type.find(xs+'restriction') is not None:
-#                   choices = ['$choice']  # literal followed by actual choices
-#                   for choice in simple_type.find(xs+'restriction').findall(xs+'enumeration'):
-#                       choices.append(choice.get('value'))
-#               attr_type = choices
-#           else:
-#               attr_type = self.xs_types[attr.get('type', 'xs:string')]
-#           attr_list.append((attr_name, attr_reqd, attr_type))
-        gui = []
-        for app_elem in appinfo:
-            if app_elem.tag == 'row':
-                gui.append(('row', None))
-            elif app_elem.tag == 'col':
-                gui.append(('col', None))
-            elif app_elem.tag == 'statictext':
-                label=app_elem.get('value'); span=1; align='left'
-                gui.append(('statictext',
-                    {'label':label, 'span':span, 'align':align}))
-            elif app_elem.tag == 'input':
-                attr_name = app_elem.get('attr')
-                lng = app_elem.get('lng')
-                gui.append(('input',
-                    {'type':app_elem.get('type'), 'attr':app_elem.get('attr'),
-                    'lng': app_elem.get('lng'), 'password': ''}))
-        xsdict[elem_name] = [elem_list, gui]
+        sql = (
+            "SELECT row_id, 'group' AS type, {5} AS code, descr, "
+            "COALESCE(parent_id, 0) AS parent_num, seq FROM {0}.{1}{3} "
+            "UNION ALL SELECT row_id, 'member' AS type, {6} AS code, "
+            "{7} AS descr, parent_id AS parent_num, seq FROM {0}.{2}{4} "
+            "ORDER BY parent_num, seq"
+            .format(self.db_obj.data_company, self.group.table_name,
+                self.member.table_name, group_where, member_where,
+                self.group_code, self.member_code, self.member_descr)
+            )
+
+        with self.form.db_session as db_mem_conn:
+            conn = db_mem_conn.db
+            for row_id, node_type, code, descr, parent_num, seq in conn.exec_sql(sql):
+                self.db_obj.init()
+                self.db_obj.setval('type', node_type)
+                self.db_obj.setval('data_row_id', row_id)
+                self.db_obj.setval('code', code)
+                self.db_obj.setval('descr', descr)
+                self.db_obj.setval('parent_num', parent_num)
+                self.db_obj.setval('seq', seq)
+                self.db_obj.setval('expandable', (node_type == 'group'))
+                self.db_obj.save()
+
+        # at present, we select and upload all the rows in the table
+        # if this beomes a problem due to table size, we can change it
+        #   to only select root + one level, and wait for the user to
+        #   expand a level, whereupon we select and upload those rows
+            conn = db_mem_conn.mem
+            sql = (
+                "SELECT data_row_id{0}'_'{0}type as node_id, "
+                "parent_num{0}'_group' as parent_id, "
+                "descr, expandable FROM {1} "
+                "ORDER BY parent_num, seq"
+                .format(conn.concat, self.db_obj.table_name)
+                )
+            # pyodbc returns a pyodbc.Row object, which cannot be JSON'd!
+            # here we turn each row into a regular tuple
+            tree_data = [tuple(_) for _ in
+                conn.cur.execute(sql)]
+
+#       for td in tree_data:
+#           print('{:<10}{:<10}{:<20}{}'.format(*td))
+
+        gui.append(('tree', {
+            'ref': self.ref,
+            'lng': element.get('lng'),
+            'height': element.get('height'),
+            'toolbar': element.get('toolbar') == 'true',
+            'hide_root': True,
+#           'combo': (self.group.db_table.short_descr, self.member.db_table.short_descr),
+            'combo': (group_name, member_name),
+            'tree_data': tree_data}))
+
+    @asyncio.coroutine
+    def on_active(self, node_id):
+        self.node_inserted = False
+
+        data_row_id, node_type = node_id.split('_')
+        data_row_id = int(data_row_id)
+
+        if self.tree_frame.db_obj.dirty:
+
+            if node_type == 'group':
+                descr = 'descr'
+            else:
+                descr = self.member_descr
+
+            title = self.tree_frame.db_obj.table_name
+            question = 'Do you want to save the changes to {}?'.format(descr)
+            answers = ['Yes', 'No']
+            default = 'No'
+            escape = 'No'
+
+            ans = yield from self.session.request.ask_question(
+                self.parent, title, question, answers, default, escape)
+
+            if ans == 'Yes':
+                if self.tree_frame is not None:
+                    yield from self.tree_frame.validate_all()
+                yield from ht.form_xml.exec_xml(
+                    self.tree_frame, self.tree_frame.methods['do_save'])
+
+        if node_type == 'group':
+            self.group.init()
+            self.group.setval('row_id', data_row_id)
+            self.tree_frame = self.tree_frames['group']
+        else:  # must be 'member'
+            self.member.init()
+            self.member.setval('row_id', data_row_id)
+            self.tree_frame = self.tree_frames['member']
+        yield from self.tree_frame.restart_frame(set_focus=False)
+
+    @asyncio.coroutine
+    def on_req_insert_node(self, parent_id, seq, node_type):
+        if parent_id == '0_group':
+            raise AibError(head='Error', body='Cannot create new root')
+        parent_num = int(parent_id.split('_')[0])
+        self.node_inserted = True
+        if node_type == 'group':
+            # don't know why this was changed [2015-07-11]
+            # initially we set up parent_num and seq as init_vals
+            # then it was changed to populate the fields in 'before_save'
+            # don't know when or why
+            # it causes a problem with saving 'db_table' in setup_table_tree
+            # reverted to original method - it seems to be working ok
+            #self.node_inserted = (parent_num, seq, 'group')  # retain for before_save() below
+            self.db_obj.init(init_vals=
+                {'parent_num': parent_num, 'seq': seq, 'type': 'group'})
+            self.group.init(init_vals={'parent_id': parent_num, 'seq': seq})
+            #self.db_obj.init()
+            #self.group.init()
+            self.tree_frame = self.tree_frames['group']
+        else:  # must be 'member'
+            #self.node_inserted = (parent_num, seq, 'member')  # retain for before_save() below
+            self.db_obj.init(init_vals=
+                {'parent_num': parent_num, 'seq': seq, 'type': 'member'})
+            self.member.init(init_vals={'parent_id': parent_num, 'seq': seq})
+            #self.db_obj.init()
+            #self.member.init()
+            self.tree_frame = self.tree_frames['member']
+        self.session.request.send_insert_node(self.ref, parent_id, seq, -1)
+        yield from self.tree_frame.restart_frame()
+
+    @asyncio.coroutine
+    def on_req_delete_node(self, node_id=None):
+        if node_id is None:
+            pass  # deleting the node that is being inserted
+        else:
+            if node_id == '0_group':
+                raise AibError(head='Error', body='Cannot delete root node')
+            data_row_id, node_type = node_id.split('_')
+            data_row_id = int(data_row_id)
+            if node_type == 'group':
+                obj_to_delete = self.group
+            else:  # must be 'member'
+                obj_to_delete = self.member
+            if obj_to_delete.getval('children'):
+                raise AibError(head='Error', body='Cannot delete node with children')
+            obj_to_delete.delete()
+            self.db_obj.init()
+            self.db_obj.setval('type', node_type)
+            self.db_obj.setval('data_row_id', data_row_id)
+            self.db_obj.delete()
+        self.session.request.send_delete_node(self.ref, node_id)
+
+    @asyncio.coroutine
+    def on_move_node(self, node_id, parent_id, seq):
+        pass
+
+#   @asyncio.coroutine
+#   def before_save(self):  # called from frame_methods before save
+#       if self.node_inserted:  # set up in on_req_insert_node() above
+#           parent_num, seq, type = self.node_inserted
+#           self.db_obj.setval('parent_num', parent_num)
+#           self.db_obj.setval('seq', seq)
+#           self.db_obj.setval('type', type)
+#           if type == 'group':
+#               self.group.setval('parent_id', parent_num)
+#               self.group.setval('seq', seq)
+#           elif type == 'member':
+#               self.member.setval('parent_id', parent_num)
+#               self.member.setval('seq', seq)
+
+    @asyncio.coroutine
+    def update_node(self):  # called from frame_methods after save
+        self.node_inserted = False
+        node_type = self.db_obj.getval('type')
+        if node_type == 'group':
+            data_row_id = self.group.getval('row_id')
+            code = self.group.getval(self.group_code)
+            text = self.group.getval('descr')
+            expandable = True
+            node_id = '{}_group'.format(data_row_id)
+        else:
+            data_row_id = self.member.getval('row_id')
+            code = self.member.getval(self.member_code)
+            text = self.member.getval(self.member_descr)
+            expandable = False
+            node_id = '{}_member'.format(data_row_id)
+        self.db_obj.init(init_vals={
+            'type': node_type, 'data_row_id': data_row_id})
+        self.db_obj.setval('code', code)
+        self.db_obj.setval('descr', text)
+        self.db_obj.setval('expandable', expandable)
+        self.db_obj.save()
+        self.session.request.send_update_node(self.ref, node_id, text, expandable)

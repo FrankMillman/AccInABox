@@ -1,7 +1,11 @@
 import sqlite3
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal as D
+
+from errors import AibError
+import db.create_table
+from start import log_db, db_log
 
 def customise(DbConn, db_params):
     # add db-specific methods to DbConn class
@@ -19,14 +23,18 @@ def customise(DbConn, db_params):
     DbConn._build_select = DbConn.build_select
     DbConn.build_select = build_select
     DbConn.convert_string = convert_string
+    DbConn.convert_dflt = convert_dflt
     DbConn.create_functions = create_functions
     DbConn.create_company = create_company
     DbConn.create_primary_key = create_primary_key
     DbConn.create_foreign_key = create_foreign_key
     DbConn.create_index = create_index
     DbConn.tree_select = tree_select
+    DbConn.escape_string = escape_string
+    DbConn.amend_allow_null = amend_allow_null
     # create class attributes from db parameters
     DbConn.database = db_params['database']
+    DbConn.callback = callback
 
 def subfield(string, delim, occurrence):
     """
@@ -39,6 +47,9 @@ def subfield(string, delim, occurrence):
     eg select subfield('abc/123/xyz','/',3) returns ''
     """
 
+    """
+    # this logic matches the functions written for msql and psql,
+    #   because they do not have a string method to do this
     ans = ''
     found = 0
     for ch in string:
@@ -49,6 +60,9 @@ def subfield(string, delim, occurrence):
         elif found == occurrence:
             ans += ch
     return ans
+    """
+    # python does have a suitable string method, so use it
+    return string.split(delim)[occurrence]
 
 def repeat(string, times):
     return string * times
@@ -57,55 +71,68 @@ def zfill(string, lng):
     template = '{{:0>{}}}'.format(lng)
     return template.format(string)
 
-# Decimal adapter (store Decimal in database as string)
-# add '#' to force sqlite3 not to convert to int if no decimals
-# else it stores '4.00' as 4, and returns it as D('4')
-#
-# TODO - test the above to see if it is necessary
-#        we have our own scaling routine, so it might handle it automatically
+def date_func(date_string, op, days):
+    if op.lower() in ('+', 'add'):
+        return str(date(*map(int, date_string.split('-'))) + timedelta(days))
+    if op.lower() in ('-', 'sub'):
+        return str(date(*map(int, date_string.split('-'))) - timedelta(days))
+
+# Decimal adapter (store Decimal in database as float)
 def adapt_decimal(d):
-    return '#'+str(d)
+#   return float(str(d))
+    return float(d)
 sqlite3.register_adapter(D, adapt_decimal)
 
 # Decimal converter (convert back to Decimal on return)
 def convert_decimal(s):
-    s = s.decode('utf-8')
-    return D(s[1:])  # strip off leading '#'
+    return D(s.decode('utf-8'))
 sqlite3.register_converter('DEC', convert_decimal)
 
 # Boolean adapter (store bool in database as '1'/'0')
 def adapt_bool(b):
-    return str(int(b))
+#   return str(int(b))
+    return int(b)
 sqlite3.register_adapter(bool, adapt_bool)
 
 # Boolean converter (convert back to bool on return)
 def convert_bool(s):
-    s = s.decode('utf-8')
-    return bool(int(s))
+    return bool(int(s.decode('utf-8')))
 sqlite3.register_converter('BOOL', convert_bool)
 
-def init(self, pos):
+def init(self, pos, mem_id=None):
     if self.database == ':memory:':
-        conn = sqlite3.connect(':memory:',
-            detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
+#       conn = sqlite3.connect(':memory:',
+        conn = sqlite3.connect('file:{}?mode=memory&cache=shared'.format(mem_id),
+            detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False, uri=True)
+        cur = conn.cursor()
+        cur.execute("pragma read_uncommitted = on")  # http://www.sqlite.org/sharedcache.html
     else:
-        conn = sqlite3.connect('{0}/base'.format(self.database),
+        conn = sqlite3.connect('{0}/_base'.format(self.database),
             detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
     conn.create_function('subfield', 3, subfield)
     conn.create_function('repeat', 2, repeat)
     conn.create_function('zfill', 2, zfill)
+    conn.create_function('date_func', 3, date_func)
+
     self.conn = conn
     self.cursor = conn.cursor
     self.param_style = '?'
     self.func_prefix = ''
     self.concat = '||'
     self.repeat = 'repeat'
-    self.exception = (sqlite3.Error, sqlite3.OperationalError)
+    self.exception = (sqlite3.Error, sqlite3.IntegrityError, sqlite3.OperationalError)
     self.msg_pos = 0
     self.func_prefix = ''
     self.now = datetime.now
     self.today = date.today
     self.companies = {}
+
+#   conn.set_trace_callback(self.callback)
+
+#sql_log = open('sql_log.txt', 'w', errors='backslashreplace')
+def callback(self, sql_cmd):
+    sql_log.write('{}: {}\n'.format(id(self), sql_cmd))
+    sql_log.flush()
 
 def form_sql(self, columns, tablenames, where_clause='',
         order_clause='', limit=0, offset=0, lock=False):
@@ -120,7 +147,10 @@ def form_sql(self, columns, tablenames, where_clause='',
     if offset:
         sql += ' OFFSET {}'.format(offset)
     if lock:
-        self.cur.execute('BEGIN IMMEDIATE')
+        if not self.conn.in_transaction:
+            if log_db:
+                db_log.write('{}: BEGIN IMMEDIATE\n'.format(id(self)))
+            self.cur.execute('BEGIN IMMEDIATE')
     return sql
 
 def attach_company(self, company):
@@ -144,6 +174,7 @@ def create_company(self, company):
 
 def exec_sql(self, sql, params=None):
     # search for occurrences of {company}.{table}, and attach company
+    """
     if sql.lower().startswith('select'):
         from_pos = sql.lower().find('from ')
         if from_pos != -1:
@@ -170,6 +201,13 @@ def exec_sql(self, sql, params=None):
         dot = sql.find('.')
         company = sql[12:dot].strip()  # skip 'delete from '
         self.attach_company(company)
+    """
+    for word in sql.split():
+        if '.' in word:
+            company = word.split('.')[0]
+#           if len(company) > 1:  # to avoid a.col_name, ...
+            if not (company.startswith('_') and company != '_sys'):  # to avoid _.col_name, ...
+                self.attach_company(company)
     return self._exec_sql(sql, params)
 
 def simple_select(self, company, table_name, cols, where='', order=''):
@@ -193,6 +231,8 @@ def insert_row(self, db_obj, cols, vals, generated_flds):
     sql = ('INSERT INTO {} ({}) VALUES ({})'.format(table_name,
         ', '.join(cols), ', '.join([self.param_style]*len(cols))))
 
+    if log_db:
+        db_log.write('{}: {}; {}\n'.format(id(self), sql, vals))
     self.cur.execute(sql, vals)
 
     key_cols = []  # if there are generated fields, build
@@ -217,6 +257,8 @@ def insert_row(self, db_obj, cols, vals, generated_flds):
         sql = 'SELECT {} FROM {} WHERE {}'.format(
             ', '.join([fld.col_name for fld in generated_flds]),
             table_name, where)
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, key_vals))
         self.cur.execute(sql, key_vals)
         vals_generated = self.cur.fetchone()
         for fld, val in zip(generated_flds, vals_generated):
@@ -229,9 +271,11 @@ def insert_row(self, db_obj, cols, vals, generated_flds):
         sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
                 "({2}, {2}, {2}, 'add')".format(
             table_name, cols, self.param_style))
+        params = (data_row_id, db_obj.context.user_row_id, self.timestamp)
 
-        self.cur.execute(sql,
-            (data_row_id, db_obj.context.db_session.user_row_id, self.timestamp))
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
+        self.cur.execute(sql, params)
         xref_row_id = self.cur.lastrowid
 
         db_obj.setval('created_id', xref_row_id)
@@ -239,6 +283,8 @@ def insert_row(self, db_obj, cols, vals, generated_flds):
             'UPDATE {} SET created_id = {} WHERE row_id = {}'
             .format(table_name, xref_row_id, data_row_id)
             )
+        if log_db:
+            db_log.write('{}: {};\n'.format(id(self), sql))
         self.cur.execute(sql)
 
 def update_row(self, db_obj, cols, vals):
@@ -261,6 +307,8 @@ def update_row(self, db_obj, cols, vals):
         for col_name in key_cols])
     vals.extend(key_vals)
     sql = "UPDATE {} SET {} WHERE {}".format(table_name, update, where)
+    if log_db:
+        db_log.write('{}: {}; {}\n'.format(id(self), sql, vals))
     self.cur.execute(sql, vals)
 
     if db_table.audit_trail:
@@ -278,6 +326,8 @@ def update_row(self, db_obj, cols, vals):
             table_name, ', '.join(cols),
             ', '.join([self.param_style]*len(cols))))
 
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, vals))
         self.cur.execute(sql, vals)
         audit_row_id = self.cur.lastrowid
 
@@ -286,8 +336,10 @@ def update_row(self, db_obj, cols, vals):
         sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
             "({2}, {2}, {2}, {2}, 'chg')".format(
             table_name, cols, self.param_style))
-        self.cur.execute(sql, (data_row_id, audit_row_id,
-            db_obj.context.db_session.user_row_id, self.timestamp))
+        params = (data_row_id, audit_row_id, db_obj.context.user_row_id, self.timestamp)
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
+        self.cur.execute(sql, params)
 
 def delete_row(self, db_obj):
     db_table = db_obj.db_table
@@ -304,13 +356,17 @@ def delete_row(self, db_obj):
         sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
                 "({2}, {2}, {2}, 'del')".format(
             table_name, cols, self.param_style))
-        self.cur.execute(sql,
-            (data_row_id, db_obj.context.db_session.user_row_id, self.timestamp))
+        params = (data_row_id, db_obj.context.user_row_id, self.timestamp)
+        if log_db:
+            db_log.write('{}: {}; {}'.format(id(self), sql, params))
+        self.cur.execute(sql, params)
         xref_row_id = self.cur.lastrowid
         db_obj.setval('deleted_id', xref_row_id)
         sql = (
             'UPDATE {} SET deleted_id = {} WHERE row_id = {}'
             .format(table_name, xref_row_id, data_row_id))
+        if log_db:
+            db_log.write('{}: {};'.format(id(self), sql))
         self.cur.execute(sql)
 
     else:
@@ -324,6 +380,8 @@ def delete_row(self, db_obj):
             for col_name in key_cols])
 
         sql = "delete from {} where {}".format(table_name, where)
+        if log_db:
+            db_log.write('{}: {}; {}'.format(id(self), sql, key_vals))
         self.cur.execute(sql, key_vals)
 
 def delete_all(self, db_obj):
@@ -333,7 +391,9 @@ def delete_all(self, db_obj):
     if not db_obj.mem_obj:
         return  # can only delete all from mem_obj
 
-    sql = "delete from {}".format(table_name)
+    sql = "DELETE FROM {}".format(table_name)
+    if log_db:
+        db_log.write('{}: {};\n'.format(id(self), sql))
     self.cur.execute(sql)
 
 def convert_string(self, string, db_scale=None):
@@ -364,6 +424,22 @@ def convert_string(self, string, db_scale=None):
         .replace('NOW()', "(DATETIME('NOW'))")
         .replace('PKEY', 'PRIMARY KEY')
         )
+
+def convert_dflt(self, string, data_type):
+    if data_type == 'TEXT':
+        return repr(string)  # enclose in quotes
+    elif data_type == 'INT':
+        return string
+    elif data_type == 'DEC':
+        return string
+    elif data_type == 'BOOL':
+        if string == 'true':
+            return 1
+        else:
+            return 0
+    elif data_type == 'DTE':
+        if string == 'today':
+            return "(DATE('NOW'))"
 
 def create_functions(self):
     pass
@@ -472,35 +548,41 @@ def tree_select_new(self, company_id, table_name, start_col, start_value,
     if group:
         select_1 += ", row_id AS _group_id"
         select_1 += ", '' AS _group_key"
-    select_2 = "temp2.*, temp._level+1"
+    select_2 = "_temp2.*, _temp._level+1"
     if sort:
-        select_2 += ", temp._path || ',' || temp2.row_id"
-        select_2 += ", temp._key || zfill(temp2.seq, 4)"
+        select_2 += ", _temp._path||','||_temp2.row_id"
+        select_2 += ", _temp._key||zfill(_temp2.seq, 4)"
     if group:
         select_2 += (
-            ", CASE WHEN temp._level < {} THEN "
-            "temp2.row_id ELSE temp._group_id END".format(group)
+            ", CASE WHEN _temp._level < {} THEN "
+            "_temp2.row_id ELSE _temp._group_id END".format(group)
             )
         select_2 += (
-            ", CASE WHEN temp._level < {} THEN "
-            "temp._group_key || zfill(temp2.seq, 4) "
-            "ELSE temp._group_key END".format(group)
+            ", CASE WHEN _temp._level < {} THEN "
+            "_temp._group_key||zfill(_temp2.seq, 4) "
+            "ELSE _temp._group_key END".format(group)
             )
     if up:
-        test = "WHERE temp.parent_id = temp2.row_id"
+        test = "WHERE _temp.parent_id = _temp2.row_id"
     else:
-        test = "WHERE temp.row_id = temp2.parent_id"
+        test = "WHERE _temp.row_id = _temp2.parent_id"
+
+    if start_value is None:
+        start_value = 'NULL'
+        op = 'IS'
+    else:
+        op = '='
 
     cte = (
-        "WITH RECURSIVE temp AS ("
+        "WITH RECURSIVE _temp AS ("
           "SELECT {0} "
           "FROM {1}.{2} "
-          "WHERE {3} = {4} "
+          "WHERE {3} {4} {5} "
           "UNION ALL "
-          "SELECT {5} "
-          "FROM temp, {1}.{2} temp2 "
-          "{6})"
-        .format(select_1, company_id, table_name, start_col,
+          "SELECT {6} "
+          "FROM _temp, {1}.{2} _temp2 "
+          "{7})"
+        .format(select_1, company_id, table_name, start_col, op,
             start_value, select_2, test))
     return cte
 
@@ -508,3 +590,59 @@ if sqlite3.sqlite_version_info < (3, 8, 6):
     tree_select = tree_select_old  # create cte manually
 else:
     tree_select = tree_select_new  # create cte using the new WITH statement
+
+def escape_string():
+    # in a LIKE clause, literals '%' and '_' amust be escaped with '\'
+    # sqlite3 requires the escape character to be specified
+    return " ESCAPE '\'"
+
+def amend_allow_null(self, db_obj):
+    # sqlite3 does not allow changing NULL/NOT NULL by using ALTER TABLE
+    # it does provide a complicated workaround by allowing you to replace
+    #   the entire 'CREATE TABLE' statement in the sqlite master table
+    # see https://www.sqlite.org/lang_altertable.html for details
+
+    # it has a shortcoming - if you change a column from NULL to NOT NULL,
+    #   and there are rows in the database containing NULL, it does not
+    #   raise an error, which results in a failure of integrity
+    # can execute 'PRAGMA integrity_check' to look for such casss, and
+    #   reject the change if result is not 'ok'
+    # additionally, call chk_constraint before updating, to ensure
+    #   no NULL rows exist in database
+
+    company = db_obj.data_company
+    table_name = db_obj.getval('table_name')
+
+    # use exec_sql here to ensure that the company is 'attached'
+    cur = self.exec_sql('PRAGMA {}.schema_version'.format(company))
+    schema_version = cur.fetchone()[0]
+
+    # normally the statement starts with 'CREATE company.table_name'
+    # in this case we are updating the schema in company.sqlite_master
+    # it expects the statement to start with 'CREATE table_name'
+    # therefore we strip off the leading 'company.'
+    new_schema = (
+        db.create_table.create_table(
+            self, company, table_name, return_sql=True)
+        .replace('{}.'.format(company), '')
+        )
+
+    cur.execute('PRAGMA writable_schema=ON')
+    cur.execute(
+        'UPDATE {0}.sqlite_master SET sql = {1} '
+        'WHERE type = {1} AND name = {1}'
+        .format(company, self.param_style),
+        (new_schema, 'table', table_name)
+        )
+    cur.execute('PRAGMA integrity_check')
+    result = cur.fetchone()[0]
+    if result != 'ok':
+        raise AibError(
+            head='Integrity check failure',
+            body='Cannot reset allow_null - {}'.format(result)
+            )
+    cur.execute(
+        'PRAGMA {}.schema_version={}'.format(
+        company, schema_version+1)
+        )
+    cur.execute('PRAGMA writable_schema=OFF')

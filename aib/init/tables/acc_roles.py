@@ -1,0 +1,227 @@
+from lxml import etree
+
+# table definition
+table = {
+    'table_name'    : 'acc_roles',
+    'module'        : 'acc',
+    'short_descr'   : 'Roles',
+    'long_descr'    : 'Hierarchy of roles and responsibilities',
+    'audit_trail'   : True,
+    'table_created' : True,
+    'default_cursor': None,
+    'setup_form'    : None,
+    'upd_chks'      : None,
+    'del_chks'      : None,
+    'del_chks'      : [[
+                        'not_mod',
+                        'Cannot delete module administrator',
+                        [['check', '', 'parent_id', '>', 'int(1)', '']],
+                      ]],
+    'table_hooks'   : None,
+    'sequence'      : ['seq', ['parent_id'], None],
+    'defn_company'  : None,
+    'data_company'  : None,
+    'read_only'     : False,
+    }
+
+# column definitions
+cols = []
+cols.append ({
+    'col_name'   : 'row_id',
+    'data_type'  : 'AUTO',
+    'short_descr': 'Row id',
+    'long_descr' : 'Row id',
+    'col_head'   : 'Row',
+    'key_field'  : 'Y',
+    'generated'  : True,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'col_chks'   : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'created_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Created id',
+    'long_descr' : 'Created row id',
+    'col_head'   : 'Created',
+    'key_field'  : 'N',
+    'generated'  : True,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '0',
+    'col_chks'   : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'deleted_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Deleted id',
+    'long_descr' : 'Deleted row id',
+    'col_head'   : 'Deleted',
+    'key_field'  : 'N',
+    'generated'  : True,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '0',
+    'col_chks'   : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'role',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Role',
+    'long_descr' : 'Role code',
+    'col_head'   : 'Role',
+    'key_field'  : 'A',
+    'generated'  : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 15,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'col_chks'   : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'descr',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Description',
+    'long_descr' : 'Description',
+    'col_head'   : 'Description',
+    'key_field'  : 'N',
+    'generated'  : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 30,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'col_chks'   : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'parent_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Parent id',
+    'long_descr' : 'Parent id',
+    'col_head'   : 'Parent',
+    'key_field'  : 'N',
+    'generated'  : False,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'col_chks'   : None,
+    'fkey'       : ['acc_roles', 'row_id', None, None, False],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'seq',
+    'data_type'  : 'INT',
+    'short_descr': 'Sequence',
+    'long_descr' : 'Sequence',
+    'col_head'   : 'Seq',
+    'key_field'  : 'N',
+    'generated'  : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'col_chks'   : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'sub_roles',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Allow sub_roles?',
+    'long_descr' : 'Can this role have other roles reporting to it?',
+    'col_head'   : 'Sub_roles?',
+    'key_field'  : 'N',
+    'generated'  : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'col_chks'   : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+
+# virtual column definitions
+virt = []
+virt.append ({
+    'col_name'   : 'children',
+    'data_type'  : 'INT',
+    'short_descr': 'Children',
+    'long_descr' : 'Number of children',
+    'col_head'   : '',
+    'sql'        : "SELECT count(*) FROM {company}.acc_roles b "
+                   "WHERE b.parent_id = a.row_id",
+    })
+virt.append ({
+    'col_name'   : 'expandable',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Expandable?',
+    'long_descr' : 'Is this node expandable?',
+    'col_head'   : '',
+    'sql'        : "SELECT a.sub_roles",
+    })
+virt.append ({
+    'col_name'   : 'parent_num',
+    'data_type'  : 'INT',
+    'short_descr': 'Parent numeric id',
+    'long_descr' : 'Parent id - change null to 0',
+    'col_head'   : '',
+    'sql'        : "SELECT COALESCE(a.parent_id, 0)",
+    })
+
+# cursor definitions
+cursors = []
+
+cursors.append({
+    'cursor_name': 'role_list',
+    'descr': 'List of roles',
+    'columns': [
+        ('role', 80, False, False, False, False, None, None, None, None),
+        ('descr', 150, True, False, False, False, None, None, None, None),
+        ],
+    'filter': [],
+    'sequence': [('role', False)],
+    'default': True
+    })
+
+cursors.append({
+    'cursor_name': 'roles_no_admin',
+    'descr': 'List of roles excluding admin',
+    'columns': [
+        ('role', 80, False, False, False, False, None, None, None, None),
+        ('descr', 150, True, False, False, False, None, None, None, None),
+        ],
+    'filter': [['where', '', 'role', '!=', "'admin'", '']],
+    'sequence': [('role', False)],
+    'default': False
+    })

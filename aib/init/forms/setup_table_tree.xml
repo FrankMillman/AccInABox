@@ -1,0 +1,444 @@
+<form name="setup_table_combo">
+  <db_objects>
+    <db_obj name="db_module" table_name="db_modules"/>
+    <db_obj name="db_table" table_name="db_tables"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="var" descr="Variables used in form">
+      <mem_col col_name="own_defn" data_type="TEXT" short_descr="Use own table definitions?"
+        long_descr="Use own table definition?" col_head="" key_field="N"
+        allow_null="false" allow_amend="true" max_len="1" db_scale="0" dflt_val="Y"
+        choices="[true, false, [
+        [`Y`, `Use own table definition`, [], []],
+        [`N`, `Use other table definition`, [], []]
+        ]]"/>
+      <mem_col col_name="own_data" data_type="TEXT" short_descr="Use own table data?"
+        long_descr="Use own table data?" col_head="" key_field="N"
+        allow_null="false" allow_amend="true" max_len="1" db_scale="0" dflt_val="Y"
+        choices="[true, false, [
+        [`Y`, `Use own table for data`, [], []],
+        [`N`, `Use other table for data`, [], []]
+        ]]"/>
+    </mem_obj>
+    <mem_obj name="db_table_combo" descr="Combination of db_modules and db_tables">
+      <mem_col col_name="type" data_type="TEXT" short_descr="Node type"
+        long_descr="Node type:- 'group' (db_module), 'member' (db_table)" col_head=""
+        key_field="A" allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="data_row_id" data_type="INT" short_descr="Data row id"
+        long_descr="if 'group', db_module; if 'member', db_table" col_head=""
+        key_field="A" allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="code" data_type="TEXT" short_descr="Code"
+        long_descr="Code" col_head="Code" key_field="N" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
+        long_descr="Description" col_head="Description" key_field="N" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="parent_num" data_type="INT" short_descr="Parent id"
+        long_descr="Parent id" col_head="" key_field="N"
+        allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="" key_field="N"
+        allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
+      <mem_col col_name="expandable" data_type="BOOL" short_descr="Expandable"
+        long_descr="True if group, False if table" col_head="" key_field="N" allow_null="false"
+        allow_amend="false" max_len="0" db_scale="0"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params/>
+  <output_params/>
+  <frame main_object="db_table_combo">
+    <toolbar/>
+    <body>
+      <block/>
+      <tree_combo data_object="db_table_combo" group="db_module" group_code="module"
+        member="db_table" member_code="table_name" member_descr="short_descr"
+        lng="250" height="500" toolbar="true"/>
+      <tree_frame main_object="db_module" combo_type="group">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Module:"/>
+          <col/>
+          <input fld="db_module.module" lng="80" validation="
+            <<validations>>
+              <<validation>>
+                <<case>>
+                  <<node_inserted>>
+                    <<case>>
+                      <<obj_exists obj_name=`db_module`>>
+                        <<init_obj obj_name=`db_module`/>>
+                        <<error head=`Module` body=`'$value' already exists`/>>
+                      <</obj_exists>>
+                    <</case>>
+                  <</node_inserted>>
+                <</case>>
+              <</validation>>
+            <</validations>>
+            "/>
+          <row/>
+          <col/>
+          <label value="Description:"/>
+          <col/>
+          <input fld="db_module.descr" lng="150"/>
+          <row/>
+          <col/>
+          <label value="Uses transactions?"/>
+          <col/>
+          <input fld="db_module.trans"/>
+        </body>
+        <button_row validate="true" template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame">
+        </frame_methods>
+      </tree_frame>
+      <tree_frame main_object="db_table" obj_descr = "db_table.table_name"
+          combo_type="member">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <input fld="var.own_defn" lng="200"/>
+
+          <block/>
+          <subtype_panel subtype="var.own_defn">
+
+            <subtype_body subtype_id="Y">
+              <row/>
+              <col/>
+              <label value="Table name:"/>
+              <col/>
+              <input fld="db_table.table_name" lng="150" validation="
+                <<validations>>
+                  <<validation>>
+                    <<case>>
+                      <<node_inserted>>
+                        <<case>>
+                          <<obj_exists obj_name=`db_table`>>
+                            <<init_obj obj_name=`db_table`/>>
+                            <<error head=`Table name` body=`'$value' already exists`/>>
+                          <</obj_exists>>
+                        <</case>>
+                      <</node_inserted>>
+                    <</case>>
+                  <</validation>>
+                <</validations>>
+                "/>
+              <row/>
+              <col/>
+              <label value="Short description:"/>
+              <col colspan="3"/>
+              <input fld="db_table.short_descr" lng="200"/>
+              <row/>
+              <col/>
+              <label value="Long description:"/>
+              <col colspan="3"/>
+              <input fld="db_table.long_descr" lng="300" height="5"/>
+              <row/>
+              <col/>
+              <label value="Keep audit trail?"/>
+              <col/>
+              <input fld="db_table.audit_trail"/>
+
+              <row/>
+              <col/>
+              <col/>
+              <col/>
+              <button btn_id="pre_save" btn_label="Save header"
+                help_msg = "Save header before proceeding"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                    <<save_obj obj_name=`db_table`/>>
+                    <<change_button>>
+                      <<btn_dflt btn_id=`btn_rgt`/>>
+                    <</change_button>>
+                    <<change_button>>
+                      <<btn_show btn_id=`pre_save` state=`false`/>>
+                    <</change_button>>
+                    <<case>>
+                      <<compare src=`db_table.audit_trail` op=`eq` tgt=`$True`>>
+                        <<pyfunc name=`custom.table_setup.setup_audit_cols`/>>
+                      <</compare>>
+                    <</case>>
+                  <</action>>
+                " validation="
+                  <<validations>>
+                    <<validation>>
+                      <<case>>
+                        <<obj_exists obj_name=`db_table`/>>
+                        <<default>>
+                          <<error head=`Error` body=`Header not saved`/>>
+                        <</default>>
+                      <</case>>
+                    <</validation>>
+                  <</validations>>
+                "/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="db_col" btn_label="Db columns"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                    <<sub_form form_name=`_sys.setup_table_dbcols`>>
+                      <<call_params>>
+                        <<call_param name=`db_table` type=`data_obj` source=`db_table`/>>
+                      <</call_params>>
+                      <<return_params/>>
+                      <<on_return>>
+                        <<return state=`cancelled`/>>
+                        <<return state=`completed`/>>
+                      <</on_return>>
+                    <</sub_form>>
+                  <</action>>
+                "/>
+              <col/>
+              <button lng="150" btn_id="db_cur" btn_label="Db cursors"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                    <<sub_form form_name=`_sys.cursor_setup`>>
+                      <<call_params>>
+                        <<call_param name=`db_table` type=`data_obj` source=`db_table`/>>
+                      <</call_params>>
+                      <<return_params/>>
+                      <<on_return>>
+                        <<return state=`cancelled`/>>
+                        <<return state=`completed`/>>
+                      <</on_return>>
+                   <</sub_form>>
+                  <</action>>
+                "/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="upd_chk" btn_label="Update checks"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                    <<sub_form form_name=`_sys.upd_checks`>>
+                      <<call_params>>
+                        <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                        <<call_param name=`upd_chks` type=`data_attr` source=`db_table.upd_chks`/>>
+                      <</call_params>>
+                      <<return_params>>
+                        <<return_param name=`upd_chks` type=`data_attr` target=`db_table.upd_chks`/>>
+                      <</return_params>>
+                      <<on_return>>
+                        <<return state=`completed`/>>
+                        <<return state=`cancelled`/>>
+                      <</on_return>>
+                    <</sub_form>>
+                  <</action>>
+                "/>
+              <col/>
+              <button lng="150" btn_id="del_chk" btn_label="Delete checks"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                    <<sub_form form_name=`_sys.del_checks`>>
+                      <<call_params>>
+                        <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                        <<call_param name=`del_chks` type=`data_attr` source=`db_table.del_chks`/>>
+                      <</call_params>>
+                      <<return_params>>
+                        <<return_param name=`del_chks` type=`data_attr` target=`db_table.del_chks`/>>
+                      <</return_params>>
+                      <<on_return>>
+                        <<return state=`completed`/>>
+                        <<return state=`cancelled`/>>
+                      <</on_return>>
+                    <</sub_form>>
+                  <</action>>
+                "/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="db_hook" btn_label="Table hooks"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                  <</action>>
+                "/>
+              <col/>
+              <button lng="150" btn_id="form_defn" btn_label="Sequence"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                    <<inline_form form_name=`_sys.table_sequence`/>>
+                  <</action>>
+                "/>
+              <row/>
+              <col/>
+              <label value="Default cursor:"/>
+              <input fld="db_table.default_cursor" lng="100"/>
+              <col/>
+              <label value="Form definition:"/>
+              <input fld="db_table.setup_form" lng="100"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="N">
+              <row/>
+              <col/>
+              <label value="Definition company:"/>
+              <col/>
+              <input fld="db_table.defn_company" lng="120" validation="
+                <<validations>>
+                  <<validation>>
+                    <<case>>
+                      <<compare src=`$value` op=`is_` tgt=`$None`>>
+                        <<error head=`Company name` body=`A value is required`/>>
+                      <</compare>>
+                    <</case>>
+                  <</validation>>
+                <</validations>>
+                "/>
+              <row/>
+              <col/>
+              <label value="Table name:"/>
+              <col/>
+              <input fld="db_table.table_name" lng="150" validation="
+                <<validations>>
+                  <<validation>>
+                    <<case>>
+                      <<node_inserted>>
+                        <<case>>
+                          <<obj_exists obj_name=`db_table`>>
+                            <<init_obj obj_name=`db_table`/>>
+                            <<error head=`Table name` body=`'$value' already exists`/>>
+                          <</obj_exists>>
+                        <</case>>
+                      <</node_inserted>>
+                    <</case>>
+                  <</validation>>
+                  <<validation>>
+                    <<pyfunc name=`custom.table_setup.chk_table_name`/>>
+                  <</validation>>
+                <</validations>>
+                "/>
+              <row/>
+              <col/>
+              <label value="Description:"/>
+              <col/>
+              <display fld="db_table.short_descr" lng="250"/>
+              <row/>
+              <col/>
+              <input fld="var.own_data" lng="200" after="
+                <<action>>
+                  <<case>>
+                    <<compare src=`var.own_data` op=`eq` tgt=`Y`>>
+                      <<set_readonly target=`db_table.data_company` state=`true`/>>
+                      <<set_readonly target=`db_table.read_only` state=`true`/>>
+                    <</compare>>
+                    <<default>>
+                      <<set_readonly target=`db_table.data_company` state=`false`/>>
+                      <<set_readonly target=`db_table.read_only` state=`false`/>>
+                    <</default>>
+                  <</case>>
+                <</action>>
+              "/>
+              <row/>
+              <col/>
+              <label value="Data company:"/>
+              <col/>
+              <input fld="db_table.data_company" lng="120" validation="
+                <<validations>>
+                  <<validation>>
+                    <<case>>
+                      <<compare src=`var.own_data` op=`eq` tgt=`N`>>
+                        <<case>>
+                          <<compare src=`$value` op=`is_` tgt=`$None`>>
+                            <<error head=`Company name` body=`A value is required`/>>
+                          <</compare>>
+                        <</case>>
+                      <</compare>>
+                    <</case>>
+                  <</validation>>
+                <</validations>>
+                "/>
+              <label value="Read only?"/>
+              <input fld="db_table.read_only"/>
+            </subtype_body>
+
+          </subtype_panel>
+        </body>
+        <button_row validate="true" template="Tree_Frame">
+          <button btn_id="create_table" btn_label="Create table" btn_enabled="true"
+            btn_validate="true" btn_default="false" action="
+              <<action>>
+                <<pyfunc name=`custom.table_setup.create_table`/>>
+                <<assign>>
+                  <<source>>$True<</source>>
+                  <<target>>db_table.table_created<</target>>
+                <</assign>>
+                <<save_obj obj_name=`db_table`/>>
+                <<change_button>>
+                  <<btn_enabled btn_id=`create_table` state=`false`/>>
+                <</change_button>>
+              <</action>>
+            " help_msg="Set up table in database"/>
+        </button_row>
+        <frame_methods template="Tree_Frame">
+          <method name="on_start_frame" action="
+            <<action>>
+              <<case>>
+                <<obj_exists obj_name=`db_table`>>
+                  <<!--change_button>>
+                    <<btn_dflt btn_id=`btn_rgt`/>>
+                  <</change_button-->>
+                  <<change_button>>
+                    <<btn_show btn_id=`pre_save` state=`false`/>>
+                  <</change_button>>
+                  <<case>>
+                    <<compare src=`db_table.defn_company` op=`is_` tgt=`$None`>>
+                      <<assign>>
+                        <<source>>Y<</source>>
+                        <<target>>var.own_defn<</target>>
+                      <</assign>>
+                    <</compare>>
+                    <<default>>
+                      <<assign>>
+                        <<source>>N<</source>>
+                        <<target>>var.own_defn<</target>>
+                      <</assign>>
+                    <</default>>
+                  <</case>>
+                <</obj_exists>>
+                <<default>>
+                  <<init_obj obj_name=`var`/>>
+                  <<change_button>>
+                    <<btn_show btn_id=`pre_save` state=`true`/>>
+                  <</change_button>>
+                <</default>>
+              <</case>>
+              <<case>>
+                <<compare src=`db_table.table_created` op=`eq` tgt=`$True`>>
+                  <<change_button>>
+                    <<btn_enabled btn_id=`create_table` state=`false`/>>
+                  <</change_button>>
+                <</compare>>
+                <<default>>
+                  <<change_button>>
+                    <<btn_enabled btn_id=`create_table` state=`true`/>>
+                  <</change_button>>
+                <</default>>
+              <</case>>
+            <</action>>
+          "/>
+        </frame_methods>
+      </tree_frame>
+    </body>
+    <button_row validate="false"/>
+    <frame_methods template="Tree_Form">
+      <method name="on_req_close" action="
+        <<action>>
+         <<call method=`do_cancel`/>>
+        <</action>>
+      "/>
+      <method name="on_req_cancel" action="
+        <<action>>
+          <<call method=`do_cancel`/>>
+        <</action>>
+      "/>
+      <method name="do_cancel" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

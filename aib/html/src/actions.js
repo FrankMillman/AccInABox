@@ -38,17 +38,14 @@ function got_focus(new_focus) {
 
 //  if (new_focus_form.disable_count) return;
 
-  // next bit seems dodgy!
-  // if validation fails, we set focus on invalid field - focus_from_server is set to true
-  // then we display error message
-  // when error box is dismissed, we return focus to the invalid field
-  // this is the only time that current_focus === new_focus and focus_from_server is true
-  // therefore this is the only time that we reset focus_from_server to false
-  // there could be other occasions when focus_from_server is true
-  // we need a more reliable way to reset it
   if (new_focus_form.current_focus === new_focus) {
-    if (new_focus_form.focus_from_server)
-      new_focus_form.focus_from_server = false;
+    // after dragging, we set focus on current_focus
+    // here we check if 'input' is active
+    // if input is active, we set focus on input
+    if (new_focus.tabIndex === -1)
+      new_focus.childNodes[0].focus();
+    new_focus_form.focus_from_server = false;
+    new_focus.frame.err_flag = false;
     return;
     };
   if (new_focus.disabled)
@@ -56,7 +53,7 @@ function got_focus(new_focus) {
 
   //debug3('GOT FOCUS ' + new_focus.ref + ' ' + new_focus.help_msg + ' ' +
   //  (new_focus.frame.form.current_focus === new_focus) + ' ' +
-  //  new_focus.frame.send_focus_msg);
+  //  new_focus_form.focus_from_server);
 
   current_form = new_focus_form;  // global variable
   var old_focus = new_focus_form.current_focus;
@@ -72,17 +69,19 @@ function got_focus(new_focus) {
   new_focus_form.current_focus = new_focus;
   new_focus_form.setting_focus = new_focus;  // IE workaround
   if (new_focus_form.help_msg)
-    new_focus_form.help_msg.innerHTML = new_focus.help_msg;
+    new_focus_form.help_msg.data = new_focus.help_msg;
 
 // if focus_from_server === true, should we call 'got_focus'?
 // it sends 'got focus' back to the server, which we don't want
 // change it and see what happens! [2013-08-23]
 
-  new_focus.got_focus();
 //  if (new_focus_form.focus_from_server)
 //    new_focus_form.focus_from_server = false;
 //  else
 //    new_focus.got_focus();
+  new_focus.got_focus();
+  new_focus_form.focus_from_server = false;
+  new_focus.frame.err_flag = false;
 
   if (new_focus.active_frame !== new_focus.frame.form.active_frame) {
 
@@ -108,7 +107,9 @@ function got_focus(new_focus) {
     if (new_frame.type === 'grid_frame') {
       new_frame.page.style.border = '1px solid blue';
       new_frame.ctrl_grid.highlight_active_row();
-      new_frame.frame_amended = (new_frame.ctrl_grid.inserted !== 0);
+// is this necessary? [2015-04-03]
+// causes a problem with 'del_checks' - cannot tab off empty grid
+//      new_frame.set_amended((new_frame.ctrl_grid.inserted !== 0));
       };
 //
 //    new_focus.frame.form.set_gridframe_border(new_focus.active_frame);
@@ -118,6 +119,7 @@ function got_focus(new_focus) {
   };
 
 function redisplay(args) {
+  //debug3('redisp ' + JSON.stringify(args));
   for (var i=0, l=args.length; i<l; i++) {
     var ref = args[i][0], value = args[i][1];
     get_obj(ref).set_value_from_server(value);
@@ -132,49 +134,31 @@ function reset(args) {
   };
 
 function set_readonly(args) {
+  //debug3('readonly ' + JSON.stringify(args));
   for (var i=0, l=args.length; i<l; i++) {
     var ref = args[i][0], state = args[i][1];
     var obj = get_obj(ref);
-    if (state === false)
-      enable_obj(obj)
-    else
-      disable_obj(obj)
+    //obj.readonly = state;
+    obj.set_readonly(state);
     };
   };
 
-function enable_obj(obj) {
-  obj.disable_count = 0;
-  obj.set_disabled(false);
-//  obj.disable_count -= 1;
-//  if (!obj.disable_count) {
-//    obj.set_disabled(false);
-////    obj.disabled = false;
-////    obj.tabIndex = 0;
-//    };
-  };
-
-function disable_obj(obj) {
-  obj.disable_count = 1;
-  obj.set_disabled(true);
-//  if (!obj.disable_count){
-//    obj.set_disabled(true);
-////    obj.disabled = true;
-////    obj.tabIndex = -1;
-////    if (obj === obj.frame.form.current_focus) {
-////      var pos = obj.pos + 1;
-////      while (obj.frame.obj_list[pos].disabled || obj.frame.obj_list[pos].display)
-////        pos += 1;  // look for next enabled object
-////      obj.frame.obj_list[pos].focus();
-////      };
-//    };
-//  obj.disable_count += 1;
-  };
-
 function set_focus(args) {
-  var obj = get_obj(args);
+  var obj_ref = args[0], err_flag=args[1];
+  var obj = get_obj(obj_ref);
   obj.frame.form.focus_from_server = true;
   obj.frame.form.setting_focus = obj;  // IE workaround - delays actually setting focus!
+  obj.frame.err_flag = err_flag;
+  if (obj.nb_page !== null)
+    // ensure object visible
+    if (obj.nb_page.pos !== obj.nb_page.parentNode.current_pos)
+      obj.nb_page.parentNode.req_new_page(obj.nb_page.pos, false)
   obj.focus();
+  };
+
+function recv_dflt(args) {
+  var obj = get_obj(args[0]), value = args[1];
+  obj.set_dflt_val(value);
   };
 
 function recv_prev(args) {
@@ -183,24 +167,37 @@ function recv_prev(args) {
   };
 
 function cell_set_focus(args) {
-  var grid_ref = args[0], row = args[1], col = args[2], err_flag=args[3];
+  var grid_ref = args[0], row = args[1], col_ref = args[2], dflt_val=args[3], err_flag=args[4];
   var grid = get_obj(grid_ref);
+  if (col_ref === null)
+    var col = grid.active_col;
+  else
+    var col = get_obj(col_ref).col;
   if (!grid.has_focus)
     grid.focus();
   grid.focus_from_server = true;
   grid.err_flag = err_flag;
-  grid.cell_set_focus(row, col);
+  grid.cell_set_focus(row, col, dflt_val);
   };
 
 function start_frame(args) {
   var frame = get_obj(args[0]);
-  frame.frame_amended = args[1];  // false if object exists, else true
-  if (args[2]) {  // set_focus
-
+  frame.obj_exists = args[1];
+  var set_focus = args[2];
+  //debug3('start frame ' + frame.ref + ' exists=' + args[1] + ' focus=' + args[2]);
+  frame.set_amended(!frame.obj_exists);
+  if (frame.combo_type !== undefined) {
+    if (frame.combo_type === 'member')
+      frame.tree.tree_frames['group'].page.style.display = 'none';
+    else  // must be 'group'
+      frame.tree.tree_frames['member'].page.style.display = 'none';
+    frame.page.style.display = 'block';
+    };
+  if (set_focus) {
     frame.form.tabdir = 1;  // in case 'dummy' gets focus
     for (var i=0, l=frame.obj_list.length; i<l; i++) {
       var obj = frame.obj_list[i];
-      //if (obj.disable_count || obj.display || !obj.offsetHeight)
+      //if (obj.readonly || obj.display || !obj.offsetHeight)
       if (obj.display || !obj.offsetHeight)
         continue;  // look for the next obj
       else
@@ -224,7 +221,7 @@ function start_frame(args) {
     else {
 //      if (frame.form.current_focus !== null)
       if (frame.type === 'frame') // don't do this for grid_frame
-        frame.send_focus_msg = false;  // do not notify server of 'lost/got_focus'
+        frame.form.focus_from_server = true;  // do not notify server of 'lost/got_focus'
       setTimeout(function() {obj.focus()}, 0);
       };
     };
@@ -255,13 +252,33 @@ function delete_row(args) {
   grid.delete_row(args[1]);
   };
 
+function insert_node(args) {
+  var tree_ref=args[0], parent_id=args[1], seq=args[2], node_id=args[3];
+  var tree = get_obj(tree_ref);
+  tree.insert_node(parent_id, seq, node_id);
+  };
+
+function update_node(args) {
+  var tree_ref=args[0], node_id=args[1], text=args[2], expandable=args[3];
+  var tree = get_obj(tree_ref);
+  tree.update_node(node_id, text, expandable);
+  };
+
+function delete_node(args) {
+  var tree_ref=args[0], node_id=args[1];
+  var tree = get_obj(tree_ref);
+  tree.delete_node(node_id);
+  };
+
 function set_subtype(args) {
   var frame_ref = args[0], subtype_name = args[1], subtype_id = args[2];
   var frame = get_obj(frame_ref);
   var subtype = frame.subtypes[subtype_name];
-  subtype[subtype._active_box].style.display = 'none';
-  subtype[subtype_id].style.display = 'inline-block';
-  subtype._active_box = subtype_id;
+  if (subtype._active_box !== subtype_id) {
+    subtype[subtype._active_box].style.display = 'none';
+    subtype[subtype_id].style.display = 'block';
+    subtype._active_box = subtype_id;
+    };
   };
 
 function exception(args) {

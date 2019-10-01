@@ -7,7 +7,6 @@
         <xs:element ref="mem_objects"/>
         <xs:element ref="input_params"/>
         <xs:element ref="output_params"/>
-        <xs:element ref="rules"/>
         <xs:element ref="frame"/>
         <xs:element ref="inline_form" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
@@ -28,6 +27,8 @@
       <xs:attribute name="hooks"/>
       <xs:attribute name="parent"/>
       <xs:attribute name="fkey"/>
+      <xs:attribute name="cursor"/>
+      <xs:attribute name="formview_obj" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="mem_objects">
@@ -46,6 +47,9 @@
       <xs:attribute name="descr"/>
       <xs:attribute name="parent"/>
       <xs:attribute name="hooks"/>
+      <xs:attribute name="sequence"/>
+      <xs:attribute name="upd_chks"/>
+      <xs:attribute name="del_chks"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="mem_col">
@@ -53,13 +57,13 @@
       <xs:attribute name="col_name" use="required"/>
       <xs:attribute name="data_type" use="required"/>
       <xs:attribute name="short_descr" use="required"/>
-      <xs:attribute name="long_descr" use="required"/>
-      <xs:attribute name="col_head" use="required"/>
+      <xs:attribute name="long_descr"/>
+      <xs:attribute name="col_head"/>
       <xs:attribute name="key_field" use="required"/>
-      <xs:attribute name="allow_null" use="required" type="xs:boolean"/>
-      <xs:attribute name="allow_amend" use="required" type="xs:boolean"/>
-      <xs:attribute name="max_len" use="required" type="xs:integer"/>
-      <xs:attribute name="db_scale" use="required" type="xs:integer"/>
+      <xs:attribute name="allow_null" type="xs:boolean"/>
+      <xs:attribute name="allow_amend" type="xs:boolean"/>
+      <xs:attribute name="max_len" type="xs:integer"/>
+      <xs:attribute name="db_scale" type="xs:integer"/>
       <xs:attribute name="scale_ptr"/>
       <xs:attribute name="dflt_val"/>
       <xs:attribute name="col_chks"/>
@@ -97,24 +101,6 @@
       <xs:attribute name="source" use="required"/>
     </xs:complexType>
   </xs:element>
-  <xs:element name="rules">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="dflt_rule" minOccurs="0" maxOccurs="unbounded"/>
-        <xs:element ref="vld_rule" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="dflt_rule">
-    <xs:complexType/>
-  </xs:element>
-  <xs:element name="vld_rule">
-    <xs:complexType>
-      <xs:group ref="vld_types" maxOccurs="unbounded"/>
-      <xs:attribute name="fld_name" use="required"/>
-      <xs:attribute name="errmsg" use="required"/>
-    </xs:complexType>
-  </xs:element>
   <xs:element name="frame">
     <xs:complexType>
       <xs:sequence>
@@ -124,6 +110,9 @@
         <xs:element ref="frame_methods"/>
       </xs:sequence>
       <xs:attribute name="main_object"/>
+      <xs:attribute name="obj_descr"/>
+      <xs:attribute name="before_start_form"/>
+      <xs:attribute name="after_start_form"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="toolbar">
@@ -136,11 +125,15 @@
   </xs:element>
   <xs:element name="tool">
     <xs:complexType>
-      <!-- xs:group ref="callable" minOccurs="0" maxOccurs="unbounded"/ -->
       <xs:attribute name="type" use="required"/>
+      <xs:attribute name="fld"/>
+      <xs:attribute name="name"/>
+      <xs:attribute name="lng"/>
       <xs:attribute name="label"/>
       <xs:attribute name="tip"/>
-      <xs:attribute name="confirm" type="xs:boolean"/>
+      <xs:attribute name="action"/>
+      <xs:attribute name="shortcut"/>
+      <!-- xs:attribute name="confirm" type="xs:boolean"/ -->
     </xs:complexType>
   </xs:element>
   <xs:element name="body">
@@ -168,7 +161,11 @@
       <xs:element ref="nb_end"/>
       <xs:element ref="grid"/>
       <xs:element ref="grid_frame"/>
+      <xs:element ref="tree"/>
+      <xs:element ref="tree_combo"/>
+      <xs:element ref="tree_frame"/>
       <xs:element ref="subtype_panel"/>
+      <xs:element ref="button_row"/>
     </xs:choice>
   </xs:group>
   <xs:element name="string">
@@ -200,8 +197,11 @@
       <xs:attribute name="height" type="xs:integer"/>
       <xs:attribute name="pwd" type="xs:boolean"/>
       <xs:attribute name="readonly" type="xs:boolean"/>
+      <xs:attribute name="skip" type="xs:boolean"/>
       <xs:attribute name="choice" type="xs:boolean"/>
       <xs:attribute name="lookup" type="xs:boolean"/>
+      <xs:attribute name="before"/>
+      <xs:attribute name="default"/>
       <xs:attribute name="validation"/>
       <xs:attribute name="after"/>
     </xs:complexType>
@@ -239,8 +239,10 @@
         <xs:element ref="grid_methods" minOccurs="0"/>
       </xs:sequence>
       <xs:attribute name="data_object" use="required"/>
+      <xs:attribute name="obj_descr"/>
       <xs:attribute name="growable" type="xs:boolean"/>
       <xs:attribute name="num_grid_rows" type="xs:integer"/>
+      <xs:attribute name="auto_startrow" type="xs:boolean"/>
       <xs:attribute name="form_name"/>
       <xs:attribute name="cursor"/>
       <xs:attribute name="colspan" type="xs:integer"/>
@@ -249,9 +251,15 @@
   </xs:element>
   <xs:element name="cur_columns">
     <xs:complexType>
+<!--
       <xs:sequence>
         <xs:element ref="cur_col" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
+-->
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="cur_col" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="cur_btn" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:choice>
     </xs:complexType>
   </xs:element>
   <xs:element name="cur_col">
@@ -260,11 +268,20 @@
       <xs:attribute name="lng" type="xs:integer" use="required"/>
       <xs:attribute name="expand" type="xs:boolean"/>
       <xs:attribute name="readonly" type="xs:boolean"/>
+      <xs:attribute name="skip" type="xs:boolean"/>
       <xs:attribute name="reverse" type="xs:boolean"/>
-      <xs:attribute name="lkup_ok" type="xs:boolean"/>
-      <xs:attribute name="choice_ok" type="xs:boolean"/>
+      <xs:attribute name="before"/>
+      <xs:attribute name="default"/>
       <xs:attribute name="validation"/>
       <xs:attribute name="after"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="cur_btn">
+    <xs:complexType>
+      <xs:attribute name="btn_label" use="required"/>
+      <xs:attribute name="btn_id" use="required"/>
+      <xs:attribute name="lng" type="xs:integer" use="required"/>
+      <xs:attribute name="action" use="required"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="cur_filter">
@@ -299,7 +316,42 @@
         <xs:element ref="frame_methods" minOccurs="0"/>
       </xs:sequence>
       <xs:attribute name="main_object"/>
-      <xs:attribute name="split"/>
+      <xs:attribute name="obj_descr"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="tree">
+    <xs:complexType>
+      <xs:attribute name="data_object" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="height" type="xs:integer"/>
+      <xs:attribute name="toolbar" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="tree_combo">
+    <xs:complexType>
+      <xs:attribute name="data_object" use="required"/>
+      <xs:attribute name="group" use="required"/>
+      <xs:attribute name="group_code" use="required"/>
+      <xs:attribute name="group_filter"/>
+      <xs:attribute name="member" use="required"/>
+      <xs:attribute name="member_code" use="required"/>
+      <xs:attribute name="member_descr" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="height" type="xs:integer"/>
+      <xs:attribute name="toolbar" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="tree_frame">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="toolbar" minOccurs="0"/>
+        <xs:element ref="body"/>
+        <xs:element ref="button_row" minOccurs="0"/>
+        <xs:element ref="frame_methods" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="main_object" use="required"/>
+      <xs:attribute name="obj_descr"/>
+      <xs:attribute name="combo_type"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="subtype_panel">
@@ -308,6 +360,7 @@
         <xs:element ref="subtype_body" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
       <xs:attribute name="subtype" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="subtype_body">
@@ -322,19 +375,19 @@
         <xs:element ref="button" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
       <xs:attribute name="template"/>
-      <xs:attribute name="validate" type="xs:boolean" use="required"/>
+      <xs:attribute name="validate" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="button">
     <xs:complexType>
-      <!-- xs:group ref="callable" minOccurs="0" maxOccurs="unbounded"/ -->
       <xs:attribute name="btn_id" use="required"/>
       <xs:attribute name="btn_label" use="required"/>
       <xs:attribute name="btn_default" type="xs:boolean"/>
-      <xs:attribute name="btn_enabled" type="xs:boolean" use="required"/>
-      <xs:attribute name="btn_validate" type="xs:boolean" use="required"/>
+      <xs:attribute name="btn_enabled" type="xs:boolean"/>
+      <xs:attribute name="btn_validate" type="xs:boolean"/>
       <xs:attribute name="lng" type="xs:integer"/>
-      <xs:attribute name="btn_action"/>
+      <xs:attribute name="action" use="required"/>
+      <xs:attribute name="validation"/>
       <xs:attribute name="help_msg"/>
     </xs:complexType>
   </xs:element>
@@ -348,10 +401,9 @@
   </xs:element>
   <xs:element name="method">
     <xs:complexType>
-      <!-- xs:group ref="callable" minOccurs="0" maxOccurs="unbounded"/ -->
       <xs:attribute name="name" use="required"/>
       <xs:attribute name="obj_name"/>
-      <xs:attribute name="action"/>
+      <xs:attribute name="action" use="required"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="inline_form">
@@ -363,290 +415,4 @@
     </xs:complexType>
   </xs:element>
 
-  <xs:group name="vld_types">
-    <xs:choice>
-      <xs:element ref="vld_compare"/>
-      <xs:element ref="vld_exists"/>
-      <xs:element ref="vld_hash"/>
-    </xs:choice>
-  </xs:group>
-  <xs:element name="vld_compare">
-    <xs:complexType>
-      <xs:attribute name="src" use="required"/>
-      <xs:attribute name="op" use="required"/>
-      <xs:attribute name="tgt" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="vld_exists">
-    <xs:complexType>
-      <xs:attribute name="data_object" use="required"/>
-      <xs:attribute name="key" use="required"/>
-      <xs:attribute name="value" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="vld_hash">
-    <xs:complexType>
-      <xs:attribute name="method" use="required"/>
-      <xs:attribute name="src" use="required"/>
-      <xs:attribute name="tgt" use="required"/>
-    </xs:complexType>
-  </xs:element>
 </xs:schema>
-
-<!--
-  <xs:group name="callable">
-    <xs:choice>
-      <xs:element ref="ask"/>
-      <xs:element ref="assign"/>
-      <xs:element ref="call"/>
-      <xs:element ref="save_obj"/>
-      <xs:element ref="restore_obj"/>
-      <xs:element ref="pyfunc"/>
-      <xs:element ref="case"/>
-      <xs:element ref="change_button"/>
-      <xs:element ref="change_gridframe_button"/>
-      <xs:element ref="end_form"/>
-      <xs:element name="restart_frame"/>
-      <xs:element ref="set_focus"/>
-      <xs:element ref="set_readonly"/>
-      <xs:element name="do_navigate"/>
-      <xs:element ref="sub_form"/>
-      <xs:element name="inline_form"/>
-    </xs:choice>
-  </xs:group>
-  <xs:element name="ask">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="response" maxOccurs="unbounded"/>
-      </xs:sequence>
-      <xs:attribute name="title" use="required"/>
-      <xs:attribute name="enter" use="required"/>
-      <xs:attribute name="escape" use="required"/>
-      <xs:attribute name="question" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="response">
-    <xs:complexType>
-      <xs:group ref="callable" minOccurs="0" maxOccurs="unbounded"/>
-      <xs:attribute name="ans" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="assign">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="source"/>
-        <xs:element ref="target"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="source">
-    <xs:complexType mixed="true">
-      <xs:attribute name="hash"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="target">
-    <xs:complexType mixed="true">
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="call">
-    <xs:complexType>
-      <xs:attribute name="method" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="save_obj">
-    <xs:complexType>
-      <xs:attribute name="obj_name" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="restore_obj">
-    <xs:complexType>
-      <xs:attribute name="obj_name" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="pyfunc">
-    <xs:complexType>
-      <xs:attribute name="name" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="case">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:group ref="bool_types" maxOccurs="unbounded"/>
-        <xs:element ref="default" minOccurs="0" maxOccurs="1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="default">
-    <xs:complexType>
-      <xs:group ref="callable" minOccurs="1" maxOccurs="unbounded"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="change_button">
-    <xs:complexType>
-      <xs:choice maxOccurs="unbounded">
-        <xs:element ref="btn_label"/>
-        <xs:element ref="btn_dflt"/>
-        <xs:element ref="btn_enabled"/>
-      </xs:choice>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="change_gridframe_button">
-    <xs:complexType>
-      <xs:choice maxOccurs="unbounded">
-        <xs:element ref="btn_label"/>
-        <xs:element ref="btn_dflt"/>
-        <xs:element ref="btn_enabled"/>
-      </xs:choice>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="btn_label">
-    <xs:complexType>
-      <xs:attribute name="btn_id" use="required"/>
-      <xs:attribute name="value" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="btn_dflt">
-    <xs:complexType>
-      <xs:attribute name="btn_id" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="btn_enabled">
-    <xs:complexType>
-      <xs:attribute name="btn_id" use="required"/>
-      <xs:attribute name="state" use="required" type="xs:boolean"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="end_form">
-    <xs:complexType>
-      <xs:attribute name="state" use="required">
-        <xs:simpleType>
-          <xs:restriction base="xs:string">
-            <xs:enumeration value="completed"/>
-            <xs:enumeration value="cancelled"/>
-          </xs:restriction>
-        </xs:simpleType>
-      </xs:attribute>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="set_focus">
-    <xs:complexType>
-      <xs:attribute name="btn_id" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="set_readonly">
-    <xs:complexType>
-      <xs:attribute name="target" use="required"/>
-      <xs:attribute name="state" use="required" type="xs:boolean"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="sub_form">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="call_params"/>
-        <xs:element ref="return_params"/>
-        <xs:element ref="on_return"/>
-      </xs:sequence>
-      <xs:attribute name="form_name"/>
-      <xs:attribute name="form_view" type="xs:boolean"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="inline_form">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="frame"/>
-      </xs:sequence>
-      <xs:attribute name="form_name"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="call_params">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="call_param" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="call_param">
-    <xs:complexType>
-      <xs:attribute name="name" use="required"/>
-      <xs:attribute name="type" use="required"/>
-      <xs:attribute name="source" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="return_params">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="return_param" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="return_param">
-    <xs:complexType>
-      <xs:attribute name="name" use="required"/>
-      <xs:attribute name="type" use="required"/>
-      <xs:attribute name="target" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="on_return">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="return" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="return">
-    <xs:complexType>
-      <xs:group ref="callable" minOccurs="0" maxOccurs="unbounded"/>
-      <xs:attribute name="state" use="required">
-        <xs:simpleType>
-          <xs:restriction base="xs:string">
-            <xs:enumeration value="completed"/>
-            <xs:enumeration value="cancelled"/>
-          </xs:restriction>
-        </xs:simpleType>
-      </xs:attribute>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:group name="bool_types">
-    <xs:choice>
-      <xs:element ref="compare"/>
-      <xs:element ref="data_changed"/>
-      <xs:element ref="obj_exists"/>
-      <xs:element ref="btn_has_label"/>
-      <xs:element ref="has_gridframe"/>
-    </xs:choice>
-  </xs:group>
-  <xs:element name="compare">
-    <xs:complexType>
-      <xs:group ref="callable" maxOccurs="unbounded"/>
-      <xs:attribute name="src" use="required"/>
-      <xs:attribute name="op" use="required"/>
-      <xs:attribute name="tgt" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="data_changed">
-    <xs:complexType>
-      <xs:group ref="callable" maxOccurs="unbounded"/>
-      <xs:attribute name="obj_name"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="obj_exists">
-    <xs:complexType>
-      <xs:group ref="callable" maxOccurs="unbounded"/>
-      <xs:attribute name="obj_name"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="btn_has_label">
-    <xs:complexType>
-      <xs:group ref="callable" maxOccurs="unbounded"/>
-      <xs:attribute name="btn_id"/>
-      <xs:attribute name="label"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="has_gridframe">
-    <xs:complexType>
-      <xs:group ref="callable" maxOccurs="unbounded"/>
-      <xs:attribute name="obj_name"/>
-    </xs:complexType>
-  </xs:element>
--->

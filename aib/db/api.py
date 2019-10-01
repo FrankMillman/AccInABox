@@ -30,19 +30,12 @@ def config_cursor(db_params):
     """
     db.cursor.config_cursor(db_params)
 
-def start_db_session(user_row_id):
+def start_db_session(mem_id=None):
     """
     Create an instance of :class:`~db.connection.DbSession`,
     and return it to the caller.
     """
-    return db.connection.DbSession(user_row_id)
-
-def start_mem_session(user_row_id):
-    """
-    Create an instance of :class:`~db.connection.MemSession`,
-    and return it to the caller.
-    """
-    return db.connection.MemSession(user_row_id)
+    return db.connection.DbSession(mem_id)
 
 def get_db_object(db_session, active_company, table_name, parent=None):
     return db.objects.get_db_object(
@@ -52,26 +45,9 @@ def get_fkey_object(db_session, table_name, src_obj, src_colname):
     return db.objects.get_fkey_object(
         db_session, table_name, src_obj, src_colname)
 
-def get_mem_object(db_session, active_company, table_name, parent=None):
-    return db.objects.get_mem_object(
-        db_session, active_company, table_name, parent)
-
-def select_rows(conn, db_obj, cols, where=None, order=None,
-        limit=0, lock=False, param=None):
-    return conn.full_select(
-        db_obj, cols, where, order, limit, lock, param)
-
-def get_data(db_obj):
-    return str(db_obj)
-
-def set_col_val(db_obj, col_name, value):
-    db_obj.setval(col_name, value)
-
-def get_col_val(db_obj, col_name):
-    return db_obj.getval(col_name)
-
-def exec_sql(conn, sql):
-    return conn.exec_sql(sql)
+def get_mem_object(db_session, active_company, table_name, parent=None, table_defn=None):
+    return db.objects.get_mem_object(db_session, active_company,
+        table_name, parent, table_defn)
 
 def close_all_connections():
     db.connection.close_all_connections()

@@ -9,7 +9,7 @@ import asyncio
 from init.init_company import init_company
 
 import db.api
-from db.setup_tables import setup_table
+import db.create_table
 
 def table_hook(db_obj, elem):
     for xml in elem:
@@ -28,20 +28,31 @@ def case(db_obj, xml):
 
 def compare(db_obj, xml):
     """
-    <compare src="col_type" op="eq" tgt="user">
+    <compare src="col_type" op="eq" tgt="'user'">
     """
     source = xml.get('src')
     source_field = db_obj.getfld(source)
     source_value = source_field.getval()
 
     target = xml.get('tgt')
-    if '.' in target:
-        target_objname, target_colname = target.split('.')
-        target_record = form.data_objects[target_objname]
-        target_field = target_record.getfld(target_colname)
-        target_value = target_field.getval()
-    else:
-        target_value = target
+    if target.startswith("'"):  # literal string
+        target_value = target[1:-1]
+    else:  # assume it is a column name
+        if target.endswith('$orig'):
+            orig = True
+            target = target[:-5]
+        else:
+            orig = False
+        if '.' in target:
+            target_objname, target_colname = target.split('.')
+            target_obj = form.data_objects[target_objname]
+            target_field = target_obj.getfld(target_colname)
+        else:
+            target_field = db_obj.getfld(target)
+        if orig:
+            target_value = target_field.get_orig()
+        else:
+            target_value = target_field.getval()
 
     #print('"{0}" {1} "{2}"'.format(source_value, xml.get('op'), target_value))
 
@@ -70,7 +81,8 @@ def db_data(obj, xml):
     src_val = obj_rec.getval(xml.find('src_val').text)
     cols = [xml.find('tgt_col').text]
     where = [('WHERE', '', xml.find('src_col').text, '=', repr(src_val), '')]
-    with obj_rec.context.db_session as conn:
+    with obj_rec.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         rows = conn.full_select(tgt_obj, cols, where=where)
     return rows.fetchone()[0]
 
@@ -121,219 +133,36 @@ def pyfunc(db_obj, xml):
         globals()[func_name](db_obj, xml)
 
 def create_company(db_obj, xml):
-    with db_obj.context.db_session as conn:
-#       conn.create_company(db_obj.getval('company_id'))
-        init_company(db_obj.context, conn, db_obj.getval('company_id'))
+    with db_obj.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
+        init_company(db_obj.context, conn,
+            db_obj.getval('company_id'), db_obj.getval('company_name'))
 
 def add_column(db_obj, xml):
-    with db_obj.context.db_session as conn:
-        sql = 'ALTER TABLE {}.{} ADD {} {}'.format(
-            db_obj.db_table.defn_company,
+    column = [fld.getval() for fld in db_obj.select_cols]
+    with db_obj.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
+        col = db.create_table.setup_column(conn, column)
+        sql = 'ALTER TABLE {}.{} ADD {}'.format(
+            db_obj.db_table.data_company,
             db_obj.getval('table_name'),
-            db_obj.getval('col_name'),
-            db_obj.getval('data_type'))
-        conn.cur.execute(conn.convert_string(sql))
+            col)
+        conn.cur.execute(sql)
         sql = 'SELECT audit_trail FROM {}.db_tables WHERE table_name = {}'.format(
-            db_obj.db_table.defn_company, conn.param_style)
+            db_obj.db_table.data_company, conn.param_style)
         conn.cur.execute(sql, [db_obj.getval('table_name')])
         audit_trail = conn.cur.fetchone()[0]
         if audit_trail:
-            sql = 'ALTER TABLE {}.{}_audit ADD {} {}'.format(
-                db_obj.db_table.defn_company,
+            sql = 'ALTER TABLE {}.{}_audit ADD {}'.format(
+                db_obj.db_table.data_company,
                 db_obj.getval('table_name'),
-                db_obj.getval('col_name'),
-                db_obj.getval('data_type'))
-            conn.cur.execute(conn.convert_string(sql))
+                col.replace(' NOT NULL', ''))  # allow null in audit column
+            conn.cur.execute(sql)
 
-def increment_seq(db_obj, xml):  # called 'before_save'
-    seq = db_obj.getfld('seq')
-    orig_seq = seq.get_orig()
-    new_seq = seq.getval()
-    if new_seq == orig_seq:
-        return
-
-    if db_obj.mem_obj:
-        table_name = db_obj.table_name
-        session = db_obj.context.mem_session
-    else:
-        table_name = db_obj.data_company + '.' + db_obj.table_name
-        session = db_obj.context.db_session
-
-    args = xml.get('args')  # e.g. 'table_id, col_type'
-    with session as conn:
-        if db_obj.exists:
-            if new_seq > orig_seq:
-                sql = (
-                    'UPDATE {} SET seq = (seq-1) WHERE seq > {} AND seq <= {}'
-                    .format(table_name, conn.param_style, conn.param_style)
-                    )
-                params = [orig_seq, new_seq]
-            else:
-                sql = (
-                    'UPDATE {} SET seq = (seq+1) WHERE seq >= {} AND seq < {}'
-                    .format(table_name, conn.param_style, conn.param_style)
-                    )
-                params = [new_seq, orig_seq]
-        else:
-            sql = (
-                'UPDATE {} SET seq = (seq+1) WHERE seq >= {}'.format(
-                table_name, conn.param_style)
-                )
-            params = [new_seq]
-
-        if args is not None:
-            for arg in args.split(','):
-                arg = arg.strip()
-                sql += ' AND {} = {}'.format(arg, conn.param_style)
-                params.append(db_obj.getfld(arg).getval())
-
-        conn.cur.execute(sql, params)
-
-def decrement_seq(db_obj, xml):  # called 'after_delete'
-    args = xml.get('args')  # e.g. 'table_id, col_type'
-
-    if db_obj.mem_obj:
-        table_name = db_obj.table_name
-        session = db_obj.context.mem_session
-    else:
-        table_name = db_obj.data_company + '.' + db_obj.table_name
-        session = db_obj.context.db_session
-
-    with session as conn:
-        sql = (
-            'UPDATE {} SET seq = (seq-1) WHERE seq > {}'.format(
-                table_name, conn.param_style)
-            )
-        params = [db_obj.getval('seq')]
-
-        if args is not None:
-            for arg in args.split(','):
-                arg = arg.strip()
-                sql += ' AND {} = {}'.format(arg, conn.param_style)
-                params.append(db_obj.getfld(arg).getval())
-
-        conn.cur.execute(sql, params)
-
-def increment_tree_seq(db_obj, xml):  # called 'before_save'
-    # [TO BE TESTED!]
-    seq = db_obj.getfld('seq')
-    orig_seq = seq.get_orig()
-    new_seq = seq.getval()
-    if new_seq == orig_seq:
-        return
-
-    parent_id = db_obj.getval('parent_id')
-    with db_obj.context.db_session as conn:
-        if db_obj.exists:
-            if new_seq > orig_seq:
-                sql = (
-                    'UPDATE {}.{} SET seq = (seq-1) WHERE parent_id = {} '
-                    'AND seq > {} AND seq <= {}'.format(
-                    db_obj.data_company, db_obj.table_name,
-                    conn.param_style, conn.param_style, conn.param_style)
-                    )
-                params = (parent_id, orig_seq, new_seq)
-            else:
-                sql = (
-                    'UPDATE {}.{} SET seq = (seq+1) WHERE parent_id = {} '
-                    'AND seq >= {} AND seq < {}'.format(
-                    db_obj.data_company, db_obj.table_name,
-                    conn.param_style, conn.param_style, conn.param_style)
-                    )
-                params = (parent_id, new_seq, orig_seq)
-        else:
-            sql = (
-                'UPDATE {}.{} SET seq = (seq+1) WHERE parent_id = {} '
-                'AND seq >= {}'.format(db_obj.data_company, 
-                db_obj.table_name, conn.param_style, conn.param_style)
-                )
-            params = (parent_id, new_seq)
-
-        conn.cur.execute(sql, params)
-
-def decrement_tree_seq(db_obj, xml):  # called 'after_delete'
-    with db_obj.context.db_session as conn:
-        sql = (
-            'UPDATE {}.{} SET seq = (seq-1) WHERE parent_id = {} AND seq > {}'
-                .format(db_obj.data_company, db_obj.table_name,
-                conn.param_style, conn.param_style)
-            )
-        params = (db_obj.getval('parent_id'), db_obj.getval('seq'))
-
-        conn.cur.execute(sql)
-
-"""
-def increment_fields_seq(db_obj, xml):
-    seq = db_obj.getfld('seq')
-    new_seq = seq.getval()
-    orig_seq = seq.get_orig()
-    if new_seq == orig_seq:
-        return
-    type_id = db_obj.getval('type_id')
-    if db_obj.exists:
-        if new_seq > orig_seq:
-            sql = (
-                'UPDATE {}.{} SET seq = (seq-1) WHERE type_id = {} '
-                'AND seq > {} AND seq <= {}'.format(
-                db_obj.data_company, db_obj.table_name,
-                type_id, orig_seq, new_seq)
-                )
-        else:
-            sql = (
-                'UPDATE {}.{} SET seq = (seq+1) WHERE type-id = {} '
-                'AND seq >= {} AND seq < {}'.format(
-                db_obj.data_company, db_obj.table_name,
-                type-id, new_seq, orig_seq)
-                )
-    else:
-        sql = (
-            'UPDATE {}.{} SET seq = (seq+1) WHERE type_id = {} AND seq >= {}'
-            .format(db_obj.data_company, db_obj.table_name,
-            type_id, new_seq)
-            )
-    with db_obj.context.db_session as conn:
-        conn.cur.execute(sql)
-"""
-
-"""
-def increment_fields_display_seq(db_obj, xml):
-    seq = db_obj.getfld('display_seq')
-    new_seq = seq.getval()
-    orig_seq = seq.get_orig()
-    if new_seq == orig_seq:
-        return
-    type_id = db_obj.getval('type_id')
-
-    if new_seq is None:
-        sql = (
-            'UPDATE {}.{} SET display_seq = '
-            '(display_seq - 1) WHERE type_id = {} and '
-            'display_seq > {}'.format(db_obj.data_company,
-            db_obj.table_name, type_id, orig_seq))
-    elif orig_seq is None:
-        sql = (
-            'UPDATE {}.{} SET display_seq = '
-            '(display_seq + 1) WHERE type_id = {} and '
-            'display_seq >= {}'.format(db_obj.data_company,
-            db_obj.table_name, type_id, new_seq))
-    elif new_seq > orig_seq:
-        sql = (
-            'UPDATE {}.{} SET display_seq = '
-            '(display_seq - 1) WHERE type_id = {} and '
-            'display_seq > {} and display_seq <= {}'.format(
-            db_obj.data_company, db_obj.table_name, type_id,
-            orig_seq, new_seq))
-    else:
-        sql = (
-            'UPDATE {}.{} SET display_seq = '
-            '(display_seq + 1) WHERE type_id = {} and '
-            'display_seq >= {} and display_seq < {}'.format(
-            db_obj.data_company, db_obj.table_name, type_id,
-            new_seq, orig_seq))
-
-    with db_obj.context.db_session as conn:
-        conn.cur.execute(sql)
-"""
+def amend_allow_null(db_obj, xml):
+    with db_obj.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
+        conn.amend_allow_null(db_obj)
 
 def setup_disp_name(db_obj, xml):
     choices = db_obj.getval('choices')
@@ -342,7 +171,8 @@ def setup_disp_name(db_obj, xml):
     if not choices[1]:  # [0]=use_subtypes, [1]=use_displaynames
         return
 
-    with db_obj.context.db_session as conn:
+    with db_obj.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         concat = conn.concat
 
     col_name = db_obj.getval('col_name')
@@ -354,7 +184,7 @@ def setup_disp_name(db_obj, xml):
             sql_elem = []
             for disp_name, separator in disp_names:
                 sql_elem.append('a.' + disp_name)
-                if separator != "":
+                if separator:  # if not '' or None
                     sql_elem.append("'{}'".format(separator))
             virt_sql += " {} ".format(concat).join(sql_elem)
     if virt_sql != "":
@@ -375,7 +205,7 @@ def setup_disp_name(db_obj, xml):
         vdict.setval('col_head', 'Display name')
         vdict.setval('key_field', 'N')
         vdict.setval('generated', True)
-        vdict.setval('allow_null', False)
+        vdict.setval('allow_null', True)
         vdict.setval('allow_amend', True)
         vdict.setval('max_len', 0)
         vdict.setval('db_scale', 0)
@@ -394,14 +224,15 @@ def setup_disp_name(db_obj, xml):
     if table_key in tables_open:
         del tables_open[table_key]
 
+""" - moved to custom.table_setup.py
 # called from table_formview
 @asyncio.coroutine
 def setup_audit_cols(caller, xml):
-    db_obj = caller.data_objects['db_obj']
-    if db_obj.getval('defn_company') is not None:
+    db_table = caller.data_objects['db_table']
+    if db_table.getval('defn_company') is not None:
         return  # col definitions already set up in another company
 
-    table_id = db_obj.getval('row_id')
+    table_id = db_table.getval('row_id')
 
     params = []
     params.append(('row_id', 'AUTO', 'Row id', 'Row id', 'Row', 'Y',
@@ -411,7 +242,8 @@ def setup_audit_cols(caller, xml):
     params.append(('deleted_id', 'INT', 'Deleted id', 'Deleted row id', 'Deleted', 'N',
         True, False, True, 0, 0, None, '0', None, None, None))
 
-    db_column = db.api.get_db_object(db_obj.context, db_obj.data_company, 'db_columns')
+    db_column = db.api.get_db_object(
+        db_table.context, db_table.data_company, 'db_columns')
     for seq, param in enumerate(params):
         db_column.init()
         db_column.setval('table_id', table_id)
@@ -436,11 +268,14 @@ def setup_audit_cols(caller, xml):
         db_column.setval('sql', None)
         db_column.save()
 
-# called from table_formview
+# called from setup_table
 @asyncio.coroutine
 def create_table(caller, xml):
-    db_obj = caller.data_objects['db_obj']
-    if db_obj.getval('data_company') is not None:
+    db_table = caller.data_objects['db_table']
+    if db_table.getval('data_company') is not None:
         return  # using table set up in another company
-    with db_obj.context.db_session as conn:
-        setup_table(conn, db_obj.data_company, db_obj.getval('table_name'))
+    with db_table.context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
+        db.create_table.create_table(conn, db_table.data_company,
+            db_table.getval('table_name'))
+"""

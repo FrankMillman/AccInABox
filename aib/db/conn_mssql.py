@@ -1,7 +1,8 @@
-#import ceODBC
-#import pypyodbc as pyodbc
 import pyodbc
 from datetime import datetime
+
+from errors import AibError
+import db.create_table
 
 def customise(DbConn, db_params):
     # add db-specific methods to DbConn class
@@ -11,12 +12,15 @@ def customise(DbConn, db_params):
     DbConn.update_row = update_row
     DbConn.delete_row = delete_row
     DbConn.convert_string = convert_string
+    DbConn.convert_dflt = convert_dflt
     DbConn.create_functions = create_functions
     DbConn.create_company = create_company
     DbConn.create_primary_key = create_primary_key
     DbConn.create_foreign_key = create_foreign_key
     DbConn.create_index = create_index
     DbConn.tree_select = tree_select
+    DbConn.escape_string = escape_string
+    DbConn.amend_allow_null = amend_allow_null
     # create class attributes from db parameters
     DbConn.database = db_params['database']
     DbConn.user = db_params['user']
@@ -24,17 +28,17 @@ def customise(DbConn, db_params):
 
 def init(self, pos):
     conn = pyodbc.connect(
-#   conn = ceODBC.connect(
-        'driver={0};server={1};database={2};uid={3};pwd={4}'.format
-        ('sql server', '(local)', self.database, self.user, self.pwd))
+#       'driver={0};server={1};database={2};uid={3};pwd={4}'.format
+#       ('sql server', '(local)', self.database, self.user, self.pwd))
+        driver='sql server', server='np:(local)', database=self.database,
+        user=self.user, password=self.pwd)
     self.conn = conn
     self.cursor = conn.cursor
     self.param_style = '?'
     self.func_prefix = 'dbo.'
     self.concat = '+'
     self.repeat = 'replicate'
-#   self.exception = ceODBC.Error
-    self.exception = pyodbc.DatabaseError
+    self.exception = (pyodbc.DatabaseError, pyodbc.IntegrityError)
     self.msg_pos = 0
     # SQL Server 2000/2005 does not have a Date type - apparently 2008 does
     self.now = datetime.now
@@ -108,7 +112,7 @@ def insert_row(self, db_obj, cols, vals, generated_flds):
             output_clause, self.param_style))
 
         self.cur.execute(sql,
-            (data_row_id, db_obj.context.db_session.user_row_id, self.timestamp))
+            (data_row_id, db_obj.context.user_row_id, self.timestamp))
         xref_row_id = self.cur.fetchone()[0]
 
         db_obj.setval('created_id', xref_row_id)
@@ -162,7 +166,7 @@ def update_row(self, db_obj, cols, vals):
             "({3}, {3}, {3}, {3}, 'chg')".format(
             data_company, table_name, cols, self.param_style))
         self.cur.execute(sql, (data_row_id, audit_row_id,
-            db_obj.context.db_session.user_row_id, self.timestamp))
+            db_obj.context.user_row_id, self.timestamp))
 
 def delete_row(self, db_obj):
     db_table = db_obj.db_table
@@ -178,7 +182,7 @@ def delete_row(self, db_obj):
             data_company, table_name, cols,
             output_clause, self.param_style))
         self.cur.execute(sql,
-            (data_row_id, db_obj.context.db_session.user_row_id, self.timestamp))
+            (data_row_id, db_obj.context.user_row_id, self.timestamp))
         xref_row_id = self.cur.fetchone()[0]
         db_obj.setval('deleted_id', xref_row_id)
         sql = (
@@ -204,7 +208,7 @@ def convert_string(self, string, db_scale=None):
     return (string
         .replace('CHAR','NCHAR')
         .replace('TEXT','NVARCHAR(3999)')
-        .replace('DTE','DATETIME')
+        .replace('DTE','DATETIME')  # Sql Server 2008 has a DATE type, but not 2005
         .replace('DTM','DATETIME')
         .replace('DEC','DEC (17,{})'.format(db_scale))
         .replace('AUTO','INT IDENTITY PRIMARY KEY NONCLUSTERED')
@@ -219,6 +223,22 @@ def convert_string(self, string, db_scale=None):
         .replace(':', '')  # see comment in conn_sqlite3
         )
 
+def convert_dflt(self, string, data_type):
+    if data_type == 'TEXT':
+        return repr(string)  # enclose in quotes
+    elif data_type == 'INT':
+        return string
+    elif data_type == 'DEC':
+        return string
+    elif data_type == 'BOOL':
+        if string == 'true':
+            return 1
+        else:
+            return 0
+    elif data_type == 'DTE':
+        if string == 'today':
+            return 'GETDATE()'
+
 def create_functions(self):
 
     cur = self.cursor()
@@ -228,11 +248,11 @@ def create_functions(self):
     except self.exception:
         pass
     cur.execute(
-        "CREATE FUNCTION subfield (@str VARCHAR(999), @sep CHAR, @occ INT) "
-            "RETURNS VARCHAR(999) WITH SCHEMABINDING AS "
+        "CREATE FUNCTION subfield (@str NVARCHAR(999), @sep CHAR, @occ INT) "
+            "RETURNS NVARCHAR(999) WITH SCHEMABINDING AS "
           "BEGIN "
-            "DECLARE @ans VARCHAR(999) "
-            "DECLARE @ch CHAR "
+            "DECLARE @ans NVARCHAR(999) "
+            "DECLARE @ch NCHAR "
             "DECLARE @found INT "
             "DECLARE @pos INT "
             "SET @ans = '' "
@@ -265,14 +285,32 @@ def create_functions(self):
         pass
     cur.execute(
         "CREATE FUNCTION zfill (@num INT, @lng INT) "
-            "RETURNS VARCHAR(999) WITH SCHEMABINDING AS "
+            "RETURNS NVARCHAR(999) WITH SCHEMABINDING AS "
           "BEGIN "
-            "DECLARE @ans VARCHAR(999) "
+            "DECLARE @ans NVARCHAR(999) "
             "SET @ans = CAST(@num AS NVARCHAR) "
             "WHILE LEN(@ans) < @lng "
               "BEGIN "
                 "SET @ans = '0' + @ans "
               "END "
+            "RETURN @ans "
+          "END "
+        )
+
+    try:
+        cur.execute("drop function date_func")
+    except self.exception:
+        pass
+    cur.execute(
+        "CREATE FUNCTION date_func (@date DATETIME, @op NVARCHAR(5), @days INT) "
+            "RETURNS DATETIME WITH SCHEMABINDING AS "
+          "BEGIN "
+            "DECLARE @ans DATETIME "
+            "SET @op = LOWER(@op) "
+            "IF @op = '+' OR @op = 'add' "
+              "SET @ans = @date + @days "
+            "ELSE IF @op = '-' OR @op = 'sub' "
+              "SET @ans = @date - @days "
             "RETURN @ans "
           "END "
         )
@@ -343,3 +381,20 @@ def tree_select(self, company_id, table_name, start_col, start_value,
         .format(select_1, company_id, table_name, start_col,
             start_value, select_2, test))
     return cte
+
+def escape_string():
+    return ''
+
+def amend_allow_null(self, db_obj):
+    column = [fld.getval() for fld in db_obj.select_cols]
+
+    col = db.create_table.setup_column(self, column)
+    sql = 'ALTER TABLE {}.{} ALTER COLUMN {}'.format(
+        db_obj.data_company,
+        db_obj.getval('table_name'),
+        col)
+    try:
+        self.exec_sql(sql)
+    except self.exception as err:
+        raise AibError(head='Alter {}'.format(db_obj.table_name),
+            body=str(err))

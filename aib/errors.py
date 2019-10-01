@@ -6,3 +6,7 @@ class AibError(Exception):
 
     def __str__(self):
         return '{}: {}'.format(self.head, self.body)
+
+class AibDenied(AibError):
+    """Database permission denied."""
+    pass

@@ -5,28 +5,34 @@ This module contains classes that represent the following database objects -
 * :class:`~db.objects.MemObject` - a subclass of DbObject that exists only in memory
 """
 
-import sqlite3
-from json import loads
+from json import loads, dumps
 from lxml import etree
 import gzip
 from datetime import datetime
+from collections import OrderedDict as OD
 
 import logging
 logger = logging.getLogger(__name__)
 
 import db.object_fields
-import db.object_setup
-import db.templates
 import db.cursor
 import db.connection
 import db.db_xml
 from db.chk_constraints import chk_constraint
-from errors import AibError
+from errors import AibError, AibDenied
+from start import log_db, db_log
 
 # should 'tables_open' be in db.objects or ht.htc.Session()
 # if server is long-running, the former would prevent changes being picked up
 #   if the table definition was changed during run-time
 # maybe have a 'trigger' - if table/column defn changed, remove from 'tables_open'
+# [TODO - 2015-08-17]
+# use new concept of 'notify_update' to register a callback on any changes
+# see adm_params below for an example
+# maybe enhance concept to invoke callback if table *or* any of its children
+#   change - else we have to register a callback on every column definition
+# OTOH, one callback per column definition is probably a better idea
+# see first attempt below - not finished [2015-08-20]
 tables_open = {}
 
 # db_fkeys columns
@@ -44,8 +50,18 @@ def get_db_object(context, active_company, table_name, parent=None):
     Instantiate and return a :class:`~db.objects.DbObject` object.
     """
 
-    # get table instance from cache - will create if does not exist
-    db_table = get_db_table(context, active_company, table_name)
+    if '.' in table_name:
+        db_company, table_name = table_name.split('.')
+    else:
+        db_company = active_company
+    table_key = '{}.{}'.format(db_company.lower(), table_name.lower())
+
+    if table_key in tables_open:
+        db_table = tables_open[table_key]
+    else:
+        db_table = get_db_table(context, db_company, table_name)
+        tables_open[table_key] = db_table
+
     return DbObject(context, db_table.data_company, db_table, parent)
 
 def get_fkey_object(context, table_name, src_obj, src_colname):
@@ -53,59 +69,85 @@ def get_fkey_object(context, table_name, src_obj, src_colname):
         src_colname = src_colname[-1]  # take the last one
     src_fld = src_obj.fields[src_colname]
     fk_object = src_fld.get_fk_object()
+    if '.' in table_name:
+        table_name = table_name.split('.')[1]
     if fk_object.table_name != table_name:
         raise AibError(head='Error',
             body='{} is not a foreign key for {}'.format(src_colname, table_name))
     return fk_object
 
-def get_mem_object(context, active_company, table_name, parent=None):
-    db_table = MemTable(table_name)
-    return MemObject(context, active_company, db_table, parent)
+def get_mem_object(context, active_company, table_name, parent=None, table_defn=None):
+    # if table_defn is not None, the caller is setting up the table
+    # if it is None, the caller wants a reference to an existing table
 
-def get_db_table(context, active_company, table_name):
-    if active_company is None:  # ':memory:' table
-        table_key = table_name.lower()
-    else:
-        table_key = '{}.{}'.format(active_company.lower(), table_name.lower())
-    if table_key in tables_open:
-        return tables_open[table_key]
+#   mem_table = MemTable(table_name, upd_chks, del_chks, sequence)
+#   mem_table = get_mem_table(context, table_name, upd_chks, del_chks, sequence)
+    mem_table = get_mem_table(context, active_company, table_name, table_defn)
+    return MemObject(context, active_company, mem_table, parent)
 
+#def get_mem_table(context, table_name, upd_chks, del_chks, sequence):
+def get_mem_table(context, company, table_name, table_defn):
+    table_key = (context, table_name.lower())
+    if table_defn is not None:
+        if table_key in tables_open:
+            raise AibError(head='Create mem table',
+                body="Another in-memory table '{}' already exists".format(table_name))
+    if table_key not in tables_open:
+#       tables_open[table_key] = MemTable(context, table_name, upd_chks, del_chks, sequence)
+        tables_open[table_key] = MemTable(context, company, table_name, table_defn)
+    return tables_open[table_key]
+
+def get_db_table(context, db_company, table_name):
     table = 'db_tables'
     cols = ['row_id', 'table_name', 'short_descr', 'audit_trail', 'upd_chks',
-        'del_chks', 'table_hooks', 'defn_company', 'data_company', 'read_only',
-        'default_cursor', 'form_xml']
+        'del_chks', 'table_hooks', 'sequence', 'defn_company', 'data_company',
+        'read_only', 'default_cursor', 'setup_form']
     where = [('WHERE', '', 'table_name', '=', table_name, '')]
 
-    with context.db_session as conn:
+    with context.db_session as db_mem_conn:
+        conn = db_mem_conn.db
         try:
             # next line only works if exactly one row is selected
             ((table_id, table_name, short_descr, audit_trail, upd_chks, del_chks,
-                table_hooks, defn_company, data_company, read_only, default_cursor, form_xml),
-                 ) = conn.simple_select(active_company, table, cols, where)
+                table_hooks, sequence, defn_company, data_company, read_only,
+                default_cursor, setup_form),
+                 ) = conn.simple_select(db_company, table, cols, where)
         except ValueError as e:
             if str(e).startswith('need'):
                 # need more than 0 values to unpack = no rows selected
                 raise AibError(head='Error',
-                    body='Table {} does not exist'.format(table_name))
+                    body='Table {}.{} does not exist'.format(db_company, table_name))
             else:
                 # too many values to unpack = more than 1 row selected
-                raise RuntimeError('More than one row found')
+#               raise RuntimeError('More than one row found')
+                raise AibError(head='Select {}.{}'.format(db_company, table_name),
+                    body='More than one row found')
                 # should never happen - table_name is primary key
 
+    # table_id is the row_id of the entry in db_tables
+    # if defn_company is not None, we read in the actual definition from
+    #   db_tables in defn_company
+    # BUT
+    # we want to store the original table_id on the DbTable instance,
+    #   as it is used for checking permissions
+    orig_tableid = table_id
+
     if data_company is None:
-        data_company = active_company
+        data_company = db_company
         read_only = False
 
     if defn_company is None:
-        defn_company = active_company
+        defn_company = db_company
     else:
-        with context.db_session as conn:
+        with context.db_session as db_mem_conn:
+            conn = db_mem_conn.db
             try:
                 # next line only works if exactly one row is selected
                 # NB don't overwrite defn_company or data_company [2014-07-25]
                 (
                 (table_id, table_name, short_descr, audit_trail, upd_chks, del_chks,
-                table_hooks, defn_company2, data_company2, read_only, default_cursor, form_xml),
+                table_hooks, sequence, defn_company2, data_company2, read_only,
+                default_cursor, setup_form),
                 ) = conn.simple_select(defn_company, table, cols, where)
             except ValueError as e:
                 if str(e).startswith('need'):
@@ -114,13 +156,85 @@ def get_db_table(context, active_company, table_name):
                         body='Table {} does not exist'.format(table_name))
                 else:
                     # too many values to unpack = more than 1 row selected
-                    raise RuntimeError('More than one row found')
+#                   raise RuntimeError('More than one row found')
+                    raise AibError(head='Select {}'.format(table_name),
+                        body='More than one row found')
                     # should never happen - table_name is primary key
 
-    tables_open[table_key] = DbTable(
-        context, table_id, table_name, short_descr, audit_trail, upd_chks, del_chks,
-            table_hooks, defn_company, data_company, read_only, default_cursor, form_xml)
-    return tables_open[table_key]
+    return DbTable(context, orig_tableid, table_id, table_name, short_descr,
+        audit_trail, upd_chks, del_chks, table_hooks, sequence, defn_company,
+        data_company, read_only, default_cursor, setup_form)
+
+#-----------------------------------------------------------------------------
+
+db_session = db.connection.DbSession()
+sys_admin = True  # only used for the following
+
+"""
+# cache to store tables_open
+
+# new version that re-reads table_defn on any changes
+# not finished - needs more thought [2015-08-20]
+#
+# possibly *every* table defn and col defn msut have a callback
+#   set automatically, but only executed if table_defn is in
+#   tables_open
+# or, if we set a callback on a table defn, it automatically sets
+#   it on all col defns as well
+
+class TablesOpen(dict):
+    def __missing__(self, company):
+        table_defn = get_db_object(db.objects, company, 'adm_params')
+        table_defn.notify_update(update_table)
+        table_defn.setval('company_id', company)
+        result = self[company] = table_defn
+        return result
+tables_open = TablesOpen()
+
+# callback to re-read from database if table defn is changed
+def update_table(db_obj):
+    company = db_obj.data_company
+    adm_param = adm_params[company]
+    adm_param.init()
+    adm_param.setval('company_id', company)  # forces a re-read
+"""
+
+# cache to store adm_params data object for each company
+class AdmParams(dict):
+    def __missing__(self, company):
+        adm_param = get_db_object(db.objects, company, 'adm_params')
+        adm_param.notify_update(param_updated)
+        adm_param.setval('company_id', company)
+        result = self[company] = adm_param
+        return result
+adm_params = AdmParams()
+
+# callback to re-read from database if params are changed
+def param_updated(db_obj):
+    company = db_obj.data_company
+    adm_param = adm_params[company]
+    adm_param.init()
+    adm_param.setval('company_id', company)  # forces a re-read
+
+#-----------------------------------------------------------------------------
+
+companies = {}
+def setup_companies():
+    # called from start.py
+    # read in all company ids and names up front
+    with db_session as db_mem_conn:
+        conn = db_mem_conn.db
+        sql = 'SELECT company_id, company_name FROM _sys.dir_companies'
+        for comp_id, comp_name in conn.exec_sql(sql):
+            companies[comp_id] = comp_name
+
+    dir_comp = get_db_object(db.objects, '_sys', 'dir_companies')
+    dir_comp.notify_insert(company_updated)
+    dir_comp.notify_update(company_updated)
+
+# callback to re-read from database if company is changed
+def company_updated(db_obj):
+    companies[db_obj.getval('company_id')] = db_obj.getval('company_name')
 
 #-----------------------------------------------------------------------------
 
@@ -133,59 +247,67 @@ class DbObject:
 
 #   logger.warning('DbObject in db.objects')
 
-    set_permissions = db.object_setup.set_permissions
-
-    def __init__(self, context, data_company, db_table, parent=None):
+    def __init__(self, context, data_company, db_table, parent=None, mem_obj=False):
         self.context = context
         self.data_company = data_company
         self.db_table = db_table
         self.table_name = db_table.table_name
+        self.default_cursor = db_table.default_cursor  # can be over-ridden (users_roles.xml)
 
-        self.mem_obj = False  # over-ridden if MemObject
+        self.mem_obj = mem_obj  # over-ridden if MemObject
         self.exists = False
         self.dirty = False
         self.where = None
-        self.permissions_set = False
-        self.enabled = True
+        self.init_vals = {}  # can be over-ridden in init()
         self.cursor = None
         self.cursor_row = None
-        self.virt_list = []
         self.children = {}  # store reference to any child records
         self.on_clean_func = []  # function(s) to call on clean
         self.on_amend_func = []  # function(s) to call on amend
+        self.on_delete_func = []  # function(s) to call on delete
         self.on_read_func = []  # function(s) to call on read/select
 
+        """
         # table hooks
         self.on_setup_xml = []
         self.after_read_xml = []
         self.after_init_xml = []
         self.after_restore_xml = []
         self.before_save_xml = []
-        self.after_save_xml = []  # runs after 'commit'
+        self.after_save_xml = []
         self.before_insert_xml = []
-        self.after_insert_xml = []  # runs before 'commit'
+        self.after_insert_xml = []
         self.before_update_xml = []
-        self.after_update_xml = []  # runs before 'commit'
+        self.after_update_xml = []
         self.before_delete_xml = []
         self.after_delete_xml = []
+        """
 
         if parent is None:
             self.parent = None
+        elif mem_obj and not db_table.parent_params:
+            # mem_obj can have a parent without having an fkey [2015-07-29]
+            self.parent = None
         else:  # parent must be an existing DbRecord, of which this is a child
-            try:
-                parent_name, parent_pkey, fkey_colname = db_table.parent_params
-            except TypeError:  # parent_params is None
+            if not db_table.parent_params:
                 raise AibError(head='Error',
                     body='{} is not a child table'.format(self.table_name))
-            if parent.table_name != parent_name:
+            # can have > 1 parent e.g. dir_users_companies
+            for parent_name, parent_pkey, fkey_colname in db_table.parent_params:
+                if '.' in parent_name:
+                    parent_name = parent_name.split('.')[1]
+                if parent.table_name == parent_name:
+                    break
+            else:
                 raise AibError(head='Error',
                     body='{} is not a parent of {}'.format(
-                        parent.table_name, self.table_name))
+                    parent.table_name, self.table_name))
+
             self.parent = (fkey_colname,
                 parent.getfld(parent_pkey))  # used in setup_fkey(), start_grid()
             parent.children[self.table_name] = self
 
-        self.fields = {}  # key=col_name value=Field() instance
+        self.fields = OD()  # key=col_name value=Field() instance
         self.flds_to_update = []
         self.select_cols = []
         virtual_cols = []
@@ -194,7 +316,13 @@ class DbObject:
             field = db.object_fields.DATA_TYPES[col_defn.data_type](self, col_defn)
             self.fields[col_defn.col_name] = field
             self.select_cols.append(field)  # excludes any 'alt_src' columns
-            if col_defn.col_type == 'virt':
+# this change is debatable [2015-07-27]
+# the reason for the change is that all 'in memory' columns are given the col_type
+#   'mem', but some of them could contain sql, and so are virtual fields
+# the danger is that it used to be possible to have a non-virtual field that
+#   contained sql - none exist at present, but if it happens, this will fail!
+#           if col_defn.col_type == 'virt':
+            if col_defn.sql is not None:
                 virtual_cols.append((col_defn, field))
             else:
                 self.flds_to_update.append(field)
@@ -218,14 +346,15 @@ class DbObject:
             self.fields[col_defn.col_name]
                 for col_defn in db_table.primary_keys]
 
-        if db_table.table_hooks is not None:
-            hooks_xml = etree.fromstring(gzip.decompress(db_table.table_hooks))
-            for hook in hooks_xml:
-                self.setup_hook(hook)
+#       if db_table.table_hooks is not None:
+#           hooks_xml = etree.fromstring(gzip.decompress(db_table.table_hooks))
+#           for hook in hooks_xml:
+#               self.setup_hook(hook)
 
-        for on_setup in self.on_setup_xml:
+        for on_setup in self.db_table.on_setup_xml:
             db.db_xml.table_hook(self, on_setup)
 
+    """
     def setup_hook(self, hook):
         hook_type = hook.get('type')
         if hook_type == 'on_setup':
@@ -252,6 +381,7 @@ class DbObject:
             self.before_delete_xml.append(hook)
         elif hook_type == 'after_delete':
             self.after_delete_xml.append(hook)
+    """
 
     def __str__(self):
         descr = ['{} {}:'.format(
@@ -279,6 +409,12 @@ class DbObject:
         # called from ht.gui_grid.start_row()
         self.cursor_row = cursor_row
 
+    def close_cursor(self):
+        if self.cursor is not None:
+            self.cursor.close()
+            self.cursor_row = None
+            self.cursor = None
+
     def add_clean_func(self, callback):
         self.on_clean_func.append(callback)
 
@@ -295,6 +431,14 @@ class DbObject:
             if callback[0] == caller:
                 self.on_amend_func.remove(callback)
 
+    def add_delete_func(self, callback):
+        self.on_delete_func.append(callback)
+
+    def remove_delete_func(self, caller):
+        for callback in self.on_delete_func:
+            if callback[0] == caller:
+                self.on_delete_func.remove(callback)
+
     def add_read_func(self, callback):
         self.on_read_func.append(callback)
 
@@ -303,43 +447,58 @@ class DbObject:
             if callback[0] == caller:
                 self.on_read_func.remove(callback)
 
+    def notify_insert(self, callback):
+        self.db_table.on_insert.append(callback)
+
+    def notify_update(self, callback):
+        self.db_table.on_update.append(callback)
+
+    def notify_delete(self, callback):
+        self.db_table.on_delete.append(callback)
+
     def getfld(self, col_name):
-        if '.' in col_name:  # how is this used? [2013-05-10]
-            src_col, tgt_col = col_name.split('.')
+        if '>' in col_name:
+            src_col, tgt_col = col_name.split('>')
             src_fld = self.fields[src_col]
-            return src_fld.foreign_key['tgt_field']
+#           tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
+            tgt_rec = src_fld.get_fk_object()
+            return tgt_rec.fields[tgt_col]
         return self.fields[col_name]
 
     def getval(self, col_name):
-        if '.' in col_name:
-            src_col, tgt_col = col_name.split('.')
+        if '>' in col_name:
+            src_col, tgt_col = col_name.split('>')
             src_fld = self.fields[src_col]
-            tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
-            return tgt_rec.getval(tgt_col)
+#           tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
+            tgt_rec = src_fld.get_fk_object()
+            return tgt_rec.fields[tgt_col].getval()
         fld = self.fields[col_name]
         return fld.getval()
 
     def get_orig(self, col_name):
-        if '.' in col_name:
-            src_col, tgt_col = col_name.split('.')
+        if '>' in col_name:
+            src_col, tgt_col = col_name.split('>')
             src_fld = self.fields[src_col]
-            tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
-            return tgt_rec.get_orig(tgt_col)
+#           tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
+            tgt_rec = src_fld.get_fk_object()
+            return tgt_rec.fields[tgt_col].get_orig()
         fld = self.fields[col_name]
         return fld.get_orig()
 
     def get_prev(self, col_name):
-        if '.' in col_name:
-            src_col, tgt_col = col_name.split('.')
+        if '>' in col_name:
+            src_col, tgt_col = col_name.split('>')
             src_fld = self.fields[src_col]
-            tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
-            return tgt_rec.get_prev(tgt_col)
+#           tgt_rec = src_fld.foreign_key['tgt_field'].db_obj
+            tgt_rec = src_fld.get_fk_object()
+            return tgt_rec.fields[tgt_col].get_prev()
         fld = self.fields[col_name]
         return fld.get_prev()
 
-    def get_val_for_sql(self, col_name):
-        fld = self.fields[col_name]
-        return fld.get_val_for_sql()
+# don't think this is ever called
+#   def get_val_for_sql(self, col_name):
+#       fld = self.fields[col_name]
+#       return fld.get_val_for_sql()
 
     def get_val_for_xml(self, col_name):
         fld = self.fields[col_name]
@@ -349,16 +508,16 @@ class DbObject:
         fld = self.fields[col_name]
         fld.setval(value, display)
 
-    def set_val_from_xml(self, col_name, value):
+    def get_val_from_xml(self, col_name, value):
         fld = self.fields[col_name]
-        fld.set_val_from_xml(value)
+        return fld.get_val_from_xml(value)
 
     def recalc(self, col_name):
         fld = self.fields[col_name]
         fld.recalc()
 
     def setup_virtual(self, col_defn, field):
-        sql = col_defn.sql.replace('{company}', self.data_company)
+        sql = col_defn.sql
 
         if 'a.' not in sql:  # no dependencies on this table
             # if several, could build up statement and do one execute at end
@@ -392,9 +551,15 @@ class DbObject:
         self.init(display=False)
         for key in keys:
             self.setval(key, keys[key], display)
-        self.exists = True
+        assert self.exists
 
-    def select_many(self, where, order):
+    def select_many(self, where, order, debug=False):
+
+        if self.dirty:
+            raise AibError(head="Trying to select '{}'".format(self.table_name),
+                body='Current row has been amended - must save or cancel before selecting')
+
+        self.check_perms('select')
 
         if where:
             test = 'AND'
@@ -407,31 +572,37 @@ class DbObject:
 
         parent = self.parent
         if parent is not None:
-            where.append((test, '', parent[0], '=', parent[1].getval(), ''))
+            parent_val = parent[1].getval()
+            if isinstance(parent_val, str):
+                parent_val = repr(parent_val)
+            where.append((test, '', parent[0], '=', parent_val, ''))
 
         # cannot use 'with conn' here
         # if we have nested 'select_many's, they would share the same
         #   connection, and the cursor would be over-written
 
         if self.mem_obj:
-            session = self.context.mem_session
-            conn = self.context.mem_session.conn
+            mem_id = self.context.mem_id
+            conn = db.connection._get_mem_connection(mem_id)
         else:
-            session = self.context.db_session
             conn = db.connection._get_connection()
         conn.cur = conn.cursor()
 
+        if log_db:
+            db_log.write('{}: START many\n'.format(id(conn)))
+
         select_cols = [fld.col_name for fld in self.select_cols]
-        cur = conn.full_select(self, select_cols, where, order)
+        cur = conn.full_select(self, select_cols, where, order, debug=debug)
         for row in cur:
             self.on_row_selected(row, display=False)
             yield None  # throw-away value
 
-        if not self.mem_obj:
-            conn.release()
+        conn.release()
+
+        if log_db:
+            db_log.write('{}: CLOSE many\n\n'.format(id(conn)))
 
     def select_row(self, keys, display=True, debug=False):
-#       cols_vals = []
         where = []
         test = 'WHERE'
         for col_name, value in keys.items():
@@ -445,9 +616,14 @@ class DbObject:
                         src = fld.foreign_key['true_src']
                         col_name = src.col_name
                         value = src._value
-#           cols_vals.append(('a.{}'.format(col_name), value))
+                if value is None:
+                    eq = 'IS'
+                else:
+                    eq = '='
+                    if isinstance(value, str):
+                        value = repr(value)
             where.append(
-                (test, '', col_name, '=', value, '') )
+                (test, '', col_name, eq, value, '') )
 #               {'test': test, 'lbr': '', 'col_name': col_name,
 #                   'op': '=', 'expr': value, 'rbr': ''} )
             test = 'AND'  # in case there is more than one
@@ -465,11 +641,11 @@ class DbObject:
                     return  # row not changed since last select
         self.where = where
 
-        if self.mem_obj:
-            session = self.context.mem_session
-        else:
-            session = self.context.db_session
-        with session as conn:
+        with self.context.db_session as db_mem_conn:
+            if self.mem_obj:
+                conn = db_mem_conn.mem
+            else:
+                conn = db_mem_conn.db
             try:
                 select_cols = [fld.col_name for fld in self.select_cols]
                 # next line only works if exactly one row is selected
@@ -478,12 +654,13 @@ class DbObject:
             except ValueError as e:
                 if str(e).startswith('need'):
                     # need more than 0 values to unpack = no rows selected
-#                   self.on_select_failed(cols_vals, display)
                     self.on_select_failed(display)
                 else:
                     print(self.cursor.rows)
                     # too many values to unpack = more than 1 row selected
-                    raise RuntimeError('More than one row found')
+#                   raise RuntimeError('More than one row found')
+                    raise AibError(head='Select {}'.format(self.table_name),
+                        body='More than one row found')
 
     def on_row_selected(self, row, display):
         for fld, dat in zip(self.select_cols, row):
@@ -503,8 +680,9 @@ class DbObject:
                 for obj in fld.gui_obj:
                     obj._redisplay()
                 if fld.gui_subtype is not None:
-                    form, subtype = fld.gui_subtype
-                    form.set_subtype(subtype, dat)
+                    frame, subtype = fld.gui_subtype
+#                   frame.set_subtype(subtype, dat)
+                    frame.set_subtype(subtype, fld.val_to_str(dat))
 
             # if fld has foreign_key which has changed, re-read foreign db_obj
             if fld.foreign_key:
@@ -522,71 +700,49 @@ class DbObject:
                             for obj in alt_src.gui_obj:
                                 obj._redisplay()
 
+        self.init_vals = {}  # to prevent re-use on restore()
         self.exists = True
-#       for callback in self.on_clean_func:  # frame method
-#           callback.on_clean(self)
         if self.dirty:
-            for caller, method in self.on_clean_func:  # frame methods
-                caller.session.request.db_events.append((caller, method))
-#       for callback in self.on_read_func:  # frame method
-#           callback.on_read(self)
-        for caller, method in self.on_read_func:  # frame methods
-#           print('ON READ', caller, method)
-            caller.session.request.db_events.append((caller, method))
-        for after_read in self.after_read_xml:  # table hook
-            db.db_xml.table_hook(self, after_read)
-        self.dirty = False
-        for child in self.children.values():
-            child.dirty = False
-
-#   def on_select_failed(self, cols_vals, display):
-    def on_select_failed(self, display):
-        # assume we are trying to create a new db_obj
-        if not self.enabled or not self.insert_ok:
-            raise AibError(head=self.table_name, body='Insert not allowed')
-
-        #
-        # assert self.dirty is True  # remove when satisfied
-        #
-        # it is *not* True
-        # select_row() is called when we call setval() on a key field
-        # but it is called as part of the validation process
-        # therefore at this point, setval() has not completed
-        # therefore at this point, self.dirty has not been set to True
-        # if setval() does complete, it will be set to True
-
-        self.exists = False
-        for fld in self.fields.values():  # initialise fields
-            fld._orig = None
-            fld.amendable = True  # [?]
-
-            # is this necessary? remove for now [09/06/2012]
-#           if display:
-#               for obj in fld.gui_obj:
-#                   obj._redisplay()
-
-#           for key_fld in fld.table_keys:
-#               for obj in key_fld.gui_obj:
-#                   obj.set_readonly(True)
-
-#?#
-##      for callback in self.on_read_func:  # frame method
-##          callback.on_read(self)
+            if display:
+                for caller, method in self.on_clean_func:  # frame methods
+                    caller.session.request.db_events.append((caller, method))
+# cannot call this here [2015-03-04]
+# we may re-read the contents of the grid for other purposes (e.g. fin_periods)
+# we do not want on_read to be triggered for each read
+# solution - move this to object_fields, when reading row after key field entered
 #       for caller, method in self.on_read_func:  # frame methods
 #           caller.session.request.db_events.append((caller, method))
-#       for after_read in self.after_read_xml:  # table hook
-#           db.db_xml.table_hook(self, after_read)
-#?#
+        for after_read in self.db_table.after_read_xml:  # table hook
+            db.db_xml.table_hook(self, after_read)
+        self.dirty = False
 
-    def init(self, display=True, preserve=[]):
+# don't understand this [2015-03-16]
+# better to disallow save() if any children are dirty!
+#       for child in self.children.values():
+#           child.dirty = False
+
+    def on_select_failed(self, display):
+        # assume we are trying to create a new db_obj
+        self.check_perms('insert')
+        self.exists = False
+
+    def init(self, *, display=True, init_vals=None):
+        # if not None, init_vals is a dict of col_name, value pairs
+        #   used to initialise db_obj fields (see ht.gui_tree for example)
+        # purpose -  set initial values, do *not* set db_obj.dirty to True
+        self.init_vals = init_vals if init_vals is not None else {}
+
         for fld in self.fields.values():
             # store existing data as 'prev' for data-entry '\' function
             if self.exists:
                 fld._prev = fld._value
 
-            # 'preserve' not used at present
-            if fld.col_name not in preserve:
-                fld._value = fld._orig = fld.get_dflt()  # None
+            if fld.col_name in self.init_vals:
+                fld._value = self.init_vals[fld.col_name]
+            else:
+                fld._value = fld.get_dflt()
+
+            fld._orig = None
 
             # if fld has foreign_key, init foreign db_obj
             if fld.foreign_key:
@@ -596,67 +752,109 @@ class DbObject:
                         tgt_field.db_obj.init()
 
             if fld.fkey_parent is not None:
-                fld._value = fld._orig = fld.fkey_parent._value
+                fld._value = fld.fkey_parent._value
 
-#           if not fld.col_defn.allow_amend:
-#               for obj in fld.gui_obj:
-#                   obj.set_readonly(False)
+            # not thought through [2015-08-07]
+            # seems to work ok [2015-08-12]
+            if fld.table_keys:
+                if fld._value is not None:
+                    fld.read_row(fld._value, display=display)
+                    if self.exists:
+                        return
 
             if display:
                 for obj in fld.gui_obj:
                     obj._redisplay()
                 if fld.gui_subtype is not None:
-                    form, subtype = fld.gui_subtype
-                    form.set_subtype(subtype, '')
+                    frame, subtype = fld.gui_subtype
+                    frame.set_subtype(subtype, fld.val_to_str())
 
         self.exists = False
-        for after_init in self.after_init_xml:
+        for after_init in self.db_table.after_init_xml:
             db.db_xml.table_hook(self, after_init)
         self.dirty = False
+# don't understand this [2015-03-16]
+# better to disallow save() if any children are dirty!
+#       for child in self.children.values():
+#           child.dirty = False
 
     def restore(self,display=True):
-        if not self.exists:
-            self.init(display)
-        else:
-            for fld in self.fields.values():
-                if fld._value != fld._orig:
+        if not self.dirty:
+            return  # nothing to restore
 
-                    # if fld has foreign_key, restore foreign db_obj
-                    if fld.foreign_key and fld.foreign_key['true_src'] is None:
-                        tgt_field = fld.foreign_key['tgt_field']
-                        if not fld._orig:
-                            tgt_field.db_obj.init()
-                        else:
-                            tgt_field.db_obj.init(display=False)
-                            tgt_field.read_row(fld._orig, display)
+        if not self.mem_obj and not self.exists:
+            self.init(display=display, init_vals=self.init_vals)
+            if display:
+                for caller, method in self.on_clean_func:  # frame methods
+                    caller.session.request.db_events.append((caller, method))
+            return
 
-                    # check for 'accum' fields here - subtract _value, add _orig
-                    fld._value = fld._orig
+        for fld in self.fields.values():
 
-                    if display:
-                        for obj in fld.gui_obj:
-                            obj._redisplay()
-                        if fld.gui_subtype is not None:
-                            form, subtype = fld.gui_subtype
-                            form.set_subtype(subtype, fld._value)
+            if fld.col_name in self.init_vals:
+                restore_val = self.init_vals[fld.col_name]
+            else:
+                restore_val = fld._orig
+                if restore_val is None:
+                    restore_val = fld.get_dflt()  # if None, check dflt
 
-#       for callback in self.on_clean_func:  # frame method
-#           callback.on_clean(self)
-        if self.dirty:
+            if fld._value != restore_val:
+
+                # if fld has foreign_key, restore foreign db_obj
+                if fld.foreign_key and fld.foreign_key['true_src'] is None:
+                    tgt_field = fld.foreign_key['tgt_field']
+#                   if not fld._orig:
+                    if not restore_val:
+                        tgt_field.db_obj.init()
+                    else:
+                        tgt_field.db_obj.init(display=False)
+#                       tgt_field.read_row(fld._orig, display)
+                        tgt_field.read_row(restore_val, display)
+
+                # check for 'accum' fields here - subtract _value, add _orig
+#               fld._value = fld._orig
+                fld._value = restore_val
+
+                if display:
+                    for obj in fld.gui_obj:
+                        obj._redisplay()
+                    if fld.gui_subtype is not None:
+                        frame, subtype = fld.gui_subtype
+#                       frame.set_subtype(subtype, fld._value)
+                        frame.set_subtype(subtype, fld.val_to_str())
+
+        if display:
             for caller, method in self.on_clean_func:  # frame methods
                 caller.session.request.db_events.append((caller, method))
-        for after_restore in self.after_restore_xml:
+        for after_restore in self.db_table.after_restore_xml:
             db.db_xml.table_hook(self, after_restore)
         self.dirty = False
-        for child in self.children.values():
-            child.dirty = False
+# don't understand this [2015-03-16]
+# better to disallow save() if any children are dirty!
+#       for child in self.children.values():
+#           child.dirty = False
 
     def save(self):
         if self.db_table.read_only:
-            raise IOError('{} is read only - no updates allowed'
-                .format(self.table_name))
+#           raise IOError('{} is read only - no updates allowed'
+#               .format(self.table_name))
+            raise AibError(head='Save {}'.format(self.table_name),
+                body='Table is read only - no updates allowed')
 
-        for before_save in self.before_save_xml:
+        # not thought through 100% yet
+        # if parent does not exist, and child is dirty, we need to save the
+        #   parent in order to populate the foreign key field on the child
+        # if parent does exist, and child is dirty, does it matter if the
+        #   parent is saved first? - not sure
+        if self.exists:
+            for child in self.children.values():
+                if child.dirty:
+#                   print([(fld.col_name, fld._orig, fld._value) for fld in child.fields.values()
+#                       if fld._orig != fld._value])
+                    raise AibError(head='Save {}'.format(self.table_name),
+                        body='{} must be saved first'.format(child.table_name))
+
+        for before_save in self.db_table.before_save_xml:
             db.db_xml.table_hook(self, before_save)  # can raise AibError
 
         if self.exists and not self.dirty:
@@ -680,75 +878,65 @@ class DbObject:
         #   sequence number of the current db_obj
         # if it is a new db_obj, this is generated from setup_defaults()
         # have to wait and see if there is an implication
+
         self.setup_defaults()  # generate defaults for blank fields
                                # can raise AibError if required and no default
 
-        for upd_chk in self.db_table.upd_chks:
-            chk_constraint(self, upd_chk)  # will raise AibError on fail
+        for descr, errmsg, upd_chk in self.db_table.upd_chks:
+            chk_constraint(self, upd_chk, errmsg=errmsg)  # will raise AibError on fail
 
-        if self.mem_obj:
-            session = self.context.mem_session
-        else:
-            session = self.context.db_session
-        with session as conn:
-            session.transaction_active = True
+        with self.context.db_session as db_mem_conn:
+
+            self.context.db_session.after_commit.append(
+                (self.after_save_committed,))
+
+            if self.mem_obj:
+                conn = db_mem_conn.mem
+            else:
+                conn = db_mem_conn.db
+
+            if self.db_table.sequence is not None:
+                self.increment_seq(conn)
 
             if self.exists:  # update row
-                for before_update in self.before_update_xml:
+                for before_update in self.db_table.before_update_xml:
                     db.db_xml.table_hook(self, before_update)
                 self.update(conn)
-                for after_update in self.after_update_xml:
+                for after_update in self.db_table.after_update_xml:
                     db.db_xml.table_hook(self, after_update)
                 if self.cursor is not None:
                     self.cursor.update_row(self.cursor_row)
             else:  # insert row
-                for before_insert in self.before_insert_xml:
+                for before_insert in self.db_table.before_insert_xml:
                     db.db_xml.table_hook(self, before_insert)
                 self.insert(conn)
-                for after_insert in self.after_insert_xml:
+                for after_insert in self.db_table.after_insert_xml:
                     db.db_xml.table_hook(self, after_insert)
                 if self.cursor is not None:
                     self.cursor.insert_row(self.cursor_row)
 
-# indentation of next two lines is important
-# it must run *after* the 'with' block terminates, therefore after 'commit'
+            for after_save in self.db_table.after_save_xml:
+                db.db_xml.table_hook(self, after_save)
 
-        for after_save in self.after_save_xml:
-            db.db_xml.table_hook(self, after_save)
-#       for callback in self.on_clean_func:  # frame method
-#           callback.on_clean(self)
+    def after_save_committed(self):
+        if self.exists:  # row updated
+            for callback in self.db_table.on_update:
+                # e.g. if company updated, notify db.objects.company_updated()
+                callback(self)
+        else:  # row inserted
+            for callback in self.db_table.on_insert:
+                # e.g. if company inserted, notify db.objects.company_updated()
+                callback(self)
+
         for caller, method in self.on_clean_func:  # frame methods
             caller.session.request.db_events.append((caller, method))
 
+        self.init_vals = {}  # to prevent re-use on restore()
         self.dirty = False
-        for child in self.children.values():
-            child.dirty = False
         self.exists = True
 
         for fld in self.fields.values():
             fld._orig = fld._value
-
-        # what is going on here? [28/03/2013]
-        # it looks as if we are re-evaluating all virtual columns after save
-        # but I thought we re-evaluated them on change of a dependant column!
-        if 0:  #self.virt_list:
-            key_cols = []
-            key_vals = []
-            for fld in self.primary_keys:
-                key_cols.append(fld.col_name)
-                key_vals.append(str(fld._value))
-
-            where = ' and '.join(['='.join((key, val))
-                for key, val in zip(key_cols, key_vals)])
-            sql = "SELECT {} FROM {}.{} a WHERE {}".format(
-                ', '.join(virt[1] for virt in self.virt_list),
-                self.data_company, self.table_name, where)
-            with self.context as conn:
-                conn.cur.execute(sql)
-                for fld, val in zip(
-                        [virt[0] for virt in self.virt_list],
-                        conn.cur.fetchone()):
-                    fld._value = fld._orig = val
 
     def check_subtypes(self):  # if subtype, check subtype values
         # self.db_table.subtypes is a dict - subtype: col_names
@@ -761,37 +949,19 @@ class DbObject:
             for (col_name, reqd) in self.db_table.subtypes[subtype][this_subtype]:
                 if reqd:
                     if self.getval(col_name) in (None, ''):
-                        errmsg = 'A value is required'
-                        descr = self.fields[col_name].col_defn.short_descr
-                        raise AibError(head=descr, body=errmsg)
+#                       head = self.fields[col_name].col_defn.short_descr
+                        head = '{}.{}'.format(self.table_name, col_name)
+                        body = 'A value is required'
+                        raise AibError(head=head, body=body)
 
     def setup_defaults(self):  # generate defaults for blank fields
-        error_list = []  # accumulate all errors before raising error
-        #for fld in self.fields[:self.no_cols]:  # exclude virtual columns
         for fld in self.flds_to_update:  # exclude virtual columns
             if fld._value is None:
                 if not fld.col_defn.generated:
-#                   print('{}.{}'.format(fld.table_name, fld.col_name))
-                    value = None
-#                   if fld.fkey_parent is not None:
-#                       value = fld.fkey_parent._value
-                    if fld.col_defn.dflt_val is not None:
-                        value = fld.get_dflt(fld.col_defn.dflt_val)
-#                   try:
-#                       fld.setval(value)
-##                      print('Dflt {}.{} "{}"'.format(
-##                          fld.table_name, fld.col_name, value))
-#                   except ValueError as err:
-#                       errmsg = err.args
-#                       if not len(errmsg) == 2:  #  eg from IOError
-#                           errmsg = [fld.col_defn.short_descr, errmsg[0]]
-#                       raise ValueError(errmsg)
-                    fld.setval(value)  # can raise AibError
+                    fld.setval(fld.get_dflt())  # can raise AibError
 
     def insert(self, conn):
-#       if not self.enabled or not self.insert_ok:
-#           g.errmsg = (self.name, 'Insert not allowed')
-#           raise IOError(g.errmsg)
+        self.check_perms('insert')
 
         cols = []
         vals = []
@@ -803,10 +973,17 @@ class DbObject:
                 cols.append(fld.col_name)
                 vals.append(fld.get_val_for_sql())
 
-        conn.insert_row(self, cols, vals, generated_flds)
+        try:
+            conn.insert_row(self, cols, vals, generated_flds)
+        except conn.exception as err:
+            raise AibError(head='Insert {}'.format(self.table_name),
+                body=str(err))
 
     def update(self, conn):
+        self.check_perms('update')
+
         # read in current row with lock, for optimistic concurrency control
+        # also values are used to setup up audit trail with 'prev' values
         cols = ', '.join([fld.col_name for fld in self.flds_to_update])
         if self.mem_obj:
             table_name = self.table_name
@@ -823,6 +1000,8 @@ class DbObject:
         order = None
         sql = conn.form_sql(cols, table_name, where, order, lock=True)
 
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(conn), sql, key_vals))
         conn.cur.execute(sql, key_vals)
         row, = conn.cur
         for fld, dat in zip(self.flds_to_update, row):
@@ -835,63 +1014,363 @@ class DbObject:
                 cols.append(fld.col_name)
                 vals.append(fld.get_val_for_sql())
         if len(cols):  # there is something to update
-            conn.update_row(self, cols, vals)
-#       else:  # do NOT do this - could be part of a larger transaction
-#           conn.rollback()  # release lock
-#           self.context.transaction_active = False
+            try:
+                conn.update_row(self, cols, vals)
+            except conn.exception as err:
+                raise AibError(head='Update {}'.format(self.table_name),
+                    body=str(err))
 
     def delete(self):
+        self.check_perms('delete')
 
         if not self.exists:
-            raise IOError('No current row - cannot delete')
+            raise AibError(
+                head='Delete',
+                body='No current row - cannot delete')
 
-        for del_chk in self.db_table.del_chks:
-            # will raise AibError on fail
-            chk_constraint(self, del_chk)
+        for descr, errmsg, del_chk in self.db_table.del_chks:
+            chk_constraint(self, del_chk, errmsg=errmsg)  # will raise AibError on fail
 
         self.restore(display=False)  # remove unsaved changes, to ensure valid audit trail
 
-        if self.mem_obj:
-            session = self.context.mem_session
-        else:
-            session = self.context.db_session
-        with session as conn:
-            session.transaction_active = True
-            for before_delete in self.before_delete_xml:
+        with self.context.db_session as db_mem_conn:
+
+            self.context.db_session.after_commit.append((self.after_delete_committed,))
+
+            if self.mem_obj:
+                conn = db_mem_conn.mem
+            else:
+                conn = db_mem_conn.db
+            for before_delete in self.db_table.before_delete_xml:
                 db.db_xml.table_hook(self, before_delete)
-            conn.delete_row(self)
-            for after_delete in self.after_delete_xml:
+            try:
+                conn.delete_row(self)
+            except conn.exception as err:
+                raise AibError(head='Delete {}'.format(self.table_name),
+                    body=str(err))
+
+            if self.db_table.sequence is not None:
+                self.decrement_seq(conn)
+
+            for after_delete in self.db_table.after_delete_xml:
                 db.db_xml.table_hook(self, after_delete)
             if self.cursor is not None:
                 self.cursor.delete_row(self.cursor_row)
 
-#       self.dirty = False
-#       self.exists = False
+            for caller, method in self.on_delete_func:  # frame methods
+                caller.session.request.db_events.append((caller, method))
+
+    def after_delete_committed(self):
+        for callback in self.db_table.on_delete:
+            callback(self)
 
         # set display=False, because if we are in a grid, display=True results
         #   in blanking out the next row after they all move up one
         self.init(display=False)
 
-    # the rest of this class uses property() to ensure that self.insert_ok
-    # and self.delete_ok are initialised when required
+    def increment_seq(self, conn):  # called before save
+        seq_col_name, groups, combo = self.db_table.sequence
 
-    def get_insert_ok(self):
-        if not self.permissions_set:
-            self.set_permissions(first=True)
-#           self.setup_fkeys()
-        return self.__insert_ok
-    def set_insert_ok(self, value):
-        self.__insert_ok = value
-    insert_ok = property(get_insert_ok, set_insert_ok)
+        # 'combo' may be an over-complication - not sure [2015-08-30]
+        # this is the problem it is intended to solve
+        #
+        # a combo is a situation where the 'nodes' of the tree are in one
+        #   table, and the 'leaves' are in another
+        # e.g. a file system comprising 'folders' and 'files' - they are
+        #   inherently different data types, so would be defined in different tables
+        # normally all 'leaves' would be sorted after all 'nodes' in a given
+        #   sub-tree, but what if you wanted to intersperse them?
+        #
+        # e.g. a menu system - if entries of type 'menu' were in a different
+        #   table from 'menu options', this might apply
+        #
+        # the problem then is that if you append or insert a new row or change
+        #   the sequence of an existing one, you must update the sequence numbers
+        #   by considering the merged tables as a single table
+        #
+        # we do not have this situaion at present - menu options are stored in
+        #   the same table as menu definitions
+        #
+        # the only 'combo' situation we have is 'db_modules', which is used as a
+        #   grouping for db_tables, sys_menus, acc_roles, db_tran_types, etc
+        #
+        # it would not be practical to allow an interspersed tree here, as all the
+        #   other tables would be affected and it would be difficult to maintain
+        #
+        # therefore we do not make use of 'combo' at present, but leave the code
+        #   here in case a situation crops up in the future where we need it
 
-    def get_delete_ok(self):
-        if not self.permissions_set:
-            self.set_permissions(first=True)
-#           self.setup_fkeys()
-        return self.__delete_ok
-    def set_delete_ok(self, value):
-        self.__delete_ok = value
-    delete_ok = property(get_delete_ok, set_delete_ok)
+        seq = self.getfld(seq_col_name)
+        orig_seq = seq.get_orig()
+        new_seq = seq.getval()
+        if new_seq == orig_seq:
+            return
+
+        if self.mem_obj:
+            table_name = self.table_name
+        else:
+            table_name = self.data_company + '.' + self.table_name
+            if combo is not None:
+                combo = self.data_company + '.' + combo
+
+        if not self.exists and new_seq == -1:  # append node
+            sql = 'SELECT COALESCE(MAX({}), -1) FROM'.format(seq_col_name)
+            params = []
+
+            if combo is not None:
+
+                sql += ' (SELECT {} FROM {}'.format(seq_col_name, table_name)
+
+                test = 'WHERE'
+                for group in groups:  # if any
+                    sql += ' {} {} = {}'.format(test, group, conn.param_style)
+                    params.append(self.getfld(group).getval())
+                    test = 'AND'
+
+                sql += ' UNION ALL SELECT {} FROM {}'.format(seq_col_name, combo)
+
+                test = 'WHERE'
+                for group in groups:  # if any
+                    sql += ' {} {} = {}'.format(test, group, conn.param_style)
+                    params.append(self.getfld(group).getval())
+                    test = 'AND'
+
+                sql += ') AS temp'  # MS-SQL requires 'AS'
+
+            else:
+                sql += ' {}'.format(table_name)
+
+                test = 'WHERE'
+                for group in groups:  # if any
+                    sql += ' {} {} = {}'.format(test, group, conn.param_style)
+                    params.append(self.getfld(group).getval())
+                    test = 'AND'
+
+            if log_db:
+                db_log.write('{}: {}; {}\n'.format(id(conn), sql, params))
+            conn.cur.execute(sql, params)
+            seq = conn.cur.fetchone()[0] + 1
+            self.setval(seq_col_name, seq)
+            return
+
+        if self.exists:
+            if new_seq > orig_seq:
+                sql_1 = (
+                    'UPDATE {0} SET {1} = ({1}-1) WHERE {1} > {2} AND {1} <= {2}'
+                    .format(table_name, seq_col_name, conn.param_style)
+                    )
+                if combo is not None:
+                    sql_2 = (
+                        'UPDATE {0} SET {1} = ({1}-1) WHERE {1} > {2} AND {1} <= {2}'
+                        .format(combo, seq_col_name, conn.param_style)
+                        )
+                params = [orig_seq, new_seq]
+            else:
+                sql_1 = (
+                    'UPDATE {0} SET {1} = ({1}+1) WHERE {1} >= {2} AND {1} < {2}'
+                    .format(table_name, seq_col_name, conn.param_style)
+                    )
+                if combo is not None:
+                    sql_2 = (
+                        'UPDATE {0} SET {1} = ({1}+1) WHERE {1} >= {2} AND {1} < {2}'
+                        .format(combo, seq_col_name, conn.param_style)
+                        )
+                params = [new_seq, orig_seq]
+        else:
+            sql_1 = (
+                'UPDATE {0} SET {1} = ({1}+1) WHERE {1} >= {2}'.format(
+                table_name, seq_col_name, conn.param_style)
+                )
+            if combo is not None:
+                sql_2 = (
+                    'UPDATE {0} SET {1} = ({1}+1) WHERE {1} >= {2}'.format(
+                    combo, seq_col_name, conn.param_style)
+                    )
+            params = [new_seq]
+
+        for group in groups:  # if any
+            sql_1 += ' AND {} = {}'.format(group, conn.param_style)
+            if combo is not None:
+                sql_2 += ' AND {} = {}'.format(group, conn.param_style)
+            params.append(self.getfld(group).getval())
+
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(conn), sql_1, params))
+        conn.cur.execute(sql_1, params)
+        if combo is not None:
+            if log_db:
+                db_log.write('{}: {}; {}\n'.format(id(conn), sql_2, params))
+            conn.cur.execute(sql_2, params)
+
+    def decrement_seq(self, conn):  # called after delete
+        seq_col_name, groups, combo = self.db_table.sequence
+
+        # 'combo' may be an over-complication - not sure [2015-08-30]
+        # see the notes above in 'increment_seq'
+
+        if self.mem_obj:
+            table_name = self.table_name
+        else:
+            table_name = self.data_company + '.' + self.table_name
+            if combo is not None:
+                combo = self.data_company + '.' + combo
+
+        sql_1 = ('UPDATE {0} SET {1} = ({1}-1) WHERE {1} > {2}'.format(
+            table_name, seq_col_name, conn.param_style))
+        if combo is not None:
+            sql_2 = ('UPDATE {0} SET {1} = ({1}-1) WHERE {1} > {2}'.format(
+                combo, seq_col_name, conn.param_style))
+        params = [self.getval(seq_col_name)]
+
+        for group in groups:  # if any
+            sql_1 += ' AND {} = {}'.format(group, conn.param_style)
+            if combo is not None:
+                sql_2 += ' AND {} = {}'.format(group, conn.param_style)
+            params.append(self.getfld(group).getval())
+
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(conn), sql_1, params))
+        conn.cur.execute(sql_1, params)
+        if combo is not None:
+            if log_db:
+                db_log.write('{}: {}; {}\n'.format(id(conn), sql_2, params))
+            conn.cur.execute(sql_2, params)
+
+    def check_perms(self, perm_type, col_id=None):
+        if self.mem_obj:
+            return  # no restrictions on in-memory objects
+
+        if self.context.sys_admin:
+            return  # system administrator
+
+        perms = self.context.session.perms
+
+        if perms.get(self.data_company) == '_admin_':
+            return  # company administrator
+
+        if self.data_company not in perms:
+            self.setup_perms(perms)
+
+        ok = False
+        table_id = self.db_table.orig_tableid
+        if table_id in perms[self.data_company]:
+            if perm_type == 'select':
+                perm = perms[self.data_company][table_id][0]
+                if perm is not False:
+                    ok = True
+            elif perm_type == 'view':
+                perm = perms[self.data_company][table_id][0]
+                if perm is True:
+                    ok = True
+                elif isinstance(perm, dict):
+                    if str(col_id) in perm:
+                        ok = True
+            elif perm_type == 'insert':
+                if perms[self.data_company][table_id][1]:
+                    ok = True
+            elif perm_type == 'update':
+                perm = perms[self.data_company][table_id][2]
+                if perm is not False:
+                    ok = True
+            elif perm_type == 'amend':
+                perm = perms[self.data_company][table_id][2]
+                if perm is True:
+                    ok = True
+                elif isinstance(perm, dict):
+                    if str(col_id) in perm:
+                        ok = True
+            elif perm_type == 'delete':
+                if perms[self.data_company][table_id][3]:
+                    ok = True
+        elif perm_type in ('select', 'view'):
+            ok = True  # 'select' defaults to True
+        if not ok:
+            raise AibDenied(
+                head='{} {}.{}'.format(perm_type, self.data_company, self.table_name),
+                body='Permission denied'
+                )
+
+    def setup_perms(self, perms):
+
+        company = self.data_company
+        user_row_id = self.context.user_row_id
+
+        # first, check if any user roles are at level 1 in acc_roles
+        # if so, each one represents a module adminstrator, and full
+        #   rights are granted for all tables within that module
+
+        # then check for user roles with level > 1
+        # user can have more than one role
+        # roles could have differing permissions on the same table
+        # read in all roles for this user
+        # if *any* permission is True for this table, set it to True
+        # else if permission is a dict of permitted columns
+        #   update the dictionary so it includes all permitted columns
+        # else set it to False
+        perms[company] = {}  # key=table_id, value=permissions
+
+        with self.context.db_session as db_mem_conn:
+            conn = db_mem_conn.db
+
+            sql = (
+                "SELECT a.role FROM {0}.acc_roles a, {0}.acc_users_roles b "
+                "WHERE a.deleted_id = 0 AND a.parent_id = 1 "
+                "AND b.role_id = a.row_id AND b.user_row_id = {1}"
+                .format(company, user_row_id)
+                )
+            conn.cur = conn.exec_sql(sql)
+            modules = [repr(row[0]) for row in conn.cur.fetchall()]
+
+            if modules:
+                sql = (
+                    "SELECT a.row_id FROM {0}.db_tables a, {0}.db_modules b "
+                    "WHERE b.row_id = a.parent_id and b.module in ({1})"
+                    .format(company, ','.join(modules))
+                    )
+                conn.cur = conn.exec_sql(sql)
+                table_ids = [row[0] for row in conn.cur.fetchall()]
+
+                for table_id in table_ids:
+                    perms[company][table_id] = (True, True, True, True)
+
+            sql = (
+                "SELECT a.table_id, a.sel_ok, a.ins_ok, a.upd_ok, a.del_ok "
+                "FROM {0}.acc_table_perms a, {0}.acc_users_roles b, {0}.acc_roles c "
+                "WHERE a.deleted_id = 0 AND b.role_id = a.role_id "
+                "AND c.row_id = a.role_id AND c.parent_id > 1 "
+                "AND b.user_row_id = {1}"
+                .format(company, user_row_id)
+                )
+
+            conn.cur = conn.exec_sql(sql)
+            for table_id, sel_new, ins_new, upd_new, del_new in conn.cur:
+                sel_new = loads(sel_new)
+                ins_new = loads(ins_new)
+                upd_new = loads(upd_new)
+                del_new = loads(del_new)
+                if table_id in perms[company]:
+                    sel_now, ins_now, upd_now, del_now = perms[company][table_id]
+                    if sel_new is True:
+                        sel_now = True
+                    elif isinstance(sel_new, dict):
+                        if sel_now is False:
+                            sel_now = sel_new
+                        else:
+                            sel_now.update(sel_new)
+                    if ins_new is True:
+                        ins_now = True
+                    if upd_new is True:
+                        upd_now = True
+                    elif isinstance(upd_new, dict):
+                        if upd_now is False:
+                            upd_now = upd_new
+                        else:
+                            upd_now.update(upd_new)
+                    if del_new is True:
+                        del_now = True
+                    perms[company][table_id] = (sel_now, ins_now, upd_now, del_now)
+                else:
+                    perms[company][table_id] = (sel_new, ins_new, upd_new, del_new)
 
 #-----------------------------------------------------------------------------
 
@@ -911,25 +1390,30 @@ class MemObject(DbObject):
         self.mem_parent = parent  # must set *before* DbObject.__init__()
         # if parent is not None, use @property to get/set 'dirty'
         self._dirty = False
-        DbObject.__init__(self, context, data_company, db_table)
-        self.mem_obj = True  # over-ride value set in DbObject.__init__
-        if parent is not None:
-            parent.children[self.table_name] = self
+        DbObject.__init__(self, context, data_company, db_table, parent, mem_obj=True)
+#       self.mem_obj = True  # over-ride value set in DbObject.__init__
+# only do this when fkey is processed - see below
+#       if parent is not None:
+#           parent.children[self.table_name] = self
 
 #       self.conn = db.connection.MemConn()
 #       cur = self.conn.cursor()
-        with self.context.mem_session as conn:
-            conn.cur.execute(
-                'CREATE TABLE {} (row_id INTEGER PRIMARY KEY)'
-                .format(self.table_name))
+#       with self.context.db_session as db_mem_conn:
+#           conn = db_mem_conn.mem
+#           conn.cur.execute(
+#               'CREATE TABLE {} (row_id INTEGER PRIMARY KEY)'
+#               .format(self.table_name))
 
+        """
         self.add_mem_column(
             col_name='row_id', data_type='AUTO', short_descr='Row id',
             long_descr='Row id', col_head='Row', key_field='Y', allow_null=False,
             allow_amend=False, max_len=0, db_scale=0, generated=True)
+        """
 
-        self.primary_keys = [self.fields['row_id']]
-        self.alt_keys = []
+#       self.primary_keys = [self.fields['row_id']]
+#       self.alt_keys = []
+#       self.virt_cols = []
 
     def get_cursor(self):
 #       print('GET CURSOR', self.table_name)
@@ -944,6 +1428,7 @@ class MemObject(DbObject):
             self.cursor_row = None
             self.cursor = None
 
+    '''
     def add_mem_column(
             self, col_name, data_type, short_descr, long_descr, col_head, key_field,
             allow_null, allow_amend, max_len, db_scale, scale_ptr=None, dflt_val=None,
@@ -985,7 +1470,8 @@ class MemObject(DbObject):
         if col_name != 'row_id':  # row_id already set up
             sql = 'ALTER TABLE {} ADD {} {}'.format(
                 self.table_name, col_name, data_type)
-            with self.context.mem_session as conn:
+            with self.context.db_session as db_mem_conn:
+                conn = db_mem_conn.mem
                 conn.cur.execute(conn.convert_string(sql))
 
         if col.col_chks is None:
@@ -1012,7 +1498,7 @@ class MemObject(DbObject):
         if col.choices is not None:
             col.choices = loads(col.choices)
             if col.choices[0]:  # use sub_types
-                self.db_table.subtypes[col.col_name] = {}
+                self.db_table.subtypes[col.col_name] = OD()
                 for sub_type, descr, subtype_cols, disp_names in col.choices[2]:
                     # subtype_cols = [(col_1, reqd), (col_2, reqd), ...]
                     self.db_table.subtypes[col.col_name][sub_type] = subtype_cols
@@ -1027,7 +1513,7 @@ class MemObject(DbObject):
                         sql_elem = []
                         for disp_name, separator in disp_names:
                             sql_elem.append("a." + disp_name)
-                            if separator != '':
+                            if separator:  # if not '' or None
                                 sql_elem.append("'{}'".format(separator))
                         virt_sql += " || ".join(sql_elem)  # || is concat in sqlite3
                 if virt_sql != "":
@@ -1070,23 +1556,91 @@ class MemObject(DbObject):
         # update list of fields belonging to this db_obj
         self.fields[col_name] = field
         self.select_cols.append(field)
-        self.flds_to_update.append(field)
+        if col.sql is None:
+            self.flds_to_update.append(field)
 
         if value is not None:
             field._value = value
 
+        if field.sql is not None:
+            self.virt_cols.append(field)
+
         return field
+    '''
+
+    def clone_db_col(self, conn, col):
+
+            if col.col_name in self.fields:
+                return  # already cloned
+
+            col_flds = (
+                col.col_name,
+                col.data_type,
+                col.short_descr,
+                col.long_descr,
+                col.col_head,
+                col.key_field,
+                col.generated,
+                col.allow_null,
+                col.allow_amend,
+                col.max_len,
+                col.db_scale,
+                col.scale_ptr,
+                col.dflt_val,
+                None if col.col_chks is None else dumps(col.col_chks),
+                None if col.fkey is None else dumps(col.fkey),
+                None if col.choices is None else dumps(col.choices),
+                col.sql,
+                )
+            col_defn = self.db_table.add_mem_column(conn, col_flds)
+
+            if col_defn is None:  # can happen is col_name already exists
+                # if it exists, find it and set up field
+                for col_defn in self.db_table.col_list:
+                    if col_defn.col_name == col.col_name:
+                        break
+                else:
+                    return
+
+            if col.key_field != 'N':
+                col_defn.table_keys = [col_defn]  # cannot handle composite keys!
+
+            field = db.object_fields.DATA_TYPES[col_defn.data_type](self, col_defn)
+            self.fields[col_defn.col_name] = field
+            self.select_cols.append(field)  # excludes any 'alt_src' columns
+            if col_defn.sql is not None:
+                self.setup_virtual(col_defn, field)
+            else:
+                self.flds_to_update.append(field)
+            field.table_keys = [self.fields[col_defn.col_name]
+                for col_defn in col_defn.table_keys]
 
     def delete(self):
+        # for each child (if any), delete rows
+        for child in self.children.values():
+            # if there is a cursor, we need to specify the cursor row
+            #   to be deleted
+            # as each row is deleted, the rows move up by one, so the
+            #   cursor row to be deleted is always 0
+            # it does not matter if they are not in the same sequence,
+            #   provided the number of rows in the cursor equals the
+            #   number of rows selected
+            # they should always be equal, but don't know how to prove it
+            if child.cursor is not None:
+                child.set_cursor_row(0)
+            rows = child.select_many(where=[], order=[])
+            for row in rows:  # automatically selects next row in child
+                child.delete()
+
         DbObject.delete(self)
+
         if self.mem_parent is not None:
             if not self.mem_parent.dirty:
                 self.mem_parent.dirty = True
-#               for callback in self.mem_parent.on_amend_func:
-#                   callback.on_amend(self.mem_parent)
                 for caller, method in self.mem_parent.on_amend_func:
                     caller.session.request.db_events.append((caller, method))
 
+    """
     def load_one(self, row):  # populate self from list
         cols = [col for col in self.select_cols if not col.col_defn.generated]
         self.init()
@@ -1112,17 +1666,21 @@ class MemObject(DbObject):
         cols = [col for col in self.select_cols if not col.col_defn.generated]
         array = []
         all_dbobj = self.select_many(where=[], order=[('row_id', False)])
-        while next(all_dbobj):
+        for _ in all_dbobj:
             array.append([fld.get_val_for_sql() for fld in cols])
         return array
+    """
 
     def delete_all(self):
 #       all_cols = self.select_many(where=[], order=[])
 #       for _ in all_cols:
 #           self.delete()
-        session = self.context.mem_session
-        with session as conn:
+        with self.context.db_session as db_mem_conn:
+            conn = db_mem_conn.mem
             conn.delete_all(self)
+        self.init(display=False)
+        for caller, method in self.on_clean_func:  # frame methods
+            caller.session.request.db_events.append((caller, method))
 
     """
     def select_row_from_cursor(self, row, display):
@@ -1153,7 +1711,7 @@ class MemObject(DbObject):
     def save(self):
 #       print('save', self)
 
-        for before_save in self.before_save_xml:
+        for before_save in self.db_table.before_save_xml:
             db.db_xml.table_hook(self, before_save)
 
         if self.exists and not self.dirty:
@@ -1164,19 +1722,19 @@ class MemObject(DbObject):
 
         if self.cursor is not None:
             if self.exists:  # update row
-                for before_update in self.before_update_xml:
+                for before_update in self.db_table.before_update_xml:
                     db.db_xml.table_hook(self, before_update)
                 self.cursor.update_row(self.cursor_row)
-                for after_update in self.after_update_xml:
+                for after_update in self.db_table.after_update_xml:
                     db.db_xml.table_hook(self, after_update)
             else:  # insert row
-                for before_insert in self.before_insert_xml:
+                for before_insert in self.db_table.before_insert_xml:
                     db.db_xml.table_hook(self, before_insert)
                 self.cursor.insert_row(self.cursor_row)
-                for after_insert in self.after_insert_xml:
+                for after_insert in self.db_table.after_insert_xml:
                     db.db_xml.table_hook(self, after_insert)
 
-        for after_save in self.after_save_xml:
+        for after_save in self.db_table.after_save_xml:
             db.db_xml.table_hook(self, after_save)
 #       for callback in self.on_clean_func:  # frame method
 #           callback.on_clean(self)
@@ -1184,8 +1742,8 @@ class MemObject(DbObject):
             caller.session.request.db_events.append((caller, method))
 
         self.dirty = False
-        for child in self.children.values():
-            child.dirty = False
+#       for child in self.children.values():
+#            child.dirty = False
         self.exists = True
 
         for fld in self.fields.values():
@@ -1197,10 +1755,10 @@ class MemObject(DbObject):
 
         self.restore(display=False)  # remove unsaved changes, to ensure valid audit trail
 
-        for before_delete in self.before_delete_xml:
+        for before_delete in self.db_table.before_delete_xml:
            db.db_xml.table_hook(self, before_delete)
         self.array.pop(self.cursor_row)
-        for after_delete in self.after_delete_xml:
+        for after_delete in self.db_table.after_delete_xml:
            db.db_xml.table_hook(self, after_delete)
 
         self.init()
@@ -1214,8 +1772,6 @@ class MemObject(DbObject):
             if self.mem_parent is not None:
                 if not self.mem_parent.dirty:
                     self.mem_parent.dirty = True
-#                   for callback in self.mem_parent.on_amend_func:
-#                       callback.on_amend(self.mem_parent)
                     for caller, method in self.mem_parent.on_amend_func:
                         caller.session.request.db_events.append((caller, method))
     dirty = property(get_dirty, set_dirty)
@@ -1224,9 +1780,10 @@ class MemObject(DbObject):
 
 class DbTable:
 
-    def __init__(self, context, table_id, table_name, short_descr,
-            audit_trail, upd_chks, del_chks, table_hooks, defn_company,
-            data_company, read_only, default_cursor, form_xml):
+    def __init__(self, context, orig_tableid, table_id, table_name, short_descr,
+            audit_trail, upd_chks, del_chks, table_hooks, sequence, defn_company,
+            data_company, read_only, default_cursor, setup_form):
+        self.orig_tableid = orig_tableid
         self.table_id = table_id
         self.table_name = table_name
         self.short_descr = short_descr
@@ -1239,31 +1796,60 @@ class DbTable:
             self.del_chks = []
         else:
             self.del_chks = loads(del_chks)
-        self.table_hooks = table_hooks
+        if sequence is None:
+            self.sequence = None
+        else:
+            self.sequence = loads(sequence)
         self.defn_company = defn_company
         self.data_company = data_company
         self.read_only = read_only
         self.default_cursor = default_cursor
-        if form_xml is None:
-            self.form_xml = None
-        else:
-            self.form_xml = etree.fromstring(gzip.decompress(form_xml))
 
-        self.parent_params = None  # if fkey has 'child=True', set to
-                                   #   (parent_name, parent_pkey, fkey_colname)
+        # table hooks
+#       self.table_hooks = table_hooks
+        self.on_setup_xml = []
+        self.after_read_xml = []
+        self.after_init_xml = []
+        self.after_restore_xml = []
+        self.before_save_xml = []
+        self.after_save_xml = []
+        self.before_insert_xml = []
+        self.after_insert_xml = []
+        self.before_update_xml = []
+        self.after_update_xml = []
+        self.before_delete_xml = []
+        self.after_delete_xml = []
+
+        if table_hooks is not None:
+            hooks_xml = etree.fromstring(gzip.decompress(table_hooks))
+            for hook in hooks_xml:
+                self.setup_hook(hook)
+
+        self.on_insert = []  # callbacks to call on insert
+        self.on_update = []  # callbacks to call on update
+        self.on_delete = []  # callbacks to call on delete
+
+        self.setup_form = setup_form
+
+        self.parent_params = []  # if fkey has 'child=True', append
+                                 #   (parent_name, parent_pkey, fkey_colname)
+                                 # can have > 1 parent e.g. dir_users_companies
 
         # set up data dictionary
         self.col_list = []  # maintain sorted list of column names
         self.primary_keys = []
         alt_keys = []
-        self.subtypes = {}  # insert col_name: col_names if col is subtype
+        self.subtypes = OD()  # insert col_name: col_names if col is subtype
 
         table = 'db_columns'
         cols = Column.names
-        where = [('WHERE', '', 'table_id', '=', table_id, '')]
+        where = []
+        where.append(('WHERE', '', 'table_id', '=', table_id, ''))
+        where.append(('AND', '', 'deleted_id', '=', 0, ''))
         order = ['col_type', 'seq']
 
-        with context.db_session as conn:
+        with context.db_session as db_mem_conn:
+            conn = db_mem_conn.db
             for row in conn.simple_select(defn_company, table, cols, where, order):
                 col = Column(row)
                 col.table_name = table_name
@@ -1284,11 +1870,11 @@ class DbTable:
                 if col.fkey is not None:
                     col.fkey = loads(col.fkey)
                     if col.fkey[FK_CHILD]:
-                        self.parent_params = (
+                        self.parent_params.append((
                             col.fkey[FK_TARGET_TABLE],
                             col.fkey[FK_TARGET_COLUMN],
                             col.col_name
-                            )
+                            ))
 
                 # if a sub_type, set up list of subtype columns
                 if col.choices is not None:
@@ -1316,7 +1902,8 @@ class DbTable:
             ('WHERE', '', 'table_name', '=', self.table_name, ''),
             ('AND', '', 'deleted_id', '=', 0, '')]
 
-        with context.db_session as conn:
+        with context.db_session as db_mem_conn:
+            conn = db_mem_connnn.db
 #           rows = conn.simple_select(defn_company, table, cols, where)
 #           for row in rows:
             for row in conn.simple_select(defn_company, table, cols, where):
@@ -1329,20 +1916,299 @@ class DbTable:
                     self.delete_conditions.append((row[5], row[6]))
         """
 
+    def setup_hook(self, hook):
+        hook_type = hook.get('type')
+        if hook_type == 'on_setup':
+            self.on_setup_xml.append(hook)
+        elif hook_type == 'after_read':
+            self.after_read_xml.append(hook)
+        elif hook_type == 'after_init':
+            self.after_init_xml.append(hook)
+        elif hook_type == 'after_restore':
+            self.after_restore_xml.append(hook)
+        elif hook_type == 'before_save':
+            self.before_save_xml.append(hook)
+        elif hook_type == 'after_save':
+            self.after_save_xml.append(hook)
+        elif hook_type == 'before_insert':
+            self.before_insert_xml.append(hook)
+        elif hook_type == 'after_insert':
+            self.after_insert_xml.append(hook)
+        elif hook_type == 'before_update':
+            self.before_update_xml.append(hook)
+        elif hook_type == 'after_update':
+            self.after_update_xml.append(hook)
+        elif hook_type == 'before_delete':
+            self.before_delete_xml.append(hook)
+        elif hook_type == 'after_delete':
+            self.after_delete_xml.append(hook)
+
 #-----------------------------------------------------------------------------
 
 class MemTable(DbTable):
-    def __init__(self, table_name):
+#   def __init__(self, context, table_name, upd_chks, del_chks, sequence):
+    def __init__(self, context, company, table_name, table_defn):
         self.table_name = table_name
+        self.short_descr = table_name
         self.read_only = False
         self.col_list = []  # maintain sorted list of column names
-        self.subtypes = {}  # insert col_name: col_names if col is subtype
         self.primary_keys = []
-        self.virt_list = []
+        alt_keys = []
+        self.subtypes = OD()  # insert col_name: col_names if col is subtype
         self.audit_trail = None
-        self.upd_chks = []
-        self.del_chks = []
-        self.table_hooks = None
+        self.parent_params = []  # if fkey has 'child=True', append
+                                 #   (parent_name, parent_pkey, fkey_colname)
+                                 # can have > 1 parent e.g. dir_users_companies
+
+        upd_chks = table_defn.get('upd_chks')
+        if upd_chks is None:
+            self.upd_chks = []
+        else:
+            self.upd_chks = loads(upd_chks)
+        del_chks = table_defn.get('del_chks')
+        if del_chks is None:
+            self.del_chks = []
+        else:
+            self.del_chks = loads(del_chks)
+        sequence = table_defn.get('sequence')
+        if sequence is None:
+            self.sequence = None
+        else:
+            self.sequence = loads(sequence)
+        self.default_cursor = None
+
+        # table hooks
+        self.on_setup_xml = []
+        self.after_read_xml = []
+        self.after_init_xml = []
+        self.after_restore_xml = []
+        self.before_save_xml = []
+        self.after_save_xml = []
+        self.before_insert_xml = []
+        self.after_insert_xml = []
+        self.before_update_xml = []
+        self.after_update_xml = []
+        self.before_delete_xml = []
+        self.after_delete_xml = []
+
+        hooks = table_defn.get('hooks')
+        if hooks is not None:
+            hooks = etree.fromstring(hooks, parser=parser)
+            for hook in hooks:
+                self.setup_hook(hook)
+
+        self.on_insert = []  # callbacks to call on insert
+        self.on_update = []  # callbacks to call on update
+        self.on_delete = []  # callbacks to call on delete
+
+        with context.db_session as db_mem_conn:
+            conn = db_mem_conn.mem
+            conn.cur.execute(
+                'CREATE TABLE {} (row_id INTEGER PRIMARY KEY)'
+                .format(table_name))
+
+            col_flds = (
+                'row_id',  # col_name
+                'AUTO',    # data_type
+                'Row id',  # short_descr
+                'Row id',  # long_descr
+                'row',     # col_head
+                'Y',       # key_field
+                True,      # generated
+                False,     # allow_null
+                False,     # allow_amend
+                0,         # max_len
+                0,         # db_scale
+                None,      # scale_ptr
+                None,      # dflt_val
+                None,      # col_chks
+                None,      # fkey
+                None,      # choices
+                None,      # sql
+                )
+            col = self.add_mem_column(conn, col_flds)
+            self.primary_keys.append(col)
+
+            for col_defn in table_defn.findall('mem_col'):
+                col_flds = (
+                    col_defn.get('col_name'),
+                    col_defn.get('data_type'),
+                    col_defn.get('short_descr'),
+                    col_defn.get('long_descr'),
+                    col_defn.get('col_head'),
+                    col_defn.get('key_field'),
+                    False,  # generated
+                    col_defn.get('allow_null') == 'true',
+                    col_defn.get('allow_amend') == 'true',
+                    int(col_defn.get('max_len')),
+                    int(col_defn.get('db_scale')),
+                    col_defn.get('scale_ptr'),
+                    col_defn.get('dflt_val'),
+                    col_defn.get('col_chks'),
+                    col_defn.get('fkey').replace('{company}', company)
+                        if col_defn.get('fkey') is not None else None,
+                    col_defn.get('choices'),
+                    col_defn.get('sql')
+                    )
+                col = self.add_mem_column(conn, col_flds)
+
+                if col.key_field == 'A':
+                    alt_keys.append(col)
+
+        # set up table_keys on last key field to force 'select' if field is changed
+        if self.primary_keys:
+            self.primary_keys[-1].table_keys = self.primary_keys
+        if alt_keys:
+            alt_keys[-1].table_keys = alt_keys
+
+    def add_mem_column(self, conn, col_flds):
+#           self, col_name, data_type, short_descr, long_descr, col_head, key_field,
+#           allow_null, allow_amend, max_len, db_scale, scale_ptr=None, dflt_val=None,
+#           col_chks=None, fkey=None, choices=None, sql=None, value=None, generated=False):
+        """
+        Create a :class:`~db.objects.Column` object from the parameters provided.
+        """
+
+        (col_name, data_type, short_descr, long_descr, col_head, key_field,
+            generated, allow_null, allow_amend, max_len, db_scale, scale_ptr,
+            dflt_val, col_chks, fkey, choices, sql) = col_flds
+
+        if col_name in [col.col_name for col in self.col_list]:
+            print('variable', col_name, 'already exists in', self.table_name)
+            return
+
+        col = Column([
+            len(self.col_list),    # col_id
+            self.table_name,       # table_id
+            col_name,              # col_name
+            'mem',                 # col_type
+            len(self.col_list),    # seq
+            data_type,             # data_type
+            short_descr,           # short_descr
+            long_descr,            # long_descr
+            col_head,              # col_head
+            key_field,             # key_field
+            generated,             # generated
+            allow_null,            # allow_null
+            allow_amend,           # allow_amend
+            max_len,               # max len
+            db_scale,              # db_scale
+            scale_ptr,             # scale_ptr
+            dflt_val,              # dflt_val
+            col_chks,              # col_chks
+            fkey,                  # fkey
+            choices,               # choices
+            sql,                   # sql
+            ])
+        self.col_list.append(col)
+        col.table_name = self.table_name
+
+        if col_name != 'row_id':  # already set up
+            sql = 'ALTER TABLE {} ADD {} {}'.format(
+                self.table_name, col_name, data_type)
+            conn.cur.execute(conn.convert_string(sql))
+
+        if col.col_chks is None:
+            col.col_chks = []
+        else:
+            col.col_chks = loads(col.col_chks)
+
+        # set up foreign key
+        if col.fkey is not None:
+            col.fkey = loads(col.fkey)
+            if col.fkey[FK_CHILD]:
+                self.parent_params.append((
+                    col.fkey[FK_TARGET_TABLE],
+                    col.fkey[FK_TARGET_COLUMN],
+                    col.col_name
+                    ))
+
+#               parent = self.mem_parent
+#               parent_name = col.fkey[FK_TARGET_TABLE]
+#               parent_pkey = col.fkey[FK_TARGET_COLUMN]
+#               fkey_colname = col_name
+#               if parent.table_name != parent_name:
+#                   if parent_name != '$parent':
+#                       raise AibError(head='Error',
+#                           body='{} is not a parent of {}'.format(
+#                               parent.table_name, self.table_name))
+#               self.parent = (fkey_colname,
+#                   parent.getfld(parent_pkey))  # used in setup_fkey(), start_grid()
+#               parent.children[self.table_name] = self
+
+        # if a sub_type, set up list of subtype columns
+        if col.choices is not None:
+            col.choices = loads(col.choices)
+            if col.choices[0]:  # use sub_types
+                self.subtypes[col.col_name] = OD()
+                for sub_type, descr, subtype_cols, disp_names in col.choices[2]:
+                    # subtype_cols = [(col_1, reqd), (col_2, reqd), ...]
+                    self.subtypes[col.col_name][sub_type] = subtype_cols
+            if col.choices[1]:  # use disp_names
+                virt_sql = ""
+                for choice, descr, subtype_cols, disp_names in col.choices[2]:
+                    if disp_names:
+                        virt_sql += (
+                            " WHEN a.{} = '{}' THEN "
+                            .format(col.col_name, choice)
+                            )
+                        sql_elem = []
+                        for disp_name, separator in disp_names:
+                            sql_elem.append("a." + disp_name)
+                            if separator:  # if not '' or None
+                                sql_elem.append("'{}'".format(separator))
+                        virt_sql += " || ".join(sql_elem)  # || is concat in sqlite3
+                if virt_sql != "":
+                    virt_sql = "SELECT CASE{} ELSE '' END".format(virt_sql)
+                else:
+                    virt_sql = "SELECT ''"
+                col_flds = (
+                    'display_name',  # col_name
+                    'TEXT',          # data_type
+                    'Display name',  # short_descr
+                    '',              # long_descr
+                    'Value',         # col_head
+                    'N',             # key_field
+                    False,           # generated
+                    True,            # allow_null
+                    True,            # allow_amend
+                    0,               # max_len
+                    0,               # db_scale
+                    None,            # scale_ptr
+                    None,            # dflt_val
+                    None,            # col_chks
+                    None,            # fkey
+                    None,            # choices
+                    virt_sql         # sql
+                    )
+                self.add_mem_column(conn, col_flds)
+
+        return col
+
+        """
+        # create field instance from column definition
+        field = db.object_fields.DATA_TYPES[data_type](self, col)
+        if col.key_field == 'Y':  # primary key - assume only one
+            field.table_keys = [field]
+            self.primary_keys.append(field)
+        elif col.key_field == 'A':  # alt key
+            # there can be multiple alt keys, but only the last one is used
+            if self.alt_keys:  # remove existing one, build up new one
+                self.alt_keys[-1].table_keys = []
+            self.alt_keys.append(field)
+            field.table_keys = self.alt_keys
+        else:
+            field.table_keys = []
+
+        # update list of fields belonging to this db_obj
+        self.fields[col_name] = field
+        self.select_cols.append(field)
+        if col.sql is None:
+            self.flds_to_update.append(field)
+
+        if value is not None:
+            field._value = value
+        """
 
 #----------------------------------------------------------------------------
 
@@ -1361,7 +2227,7 @@ class Column:
         self.table_keys = []
 
     def __str__(self):
-        descr = ['Column {}.{}:'.format(self.table_id, self.col_name)]
+        descr = ['Column {}.{}:'.format(self.table_name, self.col_name)]
         for name in self.names:
             descr.append('{}={};'.format(name, repr(getattr(self, name))))
         return ' '.join(descr)

@@ -3,6 +3,8 @@ import psycopg2
 import psycopg2.extensions  # so that strings are returned as unicode
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
 
+from errors import AibError
+
 # bytea data is usually returned as a 'memoryview'
 # this creates a problem - after a roundtrip to the database, it no
 #   longer compares equal to the original object
@@ -23,12 +25,15 @@ def customise(DbConn, db_params):
     DbConn.update_row = update_row
     DbConn.delete_row = delete_row
     DbConn.convert_string = convert_string
+    DbConn.convert_dflt = convert_dflt
     DbConn.create_functions = create_functions
     DbConn.create_company = create_company
     DbConn.create_primary_key = create_primary_key
     DbConn.create_foreign_key = create_foreign_key
     DbConn.create_index = create_index
     DbConn.tree_select = tree_select
+    DbConn.escape_string = escape_string
+    DbConn.amend_allow_null = amend_allow_null
     # create class attributes from db parameters
     DbConn.database = db_params['database']
     DbConn.host = db_params['host']
@@ -107,7 +112,7 @@ def insert_row(self, db_obj, cols, vals, generated_flds):
             self.param_style, returning_clause))
 
         self.cur.execute(sql,
-            (data_row_id, db_obj.context.db_session.user_row_id, self.timestamp))
+            (data_row_id, db_obj.context.user_row_id, self.timestamp))
         xref_row_id = self.cur.fetchone()[0]
 
         db_obj.setval('created_id', xref_row_id)
@@ -162,7 +167,7 @@ def update_row(self, db_obj, cols, vals):
             "({3}, {3}, {3}, {3}, 'chg')".format(
             data_company, table_name, cols, self.param_style))
         self.cur.execute(sql, (data_row_id, audit_row_id,
-            db_obj.context.db_session.user_row_id, self.timestamp))
+            db_obj.context.user_row_id, self.timestamp))
 
 def delete_row(self, db_obj):
     db_table = db_obj.db_table
@@ -179,7 +184,7 @@ def delete_row(self, db_obj):
             data_company, table_name, cols,
             self.param_style, returning_clause))
         self.cur.execute(sql,
-            (data_row_id, db_obj.context.db_session.user_row_id, self.timestamp))
+            (data_row_id, db_obj.context.user_row_id, self.timestamp))
         xref_row_id = self.cur.fetchone()[0]
         db_obj.setval('deleted_id', xref_row_id)
         sql = (
@@ -217,6 +222,24 @@ def convert_string(self, string, db_scale=None):
         .replace('PKEY', 'PRIMARY KEY')
         .replace(':', '')  # see comment in conn_sqlite3
         )
+
+def convert_dflt(self, string, data_type):
+    if data_type == 'TEXT':
+        return repr(string)  # enclose in quotes
+    elif data_type == 'INT':
+        return string
+    elif data_type == 'DEC':
+        return string
+    elif data_type == 'BOOL':
+        if string == 'true':
+            return repr('t')
+        else:
+            return repr('f')
+    elif data_type == 'DTE':
+        if string == 'today':
+            return 'CURRENT_DATE'
+    else:
+        print('UNKNOWN', string, data_type)
 
 def create_functions(self):
 
@@ -266,6 +289,24 @@ def create_functions(self):
               "_ans = '0' || _ans;"
             "END LOOP;"
             "RETURN _ans;"
+          "END;"
+          "$$;"
+        )
+
+    cur.execute(
+        "CREATE OR REPLACE FUNCTION date_func (DATE, VARCHAR, INT) "
+            "RETURNS DATE LANGUAGE 'plpgsql' IMMUTABLE AS $$ "
+          "DECLARE "
+            "_date ALIAS FOR $1;"
+            "_op VARCHAR := LOWER($2);"
+            "_days ALIAS FOR $3;"
+          "BEGIN "
+            "IF _op = '+' OR _op = 'add' THEN "
+              "RETURN _date + _days; "
+            "END IF;"
+            "IF _op = '-' OR _op = 'sub' THEN "
+              "RETURN _date - _days; "
+            "END IF;"
           "END;"
           "$$;"
         )
@@ -338,3 +379,19 @@ def tree_select(self, company_id, table_name, start_col, start_value,
         .format(select_1, company_id, table_name, start_col,
             start_value, select_2, test))
     return cte
+
+def escape_string():
+    return ''
+
+def amend_allow_null(self, db_obj):
+    allow_null = db_obj.getfld('allow_null').getval()
+    sql = 'ALTER TABLE {}.{} ALTER COLUMN {} {}'.format(
+        db_obj.data_company,
+        db_obj.getval('table_name'),
+        db_obj.getval('col_name'),
+        'DROP NOT NULL' if allow_null else 'SET NOT NULL')
+    try:
+        self.exec_sql(sql)
+    except self.exception as err:
+        raise AibError(head='Alter {}'.format(db_obj.table_name),
+            body=str(err))

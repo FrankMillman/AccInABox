@@ -1,4 +1,4 @@
-function create_cell_input(grid) {
+  function create_cell_input(grid) {
 
   var input = document.createElement('input');
   input.className = 'focus_background';
@@ -8,7 +8,7 @@ function create_cell_input(grid) {
   input.style.padding = '1px';
   input.style.font = '10pt Verdana,sans-serif';
   input.style.color = 'navy';
-  input.grid = grid;
+//  input.grid = grid;
 
   input.get_val = function() {
     return this.value;
@@ -18,11 +18,28 @@ function create_cell_input(grid) {
     return getCaret(this);
     };
 
+  input.set_dflt_val = function(value) {
+    var grid = this.grid;
+    var cell = grid.grid_rows[grid.active_row-grid.first_grid_row].grid_cols[this.col];
+    if (this.col === grid.active_col && this.amendable()) {
+      this.aib_obj.set_cell_dflt_val(cell, value);
+      }
+    else {
+      cell.text_node.data = value;
+      cell.current_value = value;
+      this.aib_obj.set_cell_value_lost_focus(cell, value);
+      };
+    //grid.set_amended(true);
+    };
+
   input.set_value_from_server = function(args) {
     if (this.grid.active_row === -1)  // grid not yet set up
-      return
+      return;
+    //debug3('redisp ' + args[0] + '/' + this.col + ' "' + args[1] + '"');
     var row = args[0], value = args[1];
     input.aib_obj.set_cell_value_from_server(this.grid, row, this.col, value);
+// not sure about this
+//    grid.set_amended(true);
     };
 
   input.reset_value = function() {
@@ -60,17 +77,8 @@ function create_cell_input(grid) {
 
   input.end_edit = function(update, reset_focus) {
     var cell = this.cell, grid = this.grid;
+    //grid.edit_in_progress = false;
     grid.edit_in_progress = false;
-    if (update) {
-      if (!input.aib_obj.before_cell_lost_focus(input))  // validation failed
-        return false;
-      // before_lost_focus() copies input.value to input.current_value
-      cell.current_value = input.current_value;
-      cell.text_node.data = input.value;
-      grid.row_amended = true;
-      if (grid.grid_frame !== null)
-        grid.grid_frame.frame_amended = true;
-      };
     cell.parentNode.removeChild(input);
     cell.style.display = 'inline-block';
     grid.onkeypress = grid.save_onkeypress;
@@ -79,6 +87,23 @@ function create_cell_input(grid) {
       this_grid = grid;  // make global
       setTimeout(function() {this_grid.focus()}, 0);  // IE needs timeout!
       };
+    if (update) {
+      if (!input.aib_obj.before_cell_lost_focus(input))  // validation failed
+        return false;
+      // before_lost_focus() copies input.value to input.current_value
+      cell.current_value = input.current_value;
+      cell.text_node.data = input.value;
+      grid.set_amended(true);
+      };
+//    grid.edit_in_progress = false;
+//    cell.parentNode.removeChild(input);
+//    cell.style.display = 'inline-block';
+//    grid.onkeypress = grid.save_onkeypress;
+//    grid.onkeydown = grid.save_onkeydown;
+//    if (reset_focus) {
+//      this_grid = grid;  // make global
+//      setTimeout(function() {this_grid.focus()}, 0);  // IE needs timeout!
+//      };
     return true;
     }
 
@@ -134,7 +159,7 @@ function create_cell_input(grid) {
     if (this.grid.active_row > 0) {
       var prev_value = this.grid.subset_data[
         this.grid.first_subset_row + this.grid.active_row - 1][this.grid.active_col];
-      var cell = this.grid.get_active_cell();
+      var cell = this.grid.active_cell;
       input.edit_cell(
         cell, cell.aib_obj.convert_prev_cell_value(cell, prev_value), null);
       };
@@ -150,13 +175,25 @@ function create_grid_cell(col_span, col_defn, first, last) {
   var cell = document.createElement('div');
   cell.style[cssFloat] = 'left';
 //  cell.style.border = ' 2px solid transparent';
-  cell.style.width = col_defn.lng + 'px';
+  cell.style.width = col_defn[1].lng + 'px';
   cell.style.height = '17px';
   col_span.cell = cell;
   col_span.appendChild(cell);
 
   cell.onmouseover = function() {cell.style.cursor = 'default'};
   cell.onmouseleave = function() {cell.style.cursor = 'default'};
+
+  if (col_defn[0] === 'input')
+    var btn = create_grid_input(col_span, col_defn[1], cell);
+  else if (col_defn[0] === 'button')
+    var btn = create_grid_button(col_span, col_defn[1], cell);
+
+  create_cell_borders(btn, cell, first, last);
+
+  return cell;
+  };
+
+function create_grid_input(col_span, col_defn, cell) {
 
   if (col_defn.type === 'bool') {
     cell.style.textAlign = 'center';
@@ -177,6 +214,7 @@ function create_grid_cell(col_span, col_defn, first, last) {
       };
 
     cell.highlight = function(state) {
+      //debug3(cell.grid_row + '/' + cell.grid_col + ' - ' + state);
       switch (state) {
         case 'clear':
           cell.firstChild.style.border = '1px solid darkgrey';
@@ -206,21 +244,22 @@ function create_grid_cell(col_span, col_defn, first, last) {
       var cell = chkbox.parentNode;
       var grid = cell.grid;
       if (grid.frame.form.disable_count) return false;
-      var this_row = grid.first_grid_row + cell.grid_row, this_col = cell.grid_col;
-      if (this_row !== grid.active_row || this_col !== grid.active_col) {
-        callbacks.push([chkbox, chkbox.afterclick, cell, this_row]);
-        grid.req_cell_focus(this_row, this_col, false);
-        }
-      else
-        cell.aib_obj.grid_chkbox_change(cell, this_row);
+//      if (cell.input.readonly) return false;
+      if (!cell.input.amendable()) return false;
+      if (grid.active_cell === cell)
+        cell.aib_obj.grid_chkbox_change(cell, grid.active_row);
+      else {
+        callbacks.push([chkbox, chkbox.afterclick, cell]);
+        grid.req_cell_focus(grid.first_grid_row + cell.grid_row, cell.grid_col);
+        };
       e.cancelBubble = true;
       return false;  // prevent bubble up to cell.onclick()
       };
-    chkbox.afterclick = function(cell, this_row) {
-      //if (cell.grid.focus_from_server)  // server has set focus somewhere else
-      if (cell.grid.get_active_cell() !== cell)  // server has set focus somewhere else
+    chkbox.afterclick = function(cell) {
+      var grid = cell.grid;
+      if (grid.active_cell !== cell)  // server has set focus somewhere else
         return;
-      cell.aib_obj.grid_chkbox_change(cell, this_row)
+      cell.aib_obj.grid_chkbox_change(cell, grid.active_row)
       };
     }
 
@@ -267,21 +306,20 @@ function create_grid_cell(col_span, col_defn, first, last) {
       var cell = sxml.parentNode;
       var grid = cell.grid;
       if (grid.frame.form.disable_count) return false;
-      var this_row = grid.first_grid_row + cell.grid_row, this_col = cell.grid_col;
-      if (this_row !== grid.active_row || this_col !== grid.active_col) {
-        callbacks.push([sxml, sxml.afterclick, cell, this_row]);
-        grid.req_cell_focus(this_row, this_col, false);
-        }
-      else
-        sxml.afterclick(cell, this_row);
+      if (cell.grid.active_cell === cell)
+        cell.aib_obj.grid_popup(cell, grid.active_row);
+      else {
+        callbacks.push([sxml, sxml.afterclick, cell]);
+        grid.req_cell_focus(grid.first_grid_row + cell.grid_row, cell.grid_col);
+        };
       e.cancelBubble = true;
       return false;  // prevent bubble up to cell.onclick()
       };
-    sxml.afterclick = function(cell, this_row) {
-      //if (cell.grid.focus_from_server)  // server has set focus somewhere else
-      if (cell.grid.get_active_cell() !== cell)  // server has set focus somewhere else
+    sxml.afterclick = function(cell) {
+      var grid = cell.grid;
+      if (grid.active_cell !== cell)  // server has set focus somewhere else
         return;
-      cell.aib_obj.grid_popup(cell, this_row);
+      cell.aib_obj.grid_popup(cell, grid.active_row);
       };
     }
 
@@ -298,6 +336,7 @@ function create_grid_cell(col_span, col_defn, first, last) {
     txt.style.background = '#F5F5F5';  // very light grey
 
     cell.highlight = function(state) {
+      //debug3(cell.grid_row + '/' + cell.grid_col + ' - ' + state);
       switch (state) {
         case 'clear':
           var border = '1px solid darkgrey';
@@ -315,7 +354,7 @@ function create_grid_cell(col_span, col_defn, first, last) {
           cell.firstChild.style.background = '#B4EEB4';
           break;
         case 'blur':
-          var border = '1px solid black';
+          var border = '1px solid darkslategray';
           cell.className = 'blur_background';
           cell.firstChild.style.background = '#F5F5F5';
           break;
@@ -325,29 +364,6 @@ function create_grid_cell(col_span, col_defn, first, last) {
           cell.firstChild.style.background = '#C0FFFF';
           break;
         };
-
-/*
-      if (state === true) {
-        var border = '1px solid black';
-        if (grid.err_flag) {
-          cell.className = 'error_background';
-          cell.firstChild.style.background = 'mistyrose';
-          }
-        else if (cell.input.readonly || !cell.input.allow_amend) {
-          cell.className = 'readonly_background';
-          cell.firstChild.style.background = '#CCFFCC';  //'#A9F5A9';
-          }
-        else {
-          cell.className = 'focus_background';
-          cell.firstChild.style.background = '#c0ffff';
-          };
-        }
-      else {
-        var border = '1px solid darkgrey';
-        cell.className = 'blur_background';
-        cell.firstChild.style.background = '#f5f5f5';
-        };
-*/
 
       var col_span = cell.parentNode;
       var grid = cell.grid;
@@ -379,6 +395,7 @@ function create_grid_cell(col_span, col_defn, first, last) {
         btn.style[cssFloat] = 'right';
         col_span.appendChild(btn);
         btn.style.backgroundImage = 'url(' + iLkup_src + ')';
+        btn.style.backgroundRepeat = 'no-repeat';
         btn.style.width = '16px';
         btn.style.height = '16px';
 //        btn.style.margin = '2px 2px 2px 0px';  // top/right/bottom/left
@@ -401,13 +418,18 @@ function create_grid_cell(col_span, col_defn, first, last) {
           var cell = this.parentNode.parentNode.firstChild;
           var grid = cell.grid;
           if (grid.frame.form.disable_count) return false;
-          callbacks.push([lkup, lkup.afterclick, cell]);
-          grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col, false);
+          if (!grid.has_focus)
+            grid.focus();
+          if (cell.grid.active_cell === cell)
+            cell.input.expander();
+          else {
+            callbacks.push([lkup, lkup.afterclick, cell]);
+            grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
+            };
           };
-
-        lkup.afterclick = function() {
-          //if (cell.grid.focus_from_server)  // server has set focus somewhere else
-          if (cell.grid.get_active_cell() !== cell)  // server has set focus somewhere else
+        lkup.afterclick = function(cell) {
+          var grid = cell.grid;
+          if (grid.active_cell !== cell)  // server has set focus somewhere else
             return;
           cell.input.expander();
           };
@@ -428,12 +450,16 @@ function create_grid_cell(col_span, col_defn, first, last) {
           var cell = this.parentNode.parentNode.firstChild;
           var grid = cell.grid;
           if (grid.frame.form.disable_count) return false;
-          callbacks.push([lkdn, lkdn.afterclick, cell]);
-          grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col, false);
+          if (cell.grid.active_cell === cell)
+            cell.input.lookdown();
+          else {
+            callbacks.push([lkdn, lkdn.afterclick, cell]);
+            grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
+            };
           };
-        lkdn.afterclick = function() {
-          //if (cell.grid.focus_from_server)  // server has set focus somewhere else
-          if (cell.grid.get_active_cell() !== cell)  // server has set focus somewhere else
+        lkdn.afterclick = function(cell) {
+          var grid = cell.grid;
+          if (grid.active_cell !== cell)  // server has set focus somewhere else
             return;
           cell.input.lookdown();
           };
@@ -451,40 +477,52 @@ function create_grid_cell(col_span, col_defn, first, last) {
       cell.text_node = document.createTextNode('');  //('\xa0');
       txt.appendChild(cell.text_node);
 
-      //var btn = document.createElement('span');
-      //btn.style.display = 'inline-block';
-      var btn = document.createElement('div');
-      btn.style[cssFloat] = 'right';
-      col_span.appendChild(btn);
-      btn.style.backgroundImage = 'url(' + iCal_src + ')';
-      btn.style.width = '16px';
-      btn.style.height = '16px';
-//      btn.style.margin = '2px 2px 2px 0px';  // top/right/bottom/left
-      btn.style.margin = '1px 1px 0px 1px';  // top/right/bottom/left
-      btn.title = 'Calendar (Space)';
+      if (col_defn.readonly !== true) {
 
-      btn.onmouseover = function() {
-        this.style.cursor = 'pointer';
-        };
-      btn.onmouseleave = function() {
-        this.style.cursor = 'default';
-        };
-      btn.onclick = function() {
-        var cell = this.parentNode.firstChild;
-        var grid = cell.grid;
-        if (grid.frame.form.disable_count) return false;
-        callbacks.push([btn, btn.afterclick, cell]);
-        grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col, false);
-        };
-      btn.afterclick = function(cell) {
-        //debug3('after click ' + cell.grid_row + ' ' + cell.grid_col
-        //  + ' ' + cell.grid.focus_from_server);
-        //if (cell.grid.focus_from_server)  // server has set focus somewhere else
-        if (cell.grid.get_active_cell() !== cell)  // server has set focus somewhere else
-          return;
-        date = cell.input
-        date.cell = cell;
-        cell.aib_obj.grid_show_cal(date)
+        //var btn = document.createElement('span');
+        //btn.style.display = 'inline-block';
+        var btn = document.createElement('div');
+        btn.style[cssFloat] = 'right';
+        col_span.appendChild(btn);
+        btn.style.backgroundImage = 'url(' + iCal_src + ')';
+        btn.style.backgroundRepeat = 'no-repeat';
+        btn.style.width = '16px';
+        btn.style.height = '16px';
+  //      btn.style.margin = '2px 2px 2px 0px';  // top/right/bottom/left
+        btn.style.margin = '1px 1px 0px 1px';  // top/right/bottom/left
+        btn.title = 'Calendar (Space)';
+
+        btn.onmouseover = function() {
+          this.style.cursor = 'pointer';
+          };
+        btn.onmouseleave = function() {
+          this.style.cursor = 'default';
+          };
+        btn.onclick = function() {
+          var cell = this.parentNode.firstChild;
+          var grid = cell.grid;
+          if (grid.frame.form.disable_count) return false;
+          if (grid.active_cell === cell) {
+            btn.afterclick(cell);
+            //var date = cell.input
+            //date.cell = cell;
+            //cell.aib_obj.grid_show_cal(date)
+            }
+          else {
+            callbacks.push([btn, btn.afterclick, cell]);
+            grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
+            };
+          };
+        btn.afterclick = function(cell) {
+          var grid = cell.grid;
+          if (grid.active_cell !== cell)  // server has set focus somewhere else
+            return;
+          var date = cell.input
+          if (grid.edit_in_progress)
+            date.end_edit(false, false)
+          date.cell = cell;
+          cell.aib_obj.grid_show_cal(date)
+          };
         };
 
       break;
@@ -498,6 +536,7 @@ function create_grid_cell(col_span, col_defn, first, last) {
       btn.style[cssFloat] = 'right';
       col_span.appendChild(btn);
       btn.style.backgroundImage = 'url(' + iDown_src + ')';
+      btn.style.backgroundRepeat = 'no-repeat';
       //btn.style.width = '16px';
       //btn.style.height = '16px';
       //btn.style.margin = '1px 1px 0px 1px';  // top/right/bottom/left
@@ -516,112 +555,189 @@ function create_grid_cell(col_span, col_defn, first, last) {
         };
       btn.onclick = function(e) {
         if (!e) e=window.event;
-        var cell = this.parentNode.parentNode.firstChild;
+        var cell = this.parentNode.firstChild;
         var grid = cell.grid;
         if (grid.frame.form.disable_count) return false;
-        callbacks.push([btn, btn.afterclick, cell]);
-        grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col, false);
+        if (grid.active_cell === cell)
+          btn.afterclick(cell, e);
+        else {
+          callbacks.push([btn, btn.afterclick, cell, e]);
+          grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
+          };
         };
-      btn.afterclick = function(cell) {
-        //debug3('after click ' + cell.grid_row + ' ' + cell.grid_col
-        //  + ' ' + cell.grid.focus_from_server);
-        //if (cell.grid.focus_from_server)  // server has set focus somewhere else
-        if (cell.grid.get_active_cell() !== cell)  // server has set focus somewhere else
+      btn.afterclick = function(cell, e) {
+        var grid = cell.grid;
+        if (grid.active_cell !== cell)  // server has set focus somewhere else
           return;
         cell.aib_obj.grid_create_dropdown(cell);
+        e.cancelBubble = true;
+        return false;
         };
 
       break;
     };
+  return btn;
+  };
 
-    if (btn !== null) {
-      cell.btn = btn;
-      cell.style.borderTop = '1px solid transparent';
-      cell.style.borderBottom = '1px solid transparent';
-      btn.style.borderTop = '1px solid transparent';
-      btn.style.borderBottom = '1px solid transparent';
-      if (first)
-        cell.style.borderLeft = '1px solid transparent';
-      else
-        cell.style.paddingLeft = '1px';
-      btn.style.paddingLeft = '1px';
-      if (last)
-        btn.style.borderRight = '1px solid transparent';
-      else
-        btn.style.paddingRight = '1px';
+function create_grid_button(col_span, col_defn, cell) {
+//  debug3('BTN ' + JSON.stringify(col_defn));
 
-      if (first && last)
-        cell.set_row_highlight = function(border) {
-          cell.style.borderTop = border;
-          cell.style.borderBottom = border;
-          cell.btn.style.borderTop = border;
-          cell.btn.style.borderBottom = border;
-          cell.style.borderLeft = border;
-          cell.btn.style.borderRight = border;
-          };
-      else if (first)
-        cell.set_row_highlight = function(border) {
-          cell.style.borderTop = border;
-          cell.style.borderBottom = border;
-          cell.btn.style.borderTop = border;
-          cell.btn.style.borderBottom = border;
-          cell.style.borderLeft = border;
-          };
-      else if (last)
-        cell.set_row_highlight = function(border) {
-          cell.style.borderTop = border;
-          cell.style.borderBottom = border;
-          cell.btn.style.borderTop = border;
-          cell.btn.style.borderBottom = border;
-          cell.btn.style.borderRight = border;
-          };
-      else
-        cell.set_row_highlight = function(border) {
-          cell.style.borderTop = border;
-          cell.style.borderBottom = border;
-          cell.btn.style.borderTop = border;
-          cell.btn.style.borderBottom = border;
-          };
-      }
+  cell.style.textAlign = 'center';
 
-    else {
-      cell.style.borderTop = '1px solid transparent';
-      cell.style.borderBottom = '1px solid transparent';
-      if (first)
-        cell.style.borderLeft = '1px solid transparent';
-      else
-        cell.style.paddingLeft = '1px';
-      if (last)
-        cell.style.borderRight = '1px solid transparent';
-      else
-        cell.style.paddingRight = '1px';
+  var button = document.createElement('span');
+  button.style.display = 'inline-block';
+//  button.style.width = col_defn.lng + 'px';
+  button.style.height = '16px';
+  button.style.border = '1px solid darkgrey';
+  button.appendChild(document.createTextNode(col_defn.label));
 
-      if (first && last)
-        cell.set_row_highlight = function(border) {
-          cell.style.borderTop = border;
-          cell.style.borderBottom = border;
-          cell.style.borderLeft = border;
-          cell.style.borderRight = border;
-          };
-      else if (first)
-        cell.set_row_highlight = function(border) {
-          cell.style.borderTop = border;
-          cell.style.borderBottom = border;
-          cell.style.borderLeft = border;
-          };
-      else if (last)
-        cell.set_row_highlight = function(border) {
-          cell.style.borderTop = border;
-          cell.style.borderBottom = border;
-          cell.style.borderRight = border;
-          };
-      else
-        cell.set_row_highlight = function(border) {
-          cell.style.borderTop = border;
-          cell.style.borderBottom = border;
-          };
+  cell.appendChild(button);
+  cell.button = button;
+  button.cell = cell;
 
+  cell.highlight = function(state) {
+    switch (state) {
+      case 'clear':
+        cell.firstChild.style.border = '1px solid darkgrey';
+        cell.firstChild.className = 'blur_background';
+        break;
+      case 'error':
+        var border = '1px solid black';
+        cell.firstChild.className = 'error_background';
+        break;
+      case 'readonly':
+        var border = '1px solid black';
+        cell.firstChild.className = 'readonly_background';
+        break;
+      case 'blur':
+        var border = '1px solid black';
+        cell.firstChild.className = 'blur_background';
+        break;
+      case 'focus':
+        var border = '1px solid black';
+        cell.firstChild.className = 'focus_background';
+        break;
       };
+    };
 
-  return cell;
+  button.onclick = function(e) {
+    if (!e) e=window.event;
+    var cell = button.parentNode;
+    var grid = cell.grid;
+    if (grid.frame.form.disable_count) return false;
+    if (cell.grid.active_cell === cell)
+      button.afterclick(cell);
+    else {
+      callbacks.push([button, button.afterclick, cell]);
+      grid.req_cell_focus(grid.first_grid_row + cell.grid_row, cell.grid_col);
+      };
+    e.cancelBubble = true;
+    return false;  // prevent bubble up to cell.onclick()
+    };
+  button.afterclick = function(cell) {
+    var grid = cell.grid;
+    if (grid.active_cell !== cell)  // server has set focus somewhere else
+      return;
+    if (!grid.amended()) {
+      var args = [grid.ref, grid.active_row, grid.inserted];
+      send_request('start_row', args);
+      grid.set_amended(true);
+      };
+    var args = [cell.input.ref];
+    send_request('clicked', args);
+    };
+
+  return null;  // btn
+  };
+
+function create_cell_borders(btn, cell, first, last) {
+
+  if (btn !== null) {
+    cell.btn = btn;
+    cell.style.borderTop = '1px solid transparent';
+    cell.style.borderBottom = '1px solid transparent';
+    btn.style.borderTop = '1px solid transparent';
+    btn.style.borderBottom = '1px solid transparent';
+    if (first)
+      cell.style.borderLeft = '1px solid transparent';
+    else
+      cell.style.paddingLeft = '1px';
+    btn.style.paddingLeft = '1px';
+    if (last)
+      btn.style.borderRight = '1px solid transparent';
+    else
+      btn.style.paddingRight = '1px';
+
+    if (first && last)
+      cell.set_row_highlight = function(border) {
+        cell.style.borderTop = border;
+        cell.style.borderBottom = border;
+        cell.btn.style.borderTop = border;
+        cell.btn.style.borderBottom = border;
+        cell.style.borderLeft = border;
+        cell.btn.style.borderRight = border;
+        };
+    else if (first)
+      cell.set_row_highlight = function(border) {
+        cell.style.borderTop = border;
+        cell.style.borderBottom = border;
+        cell.btn.style.borderTop = border;
+        cell.btn.style.borderBottom = border;
+        cell.style.borderLeft = border;
+        };
+    else if (last)
+      cell.set_row_highlight = function(border) {
+        cell.style.borderTop = border;
+        cell.style.borderBottom = border;
+        cell.btn.style.borderTop = border;
+        cell.btn.style.borderBottom = border;
+        cell.btn.style.borderRight = border;
+        };
+    else
+      cell.set_row_highlight = function(border) {
+        cell.style.borderTop = border;
+        cell.style.borderBottom = border;
+        cell.btn.style.borderTop = border;
+        cell.btn.style.borderBottom = border;
+        };
+    }
+
+  else {
+    cell.style.borderTop = '1px solid transparent';
+    cell.style.borderBottom = '1px solid transparent';
+    if (first)
+      cell.style.borderLeft = '1px solid transparent';
+    else
+      cell.style.paddingLeft = '1px';
+    if (last)
+      cell.style.borderRight = '1px solid transparent';
+    else
+      cell.style.paddingRight = '1px';
+
+    if (first && last)
+      cell.set_row_highlight = function(border) {
+        cell.style.borderTop = border;
+        cell.style.borderBottom = border;
+        cell.style.borderLeft = border;
+        cell.style.borderRight = border;
+        };
+    else if (first)
+      cell.set_row_highlight = function(border) {
+        cell.style.borderTop = border;
+        cell.style.borderBottom = border;
+        cell.style.borderLeft = border;
+        };
+    else if (last)
+      cell.set_row_highlight = function(border) {
+        cell.style.borderTop = border;
+        cell.style.borderBottom = border;
+        cell.style.borderRight = border;
+        };
+    else
+      cell.set_row_highlight = function(border) {
+        cell.style.borderTop = border;
+        cell.style.borderBottom = border;
+        };
+
+    };
   };

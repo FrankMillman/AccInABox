@@ -1,9 +1,14 @@
 import importlib
 import threading
 from datetime import datetime
+from collections import namedtuple
+DbMemConn = namedtuple('Conn', 'db mem')
+
 
 import logging
 logger = logging.getLogger(__name__)
+
+from start import log_db, db_log
 
 #-----------------------------------------------------------------------------
 
@@ -49,6 +54,9 @@ def config_connection(db_params):
 
 connection_list = []
 connections_active = []
+mem_conn_dict = {}
+#mem_conn_list = []
+#mem_conn_active = []
 connection_lock = threading.Lock()
 
 def _get_connection():
@@ -68,8 +76,45 @@ def _add_connections(n):
         connection_list.append(conn)
         connections_active.append(False)
 
+def _get_mem_connection(mem_id):
+    with connection_lock:
+        if mem_id not in mem_conn_dict:
+            mem_conn_dict[mem_id] = ([], [])  # conn_list, conn_active
+        mem_conn = mem_conn_dict[mem_id]
+        mem_conn_list = mem_conn[0]
+        mem_conn_active = mem_conn[1]
+        try: # look for an inactive connection
+            pos = mem_conn_active.index(False)
+        except ValueError:   # if not found, create 10 more
+            pos = len(mem_conn_active)
+            _add_mem_connections(2, mem_id, mem_conn)
+        conn = mem_conn_list[pos]
+        mem_conn_active[pos] = True
+    return conn
+
+def _add_mem_connections(n, mem_id, mem_conn):
+    mem_conn_list = mem_conn[0]
+    mem_conn_active = mem_conn[1]
+    for _ in range(n):
+        conn = MemConn(len(mem_conn_list), mem_id)
+        mem_conn_list.append(conn)
+        mem_conn_active.append(False)
+
 def _release_connection(pos):  # make connection available for reuse
     connections_active[pos] = False
+
+def _release_mem_conn(mem_id, pos):  # make connection available for reuse
+    mem_conn = mem_conn_dict[mem_id]
+    mem_conn_active = mem_conn[1]
+    mem_conn_active[pos] = False
+
+def _close_mem_connections(mem_id):
+    if mem_id in mem_conn_dict:
+        mem_conn = mem_conn_dict[mem_id]
+        mem_conn_list = mem_conn[0]
+        for conn in mem_conn_list:
+            conn.conn.close()  # actually close connection
+        del mem_conn_dict[mem_id]
 
 def close_all_connections():
     """
@@ -124,16 +169,12 @@ class Conn:
         self.init(pos)
         self.pos = pos
 
-    def commit(self):
-        self.conn.commit()
-
-    def rollback(self):
-        self.conn.rollback()
-
     def exec_sql(self, sql, params=None):
         sql = sql.replace('$fx_', self.func_prefix)
         if params is None:
             params = []
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
         self.cur.execute(sql, params)
         return self.cur
 
@@ -152,6 +193,10 @@ class Conn:
 
                 if expr is None:
                     expr = 'null'
+                    if op == '=':
+                        op = 'is'
+                    elif op == '!=':
+                        op = 'is not'
 
                 if isinstance(expr, str) and expr.lower() == 'null':
                     pass  # don't parameterise 'null'
@@ -163,7 +208,7 @@ class Conn:
 
             sql += where_clause
         if order:
-            order_clause = ' ORDER BY'
+            order_clause = ' ORDER BY '
             for ord_col in order:
 ############################################
 #               if isinstance(ord_col, tuple):
@@ -176,7 +221,7 @@ class Conn:
 ############################################
                 col_name = ord_col
                 desc = ''
-                order_clause += ' {}{}, '.format(col_name, desc)
+                order_clause += '{}{}, '.format(col_name, desc)
             sql += order_clause[:-2]
 
         if debug:
@@ -185,10 +230,12 @@ class Conn:
 
 #       print('SIMP', sql, params)
 
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
         try:
             self.cur.execute(sql, params)
         except self.exception as err:
-            self.conn.rollback()
+#           self.conn.rollback()  # debatable - we already rollback on exception
             logger.debug('ERROR {}'.format(err))  #[self.msg_pos]))
 #           return iter([])  # or 'raise'?
             raise
@@ -196,6 +243,8 @@ class Conn:
 
     def full_select(self, db_obj, col_names, where, order=None,
             limit=0, lock=False, param=None, debug=False):
+
+        db_obj.check_perms('select')
 
 #       if db_obj.db_table.audit_trail:
 #           if where:
@@ -212,11 +261,13 @@ class Conn:
            logger.debug((sql, params))
            print(sql, params)
 
+        if log_db:
+            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
         try:
             self.cur.execute(sql, params)
         except self.exception as err:
             print(sql, params)
-            self.conn.rollback()
+#           self.conn.rollback()  # debatable - we already rollback on exception
             logger.debug('ERROR {}'.format(err.args[self.msg_pos]))
 #           return iter([])  # or 'raise'?
             raise
@@ -234,64 +285,79 @@ class Conn:
             self.tablenames = '{}.{} a'.format(data_company, table_name)
         self.joins = {}
 
-        """
-        columns = ''
-        for col in cols:
-            if col is None:
-                columns += 'NULL, '  # literal virtual column returned None
-            elif not isinstance(col, str):  # must be int, dec, date
-                columns += '{}, '.format(col)
-            elif col.startswith("'"):  # literal string
-                columns += '{}, '.format(col)
-            elif col.startswith('('):  # expression
-                columns += '{}, '.format(col)
-            elif '.' in col:  # fkey_col.target_col
-                join_column, col = col.split('.')
-                if join_column not in self.joins:
-                    self.build_join(db_obj, join_column)
-                join_alias = self.joins[join_column]
-                columns += '{}.{}, '.format(join_alias, col)
-            elif col.lower() == 'null':
-                columns += 'NULL, '  # placeholder for alternate column
-            elif col == '*':
-                columns += 'a.*, '  # all columns
-            else:
-                sql = getattr(db_obj.getfld(col), 'sql', None)
-                if sql is not None:
-                    while '_param_' in sql:
-                        sql = sql.replace('_param_', param.pop(0), 1)
-                    columns += '({}), '.format(sql)
-                else:
-                    columns += 'a.{}, '.format(col)
-        columns = columns[:-2]  # strip trailing ', '
-        """
-##      columns = ''
-##      for col in cols:
-##          if col.sql:
-##              columns += '({}) as {}, '.format(col.sql, col.col_name)
-##          else:
-##              columns += 'a.{}, '.format(col.col_name)
-##      columns = columns[:-2]  # strip trailing ', '
-#       columns = ', '.join(
-#           ['({}) as {}'.format(col.sql, col.col_name) if col.sql is not None
-#               else 'a.{}'.format(col.col_name)
-#               for col in cols])
-        columns = []
-        for col_name in col_names:
-            if '.' in col_name:
-                src_colname, tgt_colname = col_name.split('.')
+        def get_fld_alias(col_name):
+            if '>' in col_name:
+                src_colname, tgt_colname = col_name.split('>')
                 src_fld = db_obj.getfld(src_colname)
                 tgt_fld = src_fld.foreign_key['tgt_field']
                 tgt_rec = tgt_fld.db_obj
                 fld = tgt_rec.getfld(tgt_colname)
                 if src_colname not in self.joins:
-                    self.build_join(db_obj, src_colname)
+                    self.build_join(db_obj, src_colname, tgt_fld)
                 alias = self.joins[src_colname]
             else:
                 fld = db_obj.getfld(col_name)
-                alias = 'a'
+                if fld.col_defn.col_type == 'alt':
+                    src_fld = fld.foreign_key['true_src']
+                    col_name = src_fld.col_name
+                    if col_name not in self.joins:
+                        tgt_fld = src_fld.foreign_key['tgt_field']
+                        self.build_join(db_obj, col_name, tgt_fld)
+                    fld = fld.foreign_key['tgt_field']
+                    alias = self.joins[col_name]
+                else:
+                    alias = 'a'
+            return fld, alias
+
+        def convert_sql(sql):
+            sql = fld.sql.replace('$fx_', self.func_prefix)
+            sql = sql.replace('{company}', db_obj.data_company)
+            if alias != 'a':
+                # convert all 'a.' into new_prefix
+                # but only if substring begins with 'a.'
+                # ignore if previous chr is not in valid_lead_chrs
+                new_prefix = '{}.'.format(alias)
+                valid_lead_chrs = ' ,()-+=|'  # any others?
+                start = 0
+                while 'a.' in sql[start:]:
+                    pos = sql[start:].index('a.')
+                    if pos > 0:
+                        if sql[start:][pos-1] not in valid_lead_chrs:
+                            start += (pos+2)
+                            continue
+                    sql = sql[:start+pos] + new_prefix + sql[start+pos+2:]
+                    start += (pos+2)
+            return sql
+
+        columns = []
+        for col_name in col_names:
+            """
+            if '.' in col_name:
+                src_colname, tgt_colname = col_name.split('.')
+                src_fld = db_obj.getfld(src_colname)
+                tgt_fld = src_fld.foreign_key['tgt_field']
+                tgt_rec = tgt_fld.db_obj
+#               fld = tgt_rec.getfld(tgt_colname)
+                fld = tgt_fld
+                if src_colname not in self.joins:
+                    self.build_join(db_obj, src_colname, tgt_fld)
+                alias = self.joins[src_colname]
+            else:
+                fld = db_obj.getfld(col_name)
+                if fld.col_defn.col_type == 'alt':
+                    tgt_fld = fld.foreign_key['tgt_field']
+                    tgt_rec = tgt_fld.db_obj
+#                   fld = tgt_rec.getfld(tgt_colname)
+                    fld = tgt_fld
+                    if col_name not in self.joins:
+                        self.build_join(db_obj, col_name, tgt_fld)
+                    alias = self.joins[col_name]
+                else:
+                    alias = 'a'
+            """
+            fld, alias = get_fld_alias(col_name)
             if fld.sql:
-                sql = fld.sql.replace('$fx_', self.func_prefix)
+                sql = convert_sql(fld.sql)
                 columns.append('({}) as {}'.format(sql, fld.col_name))
             else:
                 columns.append('{}.{}'.format(alias, fld.col_name))
@@ -309,21 +375,25 @@ class Conn:
 
             for test, lbr, col_name, op, expr, rbr in where:
 
+                """
                 if '.' in col_name:
                     src_colname, tgt_colname = col_name.split('.')
                     src_fld = db_obj.getfld(src_colname)
                     tgt_fld = src_fld.foreign_key['tgt_field']
                     tgt_rec = tgt_fld.db_obj
-                    fld = tgt_rec.getfld(tgt_colname)
+#                   fld = tgt_rec.getfld(tgt_colname)
+                    fld = tgt_fld
                     if src_colname not in self.joins:
-                        self.build_join(db_obj, src_colname)
+                        self.build_join(db_obj, src_colname, tgt_fld)
                     alias = self.joins[src_colname]
                 else:
                     fld = db_obj.getfld(col_name)
                     alias = 'a'
+                """
+                fld, alias = get_fld_alias(col_name)
 
                 if fld.sql:
-                    sql = fld.sql.replace('$fx_', self.func_prefix)
+                    sql = convert_sql(fld.sql)
                     col = '({})'.format(sql)
                 elif fld.col_defn.data_type == 'TEXT':
                     col = 'LOWER({}.{})'.format(alias, fld.col_name)
@@ -332,28 +402,40 @@ class Conn:
 
                 if expr is None:
                     expr = 'null'
+                    if op == '=':
+                        op = 'is'
+                    elif op == '!=':
+                        op = 'is not'
 
                 if not isinstance(expr, str):  # must be int, dec, date
                     params.append(expr)
-                    expr = '?'
+                    expr = self.param_style
                 elif expr.lower() == 'null':
                     pass  # don't parameterise 'null'
-                elif expr.startswith("c'"):  # expr is a column name
-                    expr = expr[2:-1]  # strip leading "c'" and trailing "'"
-                    if '.' in expr:  # can be col_name or fkey_col.target_col
-                        join_column, expr = expr.split('.')
-                        if join_column not in self.joins:
-                            self.build_join(db_obj, join_column)
-                        join_alias = self.joins[join_column]
-                        expr = '{}.{}'.format(join_alias, expr)
-                    else:
-                        sql = getattr(db_obj.getfld(expr), 'sql', None)
-                        if sql is not None:
-                            while '_param_' in sql:
-                                sql = sql.replace('_param_', param.pop(0), 1)
-                            expr =  '({})'.format(sql)
-                        else:
-                            expr = 'a.{}'.format(expr)
+                elif expr.startswith("'"):  # literal string
+                    params.append(expr[1:-1])
+#                   col = 'LOWER({})'.format(col)
+#                   expr = 'LOWER({})'.format(self.param_style)
+                    expr = 'LOWER(' + self.param_style + ')'
+#               elif expr.startswith('c"'):  # expr is a column name
+#                   expr = expr[2:-1]  # strip leading "c'" and trailing "'"
+#                   if '.' in expr:  # can be col_name or fkey_col.target_col
+#                       join_column, expr = expr.split('.')
+#                       if join_column not in self.joins:
+#                           self.build_join(db_obj, join_column)
+#                       join_alias = self.joins[join_column]
+##                      expr = '{}.{}'.format(join_alias, expr)
+#                       expr = join_alias + '.' + expr
+#                   else:
+#                       sql = getattr(db_obj.getfld(expr), 'sql', None)
+#                       if sql is not None:
+#                           while '_param_' in sql:
+#                               sql = sql.replace('_param_', param.pop(0), 1)
+##                          expr =  '({})'.format(sql)
+#                           expr =  '(' + sql + ')'
+#                       else:
+##                          expr = 'a.{}'.format(expr)
+#                           expr = 'a.' + expr
                 elif expr.startswith('('):  # expression
                     # could be a tuple - WHERE title IN ('Mr', 'Mrs')
                     raise NotImplementedError  # does this ever happen
@@ -361,16 +443,40 @@ class Conn:
 #                   raise NotImplementedError  # can't use this - company_id = '_sys'
                 elif expr.startswith('?'):  # get user input
                     raise NotImplementedError  # does this ever happen
-                else:  # must be literal string
-                    params.append(expr)
-#                   col = 'LOWER({})'.format(col)
-                    expr = 'LOWER(?)'
+#               else:  # must be literal string
+#                   params.append(expr)
+##                  col = 'LOWER({})'.format(col)
+##                  expr = 'LOWER({})'.format(self.param_style)
+#                   expr = 'LOWER(' + self.param_style + ')'
+                else:  # must be a column name
+                    if '.' in expr:  # can be col_name or fkey_col.target_col
+                        join_column, expr = expr.split('.')
+                        if join_column not in self.joins:
+                            self.build_join(db_obj, join_column)
+                        join_alias = self.joins[join_column]
+#                       expr = '{}.{}'.format(join_alias, expr)
+                        expr = join_alias + '.' + expr
+                    else:
+                        sql = getattr(db_obj.getfld(expr), 'sql', None)
+                        if sql is not None:
+                            while '_param_' in sql:
+                                sql = sql.replace('_param_', param.pop(0), 1)
+#                           expr =  '({})'.format(sql)
+                            expr =  '(' + sql + ')'
+                        else:
+#                           expr = 'a.{}'.format(expr)
+                            expr = 'a.' + expr
 
+                if op.lower() in ('like', 'not like'):
+                    assert isinstance(expr, str)
+                    esc = self.escape_string()
+                else:
+                    esc = ''
 
-                where_clause += ' {} {}{} {} {}{}'.format(
-                    test, lbr, col, op, expr, rbr)
+                where_clause += ' {} {}{} {} {}{}{}'.format(
+                    test, lbr, col, op, expr, rbr, esc)
 
-            where_clause = where_clause.replace('?', self.param_style)
+#           where_clause = where_clause.replace('?', self.param_style)
 
         order_clause = ''
         if order:
@@ -397,20 +503,25 @@ class Conn:
                 order_clause += '{}{}, '.format(order_by, desc)
                 """
 
+                """
                 if '.' in col_name:
                     src_colname, tgt_colname = col_name.split('.')
                     src_fld = db_obj.getfld(src_colname)
                     tgt_fld = src_fld.foreign_key['tgt_field']
                     tgt_rec = tgt_fld.db_obj
-                    fld = tgt_rec.getfld(tgt_colname)
+#                   fld = tgt_rec.getfld(tgt_colname)
+                    fld = tgt_fld
                     if src_colname not in self.joins:
-                        self.build_join(db_obj, src_colname)
+                        self.build_join(db_obj, src_colname, tgt_fld)
                     alias = self.joins[src_colname]
                 else:
                     fld = db_obj.getfld(col_name)
                     alias = 'a'
+                """
+                fld, alias = get_fld_alias(col_name)
                 if fld.sql:
-                    order_list.append('({}){}'.format(fld.sql, desc))
+                    sql = convert_sql(fld.sql)
+                    order_list.append('({}){}'.format(sql, desc))
                 else:
                     order_list.append('{}.{}{}'.format(alias, fld.col_name, desc))
 
@@ -421,29 +532,60 @@ class Conn:
 
         return sql, params
 
-    def build_join(self, db_obj, src_colname):
+    def build_join(self, db_obj, src_colname, tgt_fld):
 
-        src_fld = self.db_obj.getfld(src_colname)
-        tgt_fld = src_fld.foreign_key['tgt_field']
+#       src_fld = db_obj.getfld(src_colname)
+#       tgt_fld = src_fld.foreign_key['tgt_field']
         tgt_table = tgt_fld.db_obj.table_name
 
-        data_company = db_obj.data_company
+        data_company = tgt_fld.db_obj.data_company
 
 #       assume only single keys for now
-        alias = chr(98+len(self.joins))  # b,c,d ...
+#       alias = chr(98+len(self.joins))  # b,c,d ...
+        alias = '_' * (len(self.joins) + 1)  # '_', '__', etc
         test = '{}.{} = a.{} '.format(alias, tgt_fld.col_name, src_colname)
         self.tablenames += ' LEFT JOIN {}.{} {} ON {}'.format(
-            data_company, tgt_table, join_alias, test)
+            data_company, tgt_table, alias, test)
         self.joins[src_colname] = alias
 
 #-----------------------------------------------------------------------------
 
 class DbConn(Conn):
-    def release(self):  # return connection to connection pool
+    def __init__(self, pos):
+        """
+        Create an instance of DbConn.
+
+        :param integer pos: The position in the connection pool. It is stored
+                            as an attribute, and used as an argument when
+                            returning the connection to the pool, so that the
+                            pool knows which connection it refers to.
+        :rtype: None
+        """
+        self.init(pos)
+        self.pos = pos
+
+    def release(self, rollback=False):  # return connection to connection pool
+        self.conn.rollback() if rollback else self.conn.commit()
         _release_connection(self.pos)
 
 class MemConn(Conn):
-    pass  # cannot release MemConn connection
+    def __init__(self, pos, mem_id):
+        """
+        Create an instance of DbConn.
+
+        :param integer pos: The position in the connection pool. It is stored
+                            as an attribute, and used as an argument when
+                            returning the connection to the pool, so that the
+                            pool knows which connection it refers to.
+        :rtype: None
+        """
+        self.init(pos, mem_id)
+        self.pos = pos
+        self.mem_id = mem_id
+
+    def release(self, rollback=False):  # return connection to connection pool
+        self.conn.rollback() if rollback else self.conn.commit()
+        _release_mem_conn(self.mem_id, self.pos)
 
 #-----------------------------------------------------------------------------
 
@@ -453,84 +595,86 @@ class DbSession:
 
     A DbSession must be acquired prior to any database access.
 
-    It is acquired by calling :func:`~db.api.start_db_session` and passing
-    it a user id. The function creates an instance of this class, and
-    returns it to the caller.
+    It is acquired by calling :func:`~db.api.start_db_session`. The function
+    creates an instance of this class, and returns it to the caller.
 
-    __enter__ is called when 'with db_session as conn' is executed -
+    __enter__ is called when 'with db_session as db_mem_conn' is executed -
 
     * check if the session has an active database connection. If not,
-      acquire a connection from the connection pool
+      acquire a db connection from the connection pool and an in-memory
+      connection from the mem_conn pool
     * increment 'no_connections' to keep track of how many times
       we have been called
-    * return the connection to the caller
+    * return a tuple containing the db connection and the in-memory
+      connection to the caller
 
     __exit__ is called when the 'with' code block ends -
 
     * decrement 'no_connections'
     * if the number of connections becomes zero -
-
-      * check if a transaction is active - if yes, call commit()
-      * return the connection to the connection pool
+      * release both connections, which causes them to be 'committed'
+        and then returned to their respective pools 
     """
-    def __init__(self, user_row_id):
-        self.user_row_id = user_row_id
-        self.conn = None
+    def __init__(self, mem_id=None):
+        self.mem_id = mem_id
+        self.db_mem_conn = None
         self.no_connections = 0
-        self.transaction_active = False
-
-    def change_userid(self, user_row_id):
-        self.user_row_id = user_row_id
+        self.after_commit = []
 
     def __enter__(self):
-        if self.conn is None:
-            self.conn = _get_connection()
-            self.conn.cur = self.conn.cursor()
+        if self.db_mem_conn is None:
+
             # all updates in same transaction use same timestamp
-            self.conn.timestamp = datetime.now()
+            timestamp = datetime.now()
+            db_conn = _get_connection()
+            db_conn.cur = db_conn.cursor()
+            db_conn.timestamp = timestamp
+            if self.mem_id is not None:
+                mem_conn = _get_mem_connection(self.mem_id)
+                mem_conn.cur = mem_conn.cursor()
+                mem_conn.timestamp = timestamp
+            else:
+                mem_conn = None
+            self.db_mem_conn = DbMemConn(db_conn, mem_conn)
+
+            if log_db:
+                db_log.write('{}: START\n'.format(id(db_conn)))
+
         self.no_connections += 1
-        return self.conn
+        return self.db_mem_conn
 
     def __exit__(self, type, exc, tb):
         if type is not None:  # an exception occurred
-            if self.transaction_active:
-                self.conn.rollback()
-                self.transaction_active = False
-            self.conn.release()  # return connection to pool
-            self.conn = None
-            self.no_connections = 0
+            if self.db_mem_conn is not None:  # can happen if > 1 exception raised
+                db_conn, mem_conn = self.db_mem_conn
+                db_conn.cur.close()
+                db_conn.release(rollback=True)  # rollback, return connection to pool
+                if mem_conn is not None:
+                    mem_conn.cur.close()
+                    mem_conn.release(rollback=True)  # rollback, return connection to pool
+                self.db_mem_conn = None
+                self.no_connections = 0
+                self.after_commit = []
+                if log_db:
+                    db_log.write('{}: ROLLBACK\n\n'.format(id(db_conn)))
             return  # will reraise exception
+
         self.no_connections -= 1
         if not self.no_connections:
-            if self.transaction_active:
-                self.conn.commit()
-                self.transaction_active = False
-            self.conn.cur.close()
-            self.conn.release()  # return connection to pool
-            self.conn = None
+            db_conn, mem_conn = self.db_mem_conn
+            db_conn.cur.close()
+            db_conn.release()  # commit, return connection to pool
+            if mem_conn is not None:
+                mem_conn.cur.close()
+                mem_conn.release()  # commit, return connection to pool
+            self.db_mem_conn = None
+            if log_db:
+                db_log.write('{}: COMMIT\n\n'.format(id(db_conn)))
+            while self.after_commit:
+                callback = self.after_commit.pop(0)
+                callback[0](*callback[1:])
+
+    def close(self):  # called from ht.form.close_form()
+        _close_mem_connections(self.mem_id)
 
 #----------------------------------------------------------------------------
-
-class MemSession:
-    """
-    A context manager for a :memory: database.
-    """
-    def __init__(self, user_row_id):
-        self.user_row_id = user_row_id
-        self.conn = MemConn()
-        self.conn.cur = self.conn.cursor()
-        self.transaction_active = False
-
-    def __enter__(self):
-        self.conn.timestamp = datetime.now()
-        return self.conn
-
-    def __exit__(self, type, exc, tb):
-        if type is not None:  # an exception occurred
-            if self.transaction_active:
-                self.conn.rollback()
-                self.transaction_active = False
-            return  # will reraise exception
-        if self.transaction_active:
-            self.conn.commit()
-            self.transaction_active = False
