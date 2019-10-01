@@ -1,0 +1,37 @@
+<subtype_body subtype_id="nsls">
+  <block/>
+  <panel/>
+  <row/>
+  <col/>
+  <label value="Sales code:"/>
+  <col/>
+  <input obj_name="nsls" col_name="nsls_code" lng="80"/>
+  <row/>
+  <col/>
+  <label value="Description:"/>
+  <col/>
+  <input obj_name="nsls" col_name="nsls_descr" lng="120"/>
+  <row/>
+  <col/>
+  <label value="Amount:"/>
+  <col/>
+  <input obj_name="nsls" col_name="nsls_amount" lng="80"/>
+  <if_ src="_param.eff_date_nsls" op="is_" tgt="$True"/>
+  <row/>
+  <col/>
+  <label value="Effective date:"/>
+  <col/>
+  <input obj_name="nsls" col_name="eff_date" lng="84" form_dflt="
+    <<form_dflt>>
+      <<case>>
+        <<compare src=`$Prev` op=`eq` tgt=`$None`>>
+          <<fld_val name=`tran_det_row_id>tran_row_id>tran_date`/>>
+        <</compare>>
+        <<default>>
+          <<prev_value/>>
+        <</default>>
+      <</case>>
+    <</form_dflt>>
+    "/>
+  <end_if/>
+</subtype_body>

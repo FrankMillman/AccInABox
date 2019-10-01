@@ -1,4 +1,4 @@
-<form name="setup_company">
+<form name="setup_company" title="Company setup">
   <db_objects>
     <db_obj name="db_comp" table_name="dir_companies"/>
   </db_objects>
@@ -41,7 +41,7 @@
         <grid_methods template="Grid"/>
       </grid>
     </body>
-    <button_row validate="false"/>
+    <button_row/>
     <frame_methods template="Grid"/>
   </frame>
 </form>

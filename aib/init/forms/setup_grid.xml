@@ -1,4 +1,4 @@
-<form name="setup_grid">
+<form name="setup_grid" title="Setup - grid view">
   <db_objects/>
   <mem_objects/>
   <input_params/>
@@ -12,7 +12,7 @@
         <grid_methods template="Grid"/>
       </grid>
     </body>
-    <button_row validate="false"/>
-    <frame_methods template="Grid"/>
+    <button_row/>
+    <frame_methods/>
   </frame>
 </form>

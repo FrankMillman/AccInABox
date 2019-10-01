@@ -1,0 +1,328 @@
+<form name="ap_invoice" title="Supplier invoice" before_start_form="
+  <<action>>
+    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_inv` action=`lock`/>>
+  <</action>>
+  " on_close_form="
+  <<action>>
+    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_inv` action=`unlock`/>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="ap_inv" table_name="ap_tran_inv" is_formview_obj="true"/>
+    <db_obj name="ap_invdet" table_name="ap_tran_inv_det" parent="ap_inv"/>
+    <db_obj name="ipch" table_name="pch_ipch_subinv" parent="ap_invdet"/>
+    <db_obj name="npch" table_name="pch_npch_subinv" parent="ap_invdet"/>
+    <db_obj name="achg" table_name="ar_subtran_chg" parent="ap_invdet"/>
+    <db_obj name="com" table_name="pch_comments" parent="ap_invdet"/>
+  </db_objects>
+
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="ap_inv">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+
+      <row/>
+      <col/>
+      <label value="Supplier Id:"/>
+      <col/>
+      <input obj_name="ap_inv" col_name="supp_id" lng="80" readonly="true" skip="true"/>
+      <display obj_name="ap_inv" col_name="supp_row_id>party_row_id>display_name" lng="160"/>
+
+      <col/>
+      <label value="Invoice no:"/>
+      <col/>
+      <input obj_name="ap_inv" col_name="tran_number" lng="80" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Invoice date:"/>
+      <col/>
+      <input obj_name="ap_inv" col_name="tran_date" lng="84" readonly="true" skip="true"/>
+
+      <col/>
+      <label value="Terms code:"/>
+      <col/>
+      <input obj_name="ap_inv" col_name="terms_code" lng="60" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Tax inclusive?"/>
+      <col/>
+      <input obj_name="ap_inv" col_name="tax_incl" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Amount:"/>
+      <col/>
+      <input obj_name="ap_inv" col_name="inv_amount" lng="120" readonly="true" skip="true"/>
+
+      <col/>
+      <label value="Invoice total:"/>
+      <col/>
+      <display obj_name="ap_inv" col_name="currency_id>symbol" lng="10"/>
+      <display obj_name="ap_inv" col_name="inv_tot_amt" lng="100"/>
+
+      <block/>
+      <vbox/>
+      <grid data_object="ap_invdet" growable="true" num_grid_rows="5" readonly="true"
+          footer_row="[`'Total:'`, `ap_inv.inv_net_amt`, `ap_inv.inv_tax_amt`, `ap_inv.inv_tot_amt`]">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="display_descr" lng="80"/>
+          <cur_col col_name="inv_net_amt" lng="80"/>
+          <cur_col col_name="inv_tax_amt" lng="80"/>
+          <cur_col col_name="inv_tot_amt" lng="80"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="line_no"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+<!--
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Net amt:"/>
+      <col/>
+      <display obj_name="ap_inv" col_name="inv_net_amt" lng="90" align="right"/>
+
+      <row/>
+      <col/>
+      <label value="Tax amt:"/>
+      <col/>
+      <display obj_name="ap_inv" col_name="inv_tax_amt" lng="90" align="right"/>
+
+      <row/>
+      <col/>
+      <label value="Total amt:"/>
+      <col/>
+      <display obj_name="ap_inv" col_name="inv_tot_amt" lng="90" align="right"/>
+-->
+      <vbox_end/>
+
+      <grid_frame main_object="ap_invdet">
+        <toolbar/>
+        <body>
+
+          <block/>
+          <panel/>
+
+          <row/>
+          <col/>
+          <input obj_name="ap_invdet" col_name="line_type" radio="true" form_dflt="
+            <<form_dflt>>
+              <<prev_value/>>
+            <</form_dflt>>
+            "/>
+
+          <subtran_frame subtran_obj="ap_invdet" subtran_col="line_type">
+            <subtran_body subtran_id="ipch"/>
+            <subtran_body subtran_id="npch"/>
+            <subtran_body subtran_id="ar_chg"/>
+            <subtran_body subtran_id="com"/>
+          </subtran_frame>
+
+<!--
+            <subtype_body subtype_id="ipch">
+              <block/>
+              <panel/>
+              <if_ src="_param.in_ledger_id" op="is_" tgt="$None"/>
+              <row/>
+              <col/>
+              <label value="Warehouse:"/>
+              <col/>
+              <input obj_name="ap_invdet" col_name="warehouse" lng="80"/>
+              <display obj_name="in_ledg" col_name="descr" lng="120"/>
+              <end_if/>
+              <row/>
+              <col/>
+              <label value="Prod code:"/>
+              <col/>
+              <input obj_name="ap_invdet" col_name="prod_code" lng="80"/>
+              <display obj_name="prod" col_name="descr" lng="150"/>
+              <row/>
+              <col/>
+              <label value="Quantity:"/>
+              <col/>
+              <input obj_name="ap_invdet" col_name="qty" lng="80"/>
+              <row/>
+              <col/>
+              <label value="Price:"/>
+              <col/>
+              <input obj_name="ap_invdet" col_name="price" lng="80"/>
+              <row/>
+              <col/>
+              <label value="Amount:"/>
+              <col/>
+              <input obj_name="ap_invdet" col_name="ipch_amount" lng="80"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="npch">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Expense code:"/>
+              <col/>
+              <input obj_name="ap_invdet" col_name="npch_code" lng="80"/>
+              <row/>
+              <col/>
+              <label value="Description:"/>
+              <col/>
+              <input obj_name="ap_invdet" col_name="npch_descr" lng="120"/>
+              <row/>
+              <col/>
+              <label value="Amount:"/>
+              <col/>
+              <input obj_name="ap_invdet" col_name="npch_amount" lng="80"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="com">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Comment code:"/>
+              <col/>
+              <input obj_name="ap_invdet" col_name="comment_code" lng="80"/>
+              <row/>
+              <col/>
+              <label value="Comment:"/>
+              <col/>
+              <input obj_name="ap_invdet" col_name="comment_text" lng="250" height="5"/>
+            </subtype_body>
+
+          </subtype_frame>
+-->
+
+        </body>
+        <button_row template="Grid_Frame_Grid_RO"/>
+        <frame_methods template="Grid_Frame_Grid_RO">
+          <method name="after_save" action="
+            <<action>>
+              <<refresh_fld obj_name=`ap_inv` col_name=`inv_tot_amt`/>>
+            <</action>>
+            "/>
+        </frame_methods>
+
+      </grid_frame>
+
+    </body>
+    <button_row template="Transaction"/>
+    <frame_methods template="Transaction">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<!-- case>>
+            <<obj_exists obj_name=`ap_inv`>>
+            <</obj_exists>>
+            <<default>>
+              <<change_button>>
+                <<btn_enabled btn_id=&quot;btn_post&quot; state=&quot;false&quot;/>>
+              <</change_button>>
+              <<change_button>>
+                <<btn_enabled btn_id=&quot;btn_close&quot; state=&quot;false&quot;/>>
+              <</change_button>>
+              <<inline_form name=`inv_header`>>
+                <<on_return>>
+                  <<return state=`cancelled`>>
+                    <<end_form state=`cancelled`/>>
+                  <</return>>
+                  <<return state=`completed`>>
+                    <<change_button>>
+                      <<btn_enabled btn_id=&quot;btn_post&quot; state=&quot;true&quot;/>>
+                    <</change_button>>
+                    <<change_button>>
+                      <<btn_enabled btn_id=&quot;btn_close&quot; state=&quot;true&quot;/>>
+                    <</change_button>>
+                    <<restart_frame/>>
+                  <</return>>
+                <</on_return>>
+              <</inline_form>>
+            <</default>>
+          <</case -->>
+        <</action>>
+        "/>
+      <method name="do_post" action="
+        <<action>>
+          <<case>>
+            <<compare src=`ap_inv.inv_tot_amt` op=`=` tgt=`0`>>
+              <<ask title=`Invoice` enter=`No` escape=`No`
+                  question=`No detail lines - sure you want to post?`>>
+                <<response ans=`No`>>
+                <</response>>
+                <<response ans=`Yes`>>
+                  <<post_obj obj_name=`ap_inv`/>>
+                <</response>>
+              <</ask>>
+            <</compare>>
+            <<default>>
+              <<post_obj obj_name=`ap_inv`/>>
+            <</default>>
+          <</case>>
+        <</action>>
+        "/>
+    </frame_methods>
+  </frame>
+  <inline_form name="tran_header" title="Invoice header">
+    <frame main_object="ap_inv">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+
+        <row/>
+        <col/>
+        <label value="Supplier Id:"/>
+        <col/>
+        <input obj_name="ap_inv" col_name="supp_id" lng="80"/>
+        <display obj_name="ap_inv" col_name="supp_row_id>party_row_id>display_name" lng="160"/>
+
+        <row/>
+        <col/>
+        <label value="Invoice no:"/>
+        <col/>
+        <input obj_name="ap_inv" col_name="tran_number" lng="80"/>
+
+        <row/>
+        <col/>
+        <label value="Invoice date:"/>
+        <col/>
+        <input obj_name="ap_inv" col_name="tran_date" lng="84" form_dflt="
+          <<form_dflt>>
+            <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
+          <</form_dflt>>
+          "/>
+
+        <row/>
+        <col/>
+        <label value="Terms code:"/>
+        <col/>
+        <input obj_name="ap_inv" col_name="terms_code" lng="60"/>
+        <display obj_name="ap_inv" col_name="terms_code_id>descr" lng="140"/>
+
+        <row/>
+        <col/>
+        <label value="Tax inclusive?"/>
+        <col/>
+        <input obj_name="ap_inv" col_name="tax_incl"/>
+
+        <row/>
+        <col/>
+        <label value="Amount:"/>
+        <col/>
+        <input obj_name="ap_inv" col_name="inv_amount" lng="120"/>
+
+      </body>
+
+      <button_row template="Transaction_Header"/>
+      <frame_methods template="Transaction_Header"/>
+    </frame>
+  </inline_form>
+</form>

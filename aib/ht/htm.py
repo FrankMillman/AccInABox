@@ -2,36 +2,76 @@
 This is the Human Task Manager module.
 """
 
-import threading
+import asyncio
+import itertools
 
 import logging
 logger = logging.getLogger(__name__)
 
 import ht.htc
 import ht.form
+import db
+from common import AibError
 
-active_tasks = {}  # key=task_id, value=HumanTask instance
+active_tasks = {}
+version_counter = itertools.count()
+version = next(version_counter)
+
+def bump_version():
+    global version
+    version = next(version_counter)
+
+def add_task(task):
+    active_tasks[id(task)] = (task, None)
+    bump_version()
+
+async def claim_task(session, task_id):
+    if task_id not in active_tasks:
+        raise AibError(head='Claim task',
+            body='Task {} already completed/cancelled'.format(task_id))
+    task, claimed_by = active_tasks[task_id]
+    if claimed_by is not None:
+        user_name = await db.cache.get_user_name(
+            claimed_by.user_row_id)
+        raise AibError(head='Claim task',
+            body='Task {} already claimed by {}'.format(
+                task.title, user_name))
+    active_tasks[task_id] = (task, session)
+    bump_version()
+    await task.start_task(session)
+
+def reset_task(task):
+    active_tasks[id(task)] = (task, None)
+    bump_version()
+
+def cancel_task(task):
+    del active_tasks[id(task)]
+    bump_version()
+
+def complete_task(task):
+    del active_tasks[id(task)]
+    bump_version()  # not strictly necessary
+
+def get_task_list(user_row_id, last_version):
+    if last_version == version:
+        return None, last_version
+    task_list = []
+    for task_id in active_tasks:
+        task, claimed_by = active_tasks[task_id]
+        if claimed_by is None:
+            task_list.append((task_id, task.title))
+    return task_list, version
 
 #----------------------------------------------------------------------------
 
-def init_task(company, task_name, performer,
-        potential_owner, data_inputs, callback):
-    task = ht.form.Form(company, task_name, data_inputs, callback)
-    logger.info('{} started - task no {}'.format(task_name, task.root_id))
-#   active_tasks[task.root_id] = task
-    if performer is not None:
-        task.start_form(performer)
-    else:
-        # need a structure to maintain unclaimed tasks
-        # each task needs a list of users it has been offered to
-        # i.e. it appears on their task list
-        # does that mean that 'potential_owner' must be evaluated up-front,
-        #   to return a list of possible user-ids
-        # or do we store 'potential_owner', and re-evaluate up-front *and*
-        #   on every re-start?
-        # probably the second option, as 'roles' could have been changed
-        #   and we want to always use the latest version
-        notify_new_task(task.root_id)
+async def init_task(process, company, form_name, performer,
+        potential_owners, data_inputs, callback):
+    title = await db.cache.get_form_title(company, form_name)
+    performer = 1
+    task = HumanTask(company, form_name, title, data_inputs,
+        callback, performer, potential_owners)
+    add_task(task)
+    return task
 
 #----------------------------------------------------------------------------
 
@@ -85,53 +125,47 @@ When task is initiated -
 def restart_active_tasks():
     pass
 
-def notify_new_task(task_id):
-    task = active_tasks[task_id]
-    print('NOTIFY NEW', task.task_name)
+#-----------------------------------------------------------------------------
 
-def claim_task(task_id, user_id):
-    task = active_tasks[task_name]
-    task.start_task(user_id)
+class HumanTask:
 
-login_lock = threading.Lock()
-def try_login(operation):
-    service = operation.service
-    with login_lock:
-        dir_user = service.data_objects['dir_user']
-        user_id = dir_user.getval('row_id')
+    def __init__(self, company, form_name, title, data_inputs,
+            callback, performer, potential_owners):
+        self.company = company
+        self.form_name = form_name
+        self.title = title
+        self.data_inputs = data_inputs
+        self.callback = callback
 
-        temp_id = service.user_id  # allocated when service invoked
-        if temp_id in ht.htc.active_users:  # called from http session
-            if user_id in ht.htc.active_users:  # does anyone care?
-                raise ValueError(['Login', 'Already logged in'])
-            session = ht.htc.active_users[temp_id]
-            session.on_login(dir_user)  # update session with true user_id
+#       if performer is not None:
+#           assignees = [performer]
+#       else:
+#           assignees = self.get_performers(company, potential_owners)
+#       for assignee in assignees:
+#           for session_id, session in ht.htc.sessions.items():
+#               if session.user_row_id == assignee:
+#                   session.assign_task(self.task_id, self.title)
+# needs more thought [2017-12-20]
+# maybe dictionary of active tasks keyed on acc_role, so that session
+#   can easily check its user's roles to find its active tasks
 
-        service.user_id = user_id  # update service with true user_id
+    async def start_task(self, session):
+        form = ht.form.Form(
+            self.company, self.form_name, data_inputs=self.data_inputs,
+                callback=(self.on_task_completed,))
 
-def after_login(element, output_set, data_inputs, callback):
-    user_id = data_inputs['user_id_to_login']
-    print('AFTER LOGIN', user_id)
+        context = db.cache.get_new_context(session.user_row_id,
+            session.sys_admin, mod_ledg_id=None, mem_id=id(form))
 
-    session = ht.htc.active_users[user_id]
-    session.after_login()
+        await form.start_form(session, context)
 
-    state = 'completed'
-    data_outputs = {}
-    callback(element, state, output_set, data_outputs)
+    async def on_task_completed(self, session, state, return_params):
+        if state != 'completed':
+            reset_task(self)
+        elif id(self) in active_tasks:  # could have been cancelled
+            complete_task(self)
+            callback, *args = self.callback
+            await callback(session, return_params, *args)
 
-def cancel_login(element, output_set, data_inputs, callback):
-    user_id = data_inputs['user_id_to_cancel']
-    print('CANCEL LOGIN', user_id)
-
-    session = ht.htc.active_users[user_id]
-    session.send_close_program()
-    session.close()
-
-    state = 'completed'
-    data_outputs = {}
-    callback(element, state, output_set, data_outputs)
-
-#----------------------------------------------------------------------------
-
-logger.info('task manager started')
+    async def cancel_task(self):
+        cancel_task(self)

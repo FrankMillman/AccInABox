@@ -1,0 +1,50 @@
+<form name="setup_divisions"  title="Set up divisions">
+
+  <db_objects>
+    <db_obj name="division" table_name="adm_divisions"/>
+  </db_objects>
+  <mem_objects/>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="division">
+    <toolbar/>
+    <body>
+      <block/>
+      <tree data_object="division" lng="250" height="350" toolbar="true"/>
+      <tree_frame main_object="division">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Division id:"/>
+          <col/>
+          <input obj_name="division" col_name="division" lng="120"/>
+          <row/>
+          <col/>
+          <label value="Full name:"/>
+          <col/>
+          <input obj_name="division" col_name="descr" lng="240"/>
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame"/>
+      </tree_frame>
+    </body>
+    <button_row/>
+    <frame_methods>
+      <method name="on_req_close" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+      <method name="on_req_cancel" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

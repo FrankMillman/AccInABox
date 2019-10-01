@@ -1,0 +1,964 @@
+<form name="setup_form_body" title="Setup frame body definition" before_start_form="
+  <<action>>
+    <<pyfunc name=`custom.formdefn_funcs.before_start_body`/>>
+  <</action>>
+  ">
+
+  <db_objects/>
+  <mem_objects>
+
+    <mem_obj name="form_vars" descr="Variables used in form">
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name" col_head="Name"/>
+      <mem_col col_name="title" data_type="TEXT" short_descr="Title"
+        long_descr="Form title" col_head="Title"/>
+      <mem_col col_name="body_xml" data_type="SXML" short_descr="Body xml"
+        long_descr="Body xml" col_head="Defn" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="body" descr="Body definition elements" parent="form_vars"
+        sequence="[`seq`, [], null]" sub_types="[
+        [`type`, `descr`,
+          [
+            [`block`, `Block`, [], []]
+            ,[`vbox`, `Vertical box`, [], []]
+            ,[`vbox_end`, `End vertical box`, [], []]
+            ,[`panel`, `Panel`, [], []]
+            ,[`row`, `New row`, [], []]
+            ,[`col`, `New column`, [`rowspan`, `colspan`], []]
+            ,[`text`, `Text string`, [`value`], [`value`]]
+            ,[`label`, `Input label`, [`value`], [`value`]]
+            ,[`input`, `Input field`, [`obj_name`, `col_name`, `lng`, `height`, `pwd`, `readonly`,
+                `choice`, `lookup`, `radio`, `before`, `form_dflt`, `validation`, `after`],
+                [`obj_name`, `'.'`, `col_name`]]
+            ,[`display`, `Display field`, [`obj_name`, `col_name`, `lng`, `prev`, `align`],
+                [`obj_name`, `'.'`, `col_name`]]
+            ,[`string`, `String value`, [`value`, `lng`], [`value`]]
+            ,[`button`, `Button`, [`btn_id`, `btn_label`, `lng`, `btn_enabled`,
+                `btn_validate`, `action`, `validation`, `help_msg`], [`btn_label`]]
+            ,[`nb_start`, `Notebook start`, [], []]
+            ,[`nb_page`, `Notebook page`, [`nb_label`], [`nb_label`]]
+            ,[`nb_end`, `Notebook end`, [], []]
+            ,[`grid`, `Data grid`, [`data_object`, `obj_descr`, `growable`, `num_grid_rows`,
+                `cursor_name`, `form_name`, `readonly`, `auto_start`, `auto_startrow`],
+                [`data_object`, `' ' `, `num_grid_rows`]]
+            ,[`grid_frame`, `Grid frame`, [`main_object`, `obj_descr`], [`main_object`]]
+            ,[`tree`, `Tree`, [`data_object`, `lng`, `height`, `toolbar`], [`data_object`]]
+            ,[`tree_lkup`, `Tree lookup`, [`data_object`, `lng`, `height`], [`data_object`]]
+            ,[`tree_combo`, `Tree combo`,
+                [`lng`, `height`, `group_name`, `member_name`, `toolbar`],
+                [`group_name`, `'/'`, `member_name`]]
+            ,[`tree_report`, `Tree report`, [`pyfunc`, `lng`, `height`], []]
+            ,[`tree_frame`, `Tree frame`, [`main_object`, `obj_descr`, `combo_type`], [`main_object`]]
+            ,[`subtype_frame`, `Sub-type frame`, [`subtype_obj`, `subtype_col`, `lng`],
+                [`subtype_obj`, `'.'`, `subtype_col`]]
+            ,[`if_`, `Condition to skip fields`, [`src`, `op`, `tgt`], []]
+            ,[`end_if`, `End condition`, [], []]
+            ]
+          ]
+        ]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <!--
+        the next col_defn has col_type="virt"
+        reason - it is the 'display' column used for sub_types
+        when the table is created, 'sql' will be generated to display the descr
+      -->
+      <mem_col col_name="descr" col_type="virt" data_type="TEXT"
+        short_descr="Description" long_descr="Description" col_head="Description"/>
+      <mem_col col_name="elem" data_type="SXML" short_descr="Xml element"
+        long_descr="Xml element" allow_amend="true"/>
+      <mem_col col_name="type" data_type="TEXT" short_descr="Type"
+        long_descr="Gui object type" col_head="Type" max_len="20"/>
+      <mem_col col_name="main_object" data_type="TEXT" short_descr="Main object"
+        long_descr="Main object" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="obj_descr" data_type="TEXT" short_descr="Object description"
+        long_descr="Object description" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="combo_type" data_type="TEXT" short_descr="Combo type"
+        long_descr="Combo type - group/member" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="rowspan" data_type="INT" short_descr="Row span"
+        long_descr="Row span" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="colspan" data_type="INT" short_descr="Col span"
+        long_descr="Col span" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="value" data_type="TEXT" short_descr="Value"
+        long_descr="Value for text control" allow_amend="true"/>
+      <mem_col col_name="obj_name" data_type="TEXT" short_descr="Object name"
+        long_descr="Object name for field" allow_null="true" allow_amend="true"
+        fkey="[`{mem}.obj_names`, `name`, null, null, false, null]"/>
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name for field" allow_null="true" allow_amend="true"
+        fkey="[`obj_name>{mem}.col_names`, `name`, null, null, false, null]"/>
+      <mem_col col_name="lng" data_type="INT" short_descr="Length"
+        long_descr="Length" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="height" data_type="INT" short_descr="Height"
+        long_descr="Height - multi-line only" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="pwd" data_type="BOOL" short_descr="Password?"
+        long_descr="Password?" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="readonly" data_type="BOOL" short_descr="Read only?"
+        long_descr="Read only?" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="choice" data_type="BOOL" short_descr="Allow choices?"
+        long_descr="Allow choices?" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="lookup" data_type="BOOL" short_descr="Allow lookup?"
+        long_descr="Allow lookup?" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="radio" data_type="BOOL" short_descr="Use radio buttons?"
+        long_descr="Use radio buttons for choice selection?"
+          allow_null="true" allow_amend="true"/>
+      <mem_col col_name="before" data_type="SXML" short_descr="Before input"
+        long_descr="Action to take before input" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="form_dflt" data_type="SXML" short_descr="Form default"
+        long_descr="Default rule to apply" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="validation" data_type="SXML" short_descr="Validation"
+        long_descr="Validation after input" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="after" data_type="SXML" short_descr="After input"
+        long_descr="Action to take after input" allow_null="true" allow_amend="true"/>
+
+      <mem_col col_name="btn_id" data_type="TEXT" short_descr="Button id"
+        long_descr="Button id" col_head="Button id" allow_null="true"/>
+      <mem_col col_name="btn_label" data_type="TEXT" short_descr="Button label"
+        long_descr="Button label" col_head="Label" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="btn_enabled" data_type="BOOL" short_descr="Enabled?"
+        long_descr="Button enabled?" col_head="Enabled" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="btn_validate" data_type="BOOL" short_descr="Validate?"
+        long_descr="Validate before action?" col_head="Vld" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="action" data_type="SXML" short_descr="Action"
+        long_descr="Action to take on click" col_head="Action" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="help_msg" data_type="TEXT" short_descr="Help message"
+        long_descr="Help message" col_head="Help" allow_null="true" allow_amend="true"/>
+
+      <mem_col col_name="nb_label" data_type="TEXT" short_descr="Label"
+        long_descr="Label for notebook tab" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="subtype_obj" data_type="TEXT" short_descr="Subtype object name"
+        long_descr="Subtype object name for subtype panel" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="subtype_col" data_type="TEXT" short_descr="Subtype column name"
+        long_descr="Subtype column name for subtype panel" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="data_object" data_type="TEXT" short_descr="Data object"
+        long_descr="Data object" allow_null="true" allow_amend="true"/>
+
+      <mem_col col_name="growable" data_type="BOOL" short_descr="Growable"
+        long_descr="Growable" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="num_grid_rows" data_type="INT" short_descr="Number of rows"
+        long_descr="Number of grid rows" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="cursor_name" data_type="TEXT" short_descr="Cursor name"
+        long_descr="Name of database cursor" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name for formview" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="auto_start" data_type="BOOL" short_descr="Always start row?"
+        long_descr="Set to false to *not* start row on start_frame"
+        allow_null="true" allow_amend="true" dflt_val="true"/>
+      <mem_col col_name="auto_startrow" data_type="BOOL" short_descr="Used in setup_periods?"
+        long_descr="Used in setup_periods - investigate" allow_null="true" allow_amend="true"/>
+
+      <mem_col col_name="toolbar" data_type="BOOL" short_descr="Tree toolbar?"
+        long_descr="Tree toolbar?" allow_amend="true"/>
+      <mem_col col_name="group_name" data_type="TEXT" short_descr="Group name"
+        long_descr="Group name" allow_amend="true"/>
+      <mem_col col_name="member_name" data_type="TEXT" short_descr="Member name"
+        long_descr="Member name" allow_amend="true"/>
+      <mem_col col_name="pyfunc" data_type="TEXT" short_descr="Python function"
+        long_descr="Python function" allow_amend="true"/>
+      <mem_col col_name="prev" data_type="BOOL" short_descr="Previous value?"
+        long_descr="Previous value for display?" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="align" data_type="TEXT" short_descr="Align"
+        long_descr="Align for display - left/right" allow_amend="true" dflt_val="left"
+        choices="[[`left`, `Left`], [`right`, `Right`]]"/>
+      <mem_col col_name="src" data_type="TEXT" short_descr="Source"
+        long_descr="Source for 'if_'" allow_amend="true"/>
+      <mem_col col_name="op" data_type="TEXT" short_descr="Operation"
+        long_descr="Operation for 'if_'" allow_amend="true"/>
+      <mem_col col_name="tgt" data_type="TEXT" short_descr="Target"
+        long_descr="Target for 'if_'" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="grid_vars" descr="Variables used in grid setup" parent="body">
+<!--
+      <mem_col col_name="data_object" data_type="TEXT" short_descr="Data object"
+        long_descr="Data object" allow_amend="true"/>
+      <mem_col col_name="obj_descr" data_type="TEXT" short_descr="Object description"
+        long_descr="Object description" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="growable" data_type="BOOL" short_descr="Growable"
+        long_descr="Growable" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="num_grid_rows" data_type="INT" short_descr="Number of rows"
+        long_descr="Number of grid rows" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="cursor_name" data_type="TEXT" short_descr="Cursor name"
+        long_descr="Name of database cursor" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name for formview" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="auto_start" data_type="BOOL" short_descr="Always start row?"
+        long_descr="Set to false to *not* start row on start_frame"
+        allow_null="true" allow_amend="true" dflt_val="true"/>
+      <mem_col col_name="auto_startrow" data_type="BOOL" short_descr="Used in setup_periods?"
+        long_descr="Used in setup_periods - investigate" allow_null="true" allow_amend="true"/>
+-->
+      <mem_col col_name="toolbar_xml" data_type="SXML" short_descr="Toolbar xml"
+        long_descr="Toolbar xml" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="columns_xml" data_type="SXML" short_descr="Cursor columns"
+        long_descr="Cursor columns" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="filter_xml" data_type="SXML" short_descr="Cursor filter"
+        long_descr="Cursor filter" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="sequence_xml" data_type="SXML" short_descr="Cursor sequence"
+        long_descr="Cursor sequence" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="methods_xml" data_type="SXML" short_descr="Methods xml"
+        long_descr="Methods xml" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="gridframe_vars" descr="Variables used in grid_frame" parent="body">
+      <mem_col col_name="main_object" data_type="TEXT" short_descr="Main object"
+        long_descr="Main object" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="obj_descr" data_type="TEXT" short_descr="Object description"
+        long_descr="Object description" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="methods_xml" data_type="SXML" short_descr="Methods xml"
+        long_descr="Methods xml" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="body_xml" data_type="SXML" short_descr="Body xml"
+        long_descr="Body xml" allow_amend="true"/>
+      <mem_col col_name="toolbar_xml" data_type="SXML" short_descr="Toolbar xml"
+        long_descr="Toolbar xml" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="buttonrow_xml" data_type="SXML" short_descr="Button row xml"
+        long_descr="Button row xml" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="treeframe_vars" descr="Variables used in tree_frame" parent="body">
+      <mem_col col_name="main_object" data_type="TEXT" short_descr="Main object"
+        long_descr="Main object" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="obj_descr" data_type="TEXT" short_descr="Object description"
+        long_descr="Object description" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="combo_type" data_type="TEXT" short_descr="Combo type"
+        long_descr="Combo type - group/member" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="methods_xml" data_type="SXML" short_descr="Methods xml"
+        long_descr="Methods xml" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="body_xml" data_type="SXML" short_descr="Body xml"
+        long_descr="Body xml" allow_amend="true"/>
+      <mem_col col_name="toolbar_xml" data_type="SXML" short_descr="Toolbar xml"
+        long_descr="Toolbar xml" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="buttonrow_xml" data_type="SXML" short_descr="Button row xml"
+        long_descr="Button row xml" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="subtype_vars" descr="Variables used for sub_types" parent="body">
+      <mem_col col_name="subtype_obj" data_type="TEXT" short_descr="Subtype object name"
+        long_descr="Subtype object name for subtype panel" allow_amend="true"/>
+      <mem_col col_name="subtype_col" data_type="TEXT" short_descr="Subtype column name"
+        long_descr="Subtype column name for subtype panel" allow_amend="true"/>
+      <mem_col col_name="lng" data_type="INT" short_descr="Length"
+        long_descr="Field length - default to 120" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="subtypes" descr="Variables used per sub_type" parent="subtype_vars">
+      <mem_col col_name="subtype_id" data_type="TEXT" short_descr="Subtype id"
+        long_descr="Subtype id" col_head="Value" key_field="A"/>
+      <mem_col col_name="body_xml" data_type="SXML" short_descr="Body xml"
+        long_descr="Body xml" col_head="Panel" allow_amend="true"/>
+    </mem_obj>
+
+  </mem_objects>
+
+  <input_params>
+    <input_param name="form_name" type="data_attr" target="form_vars.form_name" required="true"/>
+    <input_param name="title" type="data_attr" target="form_vars.title" required="true"/>
+    <input_param name="body_xml" type="data_attr" target="form_vars.body_xml" required="true"/>
+  </input_params>
+
+  <output_params>
+    <output_param name="body_xml" type="data_attr" source="form_vars.body_xml"/>
+  </output_params>
+
+  <frame main_object="form_vars">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Form name:"/>
+      <col/>
+      <display obj_name="form_vars" col_name="form_name" lng="160"/>
+      <col/>
+      <label value="Title:"/>
+      <col/>
+      <display obj_name="form_vars" col_name="title" lng="250"/>
+      <block/>
+
+      <grid data_object="body" growable="true" num_grid_rows="20" readonly="true">
+        <toolbar template="Grid" title="Gui element:"/>
+        <cur_columns>
+          <cur_col col_name="type" lng="120"/>
+          <cur_col col_name="descr" lng="150" expand="true" readonly="true" skip="true"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <grid_frame main_object="body">
+        <!-- toolbar template="Setup_Form" title="Gui element:"/ -->
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Type:"/>
+          <col/>
+          <input obj_name="body" col_name="type" lng="120"/>
+          <block/>
+          <subtype_frame subtype_obj="body" subtype_col="type">
+            <subtype_body subtype_id="text">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Text:"/>
+              <col/>
+              <input obj_name="body" col_name="value" lng="180"/>
+            </subtype_body>
+            <subtype_body subtype_id="label">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Label:"/>
+              <col/>
+              <input obj_name="body" col_name="value" lng="180"/>
+            </subtype_body>
+            <subtype_body subtype_id="input">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Object name:"/>
+              <col/>
+              <input obj_name="body" col_name="obj_name" lng="120"/>
+              <row/>
+              <col/>
+              <label value="Column name:"/>
+              <col/>
+              <input obj_name="body" col_name="col_name" lng="120"/>
+              <row/>
+              <col/>
+              <label value="Length:"/>
+              <input obj_name="body" col_name="lng" lng="40"/>
+              <col/>
+              <label value="Height:"/>
+              <input obj_name="body" col_name="height" lng="40"/>
+              <row/>
+              <col/>
+              <label value="Password?"/>
+              <input obj_name="body" col_name="pwd"/>
+              <col/>
+              <label value="Read only?"/>
+              <input obj_name="body" col_name="readonly"/>
+              <row/>
+              <col/>
+              <label value="Radio buttons?"/>
+              <input obj_name="body" col_name="radio"/>
+              <row/>
+              <col/>
+              <label value="Action before:"/>
+              <col/>
+              <input obj_name="body" col_name="before"/>
+              <row/>
+              <col/>
+              <label value="Default rule:"/>
+              <col/>
+              <input obj_name="body" col_name="form_dflt"/>
+              <row/>
+              <col/>
+              <label value="Validation:"/>
+              <col/>
+              <input obj_name="body" col_name="validation"/>
+              <row/>
+              <col/>
+              <label value="Action after:"/>
+              <col/>
+              <input obj_name="body" col_name="after"/>
+            </subtype_body>
+            <subtype_body subtype_id="display">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Object name:"/>
+              <col/>
+              <input obj_name="body" col_name="obj_name" lng="120"/>
+              <row/>
+              <col/>
+              <label value="Column name:"/>
+              <col/>
+              <input obj_name="body" col_name="col_name" lng="120"/>
+              <row/>
+              <col/>
+              <label value="Length:"/>
+              <col/>
+              <input obj_name="body" col_name="lng" lng="40"/>
+              <row/>
+              <col/>
+              <label value="Previous value?"/>
+              <col/>
+              <input obj_name="body" col_name="prev"/>
+              <row/>
+              <col/>
+              <label value="Align:"/>
+              <col/>
+              <input obj_name="body" col_name="align" lng="60"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="grid">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Data object:"/>
+              <col/>
+              <input obj_name="body" col_name="data_object" lng="120"/>
+              <row/>
+              <col/>
+              <label value="Description:"/>
+              <col/>
+              <input obj_name="body" col_name="obj_descr" lng="120"/>
+              <row/>
+              <col/>
+              <label value="Growable?"/>
+              <input obj_name="body" col_name="growable"/>
+              <col/>
+              <label value="No of rows:"/>
+              <input obj_name="body" col_name="num_grid_rows" lng="60"/>
+              <row/>
+              <col/>
+              <label value="Read only?"/>
+              <input obj_name="body" col_name="readonly"/>
+              <row/>
+              <col/>
+              <label value="Auto start?"/>
+              <input obj_name="body" col_name="auto_start"/>
+              <col/>
+              <label value="Auto start row?"/>
+              <input obj_name="body" col_name="auto_startrow"/>
+              <row/>
+              <col/>
+              <label value="Form name:"/>
+              <col/>
+              <input obj_name="body" col_name="form_name" lng="120"/>
+              <row/>
+              <col/>
+              <button btn_id="grid_toolbar" btn_label="Toolbar"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<sub_form name=`_sys.setup_form_toolbar`>>
+                    <<call_params>>
+                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                      <<call_param name=`title` type=`data_attr` source=`body.data_object`/>>
+                      <<call_param name=`toolbar_xml` type=`data_attr` source=`grid_vars.toolbar_xml`/>>
+                    <</call_params>>
+                    <<return_params>>
+                      <<return_param name=`toolbar_xml` type=`data_attr` target=`grid_vars.toolbar_xml`/>>
+                    <</return_params>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</sub_form>>
+                <</action>>
+              "/>
+              <col/>
+              <button btn_id="grid_meth" btn_label="Grid methods"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<sub_form name=`_sys.setup_form_methods`>>
+                    <<call_params>>
+                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                      <<call_param name=`title` type=`data_attr` source=`body.data_object`/>>
+                      <<call_param name=`methods_xml` type=`data_attr` source=`grid_vars.methods_xml`/>>
+                    <</call_params>>
+                    <<return_params>>
+                      <<return_param name=`methods_xml` type=`data_attr` target=`grid_vars.methods_xml`/>>
+                    <</return_params>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</sub_form>>
+                <</action>>
+              "/>
+              <row/>
+              <col/>
+              <label value="Cursor name:"/>
+              <input obj_name="body" col_name="cursor_name" lng="120"/>
+              <col/>
+              <label value="or"/>
+              <button btn_id="grid_cur" btn_label="Cursor"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                    <<sub_form name=`_sys.setup_cursor`>>
+                      <<call_params>>
+                        <<call_param name=`table_name` type=`data_attr` source=`form_vars.form_name`/>>
+                        <<call_param name=`cursor_name` type=`data_attr` source=`body.data_object`/>>
+                        <<call_param name=`data_type` type=`data_attr` source=`'xml'`/>>
+                        <<call_param name=`cur_columns_xml` type=`data_attr`
+                            source=`grid_vars.columns_xml`/>>
+                        <<call_param name=`cur_filter_xml` type=`data_attr`
+                            source=`grid_vars.filter_xml`/>>
+                        <<call_param name=`cur_sequence_xml` type=`data_attr`
+                            source=`grid_vars.sequence_xml`/>>
+                      <</call_params>>
+                      <<return_params>>
+                        <<return_param name=`cur_columns_xml` type=`data_attr`
+                            target=`grid_vars.columns_xml`/>>
+                        <<return_param name=`cur_filter_xml` type=`data_attr`
+                            target=`grid_vars.filter_xml`/>>
+                        <<return_param name=`cur_sequence_xml` type=`data_attr`
+                            target=`grid_vars.sequence_xml`/>>
+                      <</return_params>>
+                      <<on_return>>
+                        <<return state=`cancelled`/>>
+                        <<return state=`completed`/>>
+                      <</on_return>>
+                   <</sub_form>>
+                  <</action>>
+                "/>
+            </subtype_body>
+
+            <subtype_body subtype_id="grid_frame">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="frame_meth" btn_label="Frame methods"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<sub_form name=`_sys.setup_form_methods`>>
+                    <<call_params>>
+                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                      <<call_param name=`methods_xml` type=`data_attr` source=`gridframe_vars.methods_xml`/>>
+                    <</call_params>>
+                    <<return_params>>
+                      <<return_param name=`methods_xml` type=`data_attr` target=`gridframe_vars.methods_xml`/>>
+                    <</return_params>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</sub_form>>
+                <</action>>
+              "/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="main_obj" btn_label="Main object"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<inline_form name=`grid_frame`>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</inline_form>>
+                <</action>>
+              "/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="design" btn_label="Frame design"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<sub_form name=`_sys.setup_form_body`>>
+                    <<call_params>>
+                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                      <<call_param name=`body_xml` type=`data_attr` source=`gridframe_vars.body_xml`/>>
+                    <</call_params>>
+                    <<return_params>>
+                      <<return_param name=`body_xml` type=`data_attr` target=`gridframe_vars.body_xml`/>>
+                    <</return_params>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</sub_form>>
+                <</action>>
+              "/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="toolbar" btn_label="Toolbar"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<sub_form name=`_sys.setup_form_toolbar`>>
+                    <<call_params>>
+                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                      <<call_param name=`toolbar_xml` type=`data_attr` source=`gridframe_vars.toolbar_xml`/>>
+                    <</call_params>>
+                    <<return_params>>
+                      <<return_param name=`toolbar_xml` type=`data_attr` target=`gridframe_vars.toolbar_xml`/>>
+                    <</return_params>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</sub_form>>
+                <</action>>
+              "/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="buttonrow" btn_label="Button row"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<sub_form name=`_sys.setup_form_buttonrow`>>
+                    <<call_params>>
+                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                      <<call_param name=`buttonrow_xml` type=`data_attr` source=`gridframe_vars.buttonrow_xml`/>>
+                    <</call_params>>
+                    <<return_params>>
+                      <<return_param name=`buttonrow_xml` type=`data_attr` target=`gridframe_vars.buttonrow_xml`/>>
+                    <</return_params>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</sub_form>>
+                <</action>>
+              "/>
+            </subtype_body>
+
+            <subtype_body subtype_id="tree_frame">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="frame_meth" btn_label="Frame methods"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<sub_form name=`_sys.setup_form_methods`>>
+                    <<call_params>>
+                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                      <<call_param name=`methods_xml` type=`data_attr` source=`treeframe_vars.methods_xml`/>>
+                    <</call_params>>
+                    <<return_params>>
+                      <<return_param name=`methods_xml` type=`data_attr` target=`treeframe_vars.methods_xml`/>>
+                    <</return_params>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</sub_form>>
+                <</action>>
+              "/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="main_obj" btn_label="Main object"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<inline_form name=`tree_frame`>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</inline_form>>
+                <</action>>
+              "/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="design" btn_label="Frame design"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<sub_form name=`_sys.setup_form_body`>>
+                    <<call_params>>
+                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                      <<call_param name=`body_xml` type=`data_attr` source=`treeframe_vars.body_xml`/>>
+                    <</call_params>>
+                    <<return_params>>
+                      <<return_param name=`body_xml` type=`data_attr` target=`treeframe_vars.body_xml`/>>
+                    <</return_params>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</sub_form>>
+                <</action>>
+              "/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="toolbar" btn_label="Toolbar"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<sub_form name=`_sys.setup_form_toolbar`>>
+                    <<call_params>>
+                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                      <<call_param name=`toolbar_xml` type=`data_attr` source=`treeframe_vars.toolbar_xml`/>>
+                    <</call_params>>
+                    <<return_params>>
+                      <<return_param name=`toolbar_xml` type=`data_attr` target=`treeframe_vars.toolbar_xml`/>>
+                    <</return_params>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</sub_form>>
+                <</action>>
+              "/>
+              <row/>
+              <col/>
+              <button lng="150" btn_id="buttonrow" btn_label="Button row"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<sub_form name=`_sys.setup_form_buttonrow`>>
+                    <<call_params>>
+                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                      <<call_param name=`buttonrow_xml` type=`data_attr` source=`treeframe_vars.buttonrow_xml`/>>
+                    <</call_params>>
+                    <<return_params>>
+                      <<return_param name=`buttonrow_xml` type=`data_attr` target=`treeframe_vars.buttonrow_xml`/>>
+                    <</return_params>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</sub_form>>
+                <</action>>
+              "/>
+            </subtype_body>
+
+            <subtype_body subtype_id="subtype_frame">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Object name:"/>
+              <col/>
+              <input obj_name="subtype_vars" col_name="subtype_obj" lng="120"/>
+              <row/>
+              <col/>
+              <label value="Column name:"/>
+              <col/>
+              <input obj_name="subtype_vars" col_name="subtype_col" lng="120"/>
+              <row/>
+              <col/>
+              <label value="Input length:"/>
+              <col/>
+              <input obj_name="subtype_vars" col_name="lng" lng="40"/>
+              <row/>
+              <col colspan="2"/>
+              <button btn_id="subtypes" btn_label="Customised sub-type frames"
+                  btn_enabled="true" btn_validate="true" action="
+                <<action>>
+                  <<inline_form name=`subtype_frames`>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</inline_form>>
+                <</action>>
+              "/>
+            </subtype_body>
+
+          </subtype_frame>
+        </body>
+        <button_row template="Grid_Frame"/>
+        <frame_methods template="Grid_Frame">
+          <method name="on_start_frame" action="
+            <<action>>
+              <<pyfunc name=`custom.formdefn_funcs.load_body_elem`/>>
+            <</action>>
+          "/>
+          <method name="before_save" action="
+            <<action>>
+              <<pyfunc name=`custom.formdefn_funcs.dump_body_elem`/>>
+            <</action>>
+          "/>
+        </frame_methods>
+      </grid_frame>
+
+    </body>
+    <button_row template="Setup_Form"/>
+    <frame_methods template="Setup_Form">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<pyfunc name=`custom.formdefn_funcs.load_body`/>>
+        <</action>>
+      "/>
+      <method name="before_save" action="
+        <<action>>
+          <<pyfunc name=`custom.formdefn_funcs.dump_body`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+  <inline_form name="grid_frame" title="Grid frame object">
+    <frame main_object="gridframe_vars">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Form name:"/>
+        <col/>
+        <display obj_name="form_vars" col_name="form_name" lng="160"/>
+        <row/>
+        <col/>
+        <label value="Title:"/>
+        <col/>
+        <display obj_name="form_vars" col_name="title" lng="250"/>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Main object:"/>
+        <col/>
+        <input obj_name="gridframe_vars" col_name="main_object" lng="160"/>
+        <row/>
+        <col/>
+        <label value="Description column:"/>
+        <col/>
+        <input obj_name="gridframe_vars" col_name="obj_descr" lng="160"/>
+      </body>
+      <button_row>
+        <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
+          btn_validate="true" btn_default="true" action="
+            <<action>>
+              <<end_form state=`completed`/>>
+            <</action>>
+          "/>
+      </button_row>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_req_close" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+  <inline_form name="tree_frame" title="Tree frame object">
+    <frame main_object="treeframe_vars">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Form name:"/>
+        <col/>
+        <display obj_name="form_vars" col_name="form_name" lng="160"/>
+        <row/>
+        <col/>
+        <label value="Title:"/>
+        <col/>
+        <display obj_name="form_vars" col_name="title" lng="250"/>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Main object:"/>
+        <col/>
+        <input obj_name="treeframe_vars" col_name="main_object" lng="160"/>
+        <row/>
+        <col/>
+        <label value="Description column:"/>
+        <col/>
+        <input obj_name="treeframe_vars" col_name="obj_descr" lng="160"/>
+        <row/>
+        <col/>
+        <label value="Combo type:"/>
+        <col/>
+        <input obj_name="treeframe_vars" col_name="combo_type" lng="160"/>
+      </body>
+      <button_row>
+        <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
+          btn_validate="true" btn_default="true" action="
+            <<action>>
+              <<end_form state=`completed`/>>
+            <</action>>
+          "/>
+      </button_row>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_req_close" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+  <inline_form name="subtype_frames" title="Customised sub-type frames">
+    <frame main_object="subtype_vars">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Form name:"/>
+        <col/>
+        <display obj_name="form_vars" col_name="form_name" lng="160"/>
+        <row/>
+        <col/>
+        <label value="Title:"/>
+        <col/>
+        <display obj_name="form_vars" col_name="title" lng="250"/>
+        <block/>
+
+        <grid data_object="subtypes" growable="true" num_grid_rows="5">
+          <toolbar/>
+          <cur_columns>
+            <cur_col col_name="subtype_id" lng="120"/>
+            <!--cur_col col_name="body_xml" lng="200" expand="true"/-->
+          </cur_columns>
+          <cur_filter/>
+          <cur_sequence>
+            <cur_seq col_name="subtype_id" desc="false"/>
+          </cur_sequence>
+          <grid_methods/>
+        </grid>
+
+        <grid_frame main_object="subtypes">
+          <toolbar/>
+          <body>
+            <block/>
+            <panel/>
+            <row/>
+            <col/>
+            <button lng="150" btn_id="design" btn_label="Frame design"
+                btn_enabled="true" btn_validate="true" action="
+              <<action>>
+                <<sub_form name=`_sys.setup_form_body`>>
+                  <<call_params>>
+                    <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                    <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                    <<call_param name=`body_xml` type=`data_attr` source=`subtypes.body_xml`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`body_xml` type=`data_attr` target=`subtypes.body_xml`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</sub_form>>
+              <</action>>
+            "/>
+          </body>
+          <button_row template="Grid_Frame"/>
+          <frame_methods template="Grid_Frame"/>
+        </grid_frame>
+
+     </body>
+      <button_row template="Setup_Form"/>
+      <frame_methods template="Setup_Form"/>
+    </frame>
+  </inline_form>
+</form>

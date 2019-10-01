@@ -23,8 +23,12 @@ function ask_question(args) {
       var args = [frame_ref, answer];
       send_request('answer', args);
       }
-    else
-      question.callback(answer)
+    else {
+      var callback = question.callback;
+      var ctx = callback[0];
+      var func = callback[1];
+      func.call(ctx, answer);
+      };
     };
 
   var button_row = document.createElement('div');
@@ -41,6 +45,13 @@ function ask_question(args) {
     button.label = ans;
     button.appendChild(document.createTextNode(ans));
 
+    button.style.border = '1px solid darkgrey';
+    button.style.color = 'navy';
+    button.style.outline = '0px solid transparent';
+    button.style.height = '22px';
+    button.style.borderRadius = '4px';
+
+
     button.onclick = function(e) {
       // FF sometimes generates click event when Enter pressed
       // this ensures that clicked() only gets called once
@@ -50,7 +61,10 @@ function ask_question(args) {
 
     button.clicked = function() {question.close_window(this.label)};
     button.pos = button_row.childNodes.length;
-    if (ans == dflt) question.dflt_pos = button.pos;
+    if (ans === dflt) {
+      question.dflt_pos = button.pos;
+      button.style.border = '1px solid blue';
+      }
     button_row.appendChild(button);
     if (button.offsetWidth < 60)
       button.style.width = '60px';
@@ -119,32 +133,44 @@ question.onkeydown = function(e) {
       };
     case 37: {  // Left
       if (this.dflt_pos > 0) {
+        this.current_focus = this.lastChild.childNodes[this.dflt_pos];
+        this.current_focus.style.border = '1px solid darkgrey';
         this.dflt_pos -= 1;
         this.current_focus = this.lastChild.childNodes[this.dflt_pos];
+        this.current_focus.style.border = '1px solid blue';
         this.current_focus.focus();
         };
       break;
       };
     case 38: {  // Up
       if (this.dflt_pos > 0) {
+        this.current_focus = this.lastChild.childNodes[this.dflt_pos];
+        this.current_focus.style.border = '1px solid darkgrey';
         this.dflt_pos -= 1;
         this.current_focus = this.lastChild.childNodes[this.dflt_pos];
+        this.current_focus.style.border = '1px solid blue';
         this.current_focus.focus();
         };
       break;
       };
     case 39: {  // Right
       if (this.dflt_pos < (this.lastChild.childNodes.length-1)) {
+        this.current_focus = this.lastChild.childNodes[this.dflt_pos];
+        this.current_focus.style.border = '1px solid darkgrey';
         this.dflt_pos += 1;
         this.current_focus = this.lastChild.childNodes[this.dflt_pos];
+        this.current_focus.style.border = '1px solid blue';
         this.current_focus.focus();
         };
       break;
       };
     case 40: {  // Down
       if (this.dflt_pos < (this.lastChild.childNodes.length-1)) {
+        this.current_focus = this.lastChild.childNodes[this.dflt_pos];
+        this.current_focus.style.border = '1px solid darkgrey';
         this.dflt_pos += 1;
         this.current_focus = this.lastChild.childNodes[this.dflt_pos];
+        this.current_focus.style.border = '1px solid blue';
         this.current_focus.focus();
         };
       break;

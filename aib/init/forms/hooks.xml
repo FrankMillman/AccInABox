@@ -1,0 +1,50 @@
+<form name="hooks" title="Setup database hooks">
+
+  <db_objects/>
+  <mem_objects>
+    <mem_obj name="var" descr="Variable to store hooks">
+      <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
+        long_descr="Table name" allow_amend="true"/>
+      <mem_col col_name="hook_type" data_type="TEXT" short_descr="Hook type"
+        long_descr="Hook type" allow_amend="true"/>
+      <mem_col col_name="hook" data_type="SXML" short_descr="Hook"
+        long_descr="Hook" col_head="Hook" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="full_name" data_type="TEXT" short_descr="Full name"
+        long_descr="Table name [dot] hook" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+
+  <input_params>
+    <input_param name="table_name" type="data_attr" target="var.table_name"/>
+    <input_param name="hook_type" type="data_attr" target="var.hook_type"/>
+    <input_param name="hook" type="data_attr" target="var.hook" required="true"/>
+  </input_params>
+
+  <output_params>
+    <output_param name="hook" type="data_attr" source="var.hook"/>
+  </output_params>
+
+  <frame main_object="var">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <display obj_name="var" col_name="full_name" lng="250"/>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <input obj_name="var" col_name="hook" lng="80"/>
+    </body>
+    <button_row template="Setup_Form_Single"/>
+    <frame_methods template="Setup_Form_Single">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<pyfunc name=`custom.actions.setup_hook_name`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

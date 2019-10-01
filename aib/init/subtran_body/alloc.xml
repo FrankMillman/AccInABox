@@ -1,0 +1,224 @@
+<subtype_body subtype_id="alloc">
+  <block/>
+  <panel/>
+
+  <row/>
+  <col/>
+  <label value="Receipt no:"/>
+  <col/>
+  <input obj_name="ar_rec" col_name="tran_number" lng="84" readonly="true" skip="true"/>
+
+  <col/>
+  <label value="Customer Id:"/>
+  <col/>
+  <input obj_name="ar_rec" col_name="cust_id" lng="84" readonly="true" skip="true"/>
+  <display obj_name="party" col_name="display_name" lng="160"/>
+
+  <row/>
+  <col/>
+  <label value="Receipt date:"/>
+  <col/>
+  <input obj_name="ar_rec" col_name="tran_date" lng="84" readonly="true" skip="true"/>
+
+  <col/>
+  <label value="Balance outstanding:"/>
+  <col/>
+  <input obj_name="due_bal" col_name="total" lng="84" readonly="true" skip="true"/>
+  <display obj_name="cust" col_name="currency" lng="40"/>
+
+  <row/>
+  <col/>
+  <label value="Amount:"/>
+  <col/>
+  <input obj_name="ar_rec" col_name="rec_cust" lng="84" readonly="true" skip="true"/>
+
+  <col/>
+  <label value="Unallocated:"/>
+  <col/>
+  <input obj_name="ar_rec" col_name="unallocated" lng="84" readonly="true" skip="true"/>
+
+  <block/>
+  <panel/>
+
+  <row/>
+  <col/>
+  <text value="Ageing: "/>
+  <col/>
+  <label value="120 days"/>
+  <col/>
+  <label value="90 days"/>
+  <col/>
+  <label value="60 days"/>
+  <col/>
+  <label value="30 days"/>
+  <col/>
+  <label value="Current"/>
+  <col/>
+  <label value="Total"/>
+
+  <row/>
+  <col/>
+  <text value="Balance: "/>
+  <col/>
+  <input obj_name="due_bal" col_name="onetwenty" lng="80" readonly="true" skip="true"/>
+  <col/>
+  <input obj_name="due_bal" col_name="ninety" lng="80" readonly="true" skip="true"/>
+  <col/>
+  <input obj_name="due_bal" col_name="sixty" lng="80" readonly="true" skip="true"/>
+  <col/>
+  <input obj_name="due_bal" col_name="thirty" lng="80" readonly="true" skip="true"/>
+  <col/>
+  <input obj_name="due_bal" col_name="current" lng="80" readonly="true" skip="true"/>
+  <col/>
+  <input obj_name="due_bal" col_name="total" lng="80" readonly="true" skip="true"/>
+
+  <row/>
+  <col/>
+  <text value="Show/Alloc: "/>
+  <col/>
+  <input obj_name="bal_vars" col_name="show_120" after="
+    <<after>>
+      <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`4`/>>
+      <<restart_grid obj_name=`ar_items`/>>
+    <</after>>
+    "/>
+  <input obj_name="bal_vars" col_name="alloc_120" validation="
+      <<validations>>
+        <<validation>>
+          <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`4`/>>
+        <</validation>>
+      <</validations>>
+    " after="
+    <<after>>
+      <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`4`/>>
+    <</after>>
+    "/>
+  <col/>
+  <input obj_name="bal_vars" col_name="show_90" after="
+    <<after>>
+      <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`3`/>>
+      <<restart_grid obj_name=`ar_items`/>>
+    <</after>>
+    "/>
+  <input obj_name="bal_vars" col_name="alloc_90" validation="
+      <<validations>>
+        <<validation>>
+          <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`3`/>>
+        <</validation>>
+      <</validations>>
+    " after="
+    <<after>>
+      <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`3`/>>
+    <</after>>
+    "/>
+  <col/>
+  <input obj_name="bal_vars" col_name="show_60" after="
+    <<after>>
+      <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`2`/>>
+      <<restart_grid obj_name=`ar_items`/>>
+    <</after>>
+    "/>
+  <input obj_name="bal_vars" col_name="alloc_60" validation="
+      <<validations>>
+        <<validation>>
+          <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`2`/>>
+        <</validation>>
+      <</validations>>
+    " after="
+    <<after>>
+      <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`2`/>>
+    <</after>>
+    "/>
+  <col/>
+  <input obj_name="bal_vars" col_name="show_30" after="
+    <<after>>
+      <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`1`/>>
+      <<restart_grid obj_name=`ar_items`/>>
+    <</after>>
+    "/>
+  <input obj_name="bal_vars" col_name="alloc_30" validation="
+      <<validations>>
+        <<validation>>
+          <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`1`/>>
+        <</validation>>
+      <</validations>>
+    " after="
+    <<after>>
+      <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`1`/>>
+    <</after>>
+    "/>
+  <col/>
+  <input obj_name="bal_vars" col_name="show_curr" after="
+    <<after>>
+      <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`0`/>>
+      <<restart_grid obj_name=`ar_items`/>>
+    <</after>>
+    "/>
+  <input obj_name="bal_vars" col_name="alloc_curr" validation="
+      <<validations>>
+        <<validation>>
+          <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`0`/>>
+        <</validation>>
+      <</validations>>
+    " after="
+    <<after>>
+      <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`0`/>>
+    <</after>>
+    "/>
+  <col/>
+  <input obj_name="bal_vars" col_name="show_tot" after="
+    <<after>>
+      <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`-1`/>>
+      <<restart_grid obj_name=`ar_items`/>>
+    <</after>>
+    "/>
+  <input obj_name="bal_vars" col_name="alloc_tot" validation="
+      <<validations>>
+        <<validation>>
+          <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`-1`/>>
+        <</validation>>
+      <</validations>>
+    " after="
+    <<after>>
+      <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`-1`/>>
+    <</after>>
+    "/>
+
+  <block/>
+  <grid data_object="ar_items" growable="false" num_grid_rows="5" auto_start="false">
+    <toolbar>
+      <tool type="nav"/>
+    </toolbar>
+    <cur_columns>
+      <cur_col col_name="tran_number" lng="80" readonly="true" skip="true"/>
+      <cur_col col_name="tran_date" lng="80" readonly="true" skip="true"/>
+      <cur_col col_name="amount_cust" lng="80" readonly="true" skip="true"/>
+      <cur_col col_name="balance_cust" lng="80" readonly="true" skip="true"/>
+      <cur_col col_name="due_cust" lng="80" readonly="true" skip="true"/>
+      <cur_col col_name="alloc_cust" lng="80"/>
+
+    </cur_columns>
+    <cur_filter>
+      <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
+        op="=" expr="ar_rec.cust_row_id" rbr=""/>
+      <cur_fil test="AND" lbr="" col_name="tran_date"
+        op="&gt;" expr="bal_vars.first_date" rbr=""/>
+      <cur_fil test="AND" lbr="" col_name="tran_date"
+        op="&lt;=" expr="bal_vars.last_date" rbr=""/>
+      <cur_fil test="AND" lbr="" col_name="bal_cust_tran"
+        op="!=" expr="0" rbr=""/>
+    </cur_filter>
+    <cur_sequence>
+      <cur_seq col_name="tran_date"/>
+      <cur_seq col_name="tran_number"/>
+    </cur_sequence>
+    <grid_methods template="Grid">
+      <method name="after_save" action="
+        <<action>>
+          <<pyfunc name=`custom.artrans_funcs.after_save_alloc`/>>
+        <</action>>
+        "/>
+    </grid_methods>
+  </grid>
+
+</subtype_body>

@@ -1,0 +1,351 @@
+<form name="ar_cust_bal" title="Customer query" before_start_form="
+  <<action>>
+    <<assign src=`var.settings` tgt=`balance_date_vars.settings`/>>
+    <<assign src=`var.balance_date` tgt=`balance_date_vars.balance_date`/>>
+    <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
+    <<assign src=`date_range_vars.start_date` tgt=`tran_vars.start_date`/>>
+    <<assign src=`date_range_vars.end_date` tgt=`tran_vars.end_date`/>>
+    <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
+    <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="cust" table_name="ar_customers" is_formview_obj="true"/>
+    <db_obj name="ar_items" table_name="ar_openitems"/>
+    <db_obj name="party" table_name="org_parties" fkey="cust.party_row_id"/>
+    <db_obj name="currency" table_name="adm_currencies" fkey="cust.currency_id"/>
+    <db_obj name="ar_trans" table_name="ar_trans" view="true"/>
+  </db_objects>
+  <mem_objects>
+    <!--
+    <mem_obj name="aged_bal" descr="Aged balance in customer currency">
+      <mem_col col_name="total" data_type="DEC" short_descr="Total"
+        long_descr="Total" col_head="Total" allow_null="true"
+        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="current" data_type="DEC" short_descr="Current"
+        long_descr="Current" col_head="Current" allow_null="true"
+        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="thirty" data_type="DEC" short_descr="30 days"
+        long_descr="30 days" col_head="30 days" allow_null="true"
+        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="sixty" data_type="DEC" short_descr="60 days"
+        long_descr="60 days" col_head="60 days" allow_null="true"
+        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="ninety" data_type="DEC" short_descr="90 days"
+        long_descr="90 days" col_head="90 days" allow_null="true"
+        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="onetwenty" data_type="DEC" short_descr="120 days"
+        long_descr="120 days" col_head="120 days" allow_null="true"
+        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
+    </mem_obj>
+    -->
+    <mem_obj name="bal_vars" descr="Variables for 'Balance' tab">
+      <mem_col col_name="show_tot" data_type="BOOL" short_descr="Show all trans due"
+        long_descr="Show all transactions due" allow_amend="true" dflt_val="true"/>
+      <mem_col col_name="show_curr" data_type="BOOL" short_descr="Show current trans due"
+        long_descr="Show current transactions due" allow_amend="true"/>
+      <mem_col col_name="show_30" data_type="BOOL" short_descr="Show 30 day trans due"
+        long_descr="Show 30 day transactions due" allow_amend="true"/>
+      <mem_col col_name="show_60" data_type="BOOL" short_descr="Show 60 day trans due"
+        long_descr="Show 60 day transactions due" allow_amend="true"/>
+      <mem_col col_name="show_90" data_type="BOOL" short_descr="Show 90 day trans due"
+        long_descr="Show 90 day transactions due" allow_amend="true"/>
+      <mem_col col_name="show_120" data_type="BOOL" short_descr="Show 120 day trans due"
+        long_descr="Show 120 day transactions due" allow_amend="true"/>
+      <!-- mem_col col_name="ageing_dates" data_type="JSON" short_descr="Dates for age buckets"
+        long_descr="Dates for ageing buckets" allow_amend="true"/>
+      <mem_col col_name="first_date" data_type="DTE" short_descr="First date for selection"
+        long_descr="First date for selection" allow_amend="true"/>
+      <mem_col col_name="last_date" data_type="DTE" short_descr="Last date for selection"
+        long_descr="Last date for selection" allow_amend="true"/ -->
+    </mem_obj>
+    <mem_obj name="tran_vars" descr="Variables for 'Transactions' tab">
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Start date"
+        long_descr="Transactions from this date" allow_amend="true"/>
+      <mem_col col_name="end_date" data_type="DTE" short_descr="End date"
+        long_descr="Transactions to this date" allow_amend="true"/>
+      <mem_col col_name="op_bal" data_type="DEC" short_descr="Opening balance"
+        long_descr="Opening balance" col_head="B/F" allow_amend="true"
+        db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="cl_bal" data_type="DEC" short_descr="Closing balance"
+        long_descr="Closing balance" col_head="C/F" allow_amend="true"
+        db_scale="2" scale_ptr="currency.scale"/>
+    </mem_obj>
+    <mem_obj name="balance_date_vars" descr="Variables for balance date">
+      <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
+        long_descr="Settings, passed between main form and subform" allow_amend="true"/>
+      <mem_col col_name="balance_date" data_type="DTE" short_descr="Balance date"
+        long_descr="Balance at which date" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="date_range_vars" descr="Variables for date range">
+      <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
+        long_descr="Settings, passed between main form and subform" allow_amend="true"/>
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Date from"
+        long_descr="From which date" allow_amend="true"/>
+      <mem_col col_name="end_date" data_type="DTE" short_descr="Date to"
+        long_descr="To which date" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params/>
+  <output_params/>
+  <frame main_object="cust">
+    <toolbar template="Query_Form"/>
+    <body>
+      <block/>
+      <panel/>
+
+      <row/>
+      <col/>
+      <label value="Customer Id:"/>
+      <col/>
+      <input obj_name="cust" col_name="cust_id" lng="80" readonly="true" skip="true"/>
+      <display obj_name="party" col_name="display_name" lng="160"/>
+
+      <block/>
+      <nb_start/>
+
+      <nb_page nb_label="Balance"/>
+
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Balance at"/>
+      <col/>
+      <input obj_name="balance_date_vars" col_name="balance_date" lng="84" readonly="true" skip="true"/>
+      <col/>
+      <display obj_name="currency" col_name="symbol" lng="10"/>
+      <display obj_name="cust" col_name="bal_total" lng="80"/>
+      <col/>
+      <button btn_id="change_date" btn_label="Change" help_msg = "Change date"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.select_balance_date`>>
+              <<call_params>>
+                <<call_param name=`settings` type=`data_attr` source=`balance_date_vars.settings`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`settings` type=`data_attr` target=`balance_date_vars.settings`/>>
+                <<return_param name=`balance_date` type=`data_attr`
+                  target=`balance_date_vars.balance_date`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.as_at_date`/>>
+                  <<pyfunc name=`custom.arcust_funcs.get_aged_bal`/>>
+                  <<restart_grid obj_name=`ar_items`/>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <text value="Ageing: "/>
+      <col/>
+      <label value="120 days"/>
+      <col/>
+      <label value="90 days"/>
+      <col/>
+      <label value="60 days"/>
+      <col/>
+      <label value="30 days"/>
+      <col/>
+      <label value="Current"/>
+      <col/>
+      <label value="Total"/>
+
+      <row/>
+      <col/>
+      <text value="Balance: "/>
+      <col/>
+      <input obj_name="cust" col_name="bal_120" lng="80" readonly="true" skip="true"/>
+      <col/>
+      <input obj_name="cust" col_name="bal_90" lng="80" readonly="true" skip="true"/>
+      <col/>
+      <input obj_name="cust" col_name="bal_60" lng="80" readonly="true" skip="true"/>
+      <col/>
+      <input obj_name="cust" col_name="bal_30" lng="80" readonly="true" skip="true"/>
+      <col/>
+      <input obj_name="cust" col_name="bal_curr" lng="80" readonly="true" skip="true"/>
+      <col/>
+      <input obj_name="cust" col_name="bal_total" lng="80" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <text value="Show: "/>
+      <col/>
+      <input obj_name="bal_vars" col_name="show_120" after="
+        <<after>>
+          <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`4`/>>
+          <<restart_grid obj_name=`ar_items`/>>
+        <</after>>
+        "/>
+      <col/>
+      <input obj_name="bal_vars" col_name="show_90" after="
+        <<after>>
+          <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`3`/>>
+          <<restart_grid obj_name=`ar_items`/>>
+        <</after>>
+        "/>
+      <col/>
+      <input obj_name="bal_vars" col_name="show_60" after="
+        <<after>>
+          <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`2`/>>
+          <<restart_grid obj_name=`ar_items`/>>
+        <</after>>
+        "/>
+      <col/>
+      <input obj_name="bal_vars" col_name="show_30" after="
+        <<after>>
+          <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`1`/>>
+          <<restart_grid obj_name=`ar_items`/>>
+        <</after>>
+        "/>
+      <col/>
+      <input obj_name="bal_vars" col_name="show_curr" after="
+        <<after>>
+          <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`0`/>>
+          <<restart_grid obj_name=`ar_items`/>>
+        <</after>>
+        "/>
+      <col/>
+      <input obj_name="bal_vars" col_name="show_tot" after="
+        <<after>>
+          <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`-1`/>>
+          <<restart_grid obj_name=`ar_items`/>>
+        <</after>>
+        "/>
+
+      <block/>
+      <grid data_object="ar_items" growable="false" num_grid_rows="6" auto_start="false">
+        <toolbar>
+          <tool type="nav"/>
+        </toolbar>
+        <cur_columns>
+          <cur_col col_name="tran_number" lng="80" readonly="true"/>
+          <cur_col col_name="tran_date" lng="80" readonly="true"/>
+          <cur_col col_name="amount_cust" lng="80" readonly="true"/>
+          <cur_col col_name="balance_cust_as_at" lng="80" readonly="true"/>
+        </cur_columns>
+        <cur_filter>
+          <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
+            op="=" expr="cust.row_id" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op="&gt;" expr="_ctx.first_date" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op="&lt;=" expr="_ctx.last_date" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="balance_cust_as_at"
+            op="!=" expr="0" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="posted"
+            op="=" expr="'1'" rbr=""/>
+        </cur_filter>
+        <cur_sequence>
+          <cur_seq col_name="tran_date"/>
+          <cur_seq col_name="tran_number"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <nb_page nb_label="Transactions"/>
+
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="From:"/>
+      <col/>
+      <input obj_name="tran_vars" col_name="start_date" lng="84" readonly="true" skip="true"/>
+      <col/>
+      <label value="To:"/>
+      <col/>
+      <input obj_name="tran_vars" col_name="end_date" lng="84" readonly="true" skip="true"/>
+      <col/>
+      <button btn_id="change_dates" btn_label="Change" help_msg = "Change dates"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.select_date_range`>>
+              <<call_params>>
+                <<call_param name=`settings` type=`data_attr` source=`date_range_vars.settings`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`settings` type=`data_attr` target=`date_range_vars.settings`/>>
+                <<return_param name=`start_date` type=`data_attr` target=`date_range_vars.start_date`/>>
+                <<return_param name=`end_date` type=`data_attr` target=`date_range_vars.end_date`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<assign src=`date_range_vars.start_date` tgt=`tran_vars.start_date`/>>
+                  <<assign src=`date_range_vars.end_date` tgt=`tran_vars.end_date`/>>
+                  <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
+                  <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
+                  <<restart_grid obj_name=`ar_trans`/>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+
+      <block/>
+      <grid data_object="ar_trans" growable="false" num_grid_rows="8" running_balance="ar_trans"
+          header_row="[`tran_vars.start_date`, `'Bal b/f'`, null, null, `tran_vars.op_bal`]"
+          footer_row="[`tran_vars.end_date`, `'Bal c/f'`, null, null, `tran_vars.cl_bal`]">
+        <toolbar>
+          <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
+            shortcut="ctrl,13" action="
+              <<action>>
+                <<select_from_view/>>
+                <<!--req_formview/-->>
+              <</action>>
+            "/>
+          <tool type="nav"/>
+        </toolbar>
+        <cur_columns>
+          <cur_col col_name="tran_date" lng="80" readonly="true"/>
+          <cur_col col_name="tran_type" lng="80" readonly="true"/>
+          <cur_col col_name="tran_number" lng="100" readonly="true"/>
+          <cur_col col_name="amount_cust" lng="80" readonly="true"/>
+          <cur_col col_name="balance_cust" lng="80" readonly="true"/>
+        </cur_columns>
+        <cur_filter>
+          <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
+            op="=" expr="cust.row_id" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op="&gt;=" expr="_ctx.start_date" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op="&lt;=" expr="_ctx.end_date" rbr=""/>
+        </cur_filter>
+        <cur_sequence>
+          <cur_seq col_name="tran_date"/>
+          <cur_seq col_name="tran_type"/>
+          <cur_seq col_name="tran_row_id"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <nb_end/>
+
+    </body>
+    <button_row template="Query_Form"/>
+    <frame_methods template="Query_Form">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<!-- init_obj obj_name=`aged_bal`/ -->>
+          <<init_obj obj_name=`bal_vars`/>>
+          <<assign src=`var.settings` tgt=`balance_date_vars.settings`/>>
+          <<assign src=`_ctx.bal_date_cust` tgt=`balance_date_vars.balance_date`/>>
+          <<assign src=`_ctx.bal_date_cust` tgt=`_ctx.as_at_date`/>>
+          <<assign src=`cust.row_id` tgt=`_ctx.cust_row_id`/>>
+          <<pyfunc name=`custom.arcust_funcs.get_aged_bal`/>>
+          <<restart_grid obj_name=`ar_items`/>>
+          <<skip_input num=`6`/>>
+        <</action>>
+        "/>
+    </frame_methods>
+  </frame>
+</form>

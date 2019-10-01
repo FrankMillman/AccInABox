@@ -1,0 +1,186 @@
+<form name="setup_cursor" title="Setup database cursor">
+  <db_objects/>
+  <mem_objects>
+    <mem_obj name="cursor_vars" descr="Cursor variables">
+      <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
+        long_descr="Table name"/>
+      <mem_col col_name="cursor_name" data_type="TEXT" short_descr="Cursor name"
+        long_descr="Cursor name"/>
+      <mem_col col_name="data_type" data_type="TEXT" short_descr="Data type"
+        long_descr="Json (from setup_table) or Xml (from setup_form)"/>
+      <mem_col col_name="cur_columns_json" data_type="JSON" short_descr="Cursor columns"
+        long_descr="Cursor columns" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="cur_filter_json" data_type="JSON" short_descr="Cursor filter"
+        long_descr="Cursor filter" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="cur_sequence_json" data_type="JSON" short_descr="Cursor sequence"
+        long_descr="Cursor sequence" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="cur_columns_xml" data_type="SXML" short_descr="Cursor columns"
+        long_descr="Cursor columns" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="cur_filter_xml" data_type="SXML" short_descr="Cursor filter"
+        long_descr="Cursor filter" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="cur_sequence_xml" data_type="SXML" short_descr="Cursor sequence"
+        long_descr="Cursor sequence" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="column" descr="Cursor columns" parent="cursor_vars"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="Column"/>
+      <mem_col col_name="lng" data_type="INT" short_descr="Length"
+        long_descr="Column length" col_head="Lng" allow_amend="true"/>
+      <mem_col col_name="expand" data_type="BOOL" short_descr="Expand?"
+        long_descr="Expand column to fill frame?" col_head="Exp?"
+        allow_null="true" allow_amend="true" dflt_val='false'/>
+      <mem_col col_name="readonly" data_type="BOOL" short_descr="Read only?"
+        long_descr="Read only field?" col_head="R/O?"
+        allow_null="true" allow_amend="true" dflt_val='false'/>
+      <mem_col col_name="skip" data_type="BOOL" short_descr="Skip?"
+        long_descr="Skip field?" col_head="Skip?"
+        allow_null="true" allow_amend="true" dflt_val='false'/>
+      <mem_col col_name="reverse" data_type="BOOL" short_descr="Reverse?"
+        long_descr="Reverse sign? (numeric only)" col_head="Rev?"
+        allow_null="true" allow_amend="true" dflt_val='false'/>
+      <mem_col col_name="before" data_type="SXML" short_descr="Before input"
+        long_descr="Action to take before input" col_head="Before"
+        allow_null="true" allow_amend="true"/>
+      <mem_col col_name="dflt_val" data_type="SXML" short_descr="Default value"
+        long_descr="Steps to derive default value" col_head="Default"
+        allow_null="true" allow_amend="true"/>
+      <mem_col col_name="validation" data_type="SXML" short_descr="Validation"
+        long_descr="Validation after input" col_head="Validation"
+        allow_null="true" allow_amend="true"/>
+      <mem_col col_name="after" data_type="SXML" short_descr="After input"
+        long_descr="Action to take after input" col_head="After"
+        allow_null="true" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="filter" descr="Cursor filter" parent="cursor_vars"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="test" data_type="TEXT" short_descr="Test"
+        long_descr="where/and/or" col_head="Test" allow_amend="true"/>
+      <mem_col col_name="lbr" data_type="TEXT" short_descr="Left bracket"
+        long_descr="Left bracket (if required)" col_head="("
+        allow_null="true" allow_amend="true" max_len="1"/>
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="Column" allow_amend="true"/>
+      <mem_col col_name="op" data_type="TEXT" short_descr="Operation"
+        long_descr="Operation" col_head="Op" allow_amend="true"/>
+      <mem_col col_name="expr" data_type="TEXT" short_descr="Expression"
+        long_descr="Expression" col_head="Expr" allow_amend="true"/>
+      <mem_col col_name="rbr" data_type="TEXT" short_descr="Right bracket"
+        long_descr="Right bracket (if required)" col_head=")"
+        allow_null="true" allow_amend="true" max_len="1"/>
+    </mem_obj>
+    <mem_obj name="sequence" descr="Cursor sequence" parent="cursor_vars"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="Column"/>
+      <mem_col col_name="descending" data_type="BOOL" short_descr="Descending?"
+        long_descr="Descending?" col_head="Desc?"
+        allow_null="true" allow_amend="true" dflt_val='false'/>
+    </mem_obj>
+  </mem_objects>
+  <input_params>
+    <input_param name="table_name" type="data_attr" target="cursor_vars.table_name" required="true"/>
+    <input_param name="cursor_name" type="data_attr" target="cursor_vars.cursor_name" required="true"/>
+    <input_param name="data_type" type="data_attr" target="cursor_vars.data_type" required="true"/>
+    <input_param name="cur_columns_json" type="data_attr" target="cursor_vars.cur_columns_json"/>
+    <input_param name="cur_filter_json" type="data_attr" target="cursor_vars.cur_filter_json"/>
+    <input_param name="cur_sequence_json" type="data_attr" target="cursor_vars.cur_sequence_json"/>
+    <input_param name="cur_columns_xml" type="data_attr" target="cursor_vars.cur_columns_xml"/>
+    <input_param name="cur_filter_xml" type="data_attr" target="cursor_vars.cur_filter_xml"/>
+    <input_param name="cur_sequence_xml" type="data_attr" target="cursor_vars.cur_sequence_xml"/>
+  </input_params>
+  <output_params>
+    <output_param name="cur_columns_json" type="data_attr" source="cursor_vars.cur_columns_json"/>
+    <output_param name="cur_filter_json" type="data_attr" source="cursor_vars.cur_filter_json"/>
+    <output_param name="cur_sequence_json" type="data_attr" source="cursor_vars.cur_sequence_json"/>
+    <output_param name="cur_columns_xml" type="data_attr" source="cursor_vars.cur_columns_xml"/>
+    <output_param name="cur_filter_xml" type="data_attr" source="cursor_vars.cur_filter_xml"/>
+    <output_param name="cur_sequence_xml" type="data_attr" source="cursor_vars.cur_sequence_xml"/>
+  </output_params>
+  <frame main_object="cursor_vars">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Table:"/>
+      <col/>
+      <display obj_name="cursor_vars" col_name="table_name" lng="160"/>
+      <col/>
+      <label value="Cursor:"/>
+      <col/>
+      <display obj_name="cursor_vars" col_name="cursor_name" lng="160"/>
+      <block/>
+      <grid data_object="column" growable="true" num_grid_rows="3">
+        <toolbar template="Grid" title="Columns:"/>
+        <cur_columns>
+          <cur_col col_name="col_name" lng="120" expand="true"/>
+          <cur_col col_name="lng" lng="40"/>
+          <cur_col col_name="expand" lng="40"/>
+          <cur_col col_name="readonly" lng="40"/>
+          <cur_col col_name="skip" lng="40"/>
+          <!-- cur_col col_name="reverse" lng="40"/ -->
+          <cur_col col_name="before" lng="100"/>
+          <cur_col col_name="dflt_val" lng="100"/>
+          <cur_col col_name="validation" lng="100"/>
+          <cur_col col_name="after" lng="100"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq" desc="false"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <block/>
+      <grid data_object="filter" growable="true" num_grid_rows="2">
+        <toolbar template="Grid" title="Filter:"/>
+        <cur_columns>
+          <cur_col col_name="test" lng="80"/>
+          <cur_col col_name="lbr" lng="20"/>
+          <cur_col col_name="col_name" lng="120"/>
+          <cur_col col_name="op" lng="60"/>
+          <cur_col col_name="expr" lng="120" expand="true"/>
+          <cur_col col_name="rbr" lng="20"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq" desc="false"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <grid data_object="sequence" growable="true" num_grid_rows="2">
+        <toolbar template="Grid" title="Sequence:"/>
+        <cur_columns>
+          <cur_col col_name="col_name" lng="120" expand="true"/>
+          <cur_col col_name="descending" lng="40"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq" desc="false"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+    </body>
+    <button_row template="Setup_Form"/>
+    <frame_methods template="Setup_Form">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<pyfunc name=`custom.cursor_fields.load_cur_flds`/>>
+        <</action>>
+      "/>
+      <method name="before_save" action="
+        <<action>>
+          <<pyfunc name=`custom.cursor_fields.dump_cur_flds`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

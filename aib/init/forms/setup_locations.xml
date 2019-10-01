@@ -1,0 +1,50 @@
+<form name="setup_locations"  title="Set up locations">
+
+  <db_objects>
+    <db_obj name="location" table_name="adm_locations"/>
+  </db_objects>
+  <mem_objects/>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="location">
+    <toolbar/>
+    <body>
+      <block/>
+      <tree data_object="location" lng="250" height="350" toolbar="true"/>
+      <tree_frame main_object="location">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Location id:"/>
+          <col/>
+          <input obj_name="location" col_name="location" lng="120"/>
+          <row/>
+          <col/>
+          <label value="Full name:"/>
+          <col/>
+          <input obj_name="location" col_name="descr" lng="240"/>
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame"/>
+      </tree_frame>
+    </body>
+    <button_row/>
+    <frame_methods>
+      <method name="on_req_close" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+      <method name="on_req_cancel" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

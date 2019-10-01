@@ -1,0 +1,84 @@
+<form name="setup_form_methods" title="Setup methods">
+
+  <db_objects/>
+
+  <mem_objects>
+
+    <mem_obj name="form_vars" descr="Variables used in form">
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name" col_head="Name"/>
+      <mem_col col_name="title" data_type="TEXT" short_descr="Title"
+        long_descr="Form title" col_head="Title"/>
+      <mem_col col_name="methods_xml" data_type="SXML" short_descr="Methods xml"
+        long_descr="Methods xml" allow_amend="true"/>
+      <mem_col col_name="method_template" data_type="TEXT" short_descr="Method template"
+        long_descr="Template for frame methods" allow_null="true" allow_amend="true" max_len="120"/>
+    </mem_obj>
+
+    <mem_obj name="method" descr="Frame method" parent="form_vars"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" key_field="A" allow_amend="true"/>
+      <mem_col col_name="name" data_type="TEXT" short_descr="Method name"
+        long_descr="Method name" col_head="Name" max_len="20"/>
+      <mem_col col_name="obj_name" data_type="TEXT" short_descr="Object name"
+        long_descr="Object name (used in on_clean/on_amend/on_read/on_delete)"
+        col_head="Object" allow_null="true" allow_amend="true" max_len="20"/>
+      <mem_col col_name="action" data_type="SXML" short_descr="Method action"
+        long_descr="Method action" col_head="Action" allow_amend="true"/>
+    </mem_obj>
+
+  </mem_objects>
+
+  <input_params>
+    <input_param name="form_name" type="data_attr" target="form_vars.form_name" required="true"/>
+    <input_param name="title" type="data_attr" target="form_vars.title" required="true"/>
+    <input_param name="methods_xml" type="data_attr" target="form_vars.methods_xml" required="true"/>
+  </input_params>
+
+  <output_params>
+    <output_param name="methods_xml" type="data_attr" source="form_vars.methods_xml"/>
+  </output_params>
+
+  <frame main_object="form_vars">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Template:"/>
+      <col/>
+      <input obj_name="form_vars" col_name="method_template" lng="120"/>
+      <block/>
+      <vbox/>
+      <grid data_object="method" growable="true" num_grid_rows="5">
+        <toolbar template="Grid" title="Frame methods:"/>
+        <cur_columns>
+          <cur_col col_name="name" lng="120"/>
+          <cur_col col_name="obj_name" lng="80"/>
+          <cur_col col_name="action" lng="80"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <vbox_end/>
+    </body>
+    <button_row template="Setup_Form"/>
+    <frame_methods template="Setup_Form">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<pyfunc name=`custom.formdefn_funcs.load_methods`/>>
+        <</action>>
+      "/>
+      <method name="before_save" action="
+        <<action>>
+          <<pyfunc name=`custom.formdefn_funcs.dump_methods`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

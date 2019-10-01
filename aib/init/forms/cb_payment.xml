@@ -1,0 +1,294 @@
+<form name="cb_payment" title="Cash book payment" before_start_form="
+  <<action>>
+    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_pmt` action=`lock`/>>
+  <</action>>
+  " on_close_form="
+  <<action>>
+    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_pmt` action=`unlock`/>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="cb_pmt" table_name="cb_tran_pmt" is_formview_obj="true"/>
+    <db_obj name="cb_pmt_det" table_name="cb_tran_pmt_det" parent="cb_pmt"/>
+    <db_obj name="in_ledg" table_name="in_ledger_params" fkey="cb_in_det.wh_row_id"/>
+    <db_obj name="prod" table_name="inv_prod_codes" fkey="cb_invdet.prod_row_id"/>
+    <db_obj name="currency" table_name="adm_currencies" fkey="cb_inv.currency_id"/>
+    <db_obj name="terms_code" table_name="cb_terms_codes" fkey="cb_inv.terms_code_id"/>
+  </db_objects>
+
+  <mem_objects>
+  </mem_objects>
+
+  <input_params/>
+  <output_params/>
+  <frame main_object="cb_pmt">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+
+      <row/>
+      <col/>
+      <label value="Customer Id:"/>
+      <col/>
+      <input obj_name="cb_pmt" col_name="cust_id" lng="80" readonly="true" skip="true"/>
+      <display obj_name="party" col_name="display_name" lng="160"/>
+
+      <col/>
+      <label value="Invoice no:"/>
+      <col/>
+      <input obj_name="cb_pmt" col_name="tran_number" lng="80" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Invoice date:"/>
+      <col/>
+      <input obj_name="cb_pmt" col_name="tran_date" lng="84" readonly="true" skip="true"/>
+
+      <col/>
+      <label value="Terms code:"/>
+      <col/>
+      <input obj_name="cb_pmt" col_name="terms_code" lng="60" readonly="true" skip="true"/>
+      <display obj_name="terms_code" col_name="descr" lng="140"/>
+
+      <row/>
+      <col/>
+      <label value="Tax inclusive?"/>
+      <col/>
+      <input obj_name="cb_pmt" col_name="tax_incl" readonly="true" skip="true"/>
+
+      <col/>
+      <label value="Invoice total:"/>
+      <col/>
+      <display obj_name="currency" col_name="symbol" lng="10"/>
+      <display obj_name="cb_pmt" col_name="pmt_tot_amt" lng="100"/>
+
+      <block/>
+      <vbox/>
+      <grid data_object="cb_pmt_det" growable="true" num_grid_rows="5" readonly="true">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="display_descr" lng="80"/>
+          <cur_col col_name="pmt_net_amt" lng="120"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="line_no"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Invoice net amt:"/>
+      <col/>
+      <display obj_name="cb_pmt" col_name="pmt_net_amt" lng="90" align="right"/>
+
+      <row/>
+      <col/>
+      <label value="Invoice tax amt:"/>
+      <col/>
+      <display obj_name="cb_pmt" col_name="pmt_tax_amt" lng="90" align="right"/>
+
+      <row/>
+      <col/>
+      <label value="Invoice total amt:"/>
+      <col/>
+      <display obj_name="cb_pmt" col_name="pmt_tot_amt" lng="90" align="right"/>
+      <vbox_end/>
+
+      <grid_frame main_object="cb_pmt_det">
+        <toolbar/>
+        <body>
+
+          <block/>
+          <panel/>
+
+          <row/>
+          <col/>
+          <input obj_name="cb_pmt_det" col_name="line_type" radio="true"/>
+
+          <subtype_frame subtype_obj="cb_pmt_det" subtype_col="line_type">
+
+            <subtype_body subtype_id="isls">
+              <block/>
+              <panel/>
+              <if_ src="_param.in_ledger_id" op="is_" tgt="$None"/>
+              <row/>
+              <col/>
+              <label value="Warehouse:"/>
+              <col/>
+              <input obj_name="cb_pmt_det" col_name="warehouse" lng="80"/>
+              <display obj_name="in_ledg" col_name="descr" lng="120"/>
+              <end_if/>
+              <row/>
+              <col/>
+              <label value="Prod code:"/>
+              <col/>
+              <input obj_name="cb_pmt_det" col_name="prod_code" lng="80"/>
+              <display obj_name="prod" col_name="descr" lng="150"/>
+              <row/>
+              <col/>
+              <label value="Quantity:"/>
+              <col/>
+              <input obj_name="cb_pmt_det" col_name="qty" lng="80"/>
+              <row/>
+              <col/>
+              <label value="Price:"/>
+              <col/>
+              <input obj_name="cb_pmt_det" col_name="price" lng="80"/>
+              <row/>
+              <col/>
+              <label value="Amount:"/>
+              <col/>
+              <input obj_name="cb_pmt_det" col_name="isls_amount" lng="80"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="nsls">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Sales code:"/>
+              <col/>
+              <input obj_name="cb_pmt_det" col_name="nsls_code" lng="80"/>
+              <row/>
+              <col/>
+              <label value="Description:"/>
+              <col/>
+              <input obj_name="cb_pmt_det" col_name="nsls_descr" lng="120"/>
+              <row/>
+              <col/>
+              <label value="Amount:"/>
+              <col/>
+              <input obj_name="cb_pmt_det" col_name="nsls_amount" lng="80"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="com">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Comment code:"/>
+              <col/>
+              <input obj_name="cb_pmt_det" col_name="comment" lng="80"/>
+              <row/>
+              <col/>
+              <label value="Comment:"/>
+              <col/>
+              <input obj_name="cb_pmt_det" col_name="text" lng="250" height="5"/>
+            </subtype_body>
+
+          </subtype_frame>
+
+        </body>
+        <button_row template="Grid_Frame"/>
+        <frame_methods template="Grid_Frame"/>
+
+      </grid_frame>
+
+    </body>
+    <button_row template="Transaction"/>
+    <frame_methods template="Transaction">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<case>>
+            <<obj_exists obj_name=`cb_pmt`>>
+            <</obj_exists>>
+            <<default>>
+              <<change_button>>
+                <<btn_enabled btn_id=&quot;btn_post&quot; state=&quot;false&quot;/>>
+              <</change_button>>
+              <<change_button>>
+                <<btn_enabled btn_id=&quot;btn_close&quot; state=&quot;false&quot;/>>
+              <</change_button>>
+              <<inline_form name=`pmt_header`>>
+                <<on_return>>
+                  <<return state=`cancelled`>>
+                    <<end_form state=`cancelled`/>>
+                  <</return>>
+                  <<return state=`completed`>>
+                    <<change_button>>
+                      <<btn_enabled btn_id=&quot;btn_post&quot; state=&quot;true&quot;/>>
+                    <</change_button>>
+                    <<change_button>>
+                      <<btn_enabled btn_id=&quot;btn_close&quot; state=&quot;true&quot;/>>
+                    <</change_button>>
+                    <<restart_frame/>>
+                  <</return>>
+                <</on_return>>
+              <</inline_form>>
+            <</default>>
+          <</case>>
+        <</action>>
+        "/>
+      <method name="do_post" action="
+        <<action>>
+          <<case>>
+            <<compare src=`cb_pmt.pmt_tot_amt` op=`=` tgt=`0`>>
+              <<ask title=`Invoice` enter=`No` escape=`No`
+                  question=`No detail lines - sure you want to post?`>>
+                <<response ans=`No`>>
+                <</response>>
+                <<response ans=`Yes`>>
+                  <<post_obj obj_name=`cb_pmt`/>>
+                <</response>>
+              <</ask>>
+            <</compare>>
+            <<default>>
+              <<post_obj obj_name=`cb_pmt`/>>
+            <</default>>
+          <</case>>
+        <</action>>
+        "/>
+    </frame_methods>
+  </frame>
+  <inline_form name="pmt_header" title="Payment header">
+    <frame main_object="cb_pmt">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+
+        <row/>
+        <col/>
+        <label value="Customer Id:"/>
+        <col/>
+        <input obj_name="cb_pmt" col_name="cust_id" lng="80"/>
+        <display obj_name="party" col_name="display_name" lng="160"/>
+
+        <if_ src="_ledger.auto_pmt_no" op="is_" tgt="$None"/>
+        <row/>
+        <col/>
+        <label value="Invoice no:"/>
+        <col/>
+        <input obj_name="cb_pmt" col_name="tran_number" lng="80"/>
+        <end_if/>
+
+        <row/>
+        <col/>
+        <label value="Invoice date:"/>
+        <col/>
+        <input obj_name="cb_pmt" col_name="tran_date" lng="84"/>
+
+        <row/>
+        <col/>
+        <label value="Terms code:"/>
+        <col/>
+        <input obj_name="cb_pmt" col_name="terms_code" lng="60"/>
+        <display obj_name="terms_code" col_name="descr" lng="140"/>
+
+        <row/>
+        <col/>
+        <label value="Tax inclusive?"/>
+        <col/>
+        <input obj_name="cb_pmt" col_name="tax_incl"/>
+
+      </body>
+
+      <button_row template="Transaction_Header"/>
+      <frame_methods template="Transaction_Header"/>
+    </frame>
+  </inline_form>
+</form>

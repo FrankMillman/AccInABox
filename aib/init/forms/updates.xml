@@ -1,0 +1,548 @@
+<form name="updates" title="Setup database updates">
+
+  <db_objects/>
+  <mem_objects>
+
+    <mem_obj name="var" descr="Variable to store updates">
+      <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
+        long_descr="Table name" allow_amend="true"/>
+      <mem_col col_name="upd_type" data_type="TEXT" short_descr="Update type"
+        long_descr="Update type" allow_amend="true"/>
+      <mem_col col_name="updates" data_type="JSON" short_descr="Updates"
+        long_descr="Updates" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="full_name" data_type="TEXT" short_descr="Full name"
+        long_descr="Table name [dot] upds" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="updates" descr="Updates" parent="var"
+        sequence="[`seq`, [], null]" sub_types="[
+        [`split_src`, null,
+          [
+            [false, `Do not split source`, [`key_fields`, `aggregation`, `on_insert`,
+              `on_update`, `on_delete`, `on_post`, `on_unpost`], []],
+            [true, `Do split source`, [`split_func_name`, `split_fkeys`,
+              `split_flds_to_upd`, `split_return_flds`, `split_chk_totals`], []]
+            ]
+          ]
+        ]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="tbl" data_type="TEXT" short_descr="Table to update"
+        long_descr="Table to update" col_head="Table" key_field="A"
+        max_len="20"/>
+      <mem_col col_name="condition" data_type="JSON" short_descr="Condition"
+        long_descr="Condition to check before updating" col_head="Cond"
+        allow_null="true" allow_amend="true"/>
+      <mem_col col_name="split_src" data_type="BOOL" short_descr="Split source?"
+        long_descr="Split source?" col_head="Split?"
+        allow_null="true" allow_amend="true" dflt_val="false"/>
+      <mem_col col_name="key_fields" data_type="JSON" short_descr="Key fields"
+        long_descr="Key fields" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="aggregation" data_type="JSON" short_descr="Aggregation"
+        long_descr="Aggregation" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="on_insert" data_type="JSON" short_descr="On insert"
+        long_descr="Update on insert" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="on_update" data_type="JSON" short_descr="On update"
+        long_descr="Update on update" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="on_delete" data_type="JSON" short_descr="On delete"
+        long_descr="Update on delete" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="on_post" data_type="JSON" short_descr="On post"
+        long_descr="Update on post" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="on_unpost" data_type="JSON" short_descr="On unpost"
+        long_descr="Update on unpost" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="split_func_name" data_type="TEXT" short_descr="Split function name"
+        long_descr="Split function name" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="split_fkeys" data_type="JSON" short_descr="Split foreign key fields"
+        long_descr="Split foreign key fields" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="split_flds_to_upd" data_type="JSON" short_descr="Split fields to update"
+        long_descr="Split fields to update" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="split_return_flds" data_type="JSON" short_descr="Split return fields"
+        long_descr="Split return fields" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="split_chk_totals" data_type="JSON" short_descr="Split check totals"
+        long_descr="Split check totals" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="cond_obj" descr="Steps for condition" parent="updates"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="test" data_type="TEXT" short_descr="Test"
+        long_descr="where/and/or" col_head="Test" allow_amend="true"/>
+      <mem_col col_name="lbr" data_type="TEXT" short_descr="Left bracket"
+        long_descr="Left bracket (if required)" col_head="("
+        allow_null="true" allow_amend="true" max_len="1"/>
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="Col" allow_amend="true"/>
+      <mem_col col_name="op" data_type="TEXT" short_descr="Op"
+        long_descr="Operator" col_head="Op" allow_amend="true"/>
+      <mem_col col_name="expr" data_type="TEXT" short_descr="Expression"
+        long_descr="Expression" col_head="Expr" allow_amend="true"/>
+      <mem_col col_name="rbr" data_type="TEXT" short_descr="Right bracket"
+        long_descr="Right bracket (if required)" col_head=")"
+        allow_null="true" allow_amend="true" max_len="1"/>
+    </mem_obj>
+
+    <mem_obj name="key_fields" descr="Key fields" parent="updates"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="tgt_field" data_type="TEXT" short_descr="Target field"
+        long_descr="Target field" col_head="Tgt fld" allow_amend="true"/>
+      <mem_col col_name="src_field" data_type="TEXT" short_descr="Source field"
+        long_descr="Source field" col_head="Src fld" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="aggregation" descr="Aggregations" parent="updates"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="tgt_field" data_type="TEXT" short_descr="Target field"
+        long_descr="Target field" col_head="Tgt fld" allow_amend="true"/>
+      <mem_col col_name="op" data_type="TEXT" short_descr="Operator"
+        long_descr="Operator" col_head="Op" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="src_field" data_type="TEXT" short_descr="Source field"
+        long_descr="Source field" col_head="Src fld" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="on_insert" descr="On insert" parent="updates"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="tgt_field" data_type="TEXT" short_descr="Target field"
+        long_descr="Target field" col_head="Tgt fld" allow_amend="true"/>
+      <mem_col col_name="op" data_type="TEXT" short_descr="Operator"
+        long_descr="Operator" col_head="Op" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="src_field" data_type="TEXT" short_descr="Source field"
+        long_descr="Source field" col_head="Src fld" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="on_update" descr="On update" parent="updates"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="tgt_field" data_type="TEXT" short_descr="Target field"
+        long_descr="Target field" col_head="Tgt fld" allow_amend="true"/>
+      <mem_col col_name="op" data_type="TEXT" short_descr="Operator"
+        long_descr="Operator" col_head="Op" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="src_field" data_type="TEXT" short_descr="Source field"
+        long_descr="Source field" col_head="Src fld" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="on_delete" descr="On delete" parent="updates"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="tgt_field" data_type="TEXT" short_descr="Target field"
+        long_descr="Target field" col_head="Tgt fld" allow_amend="true"/>
+      <mem_col col_name="op" data_type="TEXT" short_descr="Operator"
+        long_descr="Operator" col_head="Op" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="src_field" data_type="TEXT" short_descr="Source field"
+        long_descr="Source field" col_head="Src fld" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="on_post" descr="On post" parent="updates"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="tgt_field" data_type="TEXT" short_descr="Target field"
+        long_descr="Target field" col_head="Tgt fld" allow_amend="true"/>
+      <mem_col col_name="op" data_type="TEXT" short_descr="Operator"
+        long_descr="Operator" col_head="Op" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="src_field" data_type="TEXT" short_descr="Source field"
+        long_descr="Source field" col_head="Src fld" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="on_unpost" descr="On unpost" parent="updates"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="tgt_field" data_type="TEXT" short_descr="Target field"
+        long_descr="Target field" col_head="Tgt fld" allow_amend="true"/>
+      <mem_col col_name="op" data_type="TEXT" short_descr="Operator"
+        long_descr="Operator" col_head="Op" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="src_field" data_type="TEXT" short_descr="Source field"
+        long_descr="Source field" col_head="Src fld" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="split_fkeys" descr="Foreign keys to target table" parent="updates"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="tgt_field" data_type="TEXT" short_descr="Target field"
+        long_descr="Target field" col_head="Target" key_field="A" max_len="20"/>
+      <mem_col col_name="src_field" data_type="TEXT" short_descr="Source field"
+        long_descr="Source field" col_head="Source" max_len="20"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="split_flds_to_upd" descr="Fields to update in target table" parent="updates"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="tgt_field" data_type="TEXT" short_descr="Target field"
+        long_descr="Target field name - updated with value returned by split function"
+        col_head="Field" key_field="A" max_len="20"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="split_return_flds" descr="Fields to update on return" parent="updates"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="src_field" data_type="TEXT" short_descr="Source field"
+        long_descr="Source field name - updated with value returned at end of split function"
+        col_head="Field" key_field="A" max_len="20"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="split_chk_totals" descr="Fields to check split totals" parent="updates"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="src_field" data_type="TEXT" short_descr="Source field"
+        long_descr="Source field - must equal sum of target fields"
+        col_head="Source" key_field="A" max_len="20"/>
+      <mem_col col_name="tgt_field" data_type="TEXT" short_descr="Target field"
+        long_descr="Target field" col_head="Target" max_len="20"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+
+  <input_params>
+    <input_param name="table_name" type="data_attr" target="var.table_name"/>
+    <input_param name="upd_type" type="data_attr" target="var.upd_type"/>
+    <input_param name="updates" type="data_attr" target="var.updates" required="true"/>
+  </input_params>
+
+  <output_params>
+    <output_param name="updates" type="data_attr" source="var.updates"/>
+  </output_params>
+
+  <frame main_object="var">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <display obj_name="var" col_name="full_name" lng="250"/>
+      <block/>
+      <grid data_object="updates" growable="true" num_grid_rows="3">
+        <toolbar template="Grid" title="Tables to update:"/>
+        <cur_columns>
+          <cur_col col_name="tbl" lng="120"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <block/>
+      <grid_frame main_object="updates">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Table to update:"/>
+          <col/>
+          <display obj_name="updates" col_name="tbl" lng="150"/>
+          <row/>
+          <col/>
+          <label value="Update condition?"/>
+          <button btn_id="upd_cond" btn_label="Condition"
+              btn_enabled="true" btn_validate="true" btn_default="false" action="
+              <<action>>
+                <<inline_form name=`setup_condition`>>
+                  <<on_return>>
+                    <<return state=`cancelled`/>>
+                    <<return state=`completed`>>
+                      <<case>>
+                        <<compare src=`updates.condition` op=`is not` tgt=`$None`>>
+                          <<change_button>>
+                            <<font_weight btn_id=`upd_cond` value=`bold`/>>
+                          <</change_button>>
+                        <</compare>>
+                        <<default>>
+                          <<change_button>>
+                            <<font_weight btn_id=`upd_cond` value=`normal`/>>
+                          <</change_button>>
+                        <</default>>
+                      <</case>>
+                    <</return>>
+                  <</on_return>>
+                <</inline_form>>
+              <</action>>
+            "/>
+          <col/>
+          <label value="Split source?"/>
+          <input obj_name="updates" col_name="split_src"/>
+
+          <subtype_frame subtype_obj="updates" subtype_col="split_src">
+
+            <subtype_body subtype_id="False">
+              <block/>
+
+              <grid data_object="key_fields" growable="true" num_grid_rows="3">
+                <toolbar template="Grid" title="Key fields:"/>
+                <cur_columns>
+                  <cur_col col_name="tgt_field" lng="200"/>
+                  <cur_col col_name="src_field" lng="200"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+              <grid data_object="aggregation" growable="true" num_grid_rows="3">
+                <toolbar template="Grid" title="Aggregation:"/>
+                <cur_columns>
+                  <cur_col col_name="tgt_field" lng="200"/>
+                  <cur_col col_name="op" lng="40"/>
+                  <cur_col col_name="src_field" lng="200"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+              <if_ src="var.upd_type" op="eq" tgt="'upd_on_save'"/>
+              <block/>
+              <grid data_object="on_insert" growable="true" num_grid_rows="3">
+                <toolbar template="Grid" title="On insert:"/>
+                <cur_columns>
+                  <cur_col col_name="tgt_field" lng="120"/>
+                  <cur_col col_name="op" lng="40"/>
+                  <cur_col col_name="src_field" lng="120"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+              <grid data_object="on_update" growable="true" num_grid_rows="3">
+                <toolbar template="Grid" title="On update:"/>
+                <cur_columns>
+                  <cur_col col_name="tgt_field" lng="120"/>
+                  <cur_col col_name="op" lng="40"/>
+                  <cur_col col_name="src_field" lng="120"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+              <grid data_object="on_delete" growable="true" num_grid_rows="3">
+                <toolbar template="Grid" title="On delete:"/>
+                <cur_columns>
+                  <cur_col col_name="tgt_field" lng="120"/>
+                  <cur_col col_name="op" lng="40"/>
+                  <cur_col col_name="src_field" lng="120"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+              <end_if/>
+              <if_ src="var.upd_type" op="eq" tgt="'upd_on_post'"/>
+              <block/>
+              <grid data_object="on_post" growable="true" num_grid_rows="3">
+                <toolbar template="Grid" title="On post:"/>
+                <cur_columns>
+                  <cur_col col_name="tgt_field" lng="200"/>
+                  <cur_col col_name="op" lng="40"/>
+                  <cur_col col_name="src_field" lng="200"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+              <grid data_object="on_unpost" growable="true" num_grid_rows="3">
+                <toolbar template="Grid" title="On unpost:"/>
+                <cur_columns>
+                  <cur_col col_name="tgt_field" lng="200"/>
+                  <cur_col col_name="op" lng="40"/>
+                  <cur_col col_name="src_field" lng="200"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+              <end_if/>
+
+            </subtype_body>
+
+            <subtype_body subtype_id="True">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Split function name:"/>
+              <col/>
+              <input obj_name="updates" col_name="split_func_name" lng="250"/>
+              <block/>
+              <grid data_object="split_fkeys" growable="true" num_grid_rows="3">
+                <toolbar template="Grid" title="Fkeys:"/>
+                <cur_columns>
+                  <cur_col col_name="tgt_field" lng="100"/>
+                  <cur_col col_name="src_field" lng="100"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+              <grid data_object="split_flds_to_upd" growable="true" num_grid_rows="3">
+                <toolbar template="Grid" title="Fields:"/>
+                <cur_columns>
+                  <cur_col col_name="tgt_field" lng="100"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+              <grid data_object="split_return_flds" growable="true" num_grid_rows="3">
+                <toolbar template="Grid" title="Returns:"/>
+                <cur_columns>
+                  <cur_col col_name="src_field" lng="100"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+              <grid data_object="split_chk_totals" growable="true" num_grid_rows="3">
+                <toolbar template="Grid" title="Check totals:"/>
+                <cur_columns>
+                  <cur_col col_name="src_field" lng="100"/>
+                  <cur_col col_name="tgt_field" lng="100"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+            </subtype_body>
+
+          </subtype_frame>
+
+        </body>
+        <button_row template="Grid_Frame"/>
+        <frame_methods template="Grid_Frame">
+          <method name="on_start_frame" action="
+            <<action>>
+              <<pyfunc name=`custom.updates.load_details`/>>
+              <<case>>
+                <<compare src=`updates.condition` op=`is not` tgt=`$None`>>
+                  <<change_button>>
+                    <<font_weight btn_id=`upd_cond` value=`bold`/>>
+                  <</change_button>>
+                <</compare>>
+              <</case>>
+            <</action>>
+          "/>
+          <method name="before_save" action="
+            <<action>>
+              <<pyfunc name=`custom.updates.dump_details`/>>
+            <</action>>
+          "/>
+        </frame_methods>
+      </grid_frame>
+    </body>
+    <button_row template="Setup_Form_Single"/>
+    <frame_methods template="Setup_Form_Single">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<pyfunc name=`custom.updates.load_updates`/>>
+        <</action>>
+      "/>
+      <method name="before_save" action="
+        <<action>>
+          <<pyfunc name=`custom.updates.dump_updates`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+  <inline_form name="setup_condition" title="Setup condition">
+    <frame main_object="cond_obj">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Full name:"/>
+        <col/>
+        <display obj_name="var" col_name="full_name" lng="160"/>
+        <block/>
+
+        <grid data_object="cond_obj" growable="true" num_grid_rows="5">
+          <toolbar template="Grid"/>
+          <cur_columns>
+            <cur_col col_name="test" lng="80"/>
+            <cur_col col_name="lbr" lng="20"/>
+            <cur_col col_name="col_name" lng="160"/>
+            <cur_col col_name="op" lng="60"/>
+            <cur_col col_name="expr" lng="160" expand="true"/>
+            <cur_col col_name="rbr" lng="20"/>
+          </cur_columns>
+          <cur_filter/>
+          <cur_sequence>
+            <cur_seq col_name="seq"/>
+          </cur_sequence>
+          <grid_methods template="Grid"/>
+        </grid>
+
+      </body>
+      <button_row>
+        <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
+          btn_validate="true" btn_default="true" action="
+            <<action>>
+              <<end_form state=`completed`/>>
+            <</action>>
+          "/>
+        <!-- button btn_id="btn_can" btn_label="Cancel" lng="60" btn_enabled="true"
+          btn_validate="false" btn_default="false" action="
+            <<action>>
+              <<end_form state=`cancelled`/>>
+            <</action>>
+          "/ -->
+      </button_row>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_req_close" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_start_frame" action="
+          <<action>>
+            <<pyfunc name=`custom.updates.load_condition`/>>
+          <</action>>
+        "/>
+        <method name="before_save" action="
+          <<action>>
+            <<pyfunc name=`custom.updates.dump_condition`/>>
+          <</action>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+</form>

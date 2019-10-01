@@ -1,42 +1,34 @@
-<form name="foreign_key">
+<form name="foreign_key" title="Foreign key">
 
   <db_objects/>
   <mem_objects>
     <mem_obj name="fk_var" descr="Variable to store fkey_flds">
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
-        long_descr="Table name" col_head="" key_field="N" allow_null="false"
-        allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Table name" allow_amend="true"/>
       <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
-        long_descr="Column name" col_head="" key_field="N" allow_null="false"
-        allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Column name" allow_amend="true"/>
       <mem_col col_name="fkey" data_type="JSON" short_descr="Foreign key"
-        long_descr="Foreign key" col_head="Fkey" key_field="N" allow_null="true"
-        allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Foreign key" col_head="Fkey" allow_null="true" allow_amend="true"/>
       <mem_col col_name="full_col_name" data_type="TEXT" short_descr="Full column name"
-        long_descr="Table name [dot] column name" col_head="" key_field="N" allow_null="false"
-        allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Table name [dot] column name" allow_amend="true"/>
     </mem_obj>
 
     <mem_obj name="fkey_flds" descr="Foreign key fields" parent="fk_var">
-      <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
-        long_descr="Table name" col_head="" key_field="N" allow_null="false"
-        allow_amend="true" max_len="0" db_scale="0"
-        fkey="[`fk_var`, `table_name`, null, null, true]"/>
       <mem_col col_name="tgt_table" data_type="TEXT" short_descr="Target table"
-        long_descr="Target table name" col_head="Tgt table" key_field="N" allow_null="false"
-        allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Target table name" col_head="Tgt table" allow_amend="true"/>
       <mem_col col_name="tgt_col" data_type="TEXT" short_descr="Target column"
-        long_descr="Target column name" col_head="Tgt col" key_field="N" allow_null="false"
-        allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Target column name" col_head="Tgt col" allow_amend="true"/>
       <mem_col col_name="alt_src" data_type="TEXT" short_descr="Alternate source"
-        long_descr="Alternate source column name" col_head="Alt src" key_field="N"
-        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Alternate source column name" col_head="Alt src"
+        allow_null="true" allow_amend="true"/>
       <mem_col col_name="alt_tgt" data_type="TEXT" short_descr="Alternate target"
-        long_descr="Alternate target column name" col_head="Alt tgt" key_field="N"
-        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Alternate target column name" col_head="Alt tgt"
+        allow_null="true" allow_amend="true"/>
       <mem_col col_name="child" data_type="BOOL" short_descr="Child?"
-        long_descr="Is this a child table?" col_head="Child?" key_field="N" allow_null="false"
-        allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Is this a child table?" col_head="Child?" allow_amend="true"/>
+      <mem_col col_name="cursor" data_type="TEXT" short_descr="Cursor"
+        long_descr="Cursor to use for lookups" col_head="Cursor"
+        allow_null="true" allow_amend="true"/>
     </mem_obj>
   </mem_objects>
 
@@ -59,37 +51,41 @@
       <col/>
       <label value="Column:"/>
       <col/>
-      <display fld="fk_var.full_col_name" lng="250"/>
+      <display obj_name="fk_var" col_name="full_col_name" lng="250"/>
       <block/>
       <panel/>
       <row/>
       <col/>
       <label value="Target table:"/>
       <col/>
-      <input fld="fkey_flds.tgt_table" lng="120"/>
+      <input obj_name="fkey_flds" col_name="tgt_table" lng="120"/>
       <row/>
       <col/>
       <label value="Target column:"/>
       <col/>
-      <input fld="fkey_flds.tgt_col" lng="120"/>
+      <input obj_name="fkey_flds" col_name="tgt_col" lng="120"/>
       <row/>
       <col/>
       <label value="Alternate source:"/>
       <col/>
-      <input fld="fkey_flds.alt_src" lng="120"/>
+      <input obj_name="fkey_flds" col_name="alt_src" lng="120"/>
       <row/>
       <col/>
       <label value="Alternate target:"/>
       <col/>
-      <input fld="fkey_flds.alt_tgt" lng="120"/>
+      <input obj_name="fkey_flds" col_name="alt_tgt" lng="120"/>
       <row/>
       <col/>
       <label value="Child table?"/>
       <col/>
-      <input fld="fkey_flds.child"/>
+      <input obj_name="fkey_flds" col_name="child"/>
+      <row/>
+      <col/>
+      <label value="Cursor name"/>
+      <col/>
+      <input obj_name="fkey_flds" col_name="cursor"/>
     </body>
-    <!-- button_row template="Setup_Form"/ -->
-    <button_row validate="true" template="Setup_Form"/>
+    <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
         <<action>>
@@ -101,40 +97,6 @@
           <<pyfunc name=`custom.foreign_key.dump_fkey`/>>
         <</action>>
       "/>
-      <method name="do_restore" action="
-        <<action>>
-          <<pyfunc name=`custom.foreign_key.restore_fkey`/>>
-          <<restore_obj obj_name=`fk_var`/>>
-        <</action>>
-      "/>
     </frame_methods>
-<!--
-    <button_row validate="true">
-      <button btn_id="btn_ok" btn_label="Ok" lng="60"
-          btn_enabled="true" btn_validate="true" btn_default="true" action="
-        <<action>>
-          <<end_form state=`completed`/>>
-        <</action>>
-      "/>
-      <button btn_id="btn_can" btn_label="Cancel" lng="60"
-          btn_enabled="true" btn_validate="false" btn_default="false" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
-      "/>
-    </button_row>
-    <frame_methods>
-      <method name="on_req_cancel" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
-      "/>
-      <method name="on_req_close" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
-      "/>
-    </frame_methods>
--->
   </frame>
 </form>

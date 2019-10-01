@@ -11,6 +11,12 @@
         <xs:element ref="inline_form" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
       <xs:attribute name="name" use="required"/>
+      <xs:attribute name="title" use="required"/>
+      <xs:attribute name="before_start_form"/>
+      <xs:attribute name="after_start_form"/>
+      <xs:attribute name="on_end_form"/>
+      <xs:attribute name="on_close_form"/>
+      <xs:attribute name="readonly" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="db_objects">
@@ -24,11 +30,12 @@
     <xs:complexType>
       <xs:attribute name="name" use="required"/>
       <xs:attribute name="table_name" use="required"/>
-      <xs:attribute name="hooks"/>
-      <xs:attribute name="parent"/>
-      <xs:attribute name="fkey"/>
-      <xs:attribute name="cursor"/>
-      <xs:attribute name="formview_obj" type="xs:boolean"/>
+      <xs:attribute name="parent"/> <!-- setup_user -->
+      <xs:attribute name="view" type="xs:boolean"/>
+      <xs:attribute name="fkey"/> <!-- users_roles -->
+      <!-- xs:attribute name="cursor"/ --> <!-- users_roles -->
+      <xs:attribute name="is_formview_obj" type="xs:boolean"/>
+      <xs:attribute name="must_exist" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="mem_objects">
@@ -46,27 +53,34 @@
       <xs:attribute name="name" use="required"/>
       <xs:attribute name="descr"/>
       <xs:attribute name="parent"/>
-      <xs:attribute name="hooks"/>
       <xs:attribute name="sequence"/>
-      <xs:attribute name="upd_chks"/>
-      <xs:attribute name="del_chks"/>
-    </xs:complexType>
+      <xs:attribute name="sub_types"/>
+      <xs:attribute name="fkey"/>
+      <xs:attribute name="cursor"/>
+      <xs:attribute name="tree_params"/> <!-- users_roles -->
+      <xs:attribute name="actions"/> <!-- setup_roles -->
+      <xs:attribute name="clone_from"/> <!-- setup_party -->
+      <xs:attribute name="module_id"/>
+ </xs:complexType>
   </xs:element>
   <xs:element name="mem_col">
     <xs:complexType>
       <xs:attribute name="col_name" use="required"/>
-      <xs:attribute name="data_type" use="required"/>
-      <xs:attribute name="short_descr" use="required"/>
+      <xs:attribute name="col_type"/>
+      <xs:attribute name="data_type"/>
+      <xs:attribute name="short_descr"/>
       <xs:attribute name="long_descr"/>
       <xs:attribute name="col_head"/>
-      <xs:attribute name="key_field" use="required"/>
+      <xs:attribute name="key_field"/>
+      <xs:attribute name="calculated"/>
       <xs:attribute name="allow_null" type="xs:boolean"/>
-      <xs:attribute name="allow_amend" type="xs:boolean"/>
+      <xs:attribute name="allow_amend"/>
       <xs:attribute name="max_len" type="xs:integer"/>
       <xs:attribute name="db_scale" type="xs:integer"/>
       <xs:attribute name="scale_ptr"/>
       <xs:attribute name="dflt_val"/>
-      <xs:attribute name="col_chks"/>
+      <xs:attribute name="dflt_rule"/>
+      <xs:attribute name="col_checks"/>
       <xs:attribute name="fkey"/>
       <xs:attribute name="choices"/>
       <xs:attribute name="sql"/>
@@ -111,8 +125,6 @@
       </xs:sequence>
       <xs:attribute name="main_object"/>
       <xs:attribute name="obj_descr"/>
-      <xs:attribute name="before_start_form"/>
-      <xs:attribute name="after_start_form"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="toolbar">
@@ -121,24 +133,28 @@
         <xs:element ref="tool" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
       <xs:attribute name="template"/>
+      <xs:attribute name="title"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="tool">
     <xs:complexType>
       <xs:attribute name="type" use="required"/>
-      <xs:attribute name="fld"/>
+      <xs:attribute name="obj_name"/>
+      <xs:attribute name="col_name"/>
       <xs:attribute name="name"/>
       <xs:attribute name="lng"/>
       <xs:attribute name="label"/>
       <xs:attribute name="tip"/>
       <xs:attribute name="action"/>
       <xs:attribute name="shortcut"/>
-      <!-- xs:attribute name="confirm" type="xs:boolean"/ -->
     </xs:complexType>
   </xs:element>
   <xs:element name="body">
     <xs:complexType>
-      <xs:group ref="body_elements" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:choice>
+        <xs:group ref="body_elements" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="bpmn"/>
+      </xs:choice>
     </xs:complexType>
   </xs:element>
   <xs:group name="body_elements">
@@ -146,6 +162,8 @@
       <xs:element name="block"/>
       <xs:element name="vbox"/>
       <xs:element name="vbox_end"/>
+      <xs:element ref="if_"/>
+      <xs:element name="end_if"/>
       <xs:element ref="string"/>
       <xs:element name="panel"/>
       <xs:element name="row"/>
@@ -162,12 +180,22 @@
       <xs:element ref="grid"/>
       <xs:element ref="grid_frame"/>
       <xs:element ref="tree"/>
+      <xs:element ref="tree_lkup"/>
       <xs:element ref="tree_combo"/>
+      <xs:element ref="tree_report"/>
       <xs:element ref="tree_frame"/>
-      <xs:element ref="subtype_panel"/>
+      <xs:element ref="subtype_frame"/>
+      <xs:element ref="subtran_frame"/>
       <xs:element ref="button_row"/>
     </xs:choice>
   </xs:group>
+  <xs:element name="if_">
+    <xs:complexType>
+      <xs:attribute name="src" use="required"/>
+      <xs:attribute name="op" use="required"/>
+      <xs:attribute name="tgt" use="required"/>
+    </xs:complexType>
+  </xs:element>
   <xs:element name="string">
     <xs:complexType>
       <xs:attribute name="value" use="required"/>
@@ -178,6 +206,7 @@
     <xs:complexType>
       <xs:attribute name="colspan" type="xs:integer"/>
       <xs:attribute name="rowspan" type="xs:integer"/>
+      <xs:attribute name="align"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="text">
@@ -192,7 +221,8 @@
   </xs:element>
   <xs:element name="input">
     <xs:complexType>
-      <xs:attribute name="fld" use="required"/>
+      <xs:attribute name="obj_name" use="required"/>
+      <xs:attribute name="col_name" use="required"/>
       <xs:attribute name="lng" type="xs:integer"/>
       <xs:attribute name="height" type="xs:integer"/>
       <xs:attribute name="pwd" type="xs:boolean"/>
@@ -200,8 +230,11 @@
       <xs:attribute name="skip" type="xs:boolean"/>
       <xs:attribute name="choice" type="xs:boolean"/>
       <xs:attribute name="lookup" type="xs:boolean"/>
+      <!-- xs:attribute name="reverse" type="xs:boolean"/ -->
+      <xs:attribute name="radio" type="xs:boolean"/>
+      <xs:attribute name="label"/>
       <xs:attribute name="before"/>
-      <xs:attribute name="default"/>
+      <xs:attribute name="form_dflt"/>
       <xs:attribute name="validation"/>
       <xs:attribute name="after"/>
     </xs:complexType>
@@ -214,8 +247,11 @@
   </xs:element>
   <xs:element name="display">
     <xs:complexType>
-      <xs:attribute name="fld" use="required"/>
-      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="obj_name" use="required"/>
+      <xs:attribute name="col_name" use="required"/>
+      <xs:attribute name="lng" type="xs:integer" use="required"/>
+      <xs:attribute name="prev" type="xs:boolean"/>
+      <xs:attribute name="align"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="nb_start">
@@ -223,7 +259,7 @@
   </xs:element>
   <xs:element name="nb_page">
     <xs:complexType>
-      <xs:attribute name="label" use="required"/>
+      <xs:attribute name="nb_label" use="required"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="nb_end">
@@ -241,12 +277,17 @@
       <xs:attribute name="data_object" use="required"/>
       <xs:attribute name="obj_descr"/>
       <xs:attribute name="growable" type="xs:boolean"/>
+      <xs:attribute name="readonly" type="xs:boolean"/>
       <xs:attribute name="num_grid_rows" type="xs:integer"/>
-      <xs:attribute name="auto_startrow" type="xs:boolean"/>
+      <xs:attribute name="cursor_name"/>
       <xs:attribute name="form_name"/>
-      <xs:attribute name="cursor"/>
-      <xs:attribute name="colspan" type="xs:integer"/>
-      <xs:attribute name="rowspan" type="xs:integer"/>
+      <xs:attribute name="start_col"/>
+      <xs:attribute name="start_val"/>
+      <xs:attribute name="header_row"/>
+      <xs:attribute name="footer_row"/>
+      <xs:attribute name="running_balance"/>
+      <xs:attribute name="auto_start" type="xs:boolean"/>
+      <xs:attribute name="auto_startrow" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="cur_columns">
@@ -269,7 +310,7 @@
       <xs:attribute name="expand" type="xs:boolean"/>
       <xs:attribute name="readonly" type="xs:boolean"/>
       <xs:attribute name="skip" type="xs:boolean"/>
-      <xs:attribute name="reverse" type="xs:boolean"/>
+      <!-- xs:attribute name="reverse" type="xs:boolean"/ -->
       <xs:attribute name="before"/>
       <xs:attribute name="default"/>
       <xs:attribute name="validation"/>
@@ -285,6 +326,21 @@
     </xs:complexType>
   </xs:element>
   <xs:element name="cur_filter">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="cur_fil" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="cur_fil">
+    <xs:complexType>
+      <xs:attribute name="test" use="required"/>
+      <xs:attribute name="lbr" use="required"/>
+      <xs:attribute name="col_name" use="required"/>
+      <xs:attribute name="op" use="required"/>
+      <xs:attribute name="expr" use="required"/>
+      <xs:attribute name="rbr" use="required"/>
+    </xs:complexType>
   </xs:element>
   <xs:element name="cur_sequence">
     <xs:complexType>
@@ -310,10 +366,10 @@
   <xs:element name="grid_frame">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="toolbar" minOccurs="0"/>
+        <xs:element ref="toolbar"/>
         <xs:element ref="body"/>
-        <xs:element ref="button_row" minOccurs="0"/>
-        <xs:element ref="frame_methods" minOccurs="0"/>
+        <xs:element ref="button_row"/>
+        <xs:element ref="frame_methods"/>
       </xs:sequence>
       <xs:attribute name="main_object"/>
       <xs:attribute name="obj_descr"/>
@@ -327,39 +383,49 @@
       <xs:attribute name="toolbar" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
-  <xs:element name="tree_combo">
+  <xs:element name="tree_lkup">
     <xs:complexType>
       <xs:attribute name="data_object" use="required"/>
-      <xs:attribute name="group" use="required"/>
-      <xs:attribute name="group_code" use="required"/>
-      <xs:attribute name="group_filter"/>
-      <xs:attribute name="member" use="required"/>
-      <xs:attribute name="member_code" use="required"/>
-      <xs:attribute name="member_descr" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="height" type="xs:integer"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="tree_combo">
+    <xs:complexType>
+      <xs:attribute name="group_name" use="required"/>
+      <xs:attribute name="member_name" use="required"/>
       <xs:attribute name="lng" type="xs:integer"/>
       <xs:attribute name="height" type="xs:integer"/>
       <xs:attribute name="toolbar" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
+  <xs:element name="tree_report">
+    <xs:complexType>
+      <xs:attribute name="pyfunc" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="height" type="xs:integer"/>
+    </xs:complexType>
+  </xs:element>
   <xs:element name="tree_frame">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="toolbar" minOccurs="0"/>
+        <xs:element ref="toolbar"/>
         <xs:element ref="body"/>
-        <xs:element ref="button_row" minOccurs="0"/>
-        <xs:element ref="frame_methods" minOccurs="0"/>
+        <xs:element ref="button_row"/>
+        <xs:element ref="frame_methods"/>
       </xs:sequence>
       <xs:attribute name="main_object" use="required"/>
       <xs:attribute name="obj_descr"/>
       <xs:attribute name="combo_type"/>
     </xs:complexType>
   </xs:element>
-  <xs:element name="subtype_panel">
+  <xs:element name="subtype_frame">
     <xs:complexType>
       <xs:sequence>
         <xs:element ref="subtype_body" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
-      <xs:attribute name="subtype" use="required"/>
+      <xs:attribute name="subtype_obj" use="required"/>
+      <xs:attribute name="subtype_col" use="required"/>
       <xs:attribute name="lng" type="xs:integer"/>
     </xs:complexType>
   </xs:element>
@@ -369,13 +435,26 @@
       <xs:attribute name="subtype_id" use="required"/>
     </xs:complexType>
   </xs:element>
+  <xs:element name="subtran_frame">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="subtran_body" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="subtran_obj" use="required"/>
+      <xs:attribute name="subtran_col" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="subtran_body">
+    <xs:complexType>
+      <xs:attribute name="subtran_id" use="required"/>
+    </xs:complexType>
+  </xs:element>
   <xs:element name="button_row">
     <xs:complexType>
       <xs:sequence>
         <xs:element ref="button" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
       <xs:attribute name="template"/>
-      <xs:attribute name="validate" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="button">
@@ -411,7 +490,8 @@
       <xs:sequence>
         <xs:element ref="frame"/>
       </xs:sequence>
-      <xs:attribute name="form_name"/>
+      <xs:attribute name="name" use="required"/>
+      <xs:attribute name="title" use="required"/>
     </xs:complexType>
   </xs:element>
 

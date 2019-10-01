@@ -1,0 +1,18 @@
+<form name="tree_lookup" title="Lookup - tree view">
+
+  <db_objects/>
+  <mem_objects/>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="lkup_obj">
+    <toolbar/>
+    <body>
+      <block/>
+      <tree_lkup data_object="lkup_obj" lng="400" height="300"/>
+    </body>
+    <button_row/>
+    <frame_methods/>
+  </frame>
+</form>

@@ -1,69 +1,67 @@
-<form name="setup_party">
+<form name="setup_party" title="Set up parties" before_start_form="
+  <<action>>
+    <<pyfunc name=`custom.party_setup.before_start_form`/>>
+  <</action>>
+  ">
   <db_objects>
-    <db_obj name="party" table_name="org_parties" formview_obj="true"/>
-    <db_obj name="party_ids" table_name="org_party_ids"/>
+    <db_obj name="party" table_name="org_parties" is_formview_obj="true"/>
     <db_obj name="addr" table_name="org_addresses" parent="party"/>
     <db_obj name="msg" table_name="org_messaging" parent="party"/>
     <db_obj name="phone" table_name="org_phone_nos" parent="party"/>
     <db_obj name="contact" table_name="org_contacts" parent="party"/>
-    <db_obj name="msg_types" table_name="adm_msg_types"/>
+    <db_obj name="msg_types" table_name="org_msg_types"/>
   </db_objects>
   <mem_objects>
+    <mem_obj name="var" descr="Form variables">
+      <mem_col col_name="party_id" data_type="TEXT" short_descr="Party id"
+        long_descr="Party id" col_head="Address" allow_amend="true"/>
+    </mem_obj>
     <mem_obj name="addr_types" descr="Address types">
       <mem_col col_name="address_type" data_type="TEXT" short_descr="Address type"
-        long_descr="Address type" col_head="Addr type" key_field="A"
-        allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
+        long_descr="Address type" col_head="Addr type" key_field="A"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
-        long_descr="Description" col_head="Description" key_field="N"
-        allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
+        long_descr="Description" col_head="Description"/>
       <mem_col col_name="disp_addr" data_type="TEXT" short_descr="Display address"
-        long_descr="Display address" col_head="Address" key_field="N"
-        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Display address" col_head="Address" allow_null="true" allow_amend="true"/>
     </mem_obj>
-    <mem_obj name="mem_addr" descr="Mem object to store Address details" parent="party">
+    <mem_obj name="mem_addr" descr="Address details"
+        parent="party" clone_from="addr">
     </mem_obj>
-    <mem_obj name="mem_msg" descr="Mem object to store Messaging details" parent="party">
+    <mem_obj name="mem_msg_types" descr="Message types">
       <mem_col col_name="msg_type_id" data_type="INT" short_descr="Message type"
         long_descr="Message type" col_head="Msg type" key_field="A"
-        allow_null="false" allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`adm_msg_types`, `row_id`, `message_type`, `message_type`, false]"/>
+        fkey="[`org_msg_types`, `row_id`, `message_type`, `message_type`, false, null]"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
-        long_descr="Description" col_head="Description" key_field="N"
-        allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
+        long_descr="Description" col_head="Description"/>
+    </mem_obj>
+    <mem_obj name="mem_msg" descr="Messaging details" parent="party">
+      <mem_col col_name="msg_type_id" data_type="INT" short_descr="Message type"
+        long_descr="Message type" col_head="Msg type" key_field="A"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
+        long_descr="Description" col_head="Description"/>
       <mem_col col_name="message_addr" data_type="TEXT" short_descr="Message address"
-        long_descr="Message address" col_head="Address" key_field="N"
-        allow_null="true" allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Message address" col_head="Address" allow_null="true" allow_amend="true"/>
     </mem_obj>
-    <mem_obj name="mem_phone" descr="Mem object to store Phone No details" parent="party">
+    <mem_obj name="mem_phone" descr="Phone No details" parent="party">
       <mem_col col_name="phone_type" data_type="TEXT" short_descr="Phone type"
-        long_descr="Phone type" col_head="Type" key_field="A"
-        allow_null="false" allow_amend="false" max_len="12" db_scale="0"/>
+        long_descr="Phone type" col_head="Type" key_field="A" max_len="12"/>
       <mem_col col_name="phone_number" data_type="TEXT" short_descr="Phone number"
-        long_descr="Phone number" col_head="Number" key_field="N"
-        allow_null="true" allow_amend="true" max_len="30" db_scale="0"/>
+        long_descr="Phone number" col_head="Number" allow_null="true" allow_amend="true" max_len="30"/>
     </mem_obj>
-    <mem_obj name="mem_contact" descr="Mem object to store Contact details" parent="party">
+    <mem_obj name="mem_contact" descr="Contact details" parent="party">
       <mem_col col_name="contact_name" data_type="TEXT" short_descr="Contact name"
-        long_descr="Contact name" col_head="Name" key_field="A"
-        allow_null="false" allow_amend="false" max_len="30" db_scale="0"/>
+        long_descr="Contact name" col_head="Name" key_field="A" max_len="30"/>
       <mem_col col_name="position" data_type="TEXT" short_descr="Position"
-        long_descr="Position" col_head="Position" key_field="N"
-        allow_null="true" allow_amend="true" max_len="30" db_scale="0"/>
+        long_descr="Position" col_head="Position" allow_null="true" allow_amend="true" max_len="30"/>
       <mem_col col_name="phone_number" data_type="TEXT" short_descr="Phone number"
-        long_descr="Phone number" col_head="Phone" key_field="N"
-        allow_null="true" allow_amend="true" max_len="30" db_scale="0"/>
+        long_descr="Phone number" col_head="Phone" allow_null="true" allow_amend="true" max_len="30"/>
       <mem_col col_name="email_address" data_type="TEXT" short_descr="Email address"
-        long_descr="Email address" col_head="Email" key_field="N"
-        allow_null="true" allow_amend="true" max_len="30" db_scale="0"/>
+        long_descr="Email address" col_head="Email" allow_null="true" allow_amend="true" max_len="30"/>
     </mem_obj>
   </mem_objects>
   <input_params/>
   <output_params/>
-  <frame main_object="party" before_start_form="
-      <<action>>
-        <<pyfunc name=`custom.party_setup.before_start_form`/>>
-      <</action>>
-      ">
+  <frame main_object="party">
     <toolbar template="Setup_Form"/>
     <body>
       <block/>
@@ -72,23 +70,26 @@
       <col/>
       <label value="Party Id:"/>
       <col/>
-      <input fld="party.party_id" lng="60"/>
-      <display fld="party.display_name" lng="160"/>
+      <input obj_name="var" col_name="party_id" lng="60" after="
+        <<action>>
+          <<pyfunc name=`custom.party_setup.after_party_id`/>>
+        <</action>>
+        "/>
+      <display obj_name="party" col_name="display_name" lng="160"/>
       <row/>
       <col/>
       <label value="Party type:"/>
       <col/>
-      <input fld="party.party_type" lng="160"/>
+      <input obj_name="party" col_name="party_type" lng="160"/>
       <block/>
       <nb_start/>
 
-      <nb_page label="Details"/>
-      <block/>
-      <subtype_panel subtype="party.party_type"/>
+      <nb_page nb_label="Details"/>
+      <subtype_frame subtype_obj="party" subtype_col="party_type"/>
 
-      <nb_page label="Addresses"/>
+      <nb_page nb_label="Addresses"/>
       <block/>
-      <grid data_object="addr_types" growable="false" num_grid_rows="5">
+      <grid data_object="addr_types" growable="false" num_grid_rows="5" readonly="true">
         <toolbar/>
         <cur_columns>
           <cur_col col_name="descr" lng="120"/>
@@ -105,12 +106,12 @@
         </grid_methods>
       </grid>
       <grid_frame main_object="mem_addr">
+        <toolbar/>
         <body>
-          <block/>
-          <subtype_panel subtype="mem_addr.address_type"/>
+          <subtype_frame subtype_obj="mem_addr" subtype_col="address_type"/>
         </body>
-        <button_row validate="true" template="Grid_Frame"/>
-        <frame_methods template="Grid_Frame">
+        <button_row template="Grid_Frame_Grid_RO"/>
+        <frame_methods template="Grid_Frame_Grid_RO">
           <method name="after_save" action="
             <<action>>
               <<pyfunc name=`custom.party_setup.save_mem_addr`/>>
@@ -119,40 +120,40 @@
         </frame_methods>
       </grid_frame>
 
-      <nb_page label="Messaging"/>
+      <nb_page nb_label="Messaging"/>
       <block/>
       <grid data_object="mem_msg" growable="false" num_grid_rows="5">
         <toolbar/>
         <cur_columns>
-          <cur_col col_name="descr" lng="200" skip="true"/>
-          <cur_col col_name="message_addr" lng="300" expand="true"/>
+          <cur_col col_name="descr" lng="200" readonly="true" skip="true"/>
+          <cur_col col_name="message_addr" lng="200" expand="true"/>
         </cur_columns>
         <cur_filter/>
         <cur_sequence/>
         <grid_methods template="Grid"/>
       </grid>
 
-      <nb_page label="Phone nos"/>
+      <nb_page nb_label="Phone nos"/>
       <block/>
       <grid data_object="mem_phone" growable="true" num_grid_rows="5">
         <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="phone_type" lng="120"/>
-          <cur_col col_name="phone_number" lng="300" expand="true"/>
+          <cur_col col_name="phone_number" lng="120" expand="true"/>
         </cur_columns>
         <cur_filter/>
         <cur_sequence/>
         <grid_methods template="Grid"/>
       </grid>
 
-      <nb_page label="Contacts"/>
+      <nb_page nb_label="Contacts"/>
       <block/>
       <grid data_object="mem_contact" growable="true" num_grid_rows="5">
         <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="contact_name" lng="120"/>
-          <cur_col col_name="position" lng="200" expand="true"/>
-          <cur_col col_name="phone_number" lng="200"/>
+          <cur_col col_name="position" lng="120" expand="true"/>
+          <cur_col col_name="phone_number" lng="120"/>
           <cur_col col_name="email_address" lng="200"/>
         </cur_columns>
         <cur_filter/>
@@ -163,16 +164,11 @@
       <nb_end/>
 
     </body>
-    <button_row validate="true" template="Setup_Form"/>
+    <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
         <<action>>
           <<pyfunc name=`custom.party_setup.on_start_frame`/>>
-        <</action>>
-      "/>
-      <method name="before_save" action="
-        <<action>>
-          <<pyfunc name=`custom.party_setup.before_save_party`/>>
         <</action>>
       "/>
       <method name="after_save" action="

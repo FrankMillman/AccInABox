@@ -1,0 +1,435 @@
+<form name="dbcols_setup" title="Setup column">
+  <db_objects>
+    <db_obj name="db_cols" table_name="db_columns" is_formview_obj="true"/>
+  </db_objects>
+  <mem_objects>
+
+    <mem_obj name="var" descr="Form variables" parent="db_cols">
+      <mem_col col_name="col_type" data_type="TEXT" short_descr="Column type"
+        long_descr="Column type"/>
+      <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
+        long_descr="Table name"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
+        long_descr="Description"/>
+      <mem_col col_name="allow_amend" data_type="TEXT" short_descr="Allow amend?"
+        long_descr="Allow amend?" allow_amend="true" dflt_val="false"
+        choices="[[`false`, `N`], [`true`, `Y`], [`cond`, `?`]]"/>
+      <mem_col col_name="calculated" data_type="TEXT" short_descr="Calculated?"
+        long_descr="Calculated?" allow_amend="true" dflt_val="false"
+        choices="[[`false`, `N`], [`true`, `Y`], [`cond`, `?`]]"/>
+    </mem_obj>
+
+    <mem_obj name="amend" descr="Variables used to maintain Allow amend">
+      <mem_col col_name="param" data_type="TEXT" short_descr="Parameter"
+        long_descr="Parameter name" allow_amend="true"/>
+      <mem_col col_name="test" data_type="TEXT" short_descr="Test"
+        long_descr="Test" allow_amend="true"
+        choices="[[`is_`, `Is`], [`is_not`, `Is not`]]"/>
+      <mem_col col_name="value" data_type="TEXT" short_descr="Value"
+        long_descr="Value" allow_amend="true"
+        choices="[[`True`, `True`], [`False`, `False`], [`None`, `None`]]"/>
+    </mem_obj>
+
+    <mem_obj name="calc" descr="Variables used to maintain Calculated">
+      <mem_col col_name="type" data_type="TEXT" short_descr="Parameter type"
+        long_descr="Parameter type" allow_amend="true" choices="[[`_param`, `Param`], [`_ledger`, `Ledger`]]"/>
+      <mem_col col_name="name" data_type="TEXT" short_descr="Parameter name"
+        long_descr="Parameter name" allow_amend="true"/>
+      <mem_col col_name="test" data_type="TEXT" short_descr="Test"
+        long_descr="Test" allow_amend="true"
+        choices="[[`is_`, `Is`], [`is_not`, `Is not`]]"/>
+      <mem_col col_name="value" data_type="TEXT" short_descr="Value"
+        long_descr="Value" allow_amend="true"
+        choices="[[`True`, `True`], [`False`, `False`], [`None`, `None`]]"/>
+    </mem_obj>
+
+  </mem_objects>
+  <input_params/>
+  <output_params/>
+  <frame main_object="db_cols" obj_descr="db_cols.col_name">
+    <toolbar template="Setup_Form"/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Table name:"/>
+      <col/>
+      <display obj_name="var" col_name="table_name" lng="120"/>
+      <col/>
+      <label value="Description:"/>
+      <col/>
+      <display obj_name="var" col_name="descr" lng="160"/>
+      <row/>
+      <col/>
+      <label value="Column name:"/>
+      <col/>
+      <input obj_name="db_cols" col_name="col_name" lng="120"
+        validation="
+          <<validations>>
+            <<validation>>
+              <<case>>
+                <<obj_exists obj_name=`db_cols`>>
+                  <<case>>
+                    <<compare src=`db_cols.col_type` op=`!=` tgt=`var.col_type`>>
+                      <<error head=`Error` body=`Column type is not '{var.col_type}'`/>>
+                    <</compare>>
+                  <</case>>
+                <</obj_exists>>
+              <</case>>
+            <</validation>>
+          <</validations>>
+          "
+        />
+      <col/>
+      <label value="Description:"/>
+      <col/>
+      <input obj_name="db_cols" col_name="short_descr" lng="150"/>
+      <row/>
+      <col/>
+      <label value="Long description:"/>
+      <col rowspan="3" colspan="3"/>
+      <input obj_name="db_cols" col_name="long_descr" lng="300" height="3"/>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Data type:"/>
+      <col/>
+      <input obj_name="db_cols" col_name="data_type" lng="125"/>
+      <row/>
+      <col/>
+      <label value="Col heading:"/>
+      <col/>
+      <input obj_name="db_cols" col_name="col_head" lng="125"/>
+      <row/>
+      <col/>
+      <label value="Key field?"/>
+      <col/>
+      <input obj_name="db_cols" col_name="key_field" lng="60"/>
+      <row/>
+      <col/>
+      <label value="Allow null?"/>
+      <col/>
+      <input obj_name="db_cols" col_name="allow_null"/>
+<!--
+      <row/>
+      <col/>
+      <label value="Allow amend?"/>
+      <col/>
+      <input obj_name="db_cols" col_name="allow_amend"/>
+-->
+      <row/>
+      <col/>
+      <label value="Allow amend?"/>
+      <row/>
+      <col/>
+      <input obj_name="var" col_name="allow_amend" radio="true" after="
+        <<action>>
+          <<case>>
+            <<compare src=`var.allow_amend` op=`eq` tgt=`'cond'`>>
+              <<change_button>>
+                <<btn_enabled btn_id=`amend` state=`true`/>>
+              <</change_button>>
+            <</compare>>
+            <<default>>
+              <<change_button>>
+                <<btn_enabled btn_id=`amend` state=`false`/>>
+              <</change_button>>
+            <</default>>
+          <</case>>
+        <</action>>
+        "/>
+      <col/>
+      <button lng="60" btn_id="amend" btn_label="?"
+          btn_enabled="true" btn_validate="true" action="
+        <<action>>
+          <<inline_form name=`allow_amend`>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</inline_form>>
+        <</action>>
+      "/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Max length:"/>
+      <col/>
+      <input obj_name="db_cols" col_name="max_len" lng="40"/>
+      <row/>
+      <col/>
+      <label value="Scale:"/>
+      <col/>
+      <input obj_name="db_cols" col_name="db_scale" lng="40"/>
+      <row/>
+      <col/>
+      <label value="Scale param:"/>
+      <col/>
+      <input obj_name="db_cols" col_name="scale_ptr" lng="80"/>
+      <row/>
+      <col/>
+      <label value="Default value:"/>
+      <col/>
+      <input obj_name="db_cols" col_name="dflt_val" lng="80"/>
+<!--
+      <row/>
+      <col/>
+      <label value="Default rule:"/>
+      <col/>
+      <input obj_name="db_cols" col_name="dflt_rule"/>
+-->
+      <row/>
+      <col/>
+      <label value="Calculated?"/>
+      <row/>
+      <col/>
+      <input obj_name="var" col_name="calculated" radio="true" after="
+        <<action>>
+          <<case>>
+            <<compare src=`var.calculated` op=`eq` tgt=`'cond'`>>
+              <<change_button>>
+                <<btn_enabled btn_id=`calc` state=`true`/>>
+              <</change_button>>
+            <</compare>>
+            <<default>>
+              <<change_button>>
+                <<btn_enabled btn_id=`calc` state=`false`/>>
+              <</change_button>>
+            <</default>>
+          <</case>>
+        <</action>>
+        "/>
+      <col/>
+      <button lng="60" btn_id="calc" btn_label="?"
+          btn_enabled="true" btn_validate="true" action="
+        <<action>>
+          <<inline_form name=`calculated`>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</inline_form>>
+        <</action>>
+      "/>
+      <panel/>
+<!--
+      <row/>
+      <col/>
+      <button lng="100" btn_id="calc" btn_label="Calculated?"
+          btn_enabled="true" btn_validate="true" action="
+        <<action>>
+          <<inline_form name=`calculated`>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</inline_form>>
+        <</action>>
+      "/>
+-->
+      <row/>
+      <col/>
+      <input obj_name="db_cols" col_name="dflt_rule" lng="100" label="Default rule"/>
+      <row/>
+      <col/>
+      <button lng="100" btn_id="chks" btn_label="Col checks"
+          btn_enabled="true" btn_validate="true" action="
+        <<action>>
+          <<sub_form name=`_sys.checks`>>
+            <<call_params>>
+              <<call_param name=`table_name` type=`data_attr` source=`var.table_name`/>>
+              <<call_param name=`col_name` type=`data_attr` source=`db_cols.col_name`/>>
+              <<call_param name=`chk_type` type=`data_attr` source=`'col'`/>>
+              <<call_param name=`chks` type=`data_attr` source=`db_cols.col_checks`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`chks` type=`data_attr` target=`db_cols.col_checks`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</sub_form>>
+        <</action>>
+      "/>
+      <row/>
+      <col/>
+      <button lng="100" btn_id="fkey" btn_label="Foreign key"
+          btn_enabled="true" btn_validate="true" action="
+        <<action>>
+          <<sub_form name=`_sys.foreign_key`>>
+            <<call_params>>
+              <<call_param name=`table_name` type=`data_attr` source=`var.table_name`/>>
+              <<call_param name=`col_name` type=`data_attr` source=`db_cols.col_name`/>>
+              <<call_param name=`fkey` type=`data_attr` source=`db_cols.fkey`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`fkey` type=`data_attr` target=`db_cols.fkey`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</sub_form>>
+        <</action>>
+      "/>
+      <row/>
+      <col/>
+      <button lng="100" btn_id="sub" btn_label="Choices"
+          btn_enabled="true" btn_validate="true" action="
+        <<action>>
+          <<sub_form name=`_sys.choices`>>
+            <<call_params>>
+              <<call_param name=`table_name` type=`data_attr` source=`var.table_name`/>>
+              <<call_param name=`col_name` type=`data_attr` source=`db_cols.col_name`/>>
+              <<call_param name=`choices` type=`data_attr` source=`db_cols.choices`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`choices` type=`data_attr` target=`db_cols.choices`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</sub_form>>
+        <</action>>
+      "/>
+      <row/>
+      <col/>
+      <button lng="100" btn_id="sql" btn_label="SQL"
+          btn_enabled="true" btn_validate="true" action="
+        <<action>>
+          <<inline_form name=`sql`>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</inline_form>>
+        <</action>>
+      "/>
+    </body>
+    <button_row template="Setup_Form"/>
+    <frame_methods template="Setup_Form">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<pyfunc name=`custom.column_setup.on_start_frame`/>>
+          <<case>>
+            <<compare src=`var.allow_amend` op=`eq` tgt=`'cond'`>>
+              <<change_button>>
+                <<btn_enabled btn_id=`amend` state=`true`/>>
+              <</change_button>>
+            <</compare>>
+            <<default>>
+              <<change_button>>
+                <<btn_enabled btn_id=`amend` state=`false`/>>
+              <</change_button>>
+            <</default>>
+          <</case>>
+          <<case>>
+            <<compare src=`var.calculated` op=`eq` tgt=`'cond'`>>
+              <<change_button>>
+                <<btn_enabled btn_id=`calc` state=`true`/>>
+              <</change_button>>
+            <</compare>>
+            <<default>>
+              <<change_button>>
+                <<btn_enabled btn_id=`calc` state=`false`/>>
+              <</change_button>>
+            <</default>>
+          <</case>>
+        <</action>>
+      "/>
+      <method name="before_save" action="
+        <<action>>
+          <<pyfunc name=`custom.column_setup.dump_tristates`/>>
+          <<assign src=`var.col_type` tgt=`db_cols.col_type`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+
+  <inline_form name="allow_amend" title="Allow amend?">
+    <frame main_object="amend">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Parameter:"/>
+        <col/>
+        <input obj_name="amend" col_name="param" lng="200"/>
+        <row/>
+        <col/>
+        <label value="Is/Is not"/>
+        <col/>
+        <input obj_name="amend" col_name="test" lng="60"/>
+        <row/>
+        <col/>
+        <label value="True/False/None"/>
+        <col/>
+        <input obj_name="amend" col_name="value" lng="60"/>
+      </body>
+      <button_row template="Setup_Form"/>
+      <frame_methods template="Setup_Form">
+      </frame_methods>
+    </frame>
+  </inline_form>
+
+  <inline_form name="calculated" title="Calculated?">
+    <frame main_object="calc">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Parameter type:"/>
+        <col/>
+        <input obj_name="calc" col_name="type" lng="120"/>
+        <row/>
+        <col/>
+        <label value="Parameter name:"/>
+        <col/>
+        <input obj_name="calc" col_name="name" lng="120"/>
+        <row/>
+        <col/>
+        <label value="Is/Is not"/>
+        <col/>
+        <input obj_name="calc" col_name="test" lng="60"/>
+        <row/>
+        <col/>
+        <label value="True/False/None"/>
+        <col/>
+        <input obj_name="calc" col_name="value" lng="60"/>
+      </body>
+      <button_row template="Setup_Form"/>
+      <frame_methods template="Setup_Form">
+      </frame_methods>
+    </frame>
+  </inline_form>
+
+  <inline_form name="sql" title="SQL">
+    <frame main_object="db_cols">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <input obj_name="db_cols" col_name="sql" lng="400" height="8"/>
+      </body>
+      <button_row>
+        <button lng="60" btn_id="sql_ok" btn_label="Ok"
+          btn_enabled="true" btn_validate="true" action="
+            <<action>>
+              <<end_form state=`completed`/>>
+            <</action>>
+          "/>
+      </button_row>
+      <frame_methods/>
+    </frame>
+  </inline_form>
+</form>

@@ -1,11 +1,11 @@
 function create_page() {
-  //var page = document.createElement('diz');
+  //var page = document.createElement('div');
   var page = document.createElement('span');
   page.style.display = 'inline-block';
   page.style.padding = '0px 10px 10px 10px';
   page.block = null;
   page.nb_page = null;  // will be overridden if it is a notebook page
-  page.sub_pages = [];
+  page.nb_pages = [];
 
   page.kbd_shortcuts = {};
   page.kbd_shortcuts['normal'] = {};
@@ -49,7 +49,8 @@ function create_page() {
       return;
     switch (e.keyCode) {
       case 35:  // end
-        if (ctrl_grid.active_row !== (ctrl_grid.total_rows()-1)) {
+//        if (ctrl_grid.active_row !== (ctrl_grid.total_rows()-1)) {
+        if (ctrl_grid.active_row !== (ctrl_grid.num_data_rows)) {
           var args = [this.frame.ref, 'last'];
           send_request('navigate', args);
           };
@@ -67,7 +68,8 @@ function create_page() {
           };
         break;
       case 40:  // down
-        if (ctrl_grid.active_row !== (ctrl_grid.total_rows()-1)) {
+//        if (ctrl_grid.active_row !== (ctrl_grid.total_rows()-1)) {
+        if (ctrl_grid.active_row !== (ctrl_grid.num_data_rows)) {
           var args = [this.frame.ref, 'next'];
           send_request('navigate', args);
           };
@@ -81,51 +83,133 @@ function create_page() {
   page.end_page = function() {
     if (this.block != null)
       this.block.end_block()
-    for (var j=0; j<page.sub_pages.length; j++)
-      page.sub_pages[j].end_page();
+    for (var j=0; j<page.nb_pages.length; j++)
+      page.nb_pages[j].end_page();
     };
   return page;
   };
 
 function create_input(frame, page, json_elem, label) {
   switch (json_elem.type) {
+
+//    case 'textarea':
+//      var input = document.createElement('textarea');
+//      input.cols = 1;  // adjusted by json_elem.len - see below
+//      input.rows = json_elem.height;
+//      input.form_value = '';
+//      input.current_value = '';
+//      input.allow_enter = true;
+//      var return_elem = setup_text(input, json_elem);
+//      break;
     case 'text':
-      if (json_elem.lkup) {
-        var return_elem = setup_lkup(json_elem);
-        var input = return_elem.firstChild;
-        }
-      else if (json_elem.height !== null) {
-        var return_elem = setup_textarea(json_elem);
-        var input = return_elem;
+      if (json_elem.height !== null) {
+        var input = document.createElement('textarea');
+        var return_elem = setup_textarea(input, json_elem);
         }
       else {
-        var return_elem = setup_text(json_elem);
-        var input = return_elem;
-        };
+
+        var input = document.createElement('input');
+        input.type = 'text';
+
+        input.style.height = '17px';
+        input.style.width = json_elem.lng + 'px';
+        input.style.padding = '1px';
+//        input.style.border = '1px solid black';
+//        input.style.font = '10pt Verdana,sans-serif';
+//        input.style.color = 'navy';
+//        input.style.outline = '0px solid transparent';  // disable highlight on focus
+        input.style[cssFloat] = 'left';
+
+//        input.form_value = '';
+//        input.current_value = '';
+        if (json_elem.lkup)
+          var return_elem = setup_lkup(input, json_elem);
+        else
+          var return_elem = setup_text(input, json_elem);
+      };
+
+      input.style.border = '1px solid black';
+      input.style.font = '10pt Verdana,sans-serif';
+      input.style.color = 'navy';
+      input.style.outline = '0px solid transparent';  // disable highlight on focus
+
+      input.form_value = '';
+      input.current_value = '';
+
       break;
     case 'num':
-      var return_elem = setup_num(json_elem);
-      var input = return_elem;
+      var input = document.createElement('input');
+      input.type = 'text';
+
+      input.style.height = '17px';
+      input.style.width = json_elem.lng + 'px';
+      input.style.padding = '1px';
+      input.style.border = '1px solid black';
+      input.style.font = '10pt Verdana,sans-serif';
+      input.style.color = 'navy';
+      input.style.outline = '0px solid transparent';  // disable highlight on focus
+      input.style.textAlign = 'right';
+      input.style[cssFloat] = 'left';
+
+      input.form_value = '';
+      input.current_value = '';
+      var return_elem = setup_num(input, json_elem);
       break;
     case 'date':
-      var return_elem = setup_date(json_elem);
-      var input = return_elem.firstChild;
+      var input = document.createElement('input');
+      input.type = 'text';
+
+      input.style.height = '17px';
+      input.style.width = json_elem.lng + 'px';
+      input.style.padding = '1px';
+      input.style.border = '1px solid black';
+      input.style.font = '10pt Verdana,sans-serif';
+      input.style.color = 'navy';
+      input.style.outline = '0px solid transparent';  // disable highlight on focus
+      input.style[cssFloat] = 'left';
+
+      input.form_value = null;
+      input.current_value = null;
+      var return_elem = setup_date(input, json_elem);
       break;
+
     case 'bool':
-      var return_elem = setup_bool(label, json_elem);
-      var input = return_elem;
+      var input = document.createElement('span');
+      input.form_value = '0';
+      input.current_value = '0';
+      input.value = '0';
+      var return_elem = setup_bool(input, label, json_elem);
       break;
+
     case 'choice':
-      var return_elem = setup_choice(json_elem);
-      var input = return_elem.firstChild;
+      var input = document.createElement('div');
+      input.style[cssFloat] = 'left';
+      input.tabIndex = 0
+      input.form_value = '';
+      input.current_value = '';
+      var return_elem = setup_choice(input, json_elem);
+      input.value = input.data[0];
       break;
+
+    case 'radio':
+      var input = document.createElement('div');
+      input.style[cssFloat] = 'left';
+      input.tabIndex = 0;
+      input.form_value = '';
+      input.current_value = '';
+      var return_elem = setup_radio(input, json_elem);
+      input.value = input.data[0];
+      break;
+
     case 'spin':
-      var return_elem = setup_spin(json_elem);
-      var input = return_elem.firstChild;
+      var input = document.createElement('div');
+      input.style[cssFloat] = 'left';
+      var return_elem = setup_spin(input, json_elem);
       break;
+
     case 'sxml':
-      var return_elem = setup_sxml(json_elem);
-      var input = return_elem;
+      var input = document.createElement('button');
+      var return_elem = setup_sxml(input, json_elem);
       break;
     case 'dummy':
       var input = document.createElement('span');
@@ -136,16 +220,20 @@ function create_input(frame, page, json_elem, label) {
       break;
     };
 
-//  if (json_elem.lng !== null)
-//    input.style.width = json_elem.lng + 'px';
-//  input.style.font = '10pt Verdana,sans-serif';
-//  input.style.color = 'navy';
+  if (json_elem.lng !== null)
+    input.style.width = json_elem.lng + 'px';
+  input.style.font = '10pt Verdana,sans-serif';
+  input.style.color = 'navy';
   input.style.outline = '0px solid transparent';  // disable highlight on focus
+
+  if (json_elem.skip)
+    input.tabIndex = -1;  // remove from tab order
 
   input.pos = frame.obj_list.length;
   frame.obj_list.push(input);
   frame.form.obj_dict[json_elem.ref] = input;
 
+  input.label = label;
   input.frame = frame;
   input.nb_page = page.nb_page;
   input.active_frame = frame;
@@ -173,13 +261,13 @@ function create_input(frame, page, json_elem, label) {
   // on lost focus, set current_value to value
   // in after_lost_focus, reset value to display format (date/num)
 
-  input.get_val = function() {
-    return this.firstChild.value;
-    };
+//  input.get_val = function() {
+//    return this.value;
+//    };
 
-  input.get_caret = function() {
-    return getCaret(this.firstChild);
-    };
+//  input.get_caret = function() {
+//    return getCaret(this.firstChild);
+//    };
 
   input.onkeydown = function(e) {
     if (input.frame.form.disable_count) return false;
@@ -194,7 +282,7 @@ function create_input(frame, page, json_elem, label) {
       case 27:  // Esc
         if (input.aib_obj.data_changed(input)) {  //, input.childNodes[0].value)) {
           if (input.key_strokes) {
-            input.firstChild.value = input.current_value;
+            input.value = input.current_value;
             input.key_strokes = 0;
             }
           else
@@ -206,7 +294,7 @@ function create_input(frame, page, json_elem, label) {
         // else allow escape to bubble up to form, which sends 'req_cancel'
         break;
       case 32:  // space
-        if (!input.key_strokes && input.expander !== undefined) {
+        if (!input.key_strokes && input.expander !== undefined && input.amendable()) {
           input.expander();
           e.cancelBubble = true;
           return false;
@@ -226,6 +314,9 @@ function create_input(frame, page, json_elem, label) {
   input.onkeypress = function(e) {
     if (!e) e=window.event;
     if (!e.which) e.which=e.keyCode;
+    if (!input.amendable())
+      if (e.which > 31)
+        return false;
     if (e.which === 92 && !input.key_strokes) {  // backslash
       var args = [input.ref];
       send_request('get_prev', args);
@@ -236,18 +327,25 @@ function create_input(frame, page, json_elem, label) {
     };
 
   if (input.onfocus === null)  // already set on bool, sxml
-    input.onfocus = function() {got_focus(input)};
+    input.onfocus = function() {
+      if (input.multi_line === true && !input.frame.err_flag)
+        ignore_enter = true;
+      got_focus(input)
+      };
   //input.onfocus = function() {input.aib_obj.onfocus(input)};
   input.got_focus = function() {
     input.aib_obj.got_focus(input);
-    if (input.frame.amended() && !input.frame.form.focus_from_server) {
+    if ((input.frame.amended() || !input.frame.obj_exists) &&
+        !input.frame.form.focus_from_server && !input.frame.form.internal) {
       var args = [input.ref];
       send_request('got_focus', args);
+      }
+    else {
+      if (callbacks.length)
+        setTimeout(function() {exec_callbacks()}, 0);
       };
     input.key_strokes = 0;
     input.aib_obj.after_got_focus(input);
-    if (input.multi_line === true)
-      ignore_enter = true;
     };
 
   input.lost_focus = function() {
@@ -257,10 +355,11 @@ function create_input(frame, page, json_elem, label) {
 //    if (input.aib_obj.data_changed(input, input.current_value) && !input.frame.form.internal)
     if ((input.current_value !== input.form_value) && !input.frame.form.internal)
       input.frame.set_amended(true);
-    if (input.frame.amended() && !input.frame.form.focus_from_server) {
+    if ((input.frame.amended() || !input.frame.obj_exists) &&
+        !input.frame.form.focus_from_server && !input.frame.form.internal) {
       var value = input.aib_obj.get_value_for_server(input);
-        var args = [input.ref, value];
-        send_request('lost_focus', args);
+      var args = [input.ref, value];
+      send_request('lost_focus', args);
       };
     input.aib_obj.after_lost_focus(input);
     if (input.multi_line === true)
@@ -293,13 +392,22 @@ function create_input(frame, page, json_elem, label) {
 
   input.amendable = function() {
     if (this.readonly) return false;
+    // changed 2019-03-16 - ar_inv_view.line_type needs dflt_val - ok?
+    // if (this.readonly && this.frame.obj_exists) return false;
+    // NOT OK 2019-09-21 - see login.form after password accepted
     if (!this.amend_ok) return false;
     if (!this.allow_amend && this.frame.obj_exists) return false;
     return true;
     };
 
   input.set_readonly = function(state) {
+    // debug3(input.ref + ' readonly');
     this.readonly = state;
+    if (this.label)
+      if (state)
+        this.label.style.color = 'grey'
+      else
+        this.label.style.color = '';
     if (input.frame.form.current_focus === input) {
       //debug3(input.ref + ': must set readonly');
       input.aib_obj.after_lost_focus(input);
@@ -327,78 +435,19 @@ function create_input(frame, page, json_elem, label) {
   return return_elem;
   };
 
-function setup_inp(json_elem) {
-  var inp = document.createElement('input');
-  inp.style.height = '17px';
-  inp.style.width = json_elem.lng + 'px';
-  inp.style.padding = '1px';
-  inp.style.border = '1px solid black';
-  inp.className = 'focus_background';
-  inp.style.font = '10pt Verdana,sans-serif';
-  inp.style.color = 'navy';
-  inp.style.outline = '0px solid transparent';  // disable highlight on focus
-  inp.style.display = 'none';
-  return inp;
-  };
-
-function setup_dsp(json_elem) {
-  var dsp = document.createElement('div');
-  dsp.style.height = '17px';
-  dsp.style.width = json_elem.lng + 'px';
-  dsp.style.padding = '1px';
-  dsp.style.border = '1px solid darkgrey';
-  dsp.style.overflow = 'hidden';
-  dsp.style.textOverflow = 'ellipsis';
-  dsp.style.whiteSpace = 'nowrap';
-
-  var txt = document.createElement('span');
-  dsp.appendChild(txt);
-  txt.style.whiteSpace = 'pre';
-  txt.style.display = 'inline-block';
-  txt.style.height = '17px';
-  txt.style.background = '#f5f5f5';  // very light grey
-  var text_node = document.createTextNode('');
-  txt.appendChild(text_node);
-  dsp.txt = txt;
-  dsp.text = text_node;
-
-  dsp.onclick = function() {
-    if (dsp.parentNode.amendable())
-      dsp.parentNode.focus();
-    };
-
-  return dsp;
-  };
-
-function setup_text(json_elem) {
-  var text = document.createElement('div');
-  text.style[cssFloat] = 'left';
-//  text.style.height = '20px';
-  text.tabIndex = 0;
-
+function setup_text(text, json_elem) {
   text.aib_obj = new AibText();
 
-  var inp = setup_inp(json_elem);
   if (json_elem.maxlen)  // 0 means unlimited
-    inp.maxLength = json_elem.maxlen;
+    text.maxLength = json_elem.maxlen;
   text.password = json_elem.password;
   if (text.password !== '')
-    inp.type = 'password';
-
-  var dsp = setup_dsp(json_elem);
-
-  text.appendChild(inp);
-  text.appendChild(dsp);
+    text.type = 'password';
 
   return text;
   };
 
-function setup_num(json_elem) {
-  var num = document.createElement('div');
-  num.style[cssFloat] = 'left';
-//  num.style.height = '20px';
-  num.tabIndex = 0;
-
+function setup_num(num, json_elem) {
   num.aib_obj = new AibNum();
 
   num.reverse = json_elem.reverse;
@@ -406,42 +455,27 @@ function setup_num(json_elem) {
   num.max_decimals = json_elem.max_decimals;
   num.neg_display = json_elem.neg_display;
 
-  var inp = setup_inp(json_elem);
-  inp.style.textAlign = 'right';
-  var dsp = setup_dsp(json_elem);
-  dsp.style.textAlign = 'right';
-
-  num.appendChild(inp);
-  num.appendChild(dsp);
-
   return num;
   };
 
 //function setup_lkup(text, json_elem) {
-function setup_lkup(json_elem) {
-  var text = document.createElement('div');
-  text.style[cssFloat] = 'left';
-//  text.style.height = '20px';
-  text.tabIndex = 0;
+function setup_lkup(text, json_elem) {
   text.password = json_elem.password;
 
   text.aib_obj = new AibText();
 
-  var inp = setup_inp(json_elem);
-  var dsp = setup_dsp(json_elem);
-
-  text.appendChild(inp);
-  text.appendChild(dsp);
-
   text.lkup = function() {  // press Ctrl+F or click ButtonTop
-    // IE8 bug - if value is "", it returns "null" - this is a workaround
-    var lkup_val = (text.firstChild.value === '') ? '' : text.firstChild.value;
+    if (text.amendable())
+      // IE8 bug - if value is "", it returns "null" - this is a workaround
+      var lkup_val = (text.value === '') ? '' : text.value;
+    else
+      var lkup_val = text.current_value;
     var args = [text.ref, lkup_val];
     send_request('req_lookup', args);
     };
   text.expander = function() {  // press Space
     // IE8 bug - if value is "", it returns "null" - this is a workaround
-    var lkup_val = text.firstChild.value === "" ? "" : text.firstChild.value;
+    var lkup_val = text.value === "" ? "" : text.value;
     var args = [text.ref, lkup_val];
     send_request('req_lookup', args);
     };
@@ -478,7 +512,7 @@ function setup_lkup(json_elem) {
   lkup.style.width = '15px';
   lkup.style.height = '7px';
   lkup.style.background = 'transparent';
-  lkup.title = 'Call lookup (Ctrl+F)';
+  lkup.title = 'Lookup (Ctrl+F)';
   lkup.onclick = function() {
     if (text.frame.form.disable_count) return;
     if (!text.amendable()) {
@@ -510,7 +544,7 @@ function setup_lkup(json_elem) {
   lkdn.style.width = '15px';
   lkdn.style.height = '7px';
   lkdn.style.background = 'transparent';
-  lkdn.title = 'Call lookdown (Shift+Enter)';
+  lkdn.title = 'Lookdown (Shift+Enter)';
   lkdn.onclick = function() {
     if (text.frame.form.disable_count) return;
 //    if (!text.amendable()) {
@@ -534,63 +568,26 @@ function setup_lkup(json_elem) {
   return container;
     };
 
-function setup_textarea(json_elem) {
-  var text = document.createElement('div');
+function setup_textarea(text, json_elem) {
+//  var text = document.createElement('div');
   text.style.width = (+json_elem.lng + 4) + 'px';
   text.style.height = ((json_elem.height * 17) + 4) + 'px';
+
+  text.style.whiteSpace = 'pre-wrap';
+  text.style.overflow = 'hidden';
+
   text.tabIndex = 0;
   text.password = '';
   text.multi_line = true;
   text.aib_obj = new AibText();
 
-  var inp = document.createElement('textarea');
-  text.appendChild(inp);
-  inp.cols = 1;  // required, but over-ridden by json_elem.lng
-  inp.rows = json_elem.height;
-  inp.style.width = json_elem.lng + 'px';
-  inp.style.height = (json_elem.height * 17) + 'px';
-  inp.style.border = '1px solid black';
-  inp.className = 'focus_background';
-  inp.style.font = '10pt Verdana,sans-serif';
-  inp.style.color = 'navy';
-  inp.style.outline = '0px solid transparent';  // disable highlight on focus
-  inp.style.whiteSpace = 'pre-wrap';
-  inp.style.display = 'none';
-
-  var dsp = document.createElement('div');
-  text.appendChild(dsp);
-  dsp.style.width = (+json_elem.lng + 4) + 'px';
-  dsp.style.height = ((json_elem.height * 17) + 4) + 'px';
-  dsp.style.border = '1px solid darkgrey';
-  dsp.style.overflow = 'hidden';
-  dsp.style.whiteSpace = 'pre-wrap';
-  dsp.style.wordWrap = 'break-word';
-
-  dsp.onclick = function() {
-    if (dsp.parentNode.amendable())
-      dsp.parentNode.focus();
-    };
-
-  var text_node = document.createTextNode('');
-  dsp.appendChild(text_node);
-  dsp.text = text_node;
-
   return text;
   };
 
-function setup_date(json_elem) {
-  var date = document.createElement('div');
+function setup_date(date, json_elem) {
   date.style[cssFloat] = 'left';
-//  date.style.height = '20px';
-  date.tabIndex = 0;
 
   date.aib_obj = new AibDate();
-
-  var inp = setup_inp(json_elem);
-  var dsp = setup_dsp(json_elem);
-
-  date.appendChild(inp);
-  date.appendChild(dsp);
 
   date.valid = true;
   date.selected = false;
@@ -636,13 +633,13 @@ function setup_date(json_elem) {
     };
 
   var container = document.createElement('div');
-//  container.style[cssFloat] = 'left';
   container.appendChild(date);
 
-//  var cal = document.createElement('span');
+  if (json_elem.readonly)
+    return container;
+
   var cal = document.createElement('div');
   container.appendChild(cal);
-//  cal.style.display = 'inline-block';
   cal.style[cssFloat] = 'left';
   cal.style.backgroundImage = 'url(' + iCal_src + ')';
   cal.style.width = '16px';
@@ -682,15 +679,15 @@ function setup_date(json_elem) {
   return container;
   };
 
-function setup_bool(label, json_elem) {
-
-  var bool = document.createElement('div');
+function setup_bool(bool, label, json_elem) {
   bool.style[cssFloat] = 'left';
 
   if (window.SVGSVGElement !== undefined) {
     var NS='http://www.w3.org/2000/svg';
     var svg=document.createElementNS(NS,'svg');
     svg.setAttribute('focusable', false);  // IE11 workaround
+    svg.style.width = '16px';
+    svg.style.height = '16px';
     bool.appendChild(svg);
     };
 
@@ -735,72 +732,52 @@ function setup_bool(label, json_elem) {
   if (label !== null)
     label.onclick = function() {bool.onclick()};
 
-  bool.onkeydown = function(e) {
-    if (bool.frame.form.disable_count) return false;
-    if (!e) e=window.event;
-    if (e.keyCode === 27) {
-      if (bool.aib_obj.data_changed(bool, bool.current_value))
-        setTimeout(function() {bool.aib_obj.reset_value(bool)}, 0);
-      e.cancelBubble = true;
-      return false;
-      };
-    };
-
   bool.has_focus = false;
   bool.mouse_down = false;
 
   return bool;
   };
 
-function setup_choice(json_elem) {
-
-  var choice = document.createElement('div');
-  choice.style[cssFloat] = 'left';
-//  choice.style.height = '20px';
-  choice.tabIndex = 0;
-
+function setup_choice(choice, json_elem) {
   choice.aib_obj = new AibChoice();
 
-  var inp = document.createElement('div');
-  inp.style[cssFloat] = 'left';
-  inp.style.height = '17px';
-  inp.style.width = json_elem.lng + 'px';
-  inp.style.padding = '1px';
-  inp.style.border = '1px solid black';
-  inp.className = 'focus_background';
-  inp.style.font = '10pt Verdana,sans-serif';
-  inp.style.color = 'navy';
-  inp.style.outline = '0px solid transparent';  // disable highlight on focus
-  inp.style.display = 'none';
-
-  var dsp = setup_dsp(json_elem);
-  choice.appendChild(inp);
-  choice.appendChild(dsp);
+  choice.style.height = '17px';
+  choice.style.width = json_elem.lng + 'px';
+  choice.style.padding = '1px';
+  choice.style.border = '1px solid black';
+  choice.style.font = '10pt Verdana,sans-serif';
+  choice.style.color = 'navy';
+  choice.style.outline = '0px solid transparent';  // disable highlight on focus
 
   choice.data = [];
   choice.values = [];
   var subtype_name = json_elem.choices[0], choices = json_elem.choices[1];
-  for (var j=0; j<choices.length; j++) {
-    choice.data.push(choices[j][0]);
-    choice.values.push(choices[j][1]);
+  for (var key in choices) {
+    var value = choices[key];
+    if (typeof(key) === 'number')
+      debug3('got number');
+    if (typeof(key) === 'number')
+      key += '';
+    choice.data.push(key);
+    choice.values.push(value)
     };
 
   if (json_elem.callback !== undefined)
     choice.callback = json_elem.callback;
-  else if (subtype_name !== null) {
+  else if (subtype_name === null)
+    choice.callback = function(option_selected) {};
+  else {
     choice.subtype_name = subtype_name;
     choice.callback = function(subtype_id) {
       var subtype = choice.frame.subtypes[choice.subtype_name];
       if (subtype === undefined) return;
-      if (subtype._active_box !== subtype_id) {
-        subtype[subtype._active_box].style.display = 'none';
+      if (subtype._active_subtype !== subtype_id) {
+        subtype[subtype._active_subtype].style.display = 'none';
         subtype[subtype_id].style.display = 'block';
-        subtype._active_box = subtype_id;
+        subtype._active_subtype = subtype_id;
         };
       };
-    }
-  else
-    choice.callback = function(option_selected) {};
+    };
   choice.dropdown = null;
 
   var container = document.createElement('div');
@@ -808,10 +785,8 @@ function setup_choice(json_elem) {
   container.appendChild(choice);
   container.choice = choice;
 
-//  var down = document.createElement('span');
   var down = document.createElement('div');
   container.appendChild(down);
-//  down.style.display = 'inline-block';
   down.style[cssFloat] = 'left';
   down.style.backgroundImage = 'url(' + iDown_src + ')';
   down.style.width = '16px';
@@ -848,36 +823,101 @@ function setup_choice(json_elem) {
   return container;
   };
 
-function setup_spin(json_elem) {
-  var spin = document.createElement('div');
-  spin.style[cssFloat] = 'left';
-//  spin.style.height = '20px';
+function setup_radio(radio, json_elem) {
+  radio.aib_obj = new AibRadio();
+
+  radio.style.height = '17px';
+  radio.style.padding = '1px 5px 1px 5px';
+  radio.style.border = '1px solid grey';
+  radio.style.font = '10pt Verdana,sans-serif';
+  radio.style.color = 'navy';
+  radio.style.outline = '0px solid transparent';  // disable highlight on focus
+  radio.tabIndex = 0;
+
+  radio.data = [];
+  radio.values = [];
+  radio.buttons = [];
+  var subtype_name = json_elem.choices[0], choices = json_elem.choices[1];
+
+  for (var key in choices) {
+    var value = choices[key];
+    if (typeof(key) === 'number')
+      debug3('got number');
+    if (typeof(key) === 'number')
+      key += '';
+    radio.data.push(key);
+    radio.values.push(value);
+
+    var text = document.createElement('span');
+    text.appendChild(document.createTextNode(value));
+    text.style[cssFloat] = 'left';
+    text.style.cursor = 'default';
+    if (radio.childNodes.length)
+      text.style.marginLeft = '10px';
+    radio.appendChild(text);
+
+    //var button = document.createElement('span');
+    //button.appendChild(document.createTextNode('\u20DD'));
+    var button = document.createElement('input');
+    button.type = 'radio';
+    button.style[cssFloat] = 'left';
+    button.style.cursor = 'default';
+    button.style.marginLeft = '5px';
+    button.tabIndex = -1;
+    button.pos = radio.buttons.length;
+    button.radio = radio;
+
+    button.onclick = function(e) {
+      if (this.pos !== this.radio.ndx)
+        this.radio.aib_obj.onselection(this.radio, this.pos);
+      };
+
+    radio.appendChild(button);
+    radio.buttons.push(button);
+
+    };
+
+  radio.ndx = 0;
+  radio.buttons[0].checked = true;
+
+  if (json_elem.callback !== undefined)
+    radio.callback = json_elem.callback;
+  else if (subtype_name === null)
+    radio.callback = function(option_selected) {};
+  else {
+    radio.subtype_name = subtype_name;
+    radio.callback = function(subtype_id) {
+      var subtype = radio.frame.subtypes[radio.subtype_name];
+      if (subtype === undefined) return;
+      if (subtype._active_subtype !== subtype_id) {
+        subtype[subtype._active_subtype].style.display = 'none';
+        subtype[subtype_id].style.display = 'block';
+        subtype._active_subtype = subtype_id;
+        };
+      };
+    };
+
+  return radio;
+  };
+
+function setup_spin(spin, json_elem) {
   spin.style.border = '1px solid lightgrey';
   spin.tabIndex = 0;
 
+  spin.style[cssFloat] = 'left';
+  spin.style.height = '17px';
+  spin.style.width = json_elem.lng + 'px';
+  spin.style.padding = '1px';
+  spin.style.border = '1px solid black';
+  spin.style.font = '10pt Verdana,sans-serif';
+  spin.style.color = 'navy';
+  spin.style.outline = '0px solid transparent';  // disable highlight on focus
+
   spin.aib_obj = new AibSpin();
-
-  var inp = document.createElement('div');
-  inp.style[cssFloat] = 'left';
-  inp.style.height = '17px';
-  inp.style.width = json_elem.lng + 'px';
-  inp.style.padding = '1px';
-  inp.style.border = '1px solid black';
-  inp.className = 'focus_background';
-  inp.style.font = '10pt Verdana,sans-serif';
-  inp.style.color = 'navy';
-  inp.style.outline = '0px solid transparent';  // disable highlight on focus
-  inp.style.display = 'none';
-
-  var dsp = setup_dsp(json_elem);
-  spin.appendChild(inp);
-  spin.appendChild(dsp);
 
   spin.min = json_elem.min;
   spin.max = json_elem.max;
   spin.callback = json_elem.callback;
-  if (spin.current_value !== null)
-    dsp.text.data = spin.current_value;
 
   var container = document.createElement('div');
   container.style[cssFloat] = 'left';
@@ -983,18 +1023,15 @@ function setup_spin(json_elem) {
   return container;
   };
 
-function setup_sxml(json_elem) {
-
-//  var sxml = document.createElement('div');
-//  sxml.style[cssFloat] = 'left';
-
-  var sxml = document.createElement('button');
-//  if (json_elem.lng)
-//    sxml.style.width = json_elem.lng + 'px';
-//  else
-//    sxml.style.width = '60px';
-  sxml.style.width = '60px';
-  sxml.appendChild(document.createTextNode('<xml>'));
+function setup_sxml(sxml, json_elem) {
+  if (json_elem.lng === null)
+    sxml.style.width = '60px';
+  else
+    sxml.style.width = json_elem.lng + 'px';
+  if (json_elem.label === null)
+    sxml.appendChild(document.createTextNode('<xml>'));
+  else
+    sxml.appendChild(document.createTextNode(json_elem.label));
 
   sxml.style.background = button_background(sxml);
   sxml.style.border = '1px solid darkgrey';
@@ -1075,15 +1112,21 @@ function create_display(frame, json_elem, label) {
     display.choice_data = [];
     display.choice_values = [];
     var choices = json_elem.choices;
-    for (var j=0; j<choices.length; j++) {
-      display.choice_data.push(choices[j][0]);
-      display.choice_values.push(choices[j][1]);
+    for (var key in choices) {
+      var value = choices[key];
+      if (typeof(key) === 'number')
+        debug3('got number');
+      if (typeof(key) === 'number')
+        key += '';
+      display.choice_data.push(key);
+      display.choice_values.push(value)
       };
     };
 
   var text = document.createTextNode('');
   display.appendChild(text);
   //display.style.marginRight = '10px';
+  display.style.textAlign = json_elem.align;
   display.style.width = json_elem.lng + 'px';
   display.display = true;  // used in start_frame() to prevent setting focus here
 
@@ -1177,6 +1220,12 @@ function create_button(frame, json_elem) {
 
   button.onfocus = function() {
     //debug3(button.label.data + ' on focus');
+    if (button.readonly)
+      button.style.background = button.bg_disabled;
+    else
+      button.style.background = button.bg_focus;
+    if (button !== button.frame.default_button)
+      button.style.border = '1px solid black';
     button.has_focus = true;
     if (button.mouse_down)
       return;  // will set focus from onclick()
@@ -1184,22 +1233,28 @@ function create_button(frame, json_elem) {
     };
   button.got_focus = function() {
     //debug3(button.label.data + ' got focus amd=' + button.frame.amended());
-    if (button.readonly)
-      button.style.background = button.bg_disabled;
-    else
-      button.style.background = button.bg_focus;
-    if (button !== button.frame.default_button)
-      button.style.border = '1px solid black';
     button.frame.active_button = button;
     if (button.frame.amended()) {
       var args = [button.ref];
       send_request('got_focus', args);
+      }
+    else {
+      if (callbacks.length)
+        setTimeout(function() {exec_callbacks()}, 0);
       };
     if (button.after_focus !== null) {
       button.after_focus();
       button.after_focus = null;
       };
     //debug3(button.label.data + ' [focus = ' + (button.form.current_focus) + ']');
+    };
+
+  button.onblur = function() {
+    // not thought through! used when 'posting' a transaction, which clears the
+    //   screen and re-opens the transaction header - need to reset button background
+    button.style.background = button.bg_blur;
+    if (button !== button.frame.default_button)
+      button.style.border = '1px solid darkgrey';
     };
 
   button.lost_focus = function() {
@@ -1214,10 +1269,6 @@ function create_button(frame, json_elem) {
   button.onkeydown = function(e) {
     if (button.frame.form.disable_count)
       return;
-//    if (button.readonly) {
-//      button.frame.form.current_focus.focus();
-//      return;
-//      };
     if (!e) e=window.event;
     if (e.ctrlKey) return;
     if (e.altKey) return;
@@ -1236,17 +1287,6 @@ function create_button(frame, json_elem) {
     };
 
   button.onclick = function() {
-    //debug3(button.label.data + ' on click ' + click_from_kbd);
-    // FF sometimes generates click event when Enter pressed
-    // this ensures that clicked() only gets called once
-//    if (!click_from_kbd)  // if true, button.clicked is called directly
-//      button.clicked();
-//    };
-
-//  button.clicked = function() {
-    //debug3(button.label.data + ' [clicked : before focus] ' +
-    //  (button.frame.form.current_focus === button) + ' ' +
-    //  button.frame.form.disable_count + ' ' + button.has_focus);
     if (button.frame.form.disable_count) return;
     if (button.readonly) {
       button.frame.form.current_focus.focus();
@@ -1261,28 +1301,9 @@ function create_button(frame, json_elem) {
       }
     else
       button.after_click();
-//    button.focus();  // in case it does not have focus - if it does, nothing will happen
-//    if (button.frame.form.current_focus !== button) {
-//      button.after_focus = button.after_click;
-//      button.focus();
-//      }
-//    else
-//      button.after_click();
     };
 
   button.after_click = function() {
-
-//  why are next 4 lines necessary? [2014-01-21]
-//  if we click a 'form' button, we should validate up to that point first (maybe?)
-//  don't think it is necessary [2014-08-12]
-//  on the server, if 'clicked' and button.must_validate, we validate up to that point
-//  remove for now, see what happens
-
-//    if (!button.frame.amended()) {
-//      var args = [button.ref];
-//      send_request('got_focus', args);
-//      };
-
     var args = [button.ref];
     send_request('clicked', args);
     };
@@ -1297,6 +1318,9 @@ function create_button(frame, json_elem) {
       case 'label':
         button.label.data = val;
         break;
+      case 'weight':
+        button.style.fontWeight = val;  // 'bold' or 'normal'
+        break;
       case 'default':
         if (button.frame === button.frame.form.active_frame) {
           button.frame.default_button.style.border = '1px solid darkgrey';
@@ -1308,11 +1332,6 @@ function create_button(frame, json_elem) {
         button.frame.default_button = button;
         break;
       case 'show':
-// don't know why this is here [2015-06-03]
-// removed for now
-//        var col = button.parentNode;
-////        var col = button.parentNode.parentNode;
-//        col.style.height = (col.offsetHeight - 2) + 'px';
         if (val)  // show button
           button.style.display = 'block';
         else {  // hide button
@@ -1332,18 +1351,31 @@ function create_button(frame, json_elem) {
     button.readonly = state;
     if (state) {
       button.style.color = 'darkgrey';  //'#b8b8b8';
-      if (button.has_focus) {
+      if ((button.frame.form.current_focus === button) ||
+          (button.frame.form.setting_focus === button)) {
         button.style.background = button.bg_disabled;
         var pos = button.pos + 1;
-        while (button.frame.obj_list[pos].offsetHeight === 0)
+        if (pos === button.frame.obj_list.length)
+          pos = 0;  // wrap around
+        while (button.frame.obj_list[pos].offsetHeight === 0) {
           pos += 1;  // look for next available object
-        button.frame.obj_list[pos].focus();
+          if (pos === button.frame.obj_list.length)
+            pos = 0;  // wrap around
+          };
+        var obj = button.frame.obj_list[pos];
+        obj.focus();
+        button.frame.form.setting_focus = obj;
+        button.has_focus = false;
         };
+      if (frame.default_button === button)
+        button.style.border = '1px solid darkgrey';
       }
     else {
       button.style.color = 'navy';  //'black';  //'#101010';
       if (button.has_focus)
         button.style.background = button.bg_focus;
+      if (frame.default_button === button)
+        button.style.border = '1px solid blue';
       };
     };
 

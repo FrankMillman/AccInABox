@@ -1,0 +1,290 @@
+<form name="sls_report" title="Sales report" before_start_form="
+  <<action>>
+    <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
+    <<assign src=`date_range_vars.start_date` tgt=`var.start_date`/>>
+    <<assign src=`date_range_vars.end_date` tgt=`var.end_date`/>>
+  <</action>>
+  " after_start_form="
+  <<action>>
+    <<pyfunc name=`custom.arcust_funcs.setup_groups`/>>
+    <<!-- pyfunc name=`custom.date_funcs.setup_choices`/ -->>
+    <<inline_form name=`select_dates`>>
+      <<on_return>>
+        <<return state=`cancelled`>>
+          <<end_form state=`cancelled`/>>
+        <</return>>
+        <<return state=`completed`>>
+          <<pyfunc name=`custom.arcust_funcs.after_setup`/>>
+          <<continue_form/>>
+        <</return>>
+      <</on_return>>
+    <</inline_form>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="ar_cust" table_name="ar_customers"/>
+    <db_obj name="ar_invdet" table_name="ar_tran_inv_det"/>
+  </db_objects>
+  <mem_objects>
+<!--
+    <mem_obj name="var" descr="Variables used in form"
+        sub_types="[
+        [`own_dates`, null,
+          [
+            [`N`, `Select by period`, [`fin_year`, `period_no`], []],
+            [`Y`, `Select by date`, [`start_date`, `end_date`], []]
+            ]
+          ]
+        ]">
+      <mem_col col_name="own_dates" data_type="TEXT" short_descr="Select by financial period?"
+        long_descr="Select dates by financial period?" allow_amend="true" max_len="1" dflt_val="N"/>
+      <mem_col col_name="fin_year" data_type="INT" short_descr="Financial year"
+        long_descr="Financial year" allow_amend="true" choices="[]"/>
+      <mem_col col_name="period_no" data_type="INT" short_descr="Period no"
+        long_descr="Period number" allow_amend="true" choices="[]"/>
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Start date"
+        long_descr="Start date" allow_amend="true"/>
+      <mem_col col_name="end_date" data_type="DTE" short_descr="End date"
+        long_descr="End date" allow_amend="true"/>
+      <mem_col col_name="show_path" data_type="TEXT" short_descr="Show path"
+        long_descr="Show path" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="path" data_type="JSON" short_descr="Path"
+        long_descr="Path" allow_amend="true" db_scale="2"/>
+      <mem_col col_name="total_sales" data_type="DEC" short_descr="Total sales"
+        long_descr="Total sales" allow_null="true" allow_amend="true" db_scale="2"
+        scale_ptr="_param.local_currency_id&gt;scale"/>
+    </mem_obj>
+-->
+    <mem_obj name="var" descr="Variables used in form">
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Start date"
+        long_descr="Start date" allow_amend="true"/>
+      <mem_col col_name="end_date" data_type="DTE" short_descr="End date"
+        long_descr="End date" allow_amend="true"/>
+      <mem_col col_name="show_path" data_type="TEXT" short_descr="Show path"
+        long_descr="Show path" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="path" data_type="JSON" short_descr="Path"
+        long_descr="Path" allow_amend="true" db_scale="2"/>
+      <mem_col col_name="total_sales" data_type="DEC" short_descr="Total sales"
+        long_descr="Total sales" allow_null="true" allow_amend="true" db_scale="2"
+        scale_ptr="_param.local_currency_id&gt;scale"/>
+    </mem_obj>
+    <mem_obj name="groups" descr="Group categories" sequence="[`seq`, [], null]">
+      <mem_col col_name="group_code" data_type="TEXT" short_descr="Code"
+        long_descr="Group code" col_head="Code" key_field="A"/>
+      <mem_col col_name="group_pkey" data_type="TEXT" short_descr="Primary key"
+        long_descr="Primary key" col_head="PKey"/>
+      <mem_col col_name="group_text" data_type="TEXT" short_descr="Text colname"
+        long_descr="Text column name" col_head="Text"/>
+      <mem_col col_name="group_seq" data_type="TEXT" short_descr="Seq colname"
+        long_descr="Sequence column name" col_head="Seq"/>
+      <mem_col col_name="group_descr" data_type="TEXT" short_descr="Group"
+        long_descr="Group" col_head="Group by"/>
+      <mem_col col_name="by_val" data_type="BOOL" short_descr="Sort by value?"
+        long_descr="Sort by value?" col_head="By val?" allow_amend="true"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+<!--
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"
+        col_checks="[[`range_check`, `Must be from 1 to 3`,
+          [[`check`, ``, `$value`, `&gt;=`, `1`, ``],
+          [`and`, ``, `$value`, `&lt;=`, `3`, ``]]]]"/>
+-->
+    </mem_obj>
+<!--
+    <mem_obj name="sales" descr="Sales">
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
+        long_descr="Description" col_head="Description" key_field="A"/>
+      <mem_col col_name="parent_id" data_type="INT" short_descr="Parent id"
+        long_descr="Parent id" col_head="Parent"/>
+    </mem_obj>
+-->
+    <mem_obj name="date_range_vars" descr="Variables for date range">
+      <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
+        long_descr="Settings, passed between main form and subform" allow_amend="true"/>
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Date from"
+        long_descr="From which date" allow_amend="true"/>
+      <mem_col col_name="end_date" data_type="DTE" short_descr="Date to"
+        long_descr="To which date" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params/>
+  <output_params/>
+  <frame main_object="ar_cust">
+    <toolbar/>
+    <body>
+
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <text value="Sales for the period"/>
+      <display obj_name="var" col_name="start_date" lng="80"/>
+      <text value="to"/>
+      <display obj_name="var" col_name="end_date" lng="80"/>
+      <row/>
+      <col/>
+      <display obj_name="var" col_name="show_path" lng="300"/>
+
+      <block/>
+      <tree_report pyfunc="custom.arcust_funcs.tree" lng="350" height="350"/>
+    </body>
+    <button_row/>
+    <frame_methods template="Grid">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<!-- pyfunc name=`custom.date_funcs.setup_choices`/ -->>
+        <</action>>
+        "/>
+    </frame_methods>
+  </frame>
+  <inline_form name="select_dates" title="Select dates">
+    <frame main_object="var">
+      <toolbar/>
+      <body>
+
+        <block/>
+        <panel/>
+
+        <row/>
+        <col/>
+        <label value="From:"/>
+        <col/>
+        <input obj_name="var" col_name="start_date" lng="84" readonly="true" skip="true"/>
+        <col/>
+        <label value="To:"/>
+        <col/>
+        <input obj_name="var" col_name="end_date" lng="84" readonly="true" skip="true"/>
+        <col/>
+        <button btn_id="change_dates" btn_label="Change"
+          help_msg = "Change dates"
+          btn_enabled="true" btn_validate="true" action="
+            <<action>>
+              <<sub_form name=`_sys.select_date_range`>>
+                <<call_params>>
+                  <<call_param name=`settings` type=`data_attr` source=`date_range_vars.settings`/>>
+                <</call_params>>
+                <<return_params>>
+                  <<return_param name=`settings` type=`data_attr` target=`date_range_vars.settings`/>>
+                  <<return_param name=`start_date` type=`data_attr` target=`date_range_vars.start_date`/>>
+                  <<return_param name=`end_date` type=`data_attr` target=`date_range_vars.end_date`/>>
+                <</return_params>>
+                <<on_return>>
+                  <<return state=`cancelled`/>>
+                  <<return state=`completed`>>
+                    <<assign src=`date_range_vars.start_date` tgt=`var.start_date`/>>
+                    <<assign src=`date_range_vars.end_date` tgt=`var.end_date`/>>
+                  <</return>>
+                <</on_return>>
+              <</sub_form>>
+            <</action>>
+          "/>
+
+<!--
+        <row/>
+        <col/>
+        <input obj_name="var" col_name="own_dates" radio="true"/>
+
+        <subtype_frame subtype_obj="var" subtype_col="own_dates">
+
+          <subtype_body subtype_id="N">
+            <block/>
+            <panel/>
+            <row/>
+            <col/>
+            <label value="Select financial year:"/>
+            <col/>
+            <input obj_name="var" col_name="fin_year" lng="150" form_dflt="
+              <<action>>
+                <<pyfunc name=`custom.date_funcs.setup_finyrs`/>>
+              <</action>>
+              " after="
+              <<action>>
+                <<pyfunc name=`custom.date_funcs.after_finyrs`/>>
+              <</action>>
+              "/>
+            <row/>
+            <col/>
+            <label value="Select period:"/>
+            <col/>
+            <input obj_name="var" col_name="period_no" lng="150" form_dflt="
+              <<action>>
+                <<pyfunc name=`custom.date_funcs.setup_finpers`/>>
+              <</action>>
+              " after="
+              <<action>>
+                <<pyfunc name=`custom.date_funcs.after_finpers`/>>
+              <</action>>
+              "/>
+          </subtype_body>
+
+          <subtype_body subtype_id="Y">
+            <block/>
+            <panel/>
+            <row/>
+            <col/>
+            <label value="Start date:"/>
+            <col/>
+            <input obj_name="var" col_name="start_date" lng="150"/>
+            <row/>
+            <col/>
+            <label value="End date:"/>
+            <col/>
+            <input obj_name="var" col_name="end_date" lng="150"/>
+          </subtype_body>
+
+        </subtype_frame>
+-->
+
+        <block/>
+        <grid data_object="groups" growable="false" num_grid_rows="4">
+          <toolbar/>
+          <cur_columns>
+            <cur_col col_name="group_descr" lng="120" readonly="true"/>
+            <cur_col col_name="by_val" lng="60"/>
+            <cur_col col_name="seq" lng="60"/>
+          </cur_columns>
+          <cur_filter/>
+          <cur_sequence>
+            <cur_seq col_name="seq"/>
+          </cur_sequence>
+          <grid_methods template="Grid">
+            <method name="after_save" action="
+              <<action>>
+                <<restart_grid obj_name=`groups`/>>
+              <</action>>
+              "/>
+          </grid_methods>
+        </grid>
+
+      </body>
+
+      <button_row>
+        <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
+          btn_validate="true" btn_default="true" action="
+            <<action>>
+              <<end_form state=`completed`/>>
+            <</action>>
+          "/>
+        <button btn_id="btn_can" btn_label="Cancel" lng="60" btn_enabled="true"
+          btn_validate="false" btn_default="false" action="
+            <<action>>
+              <<end_form state=`cancelled`/>>
+            <</action>>
+          "/>
+      </button_row>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_req_close" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+</form>

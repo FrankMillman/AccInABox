@@ -9,7 +9,7 @@ else {  // msie
   max_h = document.documentElement.clientHeight;
   };
 
-if (document.body.style.cssFloat == undefined)
+if (document.body.style.cssFloat === undefined)
   cssFloat = 'styleFloat';  // IE
 else
   cssFloat = 'cssFloat';  // standard
@@ -35,7 +35,7 @@ if (!Array.prototype.lastIndexOf) {
 
 /* not using this at the moment (25/07/2012) but worth keeping
 // check if we are using Explorer Canvas
-EX = (navigator.appName == 'Microsoft Internet Explorer') &&
+EX = (navigator.appName === 'Microsoft Internet Explorer') &&
     (+navigator.userAgent.match(/MSIE ([\d.]+)?/)[1] < 9);
 */
 
@@ -102,7 +102,7 @@ if (document.styleSheets.length > 0) {
       if (media === "" || (media.indexOf("screen") !== -1))
         styleSheet = document.styleSheets[i];
       }
-    else if(mediaType == "object") {  // the rest
+    else if(mediaType === "object") {  // the rest
       if(media.mediaText === "" || (media.mediaText.indexOf("screen") !== -1))
         styleSheet = document.styleSheets[i];
       };
@@ -125,11 +125,11 @@ if (styleSheet === null) {
   mediaType = typeof media;
   };
 // set up global names for get/del CSSClass functions
-if (mediaType == "string") {  // IE8
+if (mediaType === "string") {  // IE8
   getCSSClass = getCSSClass_string
   delCSSClass = delCSSClass_string
   }
-else if (mediaType == "object") {  // the rest
+else if (mediaType === "object") {  // the rest
   getCSSClass = getCSSClass_object
   delCSSClass = delCSSClass_object
   };
@@ -210,7 +210,7 @@ function setInsertionPoint(elem, start, end) {
     }
   else if (elem.createTextRange) {
     var range = elem.createTextRange();
-    if (start == end) range.collapse(true);
+    if (start === end) range.collapse(true);
     range.moveEnd('character', end);
     range.moveStart('character', start);
     range.select();
@@ -223,7 +223,7 @@ function getCaret(elem) {
   if (document.selection) {
     elem.focus();
     var r = document.selection.createRange();
-    if (r == null) {
+    if (r === null) {
       return 0;
       }
     var re = elem.createTextRange(), rc = re.duplicate();
@@ -318,18 +318,13 @@ requests = [];
 function send_request(event_id, args) {
   if (dbg)
     debug3('<- ' + requests.length + ' ' + event_id + ' ' + JSON.stringify(args));
-  if (!requests.length)
+  if (!requests.length)  // only do this once - first time
     setTimeout(function() {send_requests()}, 0);
   requests.push([event_id, args]);
   };
 
 function send_requests() {
-  message = [];
-  for (var i=0; i<requests.length; i++) {
-    request = requests[i];
-    message.push([request[0], request[1]]);
-    };
-  send_message('send_req', message);
+  send_message('send_req', requests);
   requests = [];
   };
 
@@ -354,7 +349,7 @@ function process_response(response_text) {
 
   if (response_text.length) {
     var response = JSON.parse(response_text);
-    for (var i=0; i<response.length; i++) {
+    for (var i=0, l=response.length; i<l; i++) {
       var msg = response[i];
       var msg_type = msg[0];
       var msg_args = msg[1];
@@ -376,13 +371,17 @@ function process_response(response_text) {
         case 'set_focus': set_focus(msg_args); break;
         case 'set_readonly': set_readonly(msg_args); break;
         case 'setup_form': setup_form(msg_args); break;
+        case 'refresh_bpmn': refresh_bpmn(msg_args); break;
         case 'start_frame': start_frame(msg_args); break;
         case 'start_menu': start_menu(msg_args); break;
         case 'start_grid': start_grid(msg_args); break;
-        case 'recv_dflt': recv_dflt(msg_args); break;
-        case 'recv_prev': recv_prev(msg_args); break;
+        case 'add_tree_data': add_tree_data(msg_args); break;
+        case 'set_dflt': set_dflt(msg_args); break;
+        case 'setup_choices': setup_choices(msg_args); break;
+        case 'set_prev': set_prev(msg_args); break;
         case 'recv_rows': recv_rows(msg_args); break;
         case 'cell_set_focus': cell_set_focus(msg_args); break;
+        case 'append_row': append_row(msg_args); break;
         case 'move_row': move_row(msg_args); break;
         case 'insert_row': insert_row(msg_args); break;
         case 'delete_row': delete_row(msg_args); break;
@@ -390,6 +389,7 @@ function process_response(response_text) {
         case 'update_node': update_node(msg_args); break;
         case 'delete_node': delete_node(msg_args); break;
         case 'set_subtype': set_subtype(msg_args); break;
+        case 'append_tasks': append_tasks(msg_args); break;
         case 'exception': exception(msg_args); break;
         default: debug3('UNKNOWN ' + msg_type + ': ' + msg_args);
         };

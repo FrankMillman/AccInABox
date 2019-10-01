@@ -1,81 +1,60 @@
-from start import log_db, db_log
+from common import log_db, db_log
 
-def customise(DbCursor):
-    # add db-specific methods to DbCursor class
-    DbCursor.create_cursor = create_cursor
-    DbCursor.insert_row = insert_row
-    DbCursor.update_row = update_row
-    DbCursor.delete_row = delete_row
-    DbCursor._fetch_row = _fetch_row
-    DbCursor.get_rows = get_rows
-    DbCursor.close = close
+def customise(DbMemCursor):
+    # add db-specific methods to DbCursor or MemCursor class
+    DbMemCursor.create_cursor = create_cursor
+    DbMemCursor.insert_row = insert_row
+    DbMemCursor.update_row = update_row
+    DbMemCursor.delete_row = delete_row
+    DbMemCursor._fetch_row = _fetch_row
+    DbMemCursor.get_rows = get_rows
+    DbMemCursor.close = close
 
-def create_cursor(self, sql, params):
-
-    if log_db:
-        db_log.write('{}: {}; {}\n\n'.format(id(self.conn), sql, params))
-
+async def create_cursor(self, sql, params):
     if self.debug:
         print(sql, params)
-    self.cur.execute(sql, params)
+    self.rows = []
+    self.rows = await self.conn.fetchall(sql, params, context=self.db_obj.context)
+    self.num_rows = len(self.rows)
+    await self.conn.release()
+    if log_db:
+        db_log.write('{}: END cursor\n\n'.format(id(self.conn)))
 
-# following is a technique to use if the dataset could be very large
-#   for data in iter(conn.fetchmany, []): 
-#       for row in data: 
-#           process(row) 
-# is this any better than just iterating over the cursor?
-#   cur = conn.cur.execute("SELECT ...")
-#   for row in cur:
-#       process(row)
-    self.rows = self.cur.fetchall()
-    self.no_rows = len(self.rows)
-
-    self.cur.close()
-    del self.cur
-#   if self.db_obj.mem_obj:
-#       del self.conn  # don't close it! there is only one connection to :memory:
-#   else:
-#       self.conn.release()
-    self.conn.release()
-
-def insert_row(self, row_no):
-    row_no = self.find_gap(row_no)  # where to insert new row
+async def insert_row(self, row_no):
+    row_no = await self.find_gap(row_no)  # where to insert new row
     self.db_obj.cursor_row = row_no
     self.rows.insert(row_no,
-        [self.db_obj.getval(col_name) for col_name in self.col_names])
-    self.no_rows += 1
+        [await self.db_obj.getval(col_name) for col_name in self.col_names])
+    self.num_rows += 1
 
-def update_row(self, row_no):
+async def update_row(self, row_no):
     self.rows[row_no] = [
-        self.db_obj.getval(col_name) for col_name in self.col_names]
+        await self.db_obj.getval(col_name) for col_name in self.col_names]
 
-def delete_row(self, row_no):
+async def delete_row(self, row_no):
     del self.rows[row_no]
-    self.no_rows -= 1
+    self.num_rows -= 1
 
-def _fetch_row(self, row_no):
+async def _fetch_row(self, row_no):
     if self.debug:
-        print('fetch row', row_no, 'tot =', self.no_rows, 'rows =', self.rows)
-#   if row_no in self.new_rows:
-#       self.row_data = self.new_rows[row_no]
-#   else:
-#       row_no = self._grid_to_cursor(row_no)
-#       self.row_data = self.rows[row_no]
-    self.row_data = self.rows[row_no]
-    if self.debug:
-        print(self.row_data)
+        print('fetch row', row_no, 'tot =', self.num_rows)  #, 'rows =', self.rows)
+    row = self.rows[row_no]
+    self.row_data = [await self.db_obj.get_val_from_sql(col_name, dat)
+        for col_name, dat in zip(self.col_names, row)]
+    # if self.debug:
+    #     print(self.row_data)
 
-def get_rows(self, from_row, to_row):
-    # arguments are the same as python 'range' arguments
-    # from_row is the first row to return, starting from 0
-    # to_row is one past the last row to return, starting from 0
+async def get_rows(self, from_row, to_row):
     if self.debug:
         print('fetch rows from {}-{}'.format(from_row, to_row))
-    return self.rows[from_row:to_row]
+    for row in self.rows[from_row:to_row]:
+        # yield row
+        # changed [2019-07-22] - use get_val_from_sql for consistency with cur_mssql
+        yield [await self.db_obj.get_val_from_sql(col_name, dat)
+            for col_name, dat in zip(self.col_names, row)]
 
-def close(self):
+async def close(self):
     if self.cursor_active:
-        self.no_rows = 0
         self.rows.clear()
-        self.init_vars()
         self.cursor_active = False
+        self.init_cursor()

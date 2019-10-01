@@ -1,0 +1,120 @@
+<form name="setup_proc_ioparams" title="Setup process i/o parameters">
+
+  <db_objects/>
+
+  <mem_objects>
+
+    <mem_obj name="proc_vars" descr="Variables used in form">
+      <mem_col col_name="process_id" data_type="TEXT" short_descr="Process id"
+        long_descr="Process id" col_head="Id"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
+        long_descr="Description" col_head="Descr"/>
+      <mem_col col_name="inputs_xml" data_type="SXML" short_descr="Input params xml"
+        long_descr="Input params xml" allow_amend="true"/>
+      <mem_col col_name="outputs_xml" data_type="SXML" short_descr="Output params xml"
+        long_descr="Output params xml" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="inputs" descr="Input parameters" parent="proc_vars"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq"
+        allow_amend="true"/>
+      <mem_col col_name="name" data_type="TEXT" short_descr="Name"
+        long_descr="Input parameter name" col_head="Name" key_field="A"/>
+      <mem_col col_name="type" data_type="TEXT" short_descr="type"
+        long_descr="Input parameter type" col_head="Type" allow_amend="true"
+        choices="[[`data_obj`, `Data object`], [`data_attr`, `Data attribute`]]"/>
+      <mem_col col_name="target" data_type="TEXT" short_descr="Target"
+        long_descr="Input parameter target" col_head="Target" allow_amend="true"/>
+      <mem_col col_name="required" data_type="BOOL" short_descr="Required"
+        long_descr="Input parameter required" col_head="Reqd" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="outputs" descr="Output parameters" parent="proc_vars"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="name" data_type="TEXT" short_descr="Name"
+        long_descr="Output parameter name" col_head="Name" key_field="A"/>
+      <mem_col col_name="type" data_type="TEXT" short_descr="type"
+        long_descr="Output parameter type" col_head="Type" allow_amend="true"
+        choices="[[`data_obj`, `Data object`], [`data_attr`, `Data attribute`]]"/>
+      <mem_col col_name="source" data_type="TEXT" short_descr="Source"
+        long_descr="Output parameter source" col_head="Source" allow_amend="true"/>
+    </mem_obj>
+
+  </mem_objects>
+
+  <input_params>
+    <input_param name="process_id" type="data_attr" target="proc_vars.process_id" required="true"/>
+    <input_param name="descr" type="data_attr" target="proc_vars.descr" required="true"/>
+    <input_param name="inputs_xml" type="data_attr" target="proc_vars.inputs_xml" required="true"/>
+    <input_param name="outputs_xml" type="data_attr" target="proc_vars.outputs_xml" required="true"/>
+  </input_params>
+
+  <output_params>
+    <output_param name="inputs_xml" type="data_attr" source="proc_vars.inputs_xml"/>
+    <output_param name="outputs_xml" type="data_attr" source="proc_vars.outputs_xml"/>
+  </output_params>
+
+  <frame main_object="proc_vars">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Process id:"/>
+      <col/>
+      <display obj_name="proc_vars" col_name="process_id" lng="160"/>
+      <row/>
+      <col/>
+      <label value="Description:"/>
+      <col/>
+      <display obj_name="proc_vars" col_name="descr" lng="250"/>
+      <block/>
+      <grid data_object="inputs" growable="true" num_grid_rows="5">
+        <toolbar template="Grid" title="Inputs:"/>
+        <cur_columns>
+          <cur_col col_name="name" lng="120"/>
+          <cur_col col_name="type" lng="120"/>
+          <cur_col col_name="target" lng="200" expand="true"/>
+          <cur_col col_name="required" lng="40"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <block/>
+      <grid data_object="outputs" growable="true" num_grid_rows="5">
+        <toolbar template="Grid" title="Outputs:"/>
+        <cur_columns>
+          <cur_col col_name="name" lng="120"/>
+          <cur_col col_name="type" lng="120"/>
+          <cur_col col_name="source" lng="200" expand="true"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+    </body>
+    <button_row template="Setup_Form"/>
+    <frame_methods template="Setup_Form">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<pyfunc name=`custom.procdefn_funcs.load_ioparms`/>>
+        <</action>>
+      "/>
+      <method name="before_save" action="
+        <<action>>
+          <<pyfunc name=`custom.procdefn_funcs.dump_ioparms`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

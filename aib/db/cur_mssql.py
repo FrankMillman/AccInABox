@@ -1,61 +1,57 @@
+from common import log_db, db_log
+
 def customise(DbCursor):
     # add db-specific methods to DbCursor class
     DbCursor.create_cursor = create_cursor
     DbCursor.get_rows = get_rows
     DbCursor.close = close
 
-def create_cursor(self, sql, params):
+async def create_cursor(self, sql, params):
     if self.debug:
-        print('DECLARE _ccc CURSOR SCROLL STATIC FOR {}'.format(sql),
-            params)
-    self.cur.execute(
-        'DECLARE _ccc CURSOR SCROLL STATIC FOR {}'.format(sql), params)
+        print('DECLARE _aib CURSOR SCROLL STATIC FOR {}'.format(sql), params)
+    await self.conn.exec_cmd(
+        'DECLARE _aib CURSOR SCROLL STATIC FOR {}'.format(sql), params, context=self.db_obj.context)
     if self.debug:
-        print('OPEN _ccc')
-    self.cur.execute('OPEN _ccc')
-    self.cur.execute('select @@cursor_rows')
-    self.no_rows = self.cur.fetchone()[0]
+        print('OPEN _aib')
+    await self.conn.exec_cmd('OPEN _aib')
+    cur = await self.conn.exec_sql('select @@cursor_rows')
+    self.num_rows, = await cur.__anext__()
+    if self.debug:
+        print('number of rows =', self.num_rows)
 
-def get_rows(self, from_row, to_row):
-    # arguments are the same as python 'range' arguments
-    # from_row is the first row to return, starting from 0
-    # to_row is one past the last row to return, starting from 0
-    #
-    # in Sql Server, 'fetch absolute n' retrieves the n'th row starting from 1
+async def get_rows(self, from_row, to_row):
     if self.debug:
         print('fetch rows from {}-{} cursor_pos={}'.format
             (from_row, to_row, self.cursor_pos))
-    rows = []
-    if self.cursor_pos == from_row:
+    for row in range(from_row, to_row):  # mssql can only FETCH one row at a time
+        if row == from_row:  # first time
+            if self.cursor_pos == row:  # cursor in position
+                sql = 'fetch relative 0 from _aib'
+            else:
+                # 'fetch absolute n' retrieves the n'th row starting from 1
+                sql = 'fetch absolute {} from _aib'.format(row+1)
+        else:
+            sql = 'fetch next from _aib'
         if self.debug:
-            print('fetch relative 0 from _ccc')
-        self.cur.execute('fetch relative 0 from _ccc')
-    else:
-        if self.debug:
-            print('fetch absolute {} from _ccc'.format(from_row + 1))
-        self.cur.execute('fetch absolute {} from _ccc'.format(from_row + 1))
-    rows.append(self.cur.fetchone())
-    from_row += 1
-    for i in range(to_row - from_row):
-        if self.debug:
-            print('fetch next from _ccc')
-        self.cur.execute('fetch next from _ccc')
-        rows.append(self.cur.fetchone())
+            print(sql)
+        cur = await self.conn.exec_sql(sql)
+        # yield await cur.__anext__()
+        # changed [2019-07-22] - use get_val_from_sql to change datetime to date
+        row = await cur.__anext__()
+        yield [await self.db_obj.get_val_from_sql(col_name, dat)
+            for col_name, dat in zip(self.col_names, row)]
     self.cursor_pos = to_row - 1
-    if self.debug:
-        print('cursor_pos = {}'.format(self.cursor_pos))
-    return rows
 
-def close(self):
+async def close(self):
     if self.cursor_active:
         if self.debug:
-            print('CLOSE _ccc')
-        self.cur.execute('CLOSE _ccc')
+            print('CLOSE _aib')
+        await self.conn.exec_cmd('CLOSE _aib')
         if self.debug:
-            print('DEALLOCATE _ccc')
-        self.cur.execute('DEALLOCATE _ccc')
-        self.cur.close()
-        self.conn.release()
-        self.no_rows = 0
-        self.init_vars()
+            print('DEALLOCATE _aib')
+        await self.conn.exec_cmd('DEALLOCATE _aib')
+        await self.conn.release()
+        if log_db:
+            db_log.write('{}: END cursor\n\n'.format(id(self.conn)))
         self.cursor_active = False
+        self.init_cursor()

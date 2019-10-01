@@ -1,0 +1,74 @@
+<form name="setup_cb_orec_codes" title="Setup cb receipt codes">
+
+  <db_objects>
+    <db_obj name="rec_code" table_name="cb_orec_codes"/>
+  </db_objects>
+  <mem_objects/>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="nsls_code">
+    <toolbar/>
+    <body>
+      <block/>
+      <tree data_object="rec_code" lng="250" height="350" toolbar="true"/>
+      <tree_frame main_object="rec_code">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Type:"/>
+          <col/>
+          <input obj_name="rec_code" col_name="code_type" radio="true"/>
+          <subtype_frame subtype_obj="rec_code" subtype_col="code_type" lng="150">
+
+            <subtype_body subtype_id="group">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Code:"/>
+              <input obj_name="rec_code" col_name="orec_code" lng="80"/>
+              <col/>
+              <row/>
+              <col/>
+              <label value="Description:"/>
+              <col/>
+              <input obj_name="rec_code" col_name="descr" lng="120"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="rec_code">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="G/l code:"/>
+              <col/>
+              <input obj_name="rec_code" col_name="gl_code" lng="80"/>
+
+            </subtype_body>
+
+          </subtype_frame>
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame"/>
+      </tree_frame>
+    </body>
+    <button_row/>
+    <frame_methods>
+      <method name="on_req_close" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+      <method name="on_req_cancel" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

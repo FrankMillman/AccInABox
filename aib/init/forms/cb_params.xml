@@ -1,0 +1,50 @@
+<form name="cb_params" title="Set up cb ledger parameters" before_start_form="
+  <<action>>
+    <<assign src=`_ctx.ledger_row_id` tgt=`params.row_id`/>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="params" table_name="cb_ledger_params" is_formview_obj="true"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="params">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Cash book id:"/>
+      <col/>
+      <input obj_name="params" col_name="ledger_id" lng="60"/>
+      <col/>
+      <input obj_name="params" col_name="descr" lng="160"/>
+
+      <block/>
+      <panel/>
+      <if_ src="_param.currency_id" op="is_" tgt="$None"/>
+      <row/>
+      <col/>
+      <label value="Currency"/>
+      <col/>
+      <input obj_name="params" col_name="currency" lng="60"/>
+      <end_if/>
+      <row/>
+      <col/>
+      <label value="Parameters for receipt no"/>
+      <col/>
+      <input obj_name="params" col_name="auto_rec_no" lng="250"/>
+      <row/>
+      <col/>
+      <label value="Parameters for payment no"/>
+      <col/>
+      <input obj_name="params" col_name="auto_pmt_no" lng="250"/>
+
+    </body>
+    <button_row template="Setup_Form_Single"/>
+    <frame_methods template="Setup_Form_Single">
+    </frame_methods>
+  </frame>
+</form>

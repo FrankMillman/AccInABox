@@ -15,6 +15,7 @@ You stop it by pressing <enter>.
 
 import os
 import sys
+import asyncio
 import threading
 import locale
 from gettext import gettext as _
@@ -27,23 +28,31 @@ datefmt = '%Y/%m/%d %H:%M:%S'
 #logging.basicConfig(level=logging.INFO)
 logging.basicConfig(format=format, datefmt=datefmt)
 
-#log = open('log.txt', 'w', errors='backslashreplace')
-log = sys.stderr
-debug = False
+"""
+import logging
+logger=logging.getLogger()
+logging.basicConfig(level=logging.DEBUG)
 
-#db_log = open('db_log.txt', 'w', errors='backslashreplace')
-db_log = sys.stderr
-log_db = False
+now simply add logger.debug('debug message')
+wherever needed instead of print statements
 
-#sys.stdout = open('/dev/null', 'w')
-#sys.stdout = open('nul', 'w')
+alternatively
+import logging
+logger=logging.getLogger()
+logging.basicConfig(filename='logfile',level=logging.DEBUG)
+
+if you would prefer to log to a file instead.
+"""
+
+from common import log, debug, log_db, db_log
+
+import ht.htc
+import db.api
 
 def start():
 
-    import db.api
-    import db.objects
+    import db
     #import bp.bpm
-    import ht.htc
 
     if len(sys.argv) == 2:
         cfg_name = sys.argv[1]
@@ -58,7 +67,7 @@ def start():
 
     check_versions()
 
-    db.objects.setup_companies()
+#   db.cache.setup_companies()
 
 #   from wf.wfe import restart_active_processes
 #   bp.bpm.restart_active_processes()
@@ -68,21 +77,27 @@ def start():
 
     htc_args = ht.htc.setup(cfg['HumanTaskClient'])
     threading.Thread(target=stop, args=(htc_args,)).start()
-    ht.htc.start(htc_args[0])
+
+    loop = htc_args[0]
+    loop.run_forever()
 
 def stop(htc_args):
-    input(_('Press <enter> to stop\n'))
+#   input(_('Press <enter> to stop\n'))
+    print(_('Type "q" to stop\n'))
+    while True:
+        q = input()
+        if q == 'q':
+            break
+
+    if debug:
+        log.close()
+
+    # tell human task client to terminate
+    loop = htc_args[0]
+    asyncio.run_coroutine_threadsafe(ht.htc.shutdown(*htc_args), loop)
 
     if log_db:
-        db_log.flush()
         db_log.close()
-
-    import db.api
-    import ht.htc
-
-    ht.htc.stop(htc_args)  # tell human task client to terminate
-    db.api.close_all_connections()
-
 #   log.close()
 
 # custom excepthook to be implemented ...

@@ -6,7 +6,7 @@ click_from_kbd = false;  // prevent keydown repeat
 ignore_enter = false;  // allow 'enter' from textarea
 
 function setup_form(args) {
-  //debug(JSON.stringify(args));
+  //debug3(JSON.stringify(args));
 
   var save_pages = [];
   var save_frames = [];
@@ -14,22 +14,23 @@ function setup_form(args) {
   var save_vbox = [];
   var subtype_name = null;
   var label = null;
+  var notebook = null;  // to detect if we are on a notebook page
   var last_parent = null;  // keep track of last parent to decide where to append 'dummy'
 
+  // for (var elem of args) {  // v. cute, but does not work with Galaxy Note 2
   for (var i=0, args_length=args.length; i<args_length; i++) {
     var elem = args[i];
-    switch(elem[0]) {
-      case 'root': {
-        var root_id = elem[1].root_id;
+    var [elem_type, elem_args] = elem;  // NB 'grid' uses elem[2] for col_defns
+    switch(elem_type) {
+      case 'root':
+        var root_id = elem_args.root_id;
         var root = [];  // can contain multiple forms
         active_roots[root_id] = root;
         root.zindex = root_zindex.length;
         root_zindex.push(root);
         break;
-        };
-
-      case 'form': {
-        var form_id = elem[1].form_id;
+      case 'form':
+        var form_id = elem_args.form_id;
         var root_id = form_id.split('_')[0];
         var root = active_roots[root_id];
 
@@ -70,7 +71,7 @@ function setup_form(args) {
         //header.style.borderBottom = '1px solid grey';
         //header.style.cursor = 'default';
 
-        header.appendChild(document.createTextNode(elem[1].title));
+        header.appendChild(document.createTextNode(elem_args.title));
         // to prevent selection of text - IE only
         header.onselectstart = function(){return false};
 
@@ -201,14 +202,14 @@ function setup_form(args) {
             return;
             };
           if (e.keyCode === 13) {  // user pressed Enter
+            // ignore_enter is set by a 'textarea' object, which uses
+            //   'Enter' for new lines
             if (ignore_enter)
               return;
             if (form.active_frame.active_button === undefined)
               return;
             // if user holds down Enter key, testing click_from_kbd
             //   prevents clicked() from being called multiple times
-            // ignore_enter is set by a 'textarea' object, which uses
-            //   'Enter' for new lines
             if (!click_from_kbd) {
               click_from_kbd = true;
               // don't know what problem this was supposed to solve [2014-04-23]
@@ -264,7 +265,7 @@ function setup_form(args) {
         document.onkeyup = function(e) {
           if (!e) e=window.event;
           if (e.keyCode === 13) {  // user released Enter
-            if (!ignore_enter) {  // never true - document.body!
+            if (!ignore_enter) {
               click_from_kbd = false;
               e.cancelBubble = true;
               return false;
@@ -306,40 +307,8 @@ function setup_form(args) {
               menu.focus();
             };
           };
-
-/*
-        form.set_gridframe_border = function(frame) {
-          // called from got_focus() if active_frame changes
-
-          if (this.active_frame.default_button !== undefined)
-            this.active_frame.default_button.style.border = '1px solid darkgrey';
-
-          if (this.active_frame.type === 'grid_frame') {
-            // clear border of current active_frame
-            this.active_frame.page.style.border = '1px solid darkslategrey';
-            //this.active_frame.ctrl_grid.parentNode.style.border = '1px solid transparent';
-            this.active_frame.ctrl_grid.unhighlight_active_row();
-            };
-
-          if (frame.default_button !== undefined)
-            frame.default_button.style.border = '1px solid blue';
-
-          if (frame.type === 'grid_frame') {
-            frame.page.style.border = '1px solid blue';
-            //frame.ctrl_grid.parentNode.style.border = '1px solid blue';
-            frame.ctrl_grid.highlight_active_row();
-            var frame_amended = (frame.ctrl_grid.inserted !== 0);
-            var set_focus = false;
-            var args = [frame.ref, frame_amended, set_focus];
-            start_frame(args);
-            };
-          };
-*/
-
         break;
-
-        };
-      case 'frame': {
+      case 'frame':
         var page = create_page();
         form.appendChild(page);
 
@@ -349,7 +318,7 @@ function setup_form(args) {
         frame.subtypes = {};  //new Object();
 //        form.obj_list.push(frame);
 
-        frame.ref = elem[1].ref;
+        frame.ref = elem_args.ref;
         frame.form = form;
         frame.page = page;
         page.frame = frame;
@@ -359,10 +328,10 @@ function setup_form(args) {
         frame.obj_exists = false;
         frame.err_flag = false;
 
-        if (elem[1].ctrl_grid_ref === null)
+        if (elem_args.ctrl_grid_ref === null)
           frame.ctrl_grid = null;
         else
-          frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
+          frame.ctrl_grid = get_obj(elem_args.ctrl_grid_ref);
 
         frame.set_amended = function(state) {
           //debug3('fset1 ' + this.ref + ' ' + state);
@@ -385,36 +354,42 @@ function setup_form(args) {
           var clean = args[0], exists = args[1];
           this.set_amended(!clean);  // if clean, amended=false, if dirty, amended=true
           this.obj_exists = exists;
+          var current_focus = this.form.current_focus;
+          if (current_focus !== null) {
+            if (current_focus.amendable !== undefined) {
+              if (!current_focus.amendable())
+                current_focus.className = 'readonly_background'
+              else if (current_focus.frame.err_flag)  // would we ever get here? does no harm
+                current_focus.className = 'error_background'
+              else
+                current_focus.className = 'focus_background';
+              };
+            };
           };
-
         break;
-        };
-      case 'form_toolbar': {
+      case 'form_toolbar':
         var toolbar = document.createElement('div');
         toolbar.style.clear = 'left';
         toolbar.style.marginTop = '10px';
         page.appendChild(toolbar);
         toolbar.frame = frame;
-        create_frame_toolbar(toolbar, elem[1]);
+        create_frame_toolbar(toolbar, elem_args);
         break;
-        };
-      case 'block': {
+      case 'block':
         var vbox = null;
         if (page.block != null)
           page.block.end_block();
-        //var block = document.createElement('div');
-        //page.appendChild(block);
-//        var block = page.insertRow(page.row_no);
         var block = document.createElement('div');
         page.appendChild(block);
         block.style.clear = 'left';
         block.style.textAlign = 'center';
         page.block = block;
         last_parent = block;
+
         block.end_block = function() {
           if (this.childNodes.length === 1)
             this.firstChild.style[cssFloat] = 'none';
-//          if (this.children.length == 1) {
+//          if (this.children.length === 1) {
 //            this.firstChild.style.display = 'block';
 ////            }
 ////          else {
@@ -441,8 +416,7 @@ function setup_form(args) {
             };
           };
         break;
-        };
-      case 'vbox': {
+      case 'vbox':
         var vbox = document.createElement('div');
         vbox.style.textAlign = 'center';
         if (block.childNodes.length)
@@ -450,20 +424,18 @@ function setup_form(args) {
         block.appendChild(vbox);
         vbox.style[cssFloat] = 'left';
         break;
-        };
-      case 'vbox_end': {
+      case 'vbox_end':
         vbox = null;
         break;
-        };
-      case 'string': {
+      case 'string':
         var text = document.createElement('span');
         text.style.display = 'inline-block';
-        text.appendChild(document.createTextNode(elem[1].value));
+        text.appendChild(document.createTextNode(elem_args.value));
         text.style.fontWeight = 'bold';
         text.style.textAlign = 'left';
         text.style.marginTop = '10px';
-        if (elem[1].lng)
-          text.style.width = elem[1].lng + 'px'
+        if (elem_args.lng)
+          text.style.width = elem_args.lng + 'px'
         if (vbox !== null)
           vbox.appendChild(text)
         else {
@@ -473,8 +445,7 @@ function setup_form(args) {
           block.appendChild(text);
           };
         break;
-        };
-      case 'panel': {
+      case 'panel':
         var box = document.createElement('div');
         box.style.marginTop = '10px';
         if (vbox !== null)
@@ -483,15 +454,7 @@ function setup_form(args) {
           if (block.childNodes.length && subtype_name === null)
             box.style.marginLeft = '10px';
           block.appendChild(box);
-          // if a subtype panel, there are > 1 but only one is visible
-          // for some reason, if they are floated, it prevents the following
-          //    block from having a top margin
-          // avoiding the float fixes it, but I think it means that you cannot
-          //    have a subtype panel side-by-side with another panel
-          // if this is required, experiment with another layer, with the
-          //    outer layer floated, and the inner one with multiple divs
-          if (subtype_name === null)
-            box.style[cssFloat] = 'left';
+          box.style[cssFloat] = 'left';
           };
 
         var panel = document.createElement('span');
@@ -499,7 +462,10 @@ function setup_form(args) {
         box.appendChild(panel);
         //box.style.textAlign = 'center';
         panel.style.textAlign = 'left';
-        box.style.border = '1px solid lightgrey';
+        if (subtype_name === null)
+          box.style.border = '1px solid lightgrey';
+        else
+          box.style.width = '100%';  // ensure all panels same width [setup_ledg_periods]
         //panel.style.border = '1px solid lightgrey';
         //
         // which is better - set the border on the box or the panel?
@@ -515,97 +481,80 @@ function setup_form(args) {
         table.style.borderSpacing = '10px';
         panel.appendChild(table);
 //        panel.style.background = 'lightgreen';
-
-        if (subtype_name !== null) {
-          var subtype = frame.subtypes[subtype_name];
-          subtype[elem[1].subtype_id] = box;
-          if (elem[1].active === true)
-            subtype._active_box = elem[1].subtype_id;
-          };
-
         break;
-        };
-      case 'row': {
+      case 'row':
         var row = table.insertRow(-1);
         break;
-        };
-      case 'col': {
+      case 'col':
         var col = row.insertCell(-1);
-        if (elem[1].colspan)
-          col.colSpan = elem[1].colspan;
-        if (elem[1].rowspan)
-          col.rowSpan = elem[1].rowspan;
+        if (elem_args.colspan)
+          col.colSpan = elem_args.colspan;
+        if (elem_args.rowspan)
+          col.rowSpan = elem_args.rowspan;
+        if (elem_args.align)
+          col.style.textAlign = elem_args.align;
         last_parent = col;
         break;
-        };
-      case 'text': {
+      case 'text':
         var text = document.createElement('span');
-        text.appendChild(document.createTextNode(elem[1].value));
+        text.appendChild(document.createTextNode(elem_args.value));
+        text.style[cssFloat] = 'left';
         if (col.childNodes.length)
           text.style.marginLeft = '5px';
         col.appendChild(text);
         break;
-        };
-      case 'label': {
+      case 'label':
         var label = document.createElement('span');
-        label.appendChild(document.createTextNode(elem[1].value));
+        label.appendChild(document.createTextNode(elem_args.value));
         label.style[cssFloat] = 'left';
         label.style.cursor = 'default';
         if (col.childNodes.length)
           label.style.marginLeft = '5px';
         col.appendChild(label);
         break;
-        };
-      case 'input': {
-        var input = create_input(frame, page, elem[1], label);
+      case 'input':
+        var input = create_input(frame, page, elem_args, label);
         if (col.childNodes.length)
           input.style.marginLeft = '5px';
         col.appendChild(input);
         var label = null;
         break;
-        };
-      case 'display': {
-        var display = create_display(frame, elem[1], label);
+      case 'display':
+        var display = create_display(frame, elem_args, label);
         if (col.childNodes.length)
           display.style.marginLeft = '5px';
         col.appendChild(display);
-        var label = null;
+        // next line is debatable [2018-10-07]
+        // if label>display>input, (e.g. currency_id), we want label linked to input
+        // removed for now - does this cause any problems?
+        // var label = null;
         break;
-        };
-      case 'dummy': {
-        var dummy = create_input(frame, page, elem[1], null);
+      case 'dummy':
+        var dummy = create_input(frame, page, elem_args, null);
         last_parent.appendChild(dummy);
         break;
-        };
-      case 'button_row': {
+      case 'button_row':
         var button_row = document.createElement('div');
-        button_row.style.paddingTop = '10px';
+        // button_row.style.paddingTop = '10px';
         button_row.style.textAlign = 'right';
         button_row.style.clear = 'left';
         page.appendChild(button_row);
-        for (var j=0, tot_buttons=elem[1].length; j<tot_buttons; j++) {
-          var btn_elem = elem[1][j];
-          if (btn_elem[0] === 'dummy') {
-            var dummy = create_input(frame, page, btn_elem[1], null);
-            button_row.appendChild(dummy);
-            }
-          else if (btn_elem[0] === 'button') {
-            var button = create_button(frame, btn_elem[1]);
-            button_row.appendChild(button);
-            button.style.marginRight = '10px';
-            };
+        for (var j=0, tot_buttons=elem_args.length; j<tot_buttons; j++) {
+          var btn_elem = elem_args[j];
+          var button = create_button(frame, btn_elem[1]);
+          button_row.appendChild(button);
+          button.style.marginTop = '10px';
+          button.style.marginRight = '10px';
           };
         last_parent = button_row;
         break;
-        };
-      case 'button': {
-        var button = create_button(frame, elem[1]);
+      case 'button':
+        var button = create_button(frame, elem_args);
         if (col.childNodes.length)
           button.style.marginLeft = '5px';
         col.appendChild(button);
         break;
-        };
-      case 'nb_start': {
+      case 'nb_start':
         var notebook = document.createElement('div');
         notebook.style.marginTop = '10px';
         if (vbox !== null)
@@ -661,8 +610,7 @@ function setup_form(args) {
             };
           };
         break;
-        };
-      case 'nb_page': {
+      case 'nb_page':
         var tab = document.createElement('span');
         tab.style.display = 'inline-block';
         tab.style.height = '20px';
@@ -673,7 +621,7 @@ function setup_form(args) {
         tab.style.textAlign = 'center';
         tab.style.cursor = 'default';
         tab.pos = notebook.tabs.childNodes.length;
-        tab.appendChild(document.createTextNode(elem[1].label));
+        tab.appendChild(document.createTextNode(elem_args.label));
         tab.onclick = function() {
           var notebook = this.parentNode.parentNode;
           notebook.req_new_page(this.pos+1, false);
@@ -705,7 +653,7 @@ function setup_form(args) {
         //fwd_btn_div.style[cssFloat] = 'right';
         //fwd_btn_div.style.background = 'blue';
 
-        nb_page.label = elem[1].label;
+        nb_page.label = elem_args.label;
         nb_page.page = page;
         page.nb_page = nb_page;
         nb_page.style.textAlign = 'center';
@@ -714,7 +662,7 @@ function setup_form(args) {
         page.frame = frame;
         nb_page.pos = tab.pos+1;  //notebook.childNodes.length-1;  // starts from 1, 0 is 'tabs'
         nb_page.first_obj_pos = frame.obj_list.length;
-        notebook.save_page.sub_pages.push(page);
+        notebook.save_page.nb_pages.push(page);
 
         nb_page.onkeydown = function(e) {
           if (this.frame.form.disable_count) return false;
@@ -754,7 +702,6 @@ function setup_form(args) {
           nb_btn.style.width = '16px';
           nb_btn.style.height = '16px';
           nb_btn.style.border = '1px solid transparent';
-          nb_btn.style.padding = '1px';
           nb_btn.style.margin = '2px';
           nb_btn.active_frame = this.frame;
           nb_btn.help_msg = help_msg;
@@ -806,8 +753,7 @@ function setup_form(args) {
           };
 //        notebook.appendChild(nb_page);
         break;
-        };
-      case 'nb_end': {
+      case 'nb_end':
         // obscure IE8 bug [2015-07-05]
         // if there is a grid, and we add a toolbar, we adjust the size of the grid
         // IE8 does not recalculate grid.offsetWidth immediately, and by the time
@@ -903,9 +849,9 @@ function setup_form(args) {
         notebook.current_pos = 1;  // 0 = 'tabs', 1 = first nb_page
         var page = notebook.save_page;
         notebook.save_page = null;
+        notebook = null;
         break;
-        };
-      case 'grid': {
+      case 'grid':
         var box = document.createElement('div');
         box.style.marginTop = '10px';
         if (vbox !== null)
@@ -914,18 +860,18 @@ function setup_form(args) {
           if (block.childNodes.length)
             box.style.marginLeft = '10px';
           block.appendChild(box);
-          box.style[cssFloat] = 'left';
+          if (notebook === null)  // causes a problem on notebook page - don't know why [2017-08-19]
+            box.style[cssFloat] = 'left';
           };
         var main_grid = document.createElement('span');
         main_grid.style.display = 'inline-block';
         box.appendChild(main_grid);
         //box.style.textAlign = 'center';
         main_grid.style.textAlign = 'left';
-        create_grid(frame, main_grid, elem[1], elem[2]);
+        create_grid(frame, main_grid, elem_args, elem[2]);
         break;
-        };
-      case 'grid_toolbar': {
-        main_grid.create_grid_toolbar(elem[1]);
+      case 'grid_toolbar':
+        main_grid.create_grid_toolbar(elem_args);
         var toolbar = main_grid.childNodes[0];
         var grid = main_grid.childNodes[1];
         var toolbar_width = toolbar.offsetWidth + 20  // allow for extra digits
@@ -935,8 +881,7 @@ function setup_form(args) {
 //        else
 //          toolbar.style.width = (grid.offsetWidth-2) + 'px';
         break;
-        };
-      case 'grid_frame': {
+      case 'grid_frame':
         save_pages.push(page);
         save_frames.push(frame);
         save_blocks.push(block);
@@ -944,6 +889,7 @@ function setup_form(args) {
         var page = create_page();
         page.style.border = '1px solid darkslategrey';
         page.style.marginTop = '10px';
+
         if (vbox !== null)
           vbox.appendChild(page)
         else {
@@ -961,7 +907,7 @@ function setup_form(args) {
         frame.obj_list = [];
         frame.subtypes = {};  //new Object();
 
-        frame.ref = elem[1].ref;
+        frame.ref = elem_args.ref;
         frame.form = form;
         frame.page = page;
         page.frame = frame;
@@ -970,16 +916,76 @@ function setup_form(args) {
         frame.obj_exists = false;
         frame.err_flag = false;
 
-        frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
+        frame.ctrl_grid = get_obj(elem_args.ctrl_grid_ref);
         frame.ctrl_grid.grid_frame = frame;
         frame.ctrl_grid.active_frame = frame;  // override grid's active_frame
         frame.ctrl_grid.parentNode.style.border = '1px solid transparent';
+        frame.ctrl_grid.add_gridframe_indicator();
+
+        page.kbd_shortcuts = frame.ctrl_grid.kbd_shortcuts  // Ctrl_Ins & Ctrl_Del, if set up
+
+        // assume grid_frame will always accept navigation keys
+        page.nav = {}
+
+        page.nav.top = {}
+        page.nav.top.frame = page.frame;
+        page.nav.top.onclick = function() {
+          var frame = this.frame;
+          if (frame.disable_count) return false;
+          if (frame.ctrl_grid.active_row === 0)
+            return;
+          var args = [frame.ref, 'first'];
+          send_request('navigate', args);
+          frame.form.current_focus.focus();
+          }
+        page.kbd_shortcuts['ctrl'][36] = page.nav.top;  // Ctrl+Home
+
+        page.nav.up = {}
+        page.nav.up.frame = page.frame;
+        page.nav.up.onclick = function() {
+          var frame = this.frame;
+          if (frame.disable_count) return false;
+          if (frame.ctrl_grid.active_row === 0)
+            return;
+          var args = [frame.ref, 'prev'];
+          send_request('navigate', args);
+          frame.form.current_focus.focus();
+          }
+        page.kbd_shortcuts['ctrl'][38] = page.nav.up;  // Ctrl+Up
+
+        page.nav.down = {}
+        page.nav.down.frame = page.frame;
+        page.nav.down.onclick = function() {
+          var frame = this.frame;
+          if (frame.disable_count) return false;
+//          if (frame.ctrl_grid.active_row === (frame.ctrl_grid.total_rows()-1))
+          if (frame.ctrl_grid.active_row === (frame.ctrl_grid.num_data_rows))
+            return;
+          var args = [frame.ref, 'next'];
+          send_request('navigate', args);
+          frame.form.current_focus.focus();
+          }
+        page.kbd_shortcuts['ctrl'][40] = page.nav.down;  // Ctrl+Down
+
+        page.nav.end = {}
+        page.nav.end.frame = page.frame;
+        page.nav.end.onclick = function() {
+          var frame = this.frame;
+          if (frame.disable_count) return false;
+//          if (frame.ctrl_grid.active_row === (frame.ctrl_grid.total_rows()-1))
+          if (frame.ctrl_grid.active_row === (frame.ctrl_grid.num_data_rows))
+            return;
+          var args = [frame.ref, 'last'];
+          send_request('navigate', args);
+          frame.form.current_focus.focus();
+          }
+        page.kbd_shortcuts['ctrl'][35] = page.nav.end;  // Ctrl+End
 
         frame.set_amended = function(state) {
           //debug3('fset2 ' + this.ref + ' ' + state);
           this._amended = state;
           //if (state === true)
-          //  if (!this.ctrl_grid.amended())
+          ////  if (!this.ctrl_grid.amended())
           //    this.ctrl_grid.set_amended(true);
           };
 
@@ -1005,16 +1011,14 @@ function setup_form(args) {
           };
 
         break;
-        };
-      case 'grid_frame_end': {
+      case 'grid_frame_end':
         frame.page.end_page();
         var page = save_pages.pop();
         var frame = save_frames.pop();
         var block = save_blocks.pop();
         var vbox = save_vbox.pop();
         break;
-        };
-      case 'tree': {
+      case 'tree':
         var box = document.createElement('div');
         box.style.marginTop = '10px';
         if (vbox !== null)
@@ -1025,31 +1029,33 @@ function setup_form(args) {
           block.appendChild(box);
           box.style[cssFloat] = 'left';
           };
-        box.style.width = elem[1].lng + 'px';
-        box.style.height = elem[1].height + 'px';
+        box.style.width = elem_args.lng + 'px';
+        box.style.height = elem_args.height + 'px';
         box.style.border = '1px solid grey';
         // store box.height for tree.js, so it knows when to overflow
         box.height = box.offsetHeight;
 
-        var tree = create_tree(box, frame, page, elem[1].toolbar, elem[1].hide_root);
-        tree.ref = elem[1].ref
+        var tree = create_tree(box, frame, page, elem_args.toolbar);
+        tree.ref = elem_args.ref
         frame.obj_list.push(tree);
         frame.form.obj_dict[tree.ref] = tree;
-        var tree_data = elem[1].tree_data;
-        for (var j=0, lng=tree_data.length; j<lng; j++) {
-          var arg = tree_data[j];
-          var node_id=arg[0], parent_id=arg[1], text=arg[2], expandable=arg[3];
-          tree.add_node(parent_id, node_id, expandable, text, (j===0));
-          };
-        tree.onselected = function(node) {
-          };
-        tree.onactive = function(node) {
-          var args = [tree.ref, node.node_id];
-          send_request('treeitem_active', args);
-          };
-        tree.write();
+        if (elem_args.lkup) {
+          tree.select_any = true;
+          tree.onselected = function(node) {
+            var args = [tree.ref, node.node_id];
+            send_request('treelkup_selected', args);
+            };
+          tree.onactive = function(node) {};
+          }
+        else {
+          tree.onselected = function(node) {};
+          tree.onactive = function(node) {
+            var args = [tree.ref, node.node_id];
+            send_request('treeitem_active', args);
+            };
+        };
 
-        tree.combo = elem[1].combo;
+        tree.combo = elem_args.combo;
         if (tree.combo !== null) {
           var group_name = tree.combo[0];
           var member_name = tree.combo[1];
@@ -1057,8 +1063,32 @@ function setup_form(args) {
           };
 
         break;
-        };
-      case 'tree_frame': {
+      case 'tree_report':
+        var box = document.createElement('div');
+        box.style.marginTop = '10px';
+        if (vbox !== null)
+          vbox.appendChild(box)
+        else {
+          if (block.childNodes.length)
+            box.style.marginLeft = '10px';
+          block.appendChild(box);
+          box.style[cssFloat] = 'left';
+          };
+        box.style.width = elem_args.lng + 'px';
+        box.style.height = elem_args.height + 'px';
+        box.style.border = '1px solid grey';
+        // store box.height for tree.js, so it knows when to overflow
+        box.height = box.offsetHeight;
+
+        var tree = create_tree_report(box, frame, page);
+        tree.ref = elem_args.ref
+        frame.obj_list.push(tree);
+        frame.form.obj_dict[tree.ref] = tree;
+
+        tree.onactive = function(node) {};
+        tree.onselected = function(node) {};
+        break;
+      case 'tree_frame':
         save_pages.push(page);
         save_frames.push(frame);
         save_blocks.push(block);
@@ -1083,7 +1113,7 @@ function setup_form(args) {
         frame.obj_list = [];
         frame.subtypes = {};  //new Object();
 
-        frame.ref = elem[1].ref;
+        frame.ref = elem_args.ref;
         frame.form = form;
         frame.page = page;
         page.frame = frame;
@@ -1092,13 +1122,13 @@ function setup_form(args) {
         frame.obj_exists = false;
         frame.err_flag = false;
 
-        if (elem[1].combo_type !== null) {
-          frame.combo_type = elem[1].combo_type;
-          tree.tree_frames[elem[1].combo_type] = frame;
+        if (elem_args.combo_type !== null) {
+          frame.combo_type = elem_args.combo_type;
+          tree.tree_frames[elem_args.combo_type] = frame;
           frame.tree = tree;
           };
 
-//        frame.ctrl_grid = get_obj(elem[1].ctrl_grid_ref);
+//        frame.ctrl_grid = get_obj(elem_args.ctrl_grid_ref);
 //        frame.ctrl_grid.grid_frame = frame;
 //        frame.ctrl_grid.active_frame = frame;  // override grid's active_frame
 //        frame.ctrl_grid.parentNode.style.border = '1px solid transparent';
@@ -1129,8 +1159,7 @@ function setup_form(args) {
           };
 
         break;
-        };
-      case 'tree_frame_end': {
+      case 'tree_frame_end':
         if (frame.combo_type !== undefined) {
           if (frame.combo_type === 'member') {
             var max_fw = frame.page.offsetWidth, max_fh = frame.page.offsetHeight;
@@ -1153,40 +1182,79 @@ function setup_form(args) {
         var block = save_blocks.pop();
         var vbox = save_vbox.pop();
         break;
-        };
-      case 'start_subtype': {
-        subtype_name = elem[1];
+      case 'subtype_start':
+        save_pages.push(page);
+        save_frames.push(frame);
+        save_blocks.push(block);
+
+        var subtype_div = document.createElement('div');
+        subtype_div.style.marginTop = '10px';
+        page.appendChild(subtype_div);
+
+        subtype_div.style.border = '1px solid lightgrey';
+
+        save_vbox.push(vbox);
+        vbox = null;
+
+        subtype_name = elem_args;
         var subtype = {};  //new Object();
-        subtype._active_box = null;
+        subtype._active_subtype = null;
         frame.subtypes[subtype_name] = subtype;
         break;
-        };
-      case 'end_subtype': {
+      case 'subtype_frame':
+        var page = create_page();
+//        page.style.border = '1px solid darkslategrey';
+        page.style.marginTop = '10px';
+        subtype_div.appendChild(page)
+        page.style[cssFloat] = 'left';
+
+        var subtype = frame.subtypes[subtype_name];
+        var subtype_id = elem_args.subtype_id, active = elem_args.active;
+        subtype[subtype_id] = page;
+        if (active === true)
+          subtype._active_subtype = subtype_id;
+        break;
+
+      case 'subtype_end':
         var subtype = frame.subtypes[subtype_name];
         var max_subtype_w=0, max_subtype_h=0;
         for (var subtype_id in subtype) {
-          if (subtype_id !== '_active_box') {
-            var subtype_box = subtype[subtype_id];
-            if (subtype_box.offsetWidth > max_subtype_w)
-              max_subtype_w = subtype_box.offsetWidth;
-            if (subtype_box.offsetHeight > max_subtype_h)
-              max_subtype_h = subtype_box.offsetHeight;
+          if (subtype_id !== '_active_subtype') {
+            var subtype_page = subtype[subtype_id];
+            if (subtype_page.offsetWidth > max_subtype_w)
+              max_subtype_w = subtype_page.offsetWidth;
+            if (subtype_page.offsetHeight > max_subtype_h)
+              max_subtype_h = subtype_page.offsetHeight;
             };
           };
-        max_subtype_w -= 2;  // offsetWidth/Height includes borders
-        max_subtype_h -= 2;  // style.width/height excludes borders
+// causes problem with sls_report - don't know why [2016-03-06]
+//      max_subtype_w -= 2;  // offsetWidth/Height includes borders
+//      max_subtype_h -= 2;  // style.width/height excludes borders
         for (var subtype_id in subtype) {
-          if (subtype_id !== '_active_box') {
-            var subtype_box = subtype[subtype_id];
-            subtype_box.style.width = max_subtype_w + 'px';
-            subtype_box.style.height = max_subtype_h + 'px';
-            subtype_box.style.display = 'none';
+          if (subtype_id !== '_active_subtype') {
+            var subtype_page = subtype[subtype_id];
+              subtype_page.style.width = max_subtype_w + 'px';
+              subtype_page.style.height = max_subtype_h + 'px';
+            subtype_page.style.display = 'none';
             };
           };
-        subtype[subtype._active_box].style.display = 'block';
+        subtype[subtype._active_subtype].style.display = 'block';
+
+        subtype_div.style.width = max_subtype_w + 'px';
+        subtype_div.style.height = max_subtype_h + 'px';
+
+        var page = save_pages.pop();
+        var frame = save_frames.pop();
+        var block = save_blocks.pop();
+        var vbox = save_vbox.pop();
+
         subtype_name = null;
         break;
-        };
+
+      case 'bpmn':
+        setup_bpmn(frame, elem_args.ref, elem_args.nodes, elem_args.edges);
+        break;
+
       };
     };
 

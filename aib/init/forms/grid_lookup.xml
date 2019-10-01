@@ -1,16 +1,17 @@
-<form name="grid_lookup">
+<form name="grid_lookup" title="Lookup - grid view">
   <db_objects/>
   <mem_objects>
-    <mem_obj name="grid_vars" descr="Listview variables">
+    <mem_obj name="listview_vars" descr="Listview variables">
+      <mem_col col_name="start_col" data_type="TEXT" short_descr="Starting column"
+        long_descr="Col name of starting value" allow_null="true" allow_amend="true"/>
       <mem_col col_name="start_val" data_type="TEXT" short_descr="Starting value"
-        long_descr="Starting value" col_head="" key_field="N" allow_null="false"
-        allow_amend="false" max_len="0" db_scale="0"/>
+        long_descr="Starting value" allow_null="true" allow_amend="true"/>
     </mem_obj>
   </mem_objects>
   <input_params>
-    <input_param name="lkup_obj" type="data_obj" target="lkup_obj" required="true"/>
-    <input_param name="start_val" type="data_attr" target="grid_vars.start_val"
-      required="false"/>
+    <!-- input_param name="lkup_obj" type="data_obj" target="lkup_obj" required="true"/ -->
+    <input_param name="start_col" type="data_attr" target="listview_vars.start_col" required="false"/>
+    <input_param name="start_val" type="data_attr" target="listview_vars.start_val" required="false"/>
   </input_params>
   <output_params/>
   <frame main_object="lkup_obj">
@@ -22,7 +23,7 @@
         <grid_methods template="Grid_Lookup"/>
       </grid>
     </body>
-    <button_row validate="false"/>
+    <button_row/>
     <frame_methods template="Grid_Lookup"/>
   </frame>
 </form>

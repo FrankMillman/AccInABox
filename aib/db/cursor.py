@@ -1,9 +1,9 @@
-from collections import defaultdict
 import importlib
-from start import log_db, db_log
 
 import db.connection
-from errors import AibError
+from common import AibError
+from common import log_db, db_log
+#log_db = False
 
 def config_cursor(db_params):
     """
@@ -38,20 +38,19 @@ class Cursor:
         self.db_obj = db_obj
         self.cursor_active = False
         self.debug = False
+        self.init_cursor()
 
-    def setup_cursor(self, col_names, where, order, param=None):
+    def init_cursor(self):
+        self.new_rows = {}
+        self.ins_rows = []
+        self.del_rows = []
+        self.row = None
+        self.cursor_pos = -1
+        self.num_rows = 0
+
+    async def start_cursor(self, col_names, where, order, param=None):
+        await self.db_obj.check_perms('select')
         self.col_names = col_names
-
-#       parent = self.db_obj.parent
-#       if parent is not None:
-#           where = where[:]  # make a copy
-#           test = 'AND' if where else 'WHERE'
-#           where.append((test, '', parent[0], '=', parent[1].getval(), ''))
-
-        if self.cursor_active:
-            self.close()
-
-        self.db_obj.check_perms('select')
 
         if self.db_obj.mem_obj:
             mem_id = self.db_obj.context.mem_id
@@ -60,17 +59,16 @@ class Cursor:
             self.conn = db.connection._get_connection()
 
         if log_db:
-            db_log.write('{}: START cursor\n'.format(id(self.conn)))
+            db_log.write(f'{id(self.conn)}: START cursor\n')
 
-        self.cur = self.conn.cursor()
+        sql, params = await self.build_sql(where, order, param)
+        await self.create_cursor(sql, params)
 
-        sql, params = self.build_sql(where, order, param)
-        self.create_cursor(sql, params)
+        self.where = where
 
-        self.init_vars()
         self.cursor_active = True
 
-    def build_sql(self, where, order, param):
+    async def build_sql(self, where, order, param):
 
         # build list of primary keys  - (position in cursor, col_defn)
         self.key_cols = []
@@ -83,54 +81,46 @@ class Cursor:
                 self.key_cols.append((len(self.col_names), key))
                 self.col_names.append(key_name)
             # ensure that duplicates are in key seq
-            for col_name, descending in order:
-                if col_name == key_name:
-                    break
-            else:
+            if key_name not in ((_[0] for _ in order)):
                 order.append((key_name, False))
+
+        # ensure that 'order by' columns are included in selection
+        for seq_colname, seq_desc in order:
+            if seq_colname not in self.col_names:
+                self.col_names.append(seq_colname)
+
+        # self.seq, self.desc = order[0]
+        # self.order = order
+        self.order = [(col_name, self.col_names.index(col_name), desc) for col_name, desc in order]
+
+        # self.pos = self.col_names.index(self.seq)
+        self.pos = self.col_names.index(order[0][0])  # position of primary sort column
+        fld = await self.db_obj.getfld(self.col_names[self.pos])
+        if fld.sequence:
+            self.user_seq = True  # used in find_gap - do not over-ride sequence
+        else:
+            self.user_seq = False
 
         self.no_cols = len(self.col_names)
 
-# is this still necessary? [2014-02-19]
-#       if isinstance(order[0], (list, tuple)):
-#           self.seq = order[0][0]
-#           self.desc = order[0][1]
-#       else:
-#           self.seq = order[0]
-#           self.desc = False
+        # return await self.conn.build_select(self.db_obj, self.col_names,
+        #     where, order, param=param)
 
-        self.seq, self.desc = order[0]
-#       self.seq = order[0]['col_name']
-#       self.desc = order[0]['desc']
+        return await self.conn.build_select(self.db_obj.context, self.db_obj.db_table,
+            self.col_names, where, order, param=param)
 
-        try:  # find position of first 'order by' in cursor
-            self.pos = self.col_names.index(self.seq)
-        except ValueError:  # if first 'order by' col not in col_names, cannot use 'start'
-            self.pos = -1
-
-        return self.conn.build_select(self.db_obj, self.col_names,
-            where, order, param=param)
-
-    def init_vars(self):
-        self.new_rows = {}
-        self.ins_rows = []
-        self.del_rows = []
-        self.row = None
-#       self.blank_row = [None] * self.no_cols
-        self.cursor_pos = -1
-
-    def insert_row(self, row_no):
-        row_no = self.find_gap(row_no)  # where to insert new row
+    async def insert_row(self, row_no):
+        row_no = await self.find_gap(row_no)  # where to insert new row
         self.db_obj.cursor_row = row_no
 
-        for dict_key in reversed(sorted(self.new_rows.keys())):
+        for dict_key in sorted(self.new_rows.keys(), reverse=True):
             if dict_key < row_no:
                 break
             self.new_rows[dict_key+1] = self.new_rows[dict_key]
             del self.new_rows[dict_key]
 
         self.new_rows[row_no] = [
-            self.db_obj.getval(col_name) for col_name in self.col_names]
+            await self.db_obj.getval(col_name) for col_name in self.col_names]
 
         for ndx, val in enumerate(self.ins_rows):
             if val >= row_no:
@@ -138,13 +128,13 @@ class Cursor:
 
         self.ins_rows.append(row_no)
         self.ins_rows.sort()
-        self.no_rows += 1
+        self.num_rows += 1
 
-    def update_row(self, row_no):
+    async def update_row(self, row_no):
         self.new_rows[row_no] = [
-            self.db_obj.getval(col_name) for col_name in self.col_names]
+            await self.db_obj.getval(col_name) for col_name in self.col_names]
 
-    def delete_row(self, row_no):
+    async def delete_row(self, row_no):
         if row_no in self.new_rows:
             del self.new_rows[row_no]
 
@@ -163,7 +153,7 @@ class Cursor:
             if val > row_no:
                  self.ins_rows[ndx] -= 1
 
-        self.no_rows -= 1
+        self.num_rows -= 1
 
     def _grid_to_cursor(self, row_no):
         shift = 0
@@ -185,14 +175,14 @@ class Cursor:
         print(self.new_rows)
         print(self.ins_rows)
         print(self.del_rows)
-        print(self.no_rows)
+        print(self.num_rows)
         print('='*20)
 
-    def fetch_rows(self, first_row, last_row):
+    async def fetch_rows(self, first_row, last_row):
         if first_row < 0:
             first_row = 0
-        if last_row > self.no_rows:
-            last_row = self.no_rows
+        if last_row > self.num_rows:
+            last_row = self.num_rows
 
         from_row, to_row = first_row, last_row
         for row in self.ins_rows:
@@ -201,30 +191,26 @@ class Cursor:
         for row in self.del_rows:
             if row >= first_row and row < last_row:
                 to_row += 1
-        rows = self.get_rows(from_row, to_row)
 
-#       rows_fetched = []
-#       for pos in range(first_row, last_row):
-#           if pos in self.new_rows:
-#               rows_fetched.append(self.new_rows[pos])
-#           else:
-#               rows_fetched.append(rows[self._grid_to_cursor(pos) - first_row])
-#       return rows_fetched
-        pos = first_row
-        while pos < last_row:
-            if pos in self.new_rows:
-                yield(self.new_rows[pos])
+        # pos = from_row - 1
+        # async for row in self.get_rows(from_row, to_row):
+        #     pos += 1
+        #     if pos in self.new_rows:  # untested - the theory is that this will
+        #         yield self.new_rows[pos]  # replace the row read from the database
+        #     else:
+        #         yield row
+
+        pos = from_row  # no enumerate for async
+        async for row in self.get_rows(from_row, to_row):
+            if pos in self.new_rows:  # untested - the theory is that this will
+                yield self.new_rows[pos]  # replace the row read from the database
+            elif pos in self.del_rows:  # untested
+                pass  # do not yield row
             else:
-                yield(rows[self._grid_to_cursor(pos) - first_row])
+                yield row
             pos += 1
 
-#   def fetch_all(self):
-#       for row_no in range(self.no_rows):
-#           self.db_obj.select_row_from_cursor(row_no, display=False)
-#           yield True
-#       yield False
-
-    def _fetch_row(self, row_no):  # overridden in db.cur_sqlite3
+    async def _fetch_row(self, row_no):  # overridden in db.cur_sqlite3
         # i.e. set up self.row_data
         if self.debug:
             print('fetch row', row_no, 'cursor_pos =', self.cursor_pos)
@@ -233,385 +219,255 @@ class Cursor:
             if self.debug:
                 print(self.row_data)
             return
-        if row_no >= self.no_rows:
-            print('should not get here - {},{}'.format(row_no, self.no_rows))
+        if row_no >= self.num_rows:
+            print('should not get here - {},{}'.format(row_no, self.num_rows))
             self.debugger()
             raise AibError(head=self.db_obj.table_name,
                 body='Should not get here - {}, {}'.format(
-                row_no, self.no_rows))
+                row_no, self.num_rows))
         row_no = self._grid_to_cursor(row_no)
         diff = row_no - self.cursor_pos
         if diff == 0:
             if self.debug:
-                print('fetch relative 0 from _ccc')
-            self.cur.execute('fetch relative 0 from _ccc')
+                print('fetch relative 0 from _aib')
+            cur = await self.conn.exec_sql('fetch relative 0 from _aib')
         elif diff == 1:
             if self.debug:
-                print('fetch next from _ccc')
-            self.cur.execute('fetch next from _ccc')
+                print('fetch next from _aib')
+            cur = await self.conn.exec_sql('fetch next from _aib')
         elif diff == -1:
             if self.debug:
-                print('fetch prior from _ccc')
-            self.cur.execute('fetch prior from _ccc')
+                print('fetch prior from _aib')
+            cur = await self.conn.exec_sql('fetch prior from _aib')
         else:
             if self.debug:
-                print('fetch absolute {} from _ccc'.format(row_no + 1))
+                print('fetch absolute {} from _aib'.format(row_no + 1))
             # python is 0-based, cursor is 1-based
-            self.cur.execute('fetch absolute {} from _ccc'.format(row_no + 1))
+            cur = await self.conn.exec_sql('fetch absolute {} from _aib'.format(row_no + 1))
         self.cursor_pos = row_no
 
-        self.row_data = self.cur.fetchone()
+        # self.row_data = await cur.__anext__()
+        row = await cur.__anext__()
+        self.row_data = [await self.db_obj.get_val_from_sql(col_name, dat)
+            for col_name, dat in zip(self.col_names, row)]
 
         if self.debug:
             print('POS =', self.cursor_pos, ', DATA =', self.row_data)
 
-#   def read_row(self, row_no, display):
-#       self._fetch_row(row_no)
-#       for pos, key in self.key_cols:
-#           self.table.setcolval(key.id, self.row_data[pos],
-#               read=key.keys, display=display)
-
-    def get_keys(self, row_no):
-        self._fetch_row(row_no)
+    async def get_keys(self, row_no):
+        await self._fetch_row(row_no)
         keys = {}
         for pos, key in self.key_cols:
             keys[key.col_name] = self.row_data[pos]
         return keys
 
-#   def select_row(self, row_no, display):
-#       self._fetch_row(row_no)
-#       self.db_obj.init(display=False)
-#       for pos, col_defn in self.key_cols:
-#           self.db_obj.setval(col_defn.col_name, self.row_data[pos], display)
-
-    def _compare(self, str1, str2, compare_type):
-        try:
-            str1 = str1.lower()
-            str2 = str2.lower()
-        except AttributeError:  # 'int' type has no Attribute lower()
-            pass
-        if compare_type == 'eq':   # str1 == str2
-            if self.debug:
-                print('"%s" %s "%s" = %s' % (str1, compare_type, str2, (str1==str2)))
-            return str1 == str2
-        elif compare_type == 'gt':   # str1 > str2
-            if self.desc:  # descending sequence
-                if self.debug:
-                    print('"%s" %s "%s" = %s' % (str1, compare_type, str2, (str1<str2)))
-                return str1 < str2
-            else:
-                if self.debug:
-                    print('"%s" %s "%s" = %s' % (str1, compare_type, str2, (str1>str2)))
-                return str1 > str2
-        else:              # str1 < str2
-            if self.desc:  # descending sequence
-                if self.debug:
-                    print('"%s" %s "%s" = %s' % (str1, compare_type, str2, (str1>str2)))
-                return str1 > str2
-            else:
-                if self.debug:
-                    print('"%s" %s "%s" = %s' % (str1, compare_type, str2, (str1<str2)))
-                return str1 < str2
-
-    def find_row(self, current_row):
-        if self.pos == -1:
-            self.db_obj.cursor_row = current_row
-            return True
+    async def find_row(self, current_row):
+        if not await self.check_where():
+            raise AibError(head=self.db_obj.table_name,
+                body='Not part of current selection')
         self.row_data = [
-            self.db_obj.getval(col_name) for col_name in self.col_names]
-        search_str = self.db_obj.getval(self.seq)
-        rowno = self.start(search_str)
+            await self.db_obj.getval(col_name) for col_name in self.col_names]
         if self.debug:
-           print('find_row', current_row, search_str, rowno, self.pos, self.row_data)
+           print('before find_row', self.row_data)
+        # if self.user_seq:
+        #     self.db_obj.cursor_row = current_row
+        #     return
+        # TO DO [2016-06-30]
+        # if user_seq is True, and a row has been inserted or deleted, all subsequent
+        #   'seq' values have been updated, but the cursor rows have *not* been updated
+        # therefore 'self.start' will return the wrong value
+        # not sure how to handle this
+        rowno, found = await self.start()
+        if self.debug:
+           print('find_row', current_row, rowno, self.pos, self.row_data)
+        """
         found = True
         while True:
-#           if self.row_data[self.pos] != search_str:
+            # if self.row_data[self.pos] != search_val:
             try:  # if strings, set to lower case before comparing
-                equal = self.row_data[self.pos].lower() == search_str.lower()
-            except AttributeError:  # 'int' type has no Attribute lower()
-                equal = self.row_data[self.pos] == search_str
+                equal = self.row_data[self.pos].lower() == search_val.lower()
+            except AttributeError:  # 'int' type has no attribute 'lower'
+                equal = self.row_data[self.pos] == search_val
             if not equal:
                 found = False  # can happen if item not in 'where'
                 break
             # if multi-part key, check that all key fields match
             for key in self.key_cols:
-                if self.row_data[key[0]] > key[1]._value:
+                if self.row_data[key[0]] > await key[1].getval():
                     rowno -= 1
-                    self._fetch_row(rowno)
+                    await self._fetch_row(rowno)
                     break
-                elif self.row_data[key[0]] < key[1]._value:
+                elif self.row_data[key[0]] < await key[1].getval():
                     rowno += 1
-                    self._fetch_row(rowno)
+                    await self._fetch_row(rowno)
                     break
             else:  # all key fields are equal
                 break
         if not found:
             raise AibError(head=self.db_obj.table_name,
-                body='Not part of current selection')
+                body='Not part of current selection - should not get here!')
+        """
+        if not found:
+            raise AibError(head=self.db_obj.table_name,
+                body='Not part of current selection - should not get here!')
+
+        # # if multi-part key, check that all key fields match
+        # while True:
+        #     for key in self.key_cols:
+        #         # if self.row_data[key[0]] > await key[1].getval():
+        #         if await self.compare(self.row_data[key[0]], await key[1].getval(), 'gt'):
+        #             rowno -= 1
+        #             await self._fetch_row(rowno)
+        #             break
+        #         # elif self.row_data[key[0]] < await key[1].getval():
+        #         elif await self.compare(self.row_data[key[0]], await key[1].getval(), 'lt'):
+        #             rowno += 1
+        #             await self._fetch_row(rowno)
+        #             break
+        #     else:  # all key fields are equal
+        #         break
         self.db_obj.cursor_row = rowno
-#       return (found, rowno)
+        # return (found, rowno)
 
-    def find_gap(self, current_row):  # where to insert new row
-        if self.pos == -1:
-            return current_row  # i.e. return current row
-        search_str = self.db_obj.getval(self.seq)
-#       self.debug = True
-        rowno = self.start(search_str)
-#       self.debug = False
-#       print('find_gap', current_row, search_str, rowno, self.pos, self.row_data)
-        if self.row_data[self.pos] == search_str:
-            for key in self.key_cols:
-                if self.row_data[key[0]] > key[1]._value:
-                    rowno = self._find_prev(rowno)
-                    break
-                elif self.row_data[key[0]] < key[1]._value:
-                    rowno = self._find_next(rowno)
-                    break
-            else:  # all key fields are equal - should never happen!
-                pass
+    async def check_where(self):
+        if not self.where:
+            return True
+
+        check = []
+        for test, lbr, src, op, tgt, rbr in self.where:
+            if test.lower() in ('and', 'or'):  # else must be 'where'
+                check.append(test.lower())
+            if lbr == '(':
+                check.append(lbr)
+
+            # assume 'src' is a column name in self.db_obj
+            src_val = await self.db_obj.getval(src)
+
+            # 'tgt' could be an integer, a string, or a column name
+            if isinstance(tgt, int):
+                tgt_val = tgt
+            elif tgt.startswith("'"):
+                tgt_val = tgt[1:-1]
+            else:
+                fld = await self.db_obj.getfld(tgt)
+                tgt_val = await fld.getval()
+
+            if op == '=':
+                result = (src_val == tgt_val)
+            elif op == '!=':
+                result = (src_val != tgt_val)
+            elif op == '<>':
+                result = (src_val != tgt_val)
+            elif op == '<':
+                result = False if tgt_val is None else (src_val < tgt_val)
+            elif op == '>':
+                result = True if tgt_val is None else (src_val > tgt_val)
+            elif op == '<=':
+                result = False if tgt_val is None else (src_val <= tgt_val)
+            elif op == '>=':
+                result = True if tgt_val is None else (src_val >= tgt_val)
+
+            check.append(str(result))  # literal 'True' or 'False'
+
+            if rbr == ')':
+                new_check.append(rbr)
+
+        return eval(' '.join(check))
+
+    async def find_gap(self, current_row):  # where to insert new row
+        if self.user_seq:
+            return current_row
+        # primary_seq = self.order[0][0]
+        # search_val = await self.db_obj.getval(primary_seq)
+        # self.debug = True
+        rowno, found = await self.start()
+        # self.debug = False
+        # print('find_gap', found, current_row, search_val, rowno, self.pos, self.row_data)
+        # if self.row_data[self.pos] == search_val:
+        # if found:
+        #     for key in self.key_cols:
+        #         # if self.row_data[key[0]] > await key[1].getval():
+        #         if await self.compare(self.row_data[key[0]], await key[1].getval(), 'gt'):
+        #             import pdb
+        #             pdb.set_trace()
+        #             rowno = await self._find_prev(rowno)
+        #             break
+        #         # elif self.row_data[key[0]] < await key[1].getval():
+        #         elif await self.compare(self.row_data[key[0]], await key[1].getval(), 'lt'):
+        #             rowno = await self._find_next(rowno)
+        #             break
+        #     else:  # all key fields are equal - should never happen!
+        #         pass
         return rowno
 
-    def _find_prev(self, rowno):
-        done = 0
-        while not done:
-            rowno -= 1
-#           if rowno < 1:
-#               rowno = 1
-            if rowno == 1:
-                done = 1
-                break
-            self._fetch_row(rowno)
-            for key in self.key_cols:
-                if self.row_data[key[0]] < self.db_obj.getval(key[1]):
-                    rowno += 1
-                    done = 1
-                    break
-        return rowno
-
-    def _find_next(self, rowno):
-        done = 0
-        while not done:
-            rowno += 1
-#           if rowno > self.no_rows:
-#               rowno = self.no_rows
-            if rowno == self.no_rows:
-                done = 1
-                break
-            self._fetch_row(rowno)
-            for key in self.key_cols:
-                if self.row_data[key[0]] > self.db_obj.getval(key[1]):
-                    done = 1
-                    break
-        return rowno
-
-    def start(self, search_str):
+    async def start(self):
         """
         take search string and perform a binary search through the cursor
         if found, return the position of the row found
         if not found, return the position where it would be if it existed
         """
+
+        LT, EQ, GT = -1, 0, 1
+
         if self.debug:
-            print('start at', search_str, self.pos)
-        if self.pos == -1:  # no searchable column present
-            if isinstance(search_str, int):
-                return search_str
-            else:
-                return self.no_rows-1
-        if not self.no_rows:
+            print('start at',
+                [(col_name, await self.db_obj.getval(col_name), pos)
+                    for col_name, pos, desc in self.order])
+        if not self.num_rows:
             self.row_data = [None] * self.no_cols
-            return 0
-        incr = (self.no_rows // 2) or 1
-        if self.debug:
-            print('rows={} incr={}'.format(self.no_rows, incr))
-        rowno = incr
-        found = False
-        while True:
-            if rowno < 0:
-                rowno = 0
-                self._fetch_row(rowno)
-                break
-            if rowno >= self.no_rows:
-                rowno = self.no_rows - 1
-                self._fetch_row(rowno)
-                if self._compare(self.row_data[self.pos], search_str, 'lt'):
-                    rowno += 1
-                break
-            self._fetch_row(rowno)
-            if self._compare(self.row_data[self.pos], search_str, 'eq'):
-                found = True
-                break
-            elif self._compare(self.row_data[self.pos], search_str, 'gt'):
-                rowno -= 1
-                if rowno < 0:
-                    rowno = 0
-                    break
-                self._fetch_row(rowno)
-                if self._compare(self.row_data[self.pos], search_str, 'eq'):
+            return 0, False
+
+        async def bisect():  # inspired by python 'bisect' module
+            lo = 0
+            hi = self.num_rows
+            found = False
+            while lo < hi:
+                mid = (lo+hi)//2
+                await self._fetch_row(mid)
+                result = await self.compare()
+                if result == EQ:
                     found = True
+                    lo = mid
                     break
-                elif self._compare(self.row_data[self.pos], search_str, 'lt'):
-                    if not self.desc:  # descending sequence (untested)
-                        rowno += 1
-                        self._fetch_row(rowno)
-                    break
-                else:
-                    incr = (incr // 2) or 1
-                    rowno -= incr
+                if result == LT:
+                    hi = mid
+                else:  # must be GT
+                    lo = mid + 1
+            return lo, found
+        rowno, found = await bisect()
+
+        if self.debug:
+            print('returning', rowno, 'cursor_pos =', self.cursor_pos, 'found =', found)
+        return rowno, found
+
+    async def compare(self):
+        LT, EQ, GT = -1, 0, 1
+
+        for col_name, pos, desc in self.order:
+            new_data = await self.db_obj.getval(col_name)
+            col_data = self.row_data[pos]
+            try:
+                new_data = new_data.lower()
+                col_data = col_data.lower()
+            except AttributeError:  # not a TEXT column
+                pass
+            if desc:
+                less_than = False if new_data is None else (new_data > col_data)
             else:
-                rowno += 1
-                if rowno == self.no_rows:
-                    break
-                self._fetch_row(rowno)
-                if self._compare(self.row_data[self.pos], search_str, 'eq'):
-                    found = True
-                    break
-                elif self._compare(self.row_data[self.pos], search_str, 'gt'):
-                    if self.desc:  # descending sequence (untested)
-                        rowno += 1
-                        self._fetch_row(rowno)
-                    break
-                else:
-                    incr = (incr // 2) or 1
-                    rowno += incr
-        if self.debug:
-            print('found =', found)
-        if found:
-            while rowno > 0:
-                rowno -= 1  # scroll backwards to find first occurrence
-                self._fetch_row(rowno)
-                if self.row_data[self.pos] != search_str:
-                    rowno += 1
-                    self._fetch_row(rowno)
-                    break
-        if self.debug:
-            print('returning', rowno, 'cursor_pos =', self.cursor_pos)
-#?#     self.cursor_pos = rowno
-        return rowno
-
-"""
-class DbArray():
-    def __init__(self, db_obj):
-        self.db_obj = db_obj
-        self.array = []
-        self.cursor_cols = []
-        self.cursor_rows = []
-        self.no_rows = 0
-        # there can be > 1 subsets of data in self.array
-        # each one is accessed via its own 'cursor_rows'
-        # each 'cursor_row' is accessed by a 'parent' field value,
-        #   which is common to all rows in that subset
-        self.cursor_row_dict = defaultdict(list)
-
-    def select_cursor(self, value):
-        # this is called whenever the 'parent' field value changes
-        self.cursor_rows = self.cursor_row_dict[value]
-        self.no_rows = len(self.cursor_rows)
-
-    def setup_cursor(self, col_names=None, where=None, order=None, param=None):
-        # where/order/param not used at this stage
-
-        # create a map of cursor columns to array columns
-        if not col_names:  # assume 'all columns'
-            self.cursor_cols = list(range(len(self.db_obj.db_table.col_list)))
-        else:
-            self.cursor_cols = []
-            for col_name in col_names:
-                self.cursor_cols.append(
-                    self.db_obj.getfld(col_name).col_defn.seq)
-
-        # build list of primary keys  - (position in cursor, field)
-        self.key_cols = []
-        for key in self.db_obj.primary_keys:
-            key_name = key.col_name
-            self.key_cols.append((key.col_defn.seq, key))
-
-    def setup_array(self, array):
-        self.array = array
-        self.cursor_rows = list(range(len(self.array)))
-        self.no_rows = len(self.cursor_rows)
-
-    def insert_row(self, row_no):
-        # there can be > 1 subsets of data in self.array
-        # each one is accessed via its own 'cursor_rows'
-        #
-        # therefore we always 'append' the new row to self.array, to prevent
-        #   'messing up' the row numbers in the other 'cursor_rows'
-        #
-        # then we 'insert' the new array row number in the current 'cursor_rows'
-        if row_no is None:
-            row_no = len(self.cursor_rows)  # append
-        array_row_no = len(self.array)
-
-        new_row = [fld.get_val_for_sql() for fld in self.db_obj.select_cols]
-        self.array.append(new_row)
-        self.cursor_rows.insert(row_no, array_row_no)
-        self.no_rows += 1
-
-    def update_row(self, row_no):
-        new_row = [fld.get_val_for_sql() for fld in self.db_obj.select_cols]
-        array_row_no = self.cursor_rows[row_no]
-        self.array[array_row_no] = new_row
-
-    def delete_row(self, row_no):
-        # there can be > 1 subsets of data in self.array
-        # each one is accessed via its own 'cursor_rows'
-        #
-        # therefore we never 'delete' the row from self.array, to prevent
-        #   'messing up' the row numbers in the other 'cursor_rows'
-        # we just 'nullify' it (though we could leave it alone)
-        #
-        # then we 'pop' the array row number from the current 'cursor_rows'
-        array_row_no = self.cursor_rows[row_no]
-        self.array[array_row_no] = []
-        self.cursor_rows.pop(row_no)
-        self.no_rows -= 1
-
-    def fetch_rows(self, first_row, last_row):
-        if first_row < 0:
-            first_row = 0
-        if last_row > len(self.cursor_rows):
-            last_row = len(self.cursor_rows)
-        current_row = first_row
-        while current_row < last_row:
-            row = self.array[self.cursor_rows[current_row]]
-            yield [row[col] for col in self.cursor_cols]
-            current_row += 1
-
-    def fetch_all(self):
-        # this iterates through cursor_rows, and sets up db_obj
-        #   from the data in each row
-        # it does not yield db_obj, as the caller already
-        #   has access to it
-        # it yields True while there is a next row, then False
-        # this allows the caller to say the following -
-        #   all_rows = cursor.fetch_all()
-        #   while next(all_rows):  # will break when it receives False
-        #     ...
-        for array_row in self.cursor_rows:
-            self.db_obj.on_row_selected(self.array[array_row], display=False)
-            yield True
-        yield False
-
-    def find_row(self, current_row):
-        if not self.key_cols:
-            self.db_obj.cursor_row = current_row
-            return
-        for array_row in self.cursor_rows:
-            for pos, fld in self.key_cols:
-                if self.array[array_row][pos] != fld._value:
-                    break  # try next row
-            else:  # all fields match
-                self.db_obj.cursor_row = array_row
-                break  # exit
-        else:
-            raise AibError(head=self.db_obj.table_name,
-                body='Not part of current selection')
-"""
+                less_than = True if new_data is None else (new_data < col_data)
+            if self.debug:
+                print(f'"{new_data}" {">" if desc else "<"} "{col_data}": {less_than}')
+            if less_than:
+                return LT
+            if new_data != col_data:
+                return GT
+            # must be EQ - continue with next sort column
+        return EQ  # if we get here, all sort columns compare equal
 
 #-----------------------------------------------------------------------------
 
 class DbCursor(Cursor):
-    pass
+    pass  # will be customised in config_cursor()
 
 class MemCursor(Cursor):
-    pass
+    pass  # will be customised in config_cursor()

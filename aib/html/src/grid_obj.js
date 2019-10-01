@@ -1,4 +1,4 @@
-  function create_cell_input(grid) {
+function create_cell_input(grid) {
 
   var input = document.createElement('input');
   input.className = 'focus_background';
@@ -10,13 +10,13 @@
   input.style.color = 'navy';
 //  input.grid = grid;
 
-  input.get_val = function() {
-    return this.value;
-    };
+//  input.get_val = function() {
+//    return this.value;
+//    };
 
-  input.get_caret = function() {
-    return getCaret(this);
-    };
+//  input.get_caret = function() {
+//    return getCaret(this);
+//    };
 
   input.set_dflt_val = function(value) {
     var grid = this.grid;
@@ -25,11 +25,17 @@
       this.aib_obj.set_cell_dflt_val(cell, value);
       }
     else {
-      cell.text_node.data = value;
+      cell.text_node.data = value;  // if num and reverse, must reverse first!
       cell.current_value = value;
       this.aib_obj.set_cell_value_lost_focus(cell, value);
       };
-    //grid.set_amended(true);
+    // next line was commented out - don't know why
+    // put back on 2016-04-15
+    // reason - changed the handling of 'lookup'
+    //   previously, on selection, server sent 'set_value_from_server'
+    //   now it sends 'set_dflt_val'
+    //   we need to know that the row has been amended
+    grid.set_amended(true);
     };
 
   input.set_value_from_server = function(args) {
@@ -64,8 +70,8 @@
     if (keyCode === null) {
       if (current_value === null)
         current_value = cell.text_node.data;
-//      if (current_value === '\xa0')
-//        current_value = '';
+        // if (current_value === '\xa0')
+        //   current_value = '';
       };
 
     grid.edit_in_progress = true;
@@ -75,9 +81,27 @@
 //    debug3(input.offsetHeight + ' ' + input.parentNode + ' ' + input.parentNode.offsetHeight);
     };
 
+  input.clear_cell = function(cell) {
+    input.style.width = cell.style.width;
+    this.cell = cell;  // save for use in end_edit()
+    cell.style.display = 'none';
+    cell.parentNode.appendChild(input);
+
+    this.grid.save_onkeypress = this.grid.onkeypress;
+    this.grid.save_onkeydown = this.grid.onkeydown;
+    this.grid.onkeypress = null;
+    this.grid.onkeydown = null;
+
+    cell.text_node.data = '';
+
+    grid.edit_in_progress = true;
+    input.aib_obj.start_edit(input, null);
+    input.className = cell.className;
+    input.focus();
+    };
+  
   input.end_edit = function(update, reset_focus) {
     var cell = this.cell, grid = this.grid;
-    //grid.edit_in_progress = false;
     grid.edit_in_progress = false;
     cell.parentNode.removeChild(input);
     cell.style.display = 'inline-block';
@@ -210,6 +234,8 @@ function create_grid_input(col_span, col_defn, cell) {
     if (window.SVGSVGElement !== undefined) {  // else use vml
       var NS='http://www.w3.org/2000/svg';
       var svg=document.createElementNS(NS,'svg');
+      svg.style.width = '16px';
+      svg.style.height = '16px';
       chkbox.appendChild(svg);
       };
 
@@ -306,8 +332,10 @@ function create_grid_input(col_span, col_defn, cell) {
       var cell = sxml.parentNode;
       var grid = cell.grid;
       if (grid.frame.form.disable_count) return false;
-      if (cell.grid.active_cell === cell)
-        cell.aib_obj.grid_popup(cell, grid.active_row);
+      if (cell.grid.active_cell === cell) {
+        var input = grid.obj_list[cell.grid_col];
+        cell.aib_obj.grid_popup(cell, input, grid.active_row);
+        }
       else {
         callbacks.push([sxml, sxml.afterclick, cell]);
         grid.req_cell_focus(grid.first_grid_row + cell.grid_row, cell.grid_col);
@@ -319,7 +347,8 @@ function create_grid_input(col_span, col_defn, cell) {
       var grid = cell.grid;
       if (grid.active_cell !== cell)  // server has set focus somewhere else
         return;
-      cell.aib_obj.grid_popup(cell, grid.active_row);
+      var input = grid.obj_list[cell.grid_col];
+      cell.aib_obj.grid_popup(cell, input, grid.active_row);
       };
     }
 
@@ -328,12 +357,12 @@ function create_grid_input(col_span, col_defn, cell) {
     cell.style.textOverflow = 'ellipsis';
     cell.style.whiteSpace = 'nowrap';
 
-    var txt = document.createElement('span');
-    cell.appendChild(txt);
-    txt.style.whiteSpace = 'pre';
-    txt.style.display = 'inline-block';
-    txt.style.height = '17px';
-    txt.style.background = '#F5F5F5';  // very light grey
+//    var txt = document.createElement('span');
+//    cell.appendChild(txt);
+//    txt.style.whiteSpace = 'pre';
+//    txt.style.display = 'inline-block';
+//    txt.style.height = '17px';
+//    txt.style.background = '#F5F5F5';  // very light grey
 
     cell.highlight = function(state) {
       //debug3(cell.grid_row + '/' + cell.grid_col + ' - ' + state);
@@ -341,27 +370,27 @@ function create_grid_input(col_span, col_defn, cell) {
         case 'clear':
           var border = '1px solid darkgrey';
           cell.className = 'blur_background';
-          cell.firstChild.style.background = '#F5F5F5';
+//          cell.firstChild.style.background = '#F5F5F5';
           break;
         case 'error':
           var border = '1px solid black';
           cell.className = 'error_background';
-          cell.firstChild.style.background = 'mistyrose';
+//          cell.firstChild.style.background = 'mistyrose';
           break;
         case 'readonly':
           var border = '1px solid black';
           cell.className = 'readonly_background';
-          cell.firstChild.style.background = '#B4EEB4';
+//          cell.firstChild.style.background = '#CCFFCC';  //'#B4EEB4';
           break;
         case 'blur':
           var border = '1px solid darkslategray';
           cell.className = 'blur_background';
-          cell.firstChild.style.background = '#F5F5F5';
+//          cell.firstChild.style.background = '#F5F5F5';
           break;
         case 'focus':
           var border = '1px solid black';
           cell.className = 'focus_background';
-          cell.firstChild.style.background = '#C0FFFF';
+//          cell.firstChild.style.background = '#C0FFFF';
           break;
         };
 
@@ -369,14 +398,16 @@ function create_grid_input(col_span, col_defn, cell) {
       var grid = cell.grid;
       col_span.style.borderBottom = border;
       col_span.style.borderRight = border;
+
       if (cell.grid_row)
-        grid.childNodes[((cell.grid_row-1)*2)+2]
+        grid.childNodes[((cell.grid_row-1)*2) + 2 + (grid.header_row.length ? 1 : 0)]
           .childNodes[cell.grid_col].style.borderBottom = border;
       if (cell.grid_col)
-        grid.childNodes[(cell.grid_row*2)+2]
+        grid.childNodes[(cell.grid_row*2) + 2 + (grid.header_row.length ? 1 : 0)]
           .childNodes[(cell.grid_col-1)].style.borderRight = border;
       else
         col_span.style.borderLeft = border;
+
       };
     };
 
@@ -466,18 +497,19 @@ function create_grid_input(col_span, col_defn, cell) {
 
         };
 
-      txt.appendChild(cell.text_node);
+      cell.appendChild(cell.text_node);
       break;
     case 'num':
       cell.text_node = document.createTextNode('');  //('\xa0');
-      txt.appendChild(cell.text_node);
+      cell.appendChild(cell.text_node);
       cell.style.textAlign = 'right';
       break;
     case 'date':
       cell.text_node = document.createTextNode('');  //('\xa0');
-      txt.appendChild(cell.text_node);
+      cell.appendChild(cell.text_node);
 
-      if (col_defn.readonly !== true) {
+      // if col_defn or grid is readonly, do not show button
+      if (col_defn.readonly !== true && col_span.parentNode.parentNode.readonly !== true) {
 
         //var btn = document.createElement('span');
         //btn.style.display = 'inline-block';
@@ -528,7 +560,7 @@ function create_grid_input(col_span, col_defn, cell) {
       break;
     case 'choice':
       cell.text_node = document.createTextNode('');  //('\xa0');
-      txt.appendChild(cell.text_node);
+      cell.appendChild(cell.text_node);
 
       //var btn = document.createElement('span');
       //btn.style.display = 'inline-block';
@@ -584,12 +616,19 @@ function create_grid_button(col_span, col_defn, cell) {
 
   cell.style.textAlign = 'center';
 
-  var button = document.createElement('span');
-  button.style.display = 'inline-block';
+  var button = document.createElement('button');
+//  button.style.display = 'inline-block';
 //  button.style.width = col_defn.lng + 'px';
-  button.style.height = '16px';
+  button.style.height = '14px';
+  button.style.borderRadius = '4px';
+  button.style.width = (col_defn.lng-20) + 'px';
+  // button.style.width = '30px';
   button.style.border = '1px solid darkgrey';
-  button.appendChild(document.createTextNode(col_defn.label));
+  // button.appendChild(document.createTextNode(col_defn.label));
+  button.style.fontSize = 'x-small';
+  button.appendChild(document.createTextNode('\u29bf'));  // 07cb 20dd 2299/a 23fa 25ce/f 29be/f
+  // button.appendChild(document.createTextNode('Details'));
+  button.style.fontWeight = 'bold';
 
   cell.appendChild(button);
   cell.button = button;
@@ -639,7 +678,7 @@ function create_grid_button(col_span, col_defn, cell) {
     if (grid.active_cell !== cell)  // server has set focus somewhere else
       return;
     if (!grid.amended()) {
-      var args = [grid.ref, grid.active_row, grid.inserted];
+      var args = [grid.ref, grid.active_row];
       send_request('start_row', args);
       grid.set_amended(true);
       };

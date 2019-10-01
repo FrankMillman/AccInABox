@@ -2,7 +2,7 @@ function sxml_popup(sxml) {
 
   popup.sxml = sxml;
 
-  popup.readonly = sxml.readonly;
+  popup.readonly = !sxml.amendable();
   popup.caption.data = 'Xml';
 
   popup.text.value = sxml.value;
@@ -127,8 +127,9 @@ popup.close_window = function() {
     var func = callback.shift();  // callback now contains arguments
     func.apply(ctx, callback);
     };
-  //setTimeout(popup.sxml.focus(), 0);
-  setTimeout(function() {popup.sxml.focus()}, 0);
+  ////setTimeout(popup.sxml.focus(), 0);
+  //setTimeout(function() {popup.sxml.focus()}, 0);
+  setTimeout(function() {current_form.current_focus.focus()}, 0);
   };
 
 popup.style.display = 'none';  // do not show window

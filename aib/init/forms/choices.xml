@@ -1,91 +1,47 @@
-<form name="choices">
+<form name="choices" title="Choices">
 
   <db_objects/>
   <mem_objects>
-    <mem_obj name="choice_var" descr="Choices fields">
+    <mem_obj name="var" descr="Choices fields">
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
-        long_descr="Table name" col_head="" key_field="N"
-        allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
+        long_descr="Table name"/>
       <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
-        long_descr="Column name" col_head="" key_field="N"
-        allow_null="false" allow_amend="false" max_len="0" db_scale="0"/>
+        long_descr="Column name"/>
       <mem_col col_name="choices" data_type="JSON" short_descr="Choices"
-        long_descr="Choices" col_head="Choices" key_field="N" allow_null="true"
-        allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Choices" col_head="Choices" allow_null="true" allow_amend="true"/>
       <mem_col col_name="sub_types" data_type="BOOL" short_descr="Sub types?"
-        long_descr="Does this choice use sub-types?" col_head="" key_field="N"
-        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Does this choice use sub-types?" allow_amend="true"/>
       <mem_col col_name="disp_names" data_type="BOOL" short_descr="Display names?"
-        long_descr="Does this choice use display names?" col_head="" key_field="N"
-        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Does this choice use display names?" allow_amend="true"/>
       <mem_col col_name="full_col_name" data_type="TEXT" short_descr="Full column name"
-        long_descr="Table name [dot] column name" col_head="" key_field="N" allow_null="false"
-        allow_amend="true" max_len="0" db_scale="0"/>
+        long_descr="Table name [dot] column name" allow_amend="true"/>
     </mem_obj>
-    <mem_obj name="choice_codes" descr="Choices codes" parent="choice_var"
-        sequence="[`seq`, [], null]">
-      <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
-        long_descr="Table name" col_head="" key_field="N"
-        allow_null="false" allow_amend="false" max_len="0" db_scale="0"
-        fkey="[`choice_var`, `table_name`, null, null, true]"/>
-      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
-        long_descr="Sequence" col_head="Seq" key_field="N"
-        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
+    <mem_obj name="choices" descr="Choices" parent="var" sequence="[`seq`, [], null]">
       <mem_col col_name="code" data_type="TEXT" short_descr="Code"
         long_descr="Choice code" col_head="Code" key_field="A"
-        allow_null="false" allow_amend="true" max_len="15" db_scale="0"/>
+        allow_amend="true" max_len="15"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
-        long_descr="Choice description" col_head="Description" key_field="N"
-        allow_null="false" allow_amend="true" max_len="30" db_scale="0"/>
-    </mem_obj>
-    <mem_obj name="sub_types" descr="Sub types" parent="choice_codes"
-        sequence="[`seq`, [`code`], null]">
-      <mem_col col_name="code" data_type="TEXT" short_descr="Code"
-        long_descr="Choice code" col_head="Code" key_field="A"
-        allow_null="false" allow_amend="true" max_len="15" db_scale="0"
-        fkey="[`choice_codes`, `code`, null, null, true]"/>
+        long_descr="Choice description" col_head="Description"
+        allow_amend="true" max_len="30"/>
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
-        long_descr="Sequence" col_head="Seq" key_field="N"
-        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
-      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
-        long_descr="Subtype column name" col_head="Col name" key_field="A"
-        allow_null="false" allow_amend="true" max_len="15" db_scale="0"/>
-      <mem_col col_name="reqd" data_type="BOOL" short_descr="Required?"
-        long_descr="Subtype column required?" col_head="Reqd?" key_field="N"
-        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
-    </mem_obj>
-    <mem_obj name="disp_names" descr="Display names" parent="choice_codes"
-        sequence="[`seq`, [`code`], null]">
-      <mem_col col_name="code" data_type="TEXT" short_descr="Code"
-        long_descr="Choice code" col_head="Code" key_field="A"
-        allow_null="false" allow_amend="true" max_len="15" db_scale="0"
-        fkey="[`choice_codes`, `code`, null, null, true]"/>
-      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
-        long_descr="Sequence" col_head="Seq" key_field="N"
-        allow_null="false" allow_amend="true" max_len="0" db_scale="0"/>
-      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
-        long_descr="Display column name" col_head="Col name" key_field="A"
-        allow_null="false" allow_amend="true" max_len="15" db_scale="0"/>
-      <mem_col col_name="separator" data_type="TEXT" short_descr="Separator"
-        long_descr="Display column separator" col_head="Sep" key_field="N"
-        allow_null="true" allow_amend="true" max_len="5" db_scale="0"/>
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
     </mem_obj>
   </mem_objects>
 
   <input_params>
-    <input_param name="table_name" type="data_attr" target="choice_var.table_name"
+    <input_param name="table_name" type="data_attr" target="var.table_name"
         required="true"/>
-    <input_param name="col_name" type="data_attr" target="choice_var.col_name"
+    <input_param name="col_name" type="data_attr" target="var.col_name"
         required="true"/>
-    <input_param name="choices" type="data_attr" target="choice_var.choices"
+    <input_param name="choices" type="data_attr" target="var.choices"
         required="true"/>
   </input_params>
 
   <output_params>
-    <output_param name="choices" type="data_attr" source="choice_var.choices"/>
+    <output_param name="choices" type="data_attr" source="var.choices"/>
   </output_params>
 
-  <frame main_object="choice_var">
+  <frame main_object="var">
     <toolbar/>
     <body>
       <block/>
@@ -94,16 +50,9 @@
       <col/>
       <label value="Column:"/>
       <col colspan="2"/>
-      <display fld="choice_var.full_col_name" lng="250"/>
-      <row/>
-      <col/>
-      <label value="Use sub types?"/>
-      <input fld="choice_var.sub_types"/>
-      <col/>
-      <label value="Use display names?"/>
-      <input fld="choice_var.disp_names"/>
+      <display obj_name="var" col_name="full_col_name" lng="250"/>
       <block/>
-      <grid data_object="choice_codes" growable="true" num_grid_rows="10">
+      <grid data_object="choices" growable="true" num_grid_rows="10">
         <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="code" lng="100"/>
@@ -115,41 +64,8 @@
         </cur_sequence>
         <grid_methods template="Grid"/>
       </grid>
-      <vbox/>
-      <grid_frame main_object="choice_codes">
-        <body>
-          <block/>
-          <grid data_object="sub_types" growable="true" num_grid_rows="7">
-            <toolbar template="Grid"/>
-            <cur_columns>
-              <cur_col col_name="col_name" lng="100"/>
-              <cur_col col_name="reqd" lng="40"/>
-            </cur_columns>
-            <cur_filter/>
-            <cur_sequence>
-              <cur_seq col_name="seq"/>
-            </cur_sequence>
-            <grid_methods template="Grid"/>
-          </grid>
-          <grid data_object="disp_names" growable="true" num_grid_rows="7">
-            <toolbar template="Grid"/>
-            <cur_columns>
-              <cur_col col_name="col_name" lng="100"/>
-              <cur_col col_name="separator" lng="40"/>
-            </cur_columns>
-            <cur_filter/>
-            <cur_sequence>
-              <cur_seq col_name="seq"/>
-            </cur_sequence>
-            <grid_methods template="Grid"/>
-          </grid>
-        </body>
-        <button_row validate="true" template="Grid_Frame"/>
-        <frame_methods template="Grid_Frame"/>
-      </grid_frame>
-      <vbox_end/>
     </body>
-    <button_row validate="true" template="Setup_Form"/>
+    <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
         <<action>>
@@ -164,7 +80,7 @@
       <method name="do_restore" action="
         <<action>>
           <<pyfunc name=`custom.choices.restore_choices`/>>
-          <<restore_obj obj_name=`choice_var`/>>
+          <<restore_obj obj_name=`var`/>>
         <</action>>
       "/>
     </frame_methods>

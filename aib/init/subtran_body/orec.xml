@@ -1,0 +1,19 @@
+<subtype_body subtype_id="orec">
+  <block/>
+  <panel/>
+  <row/>
+  <col/>
+  <label value="Code:"/>
+  <col/>
+  <input obj_name="cb_orec" col_name="orec_code" lng="80"/>
+  <row/>
+  <col/>
+  <label value="Description:"/>
+  <col/>
+  <input obj_name="cb_orec" col_name="orec_descr" lng="120"/>
+  <row/>
+  <col/>
+  <label value="Amount:"/>
+  <col/>
+  <input obj_name="cb_orec" col_name="orec_amount" lng="80"/>
+</subtype_body>

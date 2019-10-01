@@ -1,19 +1,16 @@
-from lxml import etree
-
 # table definition
 table = {
     'table_name'    : 'acc_users_roles',
-    'module'        : 'acc',
+    'module_id'     : 'acc',
     'short_descr'   : 'User roles',
     'long_descr'    : 'Mapping of user-id to one or more roles',
-    'audit_trail'   : True,
-    'table_created' : True,
-    'default_cursor': None,
-    'setup_form'    : None,
-    'upd_chks'      : None,
-    'del_chks'      : None,
-    'table_hooks'   : None,
+    'sub_types'     : None,
+    'sub_trans'     : None,
     'sequence'      : None,
+    'tree_params'   : None,
+    'roll_params'   : None,
+    'indexes'       : None,
+    'ledger_col'    : None,
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -28,14 +25,15 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'generated'  : True,
+    'calculated' : True,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -46,14 +44,15 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'generated'  : True,
+    'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : '0',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -64,14 +63,15 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'generated'  : True,
+    'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : '0',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -82,34 +82,61 @@ cols.append ({
     'long_descr' : 'User row id',
     'col_head'   : 'User row id',
     'key_field'  : 'A',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
-    'fkey'       : ['_sys.dir_users', 'row_id', 'user_id', 'user_id', True],
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['dir_users', 'row_id', 'user_id', 'user_id', True, None],
     'choices'    : None,
     })
+"""
 cols.append ({
-    'col_name'   : 'role_id',
+    'col_name'   : 'module_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Role id',
-    'long_descr' : 'Role id',
-    'col_head'   : 'Role id',
+    'short_descr': 'Module row id',
+    'long_descr' : 'Module row id',
+    'col_head'   : 'Module',
     'key_field'  : 'A',
-    'generated'  : False,
-    'allow_null' : False,
+    'calculated' : False,
+    'allow_null' : True,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : [['not_admin', 'Role cannot be admin',
-        [['check', '', 'role', '!=', "'admin'", '']]]],
-    'fkey'       : ['acc_roles', 'row_id', 'role', 'role', True],
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['db_modules', 'row_id', 'module', 'module', False, None],
+    'choices'    : None,
+    })
+"""
+cols.append ({
+    'col_name'   : 'role_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Role row id',
+    'long_descr' : 'Role row id',
+    'col_head'   : 'Role',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : True,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+#   'col_checks' : None,
+    'col_checks' : [
+        ['not_admin', "Role may not be 'admin'", [
+            ['check', '', 'role_row_id>role_id', '!=', "'admin'", ''],
+            ],
+        ]],
+    'fkey'       : ['acc_roles', 'row_id', 'role_id', 'role_id', True, 'roles_no_admin'],
     'choices'    : None,
     })
 
@@ -118,3 +145,28 @@ virt = []
 
 # cursor definitions
 cursors = []
+
+# actions
+actions = []
+"""
+actions.append([
+    'upd_checks',
+    [
+        [
+            'module_or_role',
+            'Must have module_row_id or role_id, but not both',
+            [
+                ['check', '(', 'module_row_id', 'is not', '$None', ''],
+                ['and', '', 'role_id', 'is', '$None', ')'],
+                ['or', '(', 'module_row_id', 'is', '$None', ''],
+                ['and', '', 'role_id', 'is not', '$None', ')'],
+                ],
+            ],
+        ],
+    ])
+
+OR
+
+cannot be 'root'
+
+"""

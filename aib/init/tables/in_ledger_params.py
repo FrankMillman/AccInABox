@@ -1,0 +1,270 @@
+# table definition
+table = {
+    'table_name'    : 'in_ledger_params',
+    'module_id'     : 'in',
+    'short_descr'   : 'In warehouses',
+    'long_descr'    : 'Inventory warehouses with parameters',
+    'sub_types'     : None,
+    'sub_trans'     : None,
+    'sequence'      : None,
+    'tree_params'   : None,
+    'roll_params'   : None,
+    'indexes'       : None,
+    'ledger_col'    : None,
+    'defn_company'  : None,
+    'data_company'  : None,
+    'read_only'     : False,
+    }
+
+# column definitions
+cols = []
+cols.append ({
+    'col_name'   : 'row_id',
+    'data_type'  : 'AUTO',
+    'short_descr': 'Row id',
+    'long_descr' : 'Row id',
+    'col_head'   : 'Row',
+    'key_field'  : 'Y',
+    'calculated' : True,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'created_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Created id',
+    'long_descr' : 'Created row id',
+    'col_head'   : 'Created',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'deleted_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Deleted id',
+    'long_descr' : 'Deleted row id',
+    'col_head'   : 'Deleted',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'ledger_id',
+    'data_type'  : 'TEXT',
+#   'short_descr': 'Ledger id',
+#   'long_descr' : 'Ledger id',
+#   'col_head'   : 'Ledger',
+    'short_descr': 'Warehouse code',
+    'long_descr' : 'Warehouse code',
+    'col_head'   : 'Wh code',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 20,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'descr',
+    'data_type'  : 'TEXT',
+#   'short_descr': 'Description',
+#   'long_descr' : 'Description',
+#   'col_head'   : 'Description',
+    'short_descr': 'Warehouse name',
+    'long_descr' : 'Warehouse name',
+    'col_head'   : 'Name',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 30,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'gl_ctrl_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Gl control a/c',
+    'long_descr' : 'Gl control a/c',
+    'col_head'   : 'Gl ctrl',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : True,  # null means 'not integrated to g/l'
+#   'allow_amend': True,  # can change from null to not-null to start integration
+    'allow_amend': [['where', '', '$value', 'is', '$None', '']],
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['gl_codes', 'row_id', 'ctrl_acc', 'gl_code', False, 'gl_codes'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'location_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location id',
+    'long_descr' : 'Location id',
+    'col_head'   : 'Loc',
+    'key_field'  : 'N',
+    'calculated' : ['_param.location_id', 'is_not', None],
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{_param.location_id}',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_locations', 'row_id', 'location', 'location', False, 'locs'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'currency_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Currency id',
+    'long_descr' : 'Currency id - if specified, all suppliers will share this currency',
+    'col_head'   : 'Curr',
+    'key_field'  : 'N',
+    'calculated' : ['_param.currency_id', 'is_not', None],
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{_param.currency_id}',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'current_period',
+    'data_type'  : 'INT',
+    'short_descr': 'Current period',
+    'long_descr' : 'Current period',
+    'col_head'   : 'Curr',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_periods', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+
+# virtual column definitions
+virt = []
+virt.append ({
+    'col_name'   : 'module_id',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Module',
+    'long_descr' : 'Module id',
+    'col_head'   : '',
+    'sql'        : "'in'",
+    })
+virt.append ({
+    'col_name'   : 'module_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Module row id',
+    'long_descr' : 'Module row id',
+    'col_head'   : '',
+    'sql'        : "SELECT b.row_id FROM {company}.db_modules b WHERE b.module_id = 'in'",
+    })
+"""
+virt.append ({
+    'col_name'   : 'wh_code',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Warehouse code',
+    'long_descr' : 'Warehouse code',
+    'col_head'   : 'Wh code',
+    'sql'        : 'SELECT a.ledger_id',
+    })
+virt.append ({
+    'col_name'   : 'name',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Warehouse name',
+    'long_descr' : 'Warehouse name',
+    'col_head'   : 'Name',
+    'sql'        : 'SELECT a.descr',
+    })
+"""
+
+# cursor definitions
+cursors = []
+"""
+cursors.append({
+    'cursor_name': 'in_ledg',
+    'descr': 'Warehouses',
+    'columns': [
+        ['ledger_id', 100, False, False, False, False, None, None, None, None],
+        ['descr', 260, True, True, False, False, None, None, None, None],
+        ],
+    'filter': [],
+    'sequence': [['ledger_id', False]],
+    })
+"""
+cursors.append({
+    'cursor_name': 'whouse',
+    'descr': 'Warehouses',
+    'columns': [
+        ['ledger_id', 100, False, False, False, False, None, None, None, None],
+        ['descr', 240, True, False, False, False, None, None, None, None],
+        ],
+    'filter': [],
+    'sequence': [['ledger_id', False]],
+    'formview_name': 'in_params',
+    })
+
+# actions
+actions = []
+actions.append([
+    'after_insert', '<pyfunc name="db.cache.ledger_inserted"/>'
+    ])
+actions.append([
+    'after_commit', '<pyfunc name="db.cache.ledger_updated"/>'
+    ])

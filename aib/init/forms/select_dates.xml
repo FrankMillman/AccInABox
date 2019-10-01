@@ -1,0 +1,126 @@
+<form name="select_dates" title="Select range of dates" after_start_form="
+  <<action>>
+    <<pyfunc name=`custom.date_funcs.setup_dates`/>>
+  <</action>>
+  ">
+  <db_objects/>
+  <mem_objects>
+    <mem_obj name="var" descr="Variables used in form"
+        sub_types="[
+        [`own_dates`, null,
+          [
+            [`N`, `Select by financial period`, [`fin_year`, `period_no`], []],
+            [`Y`, `Select start and end dates`, [`start_date`, `end_date`], []]
+            ]
+          ]
+        ]">
+      <mem_col col_name="own_dates" data_type="TEXT" short_descr="Select by financial period?"
+        long_descr="Select dates by financial period?" allow_amend="true" max_len="1" dflt_val="N"/>
+      <mem_col col_name="fin_year" data_type="INT" short_descr="Financial year"
+        long_descr="Financial year" allow_amend="true" choices="[]"/>
+      <mem_col col_name="period_no" data_type="INT" short_descr="Period no"
+        long_descr="Period number" allow_amend="true" choices="[]"/>
+      <mem_col col_name="module" data_type="TEXT" short_descr="Module" long_descr="Module"/>
+<!--
+      <mem_col col_name="company_id" data_type="TEXT" short_descr="Company id"
+        long_descr="Company to select dates from"
+        fkey="[`_sys.dir_companies`, `company_id`, null, null, false, null]"/>
+      <mem_col col_name="module_row_id" data_type="INT" short_descr="Module row id"
+        long_descr="Module row id"
+        fkey="[`db_modules`, `row_id`, `module_id`, `module_id`, false, null]"/>
+      <mem_col col_name="ledger_row_id" data_type="INT" short_descr="Ledger row id"
+        long_descr="Ledger row id to select current period from"
+        fkey="[[`module_id`, [[`gl`, `adm_params`], [`ar`, `ar_ledger_params`],
+          [`ap`, `ap_ledger_params`], [`cb`, `cb_ledger_params`]]],
+          `row_id`, null, null, false, null]"/>
+-->
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Start date"
+        long_descr="Start date to return to caller"/>
+      <mem_col col_name="end_date" data_type="DTE" short_descr="End date"
+        long_descr="End date to return to caller"/>
+    </mem_obj>
+
+    <mem_obj name="periods" descr="Periods for user selection">
+      <mem_col col_name="year_no" data_type="DTE" short_descr="End date"
+        long_descr="End date to return to caller"/>
+    </mem_obj>
+
+  </mem_objects>
+
+  <input_params>
+    <input_param name="module" type="data_attr" target="var.module"/>
+    <input_param name="upd_type" type="data_attr" target="var.upd_type"/>
+    <input_param name="updates" type="data_attr" target="var.updates" required="true"/>
+  </input_params>
+
+  <output_params>
+    <output_param name="start_date" type="data_attr" source="var.start_date"/>
+    <output_param name="end_date" type="data_attr" source="var.end_date"/>
+  </output_params>
+
+  <frame main_object="var">
+    <toolbar/>
+    <body>
+
+    <block/>
+    <panel/>
+    <row/>
+    <col/>
+    <input obj_name="var" col_name="own_dates" lng="200"/>
+
+    <subtype_frame subtype_obj="var" subtype_col="own_dates">
+
+      <subtype_body subtype_id="N">
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Select financial year:"/>
+        <col/>
+        <input obj_name="var" col_name="fin_year" lng="150" form_dflt="
+          <<action>>
+            <<pyfunc name=`custom.arcust_funcs.setup_finyrs`/>>
+          <</action>>
+          " after="
+          <<action>>
+            <<pyfunc name=`custom.arcust_funcs.after_finyrs`/>>
+          <</action>>
+          "/>
+        <row/>
+        <col/>
+        <label value="Select period:"/>
+        <col/>
+        <input obj_name="var" col_name="period_no" lng="150" form_dflt="
+          <<action>>
+            <<pyfunc name=`custom.arcust_funcs.setup_finpers`/>>
+          <</action>>
+          " after="
+          <<action>>
+            <<pyfunc name=`custom.arcust_funcs.after_finpers`/>>
+          <</action>>
+          "/>
+      </subtype_body>
+
+      <subtype_body subtype_id="Y">
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Start date:"/>
+        <col/>
+        <input obj_name="var" col_name="start_date" lng="150"/>
+        <row/>
+        <col/>
+        <label value="End date:"/>
+        <col/>
+        <input obj_name="var" col_name="end_date" lng="150"/>
+      </subtype_body>
+
+    </subtype_frame>
+
+
+  </body>
+  <button_row template="Form"/>
+  <frame_methods template="Form"/>
+</frame>
+</form>

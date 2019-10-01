@@ -1,44 +1,16 @@
-from lxml import etree
-
 # table definition
 table = {
     'table_name'    : 'db_columns',
-    'module'        : 'db',
+    'module_id'     : 'db',
     'short_descr'   : 'Db columns',
     'long_descr'    : 'Database column definitions',
-    'audit_trail'   : True,
-    'table_created' : True,
-    'default_cursor': None,
-    'setup_form'    : None,
-    'upd_chks'      : None,
-    'upd_chks'      : [[
-                        'check_not_null',
-                        'Cannot disallow null - NULLs are present',
-                        [
-                            ['check', '', 'allow_null', 'pyfunc', "'check_not_null'", ''],
-                        ],
-                      ]],
-    'del_chks'      : None,
-    'table_hooks'   : etree.fromstring(
-        '<hooks>'
-            '<hook type="after_save"><setup_disp_name/></hook>'
-            '<hook type="after_insert">'
-                '<case>'
-                    '<compare src="col_type" op="eq" tgt="\'user\'">'
-                        '<add_column/>'
-                    '</compare>'
-                '</case>'
-            '</hook>'
-            '<hook type="after_update">'
-                '<case>'
-                    '<compare src="allow_null" op="ne" tgt="allow_null$orig">'
-                        '<amend_allow_null/>'
-                    '</compare>'
-                '</case>'
-            '</hook>'
-        '</hooks>'
-        ),
+    'sub_types'     : None,
+    'sub_trans'     : None,
     'sequence'      : ['seq', ['table_id', 'col_type'], None],
+    'tree_params'   : None,
+    'roll_params'   : None,
+    'indexes'       : None,
+    'ledger_col'    : None,
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -53,14 +25,15 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'generated'  : True,
+    'calculated' : True,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -71,14 +44,15 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'generated'  : True,
+    'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : '0',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -89,14 +63,15 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'generated'  : True,
+    'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : '0',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -107,15 +82,16 @@ cols.append ({
     'long_descr' : 'Table id',
     'col_head'   : 'Table',
     'key_field'  : 'A',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
-    'fkey'       : ['db_tables', 'row_id', 'table_name', 'table_name', True],
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['db_tables', 'row_id', 'table_name', 'table_name', True, None],
     'choices'    : None,
     })
 cols.append ({
@@ -125,14 +101,15 @@ cols.append ({
     'long_descr' : 'Column name',
     'col_head'   : 'Column',
     'key_field'  : 'A',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
-    'max_len'    : 15,
+    'max_len'    : 20,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -143,23 +120,20 @@ cols.append ({
     'long_descr' : 'Column type',
     'col_head'   : 'Col type',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 5,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : 'sys',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-        False,  # use sub_types?
-        False,  # use display_names?
-        [
-            ['sys', 'System column', [], []],
-            ['virt', 'Virtual column', [], []],
-            ['user', 'User-defined column', [], []],
-            ]
+            ['sys', 'System column'],
+            ['virt', 'Virtual column'],
+            ['user', 'User-defined column'],
         ],
     })
 cols.append ({
@@ -169,14 +143,15 @@ cols.append ({
     'long_descr' : 'Position for display',
     'col_head'   : 'Seq',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -187,31 +162,31 @@ cols.append ({
     'long_descr' : 'Data type',
     'col_head'   : 'Type',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': [
+        ['where', '', 'table_id>table_created', 'is', '$False', ''],
+        ],
     'max_len'    : 5,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : 'TEXT',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-        False,   # use sub_types?
-        False,  # use display_names?
-        [
-            ['TEXT', 'Text', [], []],
-            ['INT', 'Integer', [], []],
-            ['DEC', 'Decimal', [], []],
-            ['DTE', 'Date', [], []],
-            ['DTM', 'Date-time', [], []],
-            ['BOOL', 'True/False', [], []],
-            ['AUTO', 'Auto-generated key', [], []],
-            ['JSON', 'Json', [], []],
-            ['XML', 'Xml', [], []],
-            ['FXML', 'Form definition', [], []],
-            ['PXML', 'Process definition', [], []],
-            ]
+            ['TEXT', 'Text'],
+            ['PWD', 'Password'],
+            ['INT', 'Integer'],
+            ['DEC', 'Decimal'],
+            ['DTE', 'Date'],
+            ['DTM', 'Date-time'],
+            ['BOOL', 'True/False'],
+            ['AUTO', 'Generated key'],
+            ['JSON', 'Json'],
+            ['SXML', 'Xml'],
+            ['FXML', 'Form definition'],
+            ['PXML', 'Process definition'],
         ],
     })
 cols.append ({
@@ -221,14 +196,15 @@ cols.append ({
     'long_descr' : 'Column description',
     'col_head'   : 'Description',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -239,14 +215,15 @@ cols.append ({
     'long_descr' : 'Full description for user manual, tool-tip, etc',
     'col_head'   : 'Long description',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -257,14 +234,15 @@ cols.append ({
     'long_descr' : 'Column heading for reports and grids',
     'col_head'   : 'Col head',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -275,40 +253,54 @@ cols.append ({
     'long_descr' : 'Yes=primary key, Alt=alternate key, No=not key field',
     'col_head'   : 'Key?',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': [
+        ['where', '', 'table_id>table_created', 'is', '$False', ''],
+        ],
     'max_len'    : 1,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : 'N',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-        False,  # use sub_types?
-        False,  # use display_names?
-        [
-            ['N', 'No', [], []],
-            ['Y', 'Yes', [], []],
-            ['A', 'Alt', [], []],
-            ]
+            ['N', 'No'],
+            ['Y', 'Yes'],
+            ['A', 'Alt'],
+            ['B', '2nd alt'],
         ],
     })
 cols.append ({
-    'col_name'   : 'generated',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Ganerated?',
-    'long_descr' : 'Is value generated programatically?',
-    'col_head'   : 'Generated?',
+    'col_name'   : 'calculated',
+    'data_type'  : 'JSON',
+    'short_descr': 'Calculated?',
+    'long_descr' : (
+        'Is value assigned programatically? '
+        'Can be True, False, or a condition to evaluate. '
+        'Ideally, condition must be evaluatable when setting up db_obj - '
+            'not sure if true - see db.object_fields.calculated()'
+        'True if col_name = db_table.ledger_col - will be evaluated in get_dflt() '
+        'True if values are accumulated from child table while updating '
+        'True if there is a dflt_rule, and allow_amend is false '
+        'True if col_type = "virt "'
+        'If True and not "virt", amendment not allowed '
+        'If True and not "virt", re-evaluated on save in setup_defaults() '
+        'If True and not "virt", set amend_ok to False on client '
+        'if True, do not include in WSDL '
+        ),
+    'col_head'   : 'Calculated?',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_val'   : 'false',
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -319,32 +311,39 @@ cols.append ({
     'long_descr' : 'Allow column to contain null?',
     'col_head'   : 'Null?',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'allow_amend',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'JSON',
     'short_descr': 'Allow amendment?',
-    'long_descr' : 'Allow column to be amended?',
+    'long_descr' : (
+        'Allow column to be amended? '
+        'Can be True, False, or a condition to evaluate. '
+        'If False, it means that a user cannot amend the field. '
+        'Ignored if "calculated" is True - the field will be evaluated automatically on save.'
+        ),
     'col_head'   : 'Amend?',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_val'   : 'false',
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -352,17 +351,18 @@ cols.append ({
     'col_name'   : 'max_len',
     'data_type'  : 'INT',
     'short_descr': 'Maximum length',
-    'long_descr' : 'Maximum length for text field',
+    'long_descr' : 'Maximum length for text field - zero means unlimited',
     'col_head'   : 'Max len',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : '0',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -373,68 +373,93 @@ cols.append ({
     'long_descr' : 'Number of decimal places as defined in database',
     'col_head'   : 'Db scale',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': [
+        ['where', '', 'table_id>table_created', 'is', '$False', ''],
+        ],
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : '0',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'scale_ptr',
     'data_type'  : 'TEXT',
-    'short_descr': 'Parameter for number of decimals',
-    'long_descr' : 'Virtual column to return number of decimals allowed',
+    'short_descr': 'Column with scale factor',
+    'long_descr' : 'Column to define number of decimals allowed',
     'col_head'   : 'Scale ptr',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'dflt_val',
     'data_type'  : 'TEXT',
-    'short_descr': 'Default deinition',
+    'short_descr': 'Default definition',
     'long_descr' : 'Default definition',
     'col_head'   : 'Default',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'col_chks',
+    'col_name'   : 'dflt_rule',
+    'data_type'  : 'SXML',
+    'short_descr': 'Rule to derive default value',
+    'long_descr' : 'Rule to derive default value',
+    'col_head'   : 'Default rule',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'col_checks',
     'data_type'  : 'JSON',
     'short_descr': 'Column checks',
     'long_descr' : 'Column checks',
     'col_head'   : 'Checks',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -445,14 +470,15 @@ cols.append ({
     'long_descr' : 'Foreign key',
     'col_head'   : 'Fkey',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -463,14 +489,15 @@ cols.append ({
     'long_descr' : 'List of valid choices',
     'col_head'   : 'Choices',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -481,14 +508,15 @@ cols.append ({
     'long_descr' : 'Sql statement to return value',
     'col_head'   : 'Sql',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -498,3 +526,29 @@ virt = []
 
 # cursor definitions
 cursors = []
+
+# actions
+actions = []
+actions.append([
+    'upd_checks', [
+        [
+            'check_not_null',
+            'Cannot disallow null - NULLs are present',
+            [
+                ['check', '', 'allow_null', 'pyfunc', 'check_not_null', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'after_insert', (
+        '<case>'
+            '<compare src="col_type" op="eq" tgt="\'user\'">'
+                '<add_column/>'
+            '</compare>'
+        '</case>'
+        )
+    ])
+actions.append([
+    'after_commit', '<reset_table_defn/>'
+    ])
