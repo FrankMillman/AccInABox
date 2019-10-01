@@ -1,0 +1,195 @@
+<form name="ar_alloc" title="Ar allocation" before_start_form="
+  <<action>>
+    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_alloc` action=`lock`/>>
+  <</action>>
+  " on_close_form="
+  <<action>>
+    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_alloc` action=`unlock`/>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="ar_this_item" table_name="ar_openitems" is_formview_obj="true"/>
+    <db_obj name="ar_alloc" table_name="ar_tran_alloc"/>
+    <db_obj name="ar_alloc_det" table_name="ar_tran_alloc_det" parent="ar_alloc"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="ar_alloc">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+
+      <row/>
+      <col/>
+      <label value="Transaction type:"/>
+      <col/>
+      <input obj_name="ar_this_item" col_name="tran_type" lng="60" readonly="true" skip="true"/>
+
+      <col/>
+      <label value="Transaction number:"/>
+      <col/>
+      <input obj_name="ar_this_item" col_name="tran_number" lng="80" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Transaction date:"/>
+      <col/>
+      <input obj_name="ar_this_item" col_name="tran_date" lng="84" readonly="true" skip="true"/>
+
+      <col/>
+      <label value="Customer Id:"/>
+      <col/>
+      <input obj_name="ar_this_item" col_name="cust_row_id>party_row_id>party_id" lng="84" readonly="true" skip="true"/>
+      <display obj_name="ar_this_item" col_name="cust_row_id>party_row_id>display_name" lng="160"/>
+
+      <row/>
+      <col/>
+      <label value="Original amount:"/>
+      <col/>
+      <input obj_name="ar_this_item" col_name="amount_cust" lng="84" readonly="true" skip="true"/>
+
+      <col/>
+      <label value="Amount to allocate:"/>
+      <col/>
+      <input obj_name="ar_this_item" col_name="balance_cust" lng="84" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <col/>
+      <button lng="150" btn_id="alloc" btn_label="Allocate now"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<assign src=`ar_this_item.row_id` tgt=`ar_alloc.item_row_id`/>>
+            <<assign src=`ar_this_item.no_of_allocations` tgt=`ar_alloc.alloc_no`/>>
+            <<save_obj obj_name=`ar_alloc`/>>
+            <<sub_form name=`ar_alloc_item`>>
+              <<call_params>>
+                <<call_param name=`alloc_header` type=`data_obj` source=`ar_alloc`/>>
+                <<call_param name=`alloc_detail` type=`data_obj` source=`ar_alloc_det`/>>
+                <<call_param name=`tran_type` type=`data_attr` source=`'ar_alloc'`/>>
+                <<call_param name=`this_item_rowid` type=`data_attr` source=`ar_this_item.row_id`/>>
+                <<call_param name=`amount_to_alloc` type=`data_attr` source=`0-ar_this_item.balance_cust`/>>
+                <<call_param name=`unallocated` type=`data_attr` source=`0-ar_this_item.balance_cust`/>>
+              <</call_params>>
+              <<return_params>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`>>
+                  <<btn_set_focus btn_id=`btn_close`/>>
+                <</return>>
+                <<return state=`completed`>>
+                  <<btn_set_focus btn_id=`btn_close`/>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+
+    </body>
+    <button_row>
+      <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
+          btn_validate="true" btn_default="false" lng="60" action="
+        <<action>>
+          <<call method=`on_req_close`/>>
+        <</action>>
+        "/>
+      <button btn_id="btn_post" btn_label="Post" btn_enabled="true"
+          btn_validate="true" btn_default="true" lng="60" action="
+        <<action>>
+          <<req_save/>>
+          <<call method=`do_post`/>>
+          <<call method=`on_req_close`/>>
+          <<restart_grid obj_name=`grid_obj`/>>'
+        <</action>>
+        "/>
+    </button_row>
+    <frame_methods template="Form">
+      <method name="do_save" action="
+        <<action>>
+          <<save_obj obj_name=`ar_alloc`/>>
+        <</action>>
+      "/>
+      <method name="do_post" action="
+        <<action>>
+          <<post_obj obj_name=`ar_alloc`/>>
+        <</action>>
+        "/>
+    </frame_methods>
+  </frame>
+
+  <inline_form name="tran_header" title="Allocation header">
+    <frame main_object="ar_alloc">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+
+        <row/>
+        <col/>
+        <label value="Customer Id:"/>
+        <col/>
+        <input obj_name="ar_this_item" col_name="cust_row_id>party_row_id>party_id" lng="84" readonly="true" skip="true"/>
+        <display obj_name="ar_this_item" col_name="cust_row_id>party_row_id>display_name" lng="160"/>
+
+        <row/>
+        <col/>
+        <label value="Type:"/>
+        <col/>
+        <input obj_name="ar_this_item" col_name="tran_type" lng="60" readonly="true" skip="true"/>
+
+        <row/>
+        <col/>
+        <label value="Number:"/>
+        <col/>
+        <input obj_name="ar_this_item" col_name="tran_number" lng="80" readonly="true" skip="true"/>
+
+        <row/>
+        <col/>
+        <label value="Date:"/>
+        <col/>
+        <input obj_name="ar_this_item" col_name="tran_date" lng="84" readonly="true" skip="true"/>
+
+        <row/>
+        <col/>
+        <label value="Unallocated:"/>
+        <col/>
+        <input obj_name="ar_this_item" col_name="balance_cust" lng="84" readonly="true" skip="true"/>
+        <display obj_name="ar_this_item" col_name="cust_row_id>currency" lng="40"/>
+ 
+      </body>
+
+      <button_row>
+        <button btn_id="btn_save" btn_label="Ok" btn_enabled="true" 
+          btn_validate="true" btn_default="false" lng="60" action="
+            <<action>>
+              <<req_save/>>
+              <<case>>
+                <<obj_exists obj_name=`[obj_name]`>>
+                  <<parent_req_close/>>
+                <</obj_exists>>
+              <</case>>
+            <</action>>
+          "/>
+        <button btn_id="btn_close" btn_label="Cancel" btn_enabled="true" 
+          btn_validate="false" btn_default="true" lng="60" action="
+            <<action>>
+              <<parent_req_close/>>
+            <</action>>
+          "/>
+      </button_row>
+
+      <frame_methods template="Transaction_Header">
+        <method name="on_start_frame" action="
+          <<action>>
+            <<!-- init_obj obj_name=`ar_alloc` init_vals=`item_row_id=ar_this_item.row_id`/ -->>
+            <<init_obj obj_name=`ar_alloc`/>>
+            <<assign src=`ar_this_item.row_id` tgt=`ar_alloc.item_row_id`/>>
+          <</action>>
+          "/>
+        </frame_methods>
+    </frame>
+  </inline_form>
+
+</form>

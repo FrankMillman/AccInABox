@@ -5,15 +5,26 @@ create_frame_toolbar = function(toolbar, json_args) {
   toolbar.style.height = '28px';
   var frame = toolbar.frame;
   var page = frame.page;
-  for (var i=0; i<json_args.length; i++) {
-    var tool = json_args[i];
+  var title = json_args[0], tool_list = json_args[1];
+  if (title !== null) {
+    var text = document.createElement('span');
+    text.appendChild(document.createTextNode(title));
+    text.style.fontWeight = 'bold';
+    text.style.marginLeft = '5px';
+    text.style.marginTop = '5px';
+    text.style.marginRight = '10px';
+    text.style[cssFloat] = 'left';
+    toolbar.appendChild(text);
+    };
+  for (var i=0; i<tool_list.length; i++) {
+    var tool = tool_list[i];
     switch(tool.type) {
       case 'btn': {
         var label = tool.label;
         var text = '';  // convert '&' to underline
         for (var j=0; j<label.length; j++) {
-          if (label[j] == '&') {
-            if (label[j+1] == '&')
+          if (label[j] === '&') {
+            if (label[j+1] === '&')
               text += '&';
             else {
               // set up label[j+1] as hotkey!
@@ -61,13 +72,13 @@ create_frame_toolbar = function(toolbar, json_args) {
 
           if (tool.shortcut !== null) {
             var type_key = tool.shortcut.split(',');
-            if (type_key[0] == 'normal')
+            if (type_key[0] === 'normal')
               page.kbd_shortcuts['normal'][type_key[1]] = btn;
-            else if (type_key[0] == 'alt')
+            else if (type_key[0] === 'alt')
               page.kbd_shortcuts['alt'][type_key[1]] = btn;
-            else if (type_key[0] == 'ctrl')
+            else if (type_key[0] === 'ctrl')
               page.kbd_shortcuts['ctrl'][type_key[1]] = btn;
-            else if (type_key[0] == 'shift')
+            else if (type_key[0] === 'shift')
               page.kbd_shortcuts['shift'][type_key[1]] = btn;
             };
 
@@ -107,13 +118,13 @@ create_frame_toolbar = function(toolbar, json_args) {
 
           if (tool.shortcut !== null) {
             var type_key = tool.shortcut.split(',');
-            if (type_key[0] == 'normal')
+            if (type_key[0] === 'normal')
               page.kbd_shortcuts['normal'][type_key[1]] = btn;
-            else if (type_key[0] == 'alt')
+            else if (type_key[0] === 'alt')
               page.kbd_shortcuts['alt'][type_key[1]] = btn;
-            else if (type_key[0] == 'ctrl')
+            else if (type_key[0] === 'ctrl')
               page.kbd_shortcuts['ctrl'][type_key[1]] = btn;
-            else if (type_key[0] == 'shift')
+            else if (type_key[0] === 'shift')
               page.kbd_shortcuts['shift'][type_key[1]] = btn;
             };
 
@@ -291,7 +302,8 @@ create_frame_toolbar = function(toolbar, json_args) {
         nav.onclick = function(e) {
           var frame = toolbar.frame;
           if (frame.disable_count) return false;
-          if (ctrl_grid.active_row === (ctrl_grid.total_rows()-1))
+//          if (ctrl_grid.active_row === (ctrl_grid.total_rows()-1))
+          if (ctrl_grid.active_row === (ctrl_grid.num_data_rows))
             return;
           var args = [frame.ref, 'next'];
           send_request('navigate', args);
@@ -333,7 +345,8 @@ create_frame_toolbar = function(toolbar, json_args) {
         nav.onclick = function(e) {
           var frame = toolbar.frame;
           if (frame.disable_count) return false;
-          if (ctrl_grid.active_row === (ctrl_grid.total_rows()-1))
+//          if (ctrl_grid.active_row === (ctrl_grid.total_rows()-1))
+          if (ctrl_grid.active_row === (ctrl_grid.num_data_rows))
             return;
           var args = [frame.ref, 'last'];
           send_request('navigate', args);

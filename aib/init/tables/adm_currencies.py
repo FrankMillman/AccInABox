@@ -1,19 +1,16 @@
-from lxml import etree
-
 # table definition
 table = {
     'table_name'    : 'adm_currencies',
-    'module'        : 'adm',
+    'module_id'     : 'adm',
     'short_descr'   : 'Currency table',
     'long_descr'    : 'Currency table',
-    'audit_trail'   : True,
-    'table_created' : True,
-    'default_cursor': None,
-    'setup_form'    : None,
-    'upd_chks'      : None,
-    'del_chks'      : None,
-    'table_hooks'   : None,
-    'sequence'      : None,
+    'sub_types'     : None,
+    'sub_trans'     : None,
+    'sequence'      : ['seq', [], None],
+    'tree_params'   : None,
+    'roll_params'   : None,
+    'indexes'       : None,
+    'ledger_col'    : None,
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -28,14 +25,15 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'generated'  : True,
+    'calculated' : True,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -46,14 +44,15 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'generated'  : True,
+    'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : '0',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -64,14 +63,15 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'generated'  : True,
+    'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : '0',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -80,16 +80,17 @@ cols.append ({
     'data_type'  : 'TEXT',
     'short_descr': 'Currency',
     'long_descr' : 'Currency',
-    'col_head'   : 'Currency',
+    'col_head'   : 'Curr',
     'key_field'  : 'A',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 8,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -100,14 +101,34 @@ cols.append ({
     'long_descr' : 'Description',
     'col_head'   : 'Description',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'seq',
+    'data_type'  : 'INT',
+    'short_descr': 'Sequence',
+    'long_descr' : 'Sequence',
+    'col_head'   : 'Seq',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -116,22 +137,66 @@ cols.append ({
     'data_type'  : 'INT',
     'short_descr': 'No of decimals',
     'long_descr' : 'No of decimals',
-    'col_head'   : 'Scale',
+    'col_head'   : 'Dec',
     'key_field'  : 'N',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
+    'dflt_val'   : '2',
+    'dflt_rule'  : None,
+    'col_checks' : [['max_2', 'Value must be betwen 0 and 2', [
+        ['check', '', '$value', '>=', '0', ''],
+        ['and', '', '$value', '<=', '2', ''],
+        ]]],
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'symbol',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Symbol',
+    'long_descr' : 'Currency symbol',
+    'col_head'   : 'Cur',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 3,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'local_currency',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Local currency?',
+    'long_descr' : 'Is this the local currency?',
+    'col_head'   : 'Local?',
+    'dflt_rule'  : (
+        '<expr>'
+            '<fld_val name="row_id"/>'
+            '<op type="="/>'
+            '<fld_val name="_param.local_curr_id"/>'
+        '</expr>'
+        ),
+# SQL Server cannot handle boolean expression :-(
+#   'sql'        : "SELECT a.row_id = (SELECT local_curr_id FROM {company}.adm_params)",
+    'sql'        : (
+        "CASE WHEN a.row_id = "
+        "(SELECT local_curr_id FROM {company}.adm_params) "
+        "THEN 1 ELSE 0 END"
+        ),
+    })
 
 # cursor definitions
 cursors = []
@@ -140,11 +205,15 @@ cursors.append({
     'cursor_name': 'curr',
     'descr': 'Currencies',
     'columns': [
-        ('currency', 80, False, False, False, False, None, None, None, None),
-        ('descr', 200, True, False, False, False, None, None, None, None),
-        ('scale', 60, False, False, False, False, None, None, None, None),
+        ['currency', 60, False, False, False, False, None, None, None, None],
+        ['descr', 150, True, False, False, False, None, None, None, None],
+        ['scale', 40, False, False, False, False, None, None, None, None],
+        ['symbol', 40, False, False, False, False, None, None, None, None],
+        ['local_currency', 60, False, True, False, False, None, None, None, None],
         ],
     'filter': [],
-    'sequence': [('currency', False)],
-    'default': True
+    'sequence': [['seq', False]],
     })
+
+# actions
+actions = []

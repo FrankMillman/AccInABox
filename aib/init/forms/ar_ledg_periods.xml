@@ -1,0 +1,390 @@
+<form name="ar_ledg_per" title="Ar ledger periods" before_start_form="
+  <<action>>
+    <<case>>
+      <<compare src=`_ledger.separate_stat_close` op=`is` tgt=`$True`>>
+        <<assign src=`'ar_per_stat'` tgt=`_ctx.cursor_name`/>>
+      <</compare>>
+      <<default>>
+        <<assign src=`'ar_per'` tgt=`_ctx.cursor_name`/>>
+      <</default>>
+    <</case>>
+  <</action>>
+  " after_start_form="
+  <<action>>
+    <<pyfunc name=`custom.date_funcs.get_curr_per`/>>
+    <<case>>
+      <<compare src=`var.current_period` op=`is` tgt=`$None`>>
+        <<inline_form name=`op_period`>>
+          <<on_return>>
+            <<return state=`cancelled`>>
+              <<end_form state=`cancelled`/>>
+            <</return>>
+            <<return state=`completed`>>
+              <<assign src=`adm_period.period_row_id` tgt=`var.current_period`/>>
+              <<case>>
+                <<compare src=`_ledger.separate_stat_close` op=`is` tgt=`$True`>>
+                  <<inline_form name=`op_stat_date`>>
+                    <<on_return>>
+                      <<return state=`cancelled`>>
+                        <<end_form state=`cancelled`/>>
+                      <</return>>
+                      <<return state=`completed`>>
+                        <<pyfunc name=`custom.date_funcs.save_curr_per` module_id=`ar`/>>
+                        <<continue_form/>>
+                      <</return>>
+                    <</on_return>>
+                  <</inline_form>>
+                <</compare>>
+                <<default>>
+                  <<pyfunc name=`custom.date_funcs.save_curr_per` module_id=`ar`/>>
+                  <<continue_form/>>
+                <</default>>
+              <</case>>
+            <</return>>
+          <</on_return>>
+        <</inline_form>>
+      <</compare>>
+      <<default>>
+        <<continue_form/>>
+      <</default>>
+    <</case>>
+  <</action>>
+  ">
+
+  <db_objects>
+    <db_obj name="adm_period" table_name="adm_periods"/>
+    <db_obj name="ledg_per" table_name="ar_ledger_periods"/>
+  </db_objects>
+  <mem_objects>
+
+    <mem_obj name="actions" descr="Possible actions"
+        sub_types="[
+        [`action`, null,
+          [
+            [`no_action`, `No action available`, [], []],
+            [`statement_close`, `Start statement close`, [], []],
+            [`period_close`, `Start period close`, [], []],
+            [`reopen`, `Reopen period`, [], []]
+            ]
+          ]
+        ]">
+      <mem_col col_name="action" data_type="TEXT" short_descr="Action"
+        long_descr="Action" col_head="Action" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="var" descr="Form variables" module_id="ar">
+      <mem_col col_name="module_id" data_type="TEXT" short_descr="Module id"
+        long_descr="Module id"/>
+      <mem_col col_name="module_descr" data_type="TEXT" short_descr="Module descr"
+        long_descr="Module descr"/>
+      <mem_col col_name="ledger_id" data_type="TEXT" short_descr="Ledger id"
+        long_descr="Ledger id"/>
+      <mem_col col_name="ledger_descr" data_type="TEXT" short_descr="Ledger descr"
+        long_descr="Ledger descr"/>
+      <mem_col col_name="first_stat_date" data_type="DTE" short_descr="Statement date"
+        long_descr="First statement date" allow_amend="true"
+        col_checks="[[`first_stat`, `Not in period selected`, [
+          [`check`, ``, `$value`, `&gt;=`, `adm_period.opening_date`, ``],
+          [`and`, ``, `$value`, `&lt;=`, `adm_period.closing_date`, ``]
+          ]]]"/>
+      <mem_col col_name="close_period" data_type="BOOL" short_descr="Close period?"
+        long_descr="Close period?" allow_amend="true"/>
+      <mem_col col_name="reopen_period" data_type="BOOL" short_descr="Reopen period?"
+        long_descr="Reopen period?" allow_amend="true"/>
+      <mem_col col_name="current_period" data_type="INT" short_descr="Current period"
+        long_descr="Current period" col_head="Curr" allow_amend="true"/>
+      <mem_col col_name="single_cust" data_type="BOOL" short_descr="Single customer?"
+        long_descr="Single customer?" allow_amend="true"/>
+      <mem_col col_name="cust_row_id" data_type="INT" short_descr="Customer row id"
+        long_descr="Customer row id" allow_amend="true" allow_null="true"
+        fkey="[`ar_customers`, `row_id`, `cust_id`, `cust_id`, false, null]"/>
+      <mem_col col_name="statement_date" data_type="DTE" short_descr="Statement date"
+        long_descr="Statement date" allow_amend="true"/>
+      <mem_col col_name="close_params" data_type="JSON" short_descr="Params for close period"
+        long_descr="Parameters to pass to 'close period process'" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="var">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Module:"/>
+      <display obj_name="var" col_name="module_descr" lng="150"/>
+      <col/>
+      <label value="Ledger:"/>
+      <display obj_name="var" col_name="ledger_descr" lng="150"/>
+      <block/>
+      <grid data_object="ledg_per" growable="false" num_grid_rows="8"
+          start_col="period_row_id" start_val="var.current_period" readonly="true">
+        <toolbar>
+          <tool type="nav"/>
+        </toolbar>
+        <grid_methods template="Grid">
+          <method name="on_start_row" action="
+            <<action>>
+              <<pyfunc name=`custom.artrans_funcs.check_ledg_per`/>>
+            <</action>>
+          "/>
+        </grid_methods>
+      </grid>
+      <block/>
+      <grid_frame main_object="ledg_per">
+        <toolbar/>
+        <body>
+          <subtype_frame subtype_obj="actions" subtype_col="action">
+
+            <subtype_body subtype_id="no_action">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Period"/>
+              <display obj_name="ledg_per" col_name="period_row_id" lng="20"/>
+              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="statement_close">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Period"/>
+              <display obj_name="ledg_per" col_name="period_row_id" lng="20"/>
+              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
+              <button btn_id="close_stat" btn_label="Close for statements"
+                help_msg = "Start 'statement close' process"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                    <<inline_form name=`period_close`>>
+                      <<on_return>>
+                        <<return state=`cancelled`>>
+                        <</return>>
+                        <<return state=`completed`>>
+                        <</return>>
+                      <</on_return>>
+                    <</inline_form>>
+                  <</action>>
+                "/>
+            </subtype_body>
+
+            <subtype_body subtype_id="period_close">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Period"/>
+              <display obj_name="ledg_per" col_name="period_row_id" lng="20"/>
+              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
+              <button btn_id="close_period" btn_label="Close period"
+                help_msg = "Start 'period close' process"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                    <<inline_form name=`period_close`>>
+                      <<on_return>>
+                        <<return state=`cancelled`>>
+                        <</return>>
+                        <<return state=`completed`>>
+                        <</return>>
+                      <</on_return>>
+                    <</inline_form>>
+                  <</action>>
+                "/>
+            </subtype_body>
+
+            <subtype_body subtype_id="reopen">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Period"/>
+              <display obj_name="ledg_per" col_name="period_row_id" lng="20"/>
+              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
+              <button btn_id="reopen_period" btn_label="Reopen period"
+                help_msg = "Reopen period if permitted"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                    <<pyfunc name=`custom.artrans_funcs.reopen_period`/>>
+                  <</action>>
+                "/>
+            </subtype_body>
+          </subtype_frame>
+
+        </body>
+        <button_row>
+          <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
+            btn_validate="true" btn_default="true" lng="60" action="
+              <<action>>
+                <<end_form state=`completed`/>>
+              <</action>>
+            "/>
+        </button_row>
+        <frame_methods/>
+      </grid_frame>
+    </body>
+    <button_row/>
+    <frame_methods/>
+  </frame>
+  <inline_form name="op_period" title="Opening period">
+    <frame main_object="ledg_per">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Module:"/>
+        <display obj_name="var" col_name="module_descr" lng="150"/>
+        <row/>
+        <col/>
+        <label value="Ledger:"/>
+        <display obj_name="var" col_name="ledger_descr" lng="150"/>
+        <row/>
+        <col/>
+        <text value="No periods have been set up"/>
+        <row/>
+        <col/>
+        <text value="Please select the opening period"/>
+        <block/>
+        <grid data_object="adm_period" growable="false" num_grid_rows="6"
+          cursor_name="adm_per" readonly="true">
+          <toolbar>
+            <tool type="img" name="selected" tip="Item selected (Enter)"
+              shortcut="normal,13" action="
+                <<action>>
+                  <<row_selected/>>
+                <</action>>
+              "/>
+            <tool type="nav"/>
+          </toolbar>
+          <grid_methods template="Grid"/>
+        </grid>
+      </body>
+      <button_row/>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_req_close" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+  <inline_form name="op_stat_date" title="First statement date">
+    <frame main_object="ledg_per">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="First statement date:"/>
+        <col/>
+        <input obj_name="var" col_name="first_stat_date" lng="84"/>
+      </body>
+      <button_row>
+        <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
+          btn_validate="true" btn_default="true" lng="60" action="
+            <<action>>
+              <<end_form state=`completed`/>>
+            <</action>>
+          "/>
+      </button_row>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_req_close" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+  <inline_form name="period_close" title="Start period close process">
+    <frame main_object="ledg_per">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <if_ src="_ledger.separate_stat_cust" op="is_" tgt="$True"/>
+        <row/>
+        <col/>
+        <label value="Single customer?"/>
+        <col/>
+        <input obj_name="var" col_name="single_cust" after="
+          <<action>>
+            <<case>>
+              <<compare src=`var.single_cust` op=`is` tgt=`$True`>>
+                <<set_readonly target=`var.cust_id` state=`false`/>>
+              <</compare>>
+              <<default>>
+                <<set_readonly target=`var.cust_id` state=`true`/>>
+              <</default>>
+            <</case>>
+          <</action>>
+          "/>
+        <row/>
+        <col/>
+        <label value="Customer id:"/>
+        <col/>
+        <input obj_name="var" col_name="cust_id" lng="80"/>
+        <display obj_name="var" col_name="cust_row_id>party_row_id>display_name" lng="150"/>
+        <end_if/>
+        <row/>
+        <col/>
+        <label value="Statement date:"/>
+        <col/>
+        <input obj_name="var" col_name="statement_date" lng="150"/>
+        <row/>
+        <col/>
+        <label value="Start period close process?"/>
+        <col/>
+        <button btn_id="start_period_close" btn_label="Start"
+          btn_enabled="true" btn_validate="true" action="
+            <<action>>
+              <<pyfunc name=`custom.artrans_funcs.setup_close_params`/>>
+              <<start_process name=`ar_per_close`>>
+                <<call_params>>
+                  <<call_param name=`close_params` type=`data_attr` source=`var.close_params`/>>
+                <</call_params>>
+                <<return_params>>
+                <</return_params>>
+                <<on_return>>
+                  <<return state=`cancelled`/>>
+                  <<return state=`completed`/>>
+                <</on_return>>
+              <</start_process>>
+            <</action>>
+          "/>
+      </body>
+      <button_row/>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_req_close" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+</form>

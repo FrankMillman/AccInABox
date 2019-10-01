@@ -1,0 +1,125 @@
+<form name="cb_cashbook" title="Cashbook" before_start_form="
+  <<action>>
+    <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
+    <<assign src=`date_range_vars.start_date` tgt=`tran_vars.start_date`/>>
+    <<assign src=`date_range_vars.end_date` tgt=`tran_vars.end_date`/>>
+    <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
+    <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="cb_trans" table_name="cb_trans" view="true"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="var" descr="Variables to pass to formview">
+      <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
+        long_descr="Settings, passed between main form and formview" allow_amend="true"/>
+      <mem_col col_name="balance_date" data_type="DTE" short_descr="Balance date"
+        long_descr="Balance at which date" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="tran_vars" descr="Variables for 'Transactions' tab">
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Start date"
+        long_descr="Transactions from this date" allow_amend="true"/>
+      <mem_col col_name="end_date" data_type="DTE" short_descr="End date"
+        long_descr="Transactions to this date" allow_amend="true"/>
+      <mem_col col_name="op_bal" data_type="DEC" short_descr="Opening balance"
+        long_descr="Opening balance" col_head="B/F" allow_amend="true"
+        db_scale="2" scale_ptr="cb_trans.ledger_row_id>currency_id>scale"/>
+      <mem_col col_name="cl_bal" data_type="DEC" short_descr="Closing balance"
+        long_descr="Closing balance" col_head="C/F" allow_amend="true"
+        db_scale="2" scale_ptr="cb_trans.ledger_row_id>currency_id>scale"/>
+    </mem_obj>
+    <mem_obj name="date_range_vars" descr="Variables for date range">
+      <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
+        long_descr="Settings, passed between main form and subform" allow_amend="true"/>
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Date from"
+        long_descr="From which date" allow_amend="true"/>
+      <mem_col col_name="end_date" data_type="DTE" short_descr="Date to"
+        long_descr="To which date" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params/>
+  <output_params/>
+  <frame main_object="cb_trans">
+    <toolbar template="Query_Form"/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="From:"/>
+      <col/>
+      <input obj_name="tran_vars" col_name="start_date" lng="84" readonly="true" skip="true"/>
+      <col/>
+      <label value="To:"/>
+      <col/>
+      <input obj_name="tran_vars" col_name="end_date" lng="84" readonly="true" skip="true"/>
+      <col/>
+      <button btn_id="change_dates" btn_label="Change" help_msg = "Change dates"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.select_date_range`>>
+              <<call_params>>
+                <<call_param name=`settings` type=`data_attr` source=`date_range_vars.settings`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`settings` type=`data_attr` target=`date_range_vars.settings`/>>
+                <<return_param name=`start_date` type=`data_attr` target=`date_range_vars.start_date`/>>
+                <<return_param name=`end_date` type=`data_attr` target=`date_range_vars.end_date`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<assign src=`date_range_vars.start_date` tgt=`tran_vars.start_date`/>>
+                  <<assign src=`date_range_vars.end_date` tgt=`tran_vars.end_date`/>>
+                  <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
+                  <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
+                  <<restart_grid obj_name=`cb_trans`/>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+
+      <block/>
+      <grid data_object="cb_trans" growable="false" num_grid_rows="8" running_balance="cb_trans"
+          header_row="[`tran_vars.start_date`, `'Bal b/f'`, null, null, `tran_vars.op_bal`]"
+          footer_row="[`tran_vars.end_date`, `'Bal c/f'`, null, null, `tran_vars.cl_bal`]">
+        <toolbar>
+          <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
+            shortcut="ctrl,13" action="
+              <<action>>
+                <<select_from_view/>>
+                <<!--req_formview/-->>
+              <</action>>
+            "/>
+          <tool type="nav"/>
+        </toolbar>
+        <cur_columns>
+          <cur_col col_name="tran_date" lng="80" readonly="true"/>
+          <cur_col col_name="tran_type" lng="80" readonly="true"/>
+          <cur_col col_name="tran_number" lng="100" readonly="true"/>
+          <cur_col col_name="amount_cb" lng="80" readonly="true"/>
+          <cur_col col_name="balance_cb" lng="80" readonly="true"/>
+        </cur_columns>
+        <cur_filter>
+          <cur_fil test="WHERE" lbr="" col_name="ledger_row_id"
+            op="=" expr="_ctx.ledger_row_id" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op="&gt;=" expr="_ctx.start_date" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op="&lt;=" expr="_ctx.end_date" rbr=""/>
+        </cur_filter>
+        <cur_sequence>
+          <cur_seq col_name="tran_date"/>
+          <cur_seq col_name="tran_type"/>
+          <cur_seq col_name="tran_row_id"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+    </body>
+    <button_row template="Query_Form"/>
+    <frame_methods template="Query_Form"/>
+  </frame>
+</form>

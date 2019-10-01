@@ -18,7 +18,7 @@ function display_error(args) {
   };
 
 function got_focus(new_focus) {
-  // if focus not set on active form (most recent), reset on active_form
+  // if focus not set on active form (most recent), reset on active form
   var new_focus_form = new_focus.frame.form;
   var new_focus_root_forms = new_focus_form.root;
   if (new_focus_form !== new_focus_root_forms[new_focus_root_forms.length-1]) {
@@ -33,21 +33,18 @@ function got_focus(new_focus) {
     };
 
   //debug3('GOT FOCUS ' + new_focus.ref + ' ' + new_focus.help_msg + ' ' +
-  //   new_focus.frame.form.disable_count + ' ' +
-  //   (new_focus.frame.form.current_focus === new_focus));
+  //   new_focus_form.disable_count + ' ' +
+  //   (new_focus_form.current_focus === new_focus));
 
 //  if (new_focus_form.disable_count) return;
 
   if (new_focus_form.current_focus === new_focus) {
-    // after dragging, we set focus on current_focus
-    // here we check if 'input' is active
-    // if input is active, we set focus on input
-    if (new_focus.tabIndex === -1)
-      new_focus.childNodes[0].focus();
+    // can get here after errmsg box dismissed
     new_focus_form.focus_from_server = false;
     new_focus.frame.err_flag = false;
     return;
     };
+
   if (new_focus.disabled)
     return;  // opera accepts focus even if disabled!
 
@@ -66,22 +63,28 @@ function got_focus(new_focus) {
     // as this has not been updated (see next line) it sets it on the faulty field
     // a bit fragile!
     };
-  new_focus_form.current_focus = new_focus;
+
+// moved to after calling got_focus - implications? [2016-10-16]
+    // why was this necessary? - there are implications!
+    //  in AibDummy.prototype.after_got_focus, we check for
+    //    (dummy.frame.form.current_focus === dummy), so if we set it after focus()
+    //    it is too late
+    // workaround [2016-11-20] -
+    //   delay setting 'current_focus', but not 'setting_focus'
+    // solves problem for now, but needs a proper solution
+//  new_focus_form.current_focus = new_focus;
   new_focus_form.setting_focus = new_focus;  // IE workaround
-  if (new_focus_form.help_msg)
-    new_focus_form.help_msg.data = new_focus.help_msg;
+//  if (new_focus_form.help_msg)
+//    new_focus_form.help_msg.data = new_focus.help_msg;
 
-// if focus_from_server === true, should we call 'got_focus'?
-// it sends 'got focus' back to the server, which we don't want
-// change it and see what happens! [2013-08-23]
-
-//  if (new_focus_form.focus_from_server)
-//    new_focus_form.focus_from_server = false;
-//  else
-//    new_focus.got_focus();
   new_focus.got_focus();
   new_focus_form.focus_from_server = false;
   new_focus.frame.err_flag = false;
+
+  new_focus_form.current_focus = new_focus;
+//  new_focus_form.setting_focus = new_focus;  // IE workaround
+  if (new_focus.help_msg)
+    new_focus_form.help_msg.data = new_focus.help_msg;
 
   if (new_focus.active_frame !== new_focus.frame.form.active_frame) {
 
@@ -93,7 +96,6 @@ function got_focus(new_focus) {
     if (old_frame.type === 'grid_frame') {
       // clear border of current active_frame
       old_frame.page.style.border = '1px solid darkslategrey';
-      //this.active_frame.ctrl_grid.parentNode.style.border = '1px solid transparent';
       old_frame.ctrl_grid.unhighlight_active_row();
       };
 
@@ -107,19 +109,12 @@ function got_focus(new_focus) {
     if (new_frame.type === 'grid_frame') {
       new_frame.page.style.border = '1px solid blue';
       new_frame.ctrl_grid.highlight_active_row();
-// is this necessary? [2015-04-03]
-// causes a problem with 'del_checks' - cannot tab off empty grid
-//      new_frame.set_amended((new_frame.ctrl_grid.inserted !== 0));
       };
-//
-//    new_focus.frame.form.set_gridframe_border(new_focus.active_frame);
-//    new_focus.frame.form.active_frame = new_focus.active_frame;
     };
-
   };
 
 function redisplay(args) {
-  //debug3('redisp ' + JSON.stringify(args));
+  // debug3('redisp ' + JSON.stringify(args));
   for (var i=0, l=args.length; i<l; i++) {
     var ref = args[i][0], value = args[i][1];
     get_obj(ref).set_value_from_server(value);
@@ -134,7 +129,7 @@ function reset(args) {
   };
 
 function set_readonly(args) {
-  //debug3('readonly ' + JSON.stringify(args));
+  // debug3('readonly ' + JSON.stringify(args));
   for (var i=0, l=args.length; i<l; i++) {
     var ref = args[i][0], state = args[i][1];
     var obj = get_obj(ref);
@@ -156,12 +151,18 @@ function set_focus(args) {
   obj.focus();
   };
 
-function recv_dflt(args) {
+function set_dflt(args) {
+  // debug3('set_dflt ' + JSON.stringify(args));
   var obj = get_obj(args[0]), value = args[1];
   obj.set_dflt_val(value);
   };
 
-function recv_prev(args) {
+function setup_choices(args) {
+  var obj = get_obj(args[0]), choices = args[1];
+  obj.aib_obj.setup_choices(obj, choices);
+  };
+
+function set_prev(args) {
   var obj = get_obj(args[0]);
   obj.aib_obj.set_prev_from_server(obj, args[1]);
   };
@@ -173,19 +174,44 @@ function cell_set_focus(args) {
     var col = grid.active_col;
   else
     var col = get_obj(col_ref).col;
-  if (!grid.has_focus)
+
+  // next block looks redundant, as it all happens in cell_set_focus() anyway
+  // but there is an important difference [2017-11-20]
+  // this way, grid.focus() is called *before* setting focus_from_server = true
+  // this prevents grid.focus() trying to reset focus on the grid_frame, if there is one
+  // don't know if this is by fluke or by design, but leaving it alone for now!
+
+  if (!grid.has_focus) {
+    // next lines added 2016-07-11
+    // if current active_col has 'skip' set, we keep resetting focus on grid_frame :-(
+    // this forces active_col to the column we are setting focus on
+    // any implications?
+    grid.active_col = col;
+    grid.active_cell =
+      grid.grid_rows[grid.active_row-grid.first_grid_row].grid_cols[col];
+    if (grid.active_row === grid.num_data_rows)
+      grid.inserted = -1;
+    else
+      grid.inserted = 0;
     grid.focus();
+    };
+
   grid.focus_from_server = true;
   grid.err_flag = err_flag;
   grid.cell_set_focus(row, col, dflt_val);
   };
 
+// function render_bpmn(args) {
+//   var svg = get_obj(args[0]), nodes = args[1], edges = args[2];
+//   render_bpmn(svg, nodes, edges)
+//   };
+
 function start_frame(args) {
   var frame = get_obj(args[0]);
-  frame.obj_exists = args[1];
-  var set_focus = args[2];
-  //debug3('start frame ' + frame.ref + ' exists=' + args[1] + ' focus=' + args[2]);
-  frame.set_amended(!frame.obj_exists);
+  var set_focus = args[1];  // set focus on first available object?
+  var obj_exists = args[2];  // does object exist?
+  var skip_input = args[3];  // number of objects to skip before setting focus
+  //debug3('start frame ' + frame.ref + ' focus=' + set_focus);
   if (frame.combo_type !== undefined) {
     if (frame.combo_type === 'member')
       frame.tree.tree_frames['group'].page.style.display = 'none';
@@ -193,13 +219,16 @@ function start_frame(args) {
       frame.tree.tree_frames['member'].page.style.display = 'none';
     frame.page.style.display = 'block';
     };
+  frame.obj_exists = obj_exists;
   if (set_focus) {
     frame.form.tabdir = 1;  // in case 'dummy' gets focus
     for (var i=0, l=frame.obj_list.length; i<l; i++) {
       var obj = frame.obj_list[i];
       //if (obj.readonly || obj.display || !obj.offsetHeight)
-      if (obj.display || !obj.offsetHeight)
-        continue;  // look for the next obj
+      if (obj.display || !obj.offsetHeight || obj.tabIndex === -1)
+        ;  // look for the next obj
+      else if (skip_input)
+        skip_input -= 1;  // skip this one
       else
         break;  // set focus on this obj
       };
@@ -215,13 +244,16 @@ function start_frame(args) {
       // if it does not, it calls object.got_focus()
       // for now, call both!
 
-      obj.onfocus();
-      obj.got_focus();
+      // comment above re dsp/inp no longer applies, so this should not be needed
+      //obj.onfocus();
+      obj.got_focus();  // or should we call got_focus(obj) ?? [2016-10-21]
       }
     else {
 //      if (frame.form.current_focus !== null)
-      if (frame.type === 'frame') // don't do this for grid_frame
-        frame.form.focus_from_server = true;  // do not notify server of 'lost/got_focus'
+// removed next 2 lines [2015-12-10]
+// we *do* want to send focus, as there may be a default value
+//      if (frame.type === 'frame') // don't do this for grid_frame
+//        frame.form.focus_from_server = true;  // do not notify server of 'lost/got_focus'
       setTimeout(function() {obj.focus()}, 0);
       };
     };
@@ -232,9 +264,24 @@ function start_grid(args) {
   grid.start_grid(args[1]);
   };
 
+function add_tree_data(args) {
+  var tree_ref = args[0], tree_data = args[1], hide_root = args[2];
+  var tree = get_obj(tree_ref);
+  tree.add_tree_data(tree_data, hide_root);
+  };
+
 function recv_rows(args) {
   var grid = get_obj(args[0]);
   grid.recv_rows(args[1]);
+  };
+
+function append_row(args) {
+  var grid = get_obj(args);
+  grid.num_data_rows += 1;
+  grid.append_row();
+  if (grid.num_data_rows >= grid.num_grid_rows)
+    grid.show_scrollbar();
+  grid.draw_grid()
   };
 
 function move_row(args) {
@@ -274,14 +321,42 @@ function set_subtype(args) {
   var frame_ref = args[0], subtype_name = args[1], subtype_id = args[2];
   var frame = get_obj(frame_ref);
   var subtype = frame.subtypes[subtype_name];
-  if (subtype._active_box !== subtype_id) {
-    subtype[subtype._active_box].style.display = 'none';
+  if (subtype._active_subtype !== subtype_id) {
+    subtype[subtype._active_subtype].style.display = 'none';
     subtype[subtype_id].style.display = 'block';
-    subtype._active_box = subtype_id;
+    subtype._active_subtype = subtype_id;
     };
   };
 
-function exception(args) {
+function refresh_bpmn(args) {
+  var svg_ref = args[0], nodes = args[1], edges = args[2];
+  var svg = get_obj(svg_ref);
+  render_bpmn(svg, nodes, edges);
+  };
+  
+function append_tasks(args) {
+  while (task_div.childNodes.length > 1)  // firstChild is 'task_hdng'
+    task_div.removeChild(task_div.lastChild);
+  for (var j=0; j<args.length; j++) {
+    var task_row = document.createElement('div');
+    task_row.task_id = args[j][0]
+    task_div.appendChild(task_row);
+    task_row.style.marginTop = '5px';
+    task_row.style.marginLeft = '5px';
+    // to prevent selection of text - IE only
+    task_row.onselectstart = function() {return false};
+    var text = document.createTextNode(args[j][1]);
+    task_row.appendChild(text);
+    task_row.onmouseover = function() {this.style.cursor = 'pointer'};
+    task_row.onmouseleave = function() {this.style.cursor = 'default'};
+    task_row.onclick = function() {
+      var args = [this.task_id];
+      send_request('claim_task', args);
+      };
+    };
+  };
+
+  function exception(args) {
   //document.body.innerHTML =
   //  args.join('<br>').replace(/ /g, '\xa0');  // replace all ' ' with &nbsp;
   //debug3(

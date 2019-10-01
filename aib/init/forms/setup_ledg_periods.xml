@@ -1,0 +1,237 @@
+<form name="setup_ledg_periods" title="Set up ledger periods" after_start_form="
+  <<action>>
+    <<pyfunc name=`custom.date_funcs.get_curr_per`/>>
+    <<case>>
+      <<compare src=`_ctx.curr_per` op=`is` tgt=`$None`>>
+        <<inline_form name=`op_period`>>
+          <<on_return>>
+            <<return state=`cancelled`>>
+              <<end_form state=`cancelled`/>>
+            <</return>>
+            <<return state=`completed`>>
+              <<assign src=`mem_periods.period_row_id` tgt=`_ctx.curr_per`/>>
+              <<pyfunc name=`custom.date_funcs.save_curr_per`/>>
+              <<assign src=`_ctx.curr_per` tgt=`var.current_period`/>>
+              <<continue_form/>>
+            <</return>>
+          <</on_return>>
+        <</inline_form>>
+      <</compare>>
+      <<default>>
+        <<assign src=`_ctx.curr_per` tgt=`var.current_period`/>>
+        <<continue_form/>>
+      <</default>>
+    <</case>>
+  <</action>>
+  ">
+
+  <db_objects>
+    <db_obj name="adm_period" table_name="adm_periods"/>
+    <db_obj name="ledg_per" table_name="adm_ledger_periods"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="mem_periods" descr="Memory table for period data"
+        sub_types="[
+        [`state`, null,
+          [
+            [`open`, `Open`, [], []],
+            [`closed`, `Closed`, [], []]
+            ]
+          ]
+        ]">
+      <mem_col col_name="period_row_id" data_type="INT" short_descr="Period id"
+        long_descr="Per id" col_head="Id" key_field="A"/>
+      <mem_col col_name="year_per" data_type="TEXT" short_descr="Year/period"
+        long_descr="Year/period" col_head="Year/per"/>
+      <mem_col col_name="cl_date" data_type="DTE" short_descr="Closing date"
+        long_descr="Closing date" col_head="End date"/>
+      <mem_col col_name="state" data_type="TEXT" short_descr="State"
+        long_descr="State" col_head="State" allow_amend="true"/>
+      <mem_col col_name="current_period" data_type="BOOL" short_descr="Current period?"
+        long_descr="Current period?" col_head="Curr?" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="var" descr="Form variables">
+      <mem_col col_name="module_id" data_type="TEXT" short_descr="Module id"
+        long_descr="Module id"/>
+      <mem_col col_name="module_descr" data_type="TEXT" short_descr="Module descr"
+        long_descr="Module descr"/>
+      <mem_col col_name="ledger_id" data_type="TEXT" short_descr="Ledger id"
+        long_descr="Ledger id"/>
+      <mem_col col_name="ledger_descr" data_type="TEXT" short_descr="Ledger descr"
+        long_descr="Ledger descr"/>
+      <mem_col col_name="close_period" data_type="BOOL" short_descr="Close period?"
+        long_descr="Close period?" allow_amend="true"/>
+      <mem_col col_name="reopen_period" data_type="BOOL" short_descr="Reopen period?"
+        long_descr="Reopen period?" allow_amend="true"/>
+      <mem_col col_name="current_period" data_type="INT" short_descr="Current period"
+        long_descr="Current period" col_head="Curr" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="var">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Module:"/>
+      <display obj_name="var" col_name="module_descr" lng="150"/>
+      <col/>
+      <label value="Ledger:"/>
+      <display obj_name="var" col_name="ledger_descr" lng="150"/>
+      <block/>
+      <grid data_object="mem_periods" growable="false" num_grid_rows="6"
+          start_col="period_row_id" start_val="var.current_period">
+        <toolbar>
+          <tool type="nav"/>
+        </toolbar>
+        <cur_columns>
+            <cur_col col_name="period_row_id" lng="30" readonly="true"/>
+            <cur_col col_name="year_per" lng="80" readonly="true"/>
+            <cur_col col_name="cl_date" lng="100" readonly="true"/>
+            <cur_col col_name="state" lng="80" readonly="true"/>
+            <cur_col col_name="current_period" lng="50" readonly="true"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence/>
+        <grid_methods template="Grid">
+        </grid_methods>
+      </grid>
+      <grid_frame main_object="mem_periods">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Period id:"/>
+          <col/>
+          <input obj_name="mem_periods" col_name="period_row_id" lng="30" readonly="true"/>
+          <display obj_name="mem_periods" col_name="cl_date" lng="85"/>
+          <row/>
+          <col/>
+          <label value="State:"/>
+          <col/>
+          <input obj_name="mem_periods" col_name="state" lng="80" readonly="true"/>
+
+          <subtype_frame subtype_obj="mem_periods" subtype_col="state">
+            <subtype_body subtype_id="open">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <text value="Click here to start the 'Close period' process"/>
+              <row/>
+              <col align="center"/>
+              <button btn_id="close_period" btn_label="Close period"
+                help_msg = "Start 'period close' process"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                    <<pyfunc name=`custom.artrans_funcs.start_period_close`/>>
+                  <</action>>
+                "/>
+
+            </subtype_body>
+            <subtype_body subtype_id="closed">
+              <block/>
+              <panel/>
+              <row/>
+              <col align="center"/>
+              <text value="Click here to reopen the period"/>
+              <row/>
+              <col align="center"/>
+              <button btn_id="reopen_period" btn_label="Reopen period"
+                help_msg = "Reopen period if permitted"
+                btn_enabled="true" btn_validate="true" action="
+                  <<action>>
+                    <<pyfunc name=`custom.artrans_funcs.reopen_period`/>>
+                  <</action>>
+                "/>
+            </subtype_body>
+          </subtype_frame>
+
+        </body>
+        <button_row>
+          <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
+            btn_validate="true" btn_default="true" lng="60" action="
+              <<action>>
+                <<pyfunc name=`custom.date_funcs.check_close_per`/>>
+                <<end_form state=`completed`/>>
+              <</action>>
+            "/>
+        </button_row>
+        <frame_methods/>
+      </grid_frame>
+    </body>
+    <button_row>
+      <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
+        btn_validate="true" btn_default="true" lng="60" action="
+          <<action>>
+            <<end_form state=`completed`/>>
+          <</action>>
+        "/>
+    </button_row>
+    <frame_methods>
+    </frame_methods>
+  </frame>
+  <inline_form name="op_period" title="Opening period">
+    <frame main_object="mem_periods">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Module:"/>
+        <display obj_name="var" col_name="module_descr" lng="150"/>
+        <row/>
+        <col/>
+        <label value="Ledger:"/>
+        <display obj_name="var" col_name="ledger_descr" lng="150"/>
+        <row/>
+        <col/>
+        <text value="No periods have been set up"/>
+        <row/>
+        <col/>
+        <text value="Please select the opening period"/>
+        <block/>
+        <grid data_object="mem_periods" growable="false" num_grid_rows="6">
+          <toolbar>
+            <tool type="img" name="selected" tip="Item selected (Enter)"
+              shortcut="normal,13" action="
+                <<action>>
+                  <<row_selected/>>
+                <</action>>
+              "/>
+            <tool type="nav"/>
+          </toolbar>
+          <cur_columns>
+            <cur_col col_name="period_row_id" lng="30" readonly="true"/>
+            <cur_col col_name="year_per" lng="80" readonly="true"/>
+            <cur_col col_name="cl_date" lng="100" readonly="true"/>
+          </cur_columns>
+          <cur_filter/>
+          <cur_sequence/>
+          <grid_methods template="Grid"/>
+        </grid>
+      </body>
+      <button_row/>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_req_close" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+</form>

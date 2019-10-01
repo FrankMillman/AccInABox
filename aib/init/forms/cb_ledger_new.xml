@@ -1,0 +1,64 @@
+<form name="cb_ledger_new" title="Set up new cb ledger" on_close_form="
+  <<action>>
+    <<pyfunc name=`db.cache.menu_updated`/>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="ledger" table_name="cb_ledger_params" is_formview_obj="true"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="ledger">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Cash book id:"/>
+      <col/>
+      <input obj_name="ledger" col_name="ledger_id" lng="60" validation="
+        <<validations>>
+          <<validation>>
+            <<case>>
+              <<obj_exists obj_name=`ledger`>>
+                <<init_obj obj_name=`ledger`/>>
+                <<error head=`Parameter` body=`Already exists`/>>
+              <</obj_exists>>
+            <</case>>
+          <</validation>>
+        <</validations>>
+        "/>
+      <row/>
+      <col/>
+      <label value="Description:"/>
+      <col/>
+      <input obj_name="ledger" col_name="descr" lng="160"/>
+
+      <block/>
+      <panel/>
+      <if_ src="_param.currency_id" op="is_" tgt="$None"/>
+      <row/>
+      <col/>
+      <label value="Currency"/>
+      <col/>
+      <input obj_name="ledger" col_name="currency" lng="60"/>
+      <end_if/>
+      <row/>
+      <col/>
+      <label value="Parameters for receipt no"/>
+      <col/>
+      <input obj_name="ledger" col_name="auto_rec_no" lng="250"/>
+      <row/>
+      <col/>
+      <label value="Parameters for payment no"/>
+      <col/>
+      <input obj_name="ledger" col_name="auto_pmt_no" lng="250"/>
+
+    </body>
+    <button_row template="Setup_Form_Single"/>
+    <frame_methods template="Setup_Form_Single">
+    </frame_methods>
+  </frame>
+</form>

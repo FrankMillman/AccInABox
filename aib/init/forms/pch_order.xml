@@ -1,0 +1,37 @@
+<form name="pch_order">
+  <db_objects>
+    <db_obj name="pch_order" table_name="in_pch_orders"/>
+    <db_obj name="pch_detail" table_name="in_pchord_det" parent="pch_order"/>
+    <db_obj name="supp" table_name="ap_suppliers" fkey="pch_order.supp_row_id"/>
+    <db_obj name="party" table_name="org_parties" fkey="supp.party_row_id"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame>
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+    </body>
+    <button_row/>
+    <frame_methods/>
+  </frame>
+  <inline_form name="ord_header" title="Order header">
+    <frame main_object="pch_order">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Supplier:"/>
+        <col/>
+        <input obj_name="pch_order" col_name="supp_id" lng="80"/>
+        <display obj_name="party" col_name="display_name" lng="150"/>
+      </body>
+      <button_row template="Setup_Form"/>
+      <frame_methods template="Transaction_Header"/>
+    </frame>
+  </inline_form>
+</form>

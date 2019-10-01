@@ -5,6 +5,7 @@ This is where you initialise the database.
 import __main__
 import os
 import sys
+import asyncio
 from configparser import ConfigParser
 from collections import OrderedDict as OD
 
@@ -78,21 +79,23 @@ def get_htc_params():
     htc_port = input('Enter web server port number [6543]: ') or '6543'
     return OD((('host', htc_host), ('port', htc_port)))
 
-def setup_db(cfg):
+async def setup_db(cfg):
     db.api.config_connection(cfg['DbParams'])
 
-    # the following must be global, as they are retrieved from __main__
-    global db_session, user_row_id, sys_admin
-    db_session = db.api.start_db_session()
-    user_row_id = 1
-    sys_admin = True
-    with db_session as db_mem_conn:
+    context = db.cache.get_new_context(1, True)  # user_row_id, sys_admin
+    context.from_init = True  # used in db.objects to prevent calling get_fkeys()
+
+    async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
-        init.init_db.init_database(__main__, conn)
+        await init.init_db.init_database(context, conn)
 
 if __name__ == '__main__':
+
     cfg = get_config()
-    setup_db(cfg)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(setup_db(cfg))
+    db.api.close_all_connections()
 
     from releases import program_version_info, datamodel_version_info
     with open('program_version', 'w') as version_file:

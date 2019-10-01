@@ -118,9 +118,9 @@ var Drag = {
 
   fixE : function(e)
   {
-    if (typeof e == 'undefined') e = window.event;
-    if (typeof e.layerX == 'undefined') e.layerX = e.offsetX;
-    if (typeof e.layerY == 'undefined') e.layerY = e.offsetY;
+    if (typeof e === 'undefined') e = window.event;
+    if (typeof e.layerX === 'undefined') e.layerX = e.offsetX;
+    if (typeof e.layerY === 'undefined') e.layerY = e.offsetY;
     return e;
   }
 };

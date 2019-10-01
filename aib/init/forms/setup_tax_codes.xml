@@ -1,0 +1,87 @@
+<form name="setup_tax_codes" title="Set up tax codes">
+  <db_objects>
+    <db_obj name="tax_cats" table_name="adm_tax_cats"/>
+    <db_obj name="tax_codes" table_name="adm_tax_codes" parent="tax_cats"/>
+    <db_obj name="tax_rates" table_name="adm_tax_rates" parent="tax_codes"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="tax_cats">
+    <toolbar/>
+    <body>
+      <block/>
+      <grid data_object="tax_cats" growable="true" num_grid_rows="3" cursor_name="tax_cats">
+        <toolbar template="Grid" title="Categories:"/>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <block/>
+      <grid_frame main_object="tax_cats">
+        <toolbar/>
+        <body>
+          <block/>
+          <dummy after="
+            <<action>>
+              <<case>>
+                <<obj_exists obj_name=`tax_cats`/>>
+                <<default>>
+                  <<call method=`do_save`/>>
+                <</default>>
+              <</case>>
+            <</action>>
+            "/>
+          <grid data_object="tax_codes" growable="true" num_grid_rows="6">
+            <toolbar template="Grid" title="Codes:"/>
+            <cur_columns>
+              <cur_col col_name="tax_code" lng="80"/>
+              <cur_col col_name="descr" lng="200"/>
+            </cur_columns>
+            <cur_filter/>
+            <cur_sequence>
+              <cur_seq col_name="seq"/>
+            </cur_sequence>
+            <grid_methods template="Grid">
+            </grid_methods>
+          </grid>
+
+          <grid_frame main_object="tax_codes">
+            <toolbar/>
+            <body>
+              <block/>
+              <dummy after="
+                <<action>>
+                  <<case>>
+                    <<obj_exists obj_name=`tax_codes`/>>
+                    <<default>>
+                      <<call method=`do_save`/>>
+                    <</default>>
+                  <</case>>
+                <</action>>
+                "/>
+              <grid data_object="tax_rates" growable="true" num_grid_rows="6" cursor_name="tax_rates">
+                <toolbar template="Grid" title="Rates:"/>
+                <grid_methods template="Grid">
+                </grid_methods>
+              </grid>
+            </body>
+            <button_row template="Grid_Frame_With_Grid"/>
+            <frame_methods template="Grid_Frame_With_Grid"/>
+          </grid_frame>
+        </body>
+        <button_row template="Grid_Frame_With_Grid"/>
+        <frame_methods template="Grid_Frame_With_Grid"/>
+      </grid_frame>
+
+    </body>
+    <button_row>
+      <button btn_id="btn_rgt" btn_label="Close" btn_enabled="true"
+        btn_validate="false" btn_default="true" lng="60" action="
+          <<action>>
+             <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+    </button_row>
+    <frame_methods/>
+  </frame>
+</form>

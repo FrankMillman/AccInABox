@@ -1,0 +1,132 @@
+<form name="setup_form_buttonrow" title="Setup button row">
+
+  <db_objects/>
+
+  <mem_objects>
+
+    <mem_obj name="form_vars" descr="Variables used in form">
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name" col_head="Name"/>
+      <mem_col col_name="title" data_type="TEXT" short_descr="Title"
+        long_descr="Form title" col_head="Title"/>
+      <mem_col col_name="buttonrow_xml" data_type="SXML" short_descr="Button row xml"
+        long_descr="Button row xml" allow_amend="true"/>
+     <mem_col col_name="btn_template" data_type="TEXT" short_descr="Button row template"
+        long_descr="Button row template" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="button" descr="Button elements" parent="form_vars"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="btn_id" data_type="TEXT" short_descr="Button id"
+        long_descr="Button id" col_head="Button id"/>
+      <mem_col col_name="btn_label" data_type="TEXT" short_descr="Button label"
+        long_descr="Button label" col_head="Label" allow_amend="true"/>
+      <mem_col col_name="lng" data_type="INT" short_descr="Length"
+        long_descr="Length" col_head="Lng" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="btn_default" data_type="BOOL" short_descr="Default?"
+        long_descr="Default button?" col_head="Default" allow_amend="true"/>
+      <mem_col col_name="btn_enabled" data_type="BOOL" short_descr="Enabled?"
+        long_descr="Button enabled?" col_head="Enabled" allow_amend="true"/>
+      <mem_col col_name="btn_validate" data_type="BOOL" short_descr="Validate?"
+        long_descr="Validate before action?" col_head="Vld" allow_amend="true"/>
+      <mem_col col_name="validation" data_type="SXML" short_descr="Validation"
+        long_descr="Validation after click" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="action" data_type="SXML" short_descr="Action"
+        long_descr="Action to take on click" col_head="Action" allow_amend="true"/>
+      <mem_col col_name="help_msg" data_type="TEXT" short_descr="Help message"
+        long_descr="Help message" col_head="Help" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+  </mem_objects>
+
+  <input_params>
+    <input_param name="form_name" type="data_attr" target="form_vars.form_name" required="true"/>
+    <input_param name="title" type="data_attr" target="form_vars.title" required="true"/>
+    <input_param name="buttonrow_xml" type="data_attr" target="form_vars.buttonrow_xml" required="true"/>
+  </input_params>
+
+  <output_params>
+    <output_param name="buttonrow_xml" type="data_attr" source="form_vars.buttonrow_xml"/>
+  </output_params>
+
+  <frame main_object="form_vars">
+    <toolbar/>
+    <body>
+
+      <block/>
+      <vbox/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Template:"/>
+      <col/>
+      <input obj_name="form_vars" col_name="btn_template" lng="120"/>
+      <grid data_object="button" growable="true" num_grid_rows="5">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="btn_id" lng="120"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <vbox_end/>
+      <grid_frame main_object="button">
+        <toolbar template="Setup_Form" title="Button:"/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Label:"/>
+          <col/>
+          <input obj_name="button" col_name="btn_label" lng="120"/>
+          <row/>
+          <col/>
+          <label value="Length:"/>
+          <col/>
+          <input obj_name="button" col_name="lng" lng="30"/>
+          <row/>
+          <col/>
+          <label value="Default?"/>
+          <col/>
+          <input obj_name="button" col_name="btn_default"/>
+          <row/>
+          <col/>
+          <label value="Enabled?"/>
+          <col/>
+          <input obj_name="button" col_name="btn_enabled"/>
+          <row/>
+          <col/>
+          <label value="Validate?"/>
+          <col/>
+          <input obj_name="button" col_name="btn_validate"/>
+          <row/>
+          <col/>
+          <label value="Action:"/>
+          <col/>
+          <input obj_name="button" col_name="action"/>
+        </body>
+        <button_row template="Grid_Frame"/>
+        <frame_methods template="Grid_Frame"/>
+      </grid_frame>
+    </body>
+    <button_row template="Setup_Form"/>
+    <frame_methods template="Setup_Form">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<pyfunc name=`custom.formdefn_funcs.load_buttonrow`/>>
+        <</action>>
+      "/>
+      <method name="before_save" action="
+        <<action>>
+          <<pyfunc name=`custom.formdefn_funcs.dump_buttonrow`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

@@ -1,0 +1,56 @@
+<form name="adm_params" title="Set up company parameters" before_start_form="
+  <<action>>
+    <<assign src=`1` tgt=`params.row_id`/>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="params" table_name="adm_params"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="params">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Company Id:"/>
+      <col/>
+      <input obj_name="params" col_name="company_id" lng="60"/>
+      <row/>
+      <col/>
+      <label value="Company name:"/>
+      <col/>
+      <input obj_name="params" col_name="company_name" lng="160"/>
+
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Local currency"/>
+      <col/>
+      <input obj_name="params" col_name="local_currency" lng="120"/>
+      <row/>
+      <col/>
+      <label value="Parameters for party id"/>
+      <col/>
+      <input obj_name="params" col_name="auto_party_id" lng="250"/>
+      <row/>
+      <col/>
+      <label value="Change effective date?"/>
+      <col/>
+      <input obj_name="params" col_name="eff_date_nsls"/>
+      <row/>
+      <col/>
+      <label value="Allow receipt allocation?"/>
+      <col/>
+      <input obj_name="params" col_name="allow_alloc_rec"/>
+
+    </body>
+    <button_row template="Setup_Form_Single"/>
+    <frame_methods template="Setup_Form_Single">
+    </frame_methods>
+  </frame>
+</form>

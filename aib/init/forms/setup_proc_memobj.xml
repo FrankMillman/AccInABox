@@ -1,0 +1,245 @@
+<form name="setup_proc_memobj" title="Setup process memobj definitions">
+
+  <db_objects/>
+  <mem_objects>
+
+    <mem_obj name="proc_vars" descr="Variables used in form">
+      <mem_col col_name="process_id" data_type="TEXT" short_descr="Process id"
+        long_descr="Process id" col_head="Id"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
+        long_descr="Description" col_head="Descr"/>
+      <mem_col col_name="memobj_xml" data_type="SXML" short_descr="Mem objects xml"
+        long_descr="Mem objects xml" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="memobj" descr="Mem objects used in form" parent="proc_vars"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="name" data_type="TEXT" short_descr="Object name"
+        long_descr="Object name" col_head="Object" key_field="A" max_len="20"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
+        long_descr="Description" col_head="Description" allow_amend="true" max_len="30"/>
+      <mem_col col_name="parent" data_type="TEXT" short_descr="Parent"
+        long_descr="Parent" col_head="Parent" allow_null="true" allow_amend="true" max_len="30"/>
+      <mem_col col_name="sequence" data_type="JSON" short_descr="Sequence"
+        long_descr="Sequence" col_head="Sequence" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="sub_types" data_type="JSON" short_descr="Sub-types"
+        long_descr="Sub-types" col_head="Sub-types" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="tree_params" data_type="JSON" short_descr="Tree parameters"
+        long_descr="Tree parameters" col_head="Tree params" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="actions" data_type="JSON" short_descr="Database actions"
+        long_descr="Database actions" col_head="Actions" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="clone_from" data_type="TEXT" short_descr="Clone from table"
+        long_descr="Clone in-memory table from database table" col_head="Clone from"
+        allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="memcol" descr="Column defns for mem objects" parent="memobj"
+        sequence="[`seq`, [`table_id`], null]">
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="Column name" key_field="A" max_len="20"/>
+      <mem_col col_name="col_type" data_type="TEXT" short_descr="Column type"
+        long_descr="Column type" col_head="Column type" max_len="20" dflt_val="mem"
+        choices="[[`mem`, `mem`], [`virt`, `virt`]]"/>
+      <mem_col col_name="data_type" data_type="TEXT" short_descr="Data type"
+        long_descr="Data type" col_head="Data type" dflt_val="TEXT"
+        choices="[[`TEXT`, `Text`], [`PWD`, `Password`], [`INT`, `Integer`], [`DEC`, `Decimal`],
+        [`DCRV`, `Decimal reversible`], [`DTE`, `Date`], [`DTM`, `Date-time`],
+        [`BOOL`, `True/False`], [`JSON`, `Json`], [`XML`, `Xml`], [`SXML`, `Xml string`],
+        [`FXML`, `Form definition`], [`PXML`, `Process definition`]]"/>
+      <mem_col col_name="short_descr" data_type="TEXT" short_descr="Short description"
+        long_descr="Short description" col_head="Description" allow_amend="true" max_len="30"/>
+      <mem_col col_name="long_descr" data_type="TEXT" short_descr="Long description"
+        long_descr="Long description" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="col_head" data_type="TEXT" short_descr="Col head"
+        long_descr="Column heading" allow_null="true" allow_amend="true" max_len="15"/>
+      <mem_col col_name="key_field" data_type="TEXT" short_descr="Key field"
+        long_descr="Alt=Alternate key; No=Not a key field" allow_amend="true" max_len="1" dflt_val="N"
+        choices="[[`A`, `Alt`], [`N`, `No`]]"/>
+      <mem_col col_name="calculated" data_type="JSON" short_descr="Calculated?"
+        long_descr="Calculated?" allow_amend="true" dflt_val="false"/>
+      <mem_col col_name="allow_null" data_type="BOOL" short_descr="Allow null"
+        long_descr="Allow null" allow_amend="true" dflt_val="false"/>
+      <mem_col col_name="allow_amend" data_type="JSON" short_descr="Allow amend"
+        long_descr="Allow amend" allow_amend="true" dflt_val="false"/>
+      <mem_col col_name="max_len" data_type="INT" short_descr="Max length"
+        long_descr="Maximum length" allow_amend="true" dflt_val="0"/>
+      <mem_col col_name="db_scale" data_type="INT" short_descr="Db scale"
+        long_descr="Decimal places in database" allow_amend="true" dflt_val="0"/>
+      <mem_col col_name="scale_ptr" data_type="TEXT" short_descr="Scale pointer"
+        long_descr="Scale pointer" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="dflt_val" data_type="TEXT" short_descr="Default value"
+        long_descr="Default value" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="dflt_rule" data_type="SXML" short_descr="Default rule"
+        long_descr="Default rule" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="col_checks" data_type="JSON" short_descr="Column checks"
+        long_descr="Column checks" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="fkey" data_type="JSON" short_descr="Foreign key"
+        long_descr="Foreign key" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="choices" data_type="JSON" short_descr="Choices"
+        long_descr="List of valid choices" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="sql" data_type="TEXT" short_descr="Sql"
+        long_descr="Sql statement" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="table_id" data_type="INT" short_descr="Object id"
+        long_descr="Object id" col_head="Object" key_field="A"
+        fkey="[`memobj`, `row_id`, null, null, true, null]"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="sequence" descr="'Sequence' variables">
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" allow_amend="true"/>
+      <mem_col col_name="group_1" data_type="TEXT" short_descr="Group 1"
+        long_descr="Group 1" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="group_2" data_type="TEXT" short_descr="Group 2"
+        long_descr="Group 2" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="group_3" data_type="TEXT" short_descr="Group 3"
+        long_descr="Group 3" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+  </mem_objects>
+
+  <input_params>
+    <input_param name="process_id" type="data_attr" target="proc_vars.process_id" required="true"/>
+    <input_param name="descr" type="data_attr" target="proc_vars.descr" required="true"/>
+    <input_param name="memobj_xml" type="data_attr" target="proc_vars.memobj_xml" required="true"/>
+  </input_params>
+
+  <output_params>
+    <output_param name="memobj_xml" type="data_attr" source="proc_vars.memobj_xml"/>
+  </output_params>
+
+  <frame main_object="proc_vars">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Process id:"/>
+      <col/>
+      <display obj_name="proc_vars" col_name="process_id" lng="160"/>
+      <col/>
+      <label value="Description:"/>
+      <col/>
+      <display obj_name="proc_vars" col_name="descr" lng="250"/>
+
+      <block/>
+      <grid data_object="memobj" growable="true" num_grid_rows="2">
+        <toolbar template="Grid" title="Memory objects:"/>
+        <cur_columns>
+          <cur_col col_name="name" lng="120"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <block/>
+      <grid_frame main_object="memobj">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Description:"/>
+          <col/>
+          <input obj_name="memobj" col_name="descr" lng="200"/>
+          <row/>
+          <col/>
+          <label value="Parent:"/>
+          <col/>
+          <input obj_name="memobj" col_name="parent" lng="120"/>
+          <row/>
+          <col/>
+          <label value="Sequence parameters:"/>
+          <col/>
+          <button btn_id="sequence" btn_label="Seq"
+            btn_enabled="true" btn_validate="true" action="
+              <<action>>
+                <<pyfunc name=`custom.table_setup.load_sequence` tbl_name=`memobj`/>>
+                <<inline_form name=`sequence`>>
+                  <<on_return>>
+                    <<return state=`cancelled`/>>
+                    <<return state=`completed`>>
+                      <<pyfunc name=`custom.table_setup.dump_sequence` tbl_name=`memobj`/>>
+                    <</return>>
+                  <</on_return>>
+                <</inline_form>>
+              <</action>>
+            "/>
+          <dummy after="
+            <<action>>
+              <<call method=`do_save`/>>
+            <</action>>
+            "/>
+          <block/>
+          <grid data_object="memcol" growable="true" num_grid_rows="6" form_name="_sys.dbcols_setup">
+            <toolbar template="Grid_Setup" title="Memory columns:"/>
+            <cur_columns>
+              <cur_col col_name="col_name" lng="120"/>
+              <cur_col col_name="short_descr" lng="150" expand="true"/>
+            </cur_columns>
+            <cur_filter/>
+            <cur_sequence>
+              <cur_seq col_name="seq"/>
+            </cur_sequence>
+            <grid_methods template="Grid"/>
+          </grid>
+
+        </body>
+        <button_row template="Grid_Frame"/>
+        <frame_methods template="Grid_Frame"/>
+      </grid_frame>
+    </body>
+    <button_row template="Setup_Form"/>
+    <frame_methods template="Setup_Form">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<pyfunc name=`custom.procdefn_funcs.load_mem_obj`/>>
+        <</action>>
+      "/>
+      <method name="before_save" action="
+        <<action>>
+          <<pyfunc name=`custom.procdefn_funcs.dump_mem_obj`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+  <inline_form name="sequence" title="Sequence">
+    <frame main_object="sequence">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Column name:"/>
+        <col/>
+        <input obj_name="sequence" col_name="col_name" lng="200"/>
+        <row/>
+        <col/>
+        <label value="Group 1:"/>
+        <col/>
+        <input obj_name="sequence" col_name="group_1" lng="200"/>
+        <row/>
+        <col/>
+        <label value="Group 2:"/>
+        <col/>
+        <input obj_name="sequence" col_name="group_2" lng="200"/>
+        <row/>
+        <col/>
+        <label value="Group 3:"/>
+        <col/>
+        <input obj_name="sequence" col_name="group_3" lng="200"/>
+      </body>
+      <button_row template="Setup_Form"/>
+      <frame_methods template="Setup_Form"/>
+    </frame>
+  </inline_form>
+</form>

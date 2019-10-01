@@ -1,0 +1,81 @@
+<form name="setup_sell_prices" title="Set up selling prices">
+  <db_objects>
+    <db_obj name="prod_codes" table_name="inv_prod_codes"/>
+    <db_obj name="prices" table_name="sls_sell_prices" parent="prod_codes"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="prod_codes">
+    <toolbar/>
+    <body>
+      <block/>
+      <grid data_object="prod_codes" growable="false" num_grid_rows="12" cursor_name="prod_codes">
+        <toolbar template="Grid"/>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <grid_frame main_object="prod_codes">
+        <toolbar/>
+        <body>
+          <block/>
+          <dummy after="
+            <<action>>
+              <<case>>
+                <<obj_exists obj_name=`prod_codes`/>>
+                <<default>>
+                  <<call method=`do_save`/>>
+                <</default>>
+              <</case>>
+            <</action>>
+            "/>
+          <grid data_object="prices" growable="true" num_grid_rows="8" cursor_name="sell_prices">
+            <toolbar template="Grid"/>
+            <grid_methods template="Grid">
+              <!-- method name="on_start_row" action="
+                <<action>>
+                  <<save_obj obj_name=`prod_codes`/>>
+                <</action>>
+                "/ -->
+            </grid_methods>
+          </grid>
+        </body>
+        <button_row>
+          <button btn_id="btn_rgt" btn_label="Return" btn_enabled="true"
+            btn_validate="false" btn_default="true" lng="60" action="
+              <<action>>
+                <<req_save/>>
+                <<return_to_grid/>>
+              <</action>>
+            "/>
+        </button_row>
+        <frame_methods>
+          <method name="do_save" action="
+            <<action/>>
+          "/>
+          <method name="on_req_close" action="
+            <<action>>
+              <<parent_req_close/>>
+            <</action>>
+          "/>
+        </frame_methods>
+      </grid_frame>
+
+    </body>
+    <button_row>
+      <button btn_id="btn_rgt" btn_label="Close" btn_enabled="true"
+        btn_validate="false" btn_default="true" lng="60" action="
+          <<action>>
+             <<call method=`on_req_close`/>>
+          <</action>>
+        "/>
+    </button_row>
+    <frame_methods>
+      <method name="on_req_close" action="
+        <<action>>
+          <<parent_req_close/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

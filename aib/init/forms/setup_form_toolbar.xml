@@ -1,0 +1,165 @@
+<form name="setup_form_toolbar" title="Setup toolbar" before_start_form="
+  <<action>>
+    <<pyfunc name=`custom.formdefn_funcs.before_start_toolbar`/>>
+  <</action>>
+  ">
+
+  <db_objects/>
+
+  <mem_objects>
+
+    <mem_obj name="form_vars" descr="Variables used in form">
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name" col_head="Name"/>
+      <mem_col col_name="title" data_type="TEXT" short_descr="Title"
+        long_descr="Form title" col_head="Title"/>
+      <mem_col col_name="toolbar_xml" data_type="SXML" short_descr="Toolbar xml"
+        long_descr="Toolbar xml" allow_amend="true"/>
+      <mem_col col_name="tb_template" data_type="TEXT" short_descr="Toolbar template"
+        long_descr="Toolbar template" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="tb_title" data_type="TEXT" short_descr="Toolbar title"
+        long_descr="Toolbar title" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="tool" descr="Toolbar elements" parent="form_vars"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="type" data_type="TEXT" short_descr="Tool type"
+        long_descr="Tool type" col_head="Tool type" max_len="80"/>
+      <mem_col col_name="label" data_type="TEXT" short_descr="Tool label"
+        long_descr="Tool label" col_head="Tool label" allow_null="true"
+        allow_amend="true" max_len="120"/>
+      <mem_col col_name="tip" data_type="TEXT" short_descr="Tool tip"
+        long_descr="Tool tip" col_head="Tool tip" allow_null="true"
+        allow_amend="true" max_len="120"/>
+      <mem_col col_name="lng" data_type="INT" short_descr="Length"
+        long_descr="Length (only for Text)" col_head="Lng"
+        allow_null="true" allow_amend="true"/>
+      <mem_col col_name="name" data_type="TEXT" short_descr="Image name"
+        long_descr="Image name" col_head="Image name" allow_null="true"
+        allow_amend="true" max_len="120"/>
+      <mem_col col_name="obj_name" data_type="TEXT" short_descr="Object name"
+        long_descr="Object name for field" allow_null="true" allow_amend="true"
+        fkey="[`{mem}.obj_names`, `name`, null, null, false, null]"/>
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name for field" allow_null="true" allow_amend="true"
+        fkey="[`obj_name>{mem}.col_names`, `name`, null, null, false, null]"/>
+      <mem_col col_name="shortcut" data_type="TEXT" short_descr="Keyboard shortcut"
+        long_descr="Keyboard shortcut" col_head="Shortcut" allow_null="true"
+        allow_amend="true" max_len="120"/>
+      <mem_col col_name="action" data_type="SXML" short_descr="Action to take"
+        long_descr="Action to take if selected" col_head="Action"
+        allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+  </mem_objects>
+
+  <input_params>
+    <input_param name="form_name" type="data_attr" target="form_vars.form_name" required="true"/>
+    <input_param name="title" type="data_attr" target="form_vars.title" required="true"/>
+    <input_param name="toolbar_xml" type="data_attr" target="form_vars.toolbar_xml" required="true"/>
+  </input_params>
+
+  <output_params>
+    <output_param name="toolbar_xml" type="data_attr" source="form_vars.toolbar_xml"/>
+  </output_params>
+
+  <frame main_object="form_vars">
+    <toolbar/>
+    <body>
+      <block/>
+      <vbox/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Template:"/>
+      <col/>
+      <input obj_name="form_vars" col_name="tb_template" lng="120"/>
+      <row/>
+      <col/>
+      <label value="Title:"/>
+      <col/>
+      <input obj_name="form_vars" col_name="tb_title" lng="120"/>
+      <grid data_object="tool" growable="true" num_grid_rows="5">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="type" lng="120"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <vbox_end/>
+      <grid_frame main_object="tool">
+        <toolbar template="Setup_Form" title="Tool:"/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Type:"/>
+          <col/>
+          <input obj_name="tool" col_name="type" lng="120"/>
+          <row/>
+          <col/>
+          <label value="Label:"/>
+          <col/>
+          <input obj_name="tool" col_name="label" lng="120"/>
+          <row/>
+          <col/>
+          <label value="Tip:"/>
+          <col/>
+          <input obj_name="tool" col_name="tip" lng="120"/>
+          <row/>
+          <col/>
+          <label value="Length:"/>
+          <col/>
+          <input obj_name="tool" col_name="lng" lng="120"/>
+          <row/>
+          <col/>
+          <label value="Name:"/>
+          <col/>
+          <input obj_name="tool" col_name="name" lng="120"/>
+          <row/>
+          <col/>
+          <label value="Object name:"/>
+          <col/>
+          <input obj_name="tool" col_name="obj_name" lng="120"/>
+          <row/>
+          <col/>
+          <label value="Column name:"/>
+          <col/>
+          <input obj_name="tool" col_name="col_name" lng="120"/>
+          <row/>
+          <col/>
+          <label value="Shortcut:"/>
+          <col/>
+          <input obj_name="tool" col_name="shortcut" lng="120"/>
+          <row/>
+          <col/>
+          <label value="Action:"/>
+          <col/>
+          <input obj_name="tool" col_name="action"/>
+        </body>
+        <button_row template="Grid_Frame"/>
+        <frame_methods template="Grid_Frame"/>
+      </grid_frame>
+    </body>
+    <button_row template="Setup_Form"/>
+    <frame_methods template="Setup_Form">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<pyfunc name=`custom.formdefn_funcs.load_toolbar`/>>
+        <</action>>
+      "/>
+      <method name="before_save" action="
+        <<action>>
+          <<pyfunc name=`custom.formdefn_funcs.dump_toolbar`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

@@ -1,0 +1,46 @@
+<form name="setup_menu" title="Setup menu">
+
+  <db_objects>
+    <db_obj name="menu" table_name="sys_menu_defns"/>
+  </db_objects>
+  <mem_objects/>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="menu">
+    <toolbar/>
+    <body>
+      <block/>
+      <tree data_object="menu" lng="250" height="350" toolbar="true"/>
+      <tree_frame main_object="menu">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Option type:"/>
+          <col/>
+          <input obj_name="menu" col_name="opt_type" lng="120"/>
+          <subtype_frame subtype_obj="menu" subtype_col="opt_type" lng="150"/>
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame"/>
+      </tree_frame>
+    </body>
+    <button_row/>
+    <frame_methods>
+      <method name="on_req_close" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+      <method name="on_req_cancel" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

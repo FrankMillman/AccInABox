@@ -1,0 +1,138 @@
+<form name="setup_nsls_codes" title="Setup other income codes" before_start_form="
+  <<action>>
+    <<pyfunc name=`custom.tax_funcs.before_start_form`/>>
+  <</action>>
+  ">
+
+  <db_objects>
+    <db_obj name="nsls_code" table_name="sls_nsls_codes"/>
+    <db_obj name="tax_code" table_name="sls_nsls_tax_codes" parent="nsls_code"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="mem_tax_codes" descr="Tax codes" parent="nsls_code">
+      <mem_col col_name="tax_cat" data_type="TEXT" short_descr="Tax category"
+        long_descr="Tax category" col_head="Tax cat"
+        fkey="[`{mem}.tax_cats`, `tax_cat`, null, null, false, null]"/>
+      <mem_col col_name="tax_code" data_type="TEXT" short_descr="Tax code"
+        long_descr="Tax code" col_head="Tax code" allow_null="true" allow_amend="true"
+        fkey="[`tax_cat>{mem}.tax_codes`, `tax_code`, null, null, false, null]"/>
+    </mem_obj>
+  </mem_objects>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="nsls_code">
+    <toolbar/>
+    <body>
+      <block/>
+      <tree data_object="nsls_code" lng="250" height="350" toolbar="true"/>
+      <tree_frame main_object="nsls_code">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Type:"/>
+          <col/>
+          <input obj_name="nsls_code" col_name="code_type" radio="true"/>
+          <subtype_frame subtype_obj="nsls_code" subtype_col="code_type" lng="150">
+
+            <subtype_body subtype_id="group">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Code:"/>
+              <col/>
+              <input obj_name="nsls_code" col_name="nsls_code" lng="80"/>
+              <row/>
+              <col/>
+              <label value="Description:"/>
+              <col/>
+              <input obj_name="nsls_code" col_name="descr" lng="120"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="code">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Code:"/>
+              <col/>
+              <input obj_name="nsls_code" col_name="nsls_code" lng="80"/>
+              <row/>
+              <col/>
+              <label value="Description:"/>
+              <col/>
+              <input obj_name="nsls_code" col_name="descr" lng="120"/>
+              <row/>
+              <col/>
+              <label value="G/l code:"/>
+              <col/>
+              <input obj_name="nsls_code" col_name="gl_code" lng="80"/>
+
+              <if_ src="_param.eff_date_nsls" op="is_" tgt="$True"/>
+              <row/>
+              <col/>
+              <label value="Allow change effective date?"/>
+              <col/>
+              <input obj_name="nsls_code" col_name="chg_eff_date"/>
+              <row/>
+              <col/>
+              <label value="Unearned gl code:"/>
+              <col/>
+              <input obj_name="nsls_code" col_name="unearned_gl_code" lng="80"/>
+              <end_if/>
+
+              <if_ src="_param.tax_cat_id" op="is_not" tgt="$None"/>
+              <block/>
+              <grid data_object="mem_tax_codes" growable="false" num_grid_rows="3">
+                <toolbar/>
+                <cur_columns>
+                  <cur_col col_name="tax_cat" lng="80" readonly="true"/>
+                  <cur_col col_name="tax_code" lng="80" expand="true"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence/>
+                <grid_methods template="Grid"/>
+              </grid>
+              <end_if/>
+
+            </subtype_body>
+
+          </subtype_frame>
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame">
+          <method name="on_start_frame" action="
+            <<action>>
+              <<pyfunc name=`custom.tax_funcs.on_start_frame`
+                master_obj=`nsls_code` taxcode_obj=`tax_code`/>>
+            <</action>>
+          "/>
+          <method name="after_save" action="
+            <<action>>
+              <<pyfunc name=`custom.tax_funcs.save_tax_codes`
+                master_obj=`nsls_code` taxcode_obj=`tax_code` master_id=`nsls_row_id`/>>
+            <</action>>
+          "/>
+        </frame_methods>
+      </tree_frame>
+    </body>
+    <button_row/>
+    <frame_methods>
+      <method name="on_req_close" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+      <method name="on_req_cancel" action="
+        <<action>>
+          <<end_form state=`cancelled`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

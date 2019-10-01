@@ -1,11 +1,13 @@
-import asyncio
+from lxml import etree
 
 import db.api
+import db.objects
 import ht.gui_objects
 import ht.templates
 import ht.form
-from errors import AibError
-from start import log, debug
+from common import AibError
+from common import log, debug
+db_session = db.api.start_db_session()  # need independent connection for reading
 
 def log_func(func):
     def wrapper(*args, **kwargs):
@@ -20,369 +22,811 @@ def log_func(func):
 #----------------------------------------------------------------------------
 
 class GuiTreeCommon:
-    def __init__(self, parent, gui, element):
+    async def _ainit_(self, parent, gui, element):
         self.must_validate = True
         self.readonly = False
-#       self.parent_type = 'tree'
         self.tree_frame = None  # over-ridden if tree_frame exists
 
         self.data_objects = parent.data_objects
-        self.obj_name = element.get('data_object')
-        self.db_obj = parent.data_objects[self.obj_name]
         self.parent = parent
         self.form = parent.form
         self.session = parent.session
         self.node_inserted = False
+        self.insert_params = {}
         self.methods = {}
+        self.auto_start = element.get('auto_start') != 'false'  # default to True
+        self.before_input = None
 
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
         self.pos = pos
 
-    @asyncio.coroutine
-    def validate(self, save):
+    async def validate(self, save=False):
+        # 2016-07-28 - don't know when this gets called, or if save is ever True
+        # default save to False, monitor
+        print('HOW DO WE GET HERE?')
         if debug:
             log.write('validate tree {} {}\n\n'.format(
                 self.ref, self.db_obj.dirty))
         if self.db_obj.dirty:
             if save:
                 if self.tree_frame is not None:
-                    yield from self.tree_frame.validate_all()
-#               self.db_obj.save()
-                yield from ht.form_xml.exec_xml(self.parent, self.parent.methods['do_save'])
+                    await self.tree_frame.validate_all()
+                await ht.form_xml.exec_xml(self.parent, self.parent.methods['do_save'])
             else:
                 print('DBOBJ NOT SAVED!')
 
-    def on_req_cancel(self):
+    async def on_req_cancel(self):
         if 'on_req_cancel' in self.methods:
-            yield from ht.form_xml.exec_xml(self, self.methods['on_req_cancel'])
+            await ht.form_xml.exec_xml(self, self.methods['on_req_cancel'])
         else:
-            yield from self.parent.on_req_cancel()
+            await self.parent.on_req_cancel()
 
-    def on_req_close(self):
+    async def on_req_close(self):
         if 'on_req_close' in self.methods:
             ht.form_xml.exec_xml(self, self.methods['on_req_close'])
         else:
-            yield from self.parent.on_req_close()
+            await self.parent.on_req_close()
 
-class GuiTree(GuiTreeCommon):
-    def __init__(self, parent, gui, element):
-        GuiTreeCommon.__init__(self, parent, gui, element)
+    async def setup_memobj(self, group, member):
+
+        if '_mem_combo' not in self.data_objects:
+            combo_defn = (
+                '<mem_obj name="_mem_combo">'
+                  '<mem_col col_name="type" data_type="TEXT" short_descr="Node type" '
+                    'long_descr="Node type:- group, member or member_root" col_head="" key_field="A"/>'
+                  '<mem_col col_name="data_row_id" data_type="INT" short_descr="Data row id" '
+                    'long_descr="Data row id of group or member" col_head="" key_field="A"/>'
+                  '<mem_col col_name="data_group_id" data_type="INT" short_descr="Data group id" '
+                    'long_descr="Data group id of member" col_head="" key_field="N" '
+                    'allow_null="true" allow_amend="true"/>'
+                  '<mem_col col_name="data_parent_id" data_type="INT" short_descr="Data parent id" '
+                    'long_descr="Data parent id of group or member" col_head="" key_field="N" '
+                    'allow_null="true" allow_amend="true"/>'
+                  '<mem_col col_name="code" data_type="TEXT" short_descr="Code" '
+                    'long_descr="Code" col_head="Code" key_field="N"/>'
+                  '<mem_col col_name="descr" data_type="TEXT" short_descr="Description" '
+                    'long_descr="Description" col_head="Description" key_field="N" allow_amend="true"/>'
+                  '<mem_col col_name="parent_id" data_type="INT" short_descr="Parent id" '
+                    'long_descr="Parent id" col_head="" key_field="N" allow_null="true" allow_amend="true"/>'
+                  '<mem_col col_name="level" data_type="INT" short_descr="Level" '
+                    'long_descr="Level - zero is root" col_head="" key_field="N" allow_amend="true"/>'
+                  '<mem_col col_name="seq" data_type="INT" short_descr="Sequence" '
+                    'long_descr="Sequence" col_head="" key_field="N" allow_amend="true"/>'
+                  '<mem_col col_name="expandable" data_type="BOOL" short_descr="Expandable" '
+                    'long_descr="Expandable" col_head="" key_field="N" allow_amend="true"/>'
+                '</mem_obj>'
+                )
+            self.data_objects['_mem_combo'] = await db.objects.get_mem_object(
+                self.parent.form.context, self.parent.company,
+                '_mem_combo', table_defn=etree.fromstring(combo_defn))
+        self.db_obj = self.data_objects['_mem_combo']
+
+        await self.db_obj.delete_all()
+
+        group_parent, group_col_names, group_levels = group.db_table.tree_params
+        member_group_id, member_col_names, member_levels = member.db_table.tree_params
+
+        self.group_code, self.group_descr, self.group_seq, self.group_parent_id = group_col_names
+        self.group_levels = len(group_levels)  # only need number of levels
+        self.member_group_id = member_group_id
+        self.member_code, self.member_descr, self.member_seq, self.member_parent_id = member_col_names
+        self.member_levels = len(member_levels)
+
+    async def get_combo_data(self, group, member):
+
+        if group.mem_obj or group.view_obj:
+            group_where = ''
+        else:
+            group_where = ' WHERE deleted_id = 0'
+
+        if member.mem_obj or member.view_obj:
+            member_where = ''
+        else:
+            member_where = ' WHERE deleted_id = 0'
+
+        async with db_session.get_connection() as db_mem_conn:
+            conn = db_mem_conn.db
+
+            if self.group_levels == 1:
+
+                # create 'root' node
+                await self.db_obj.init(display=False)
+                await self.db_obj.setval('type', 'group')
+                await self.db_obj.setval('data_row_id', 0)
+                await self.db_obj.setval('data_parent_id', None)
+                await self.db_obj.setval('code', 'root')
+                await self.db_obj.setval('descr', 'Root')
+                await self.db_obj.setval('parent_id', None)
+                await self.db_obj.setval('level', 0)
+                await self.db_obj.setval('seq', 0)
+                await self.db_obj.setval('expandable', True)
+                await self.db_obj.save()
+
+                self.group_levels += 1
+
+                sql = (
+                    "SELECT row_id, {}, {}, "
+                    "0 as parent_id, 1 as _level, {} FROM {}.{}{} "
+                    "ORDER BY seq"
+                    .format(self.group_code, self.group_descr, self.group_seq,
+                        self.parent.company, group.table_name, group_where)
+                    )
+            else:
+                cte = conn.tree_select(
+                    company_id=self.parent.company,
+                    table_name=group.table_name,
+                    link_col=self.group_parent_id,
+                    start_col=self.group_parent_id,
+                    start_value=None,
+                    )
+                sql = (cte +
+                    "SELECT row_id, {}, {}, {}, "
+                    "_level, {} FROM _tree{} "
+                    "ORDER BY parent_id, {}"
+                    .format(self.group_code, self.group_descr,
+                    self.group_parent_id, self.group_seq, group_where, self.group_seq)
+                    )
+
+            # expandable?
+            # if number of levels is fixed (i.e. not zero), levels higher than
+            #   bottom level are expandable, the bottom level is not
+            # if number of levels is variable (i.e. zero), a level is always
+            #   expandable unless limited by an expression - e.g.
+            #     acc_roles - if 'sub_roles' is True, role is expandable)
+            #     sys_menu_defns - if 'opt_type' in ('root', 'menu'), option is expandable
+            # 'group' bottom level is always expandable to 'member'
+            #
+            # [TODO] previous line not always true! [2016-03-11]
+            # if used as a lookup, and group has no children, it is not expandable
+            #
+            # if group levels is variable and user tries to insert a node,
+            #   user must specify whether inserting a group or a member
+
+            cur = await conn.exec_sql(sql)
+            async for data_row_id, code, descr, data_parent_id, _level, seq in cur:
+
+                if data_parent_id is None:
+                    parent_id = None
+                else:
+                    await self.db_obj.init(display=False,
+                        init_vals={'type': 'group', 'data_row_id': data_parent_id})
+                    parent_id = await self.db_obj.getval('row_id')
+
+                await self.db_obj.init(display=False)
+                await self.db_obj.setval('type', 'group')
+                await self.db_obj.setval('data_row_id', data_row_id)
+                await self.db_obj.setval('data_parent_id', data_parent_id)
+                await self.db_obj.setval('code', code)
+                await self.db_obj.setval('descr', descr)
+                await self.db_obj.setval('parent_id', parent_id)
+                await self.db_obj.setval('level', _level)
+                await self.db_obj.setval('seq', seq)
+                await self.db_obj.setval('expandable', True)
+                await self.db_obj.save()
+
+            if self.member_levels == 1:
+                # sql = (
+                #     "SELECT row_id, {}, {}, {}, "
+                #     "null as parent_id, 0 as _level, {} FROM {}.{}{} "
+                #     "ORDER BY {}, {}"
+                #     .format(self.member_code, self.member_descr, self.member_group_id,
+                #         self.member_seq, self.parent.company, member.table_name,
+                #         member_where, self.member_group_id, self.member_seq)
+                #     )
+
+                col_names = ['row_id', self.member_code, self.member_descr,
+                    self.member_group_id, None, 0, self.member_seq]
+                if member_where:
+                    where = [('WHERE', '', 'deleted_id', '=', 0, '')]
+                else:
+                    where = []
+
+                test = 'AND' if where else 'WHERE'
+                if hasattr(self.db_obj.context, 'lkup_filter'):  # see ht.gui_objects.on_req_lookup
+                    filter_text, col_val = self.db_obj.context.lkup_filter
+                    del self.db_obj.context.lkup_filter
+                    # place filter_text in lbr, and col_val in rbr - they will be picked up
+                    #   in db.connection.build_select where_clause
+                    where.append((test, filter_text, '', '', '', col_val))
+                    test = 'AND'  # in case there is another one
+
+                order = [(self.member_group_id, False), (self.member_seq, False)]
+
+                # sql, params = await conn.build_select(member, col_names, where, order)
+                sql, params = await conn.build_select(
+                    member.context, member.db_table, col_names, where, order)
+
+            else:
+                cte = conn.tree_select(
+                    company_id=self.parent.company,
+                    table_name=member.table_name,
+                    link_col=self.member_parent_id,
+                    start_col=self.member_parent_id,
+                    start_value=None,
+                    )
+                sql = (cte +
+                    "SELECT row_id, {}, {}, {}, "
+                    "{}, _level, {} FROM _tree{} "
+                    "ORDER BY {}, {}, seq"
+                    .format(self.member_code, self.member_descr, self.member_group_id,
+                        self.member_parent_id, self.member_seq, member_where,
+                        self.member_group_id, self.member_parent_id)
+                    )
+
+                params = []
+
+            cur = await conn.exec_sql(sql, params)
+            async for data_row_id, code, descr, data_group_id, data_parent_id, _level, seq in cur:
+
+                # if data_parent_id is null, this is a 'member_root' -
+                #   get data_parent_id from 'group.group_id'
+                # if data_parent_id is not null, this is a 'sub_member' -
+                #   get data_parent_id from 'member.parent_id'
+
+                if data_parent_id is None:
+                    # node_type = 'member_root'
+                    await self.db_obj.init(display=False,
+                        init_vals={'type': 'group', 'data_row_id': data_group_id})
+                else:
+                    # node_type = 'member'
+                    await self.db_obj.init(display=False,
+                        init_vals={'type': 'member', 'data_row_id': data_parent_id})
+                parent_id = await self.db_obj.getval('row_id')
+
+                if self.member_levels == 1:
+                    expandable = False
+                elif _level == (self.member_levels - 1):
+                    expandable = False
+                elif not self.member_levels:
+                    await member.init(display=False, init_vals={'row_id': data_row_id})
+                    expandable = await member.getval('expandable')
+                else:
+                    # expandable = bool(await member.getval('children'))
+                    expandable = False
+                # print(code, self.member_levels, _level, expandable)
+
+                await self.db_obj.init(display=False)
+                await self.db_obj.setval('type', 'member')
+                await self.db_obj.setval('data_row_id', data_row_id)
+                await self.db_obj.setval('data_group_id', data_group_id)
+                await self.db_obj.setval('data_parent_id', data_parent_id)
+                await self.db_obj.setval('code', code)
+                await self.db_obj.setval('descr', descr)
+                await self.db_obj.setval('parent_id', parent_id)
+                await self.db_obj.setval('level', _level)
+                await self.db_obj.setval('seq', seq)
+                await self.db_obj.setval('expandable', expandable)
+                await self.db_obj.save()
 
         # at present, we select and upload all the rows in the table
         # if this beomes a problem due to table size, we can change it
         #   to only select root + one level, and wait for the user to
         #   expand a level, whereupon we select and upload those rows
-        with self.form.db_session as db_mem_conn:
-            conn = db_mem_conn.db
-            select_cols = ['row_id', 'parent_num', 'descr', 'expandable']
-            if self.db_obj.db_table.audit_trail:
-                where = [('WHERE', '', 'deleted_id', '=', 0, '')]
+
+        # we need a new connection, as global db_session does not have
+        #   a memory connection
+        # safe to use form.db_session here, as we are only reading
+        async with self.form.db_session.get_connection() as db_mem_conn:
+            conn = db_mem_conn.mem
+            sql = (
+                "SELECT row_id, parent_id, "
+                "descr, expandable FROM {} "
+                "ORDER BY parent_id, seq"
+                .format(self.db_obj.table_name)
+                )
+            tree_data = []
+            async for row in await conn.exec_sql(sql):
+                # pyodbc returns a pyodbc.Row object, which cannot be JSON'd!
+                # here we turn each row into a regular tuple
+                tree_data.append(tuple(row))
+
+        return tree_data
+
+    async def get_tree_data(self):
+        parent, col_names, levels = self.db_obj.db_table.tree_params
+
+        code, descr, seq, parent_id = col_names
+
+        self.levels = len(levels)
+        async with self.parent.db_session.get_connection() as db_mem_conn:
+            if self.db_obj.mem_obj:
+                conn = db_mem_conn.mem
             else:
-                where = []
-            order = [('parent_num', False), ('seq', False)]
-#           tree_data = list(
-#               conn.full_select(self.db_obj, select_cols, where, order))
-            # pyodbc returns a pyodbc.Row object, which cannot be JSON'd!
-            # here we turn each row into a regular tuple
-            tree_data = [tuple(_) for _ in
-                conn.full_select(self.db_obj, select_cols, where, order)]
+                conn = db_mem_conn.db
+            select_cols = ['row_id', parent_id, descr, 'expandable']
+
+            where = []
+            test = 'WHERE'
+            if not self.db_obj.mem_obj and not self.db_obj.view_obj:
+                where.append((test, '', 'deleted_id', '=', 0, ''))
+                test = 'AND'
+
+            if hasattr(self.db_obj.context, 'lkup_filter'):  # see ht.gui_objects.on_req_lookup
+                filter_text, col_val = self.db_obj.context.lkup_filter
+                del self.db_obj.context.lkup_filter
+                # place filter_text in lbr, and col_val in rbr - they will be picked up
+                #   in db.connection.build_select where_clause
+                where.append((test, filter_text, '', '', '', col_val))
+                test = 'AND'  # in case there is another one
+
+            order = [(parent_id, False), (seq, False)]
+            tree_data = []
+            cur = await conn.full_select(self.db_obj, select_cols, where, order)
+            async for row in cur:
+                # pyodbc returns a pyodbc.Row object, which cannot be JSON'd!
+                # here we turn each row into a regular tuple
+                tree_data.append(tuple(row))
+
+        return tree_data
+
+class GuiTree(GuiTreeCommon):
+    async def _ainit_(self, parent, gui, element):
+        self.obj_name = element.get('data_object')
+        self.db_obj = parent.data_objects[self.obj_name]
+        await GuiTreeCommon._ainit_(self, parent, gui, element)
 
         gui.append(('tree', {
             'ref': self.ref,
             'lng': element.get('lng'),
             'height': element.get('height'),
             'toolbar': element.get('toolbar') == 'true',
-            'hide_root': False,
             'combo': None,
-            'tree_data': tree_data}))
+            }))
 
-    @asyncio.coroutine
-    def on_active(self, node_id):
+    async def start_tree(self):
+        tree_data = await self.get_tree_data()
+
+        # for td in tree_data:
+        #     print('{:<10}{!r:<10}{:<24}{}'.format(*td))
+
+        hide_root = False
+        self.session.responder.send_tree_data(self.ref, tree_data, hide_root)
+
+    async def on_active(self, node_id):
         self.node_inserted = False
         if self.db_obj.dirty:
 
             title = self.db_obj.table_name
             question = 'Do you want to save the changes to {}?'.format(
-                self.db_obj.getval('descr'))
+                await self.db_obj.getval('descr'))
             answers = ['Yes', 'No']
             default = 'No'
             escape = 'No'
 
-            ans = yield from self.session.request.ask_question(
+            ans = await self.session.responder.ask_question(
                 self.parent, title, question, answers, default, escape)
 
             if ans == 'Yes':
                 if self.tree_frame is not None:
-                    yield from self.tree_frame.validate_all()
-                yield from ht.form_xml.exec_xml(self.parent, self.parent.methods['do_save'])
+                    await self.tree_frame.validate_all()
+                await ht.form_xml.exec_xml(self.parent, self.parent.methods['do_save'])
+                # problem - [2015-09-13]
+                # if 'save' fails, we reset focus on the offending field, but
+                #   we do not reset the tree's active node back to the original
+                # also, there is a case for adding a 'Cancel' option, which would
+                #   also reset the tree's active node back to the original
 
-        self.db_obj.init()
-        self.db_obj.setval('row_id', node_id)
+        # await self.db_obj.init(init_vals={'row_id': node_id})
+        await self.db_obj.select_row({'row_id': node_id})
+
+        # for method in self.parent.on_active:
+        #     await ht.form_xml.exec_xml(self, method)
+
+        if 'on_active' in self.parent.methods:  # see setup_roles.xml
+            await ht.form_xml.exec_xml(self, self.parent.methods['on_active'])
+
         if self.tree_frame is not None:
-            yield from self.tree_frame.restart_frame(set_focus=False)
+            await self.tree_frame.restart_frame(set_focus=False)
 
-    @asyncio.coroutine
-    def on_req_insert_node(self, parent_id, seq, combo_type=None):
+    async def on_req_insert_node(self, args):
+        parent_id, seq, node_type = args
         if not parent_id:
             raise AibError(head='Error', body='Cannot create new root')
-#       self.node_inserted = (parent_id, seq)  # retain for before_save() below
         self.node_inserted = True
-        self.db_obj.init(init_vals={'parent_id': parent_id, 'seq': seq})
-        self.session.request.send_insert_node(self.ref, parent_id, seq, -1)
+        self.insert_params = {'parent_id': parent_id, 'seq': seq}
+        if self.levels:
+            await self.db_obj.init(display=False, init_vals={'row_id': parent_id})
+            self.insert_params['level'] = await self.db_obj.getval('level') + 1
+        await self.db_obj.init()
+        self.session.responder.send_insert_node(self.ref, parent_id, seq, -1)
         if self.tree_frame is not None:
-            yield from self.tree_frame.restart_frame()
+            await self.tree_frame.restart_frame()
 
-    @asyncio.coroutine
-    def on_req_delete_node(self, node_id=None):
+    async def on_req_delete_node(self, node_id=None):
         if node_id is None:
             pass  # deleting the node that is being inserted
         else:
-            self.db_obj.init()
-            self.db_obj.setval('row_id', node_id)
-            if not self.db_obj.getval('parent_id'):
+            await self.db_obj.init(display=False, init_vals={'row_id': node_id})
+            if not await self.db_obj.getval('parent_id'):
                 raise AibError(head='Error', body='Cannot delete root node')
-            if self.db_obj.getval('children'):
+            if await self.db_obj.getval('children'):
                 raise AibError(head='Error', body='Cannot delete node with children')
-            self.db_obj.delete()
-        self.session.request.send_delete_node(self.ref, node_id)
+            await self.db_obj.delete()
+        self.session.responder.send_delete_node(self.ref, node_id)
 
-    @asyncio.coroutine
-    def on_move_node(self, node_id, parent_id, seq):
+    async def on_move_node(self, node_id, parent_id, seq):
         pass
 
-#   @asyncio.coroutine
-#   def before_save(self):  # called from frame_methods before save
-#       if self.node_inserted:  # set up in on_req_insert_node() above
-#           parent_id, seq = self.node_inserted
-#           self.db_obj.setval('parent_id', parent_id)
-#           self.db_obj.setval('seq', seq)
+    async def before_save(self):  # called from ht.form.save before save
+        for col_name in self.insert_params:
+            await self.db_obj.setval(col_name, self.insert_params[col_name])
 
-    @asyncio.coroutine
-    def update_node(self):  # called from frame_methods after save
+    async def after_save(self):  # called from ht.form.save after save
         # this is called from tree_frame frame_methods
         # could we ever have a tree without a tree_frame
         # if yes, this would not be called
         # on the other hand, how would we trigger a 'save' anyway?
         # leave alone for now [2015-03-02]
-        self.node_inserted = False
-        self.session.request.send_update_node(
+        self.session.responder.send_update_node(
             self.ref,  # tree_ref
-            self.db_obj.getval('row_id'),  # node_id
-            self.db_obj.getval('descr'),  # text
-            self.db_obj.getval('expandable')
+            await self.db_obj.getval('row_id'),  # node_id
+            await self.db_obj.getval('descr'),  # text
+            await self.db_obj.getval('expandable')
             )
+        self.node_inserted = False
+        self.insert_params = {}
 
 class GuiTreeCombo(GuiTreeCommon):
-    def __init__(self, parent, gui, element):
-        GuiTreeCommon.__init__(self, parent, gui, element)
+    async def _ainit_(self, parent, gui, element):
+        await GuiTreeCommon._ainit_(self, parent, gui, element)
 
-        group_name = element.get('group')
-        self.group = self.parent.data_objects[group_name]
-        self.group_code = element.get('group_code')
-        member_name = element.get('member')
-        self.member = self.parent.data_objects[member_name]
-        self.member_code = element.get('member_code')
-        self.member_descr = element.get('member_descr')
+        group_name = element.get('group_name')
+        self.group = self.data_objects[group_name]
+        member_name = element.get('member_name')
+        self.member = self.data_objects[member_name]
 
-        self.tree_frames = {}  # key='group'/'member' val=tree_frame for group/member
+        await self.setup_memobj(self.group, self.member)
 
-        group_where = element.get('group_filter') or ''
-
-        if self.group.db_table.audit_trail:
-            if group_where:
-                group_where += ' AND deleted_id = 0'
-            else:
-                group_where = ' WHERE deleted_id = 0'
-        if self.member.db_table.audit_trail:
-            member_where = ' WHERE deleted_id = 0'
+        if self.group_levels:  # no of levels is fixed
+            # insert while on bottom level means 'insert new member'
+            # insert while on higher level means 'insert new group'
+            ask_insert = False
         else:
-            member_where = ''
-
-        sql = (
-            "SELECT row_id, 'group' AS type, {5} AS code, descr, "
-            "COALESCE(parent_id, 0) AS parent_num, seq FROM {0}.{1}{3} "
-            "UNION ALL SELECT row_id, 'member' AS type, {6} AS code, "
-            "{7} AS descr, parent_id AS parent_num, seq FROM {0}.{2}{4} "
-            "ORDER BY parent_num, seq"
-            .format(self.db_obj.data_company, self.group.table_name,
-                self.member.table_name, group_where, member_where,
-                self.group_code, self.member_code, self.member_descr)
-            )
-
-        with self.form.db_session as db_mem_conn:
-            conn = db_mem_conn.db
-            for row_id, node_type, code, descr, parent_num, seq in conn.exec_sql(sql):
-                self.db_obj.init()
-                self.db_obj.setval('type', node_type)
-                self.db_obj.setval('data_row_id', row_id)
-                self.db_obj.setval('code', code)
-                self.db_obj.setval('descr', descr)
-                self.db_obj.setval('parent_num', parent_num)
-                self.db_obj.setval('seq', seq)
-                self.db_obj.setval('expandable', (node_type == 'group'))
-                self.db_obj.save()
-
-        # at present, we select and upload all the rows in the table
-        # if this beomes a problem due to table size, we can change it
-        #   to only select root + one level, and wait for the user to
-        #   expand a level, whereupon we select and upload those rows
-            conn = db_mem_conn.mem
-            sql = (
-                "SELECT data_row_id{0}'_'{0}type as node_id, "
-                "parent_num{0}'_group' as parent_id, "
-                "descr, expandable FROM {1} "
-                "ORDER BY parent_num, seq"
-                .format(conn.concat, self.db_obj.table_name)
-                )
-            # pyodbc returns a pyodbc.Row object, which cannot be JSON'd!
-            # here we turn each row into a regular tuple
-            tree_data = [tuple(_) for _ in
-                conn.cur.execute(sql)]
-
-#       for td in tree_data:
-#           print('{:<10}{:<10}{:<20}{}'.format(*td))
+            # cannot tell if user inserting new member or new group - ask
+            # ask_insert = True
+            ask_insert = False  # do we need this? [2016-08-05]
 
         gui.append(('tree', {
             'ref': self.ref,
             'lng': element.get('lng'),
             'height': element.get('height'),
             'toolbar': element.get('toolbar') == 'true',
-            'hide_root': True,
-#           'combo': (self.group.db_table.short_descr, self.member.db_table.short_descr),
-            'combo': (group_name, member_name),
-            'tree_data': tree_data}))
+            'combo': (group_name, member_name, ask_insert),
+            }))
 
-    @asyncio.coroutine
-    def on_active(self, node_id):
+        self.tree_frames = {}  # key='group'/'member' val=tree_frame for group/member
+
+    async def start_tree(self):
+        tree_data = await self.get_combo_data(self.group, self.member)
+
+        # for td in tree_data:
+        #     print('{:<10}{!r:<10}{:<24}{}'.format(*td))
+
+        if len(tree_data) == 1:  # there is only a root node
+            hide_root = False
+        else:
+            hide_root = True
+        self.session.responder.send_tree_data(self.ref, tree_data, hide_root)
+
+    async def on_active(self, node_id):
         self.node_inserted = False
-
-        data_row_id, node_type = node_id.split('_')
-        data_row_id = int(data_row_id)
 
         if self.tree_frame.db_obj.dirty:
 
-            if node_type == 'group':
-                descr = 'descr'
-            else:
-                descr = self.member_descr
-
             title = self.tree_frame.db_obj.table_name
-            question = 'Do you want to save the changes to {}?'.format(descr)
+            question = 'Do you want to save the changes to {}?'.format(
+                await self.db_obj.getval('descr'))
             answers = ['Yes', 'No']
             default = 'No'
             escape = 'No'
 
-            ans = yield from self.session.request.ask_question(
+            ans = await self.session.responder.ask_question(
                 self.parent, title, question, answers, default, escape)
 
             if ans == 'Yes':
                 if self.tree_frame is not None:
-                    yield from self.tree_frame.validate_all()
-                yield from ht.form_xml.exec_xml(
+                    await self.tree_frame.validate_all()
+                await ht.form_xml.exec_xml(
                     self.tree_frame, self.tree_frame.methods['do_save'])
 
+        await self.db_obj.init(display=False, init_vals={'row_id': node_id})
+        node_type = await self.db_obj.getval('type')
+        data_row_id = await self.db_obj.getval('data_row_id')
+
+        node_type = await self.db_obj.getval('type')
         if node_type == 'group':
-            self.group.init()
-            self.group.setval('row_id', data_row_id)
+            # await self.group.init(init_vals={'row_id': data_row_id})
+            await self.group.select_row({'row_id': data_row_id})
             self.tree_frame = self.tree_frames['group']
         else:  # must be 'member'
-            self.member.init()
-            self.member.setval('row_id', data_row_id)
+            # await self.member.init(init_vals={'row_id': data_row_id})
+            await self.member.select_row({'row_id': data_row_id})
             self.tree_frame = self.tree_frames['member']
-        yield from self.tree_frame.restart_frame(set_focus=False)
+        await self.tree_frame.restart_frame(set_focus=False)
 
-    @asyncio.coroutine
-    def on_req_insert_node(self, parent_id, seq, node_type):
-        if parent_id == '0_group':
-            raise AibError(head='Error', body='Cannot create new root')
-        parent_num = int(parent_id.split('_')[0])
+    async def on_req_insert_node(self, args):
+        parent_id, seq, node_type = args
         self.node_inserted = True
-        if node_type == 'group':
-            # don't know why this was changed [2015-07-11]
-            # initially we set up parent_num and seq as init_vals
-            # then it was changed to populate the fields in 'before_save'
-            # don't know when or why
-            # it causes a problem with saving 'db_table' in setup_table_tree
-            # reverted to original method - it seems to be working ok
-            #self.node_inserted = (parent_num, seq, 'group')  # retain for before_save() below
-            self.db_obj.init(init_vals=
-                {'parent_num': parent_num, 'seq': seq, 'type': 'group'})
-            self.group.init(init_vals={'parent_id': parent_num, 'seq': seq})
-            #self.db_obj.init()
-            #self.group.init()
-            self.tree_frame = self.tree_frames['group']
-        else:  # must be 'member'
-            #self.node_inserted = (parent_num, seq, 'member')  # retain for before_save() below
-            self.db_obj.init(init_vals=
-                {'parent_num': parent_num, 'seq': seq, 'type': 'member'})
-            self.member.init(init_vals={'parent_id': parent_num, 'seq': seq})
-            #self.db_obj.init()
-            #self.member.init()
-            self.tree_frame = self.tree_frames['member']
-        self.session.request.send_insert_node(self.ref, parent_id, seq, -1)
-        yield from self.tree_frame.restart_frame()
 
-    @asyncio.coroutine
-    def on_req_delete_node(self, node_id=None):
-        if node_id is None:
-            pass  # deleting the node that is being inserted
+        await self.db_obj.init(display=False, init_vals={'row_id': parent_id})
+
+        if await self.db_obj.getval('type') == 'member':
+            self.insert_params = {
+                self.member_group_id: await self.db_obj.getval('data_group_id'),
+                self.member_parent_id: await self.db_obj.getval('data_row_id'),
+                'seq': seq}
+            await self.member.init()
+            await self.db_obj.init(display=False, init_vals={
+                'type': 'member',
+                'parent_id': parent_id,
+                'data_group_id': await self.db_obj.getval('data_group_id'),
+                'data_parent_id': await self.db_obj.getval('data_row_id'),
+                'level': await self.db_obj.getval('level') + 1,
+                'seq': seq})
+            self.tree_frame = self.tree_frames['member']
         else:
-            if node_id == '0_group':
+            await self.group.init(display=False,
+                init_vals={'row_id': await self.db_obj.getval('data_row_id')})
+            if self.group_levels:
+                if await self.db_obj.getval('level') == (self.group_levels - 1):
+                    new_node_type = 'member_root'
+                else:
+                    new_node_type = 'group'
+            elif 'expandable' in self.group.db_table.col_dict:
+                expandable = await self.group.getfld('expandable')
+                if await expandable.getval():
+                    new_node_type = 'group'
+                else:
+                    new_node_type = 'member_root'
+            else:
+                if node_type == 'member':  # as entered by user
+                    new_node_type = 'member_root'
+                elif node_type == 'group':  # as entered by user
+                    new_node_type = 'group'
+                else:
+                    raise AibError(head='Insert node', body='Must specify group or member')
+            if new_node_type == 'member_root':
+                self.insert_params = {'seq': seq,
+                    self.member_group_id: await self.db_obj.getval('data_row_id')}
+                await self.member.init()
+                await self.db_obj.init(display=False, init_vals={
+                    'type': 'member',
+                    'parent_id': parent_id,
+                    'data_group_id': await self.db_obj.getval('data_row_id'),
+                    'level': 0,
+                    'seq': seq})
+                self.tree_frame = self.tree_frames['member']
+            else:
+                # self.insert_params = {'seq': seq,
+                #     self.group_parent_id: await self.db_obj.getval('data_row_id')}
+                self.insert_params = {'seq': seq}
+                if self.group_parent_id is not None:
+                    self.insert_params[self.group_parent_id] = await self.db_obj.getval('data_row_id')
+                await self.group.init()
+                await self.db_obj.init(display=False, init_vals={
+                    'type': 'group',
+                    'parent_id': parent_id,
+                    'data_parent_id': await self.db_obj.getval('data_row_id'),
+                    'level': await self.db_obj.getval('level') + 1,
+                    'seq': seq})
+                self.tree_frame = self.tree_frames['group']
+
+        self.session.responder.send_insert_node(self.ref, parent_id, seq, -1)
+        await self.tree_frame.restart_frame()
+
+    async def on_req_delete_node(self, node_id=None):
+        if node_id is not None:  # else deleting the node that is being inserted
+            await self.db_obj.init(display=False, init_vals={'row_id': node_id})
+            if node_id == 1:
                 raise AibError(head='Error', body='Cannot delete root node')
-            data_row_id, node_type = node_id.split('_')
-            data_row_id = int(data_row_id)
+            node_type = await self.db_obj.getval('type')
+            data_row_id = await self.db_obj.getval('data_row_id')
             if node_type == 'group':
                 obj_to_delete = self.group
             else:  # must be 'member'
                 obj_to_delete = self.member
-            if obj_to_delete.getval('children'):
+            if await obj_to_delete.getval('children'):
                 raise AibError(head='Error', body='Cannot delete node with children')
-            obj_to_delete.delete()
-            self.db_obj.init()
-            self.db_obj.setval('type', node_type)
-            self.db_obj.setval('data_row_id', data_row_id)
-            self.db_obj.delete()
-        self.session.request.send_delete_node(self.ref, node_id)
+            await obj_to_delete.delete()
+            # self.db_obj.init(display=False)
+            # await self.db_obj.setval('type', node_type)
+            # await self.db_obj.setval('data_row_id', data_row_id)
+            await self.db_obj.delete()
+        self.session.responder.send_delete_node(self.ref, node_id)
 
-    @asyncio.coroutine
-    def on_move_node(self, node_id, parent_id, seq):
-        pass
+    async def on_move_node(self, node_id, parent_id, seq):
+        pass  # not implemented yet
 
-#   @asyncio.coroutine
-#   def before_save(self):  # called from frame_methods before save
-#       if self.node_inserted:  # set up in on_req_insert_node() above
-#           parent_num, seq, type = self.node_inserted
-#           self.db_obj.setval('parent_num', parent_num)
-#           self.db_obj.setval('seq', seq)
-#           self.db_obj.setval('type', type)
-#           if type == 'group':
-#               self.group.setval('parent_id', parent_num)
-#               self.group.setval('seq', seq)
-#           elif type == 'member':
-#               self.member.setval('parent_id', parent_num)
-#               self.member.setval('seq', seq)
-
-    @asyncio.coroutine
-    def update_node(self):  # called from frame_methods after save
-        self.node_inserted = False
-        node_type = self.db_obj.getval('type')
-        if node_type == 'group':
-            data_row_id = self.group.getval('row_id')
-            code = self.group.getval(self.group_code)
-            text = self.group.getval('descr')
-            expandable = True
-            node_id = '{}_group'.format(data_row_id)
+    async def before_save(self):  # called from ht.form.save before save
+        if await self.db_obj.getval('type') == 'member':
+            for col_name in self.insert_params:
+                await self.member.setval(col_name, self.insert_params[col_name])
         else:
-            data_row_id = self.member.getval('row_id')
-            code = self.member.getval(self.member_code)
-            text = self.member.getval(self.member_descr)
-            expandable = False
-            node_id = '{}_member'.format(data_row_id)
-        self.db_obj.init(init_vals={
-            'type': node_type, 'data_row_id': data_row_id})
-        self.db_obj.setval('code', code)
-        self.db_obj.setval('descr', text)
-        self.db_obj.setval('expandable', expandable)
-        self.db_obj.save()
-        self.session.request.send_update_node(self.ref, node_id, text, expandable)
+            for col_name in self.insert_params:
+                await self.group.setval(col_name, self.insert_params[col_name])
+
+    async def after_save(self):  # called from frame_methods after save
+        node_type = await self.db_obj.getval('type')
+        if node_type == 'member':
+
+            data_row_id = await self.member.getval('row_id')
+            data_group_id = await self.member.getval(self.member_group_id)
+            if self.member_parent_id is not None:
+                data_parent_id = await self.member.getval(self.member_parent_id)
+            else:
+                data_parent_id = None
+            code = await self.member.getval(self.member_code)
+            text = await self.member.getval(self.member_descr)
+
+            # if await self.member.getval('children'):  # check if expandable
+            #     expandable = True
+            # elif not self.member_levels:
+            #     expandable = await self.member.getval('expandable')
+            # elif self.member_levels == 1:
+            #     expandable = False
+            # elif await self.db_obj.getval('level') == (self.member_levels - 1):
+            #     expandable = False
+            # else:
+            #     expandable = True
+
+            if self.member_levels == 1:
+                expandable = False
+            elif await self.db_obj.getval('level') == (self.member_levels - 1):
+                expandable = False
+            elif not self.member_levels:
+                expandable = await self.member.getval('expandable')
+            else:
+                expandable = False
+
+        else:
+
+            data_row_id = await self.group.getval('row_id')
+            data_group_id = None
+            if self.group_parent_id is not None:
+                data_parent_id = await self.group.getval(self.group_parent_id)
+            else:
+                data_parent_id = None
+            code = await self.group.getval(self.group_code)
+            text = await self.group.getval(self.group_descr)
+            expandable = True
+        await self.db_obj.setval('data_row_id', data_row_id)
+        await self.db_obj.setval('data_group_id', data_group_id)
+        await self.db_obj.setval('data_parent_id', data_parent_id)
+        await self.db_obj.setval('code', code)
+        await self.db_obj.setval('descr', text)
+        await self.db_obj.setval('expandable', expandable)
+        await self.db_obj.save()
+        node_id = await self.db_obj.getval('row_id')
+        self.session.responder.send_update_node(self.ref, node_id, text, expandable)
+        self.node_inserted = False
+        self.insert_params = {}
+
+class GuiTreeLkup(GuiTreeCommon):
+    async def _ainit_(self, parent, gui, element):
+        self.obj_name = element.get('data_object')
+        self.data_objects = parent.data_objects
+        self.db_obj = self.data_objects[self.obj_name]
+        self.readonly = True
+        await GuiTreeCommon._ainit_(self, parent, gui, element)
+
+        group_name, col_names, levels = self.db_obj.db_table.tree_params
+        if group_name is not None:
+            fld = await self.db_obj.getfld(group_name)
+            self.group = await fld.get_fk_object()
+            self.member = self.db_obj
+            await self.setup_memobj(self.group, self.member)
+            gui.append(('tree', {
+                'ref': self.ref,
+                'lng': element.get('lng'),
+                'height': element.get('height'),
+                'toolbar': element.get('toolbar') == 'true',
+                'hide_root': True,
+                'combo': (group_name, self.member.table_name, False),
+                'lkup': True,
+                }))
+        else:
+            self.group = None
+            gui.append(('tree', {
+                'ref': self.ref,
+                'lng': element.get('lng'),
+                'height': element.get('height'),
+                'toolbar': element.get('toolbar') == 'true',
+                'hide_root': True,  # must parameterise
+                'combo': None,
+                'lkup': True,
+                }))
+        # gui.append(('tree', {
+        #     'ref': self.ref,
+        #     'lng': element.get('lng'),
+        #     'height': element.get('height'),
+        #     'toolbar': element.get('toolbar') == 'true',
+        #     'hide_root': True,  # must parameterise
+        #     'combo': None,
+        #     'lkup': True,
+        #     }))
+
+    async def start_tree(self):
+        if self.group is not None:
+            tree_data = await self.get_combo_data(self.group, self.member)
+            if len(tree_data) == 1:  # there is only a root node
+                hide_root = False
+            else:
+                hide_root = True
+        else:
+            tree_data = await self.get_tree_data()
+            # hide_root = False
+            # changed for sales code lookup [2017-11-13]
+            # may need to make it a paremeter
+            hide_root = True
+
+        # for td in tree_data:
+        #     print('{:<10}{!r:<10}{:<32}{}'.format(*td))
+
+        self.session.responder.send_tree_data(self.ref, tree_data, hide_root)
+
+    async def on_selected(self, node_id):
+        # await self.db_obj.init(init_vals={'row_id': node_id})
+        await self.db_obj.select_row({'row_id': node_id})
+
+        if self.group is not None:
+            node_type = await self.db_obj.getval('type')
+            data_row_id = await self.db_obj.getval('data_row_id')
+
+            node_type = await self.db_obj.getval('type')
+            if node_type == 'group':
+                # # await self.group.init(init_vals={'row_id': data_row_id})
+                # await self.group.select_row({'row_id': data_row_id})
+                raise AibError(head='Lookup',
+                    body='Cannot select {} here'.format(self.group.table_name))
+            else:  # must be 'member'
+                # await self.member.init(init_vals={'row_id': data_row_id})
+                await self.member.select_row({'row_id': data_row_id})
+
+        self.session.responder.send_end_form(self.form)
+        await self.form.close_form()
+        callback, caller, *args = self.form.callback
+        state = 'completed'
+        return_params = None
+        await callback(caller, state, return_params, *args)
+
+import importlib
+class GuiTreeReport(GuiTreeCommon):
+    async def _ainit_(self, parent, gui, element):
+        await GuiTreeCommon._ainit_(self, parent, gui, element)
+
+        func_name = element.get('pyfunc')
+        module_name, func_name = func_name.rsplit('.', 1)
+        self.module = importlib.import_module(module_name)
+
+        gui.append(('tree_report', {
+            'ref': self.ref,
+            'lng': element.get('lng'),
+            'height': element.get('height'),
+            'toolbar': element.get('toolbar') == 'true',
+            }))
+
+    async def start_tree(self):
+
+        data = await self.module.get_data(self.parent, None, 0)
+        root, text, amount, expandable = data
+        tree_data = [(root, None, text, amount, expandable)]
+
+        data = await self.module.get_data(self.parent, root, amount)
+        for node_id, text, amount, expandable in data:
+            tree_data.append((node_id, root, text, amount, expandable))
+
+        hide_root = False
+        self.session.responder.send_tree_data(self.ref, tree_data, hide_root)
+
+    async def on_req_insert_node(self, args):
+        # print('EXPAND', args)
+        parent_id, amount = args
+        
+        tree_data = []
+        data = await self.module.get_data(self.parent, parent_id, amount)
+        for node_id, text, amount, expandable in data:
+            tree_data.append((node_id, parent_id, text, amount, expandable))
+
+        hide_root = False
+        self.session.responder.send_tree_data(self.ref, tree_data, hide_root)

@@ -1,0 +1,46 @@
+<form name="setup_ar_terms_codes" title="Set up terms codes">
+
+  <db_objects>
+    <db_obj name="terms_code" table_name="ar_terms_codes" is_formview_obj="true"/>
+  </db_objects>
+
+  <mem_objects/>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="terms_code">
+    <toolbar template="Setup_Form"/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Code:"/>
+      <col/>
+      <input obj_name="terms_code" col_name="terms_code" lng="80"/>
+      <row/>
+      <col/>
+      <label value="Description:"/>
+      <col/>
+      <input obj_name="terms_code" col_name="descr" lng="120"/>
+      <row/>
+      <col/>
+      <label value="Discount rule:"/>
+      <col/>
+      <input obj_name="terms_code" col_name="discount_rule" lng="120"/>
+      <row/>
+      <col/>
+      <label value="Due date rule:"/>
+      <col/>
+      <input obj_name="terms_code" col_name="due_rule" lng="120"/>
+      <row/>
+      <col/>
+      <label value="Arrears rule:"/>
+      <col/>
+      <input obj_name="terms_code" col_name="arrears_rule" lng="120"/>
+    </body>
+    <button_row template="Setup_Form"/>
+    <frame_methods template="Setup_Form"/>
+  </frame>
+</form>

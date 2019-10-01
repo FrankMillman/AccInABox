@@ -1,0 +1,109 @@
+<form name="setup_prod_codes" title="Set up product codes" before_start_form="
+  <<action>>
+    <<pyfunc name=`custom.tax_funcs.before_start_form`/>>
+  <</action>>
+  ">
+
+  <db_objects>
+    <db_obj name="prod_class" table_name="in_prod_classes"/>
+    <db_obj name="prod_code" table_name="in_prod_codes" parent="prod_class"/>
+    <db_obj name="prod_tax_code" table_name="in_prod_tax_codes" parent="prod_code"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="mem_tax_codes" descr="Tax codes" parent="prod_code">
+      <mem_col col_name="tax_cat" data_type="TEXT" short_descr="Tax category"
+        long_descr="Tax category" col_head="Tax cat"
+        fkey="[`{mem}.tax_cats`, `tax_cat`, null, null, false, null]"/>
+      <mem_col col_name="tax_code" data_type="TEXT" short_descr="Tax code"
+        long_descr="Tax code" col_head="Tax code" allow_null="true" allow_amend="true"
+        fkey="[`tax_cat>{mem}.tax_codes`, `tax_code`, null, null, false, null]"/>
+    </mem_obj>
+
+  </mem_objects>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="prod_code">
+    <toolbar/>
+    <body>
+      <block/>
+      <tree_combo group_name="prod_class" member_name="prod_code"
+        lng="250" height="400" toolbar="true"/>
+      <tree_frame main_object="prod_class" combo_type="group">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <text value="Product class"/>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Class:"/>
+          <col/>
+          <input obj_name="prod_class" col_name="class" lng="80"/>
+          <row/>
+          <col/>
+          <label value="Description:"/>
+          <col/>
+          <input obj_name="prod_class" col_name="descr" lng="150"/>
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame"/>
+      </tree_frame>
+      <tree_frame main_object="prod_code" combo_type="member">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <text value="Product code"/>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Code:"/>
+          <col/>
+          <input obj_name="prod_code" col_name="prod_code" lng="80"/>
+          <row/>
+          <col/>
+          <label value="Description:"/>
+          <col/>
+          <input obj_name="prod_code" col_name="descr" lng="150"/>
+          <block/>
+          <grid data_object="mem_tax_codes" growable="false" num_grid_rows="3">
+            <toolbar/>
+            <cur_columns>
+              <cur_col col_name="tax_cat" lng="80" readonly="true"/>
+              <cur_col col_name="tax_code" lng="80" expand="true"/>
+            </cur_columns>
+            <cur_filter/>
+            <cur_sequence/>
+            <grid_methods template="Grid"/>
+          </grid>
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame">
+          <method name="on_start_frame" action="
+            <<action>>
+              <<pyfunc name=`custom.tax_funcs.on_start_frame`
+                master_obj=`prod_code` taxcode_obj=`prod_tax_code`/>>
+            <</action>>
+          "/>
+          <method name="after_save" action="
+            <<action>>
+              <<pyfunc name=`custom.tax_funcs.save_tax_codes`
+                master_obj=`prod_code` taxcode_obj=`prod_tax_code` master_id=`prod_row_id`/>>
+            <</action>>
+          "/>
+        </frame_methods>
+      </tree_frame>
+    </body>
+    <button_row/>
+    <frame_methods/>
+  </frame>
+</form>

@@ -3,7 +3,6 @@ This is the public API for the db module.
 """
 
 import db.connection
-import db.objects
 import db.cursor
 
 def config_connection(db_params):
@@ -36,18 +35,6 @@ def start_db_session(mem_id=None):
     and return it to the caller.
     """
     return db.connection.DbSession(mem_id)
-
-def get_db_object(db_session, active_company, table_name, parent=None):
-    return db.objects.get_db_object(
-        db_session, active_company, table_name, parent)
-
-def get_fkey_object(db_session, table_name, src_obj, src_colname):
-    return db.objects.get_fkey_object(
-        db_session, table_name, src_obj, src_colname)
-
-def get_mem_object(db_session, active_company, table_name, parent=None, table_defn=None):
-    return db.objects.get_mem_object(db_session, active_company,
-        table_name, parent, table_defn)
 
 def close_all_connections():
     db.connection.close_all_connections()

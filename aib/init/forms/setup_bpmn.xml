@@ -1,0 +1,364 @@
+<form name="setup_bpmn" title="Setup BPMN diagram">
+  <db_objects/>
+  <mem_objects>
+
+    <mem_obj name="bpmn_vars" descr="Variables used in form">
+      <mem_col col_name="process_id" data_type="TEXT" short_descr="Process id" long_descr="Process id"/>
+      <mem_col col_name="bpmn_ref" data_type="TEXT" short_descr="Bpmn ref" long_descr="Bpmn ref"/>
+      <mem_col col_name="max_id" data_type="INT" short_descr="Max id" long_descr="Highest id used"/>
+    </mem_obj>
+
+    <mem_obj name="bpmn_defn" descr="BPMN definition components">
+      <mem_col col_name="bpmn_xml" data_type="SXML" short_descr="Bpmn defn xml" long_descr="Bpmn definition xml"
+        allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="task_vars" descr="Variables to maintain 'task'">
+      <mem_col col_name="task_type" data_type="TEXT" short_descr="Task type" long_descr="Task type"
+          choices="[[`task`, `Unspecified`], [`userTask`, `User task`], [`scriptTask`, `Script task`]]"
+          dflt_val="task"/>
+      <mem_col col_name="elem_id" data_type="TEXT" short_descr="Element id" long_descr="Element id"
+          allow_null="true"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description" long_descr="Description"
+        allow_amend="true"/>
+      <mem_col col_name="performer" data_type="TEXT" short_descr="Performer" long_descr="Performer"
+        allow_null="true" allow_amend="true"/>
+      <mem_col col_name="path_to_script" data_type="TEXT" short_descr="Path to script" long_descr="Path to script"
+        allow_null="true" allow_amend="true"/>
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name for user task" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="multi_instance" data_type="BOOL" short_descr="Multi instance?"
+        long_descr="Multi instance? - If Y, specify expression or data driven" allow_amend="true"/>
+      <mem_col col_name="multi_inst_seq" data_type="BOOL" short_descr="Multi instance sequential?"
+        long_descr="Multi instance sequential (y) or parallel (n)?" allow_amend="true"/>
+      <mem_col col_name="multi_inst_expr" data_type="INT" short_descr="Multi instance expression"
+        long_descr="Multi instance expression - assume int for now" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="multi_inst_data" data_type="TEXT" short_descr="Multi instance data input"
+        long_descr="Multi instance data input" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="input_params" descr="Parameters passed to task" parent="task_vars">
+      <mem_col col_name="name" data_type="TEXT" short_descr="Name"
+        long_descr="Input parameter name" col_head="Name" key_field="A"/>
+      <mem_col col_name="source" data_type="TEXT" short_descr="Source"
+        long_descr="Input parameter source" col_head="Source" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="output_params" descr="Parameters retured from task" parent="task_vars">
+      <mem_col col_name="name" data_type="TEXT" short_descr="Name"
+        long_descr="Output parameter name" col_head="Name" key_field="A"/>
+      <mem_col col_name="target" data_type="TEXT" short_descr="Target"
+        long_descr="Output parameter target" col_head="Target" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="event_vars" descr="Variables to maintain 'event'"
+        sub_types="[
+        [`event_type`, null,
+          [
+            [`startEvent`, `Start event`, [], []],
+            [`endEvent`, `End event`, [], []],
+            [`intermediateCatchEvent`, `Intermediate catch event`, [], []],
+            [`intermediateThrowEvent`, `Intermediate throw event`, [], []],
+            [`boundaryEvent`, `Boundary event`, [`cancel_activity`, `attached_to_ref`], []]
+            ]
+          ],
+        [`event_defn`, null,
+          [
+            [`none`, `None`, [], []],
+            [`cancel`, `Cancel`, [], []],
+            [`compensate`, `Compensate`, [], []],
+            [`conditional`, `Conditional`, [], []],
+            [`error`, `Error`, [], []],
+            [`escalation`, `Escalation`, [], []],
+            [`link`, `Link`, [], []],
+            [`message`, `Message`, [], []],
+            [`signal`, `Signal`, [], []],
+            [`terminate`, `Terminate`, [], []],
+            [`timer`, `Timer`, [`timer_type`, `timer_value`], []]
+            ]
+          ]
+        ]">
+      <mem_col col_name="event_type" data_type="TEXT" short_descr="Event type"
+          long_descr="Event type" dflt_val="startEvent"/>
+      <mem_col col_name="event_defn" data_type="TEXT" short_descr="Event definition"
+          long_descr="Event definition" allow_amend="true" dflt_val="none"/>
+      <mem_col col_name="elem_id" data_type="TEXT" short_descr="Element id" long_descr="Element id"
+          allow_null="true"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description" long_descr="Description"
+        allow_amend="true"/>
+      <mem_col col_name="cancel_activity" data_type="BOOL" short_descr="Cancel activity?"
+        long_descr="Cancel activity?" allow_amend="true"/>
+      <mem_col col_name="attached_to_ref" data_type="TEXT" short_descr="Attached to ref"
+        long_descr="Sub-process that boundary event is attached to" allow_amend="true"/>
+      <mem_col col_name="timer_type" data_type="TEXT" short_descr="Timer type" long_descr="Timer type"
+          choices="[[`timeDate`, `Once`], [`timeCycle`, `Repeat`], [`timeDuration`, `Wait`]]"
+          allow_amend="true" dflt_val="timeDate"/>
+      <mem_col col_name="timer_value" data_type="TEXT" short_descr="Timer value"
+          long_descr="Timer value" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="gateway_vars" descr="Variables to maintain 'gateway'">
+      <mem_col col_name="gateway_type" data_type="TEXT" short_descr="Gateway type" long_descr="Gateway type"
+          choices="[[`exclusiveGateway`, `Exclusive gateway`], [`inclusiveGateway`, `Inclusive gateway`],
+            [`parallelGateway`, `Parallel gateway`]]"
+          dflt_val="exclusiveGateway"/>
+      <mem_col col_name="elem_id" data_type="TEXT" short_descr="Element id" long_descr="Element id"
+          allow_null="true"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description" long_descr="Description"
+        allow_amend="true"/>
+      <mem_col col_name="show_marker" data_type="BOOL" short_descr="Show marker"
+        long_descr="Show marker (exclusive only)" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="connector_vars" descr="Variables to maintain 'connector'">
+      <mem_col col_name="elem_id" data_type="TEXT" short_descr="Element id" long_descr="Element id"
+          allow_null="true"/>
+      <mem_col col_name="text" data_type="TEXT" short_descr="Text for connector"
+        long_descr="Text to be shown next to connector" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="dflt_conn" data_type="BOOL" short_descr="Default connector?"
+        long_descr="Is this the default connector?" allow_amend="true"/>
+      <mem_col col_name="dflt_orig" data_type="BOOL" short_descr="Default connector copy"
+        long_descr="Was this the default connector? Save before update, compare after"/>
+    </mem_obj>
+
+    <mem_obj name="condition" descr="Condition for connector" parent="connector_vars">
+      <mem_col col_name="test" data_type="TEXT" short_descr="Test"
+        long_descr="check/and/or" col_head="Test" allow_amend="true"/>
+      <mem_col col_name="lbr" data_type="TEXT" short_descr="Left bracket"
+        long_descr="Left bracket (if required)" col_head="(" allow_null="true"
+        allow_amend="true" max_len="1"/>
+      <mem_col col_name="src" data_type="TEXT" short_descr="Source"
+        long_descr="Source" col_head="Source" allow_amend="true"/>
+      <mem_col col_name="chk" data_type="TEXT" short_descr="Check"
+        long_descr="Check to perform" col_head="Check" allow_amend="true"/>
+      <mem_col col_name="tgt" data_type="TEXT" short_descr="Target"
+        long_descr="Target" col_head="Target" allow_amend="true"/>
+      <mem_col col_name="rbr" data_type="TEXT" short_descr="Right bracket"
+        long_descr="Right bracket (if required)" col_head=")" allow_null="true"
+        allow_amend="true" max_len="1"/>
+    </mem_obj>
+
+    <mem_obj name="subproc_vars" descr="Variables to maintain 'sub-process'">
+      <mem_col col_name="elem_id" data_type="TEXT" short_descr="Element id" long_descr="Element id"
+          allow_null="true"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description" long_descr="Description"
+        allow_amend="true"/>
+    </mem_obj>
+
+  </mem_objects>
+
+  <input_params>
+    <input_param name="process_id" type="data_attr" target="bpmn_vars.process_id" required="true"/>
+    <input_param name="bpmn_xml" type="data_attr" target="bpmn_defn.bpmn_xml" required="true"/>
+  </input_params>
+  <output_params>
+    <output_param name="bpmn_xml" type="data_attr" source="bpmn_defn.bpmn_xml"/>
+  </output_params>
+
+  <frame main_object="bpmn_defn">
+    <toolbar/>
+    <body>
+      <bpmn action="
+        <<action>>
+          <<pyfunc name=`ht.gui_bpmn.on_selected`/>>
+        <</action>>
+        "/>
+    </body>
+    <button_row template="Setup_Form_Single"/>
+    <frame_methods template="Setup_Form_Single">
+      <method name="after_restore" action="
+        <<action>>
+          <<pyfunc name=`ht.gui_bpmn.refresh_bpmn`/>>
+        <</action>>
+        "/>
+    </frame_methods>
+  </frame>
+
+  <inline_form name="task" title="Task details">
+    <frame main_object="task_vars">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Task type:"/>
+        <col/>
+        <input obj_name="task_vars" col_name="task_type" lng="120"/>
+        <row/>
+        <col/>
+        <label value="Description:"/>
+        <col/>
+        <input obj_name="task_vars" col_name="descr" lng="200" height="3"/>
+        <row/>
+        <col/>
+        <label value="Performer:"/>
+        <col/>
+        <input obj_name="task_vars" col_name="performer" lng="200"/>
+        <row/>
+        <col/>
+        <label value="Form name:"/>
+        <col/>
+        <input obj_name="task_vars" col_name="form_name" lng="200"/>
+        <row/>
+        <col/>
+        <label value="Path to script:"/>
+        <col/>
+        <input obj_name="task_vars" col_name="path_to_script" lng="200"/>
+        <row/>
+        <col/>
+        <label value="Multi instance?"/>
+        <col/>
+        <input obj_name="task_vars" col_name="multi_instance"/>
+        <row/>
+        <col/>
+        <label value="Multi instance sequential?"/>
+        <col/>
+        <input obj_name="task_vars" col_name="multi_inst_seq"/>
+        <row/>
+        <col/>
+        <label value="Multi instance expression:"/>
+        <col/>
+        <input obj_name="task_vars" col_name="multi_inst_expr" lng="30"/>
+        <row/>
+        <col/>
+        <label value="Multi instance data input"/>
+        <col/>
+        <input obj_name="task_vars" col_name="multi_inst_data" lng="200"/>
+        <block/>
+        <grid data_object="input_params" growable="true" num_grid_rows="3">
+            <toolbar template="Grid" title="Call params:"/>
+            <cur_columns>
+              <cur_col col_name="name" lng="120"/>
+              <cur_col col_name="source" lng="150"/>
+            </cur_columns>
+            <cur_filter/>
+            <cur_sequence/>
+            <grid_methods template="Grid"/>
+        </grid>
+        <grid data_object="output_params" growable="true" num_grid_rows="3">
+            <toolbar template="Grid" title="Return params:"/>
+            <cur_columns>
+              <cur_col col_name="name" lng="120"/>
+              <cur_col col_name="target" lng="150"/>
+            </cur_columns>
+            <cur_filter/>
+            <cur_sequence/>
+            <grid_methods template="Grid"/>
+        </grid>
+      </body>
+      <button_row template="Setup_Form_Single"/>
+      <frame_methods template="Setup_Form_Single"/>
+    </frame>
+  </inline_form>
+
+  <inline_form name="event" title="Event details">
+    <frame main_object="event_vars">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Event type:"/>
+        <col/>
+        <input obj_name="event_vars" col_name="event_type" lng="200"/>
+        <row/>
+        <col/>
+        <label value="Description:"/>
+        <col/>
+        <input obj_name="event_vars" col_name="descr" lng="200" height="3"/>
+        <row/>
+        <col/>
+        <label value="Event definition:"/>
+        <col/>
+        <input obj_name="event_vars" col_name="event_defn" lng="120"/>
+        <subtype_frame subtype_obj="event_vars" subtype_col="event_type"/>
+        <subtype_frame subtype_obj="event_vars" subtype_col="event_defn"/>
+      </body>
+      <button_row template="Setup_Form_Single"/>
+      <frame_methods template="Setup_Form_Single"/>
+    </frame>
+  </inline_form>
+
+  <inline_form name="gateway" title="Gateway details">
+    <frame main_object="gateway_vars">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Gateway type:"/>
+        <col/>
+        <input obj_name="gateway_vars" col_name="gateway_type" lng="150"/>
+        <row/>
+        <col/>
+        <label value="Description:"/>
+        <col/>
+        <input obj_name="gateway_vars" col_name="descr" lng="200" height="3"/>
+        <row/>
+        <col/>
+        <label value="Show marker?"/>
+        <col/>
+        <input obj_name="gateway_vars" col_name="show_marker"/>
+      </body>
+      <button_row template="Setup_Form_Single"/>
+      <frame_methods template="Setup_Form_Single"/>
+    </frame>
+  </inline_form>
+
+  <inline_form name="connector" title="Connector details">
+    <frame main_object="connector_vars">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Text:"/>
+        <col/>
+        <input obj_name="connector_vars" col_name="text" lng="120"/>
+        <row/>
+        <col/>
+        <label value="Default?"/>
+        <col/>
+        <input obj_name="connector_vars" col_name="dflt_conn"/>
+        <block/>
+        <grid data_object="condition" growable="true" num_grid_rows="5">
+          <toolbar template="Grid"/>
+          <cur_columns>
+            <cur_col col_name="test" lng="80"/>
+            <cur_col col_name="lbr" lng="20"/>
+            <cur_col col_name="src" lng="160"/>
+            <cur_col col_name="chk" lng="60"/>
+            <cur_col col_name="tgt" lng="160" expand="true"/>
+            <cur_col col_name="rbr" lng="20"/>
+          </cur_columns>
+          <cur_filter/>
+          <cur_sequence/>
+          <grid_methods template="Grid"/>
+        </grid>
+      </body>
+      <button_row template="Setup_Form_Single"/>
+      <frame_methods template="Setup_Form_Single"/>
+    </frame>
+  </inline_form>
+
+  <inline_form name="subproc" title="Sub-process details">
+    <frame main_object="subproc_vars">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Description:"/>
+        <col/>
+        <input obj_name="subproc_vars" col_name="descr" lng="200" height="3"/>
+      </body>
+      <button_row template="Setup_Form_Single"/>
+      <frame_methods template="Setup_Form_Single"/>
+    </frame>
+  </inline_form>
+</form>

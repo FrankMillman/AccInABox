@@ -1,40 +1,34 @@
-import asyncio
 import importlib
-import operator
-import hashlib
-from errors import AibError
+import re
 
-@asyncio.coroutine
-def check_vld(fld, descr, ctx, vld, value=None):
+from common import AibError
+import ht
+
+async def check_vld(fld, ctx, vld, value=None):
 #   ctx, vld = vld
     for xml in vld:
-        yield from globals()[xml.tag](ctx, fld, value, xml)
+        await globals()[xml.tag](ctx, fld, value, xml)
 
-@asyncio.coroutine
-def on_answer(ctx, fld, value, elem):
+async def on_answer(ctx, fld, value, elem):
     for xml in elem:
-        yield from globals()[xml.tag](ctx, fld, value, xml)
+        await globals()[xml.tag](ctx, fld, value, xml)
 
 #----------------------------------------------------------------------
 # the following functions are called via their xml.tag, using globals()
-# they are coroutines, and use the @asyncio.coroutine decorator
 #----------------------------------------------------------------------
 
-@asyncio.coroutine
-def case(ctx, fld, value, xml):
+async def case(ctx, fld, value, xml):
     for child in xml:
-        if child.tag == 'default' or globals()[child.tag](ctx, fld, value, child):
+        if child.tag == 'default' or await globals()[child.tag](ctx, fld, value, child):
             for step in child:
-                yield from globals()[step.tag](ctx, fld, value, step)
+                await globals()[step.tag](ctx, fld, value, step)
             break
 
-@asyncio.coroutine
-def init_obj(ctx, fld, value, xml):
+async def init_obj(ctx, fld, value, xml):
     obj_name = xml.get('obj_name')
-    ctx.data_objects.get(obj_name).init()
+    await ctx.data_objects.get(obj_name).init()
 
-@asyncio.coroutine
-def select_row(ctx, fld, value, xml):
+async def select_row(ctx, fld, value, xml):
     """
     <select_row obj_name="dir_user" key="user_row_id" value="var.user"/>
     """
@@ -46,21 +40,28 @@ def select_row(ctx, fld, value, xml):
     else:
         value_objname, value_colname = value_fldname.split('.')
         value_record = ctx.data_objects[value_objname]
-        value_field = value_record.getfld(value_colname)
-        key_value = value_field.getval()
+        value_field = await value_record.getfld(value_colname)
+        key_value = await value_field.getval()
 
-    db_obj.select_row({key_field: key_value})
+    await db_obj.select_row({key_field: key_value})
 
-@asyncio.coroutine
-def pyfunc(ctx, fld, value, xml):
+async def assign(ctx, fld, value, xml):
+    source = xml.get('src')
+    value_to_assign = await ht.form_xml.get_val(ctx, source)
+
+    target = xml.get('tgt')
+    target_objname, target_colname = target.split('.')
+    target_record = ctx.data_objects[target_objname]
+    target_field = await target_record.getfld(target_colname)
+    await target_field.setval(value_to_assign)
+
+async def pyfunc(ctx, fld, value, xml):
     func_name = xml.get('name')
-    if '.' in func_name:
-        module_name, func_name = func_name.rsplit('.', 1)
-        module = importlib.import_module(module_name)
-        getattr(module, func_name)(ctx, fld, value, xml)
+    module_name, func_name = func_name.rsplit('.', 1)
+    module = importlib.import_module(module_name)
+    await getattr(module, func_name)(ctx, fld, value, xml)
 
-@asyncio.coroutine
-def ask(ctx, fld, value, xml):
+async def ask(ctx, fld, value, xml):
     answers = []
     callbacks = {}
 
@@ -68,76 +69,91 @@ def ask(ctx, fld, value, xml):
     default = xml.get('enter')
     escape = xml.get('escape')
     question = xml.get('question')
-    for response in xml.findall('response'):
+    for response in xml.iter('response'):
         ans = response.get('ans')
         answers.append(ans)
         callbacks[ans] = response
-    ans = yield from ctx.session.request.ask_question(
+    ans = await ctx.session.responder.ask_question(
         ctx, title, question, answers, default, escape)
     answer = callbacks[ans]
-    yield from on_answer(ctx, fld, value, answer)
+    await on_answer(ctx, fld, value, answer)
 
-@asyncio.coroutine
-def error(ctx, fld, value, xml):
-    raise AibError(
-        head=xml.get('head') or None,
-        body=xml.get('body').replace('$value', value or '') or None
-        )
+async def error(ctx, fld, value, xml):
+    body = xml.get('body')
+    if body is not None:
+        if '$value' in body:
+            body = body.replace('$value', str(value))
+        if '{' in body:
+            pos1 = body.index('{')
+            pos2 = body.index('}')
+            sub_col = body[pos1+1:pos2]
+            if '.' in sub_col:
+                sub_tbl, sub_col = sub_col.split('.')
+                sub_dbobj = ctx.data_objects[sub_tbl]
+            else:
+                sub_dbobj = fld.db_obj
+            sub_fld = await sub_dbobj.getfld(sub_col)
+            body = body[:pos1] + await sub_fld.getval() + body[pos2+1:]
+    raise AibError(head=xml.get('head'), body=body)
 
 #------------------------------------------------------------------------
 # the following are boolean functions called from case(), using globals()
-# they are not coroutines, so do not use the @asyncio.coroutine decorator
 #------------------------------------------------------------------------
 
-def compare(ctx, fld, value, xml):
+async def obj_exists(ctx, fld, value, xml):
+    """
+    <obj_exists obj_name="db_table"/>
+    """
+    db_obj = ctx.data_objects[xml.get('obj_name')]
+    return db_obj.exists
+
+async def node_inserted(ctx, fld, value, xml):
+    return ctx.parent.node_inserted
+
+async def chk_password(ctx, fld, value, xml):
+    source = xml.get('src')
+    if source == '$value':
+        source_value = value
+    target = xml.get('tgt')
+    target_objname, target_colname = target.split('.')
+    target_record = ctx.data_objects[target_objname]
+    target_field = await target_record.getfld(target_colname)
+    return await target_field.chk_password(source_value)
+
+async def compare(ctx, fld, value, xml):
     """
     <compare src="$value" op="ne" tgt="pwd_var.pwd1"/>
     """
     source = xml.get('src')
-    if '.' in source:
-        source_objname, source_colname = source.split('.')
-        source_record = ctx.data_objects[source_objname]
-        source_field = source_record.getfld(source_colname)
-        source_value = source_field.getval()
-    elif source == '$value':
+    if source == '$value':
         source_value = value
-    elif source == '$None':
-        source_value = None
     else:
-        source_value = source
-
-    hash = xml.get('hash')
-    if hash is not None:
-        if source_value is None:
-            source_value = ''
-        method = getattr(hashlib, hash)
-        source_value = method(source_value.encode('utf-8')).hexdigest()
+        source_value = await ht.form_xml.get_val(ctx, source)
 
     target = xml.get('tgt')
-    if '.' in target:
-        target_objname, target_colname = target.split('.')
-        target_record = ctx.data_objects[target_objname]
-        target_field = target_record.getfld(target_colname)
-        target_value = target_field.getval()
-    elif target == '$value':
-        target_value = value
-    elif target == '$None':
-        target_value = None
-    else:
-        target_value = target
+    target_value = await ht.form_xml.get_val(ctx, target)
 
-#   print('"{0}" {1} "{2}"'.format(source_value, xml.get('op'), target_value))
+    # print('"{0}" {1} "{2}"'.format(source_value, xml.get('op'), target_value))
 
-    op = getattr(operator, xml.get('op'))
-    return op(source_value, target_value)
+    compare = OPS[xml.get('op')]
+    return compare(source_value, target_value)
 
-def obj_exists(ctx, fld, value, xml):
-    """
-    <obj_exists obj_name="db_table"/>
-    """
-    target = xml.get('obj_name')
-    target_record = ctx.data_objects[target]
-    return target_record.exists
-
-def node_inserted(ctx, fld, value, xml):
-    return bool(ctx.parent.node_inserted)  # False, or tuple of (parent_id, seq)
+OPS = {
+    '=': lambda src_val, tgt_val: src_val == tgt_val,
+    'eq': lambda src_val, tgt_val: src_val == tgt_val,
+    '!=': lambda src_val, tgt_val: src_val != tgt_val,
+    'ne': lambda src_val, tgt_val: src_val != tgt_val,
+    '<': lambda src_val, tgt_val: (src_val or 0) < tgt_val,
+    'lt': lambda src_val, tgt_val: (src_val or 0) < tgt_val,
+    '>': lambda src_val, tgt_val: (src_val or 0) > tgt_val,
+    'gt': lambda src_val, tgt_val: (src_val or 0) > tgt_val,
+    '<=': lambda src_val, tgt_val: (src_val or 0) <= tgt_val,
+    'le': lambda src_val, tgt_val: (src_val or 0) <= tgt_val,
+    '>=': lambda src_val, tgt_val: (src_val or 0) >= tgt_val,
+    'ge': lambda src_val, tgt_val: (src_val or 0) >= tgt_val,
+    'is': lambda src_val, tgt_val: src_val is tgt_val,
+    'is not': lambda src_val, tgt_val: src_val is not tgt_val,
+    'in': lambda src_val, tgt_val: src_val in tgt_val,
+    'not in': lambda src_val, tgt_val: src_val not in tgt_val,
+    'matches': lambda src_val, tgt_val: bool(re.match(tgt_val+'$', src_val or '')),
+    }

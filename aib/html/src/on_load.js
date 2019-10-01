@@ -15,6 +15,8 @@ function on_load() {
   task_div.appendChild(task_hdng);
   task_div.id = 'debug2';
   document.body.appendChild(task_div);
+  // store task_div.height for tree.js, so it knows when to overflow
+  task_div.height = task_div.offsetHeight - task_hdng.offsetHeight;
 
   menu_div = document.createElement('div');
   menu_div.style.background = 'lightgreen';
@@ -55,21 +57,22 @@ function on_load() {
   var name = 'session_id=';
   for(var i=0; i<ca.length; i++) {
     var c = ca[i];
-    while (c.charAt(0)==' ') c = c.substring(1);  // strip leading spaces
+    while (c.charAt(0)===' ') c = c.substring(1);  // strip leading spaces
     if (c.indexOf(name) != -1) {
       session_id = c.substring(name.length,c.length);
       break;
       };
     };
-  document.cookie = "session_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+  //document.cookie = "session_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC";
   //var randomnumber=Math.floor(Math.random()*11)  // from 0-10
   //Math.floor((Math.random()*100)+1); // from 1-100
   //Math.random().toString(36).substring(2, 9);  // from 2 to 8
-  send_message('get_login', null, false);
 
-  tick = setInterval(
-    function() {send_message('send_req', [['tick', null]])},
-      10000);  // send 'tick' every 10 seconds
+//  send_request('get_login', []);
+  send_message('send_req', [['get_login', []]]);
+
+  tick = setInterval(function()
+    {send_message('send_req', [['tick', []]])}, 10000);  // send 'tick' every 10 seconds
 
   window.onbeforeunload = function() {
     return 'This will log you off. Are you sure?';

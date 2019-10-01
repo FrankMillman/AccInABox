@@ -3,7 +3,7 @@ import psycopg2
 import psycopg2.extensions  # so that strings are returned as unicode
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
 
-from errors import AibError
+import db.objects
 
 # bytea data is usually returned as a 'memoryview'
 # this creates a problem - after a roundtrip to the database, it no
@@ -17,23 +17,43 @@ BYTEA2BYTES = psycopg2.extensions.new_type(
     psycopg2.BINARY.values, 'BYTEA2BYTES', bytea2bytes)
 psycopg2.extensions.register_type(BYTEA2BYTES)
 
-def customise(DbConn, db_params):
+def customise(constants, DbConn, db_params):
     # add db-specific methods to DbConn class
+
+    constants.param_style = '%s'
+    constants.func_prefix = ''
+    constants.concat = '||'
+    constants.repeat = 'repeat'
+    constants.table_created = (
+        "SELECT CASE WHEN EXISTS (SELECT * FROM pg_tables "
+        "WHERE schemaname = '{company}' and tablename = a.table_name) "
+        "THEN 1 ELSE 0 END"
+        )
+    constants.view_created = (
+        "SELECT CASE WHEN EXISTS (SELECT * FROM pg_views "
+        "WHERE schemaname = '{company}' and viewname = a.view_name) "
+        "THEN 1 ELSE 0 END"
+        )
+
     DbConn.init = init
+    # DbConn.add_lock = add_lock
     DbConn.form_sql = form_sql
     DbConn.insert_row = insert_row
     DbConn.update_row = update_row
     DbConn.delete_row = delete_row
+    DbConn.convert_sql = convert_sql
     DbConn.convert_string = convert_string
     DbConn.convert_dflt = convert_dflt
     DbConn.create_functions = create_functions
     DbConn.create_company = create_company
     DbConn.create_primary_key = create_primary_key
     DbConn.create_foreign_key = create_foreign_key
+    DbConn.create_alt_index = create_alt_index
     DbConn.create_index = create_index
+    DbConn.setup_start_date = setup_start_date
     DbConn.tree_select = tree_select
+    DbConn.get_view_names = get_view_names
     DbConn.escape_string = escape_string
-    DbConn.amend_allow_null = amend_allow_null
     # create class attributes from db parameters
     DbConn.database = db_params['database']
     DbConn.host = db_params['host']
@@ -42,185 +62,305 @@ def customise(DbConn, db_params):
     DbConn.pwd = db_params['pwd']
 
 def init(self, pos):
-    conn = psycopg2.connect(database=self.database, host=self.host,
-        port=self.port, user=self.user, password=self.pwd)
+    # conn = psycopg2.connect(database=self.database, host=self.host,
+    #     port=self.port, user=self.user, password=self.pwd)
+    conn = psycopg2.connect(database=self.database, user=self.user, password=self.pwd)
     conn.set_client_encoding('UNICODE')
     self.conn = conn
-    self.cursor = conn.cursor
-    self.param_style = '%s'
-    self.func_prefix = ''
-    self.concat = '||'
-    self.repeat = 'repeat'
     self.exception = (psycopg2.ProgrammingError, psycopg2.IntegrityError,
         psycopg2.InternalError)
     self.msg_pos = 0
-    self.func_prefix = ''
     self.now = datetime.now
     self.today = date.today
     if not pos:
         self.create_functions()
 
-def form_sql(self, columns, tablenames, where_clause='',
-        order_clause='', limit=0, offset=0, lock=False):
-    sql = 'SELECT'
-    sql += ' {} FROM {}'.format(columns, tablenames)
+# async def add_lock(self, sql):
+#     return sql + ' FOR UPDATE'
+
+async def form_sql(self, columns, tablenames, where_clause='',
+        group_clause='', order_clause='', limit=0, offset=0, lock=False):
+    sql = f'SELECT {columns} FROM {tablenames}'
     if where_clause:
-        sql += ' {}'.format(where_clause)
+        sql += where_clause
+    if group_clause:
+        sql += group_clause
     if order_clause:
-        sql += ' {}'.format(order_clause)
+        sql += order_clause
     if lock:
         sql += ' FOR UPDATE'
     if limit:
-        sql += ' LIMIT {}'.format(limit)
+        sql += f' LIMIT {limit}'
     if offset:
-        sql += ' OFFSET {}'.format(offset)
+        sql += f' OFFSET {offset}'
     return sql
 
-def insert_row(self, db_obj, cols, vals, generated_flds):
-    db_table = db_obj.db_table
-    data_company = db_obj.data_company
+async def insert_row(self, db_obj, cols, vals, generated_flds, from_upd_on_save):
+    company = db_obj.company
     table_name = db_obj.table_name
 
     if generated_flds:
-        returning_clause = ' RETURNING {}'.format(
-            ', '.join(['{}'.format(fld.col_name)
-                for fld in generated_flds])
-            )
+        returning_clause = f" RETURNING {', '.join([fld.col_name for fld in generated_flds])}"
     else:
         returning_clause = ''
 
-    sql = ('INSERT INTO {0}.{1} ({2}) VALUES ({3}){4}'.format(
-        data_company, table_name, ', '.join(cols),
-        ', '.join([self.param_style]*len(cols)), returning_clause))
+    sql = (
+        f"INSERT INTO {company}.{table_name} ({', '.join(cols)}) "
+        f"VALUES ({', '.join([self.constants.param_style]*len(cols))}){returning_clause}"
+        )
 
-    self.cur.execute(sql, vals)
+    cur = await self.exec_sql(sql, vals)
 
     if generated_flds:
-        vals_generated = self.cur.fetchone()
+        vals_generated = await cur.__anext__()
         for fld, val in zip(generated_flds, vals_generated):
+            for child in fld.children:
+                child._value = val
             fld._value = val
 
-    if db_table.audit_trail:
+    # if True:  # always add 'created_id' - [2017-01-14]
+    # what was the reason for the above? [2017-07-20]
+    # it causes a problem with tables like inv_wh_prod_unposted, or any split_src table
+    # these can be deleted on the fly and recreated, leaving dangling audit trail entries
+    if not from_upd_on_save:
 
-        data_row_id = db_obj.getval('row_id')
+        data_row_id = await db_obj.getval('row_id')
         cols = 'data_row_id, user_row_id, date_time, type'
+        vals = (data_row_id, db_obj.context.user_row_id, self.timestamp, 'add')
         returning_clause = ' RETURNING row_id'
 
-        sql = ("INSERT INTO {0}.{1}_audit_xref ({2}) VALUES "
-                "({3}, {3}, {3}, 'add'){4}".format(
-            data_company, table_name, cols,
-            self.param_style, returning_clause))
-
-        self.cur.execute(sql,
-            (data_row_id, db_obj.context.user_row_id, self.timestamp))
-        xref_row_id = self.cur.fetchone()[0]
-
-        db_obj.setval('created_id', xref_row_id)
         sql = (
-            'UPDATE {0}.{1} SET created_id = {2} WHERE row_id = {3}'
-            .format(data_company, table_name, xref_row_id, data_row_id)
+            f"INSERT INTO {company}.{table_name}_audit_xref ({cols}) "
+            f"VALUES ({', '.join([self.constants.param_style]*4)}){returning_clause}"
             )
-        self.cur.execute(sql)
 
-def update_row(self, db_obj, cols, vals):
+        cur = await self.exec_sql(sql, vals)
+        xref_row_id, = await cur.__anext__()
 
-    db_table = db_obj.db_table
-    data_company = db_obj.data_company
+        fld = await db_obj.getfld('created_id')
+        fld._value = xref_row_id
+        sql = (
+            f'UPDATE {company}.{table_name} SET created_id = {xref_row_id} WHERE row_id = {data_row_id}'
+            )
+        await self.exec_cmd(sql)
+
+async def update_row(self, db_obj, cols, vals, from_upd_on_save):
+    company = db_obj.company
     table_name = db_obj.table_name
 
     key_cols = []
     key_vals = []
     for fld in db_obj.primary_keys:
         key_cols.append(fld.col_name)
-        key_vals.append(fld._value)
+        key_vals.append(await fld.getval())
 
-    update = ', '.join(['='.join((col, self.param_style)) for col in cols])
-    where = ' and '.join(['='.join((col_name, self.param_style))
+    update = ', '.join(['='.join((col, self.constants.param_style)) for col in cols])
+    where = ' and '.join(['='.join((col_name, self.constants.param_style))
         for col_name in key_cols])
     vals.extend(key_vals)
-    sql = "UPDATE {0}.{1} SET {2} WHERE {3}".format(
-        data_company, table_name, update, where)
-    self.cur.execute(sql, vals)
 
-    if db_table.audit_trail:
+    sql = f'UPDATE {company}.{table_name} SET {update} WHERE {where}'
+    await self.exec_cmd(sql, vals)
 
-        data_row_id = db_obj.getval('row_id')
+    if from_upd_on_save is True:
+        return
+
+    data_row_id = await db_obj.getval('row_id')
+    if from_upd_on_save is False:
         returning_clause = ' RETURNING row_id'
 
         cols = []
         vals = []
-        for fld in db_obj.flds_to_update:
+        for fld in db_obj.get_flds_to_update(all=True):
             if fld.col_name != 'row_id':
                 cols.append(fld.col_name)
                 vals.append(fld._curr_val)
 
-        sql = ('INSERT INTO {0}.{1}_audit ({2}) VALUES ({3}){4}'.format(
-            data_company, table_name, ', '.join(cols),
-            ', '.join([self.param_style]*len(cols)), returning_clause))
+        sql = (
+            f"INSERT INTO {company}.{table_name}_audit ({', '.join(cols)}) "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))}){returning_clause}"
+            )
 
-        self.cur.execute(sql, vals)
-        audit_row_id = self.cur.fetchone()[0]
+        cur = await self.exec_sql(sql, vals)
+        audit_row_id, = await cur.__anext__()
 
         cols = 'data_row_id, audit_row_id, user_row_id, date_time, type'
+        vals = (data_row_id, audit_row_id, db_obj.context.user_row_id, self.timestamp, 'chg')
 
-        sql = ("INSERT INTO {0}.{1}_audit_xref ({2}) VALUES "
-            "({3}, {3}, {3}, {3}, 'chg')".format(
-            data_company, table_name, cols, self.param_style))
-        self.cur.execute(sql, (data_row_id, audit_row_id,
-            db_obj.context.user_row_id, self.timestamp))
+        sql = (
+            f"INSERT INTO {company}.{table_name}_audit_xref ({cols}) "
+            f"VALUES ({', '.join([self.constants.param_style]*5)})"
+            )
+        await self.exec_cmd(sql, vals)
 
-def delete_row(self, db_obj):
-    db_table = db_obj.db_table
-    data_company = db_obj.data_company
+    else:  # assume from_upd_on_save is 'post' or 'unpost'
+        cols = 'data_row_id, user_row_id, date_time, type'
+        vals = (data_row_id, db_obj.context.user_row_id, self.timestamp, from_upd_on_save)
+        sql = (
+            f"INSERT INTO {company}.{table_name}_audit_xref ({cols}) "
+            f"VALUES ({', '.join([self.constants.param_style]*4)})"
+            )
+        await self.exec_cmd(sql, vals)
+
+async def delete_row(self, db_obj, from_upd_on_save):
+    company = db_obj.company
     table_name = db_obj.table_name
 
-    if db_table.audit_trail:
-        data_row_id = db_obj.getval('row_id')
+    if not from_upd_on_save:  # don't actually delete
+        data_row_id = await db_obj.getval('row_id')
         cols = 'data_row_id, user_row_id, date_time, type'
+        vals = (data_row_id, db_obj.context.user_row_id, self.timestamp, 'del')
         returning_clause = ' RETURNING row_id'
 
-        sql = ("INSERT INTO {0}.{1}_audit_xref ({2}) VALUES "
-                "({3}, {3}, {3}, 'del'){4}".format(
-            data_company, table_name, cols,
-            self.param_style, returning_clause))
-        self.cur.execute(sql,
-            (data_row_id, db_obj.context.user_row_id, self.timestamp))
-        xref_row_id = self.cur.fetchone()[0]
-        db_obj.setval('deleted_id', xref_row_id)
         sql = (
-            'UPDATE {0}.{1} SET deleted_id = {2} WHERE row_id = {3}'
-            .format(data_company, table_name, xref_row_id, data_row_id))
-        self.cur.execute(sql)
+            f"INSERT INTO {company}.{table_name}_audit_xref ({cols}) "
+            f"VALUES ({', '.join([self.constants.param_style]*4)}{returning_clause}"
+            )
+        cur = await self.exec_sql(sql,
+            (data_row_id, db_obj.context.user_row_id, self.timestamp))
+        xref_row_id, = await cur.__anext__()
+        fld = await db_obj.getfld('deleted_id')
+        fld._value = xref_row_id
+        sql = (
+            f'UPDATE {company}.{table_name} SET deleted_id = {xref_row_id} WHERE row_id = {data_row_id}'
+            )
+        await self.exec_cmd(sql)
 
-    else:
+    else:  # actually delete
         key_cols = []
         key_vals = []
         for fld in db_obj.primary_keys:
             key_cols.append(fld.col_name)
-            key_vals.append(fld._value)
+            key_vals.append(await fld.getval())
 
-        where = ' and '.join(['='.join((col_name, self.param_style))
+        where = ' AND '.join(['='.join((col_name, self.constants.param_style))
             for col_name in key_cols])
 
-        sql = "delete from {0}.{1} where {2}".format(
-            data_company, table_name, where)
-        self.cur.execute(sql, key_vals)
+        sql = f'DELETE FROM {company}.{table_name} WHERE {where}'
+        await self.exec_cmd(sql, key_vals)
 
-def convert_string(self, string, db_scale=None):
+async def convert_sql(self, sql, params=None):
+    # PostgreSQL sorts NULLs last, sqlite3 and Sql Server sort them first
+    # this adds NULLS FIRST to each PostgreSQL ORDER BY clause for compatibility
+    # if sorting in descending sequence, use NULLS LAST
+
+    if 'ORDER BY' not in sql.upper():
+        return sql, params
+
+    skip_expr = 0  # counter to check for brackets around expressions - can incr/decr
+    skip_case = 0  # counter to check for CASE ... END - use counter in case nested
+    skip_text = False  # flag to check for literal text (in case it contains ORDER BY)
+    def text_start(word):  # function to check for start of text
+        for s in ("'", "('", ",'"):  # any others?
+            if word.startswith(s):
+                return True
+        return False
+    def text_end(word):  # function to check for end of text
+        for e in ("'", "')", "',"):  # any others?
+            if word.endswith(e):
+                return True
+        return False
+    sqlist = sql.split(' ')  # must specify ' ' to avoid collapsing whitespace
+    found = 0  # looking for ORDER BY
+    pos = 0
+    max = len(sqlist)
+    while pos < max:
+        word = sqlist[pos].upper()
+        pos += 1  # increment now, as there are many exit points
+        if skip_text:
+            if text_end(word):
+                skip_text = False
+            continue
+        if text_start(word):
+            if not text_end(word):
+                skip_text = True
+            continue
+        if word == 'ORDER':
+            found = 1
+            continue
+        if found == 1:
+            if word == 'BY':
+                found = 2
+            else:  # can this happen?
+                found = 0
+            continue
+        if found == 2:
+            # in the following, pos has already been incremented
+            # therefore sqlist[pos-1] is where 'word' is taken from
+            if word == '':  # 'a..b'.split('.') gives['a', '', 'b']
+                continue
+            if word == ',':
+                continue
+            skip_expr += word.count('(')  # check for expression enclosed in brackets
+            skip_expr -= word.count(')')  # brackets can be spread over multiple 'words'
+            if skip_expr:
+                continue
+            if ',' in word:  # 'a,b,c' -> 'a NULLS FIRST, b NULLS FIRST, c'
+                sqlist[pos-1] = ' NULLS FIRST,'.join(sqlist[pos-1].split(','))
+                continue
+            if word == 'CASE':
+                skip_case += 1
+                continue
+            if skip_case:
+                if word == 'END':
+                    skip_case -= 1
+                if skip_case:
+                    continue
+            if pos == max:  # on last word
+                sqlist[pos-1] = f'{sqlist[pos-1]} NULLS FIRST'
+                continue
+            next_word = sqlist[pos].upper()
+            if next_word == 'ASC':
+                sqlist[pos] = f'{sqlist[pos]} NULLS FIRST'
+                pos += 1
+                if pos < max:
+                    if not sqlist[pos].startswith(','):
+                        found = 0
+            elif next_word == 'ASC,':
+                sqlist[pos] = f'{sqlist[pos][:-1]} NULLS FIRST,'
+                pos += 1
+            elif next_word == 'ASC)':
+                sqlist[pos] = f'{sqlist[pos][:-1]} NULLS FIRST)'
+                pos += 1
+                if pos < max:
+                    if not sqlist[pos].startswith(','):
+                        found = 0
+            elif next_word == 'DESC':
+                sqlist[pos] = f'{sqlist[pos]} NULLS LAST'
+                pos += 1
+                if pos < max:
+                    if not sqlist[pos].startswith(','):
+                        found = 0
+            elif next_word == 'DESC,':
+                sqlist[pos] = f'{sqlist[pos][:-1]} NULLS LAST,'
+                pos += 1
+            elif next_word == 'DESC)':
+                sqlist[pos] = f'{sqlist[pos][:-1]} NULLS LAST)'
+                pos += 1
+                if pos < max:
+                    if not sqlist[pos].startswith(','):
+                        found = 0
+            else:
+                sqlist[pos-1] = f'{sqlist[pos-1]} NULLS FIRST'
+                if not sqlist[pos].startswith(','):
+                    found = 0
+    sql = ' '.join(sqlist)
+    return sql, params
+
+def convert_string(self, string, db_scale=None, text_key=False):
     return (string
-        .replace('TEXT','VARCHAR')
-        .replace('DTE','DATE')
-        .replace('DTM','TIMESTAMP')
-        .replace('DEC','DEC (17,{})'.format(db_scale))
-        .replace('AUTO','SERIAL PRIMARY KEY')
-        .replace('JSON','VARCHAR')
-        .replace('PXML','BYTEA')
-        .replace('SXML','BYTEA')
-        .replace('FXML','BYTEA')
-        .replace('XML','BYTEA')
+        .replace('TEXT', 'VARCHAR')
+        .replace('PWD', 'VARCHAR')
+        .replace('DTE', 'DATE')
+        .replace('DTM', 'TIMESTAMP')
+        .replace('DEC', f'DEC (21,{db_scale})')
+        .replace('AUTO', 'SERIAL PRIMARY KEY')
+        .replace('JSON', 'VARCHAR')
+        .replace('FXML', 'BYTEA')
+        .replace('PXML', 'BYTEA')
+        .replace('SXML', 'VARCHAR')
         .replace('NOW()', 'CURRENT_TIMESTAMP')
         .replace('PKEY', 'PRIMARY KEY')
-        .replace(':', '')  # see comment in conn_sqlite3
         )
 
 def convert_dflt(self, string, data_type):
@@ -231,19 +371,23 @@ def convert_dflt(self, string, data_type):
     elif data_type == 'DEC':
         return string
     elif data_type == 'BOOL':
-        if string == 'true':
-            return repr('t')
+        if string.lower() == 'true':
+            return "'1'"
+        elif string.lower() == 'false':
+            return "'0'"
         else:
-            return repr('f')
+            print(f'invalid dflt_val for BOOL - {string!r}')
     elif data_type == 'DTE':
         if string == 'today':
             return 'CURRENT_DATE'
+    elif data_type == 'JSON':
+        return repr(string)  # enclose in quotes
     else:
         print('UNKNOWN', string, data_type)
 
 def create_functions(self):
 
-    cur = self.cursor()
+    cur = self.conn.cursor()
 
     cur.execute(
         "CREATE OR REPLACE FUNCTION subfield (VARCHAR, CHAR, INT) "
@@ -257,7 +401,7 @@ def create_functions(self):
             "_found INT := 0;"
             "_pos INT := 1;"
           "BEGIN "
-            "WHILE _pos <> 0 LOOP "
+            "WHILE _pos != 0 LOOP "
               "_ch = SUBSTRING(_str,_pos,1);"
               "IF _ch = _sep THEN "
                 "_found = _found+1;"
@@ -273,6 +417,9 @@ def create_functions(self):
                 "END IF;"
               "END IF;"
             "END LOOP;"
+            "IF _found = 0 THEN "
+              "_ans = '';"
+            "END IF;"
             "RETURN _ans;"
           "END;"
           "$$;"
@@ -311,11 +458,28 @@ def create_functions(self):
           "$$;"
         )
 
-def create_company(self, company_id):
-    self.cur.execute('CREATE SCHEMA {}'.format(company_id))
+# no longer required
+#   # N.B. in the following function, the decimal point after the 10 is important
+#   #      it forces PostgreSQL to treat the 10 as 'numeric', and then
+#   #          'power(10., _factor)' returns a numeric
+#   #      otherwise 'power(10, _factor)' returns a float :-(
+#   cur.execute(
+#       "CREATE OR REPLACE FUNCTION round_ (DEC, INT) "
+#         "RETURNS DEC LANGUAGE 'plpgsql' IMMUTABLE AS $$ "
+#         "DECLARE "
+#           "_number ALIAS FOR $1;"
+#           "_factor ALIAS FOR $2;"
+#         "BEGIN "
+#           "RETURN floor(_number * power(10., _factor) + 0.5) / power(10., _factor);"
+#         "END;"
+#         "$$;"
+#       )
+
+async def create_company(self, company_id):
+    await self.exec_cmd(f'CREATE SCHEMA {company_id}')
 
 def create_primary_key(self, pkeys):
-    return ', PRIMARY KEY ({})'.format(', '.join(pkeys))
+    return f", PRIMARY KEY ({', '.join(pkeys)})"
 
 def create_foreign_key(self, company_id, fkeys):
     foreign_key = ''
@@ -324,21 +488,75 @@ def create_foreign_key(self, company_id, fkeys):
             tgt_company, tgt_table = tgt_table.split('.')
         else:
             tgt_company = company_id
-        foreign_key += ', FOREIGN KEY ({}) REFERENCES {}.{} ({}){}'.format(
-            src_col, tgt_company, tgt_table, tgt_col,
-            ' ON DELETE CASCADE' if del_cascade else '')
+        foreign_key += (
+            f", FOREIGN KEY ({src_col}) REFERENCES {tgt_company}.{tgt_table} ({tgt_col})"
+            f"{' ON DELETE CASCADE' if del_cascade else ''}"
+            )
     return foreign_key
 
-def create_index(self, company_id, table_name, audit_trail, ndx_cols):
-    ndx_cols = ', '.join(ndx_cols)
-    sql = 'CREATE UNIQUE INDEX _{} ON {}.{} ({})'.format(
-        table_name, company_id, table_name, ndx_cols)
-    if audit_trail:
-        sql += ' WHERE deleted_id = 0'
-    return sql
+def create_alt_index(self, company_id, table_name, ndx_cols, a_or_b):
+    ndx_cols = ', '.join((f'{col.strip()} NULLS FIRST' for col in ndx_cols.split(',')))
+    if a_or_b == 'a':
+        ndx_name = f'_{table_name}'
+    else:  # must be 'b'
+        ndx_name = f'_{table_name}_2'
+    filter = 'WHERE deleted_id = 0'
+    return (
+        f'CREATE UNIQUE INDEX {ndx_name} ON '
+        f'{company_id}.{table_name} ({ndx_cols}) {filter}'
+        )
 
-def tree_select(self, company_id, table_name, start_col, start_value,
-        sort=False, up=False, group=0):
+def create_index(self, company_id, table_name, index):
+    ndx_name, ndx_cols, filter, unique = index
+    # ndx_cols = ', '.join((f'{col} NULLS FIRST' for col in ndx_cols))
+    ndx_cols = ', '.join((f'{col.strip()} NULLS FIRST' for col in ndx_cols.split(',')))
+    if filter is None:
+        filter = 'WHERE deleted_id = 0'
+    else:
+        filter += ' AND deleted_id = 0'
+    unique = 'UNIQUE ' if unique else ''
+    return (
+        f'CREATE {unique}INDEX {ndx_name} '
+        f'ON {company_id}.{table_name} ({ndx_cols}) {filter}'
+        )
+
+async def setup_start_date(self, company, user_row_id, start_date):
+    # adm_periods - first row_id must be 0, not 1
+
+    cols = 'row_id, closing_date'
+    vals = (0, start_date)
+    sql = (
+        f"INSERT INTO {company}.adm_periods ({cols}) "
+        f"VALUES ({', '.join([self.constants.param_style]*2)})"
+        )
+    await self.exec_cmd(sql, vals)
+
+    cols = 'row_id, data_row_id, user_row_id, date_time, type'
+    vals = (0, 0, user_row_id, self.timestamp, 'add')
+    sql = (
+        f"INSERT INTO {company}.adm_periods_audit_xref ({cols}) "
+        f"VALUES ({', '.join([self.constants.param_style]*5)})"
+        )
+    await self.exec_cmd(sql, vals)
+
+    cols = 'row_id, period_row_id'
+    vals = (0, 0)
+    sql = (
+        f"INSERT INTO {company}.adm_yearends ({cols}) "
+        f"VALUES ({', '.join([self.constants.param_style]*2)})"
+        )
+    await self.exec_cmd(sql, vals)
+
+    cols = 'row_id, data_row_id, user_row_id, date_time, type'
+    vals = (0, 0, user_row_id, self.timestamp, 'add')
+    sql = (
+        f"INSERT INTO {company}.adm_yearends_audit_xref ({cols}) "
+        f"VALUES ({', '.join([self.constants.param_style]*5)})"
+        )
+    await self.exec_cmd(sql, vals)
+
+def tree_select(self, company_id, table_name, link_col, start_col, start_value,
+        filter=None, sort=False, up=False, group=0):
     select_1 = "*, 0 as _level"
     if sort:
         select_1 += ", cast(row_id as varchar) as _path"
@@ -346,52 +564,62 @@ def tree_select(self, company_id, table_name, start_col, start_value,
     if group:
         select_1 += ", row_id AS _group_id"
         select_1 += ", '' AS _group_key"
-    select_2 = "temp2.*, temp._level+1"
+    select_2 = "_tree2.*, _tree._level+1"
+
+    if filter is None:
+        where_1 = ''
+        where_2 = ''
+        test = 'WHERE'
+    else:
+        where_1 = ''
+        where_2 = ''
+        for test, lbr, col_name, op, expr, rbr in filter:
+            if expr is None:
+                expr = 'NULL'
+                if op == '=':
+                    op = 'IS'
+                elif op == '!=':
+                    op = 'IS NOT'
+            where_1 += f' {test} {lbr}{col_name} {op} {expr}{rbr}'
+            where_2 += f' {test} {lbr}_tree2.{col_name} {op} {expr}{rbr}'
+        test = ' AND'
+
     if sort:
-        select_2 += ", temp._path || ',' || CAST(temp2.row_id AS VARCHAR)"
-#       select_2 += ", temp._key || LPAD(CAST(temp2.seq AS VARCHAR), 4, '0')"
-        select_2 += ", temp._key || zfill(temp2.seq, 4)"
+        select_2 += ", _tree._path || ',' || CAST(_tree2.row_id AS VARCHAR)"
+        # select_2 += ", _tree._key || LPAD(CAST(_tree2.seq AS VARCHAR), 4, '0')"
+        select_2 += ", _tree._key || zfill(_tree2.seq, 4)"
     if group:
         select_2 += (
-            ", CASE WHEN temp._level < {} THEN "
-            "temp2.row_id ELSE temp._group_id END".format(group)
+            f", CASE WHEN _tree._level < {group} THEN _tree2.row_id ELSE _tree._group_id END"
             )
         select_2 += (
-            ", CASE WHEN temp._level < {} THEN "
-#           "temp._group_key || LPAD(CAST(temp2.seq AS VARCHAR), 4, '0') "
-            "temp._group_key || zfill(temp2.seq, 4) "
-            "ELSE temp._group_key END".format(group)
+            f", CASE WHEN _tree._level < {group} THEN "
+            # f"_tree._group_key || LPAD(CAST(_tree2.seq AS VARCHAR), 4, '0') "
+            f"_tree._group_key || zfill(_tree2.seq, 4) "
+            f"ELSE _tree._group_key END"
             )
     if up:
-        test = "WHERE temp.parent_id = temp2.row_id"
+        where_2 += f"{test} _tree.{link_col} = _tree2.row_id"
     else:
-        test = "WHERE temp.row_id = temp2.parent_id"
+        where_2 += f"{test} _tree.row_id = _tree2.{link_col}"
+
+    if start_value is None:
+        where_1 += f"{test} {start_col} IS NULL"
+    else:
+        where_1 += f"{test} {start_col} = {start_value}"
 
     cte = (
-        "WITH RECURSIVE temp AS ("
-          "SELECT {0} "
-          "FROM {1}.{2} "
-          "WHERE {3} = {4} "
-          "UNION ALL "
-          "SELECT {5} "
-          "FROM temp, {1}.{2} temp2 "
-          "{6})"
-        .format(select_1, company_id, table_name, start_col,
-            start_value, select_2, test))
+        "WITH RECURSIVE _tree AS ("
+          f"SELECT {select_1} "
+          f"FROM {company_id}.{table_name} {where_1} "
+          f"UNION ALL "
+          f"SELECT {select_2} "
+          f"FROM _tree, {company_id}.{table_name} _tree2 {where_2}) "
+        )
     return cte
 
-def escape_string():
-    return ''
+def get_view_names(self, company_id, view_names):
+    return view_names
 
-def amend_allow_null(self, db_obj):
-    allow_null = db_obj.getfld('allow_null').getval()
-    sql = 'ALTER TABLE {}.{} ALTER COLUMN {} {}'.format(
-        db_obj.data_company,
-        db_obj.getval('table_name'),
-        db_obj.getval('col_name'),
-        'DROP NOT NULL' if allow_null else 'SET NOT NULL')
-    try:
-        self.exec_sql(sql)
-    except self.exception as err:
-        raise AibError(head='Alter {}'.format(db_obj.table_name),
-            body=str(err))
+def escape_string(self):
+    return ''

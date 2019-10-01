@@ -1,0 +1,264 @@
+<form name="setup_form_inline" title="Inline form definition">
+
+  <db_objects/>
+
+  <mem_objects>
+
+    <mem_obj name="form_vars" descr="Variables used in form">
+      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
+        long_descr="Form name" col_head="Name"/>
+      <mem_col col_name="title" data_type="TEXT" short_descr="Title"
+        long_descr="Form title" col_head="Title"/>
+    </mem_obj>
+    <mem_obj name="frame_vars" descr="Variables used in frame" parent="inline_vars">
+      <mem_col col_name="main_object" data_type="TEXT" short_descr="Main object"
+        long_descr="Main object" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="obj_descr" data_type="TEXT" short_descr="Object description"
+        long_descr="Object description" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="toolbar_xml" data_type="SXML" short_descr="Toolbar xml"
+        long_descr="Toolbar xml"/>
+      <mem_col col_name="buttonrow_xml" data_type="SXML" short_descr="Button row xml"
+        long_descr="Button row xml"/>
+      <mem_col col_name="methods_xml" data_type="SXML" short_descr="Methods xml"
+        long_descr="Methods xml" allow_amend="true"/>
+      <mem_col col_name="body_xml" data_type="SXML" short_descr="Body xml"
+        long_descr="Body xml" allow_amend="true"/>
+    </mem_obj>
+
+  </mem_objects>
+
+  <input_params>
+    <input_param name="form_name" type="data_attr" target="form_vars.form_name" required="true"/>
+    <input_param name="title" type="data_attr" target="form_vars.title" required="true"/>
+  </input_params>
+
+  <output_params>
+  </output_params>
+
+  <frame main_object="inline_vars">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Form name:"/>
+      <col/>
+      <display obj_name="form_vars" col_name="form_name" lng="160"/>
+      <row/>
+      <col/>
+      <label value="Title:"/>
+      <col/>
+      <display obj_name="form_vars" col_name="title" lng="250"/>
+      <block/>
+      <grid data_object="inline_vars" growable="true" num_grid_rows="5">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="name" lng="100"/>
+          <cur_col col_name="title" lng="200"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <!-- cur_seq col_name="name"/ -->
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <grid_frame main_object="inline_vars">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <button lng="150" btn_id="frame_meth" btn_label="Frame methods"
+              btn_enabled="true" btn_validate="true" action="
+            <<action>>
+              <<sub_form name=`_sys.setup_form_methods`>>
+                <<call_params>>
+                  <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                  <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                  <<call_param name=`methods_xml` type=`data_attr` source=`frame_vars.methods_xml`/>>
+                <</call_params>>
+                <<return_params>>
+                  <<return_param name=`methods_xml` type=`data_attr` target=`frame_vars.methods_xml`/>>
+                <</return_params>>
+                <<on_return>>
+                  <<return state=`completed`/>>
+                  <<return state=`cancelled`/>>
+                <</on_return>>
+              <</sub_form>>
+            <</action>>
+          "/>
+          <row/>
+          <col/>
+          <button lng="150" btn_id="main_obj" btn_label="Main object"
+              btn_enabled="true" btn_validate="true" action="
+            <<action>>
+              <<inline_form name=`main_object`>>
+                <<on_return>>
+                  <<return state=`completed`/>>
+                  <<return state=`cancelled`/>>
+                <</on_return>>
+              <</inline_form>>
+            <</action>>
+          "/>
+          <row/>
+          <col/>
+          <button lng="150" btn_id="design" btn_label="Frame design"
+              btn_enabled="true" btn_validate="true" action="
+            <<action>>
+              <<sub_form name=`_sys.setup_form_body`>>
+                <<call_params>>
+                  <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                  <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                  <<call_param name=`body_xml` type=`data_attr` source=`frame_vars.body_xml`/>>
+                <</call_params>>
+                <<return_params>>
+                  <<return_param name=`body_xml` type=`data_attr` target=`frame_vars.body_xml`/>>
+                <</return_params>>
+                <<on_return>>
+                  <<return state=`completed`/>>
+                  <<return state=`cancelled`/>>
+                <</on_return>>
+              <</sub_form>>
+            <</action>>
+          "/>
+          <row/>
+          <col/>
+          <button lng="150" btn_id="toolbar" btn_label="Toolbar"
+              btn_enabled="true" btn_validate="true" action="
+            <<action>>
+              <<sub_form name=`_sys.setup_form_toolbar`>>
+                <<call_params>>
+                  <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                  <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                  <<call_param name=`toolbar_xml` type=`data_attr` source=`frame_vars.toolbar_xml`/>>
+                <</call_params>>
+                <<return_params>>
+                  <<return_param name=`toolbar_xml` type=`data_attr` target=`frame_vars.toolbar_xml`/>>
+                <</return_params>>
+                <<on_return>>
+                  <<return state=`completed`/>>
+                  <<return state=`cancelled`/>>
+                <</on_return>>
+              <</sub_form>>
+            <</action>>
+          "/>
+          <row/>
+          <col/>
+          <button lng="150" btn_id="buttonrow" btn_label="Button row"
+              btn_enabled="true" btn_validate="true" action="
+            <<action>>
+              <<sub_form name=`_sys.setup_form_buttonrow`>>
+                <<call_params>>
+                  <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                  <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                  <<call_param name=`buttonrow_xml` type=`data_attr` source=`frame_vars.buttonrow_xml`/>>
+                <</call_params>>
+                <<return_params>>
+                  <<return_param name=`buttonrow_xml` type=`data_attr` target=`frame_vars.buttonrow_xml`/>>
+                <</return_params>>
+                <<on_return>>
+                  <<return state=`completed`/>>
+                  <<return state=`cancelled`/>>
+                <</on_return>>
+              <</sub_form>>
+            <</action>>
+          "/>
+      <row/>
+      <col/>
+      <button lng="150" btn_id="inline" btn_label="Inline forms" btn_enabled="true" btn_validate="true"
+        action="
+          <<action>>
+            <<sub_form name=`_sys.setup_form_inline`>>
+              <<call_params>>
+                <<call_param name=`form_name` type=`data_attr` source=`form.form_name`/>>
+                <<call_param name=`title` type=`data_attr` source=`form.title`/>>
+              <</call_params>>
+              <<return_params>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`completed`/>>
+                <<return state=`cancelled`/>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+          "/>
+        </body>
+        <button_row template="Grid_Frame"/>
+        <frame_methods template="Grid_Frame">
+          <method name="on_start_frame" action="
+            <<action>>
+              <<pyfunc name=`custom.formdefn_funcs.load_inline`/>>
+            <</action>>
+          "/>
+          <method name="before_save" action="
+            <<action>>
+              <<pyfunc name=`custom.formdefn_funcs.dump_inline`/>>
+            <</action>>
+          "/>
+        </frame_methods>
+      </grid_frame>
+    </body>
+    <button_row>
+      <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
+        btn_validate="true" btn_default="true" action="
+          <<action>>
+            <<end_form state=`completed`/>>
+          <</action>>
+        "/>
+    </button_row>
+    <frame_methods/>
+  </frame>
+  <inline_form name="main_object" title="Main object">
+    <frame main_object="frame_vars">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Form name:"/>
+        <col/>
+        <display obj_name="form_vars" col_name="form_name" lng="160"/>
+        <row/>
+        <col/>
+        <label value="Title:"/>
+        <col/>
+        <display obj_name="form_vars" col_name="title" lng="250"/>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Main object:"/>
+        <col/>
+        <input obj_name="frame_vars" col_name="main_object" lng="160"/>
+        <row/>
+        <col/>
+        <label value="Description column:"/>
+        <col/>
+        <input obj_name="frame_vars" col_name="obj_descr" lng="160"/>
+      </body>
+      <button_row>
+        <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
+          btn_validate="true" btn_default="true" action="
+            <<action>>
+              <<end_form state=`completed`/>>
+            <</action>>
+          "/>
+      </button_row>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_req_close" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+</form>

@@ -1,101 +1,105 @@
 import importlib
-import asyncio
 import operator
-import hashlib
 
-@asyncio.coroutine
-def get_form_dflt(obj, dflt):
-    ctx, dflt = dflt
+import db
+from datetime import date as dt
+from common import AibError
+
+async def get_form_dflt(caller, obj, dflt):
     for xml in dflt:
-        value = yield from globals()[xml.tag](ctx, obj, xml)
+        value = await globals()[xml.tag](caller, obj, xml)
     return value
 
-@asyncio.coroutine
-def on_answer(ctx, obj, value, elem):
+async def on_answer(caller, obj, value, elem):
     for xml in elem:
-        value = yield from globals()[xml.tag](ctx, obj, value, xml)
+        value = await globals()[xml.tag](caller, obj, value, xml)
     return value
 
 #----------------------------------------------------------------------
 # the following functions are called via their xml.tag, using globals()
 #----------------------------------------------------------------------
 
-@asyncio.coroutine
-def literal(ctx, obj, xml):
-    return xml.get('value')
+async def prev_value(caller, obj, xml):
+    # print(f'{obj.fld.table_name}.{obj.fld.col_name} {await obj.fld.get_prev()}')
+    return await obj.fld.get_prev()
 
-@asyncio.coroutine
-def pyfunc(ctx, obj, xml):
+async def literal(caller, obj, xml):
+    value = xml.get('value')
+    if value == '$True':
+        value = True
+    elif value == '$False':
+        value = False
+# problem with literal numeric value - this fixes it, but not fully thought through
+#   return value
+    return await obj.fld.str_to_val(value)
+
+async def fld_val(caller, obj, xml):
+    fld_name = xml.get('name')
+    return await obj.fld.db_obj.getval(fld_name)
+
+async def pyfunc(caller, obj, xml):
     func_name = xml.get('name')
     module_name, func_name = func_name.rsplit('.', 1)
     module = importlib.import_module(module_name)
-    return getattr(module, func_name)(ctx, obj, xml)
+    return await getattr(module, func_name)(caller, obj, xml)
 
-def obj_exists(ctx, obj, xml):
+def obj_exists(caller, obj, xml):
     """
     <obj_exists obj_name="db_table"/>
     """
     target = xml.get('obj_name')
-    target_record = ctx.data_objects[target]
+    target_record = caller.data_objects[target]
     return target_record.exists
 
-@asyncio.coroutine
-def init_obj(ctx, obj, value, xml):
+async def init_obj(caller, obj, value, xml):
     obj_name = xml.get('obj_name')
-    ctx.data_objects.get(obj_name).init()
+    caller.data_objects.get(obj_name).init()
 
-@asyncio.coroutine
-def select_row(ctx, obj, value, xml):
+async def select_row(caller, obj, value, xml):
     """
     <select_row obj_name="dir_user" key="user_row_id" value="var.user"/>
     """
-    db_obj = ctx.data_objects[xml.get('obj_name')]
+    db_obj = caller.data_objects[xml.get('obj_name')]
     key_field = xml.get('key')
     value_fldname = xml.get('value')
     if value_fldname == '$value':
         key_value = value
     else:
         value_objname, value_colname = value_fldname.split('.')
-        value_record = ctx.data_objects[value_objname]
-        value_field = value_record.getfld(value_colname)
-        key_value = value_field.getval()
+        value_record = caller.data_objects[value_objname]
+        value_field = await value_record.getfld(value_colname)
+        key_value = await value_field.getval()
 
-    db_obj.select_row({key_field: key_value})
+    await db_obj.select_row({key_field: key_value})
 
-@asyncio.coroutine
-def case(ctx, obj, xml):
+async def case(caller, obj, xml):
     for child in xml:
-        if child.tag == 'default' or globals()[child.tag](ctx, obj, child):
+        if child.tag == 'default' or await globals()[child.tag](caller, obj, child):
             for step in child:
-                yield from globals()[step.tag](ctx, obj, step)
-            break
+                value = await globals()[step.tag](caller, obj, step)
+            return value
 
-def compare(ctx, obj, xml):
+async def compare(caller, obj, xml):
     """
     <<compare src=`_param.auto_party_id` op=`is_` tgt=`$True`>>
     """
     source = xml.get('src')
     if '.' in source:
         source_objname, source_colname = source.split('.')
-        source_record = ctx.data_objects[source_objname]
-        source_field = source_record.getfld(source_colname)
-        source_value = source_field.getval()
+        source_record = caller.data_objects[source_objname]
+        source_field = await source_record.getfld(source_colname)
+        source_value = await source_field.getval()
+    elif source == '$Prev':
+        source_value = await obj.fld.get_prev()
     else:
         source_value = source
-
-    hash = xml.get('hash')
-    if hash is not None:
-        if source_value is None:
-            source_value = ''
-        method = getattr(hashlib, hash)
-        source_value = method(source_value.encode('utf-8')).hexdigest()
 
     target = xml.get('tgt')
     if '.' in target:
         target_objname, target_colname = target.split('.')
-        target_record = ctx.data_objects[target_objname]
-        target_field = target_record.getfld(target_colname)
-        target_value = target_field.getval()
+        target_record = caller.data_objects[target_objname]
+        target_field = await target_record.getfld(target_colname)
+        target_value = await target_field.getval()
     elif target == '$True':
         target_value = True
     elif target == '$False':
@@ -105,13 +109,12 @@ def compare(ctx, obj, xml):
     else:
         target_value = target
 
-#   print('"{0}" {1} "{2}"'.format(source_value, xml.get('op'), target_value))
+    # print('"{0}" {1} "{2}"'.format(source_value, xml.get('op'), target_value))
 
     op = getattr(operator, xml.get('op'))
     return op(source_value, target_value)
 
-@asyncio.coroutine
-def ask(ctx, obj, value, xml):
+async def ask(caller, obj, value, xml):
     answers = []
     callbacks = {}
 
@@ -119,11 +122,11 @@ def ask(ctx, obj, value, xml):
     default = xml.get('enter')
     escape = xml.get('escape')
     question = xml.get('question')
-    for response in xml.findall('response'):
+    for response in xml.iter('response'):
         ans = response.get('ans')
         answers.append(ans)
         callbacks[ans] = response
-    ans = yield from ctx.session.request.ask_question(
-        ctx, title, question, answers, default, escape)
+    ans = await caller.session.responder.ask_question(
+        caller, title, question, answers, default, escape)
     answer = callbacks[ans]
-    yield from on_answer(ctx, obj, value, answer)
+    await on_answer(caller, obj, value, answer)

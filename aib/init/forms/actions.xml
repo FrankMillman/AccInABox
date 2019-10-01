@@ -1,0 +1,887 @@
+<form name="actions" title="Setup database actions">
+  <db_objects>
+    <db_obj name="db_actions" table_name="db_actions" parent="db_table"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params>
+    <input_param name="db_table" type="data_obj" target="db_table" required="true"/>
+  </input_params>
+  <output_params/>
+  <frame main_object="db_actions">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <display obj_name="db_table" col_name="table_name" lng="160"/>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <button lng="150" btn_id="upd_chk" btn_label="Update checks"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.checks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`chk_type` type=`data_attr` source=`'upd'`/>>
+                <<call_param name=`chks` type=`data_attr` source=`db_actions.upd_checks`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`chks` type=`data_attr` target=`db_actions.upd_checks`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.upd_checks` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`upd_chk` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`upd_chk` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+      <col/>
+      <button lng="150" btn_id="del_chk" btn_label="Delete checks"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.checks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`chk_type` type=`data_attr` source=`'del'`/>>
+                <<call_param name=`chks` type=`data_attr` source=`db_actions.del_checks`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`chks` type=`data_attr` target=`db_actions.del_checks`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.del_checks` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`del_chk` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`del_chk` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+           <</sub_form>>
+          <</action>>
+        "/>
+      <row/>
+      <col/>
+      <button lng="150" btn_id="post_chk" btn_label="Post checks"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.checks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`chk_type` type=`data_attr` source=`'post'`/>>
+                <<call_param name=`chks` type=`data_attr` source=`db_actions.post_checks`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`chks` type=`data_attr` target=`db_actions.post_checks`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.post_checks` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`post_chk` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`post_chk` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+      <col/>
+      <button lng="150" btn_id="unpost_chk" btn_label="Unpost checks"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.checks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`chk_type` type=`data_attr` source=`'unpost'`/>>
+                <<call_param name=`chks` type=`data_attr` source=`db_actions.unpost_checks`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`chks` type=`data_attr` target=`db_actions.unpost_checks`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.unpost_checks` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`unpost_chk` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`unpost_chk` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+           <</sub_form>>
+          <</action>>
+        "/>
+      <row/>
+      <col/>
+      <button lng="150" btn_id="upd_save" btn_label="Update on save"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.updates`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`upd_type` type=`data_attr` source=`'upd_on_save'`/>>
+                <<call_param name=`updates` type=`data_attr` source=`db_actions.upd_on_save`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`updates` type=`data_attr` target=`db_actions.upd_on_save`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.upd_on_save` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`upd_save` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`upd_save` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+      <col/>
+      <button lng="150" btn_id="upd_post" btn_label="Update on post"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.updates`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`upd_type` type=`data_attr` source=`'upd_on_post'`/>>
+                <<call_param name=`updates` type=`data_attr` source=`db_actions.upd_on_post`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`updates` type=`data_attr` target=`db_actions.upd_on_post`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.upd_on_post` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`upd_post` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`upd_post` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+      <row/>
+      <col/>
+      <button lng="150" btn_id="on_setup" btn_label="Actions on setup"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'on_setup'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.on_setup`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.on_setup`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.on_setup` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`on_setup` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`on_setup` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+      <col/>
+      <button lng="150" btn_id="after_read" btn_label="Actions after read"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'after_read'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.after_read`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.after_read`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.after_read` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_read` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_read` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+           <</sub_form>>
+          <</action>>
+        "/>
+      <row/>
+      <col/>
+      <button lng="150" btn_id="after_init" btn_label="Actions after init"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'after_init'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.after_init`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.after_init`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.after_init` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_init` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_init` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+      <col/>
+      <button lng="150" btn_id="after_restore" btn_label="Actions after restore"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'after_restore'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.after_restore`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.after_restore`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.after_restore` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_restore` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_restore` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+           <</sub_form>>
+          <</action>>
+        "/>
+      <row/>
+      <col/>
+      <button lng="150" btn_id="before_save" btn_label="Actions before save"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'before_save'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.before_save`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.before_save`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.before_save` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`before_save` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`before_save` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+      <col/>
+      <button lng="150" btn_id="after_save" btn_label="Actions after save"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'after_save'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.after_save`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.after_save`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.after_save` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_save` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_save` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+           <</sub_form>>
+          <</action>>
+        "/>
+      <row/>
+      <col/>
+      <button lng="150" btn_id="before_insert" btn_label="Actions before insert"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'before_insert'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.before_insert`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.before_insert`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.before_insert` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`before_insert` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`before_insert` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+      <col/>
+      <button lng="150" btn_id="after_insert" btn_label="Actions after insert"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'after_insert'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.after_insert`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.after_insert`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.after_insert` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_insert` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_insert` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+           <</sub_form>>
+          <</action>>
+        "/>
+      <row/>
+      <col/>
+      <button lng="150" btn_id="before_update" btn_label="Actions before update"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'before_update'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.before_update`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.before_update`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.before_update` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`before_update` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`before_update` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+      <col/>
+      <button lng="150" btn_id="after_update" btn_label="Actions after update"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'after_update'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.after_update`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.after_update`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.adter_update` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_update` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_update` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+           <</sub_form>>
+          <</action>>
+        "/>
+      <!-- <col/>
+      <input obj_name="db_actions" col_name="_after_update" readonly="true" skip="true"/> -->
+      <row/>
+      <col/>
+      <button lng="150" btn_id="before_delete" btn_label="Actions before delete"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'before_delete'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.before_delete`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.before_delete`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.before_delete` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`before_delete` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`before_delete` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+      <col/>
+      <button lng="150" btn_id="after_delete" btn_label="Actions after delete"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'after_delete'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.after_delete`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.after_delete`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.after_delete` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_delete` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_delete` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+           <</sub_form>>
+          <</action>>
+        "/>
+      <row/>
+      <col/>
+      <button lng="150" btn_id="before_post" btn_label="Actions before post"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'before_post'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.before_post`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.before_post`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.before_post` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`before_post` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`before_post` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+           <</sub_form>>
+          <</action>>
+        "/>
+      <col/>
+      <button lng="150" btn_id="after_commit" btn_label="Actions after commit"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'after_commit'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.after_commit`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.after_commit`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.after_commit` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_commit` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_commit` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+           <</sub_form>>
+          <</action>>
+        "/>
+      <row/>
+      <col/>
+      <button lng="150" btn_id="after_post" btn_label="Actions after post"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.hooks`>>
+              <<call_params>>
+                <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                <<call_param name=`hook_type` type=`data_attr` source=`'after_post'`/>>
+                <<call_param name=`hook` type=`data_attr` source=`db_actions.after_post`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`hook` type=`data_attr` target=`db_actions.after_post`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`db_actions.after_post` op=`is not` tgt=`$None`>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_post` value=`bold`/>>
+                      <</change_button>>
+                    <</compare>>
+                    <<default>>
+                      <<change_button>>
+                        <<font_weight btn_id=`after_post` value=`normal`/>>
+                      <</change_button>>
+                    <</default>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+           <</sub_form>>
+          <</action>>
+        "/>
+    </body>
+    <button_row template="Setup_Form_Single"/>
+    <frame_methods template="Setup_Form_Single">
+      <method name="on_start_frame" action="
+        <<action>>
+          <<case>>
+            <<compare src=`db_actions.upd_checks` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`upd_chk` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.del_checks` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`del_chk` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.post_checks` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`post_chk` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.unpost_checks` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`unpost_chk` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.upd_on_save` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`upd_save` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.upd_on_post` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`upd_post` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.on_setup` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`on_setup` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.after_read` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`after_read` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.after_init` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`after_init` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.after_restore` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`after_restore` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.before_save` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`before_save` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.after_save` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`after_save` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.before_insert` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`before_insert` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.after_insert` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`after_insert` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.before_update` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`before_update` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.after_update` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`after_update` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.before_delete` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`before_delete` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.after_delete` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`after_delete` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.before_post` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`before_post` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.after_commit` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`after_commit` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+          <<case>>
+            <<compare src=`db_actions.after_post` op=`is not` tgt=`$None`>>
+              <<change_button>>
+                <<font_weight btn_id=`after_post` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+          <</case>>
+        <</action>>
+      "/>
+      <method name="do_save" action="
+        <<action>>
+          <<pyfunc name=`custom.actions.do_save`/>>
+        <</action>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>

@@ -1,0 +1,54 @@
+<form name="ap_params" title="Set up ap ledger parameters" before_start_form="
+  <<action>>
+    <<assign src=`_ctx.ledger_row_id` tgt=`params.row_id`/>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="params" table_name="ap_ledger_params" is_formview_obj="true"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="params">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Ledger id:"/>
+      <col/>
+      <input obj_name="params" col_name="ledger_id" lng="60"/>
+      <col/>
+      <input obj_name="params" col_name="descr" lng="160"/>
+
+      <block/>
+      <panel/>
+      <if_ src="_param.location_id" op="is_" tgt="$None"/>
+      <row/>
+      <col/>
+      <label value="Location"/>
+      <col/>
+      <input obj_name="params" col_name="location" lng="60"/>
+      <end_if/>
+      <if_ src="_param.currency_id" op="is_" tgt="$None"/>
+      <row/>
+      <col/>
+      <label value="Currency"/>
+      <col/>
+      <input obj_name="params" col_name="currency" lng="60"/>
+      <end_if/>
+      <if_ src="_param.currency_id" op="is_" tgt="$None"/>
+      <row/>
+      <col/>
+      <label value="Alternative currencies?"/>
+      <col/>
+      <input obj_name="params" col_name="alt_curr"/>
+      <end_if/>
+
+    </body>
+    <button_row template="Setup_Form_Single"/>
+    <frame_methods template="Setup_Form_Single">
+    </frame_methods>
+  </frame>
+</form>

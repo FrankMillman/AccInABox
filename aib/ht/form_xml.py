@@ -1,82 +1,82 @@
-import operator
-import hashlib
 import importlib
 import asyncio
+import operator
+import re
+from json import dumps
 
-from ht.form import Form
+import db.cache
+import ht.form
 import ht.gui_grid
-import db.api
-from errors import AibError
-from start import log, debug
+import bp.bpm
+from common import AibError, AibDenied
+from common import log, debug
 
-@asyncio.coroutine
-def on_click(caller, btn):  # caller can be frame or grid
+async def on_click(caller, btn):  # caller can be frame or grid
     for xml in btn.action:
         if debug: log.write('CLICK {} {}\n\n'.format(caller, xml.tag))
-        yield from globals()[xml.tag](caller, xml)
-        if caller.session.request.db_events:
-            yield from chk_db_events(caller)
+        await globals()[xml.tag](caller, xml)
 
-@asyncio.coroutine
-def on_answer(caller, elem):
+async def on_answer(caller, elem):
     for xml in elem:
-        yield from globals()[xml.tag](caller, xml)
-        if caller.session.request.db_events:
-            yield from chk_db_events(caller)
+        await globals()[xml.tag](caller, xml)
 
-@asyncio.coroutine
-def exec_xml(caller, elem):  # caller can be frame or grid
+async def exec_xml(caller, elem):  # caller can be frame or grid
     for xml in elem:
+        # print(xml.tag)
         if debug: log.write('EXEC {} {}\n\n'.format(caller, xml.tag))
-        yield from globals()[xml.tag](caller, xml)
-        if caller.session.request.db_events:
-            yield from chk_db_events(caller)
+        await globals()[xml.tag](caller, xml)
 
-@asyncio.coroutine
-def after_input(obj):
+async def before_input(obj):
+    for xml in obj.before_input:
+        await globals()[xml.tag](obj.parent, xml)
+
+async def after_input(obj):
     for xml in obj.after_input:
-        obj.parent._after_input = obj
-        yield from globals()[xml.tag](obj.parent, xml)
-        if obj.parent.session.request.db_events:
-            yield from chk_db_events(obj.parent)
-
-@asyncio.coroutine
-def chk_db_events(caller):
-    db_events = caller.session.request.db_events[:]
-    caller.session.request.db_events.clear()
-    for sub_caller, action in db_events:
-        yield from exec_xml(sub_caller, action)
+        # obj.parent._after_input = obj
+        await globals()[xml.tag](obj.parent, xml)
 
 #----------------------------------------------------------------------
 # the following functions are called via their xml.tag, using globals()
-# they are coroutines, and use the @asyncio.coroutine decorator
+# they are coroutines, and use async
 #----------------------------------------------------------------------
 
-@asyncio.coroutine
-def case(caller, xml):
+async def case(caller, xml):
     for child in xml:
-        if child.tag == 'default' or globals()[child.tag](caller, child):
+        if child.tag == 'default' or await globals()[child.tag](caller, child):
             for step in child:
                 if debug: log.write('STEP {} {}\n\n'.format(caller, step.tag))
-                yield from globals()[step.tag](caller, step)
+                await globals()[step.tag](caller, step)
             break
 
-@asyncio.coroutine
-def repos_row(grid, xml):
+async def skip_input(caller, xml):
+    caller.skip_input = int(xml.get('num'))
+
+async def repos_row(grid, xml):
     # only required if user enters 'key field' on blank row
     # grid_inserted will be 1 or -1  (i.e. True)
     # this is only called if record exists
-    # purpose - locate the existing record in the grid and move to it
+    # purpose - find the existing record in the grid and move to it
     if grid.inserted:
-        yield from grid.repos_row()
+        await grid.repos_row()
 
-@asyncio.coroutine
-def init_obj(caller, xml):
+async def init_obj(caller, xml):
     obj_name = xml.get('obj_name')
-    caller.data_objects.get(obj_name).init()
+    db_obj = caller.data_objects[obj_name]
+    xml_init_vals = xml.get('init_vals')
+    if xml_init_vals is None:
+        await db_obj.init()
+    else:
+        init_vals = {}
+        for init_val in (_.strip() for _ in xml_init_vals.split(',')):
+            tgt, src = init_val.split('=')
+            if '.' in src:
+                src_objname, src_colname = src.split('.')
+                src_obj = caller.data_objects[src_objname]
+                src_val = await src_obj.getval(src_colname)
+            init_vals[tgt] = src_val
+        await db_obj.init(init_vals=init_vals)
 
-@asyncio.coroutine
-def notify_obj_clean(caller, xml):
+async def notify_obj_clean(caller, xml):
     # notify client that data_obj is now clean - called from template on_clean
 
     # what do we want to do here?
@@ -112,164 +112,166 @@ def notify_obj_clean(caller, xml):
     # object does not exist, but still needs to be set to 'clean'
 
     obj_name = xml.get('obj_name')
-    db_obj = caller.data_objects.get(obj_name)
+    # db_obj = caller.data_objects.get(obj_name)
+    db_obj = caller.data_objects[obj_name]
 
-    caller.session.request.obj_to_redisplay.append(
+    caller.session.responder.obj_to_redisplay.append(
         (caller.ref, (True, db_obj.exists)))
 
-@asyncio.coroutine
-def notify_obj_dirty(caller, xml):
+async def notify_obj_dirty(caller, xml):
     obj_name = xml.get('obj_name')
-    db_obj = caller.data_objects.get(obj_name)
+    # db_obj = caller.data_objects.get(obj_name)
+    db_obj = caller.data_objects[obj_name]
 
-    caller.session.request.obj_to_redisplay.append(
+    caller.session.responder.obj_to_redisplay.append(
         (caller.ref, (False, db_obj.exists)))
 
-@asyncio.coroutine
-def handle_restore(caller, xml):
-    yield from caller.handle_restore()
+async def handle_restore(caller, xml):
+    await caller.handle_restore()
 
-@asyncio.coroutine
-def restore_obj(caller, xml):
-    db_obj = caller.data_objects.get(xml.get('obj_name'))
-    db_obj.restore()
+async def restore_obj(caller, xml):
+    db_obj = caller.data_objects[xml.get('obj_name')]
+    if db_obj.dirty:
+        await db_obj.restore()
+    for child in db_obj.children:  # mainly for sub_trans
+        if child.dirty:
+            await child.restore()
 
-@asyncio.coroutine
-def continue_form(caller, xml):
-    yield from caller.continue_form()
+async def continue_form(caller, xml):
+    await caller.continue_form()
 
-@asyncio.coroutine
-def restart_frame(caller, xml):
-    yield from caller.restart_frame()
-
-"""
-@asyncio.coroutine
-def validate_save(caller, xml):
-    yield from caller.validate_all(save=True)
-"""
-
-@asyncio.coroutine
-def validate_all(caller, xml):
-    yield from caller.validate_all()
-
-# don't think this is ever called [2015-05-18]
-#@asyncio.coroutine
-#def after_save(caller, xml):
-#    # called by grid_frame do_save()
-#    yield from caller.parent.after_save()
-
-@asyncio.coroutine
-def gridframe_dosave(caller, xml):
-    # don't think this is ever called [2015-05-02]
-    # it is called from the Setup_Grid template do_save method
-    # but we have changed ht.gui_grid.try_save() -
-    #   if there is a grid_frame, call *its* do_save method
-    #   else call the grid's do_save method
-    # leave it like this for now, as I am not sure which approach
-    #   is preferable
-    print('gridframe_dosave() - DO WE GET HERE?')
-    # if try to save grid, and grid has grid_frame, invoke grid_frame's do_save
-    yield from exec_xml(caller.grid_frame, caller.grid_frame.methods['do_save'])
+async def restart_frame(caller, xml):
+    await caller.restart_frame()
 
 """
-@asyncio.coroutine
-def check_children(frame, xml):
-#   db_obj = frame.data_objects.get(xml.get('obj_name'))
-#   yield from frame.check_children(db_obj)
-    yield from frame.check_children()
-
-@asyncio.coroutine
-def save_obj(frame, xml):
-    db_obj = frame.data_objects.get(xml.get('obj_name'))
-    if frame.ctrl_grid is not None:
-        if frame.frame_type == 'grid_frame':
-            yield from frame.ctrl_grid.save_row()
-        else:
-            yield from frame.ctrl_grid.try_save()
+async def restart_frame_if_not_grid(caller, xml):
+    if caller.ctrl_grid:
+        pass  # restarted from do_navigate
+    elif isinstance(caller.first_input, ht.gui_grid.GuiGrid):
+        pass  # restarted from start_row
     else:
-        yield from frame.save_obj(db_obj)
-
-@asyncio.coroutine
-def save_row(grid, xml):
-    yield from grid.save_row()
+        await caller.restart_frame()
 """
 
-@asyncio.coroutine
-def save(caller, xml):
-    yield from caller.save()
+async def refresh_fld(caller, xml):
+    # called from various places to force recalc of field to refresh screen
+    obj_name = xml.get('obj_name')
+    col_name = xml.get('col_name')
+    db_obj = caller.data_objects[obj_name]
+    await db_obj.getval(col_name)
 
-@asyncio.coroutine
-def save_obj(caller, xml):
-    db_obj = caller.data_objects.get(xml.get('obj_name'))
-    yield from caller.save_obj(db_obj)
+async def restart_grid(caller, xml):
+    obj_name = xml.get('obj_name')
+    await caller.start_grid(obj_name)
 
-@asyncio.coroutine
-def req_formview(grid, xml):
+async def init_grid(caller, xml):
+    obj_name = xml.get('obj_name')
+    await caller.init_grid(obj_name)
+
+async def validate_all(caller, xml):
+    await caller.validate_all()
+
+async def req_save(caller, xml):
+    await caller.req_save()
+
+async def save_obj(caller, xml):
+    db_obj = caller.data_objects[xml.get('obj_name')]
+    if db_obj.subtran_parent is not None:
+        db_obj = db_obj.subtran_parent[0]
+    await db_obj.save()
+
+async def post_obj(caller, xml):
+    db_obj = caller.data_objects[xml.get('obj_name')]
+    await db_obj.post()
+
+async def start_row(grid, xml):
     row, = grid.btn_args
-    yield from grid.on_formview(row)
+    await grid.start_row(row)
 
-@asyncio.coroutine
-def grid_req_insert_row(grid, xml):
+async def req_formview(grid, xml):
     row, = grid.btn_args
-    yield from grid.on_req_insert_row(row)
+    await grid.on_formview(row)
 
-@asyncio.coroutine
-def frame_req_insert_row(frame, xml):
+async def select_from_view(grid, xml):
+    row, = grid.btn_args
+    if row == grid.num_rows:
+        return  # on last blank row
+    await grid.start_row(row)
+
+    fld_const, path_dict = grid.db_obj.db_table.path_to_row
+    base_table_name, base_row_id, view_row_id, form_name = \
+        path_dict[await grid.db_obj.getval(fld_const)]
+    if base_table_name not in grid.parent.context.data_objects:
+        grid.parent.context.data_objects[base_table_name] = await db.objects.get_db_object(
+            grid.parent.context, grid.parent.company, base_table_name)
+    base_obj = grid.parent.context.data_objects[base_table_name]
+    await base_obj.init()
+    await base_obj.setval(base_row_id, await grid.db_obj.getval(view_row_id))
+
+    sub_form = ht.form.Form(grid.form.company, form_name, parent_form=grid.parent.form)
+    await sub_form.start_form(grid.session, formview_obj=base_obj)
+
+async def grid_req_insert_row(grid, xml):
+    row, = grid.btn_args
+    await grid.on_req_insert_row(row)
+
+"""
+async def frame_req_insert_row(frame, xml):
     grid = frame.ctrl_grid
     row, = frame.btn_args
-    yield from grid.on_req_insert_row(row)
+    await grid.on_req_insert_row(row)
 
-@asyncio.coroutine
-def grid_req_delete_row(grid, xml):
+async def grid_req_delete_row(grid, xml):
     row, = grid.btn_args
-    yield from grid.on_req_delete_row(row)
+    await grid.on_req_delete_row(row)
+"""
 
-@asyncio.coroutine
-def frame_req_delete_row(frame, xml):
+async def req_insert_row(caller, xml):
+    if isinstance(caller, ht.form.Frame):
+        grid = caller.ctrl_grid
+    else:
+        grid = caller
+    row, = caller.btn_args
+    await grid.on_req_insert_row(row)
+
+"""
+async def frame_req_delete_row(frame, xml):
     grid = frame.ctrl_grid
     row, = frame.btn_args
-    yield from grid.on_req_delete_row(row)
+    await grid.on_req_delete_row(row)
 
-@asyncio.coroutine
-def grid_delete_row(grid, xml):
-    yield from grid.on_req_delete_row()
+async def grid_req_delete_row(grid, xml):
+    await grid.on_req_delete_row()
+"""
 
-@asyncio.coroutine
-def frame_delete_row(frame, xml):
-    grid = frame.ctrl_grid
-    yield from grid.on_req_delete_row()
-
-@asyncio.coroutine
-def restore_row(grid, xml):
-    grid.db_obj.restore()
-
-@asyncio.coroutine
-def row_selected(grid, xml):
+async def req_delete_row(caller, xml):
+    if isinstance(caller, ht.form.Frame):
+        grid = caller.ctrl_grid
+    else:
+        grid = caller
     row, = grid.btn_args
-    yield from grid.on_selected(row)
+    await grid.on_req_delete_row(row)
 
-@asyncio.coroutine
-def do_navigate(caller, xml):
-    yield from caller.do_navigate()
+async def row_selected(grid, xml):
+    # called from grid_lookup after row selected
+    row, = grid.btn_args
+    if row == grid.num_rows:  # bottom blank row selected
+        await grid.form.end_form(state='cancelled')
+    else:
+        await grid.start_row(row, display=True)
+        await grid.form.end_form(state='completed')
 
-"""
-@asyncio.coroutine
-def tree_before_save(caller, xml):
-    yield from caller.tree.before_save()
+async def do_navigate(caller, xml):
+    if xml.get('nav_type') is not None:
+        caller.nav_type = xml.get('nav_type')
+    await caller.do_navigate()
 
-@asyncio.coroutine
-def update_node(caller, xml):
-    yield from caller.tree.update_node()
-"""
+async def delete_node(caller, xml):
+    await caller.tree.on_req_delete_node()
 
-@asyncio.coroutine
-def delete_node(caller, xml):
-    yield from caller.tree.on_req_delete_node()
-
-@asyncio.coroutine
-def change_button(caller, xml):
+async def change_button(caller, xml):
     """
-    #<change_button btn_id="b_pwd" attr="enable" value="true"/>
+    #<change_button btn_id="btn_pwd" attr="enable" value="true"/>
     <change_button>
       <btn_enabled btn_id="btn_pwd" value="true"/>
     </change_button>
@@ -277,10 +279,12 @@ def change_button(caller, xml):
     change = xml[0]
     button = caller.btn_dict[change.get('btn_id')]
     if debug:
-        log.write('CHG BUT {} {} {}\n\n'.format(
-            change.attrib, button.ref, change.tag))
+        log.write(f'CHG BUT {change.attrib} {button.ref} {change.tag}\n\n')
     if change.tag == 'btn_label':
         attr_name = 'label'
+        attr_value = change.get('value')
+    if change.tag == 'font_weight':
+        attr_name = 'weight'
         attr_value = change.get('value')
     elif change.tag == 'btn_dflt':
         attr_name = 'default'
@@ -293,14 +297,11 @@ def change_button(caller, xml):
         attr_value = change.get('state') == 'true'
     button.change_button(attr_name, attr_value)
 
-@asyncio.coroutine
-def change_gridframe_button(frame, xml):
-    """
-    #<change_button btn_id="b_pwd" attr="enable" value="true"/>
-    <change_button>
-      <btn_enabled btn_id="btn_pwd" value="true"/>
-    </change_button>
-    """
+"""
+async def change_gridframe_button(frame, xml):
+    #<change_button>
+    #  <btn_enabled btn_id="btn_pwd" value="true"/>
+    #</change_button>
     change = xml[0]
     btn_id = change.get('btn_id')
     if btn_id is not None:
@@ -315,24 +316,23 @@ def change_gridframe_button(frame, xml):
             attr_name = 'enabled'
             attr_value = change.get('state') == 'true'
         button.change_button(attr_name, attr_value)
+"""
 
-@asyncio.coroutine
-def set_readonly(caller, xml):
+async def set_readonly(caller, xml):
     """
     <set_readonly target="var.user_row_id" state="true"/>
     """
     target = xml.get('target')
     target_objname, target_colname = target.split('.')
     target_record = caller.data_objects[target_objname]
-    target_field = target_record.getfld(target_colname)
+    target_field = await target_record.getfld(target_colname)
     target_state = (xml.get('state') == 'true')  # turn into boolean
     target_field.set_readonly(target_state)
 
-@asyncio.coroutine
-def assign(caller, xml):
-    source = xml.find('source')
-    target = xml.find('target').text
-    format = source.find('format')
+async def assign(caller, xml):
+    source = xml.get('src')
+    target = xml.get('tgt')
+    format = xml.get('format')
 
     #-------------------------------
     # source could be an expression!
@@ -347,125 +347,64 @@ def assign(caller, xml):
         </source>
         <target>var.full_name</target>
         """
-#       print('formatting')
+        # print('formatting')
         format_string = format.text
         format_args = []
         for arg in source.arg:
             if '.' in arg.text:
                 arg_objname, arg_colname = arg.text.split('.')
-                arg_record = task.data_objects[arg_objname]
-                arg_field = arg_record.getfld(arg_colname)
-                format_arg = arg_field.getval()
+                arg_record = caller.data_objects[arg_objname]
+                arg_field = await arg_record.getfld(arg_colname)
+                format_arg = await arg_field.getval()
             else:
                 raise AibError(head='Error',
                     body='Unknown format argument {}'.format(arg.text))
             format_args.append(format_arg)
         value_to_assign = format_string.format(*format_args)
     else:
-        hash_type = source.get('hash')
-        source = source.text
-
-        if source.startswith('('):  # expression
-            source = source[1:-1].split(' ')
-
-            src_1_objname, src_1_colname = source[0].split('.')
-            src_1_record = caller.data_objects[src_1_objname]
-            src_1_field = src_1_record.getfld(src_1_colname)
-            val_1 = src_1_field.getval()
-
-            op = source[1]
-
-            src_2_objname, src_2_colname = source[2].split('.')
-            src_2_record = caller.data_objects[src_2_objname]
-            src_2_field = src_2_record.getfld(src_2_colname)
-            val_2 = src_2_field.getval()
-
-            if op == '+':
-                value_to_assign = val_1 + val_2
-            elif op == '*':
-                value_to_assign = val_1 * val_2
-
-        elif '.' in source:
-            source_objname, source_colname = source.split('.')
-            source_record = caller.data_objects[source_objname]
-            source_field = source_record.getfld(source_colname)
-            value_to_assign = source_field.getval()
-# removed for now [2015-04-30]
-# I think it is only used for maintaining 'seq', which has now been automated
-#       elif source == '$current_row':
-#           try:
-#               value_to_assign = caller.current_row
-#           except AttributeError:
-#               value_to_assign = caller.ctrl_grid.current_row
-        elif source == '$True':
-            value_to_assign = True
-        elif source == '$False':
-            value_to_assign = False
-        elif source.startswith('int('):
-            value_to_assign = int(source[4:-1])
-        else:  # literal value
-            value_to_assign = source
-        if hash_type is not None:
-            """
-            <source hash="sha1">pwd_var.pwd1</source>
-            <target>pwd_var.password</target>
-            """
-            # blank password is None - change to '' before hashing
-            hash_method = getattr(hashlib, hash_type)
-            value_to_assign = hash_method(
-                (value_to_assign or '').encode('utf-8')).hexdigest()
+        value_to_assign = await get_val(caller, source)
 
     target_objname, target_colname = target.split('.')
-    target_record = caller.data_objects[target_objname]
-    target_field = target_record.getfld(target_colname)
-    target_field.setval(value_to_assign)
+    if target_objname == '_ctx':
+        setattr(caller.context, target_colname, value_to_assign)
+    else:
+        target_record = caller.data_objects[target_objname]
+        target_field = await target_record.getfld(target_colname)
+        await target_field.setval(value_to_assign)
 
-@asyncio.coroutine
-def set_focus(caller, xml):
-    gui_obj = caller.btn_dict[xml.get('btn_id')]
-    caller.session.request.send_set_focus(gui_obj.ref)
+async def btn_set_focus(caller, xml):
+    button = caller.btn_dict[xml.get('btn_id')]
+    caller.session.responder.send_set_focus(button.ref)
 
-@asyncio.coroutine
-def call(caller, xml):
+async def call(caller, xml):
     method = caller.methods[xml.get('method')]
     for xml in method:
         if debug: log.write('CALL {} {}\n\n'.format(caller, xml.tag))
-        yield from globals()[xml.tag](caller, xml)
-#       if caller.session.request.db_events:
-#           yield from chk_db_events(caller)
+        await globals()[xml.tag](caller, xml)
 
-@asyncio.coroutine
-def pyfunc(caller, xml):
+async def pyfunc(caller, xml):
     func_name = xml.get('name')
     if debug: log.write('PYCALL {} {}\n\n'.format(caller, func_name))
-    if '.' in func_name:
-        module_name, func_name = func_name.rsplit('.', 1)
-        module = importlib.import_module(module_name)
-        yield from getattr(module, func_name)(caller, xml)
-    else:
-        log.write('WHY NOT CALL {} DIRECTLY?\n\n'.format(func_name))
-        yield from globals()[func_name](caller, xml)
-#   if caller.session.request.db_events:
-#       yield from chk_db_events(caller)
+    module_name, func_name = func_name.rsplit('.', 1)
+    module = importlib.import_module(module_name)
+    await getattr(module, func_name)(caller, xml)
 
-@asyncio.coroutine
-def parent_req_close(caller, xml):
-    yield from caller.parent.on_req_close()
+async def parent_req_close(caller, xml):
+    await caller.parent.on_req_close()
 
-@asyncio.coroutine
-def parent_req_cancel(caller, xml):
-    yield from caller.parent.on_req_cancel()
+async def parent_req_cancel(caller, xml):
+    await caller.parent.on_req_cancel()
 
-@asyncio.coroutine
-def return_to_grid(caller, xml):
+async def return_to_grid(caller, xml):
     caller.return_to_grid()
 
-@asyncio.coroutine
-def return_to_tree(caller, xml):
+async def move_off_grid(caller, xml):
+    caller.move_off_grid()
+
+async def return_to_tree(caller, xml):
     caller.return_to_tree()
 
-@asyncio.coroutine
-def ask(caller, xml):
+async def ask(caller, xml):
     answers = []
     callbacks = {}
 
@@ -473,50 +412,58 @@ def ask(caller, xml):
     default = xml.get('enter')
     escape = xml.get('escape')
     question = xml.get('question')
-    if '{obj_descr}' in question:
+    if '[obj_descr]' in question:
         if caller.obj_descr is not None:
             obj_name, col_name = caller.obj_descr.split('.')
             db_obj = caller.data_objects[obj_name]
-            fld = db_obj.getfld(col_name)
+            fld = await db_obj.getfld(col_name)
         elif isinstance(caller, ht.gui_grid.GuiGrid):
             gui_obj = caller.obj_list[0]
             fld = gui_obj.fld
+        elif isinstance(caller.obj_list[0], ht.gui_bpmn.GuiBpmn):
+            fld = caller.data_objects['proc'].fields['process_id']
         else:
-            if caller.frame_type == 'grid_frame':
+            if caller.frame_type == 'grid_frame' and not caller.ctrl_grid.readonly:  # else could be None
                 gui_obj = caller.ctrl_grid.obj_list[0]
             else:
                 gui_obj = caller.obj_list[0]
+                if isinstance(gui_obj, ht.gui_grid.GuiGrid):
+                    gui_obj = gui_obj.obj_list[0]
             fld = gui_obj.fld
-        question = question.replace(
-            '{obj_descr}', repr(fld.getval()))
-    for response in xml.findall('response'):
+        question = question.replace('[obj_descr]', str(await fld.getval()))
+    if '[tran_type]' in question:
+        tran_type = await caller.db_obj.getval('tran_type')
+        tran_number = await caller.db_obj.getval('tran_number')
+        question = question.replace('[tran_type]', tran_type).replace('[tran_number]', tran_number)
+    for response in xml.iter('response'):
         ans = response.get('ans')
         answers.append(ans)
         callbacks[ans] = response
-    ans = yield from caller.session.request.ask_question(
+    ans = await caller.session.responder.ask_question(
         caller, title, question, answers, default, escape)
     answer = callbacks[ans]
-    yield from on_answer(caller, answer)
+    await on_answer(caller, answer)
 
-@asyncio.coroutine
-def inline_form(caller, xml):
-    form_name = xml.get('form_name')
+async def inline_form(caller, xml, form_name=None, callback=None):
+    if form_name is None:  # e.g. gui_bpmn.on_selected supplies the form name
+        form_name = xml.get('name')
+    if callback is None:  # e.g. gui_bpmn.on_selected supplies the callback
+        callback = (return_from_inlineform, caller, xml)
     form_defn = caller.form.form_defn
-    form_xml = form_defn.find("inline_form[@form_name='{}']".format(form_name))
-    inline_form = Form(caller.form.company, form_name, parent=caller,
-        callback=(return_from_inlineform, xml), inline=form_xml)
-    yield from inline_form.start_form(caller.session)
+    form_xml = form_defn.find("inline_form[@name='{}']".format(form_name))
+    inline_form = ht.form.Form(caller.form.company, form_name, parent_form=caller.form,
+        callback=callback, inline=form_xml)
+    await inline_form.start_form(caller.session)
 
-@asyncio.coroutine
-def return_from_inlineform(caller, state, output_params, calling_xml):
-    # from callbacks, find callback with attribute 'state' = state
-    callback = calling_xml.find('on_return').find(
-        "return[@state='{}']".format(state))
-    for xml in callback:
-        yield from globals()[xml.tag](caller, xml)
+async def return_from_inlineform(caller, state, output_params, xml):
+    # from xml, find steps with attribute 'state' = state
+    on_return = xml.find('on_return')
+    if on_return is not None:
+        steps = on_return.find("return[@state='{}']".format(state))
+        for step in steps:
+            await globals()[step.tag](caller, step)
 
-@asyncio.coroutine
-def sub_form(caller, xml):
+async def sub_form(caller, xml):
     data_inputs = {}  # input parameters to be passed to sub-form
     for call_param in xml.find('call_params'):
         param_name = call_param.get('name')
@@ -525,75 +472,43 @@ def sub_form(caller, xml):
         if param_type == 'data_obj':
             value = caller.data_objects[source]
         elif param_type == 'data_attr':
-            if '.' in source:
+            if source.startswith("'"):
+                value = source[1:-1]
+            elif '.' in source:
+                if source.startswith('0-'):  # e.g. see ar_alloc.xml
+                    reverse_sign = True
+                    source = source[2:]
+                else:
+                    reverse_sign = False
                 obj_name, col_name = source.split('.')
-                data_obj = caller.data_objects[obj_name]
-                value = data_obj.getval(col_name)
+                if obj_name == '_param':
+                    db_obj = await db.cache.get_adm_params(caller.company)
+                elif obj_name == '_ledger':
+                    module_row_id, ledger_row_id = caller.context.mod_ledg_id
+                    db_obj = await db.cache.get_ledger_params(
+                         caller.company, module_row_id, ledger_row_id)
+                else:
+                    db_obj = caller.data_objects[obj_name]
+                value = await db_obj.getval(col_name)
+                if reverse_sign:
+                    value = 0-value
             else:
-                value = source
+                raise NotImplementedError  # enclose value in quotes!
         data_inputs[param_name] = value
 
-    form_name = xml.get('form_name')
-    sub_form = Form(caller.form.company, form_name, parent=caller,
-        data_inputs=data_inputs, callback=(return_from_subform, xml))
-    yield from sub_form.start_form(caller.session)
+    form_name = xml.get('name')
+    sub_form = ht.form.Form(caller.form.company, form_name, parent_form=caller.form,
+        data_inputs=data_inputs, callback=(return_from_subform, caller, xml))
+    await sub_form.start_form(caller.session)
 
-@asyncio.coroutine
-def end_form(caller, xml):
+async def end_form(caller, xml):
     form = caller.form
     state = xml.get('state')
+    await form.end_form(state)
 
-    yield from form.end_form(state)
-
-    return
-
-    return_params = {}  # data to be returned on completion
-    output_params = form.form_defn.find('output_params')
-    if output_params is not None:
-        for output_param in output_params.findall('output_param'):
-            name = output_param.get('name')
-            param_type = output_param.get('type')
-            source = output_param.get('source')
-            if state == 'completed':
-                if param_type == 'data_obj':
-                    value = caller.data_objects[source]
-                elif param_type == 'data_attr':
-                    data_obj_name, col_name = source.split('.')
-                    value = caller.data_objects[data_obj_name].getval(col_name)
-                """
-                elif param_type == 'data_list':
-                    value = caller.data_objects[source].dump_one()
-                    if value == []:
-                        value = None
-                elif param_type == 'data_array':
-                    value = caller.data_objects[source].dump_all()
-                    if value == []:
-                        value = None
-                elif param_type == 'pyfunc':
-                    func_name = source
-                    module_name, func_name = func_name.rsplit('.', 1)
-                    module = importlib.import_module(module_name)
-                    value = yield from getattr(module, func_name)(form)
-                """
-            else:
-                value = None
-            return_params[name] = value
-
-    caller.session.request.send_end_form(form)
-    form.close_form()
-
-    if form.callback is not None:
-        if form.parent is not None:  # closing a sub-form
-#           log.write('RETURN {} {} {}\n\n'.format(state, return_params, form.callback))
-            yield from form.callback[0](form.parent, state, return_params, *form.callback[1:])
-        else:  # return to calling process(?)
-            form.callback[0](caller.session, state, return_params, *form.callback[1:])
-            form.callback = None  # remove circular reference
-
-@asyncio.coroutine
-def return_from_subform(caller, state, output_params, calling_xml):
+async def return_from_subform(caller, state, output_params, xml):
     if state == 'completed':
-        for return_param in calling_xml.find('return_params').findall('return_param'):
+        for return_param in xml.find('return_params').iter('return_param'):
             name = return_param.get('name')
             param_type = return_param.get('type')
             target = return_param.get('target')
@@ -602,121 +517,183 @@ def return_from_subform(caller, state, output_params, calling_xml):
                 caller.data_objects[data_obj_name] = output_params[name]
             elif param_type == 'data_attr':
                 data_obj_name, col_name = target.split('.')
-                caller.data_objects[data_obj_name].setval(
+                await caller.data_objects[data_obj_name].setval(
                     col_name, output_params[name])
 
-    if hasattr(caller, 'form_active'):
-        caller.form_active = None
+    # find 'return' element in 'on_return' with attribute 'state' = state
+    on_return = xml.find('on_return').find("return[@state='{}']".format(state))
+    for xml in on_return:
+        await globals()[xml.tag](caller, xml)
 
-    # from callbacks, find callback with attribute 'state' = state
-    callback = calling_xml.find('on_return').find(
-        "return[@state='{}']".format(state))
-    for xml in callback:
-        yield from globals()[xml.tag](caller, xml)
-#       if caller.session.request.db_events:
-#           yield from chk_db_events(caller)
+async def start_process(caller, xml):
+    data_inputs = {}  # input parameters to be passed to process
+    for call_param in xml.find('call_params'):
+        param_name = call_param.get('name')
+        param_type = call_param.get('type')
+        source = call_param.get('source')
+        if param_type == 'data_obj':
+            value = caller.data_objects[source]
+        elif param_type == 'data_attr':
+            if source.startswith("'"):
+                value = source[1:-1]
+            elif '.' in source:
+                obj_name, col_name = source.split('.')
+                if obj_name == '_param':
+                    db_obj = await db.cache.get_adm_params(caller.company)
+                elif obj_name == '_ledger':
+                    module_row_id, ledger_row_id = caller.context.mod_ledg_id
+                    db_obj = await db.cache.get_ledger_params(
+                         caller.company, module_row_id, ledger_row_id)
+                else:
+                    db_obj = caller.data_objects[obj_name]
+                value = await db_obj.getval(col_name)
+            else:
+                raise NotImplementedError
+        data_inputs[param_name] = value
 
-@asyncio.coroutine
-def find_row(caller, xml):
+    process = bp.bpm.ProcessRoot(caller.company, xml.get('name'), data_inputs=data_inputs)
+    context = db.cache.get_new_context(caller.context.user_row_id,
+        caller.context.sys_admin, id(process), caller.context.mod_ledg_id)
+    await process.start_process(context)
+
+async def find_row(caller, xml):
     grid_ref, row = caller.btn_args
     print('FIND ROW', xml.get('name'), 'row={}'.format(row))
 
+async def raise_error(caller, xml):
+    raise AibError(head=xml.get('head'), body=xml.get('body'))
+
 #------------------------------------------------------------------------
 # the following are boolean functions called from case(), using globals()
-# they are not coroutines, so do not use the @asyncio.coroutine decorator
 #------------------------------------------------------------------------
 
-"""
-def any_data_changed(caller, xml):
-    if caller.db_obj is None:
-        return False
-    if caller.data_changed():
-        return True
-    for grid in caller.grids:
-        if grid.data_changed():
-            return True
-        if grid.grid_frame is not None:
-            if any_data_changed(grid.grid_frame, xml):
-                return True
-    return False
+async def has_temp_data(caller, xml):
+    # if user enters data on the first field and presses Enter, checking
+    #   temp_data allows us to detect this and assume they want to 'save'
+    return bool(caller.temp_data)
 
-def data_changed(caller, xml):
+async def posted(caller, xml):
     obj_name = xml.get('obj_name')
-    db_obj = caller.data_objects[obj_name]
-    return caller.data_changed(db_obj)
-"""
+    return await caller.data_objects[obj_name].getval('posted')
 
-def obj_exists(caller, xml):
+async def obj_exists(caller, xml):
     obj_name = xml.get('obj_name')
     return caller.data_objects[obj_name].exists
 
-def fld_changed(caller, xml):
-    # assume this is only called from after_input()
-    # _before_input has been set up before calling after_input()
-    dbobj_name, fld_name = xml.get('name').split('.')
-    dbobj = caller.data_objects[dbobj_name]
-    fld = dbobj.getfld(fld_name)
-    return fld.getval() != fld._before_input
-
-def data_changed(caller, xml):
-    return caller.data_changed()
-
-def has_gridframe(caller, xml):
-    if caller.grid_frame is not None:
-        print('has_gridframe() - DO WE GET HERE?')
-    return caller.grid_frame is not None
-
-def row_inserted(caller, xml):
-    # called from grid
-    return caller.inserted == 1
-
-def frame_row_inserted(caller, xml):
-    # called from frame
-    if caller.ctrl_grid is None:
-        return False
-    return caller.ctrl_grid.inserted == 1
-
-def node_inserted(caller, xml):
+async def node_inserted(caller, xml):
     return caller.parent.node_inserted
 
-def compare(caller, xml):
-    """
-    <compare src="pwd_var.pwd1" op="eq" tgt="">
-    """
-    source = xml.get('src')
-    if '.' in source:
-        source_objname, source_colname = source.split('.')
-        source_record = caller.data_objects[source_objname]
-        source_field = source_record.getfld(source_colname)
-        source_value = source_field.getval()
+async def has_ctrl_grid(caller, xml):
+    return bool(caller.ctrl_grid)  # False if None, else True
+
+async def fld_changed(caller, xml):
+    # assume this is only called from after_input()
+    # val_before_input has been set up before calling after_input()
+    dbobj_name, fld_name = xml.get('name').split('.')
+    dbobj = caller.data_objects[dbobj_name]
+    fld = await dbobj.getfld(fld_name)
+    return await fld.getval() != fld.val_before_input
+
+async def data_changed(caller, xml):
+    return caller.data_changed()
+
+async def row_inserted(caller, xml):
+    if isinstance(caller, ht.form.Frame):
+        if caller.ctrl_grid is None:
+            return False
+        grid = caller.ctrl_grid
     else:
-        source_value = source
-    if source.startswith('int('):
-        source_value = int(source[4:-1])
+        grid = caller
+    return (grid.inserted == 1)  # 0=existing, -1=appended, 1=inserted
 
-    target = xml.get('tgt')
-    if target == '$None':
-        target_value = None
-    elif target == '$True':
-        target_value = True
-    elif target == '$False':
-        target_value = False
-    elif target.startswith('int('):
-        target_value = int(target[4:-1])
-    elif '.' in target:
-        target_objname, target_colname = target.split('.')
-        target_record = caller.data_objects[target_objname]
-        target_field = target_record.getfld(target_colname)
-        target_value = target_field.getval()
-    else:
-        target_value = target
-
-#   print('"{}" {} "{}"'.format(source_value, xml.get('op'), target_value))
-
-    op = getattr(operator, xml.get('op'))
-    return op(source_value, target_value)
-
-def btn_has_label(caller, xml):
+async def btn_has_label(caller, xml):
     btn_id = xml.get('btn_id')
     btn = caller.btn_dict[btn_id]
     return btn.label == xml.get('label')
+
+async def compare(caller, xml):
+    # <compare src="pwd_var.pwd1" op="eq" tgt="">
+
+    source = xml.get('src')
+    source_value = await get_val(caller, source)
+
+    target = xml.get('tgt')
+    target_value = await get_val(caller, target)
+
+    # print('"{}" {} "{}"'.format(source_value, xml.get('op'), target_value))
+
+    compare = OPS[xml.get('op')]
+    return compare(source_value, target_value)
+
+OPS = {
+    '=': lambda src_val, tgt_val: src_val == tgt_val,
+    'eq': lambda src_val, tgt_val: src_val == tgt_val,
+    '!=': lambda src_val, tgt_val: src_val != tgt_val,
+    'ne': lambda src_val, tgt_val: src_val != tgt_val,
+    '<': lambda src_val, tgt_val: (src_val or 0) < tgt_val,
+    'lt': lambda src_val, tgt_val: (src_val or 0) < tgt_val,
+    '>': lambda src_val, tgt_val: (src_val or 0) > tgt_val,
+    'gt': lambda src_val, tgt_val: (src_val or 0) > tgt_val,
+    '<=': lambda src_val, tgt_val: (src_val or 0) <= tgt_val,
+    'le': lambda src_val, tgt_val: (src_val or 0) <= tgt_val,
+    '>=': lambda src_val, tgt_val: (src_val or 0) >= tgt_val,
+    'ge': lambda src_val, tgt_val: (src_val or 0) >= tgt_val,
+    '+': lambda src_val, tgt_val: bool(src_val + tgt_val),
+    'add': lambda src_val, tgt_val: bool(src_val + tgt_val),
+    '-': lambda src_val, tgt_val: bool(src_val - tgt_val),
+    'sub': lambda src_val, tgt_val: bool(src_val - tgt_val),
+    'is': lambda src_val, tgt_val: src_val is tgt_val,
+    'is not': lambda src_val, tgt_val: src_val is not tgt_val,
+    'in': lambda src_val, tgt_val: src_val in tgt_val,
+    'not in': lambda src_val, tgt_val: src_val not in tgt_val,
+    'matches': lambda src_val, tgt_val: bool(re.match(tgt_val+'$', src_val or '')),
+    }
+
+async def get_val(caller, value):
+    if value.startswith('('):  # expression
+        # for now assume a simple expression -
+        #    (lft [spc] op [spc] rgt)
+        # e.g. (item_row_id>balance_cust + alloc_cust)
+        lft, op, rgt = value[1:-1].split(' ')
+        lft = await get_val(caller, lft)
+        rgt = await get_val(caller, rgt)
+        op = getattr(operator,
+            {'+': 'add', '-': 'sub', '*': 'mul', '/': 'truediv'}[op])
+        if lft is None or rgt is None:
+            return None
+        else:
+            return op(lft, rgt)
+    if '.' in value:
+        obj_name, col_name = value.split('.')
+        if obj_name == '_ctx':
+            if col_name == 'ledger_row_id':
+                return getattr(caller.context, 'mod_ledg_id')[1]
+            # elif '[' in col_name:  # e.g. _ctx.dates[0]
+            #     pos_1 = col_name.find('[')
+            #     pos_2 = col_name[pos_1:].find(']')
+            #     pos = int(col_name[pos_1+1:pos_1+pos_2])
+            #     col_name = col_name[:pos_1]
+            #     return getattr(caller.context, col_name)[pos]
+            else:
+                return getattr(caller.context, col_name)
+        else:
+            if obj_name == '_param':
+                db_obj = await db.cache.get_adm_params(caller.company)
+            elif obj_name == '_ledger':
+                module_row_id, ledger_row_id = caller.context.mod_ledg_id
+                db_obj = await db.cache.get_ledger_params(
+                    caller.company, module_row_id, ledger_row_id)
+            else:
+                db_obj = caller.data_objects[obj_name]
+            return await db_obj.getval(col_name)
+    if value.startswith("'"):
+        return value[1:-1]
+    if value == '$True':
+        return True
+    if value == '$False':
+        return False
+    if value == '$None':
+        return None
+    if value.isdigit():
+        return int(value)
+    raise AibError(head='Get value', body='Unknown value "{}"'.format(value))

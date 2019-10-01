@@ -1,19 +1,18 @@
-from lxml import etree
-
 # table definition
 table = {
     'table_name'    : 'org_addresses',
-    'module'        : 'org',
+    'module_id'     : 'org',
     'short_descr'   : 'Addresses',
-    'long_descr'    : 'Postal anmd physical addresses of third parties',
-    'audit_trail'   : True,
-    'table_created' : True,
-    'default_cursor': None,
-    'setup_form'    : None,
-    'upd_chks'      : None,
-    'del_chks'      : None,
-    'table_hooks'   : None,
+    'long_descr'    : 'Postal and physical addresses of third parties',
+    'sub_types'     : [
+        ['address_type', 'address', []],
+        ],
+    'sub_trans'     : None,
     'sequence'      : None,
+    'tree_params'   : None,
+    'roll_params'   : None,
+    'indexes'       : None,
+    'ledger_col'    : None,
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -28,14 +27,15 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'generated'  : True,
+    'calculated' : True,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -46,14 +46,15 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'generated'  : True,
+    'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : '0',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -64,14 +65,15 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'generated'  : True,
+    'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : '0',
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -82,15 +84,16 @@ cols.append ({
     'long_descr' : 'Party row id',
     'col_head'   : 'Party',
     'key_field'  : 'A',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
-    'fkey'       : ['org_parties', 'row_id', 'party_id', 'party_id', True],
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['org_parties', 'row_id', 'party_id', 'party_id', True, None],
     'choices'    : None,
     })
 cols.append ({
@@ -100,27 +103,31 @@ cols.append ({
     'long_descr' : 'Address type',
     'col_head'   : 'Type',
     'key_field'  : 'A',
-    'generated'  : False,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 12,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'col_chks'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
-    'choices'    : [
-        True,  # use sub_types?
-        True,  # use display_names?
-        [
-            ['post', 'Postal', [], []],
-            ['phys', 'Physical', [], []],
-            ]
-        ],
+    'choices'    : None,
     })
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'address',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Address',
+    'long_descr' : 'Short address for display',
+    'col_head'   : 'Name',
+    })
 
 # cursor definitions
 cursors = []
+
+# actions
+actions = []

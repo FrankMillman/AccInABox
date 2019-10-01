@@ -10,8 +10,10 @@ parser = etree.XMLParser(
     attribute_defaults=True, remove_comments=True, remove_blank_text=True)
 form_path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'forms')
 
-import db.api
+import db.objects
 import db.create_table
+import db.cache
+param_style = db.cache.param_style
 
 def upgrade_datamodel(db_session, old_version, new_version, company='_sys'):
     print('update {} to {}'.format(old_version, new_version))
@@ -48,18 +50,18 @@ def upd_form_defn(conn, company, form_name):
     xml = gzip.compress(etree.tostring(xml))
     sql = (
         'UPDATE {0}.sys_form_defns SET form_xml = {1} WHERE form_name = {1}'
-        .format(company, conn.param_style)
+        .format(company, param_style)
         )
     params = [xml, form_name]
     conn.exec_sql(sql, params)
 
 def upgrade_0_1_1(db_session):
     print('upgrading to 0.1.1')
-    with db_session as db_mem_conn:
+    with db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
 
         # update db_tables.sys_menu_defns with new hooks
-        db_table = db.api.get_db_object(__main__, '_sys', 'db_tables')
+        db_table = db.objects.get_db_object(__main__, '_sys', 'db_tables')
         db_table.setval('table_name', 'sys_menu_defns')
         db_table.setval('table_hooks', etree.fromstring(
             '<hooks><hook type="before_save"><increment_seq args="parent_id"/></hook>'
@@ -68,7 +70,7 @@ def upgrade_0_1_1(db_session):
         db_table.save()
 
         # update db_columns.sys_menu_defns.opt_type with allow_amend, choices
-        db_column = db.api.get_db_object(__main__, '_sys', 'db_columns')
+        db_column = db.objects.get_db_object(__main__, '_sys', 'db_columns')
         db_column.setval('table_name', 'sys_menu_defns')
         db_column.setval('col_name', 'opt_type')
         db_column.setval('allow_amend', False)
@@ -187,12 +189,12 @@ def upgrade_0_1_1(db_session):
         conn.cur.executemany(
             "INSERT INTO _sys.sys_menu_defns "
             "(descr, parent_id, seq, opt_type, table_name, cursor_name, form_name) "
-            "VALUES ({})".format(', '.join([conn.param_style] * 7))
+            "VALUES ({})".format(', '.join([param_style] * 7))
             , params)
 
 def upgrade_0_1_2(db_session):
     print('upgrading to 0.1.2')
-    with db_session as db_mem_conn:
+    with db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
 
         # insert new form definition 'menu_setup'
@@ -205,16 +207,16 @@ def upgrade_0_1_2(db_session):
         xml = xml.replace('<<', '&lt;')
         xml = xml.replace('>>', '&gt;')
 
-        form_defn = db.api.get_db_object(__main__, '_sys', 'sys_form_defns')
+        form_defn = db.objects.get_db_object(__main__, '_sys', 'sys_form_defns')
         form_defn.setval('form_name', form_name)
         form_defn.setval('title', 'Menu Setup')
         form_defn.setval('form_xml', etree.fromstring(xml, parser=parser))
         form_defn.save()
 
-        menu_defn = db.api.get_db_object(__main__, '_sys', 'sys_menu_defns')
+        menu_defn = db.objects.get_db_object(__main__, '_sys', 'sys_menu_defns')
         menu_defn.select_row(keys={'descr': 'System setup'})
         if menu_defn.exists:
-            parent_id = menu_defn.getval('row_id')
+            parent_id = await menu_defn.getval('row_id')
         else:  # user has changed menu setup
             parent_id = 1  # append to root
 
@@ -228,20 +230,20 @@ def upgrade_0_1_2(db_session):
 
 def upgrade_0_1_3(db_session, company):
     print('upgrading to 0.1.3')
-    with db_session as db_mem_conn:
+    with db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
 
         # upd db_columns.dir_users.display_name - allow_null -> True
         sql = (
             'SELECT row_id FROM {}.db_tables WHERE table_name = {}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         cur = conn.exec_sql(sql, ['dir_users'])
         table_id = cur.fetchone()[0]
         sql = (
             'UPDATE {0}.db_columns SET allow_null = {1} '
             'WHERE table_id = {1} AND col_name={1}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         params = ['1', table_id, 'display_name']
         conn.exec_sql(sql, params)
@@ -250,14 +252,14 @@ def upgrade_0_1_3(db_session, company):
         # upd db_columns.sys_menu_defns.children - sql - '_sys' -> '{company}'
         sql = (
             'SELECT row_id FROM {}.db_tables WHERE table_name = {}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         cur = conn.exec_sql(sql, ['sys_menu_defns'])
         table_id = cur.fetchone()[0]
         sql = (
             'UPDATE {0}.db_columns SET allow_amend = {1}, sql={1} '
             'WHERE table_id = {1} AND col_name={1}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         params = [
             '1',
@@ -275,7 +277,7 @@ def upgrade_0_1_3(db_session, company):
         params.append(('parent_num', 'INT', 'Parent numeric id', 'Parent id - change null to 0', '',
             'N', False, False, True, 0, 0,
             "SELECT COALESCE(a.parent_id, 0)"))
-        db_column = db.api.get_db_object(__main__, company, 'db_columns')
+        db_column = db.objects.get_db_object(__main__, company, 'db_columns')
         for seq, param in enumerate(params):
             db_column.init()
             db_column.setval('table_name', 'sys_menu_defns')
@@ -303,7 +305,7 @@ def upgrade_0_1_3(db_session, company):
         # add del_chk to dir_companies (company_id != '_sys')
         sql = (
             'UPDATE {0}.db_tables SET del_checks = {1} WHERE table_name = {1}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         del_checks = []
         del_checks.append(('CHECK', '', 'company_id', '!=', '"_sys"', ''))
@@ -311,21 +313,21 @@ def upgrade_0_1_3(db_session, company):
         conn.exec_sql(sql, params)
         sql = (
             'SELECT row_id FROM {}.db_tables WHERE table_name = {}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         cur = conn.exec_sql(sql, ['dir_companies'])
         table_id = cur.fetchone()[0]
         sql = (
             'SELECT audit_row_id FROM {0}.db_tables_audit_xref '
             'WHERE data_row_id = {1} AND type = {1}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         params = [table_id, 'chg']
         cur = conn.exec_sql(sql, params)
         audit_row_id = cur.fetchone()[0]
         sql = (
             'UPDATE {0}.db_tables_audit SET del_checks = {1} WHERE row_id = {1}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         params = [dumps(del_checks), audit_row_id]
         conn.exec_sql(sql, params)
@@ -345,7 +347,7 @@ def upgrade_0_1_3(db_session, company):
 
         sql = (
             'UPDATE {0}.sys_form_defns SET form_xml = {1} WHERE form_name = {1}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         params = [xml, form_name]
         conn.exec_sql(sql, params)
@@ -354,14 +356,14 @@ def upgrade_0_1_3(db_session, company):
         # upd db_columns.dir_users_companies.company_id.fkey - child -> True
         sql = (
             'SELECT row_id FROM {}.db_tables WHERE table_name = {}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         cur = conn.exec_sql(sql, ['dir_users_companies'])
         table_id = cur.fetchone()[0]
         sql = (
             'UPDATE {0}.db_columns SET fkey = {1} '
             'WHERE table_id = {1} AND col_name={1}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         fkey = []
         fkey.append('dir_users')
@@ -374,7 +376,7 @@ def upgrade_0_1_3(db_session, company):
         sql = (
             'UPDATE {0}.db_columns SET fkey = {1} '
             'WHERE table_id = {1} AND col_name={1}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         fkey = []
         fkey.append('dir_companies')
@@ -400,7 +402,7 @@ def upgrade_0_1_3(db_session, company):
 
         sql = (
             'UPDATE {0}.db_tables SET form_xml = {1} WHERE table_name = {1}'
-            .format(company, conn.param_style)
+            .format(company, param_style)
             )
         params = [xml, 'dir_users']
         conn.exec_sql(sql, params)
@@ -421,7 +423,7 @@ def upgrade_0_1_4(db_session):
 
 def upgrade_0_1_5(db_session, company):
     print('upgrading to 0.1.5')
-    with db_session as db_mem_conn:
+    with db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
 
         form_names = ('setup_user', 'setup_roles')

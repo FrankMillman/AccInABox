@@ -1,0 +1,33 @@
+<form name="setup_apsupp" title="Set up suppliers">
+  <db_objects>
+    <db_obj name="supp" table_name="ap_suppliers" is_formview_obj="true"/>
+    <db_obj name="party" table_name="org_parties" fkey="supp.party_row_id"/>
+    <db_obj name="currency" table_name="adm_currencies" fkey="supp.currency_id"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="supp">
+    <toolbar template="Setup_Form"/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Party Id:"/>
+      <col/>
+      <input obj_name="supp" col_name="supp_id" lng="60"/>
+      <display obj_name="party" col_name="display_name" lng="160"/>
+      <if_ src="_ledger.currency_id" op="is_" tgt="$None"/>
+      <row/>
+      <col/>
+      <label value="Currency:"/>
+      <col/>
+      <input obj_name="supp" col_name="currency" lng="60"/>
+      <display obj_name="currency" col_name="descr" lng="160"/>
+      <end_if/>
+    </body>
+    <button_row template="Setup_Form"/>
+    <frame_methods template="Setup_Form"/>
+  </frame>
+</form>

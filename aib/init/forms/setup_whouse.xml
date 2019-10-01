@@ -1,0 +1,40 @@
+<form name="setup_whouse" title="Set up warehouses">
+  <db_objects>
+    <db_obj name="whouse" table_name="in_warehouses" is_formview_obj="true"/>
+    <db_obj name="location" table_name="adm_locations" fkey="whouse.location_id"/>
+    <db_obj name="currency" table_name="adm_currencies" fkey="whouse.currency_id"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="whouse">
+    <toolbar template="Setup_Form"/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Warehouse code:"/>
+      <col/>
+      <input obj_name="whouse" col_name="code" lng="60"/>
+      <row/>
+      <col/>
+      <label value="Warehouse name:"/>
+      <col/>
+      <input obj_name="whouse" col_name="name" lng="200"/>
+      <row/>
+      <col/>
+      <label value="Location:"/>
+      <col/>
+      <input obj_name="whouse" col_name="location" lng="60"/>
+      <row/>
+      <col/>
+      <label value="Currency:"/>
+      <col/>
+      <input obj_name="whouse" col_name="currency" lng="60"/>
+      <display obj_name="currency" col_name="descr" lng="160"/>
+    </body>
+    <button_row template="Setup_Form"/>
+    <frame_methods template="Setup_Form"/>
+  </frame>
+</form>

@@ -1,92 +1,286 @@
 import importlib
 from json import loads
-from ast import literal_eval
-#import operator
+from datetime import date as dt
+from decimal import Decimal as D, DecimalException
+# from copy import deepcopy
 import re
 
-from errors import AibError
-from start import log_db, db_log
+import db.cache
+from common import AibError
 
-def chk_constraint(ctx, constraint, value=None, errmsg=None):
+async def eval_infix(elem, db_obj, fld, value):
+    # Step 1 - convert infix expression to postfix notation
+
+    end_char = ' ()+-*/'  # characters that denote end of value/function
+    ops = {'+': 0, '-': 0, '*': 1, '/': 1}  # operators with precedence
+
+    operand = ''
+    function = ''
+    postfix = []
+    stack = []
+    for ch in elem:
+        if ch not in end_char:
+            operand += ch
+            continue
+        if ch == '(':
+            if operand:
+                function = operand
+                operand = ''
+            stack.append(ch)
+            continue
+        if operand:
+            postfix.append(operand)
+            operand = ''
+        if ch == ')':
+            while stack[-1] != '(':
+                postfix.append(stack.pop())
+            stack.pop()
+            if function:
+                if not stack.count('('):
+                    postfix.append(function)
+                    function = ''
+            continue
+        if ch in ops:
+            while stack and stack[-1] != '(' and ops[ch] <= ops[stack[-1]]:
+                postfix.append(stack.pop())
+            stack.append(ch)
+            continue
+    if operand:
+        postfix.append(operand)
+        operand = ''
+    while stack:
+        postfix.append(stack.pop())
+
+    # Step 2 - evaluate postfix expression
+    stack = []
+    for elem in postfix:
+        if elem not in ('+', '-', '*', '/', 'abs'):
+            try:
+                elem = D(elem)
+            except DecimalException:
+                elem, _ = await eval_elem(elem, db_obj, fld, value)
+            stack.append(elem)
+        elif elem == 'abs':
+            op1 = stack.pop()
+            stack.append(abs(op1))
+        else:
+            op1 = stack.pop()
+            op2 = stack.pop()
+            if elem == '+':
+                stack.append(op2 + op1)
+            elif elem == '-':
+                stack.append(op2 - op1)
+            elif elem == '*':
+                stack.append(op2 * op1)
+            elif elem == '/':
+                stack.append(op2 / op1)
+
+    return stack.pop()
+
+async def eval_elem_old(elem, db_obj, fld, value):  # replaced 2019-07-08
+    if elem == '':
+        return None, fld
+    if elem == '$value':
+        return value, fld
+    if elem == '$None':
+        return None, fld
+    if elem == '$True':
+        return True, fld
+    if elem == '$False':
+        return False, fld
+    if elem.startswith("'"):
+        return elem[1:-1], fld
+    if elem.isdigit():
+        return int(elem), fld
+    if elem.startswith('('):
+        return await eval_infix(elem[1:-1], db_obj, fld, value), fld
+    if elem == '$orig':
+        return await fld.get_orig(), fld
+    if '$exists' in elem:
+        obj_name = elem.split('$')[0]
+        if obj_name:
+            test_obj = db_obj.context.data_objects[obj_name]
+        else:
+            test_obj = db_obj
+        return test_obj.exists, fld
+    if elem.endswith('$orig'):
+        return await db_obj.get_orig(elem[:-5]), fld
+    if elem.startswith('recalc('):
+        fld2 = await db_obj.getfld(elem[7:-1])
+        await fld2.recalc()
+        return await fld2.getval(), fld2 if fld is None else fld
+    fld2 = await db_obj.getfld(elem)
+    return await fld2.getval(), fld2 if fld is None else fld
+
+async def eval_exp_old(src, chk, tgt, db_obj, fld, value):  # replaced 2019-07-08
+
+    # evaluating 'src' may return a new field if fld is None
+    # reason - if this is a column-level col_check, fld is passed in as a parameter,
+    #   so will never be None
+    # if it is a table_level upd_check or del_check, fld is initially None
+    # if src is a field name, we need to set up fld, as it may be passed as an
+    #   argument to pyfunc (e.g. check_tran_date)
+    # eval_elem checks to see if fld is None - if it is, and src is a field name,
+    #   it returns the new field, else it returns the existing field
+    # the same applies to tgt, but there is no need to over-ride fld in this case
+
+    src_val, fld = await eval_elem(src, db_obj, fld, value)
+
+    if chk == 'pyfunc':
+        result = await pyfunc(db_obj, fld, src_val, tgt)
+    else:
+        tgt_val, _ = await eval_elem(tgt, db_obj, fld, value)
+        try:
+            result = CHKS[chk](src_val, tgt_val)
+        except ValueError:
+            result = False
+    return result
+
+async def eval_elem(elem, db_obj, fld, value):
+    if elem == '':
+        return None
+    if elem == '$value':
+        return value
+    if elem == '$None':
+        return None
+    if elem == '$True':
+        return True
+    if elem == '$False':
+        return False
+    if elem.startswith("'"):
+        return elem[1:-1]
+    if elem.isdigit():
+        return int(elem)
+    if elem.startswith('('):
+        return await eval_infix(elem[1:-1], db_obj, fld, value)
+    if elem == '$orig':
+        return await fld.get_orig()
+    if '$exists' in elem:
+        obj_name = elem.split('$')[0]
+        if obj_name:
+            test_obj = db_obj.context.data_objects[obj_name]
+        else:
+            test_obj = db_obj
+        return test_obj.exists
+    if elem.endswith('$orig'):
+        return await db_obj.get_orig(elem[:-5])
+    if elem.startswith('recalc('):
+        fld2 = await db_obj.getfld(elem[7:-1])
+        await fld2.recalc()
+        return await fld2.getval()
+    fld2 = await db_obj.getfld(elem)
+    return await fld2.getval()
+
+async def eval_exp(src, chk, tgt, db_obj, fld, value):
+    if chk == 'pyfunc':
+        if fld is None:  # called from db.objects
+            fld = await db_obj.getfld(src)  # src is the field name to check
+        src_val = await eval_elem(src, db_obj, fld, value)
+        func_name = tgt
+        if '.' in func_name:
+            module_name, func_name = func_name.rsplit('.', 1)
+            module = importlib.import_module(module_name)
+            result = await getattr(module, func_name)(db_obj, fld, src_val)
+        else:  # e.g. check_not_null
+            result = await globals()[func_name](db_obj, fld, src_val)
+        if result not in (True, False):
+            raise AibError(head='pyfunc error', body=f'pyfunc {func_name} must return True or False')
+    else:
+        src_val = await eval_elem(src, db_obj, fld, value)
+        tgt_val = await eval_elem(tgt, db_obj, fld, value)
+        # don't know what could go wrong here [2019-07-08]
+        # try:
+        #     result = CHKS[chk](src_val, tgt_val)
+        # except ValueError:
+        #     result = False
+        result = CHKS[chk](src_val, tgt_val)
+    return result
+
+async def eval_expr(expr, db_obj, fld, value=None):
+    expr = [list(step) for step in expr]  # make a copy
+    lbr = rbr = 0
+    for exp in expr:
+        if exp[1]:  # not None or ''
+            # if not re.match('\(*$', exp[1]):  # can be used for 'pattern match'
+            if any(ch for ch in exp[1] if ch != '('):
+                errmsg = ('Invalid left bracket in {}'.format(expr))
+                raise AibError(head='Expression error', body=errmsg)
+            lbr += len(exp[1])
+        if exp[5]:  # not None or ''
+            # if not re.match('\)*$', exp[5]):  # can be used for 'pattern match'
+            if any(ch for ch in exp[5] if ch != ')'):
+                errmsg = ('Invalid right bracket in {}'.format(expr))
+                raise AibError(head='Expression error', body=errmsg)
+            rbr += len(exp[5])
+    if lbr != rbr:
+        errmsg = ('Unequal brackets in {}'.format(expr))
+        raise AibError(head='Expression error', body=errmsg)
+    max = len(expr)
+    pos = 0
+    while pos < max:
+        exp = expr[pos]
+        if exp[1]:  # not None or ''
+            # evaluate expressions in brackets first
+            cnt_lbr = len(exp[1])
+            first = pos
+            last = first
+            while cnt_lbr:
+                if expr[last][5]:  # not None or ''
+                    cnt_lbr -= len(expr[last][5])
+                if cnt_lbr > 0:
+                    last += 1
+                else:
+                    break
+
+            if expr[pos-1][1] is False and exp[0].lower() == 'and':
+                # no need to evaluate - leave as False
+                expr[first:last+1] = []
+                max -= (1 + last - first)
+                pos -= 1
+            else:
+                sub_expr = expr[first:last+1]
+                sub_expr[0][1] = sub_expr[0][1][1:]  # strip one left bracket
+                sub_expr[-1][5] = sub_expr[-1][5][1:]  # strip one right bracket
+                expr[first:last+1] = [[
+                    exp[0], await eval_expr(sub_expr, db_obj, fld, value)
+                    ]]
+                max -= (last - first)
+
+        elif expr[pos-1][1] is False and exp[0].lower() == 'and':
+            # no need to evaluate - leave as False
+            expr[pos:pos+1] = []
+            max -= 1
+            pos -= 1
+        else:
+            expr[pos] = [
+                exp[0], await eval_exp(exp[2], exp[3], exp[4], db_obj, fld, value)
+                ]
+
+        if pos < max-1:  # check for 'short-circuit'
+            if expr[pos][1] is True and expr[pos+1][0].lower() == 'or':
+                return True  # no need to evaluate rest of expression
+        pos += 1
+    return expr[-1][1]        
+
+async def chk_constraint(caller, constraint, value=None, errmsg=None):
     # can be a column constraint (col_chk) or a table constraint (upd_chk or del_chk)
     try:
-        db_obj = ctx.db_obj  # this is a column constraint
-        fld = ctx
-        descr = ctx.col_defn.short_descr
+        db_obj = caller.db_obj  # this is a column constraint
+        fld = caller
+        descr = caller.col_defn.short_descr
     except AttributeError:
-        db_obj = ctx  # this is a table constraint
+        db_obj = caller  # this is a table constraint
         fld = None
         descr = db_obj.db_table.short_descr
-    new_check = []
-    for test, lbr, src, chk, tgt, rbr in constraint:
-        if test in ('and', 'or'):  # else must be 'check'
-            new_check.append(test)
-        if lbr == '(':
-            new_check.append(lbr)
 
-        if src == '$value':
-            src_val = value
-        elif src == '$orig':
-            src_val = fld.get_orig()
-        elif src == '$exists':
-            src_val = db_obj.exists
-        elif src.endswith('$orig'):
-            src_val = db_obj.get_orig(src[:-5])
-        elif src.startswith('int('):
-            src_val = int(src[4:-1])
-        else:
-            src_val = db_obj.getval(src)
+    result = await eval_expr(constraint, db_obj, fld, value)
 
-        if tgt == '':
-            tgt_val = None
-        elif tgt == '$orig':
-            tgt_val = fld.get_orig()
-        elif tgt.endswith('$orig'):
-            tgt_val = db_obj.get_orig(tgt[:-5])
-        elif tgt in db_obj.fields:
-            tgt_val = db_obj.getval(tgt)
-        elif tgt.startswith('int('):
-            tgt_val = int(tgt[4:-1])
-        else:
-            tgt_val = literal_eval(tgt)
-
-        chk, err = CHKS[chk]
-        try:
-            result = chk(db_obj, fld, src_val, tgt_val)
-        except ValueError as e:
-            result = False
-            err = e.args[0]
-        if result is False:
-            if not errmsg:  # if exists, use errmsg supplied
-                errmsg = err
-                if '$src' in errmsg:
-                    errmsg = errmsg.split('$src')
-                    errmsg.insert(1, '{}'.format(db_obj.getfld(src).col_name))
-                    errmsg = ''.join(errmsg)
-                if '$tgt' in errmsg:
-                    errmsg = errmsg.split('$tgt')
-                    errmsg.insert(1, tgt)
-                    errmsg = ''.join(errmsg)
-        new_check.append(str(result))  # literal 'True' or 'False'
-        if rbr == ')':
-            new_check.append(rbr)
-
-    try:
-        result = eval(' '.join(new_check))
-        if result is False:
-            raise AibError(head=descr, body=errmsg)
-    except SyntaxError:  # e.g. unmatched brackets
-        errmsg = 'constraint {} is invalid'.format(constraint)
+    if result not in (True, False):
+        raise AibError(head='constraint error', body=f'constraint {constraint} must return True or False')
+    if result is False:
         raise AibError(head=descr, body=errmsg)
 
-def enum(db_obj, fld, value, args):
-    # [['enum', ['aaa', 'bbb', 'ccc']]
-    return value in args
-
-def pattern(db_obj, fld, value, args):
-    return bool(re.match(args+'$', value))  #  $ means end of string
-
-def cdv(db_obj, fld, value, args):
+def cdv(value, args):
     # this cannot work as is - is value a string or an int?
     # it will be easy to get working when needed, so leave for now
     weights, cdv_mod = args
@@ -95,130 +289,93 @@ def cdv(db_obj, fld, value, args):
     mod = tot % cdv_mod
     return mod == chkdig
 
-def nospace(db_obj, fld, value, args):
+def nospace(value, args):
     return value.isalnum()
 
-def nexist(db_obj, fld, value, args):
-    table_name, where = args
+async def nexist(db_obj, fld, src_val, tgt_val):
+    tgt_tbl, tgt_col = tgt_val.split('.')
 
-    where_clause = 'WHERE'
-    params = []
-    for test, lbr, col, op, expr, rbr in where:
-        col = 'a.{}'.format(col)
-
-        if expr is None:
-            expr = 'null'
-
-        if not isinstance(expr, str):  # must be int, dec, date
-            params.append(expr)
-            expr = '?'
-        elif expr.lower() == 'null':
-            pass  # don't parameterise 'null'
-        elif expr.lower() == '$value':
-            params.append(value)
-            expr = '?'
-        elif expr.startswith("'"):  # expr is a literal string
-            params.append(expr[1:-1])
-            col = 'LOWER({})'.format(col)
-            expr = 'LOWER(?)'
-        elif expr.startswith('('):  # expression
-            # could be a tuple - WHERE title IN ('Mr', 'Mrs')
-            raise NotImplementedError  # does this ever happen
-        elif expr.startswith('_'):  # parameter
-            raise NotImplementedError  # does this ever happen
-        elif expr.startswith('?'):  # get user input
-            raise NotImplementedError  # does this ever happen
-        else:  # must be a column name
-            expr = 'a.{}'.format(expr)
-
-        where_clause += ' {} {}{} {} {}{}'.format(
-            test, lbr, col, op, expr, rbr)
-
-    where_clause = where_clause.replace('?', self.param_style)
-
-    if chk_val == '$value':
-        chk_val = value
-    with db_obj.db_session as db_mem_conn:
-        sql = 'SELECT COUNT(*) FROM {}.{} WHERE {} = {}'.format(
-            company, db_obj.data_table, fld.col_name, conn.param_style)
-        if log_db:
-            db_log.write('{}, {}\n\n'.format(sql, chk_val))
-        conn = db_mem_conn.db
-#       conn.cur.execute(
-#           'SELECT COUNT(*) FROM {}.{} WHERE {} = {}'
-#           .format(company, db_obj.data_table, fld.col_name,
-#           conn.param_style) , chk_val)
-        conn.cur.execute(sql, [chk_val])
-    return conn.cur.fetchone()[0] == 0
-
-def pyfunc(db_obj, fld, src_val, tgt_val):
-    func_name = tgt_val
-    if '.' in func_name:
-        module_name, func_name = func_name.rsplit('.', 1)
-        module = importlib.import_module(module_name)
-        getattr(module, func_name)(db_obj, fld, src_val)
-    else:
-        globals()[func_name](db_obj, fld, src_val)
-
-"""
-CHKS = {
-    '=': (operator.eq, '$src must equal $tgt'),
-    '!=': (operator.ne, '$src must not equal $tgt'),
-    '<': (operator.lt, '$src must be less than $tgt'),
-    '>': (operator.gt, '$src must be greater than $tgt'),
-    '<=': (operator.le, '$src must be less than or equal to $tgt'),
-    '>=': (operator.ge, '$src must greater than or equal to $tgt'),
-    'is': (operator.is_, '$src must be $tgt'),
-    'is not': (operator.is_not, '$src must not be $tgt'),
-    'in': (lambda x,y: x in y, '$src must be one of $tgt'),
-#   'in': (enum,  'must be one of $tgt'),
-    'not in': (lambda x,y: x not in y, '$src must not be one of $tgt'),
-    'matches': (lambda x,y: bool(re.match(y+'$', x)),  'Value must match the pattern $tgt'),
-#   'matches': (pattern,  'Value must match the pattern $tgt'),
-    'cdv': (cdv,  '$src fails the check digit test $tgt'),
-    'nospace': (nospace,  '$src may not contain spaces'),
-#   'is xml': (is_xml, ''),
-    'nexist': (nexist, '$src must not exist on $tgt')
-    }
-"""
-
-CHKS = {
-    '=': (lambda db_obj, fld, src_val, tgt_val: src_val == tgt_val, '$src must equal $tgt'),
-    '!=': (lambda db_obj, fld, src_val, tgt_val: src_val != tgt_val, '$src must not equal $tgt'),
-    '<': (lambda db_obj, fld, src_val, tgt_val: src_val < tgt_val, '$src must be less than $tgt'),
-    '>': (lambda db_obj, fld, src_val, tgt_val: src_val > tgt_val, '$src must be greater than $tgt'),
-    '<=': (lambda db_obj, fld, src_val, tgt_val: src_val <= tgt_val, '$src must be less than or equal to $tgt'),
-    '>=': (lambda db_obj, fld, src_val, tgt_val: src_val >= tgt_val, '$src must greater than or equal to $tgt'),
-    'is': (lambda db_obj, fld, src_val, tgt_val: src_val is tgt_val, '$src must be $tgt'),
-    'is not': (lambda db_obj, fld, src_val, tgt_val: src_val is not tgt_val, '$src must not be $tgt'),
-    'in': (lambda db_obj, fld, src_val, tgt_val: src_val in tgt_val, '$src must be one of $tgt'),
-    'not in': (lambda db_obj, fld, src_val, tgt_val: src_val not in tgt_val, '$src must not be one of $tgt'),
-    'matches': (lambda db_obj, fld, src_val, tgt_val: bool(re.match(tgt_val+'$', src_val or '')),  'Value must match the pattern $tgt'),
-    'cdv': (cdv,  '$src fails the check digit test $tgt'),
-    'nospace': (nospace,  '$src may not contain spaces'),
-    'nexist': (nexist, '$src must not exist on $tgt'),
-    'pyfunc': (pyfunc, None),
-    }
-
-def check_not_null(db_obj, fld, value):
-    # called from db_columns.upd_chks
-    allow_null = db_obj.getfld('allow_null')
-    if value == allow_null.get_orig():
-        return  # value not changed
-    if value is True:
-        return  # changed to 'allow null' - no implications
-    if allow_null.get_orig() is None:
-        return  # new field - no existing data to check
     sql = (
-        'SELECT COUNT(*) FROM {}.{} WHERE {} IS NULL'
-        .format(db_obj.data_company, db_obj.getval('table_name'), db_obj.getval('col_name'))
+        f'SELECT CASE WHEN EXISTS('
+        f'SELECT * FROM {db_obj.company}.{tgt_tbl} '
+        f'WHERE {tgt_col} = {db_obj.db_table.constants.param_style}'
+        f') THEN 1 ELSE 0 END'
         )
-    with db_obj.context.db_session as db_mem_conn:
+    params = (src_val,)
+
+    async with db_obj.context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
-        cur = conn.exec_sql(sql)
-        if cur.fetchone()[0] != 0:
-            raise AibError(
-                head=db_obj.getval('col_name'),
-                body='Cannot unset allow_null - NULLs exist in {}'
-                    .format(db_obj.getval('table_name'))
-                )
+        cur = await conn.exec_sql(sql, params)
+        exists, = await cur.__anext__()
+    return not exists
+
+# async def pyfunc(db_obj, fld, src_val, tgt_val):
+#     func_name = tgt_val
+#     if '.' in func_name:
+#         module_name, func_name = func_name.rsplit('.', 1)
+#         module = importlib.import_module(module_name)
+#         result = await getattr(module, func_name)(db_obj, fld, src_val)
+#     else:  # e.g. check_not_null
+#         result = await globals()[func_name](db_obj, fld, src_val)
+#     if result not in (True, False):
+#         raise AibError(head='pyfunc error', body=f'pyfunc {func_name} must return True or False')
+#     return result
+
+CHKS = {
+    '=': (lambda src_val, tgt_val: src_val == tgt_val),
+    '!=': (lambda src_val, tgt_val: src_val != tgt_val),
+    '<': (lambda src_val, tgt_val:
+            False if src_val is None and tgt_val is None else
+            True if src_val is None else
+            False if tgt_val is None else
+            src_val < tgt_val),
+    '>': (lambda src_val, tgt_val:
+            False if src_val is None and tgt_val is None else
+            False if src_val is None else
+            True if tgt_val is None else
+            src_val > tgt_val),
+    '<=': (lambda src_val, tgt_val:
+            True if src_val is None and tgt_val is None else
+            True if src_val is None else
+            False if tgt_val is None else
+            src_val <= tgt_val),
+    '>=': (lambda src_val, tgt_val:
+            True if src_val is None and tgt_val is None else
+            False if src_val is None else
+            True if tgt_val is None else
+            src_val >= tgt_val),
+    'is': (lambda src_val, tgt_val: src_val is tgt_val),
+    'is not': (lambda src_val, tgt_val: src_val is not tgt_val),
+    'in': (lambda src_val, tgt_val: src_val in tgt_val),
+    'not in': (lambda src_val, tgt_val: src_val not in tgt_val),
+    'matches': (lambda src_val, tgt_val:
+            bool(re.match(tgt_val+'$', src_val or ''))),
+    'cdv': (cdv),
+    'nospace': (nospace),
+    'nexist': (nexist),
+    }
+
+async def check_not_null(db_obj, fld, value):
+    # called from db_columns.upd_checks
+    if not db_obj.exists:
+        return True  # new object - nothing to check
+    allow_null = await db_obj.getfld('allow_null')
+    if value == await allow_null.get_orig():
+        return True  # value not changed
+    if value is True:
+        return True  # changed to 'allow null' - no implications
+    if await allow_null.get_orig() is None:
+        return True  # new field - no existing data to check
+    sql = (
+        'SELECT CASE WHEN EXISTS'
+            '(SELECT * FROM {}.{} WHERE {} IS NULL) '
+        'THEN 1 ELSE 0 END'
+        .format(db_obj.company, await db_obj.getval('table_name'), await db_obj.getval('col_name'))
+        )
+    async with db_obj.context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        cur = await conn.exec_sql(sql)
+        nulls_exist, = await cur.__anext__()
+    if nulls_exist:
+        return False
+    return True

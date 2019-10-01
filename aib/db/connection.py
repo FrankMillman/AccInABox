@@ -1,14 +1,23 @@
 import importlib
 import threading
+import queue
+import asyncio
 from datetime import datetime
+from contextlib import asynccontextmanager
+
+from types import SimpleNamespace as SN
+db_constants = SN()
+mem_constants = SN()
+
 from collections import namedtuple
 DbMemConn = namedtuple('Conn', 'db mem')
 
-
 import logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
-from start import log_db, db_log
+from common import log_db, db_log, AibError, find_occurrence
+import db
 
 #-----------------------------------------------------------------------------
 
@@ -42,11 +51,11 @@ def config_connection(db_params):
     """
     real_db = importlib.import_module('db.conn_' + db_params['servertype'])
     # add the database-specific methods to DbConn
-    real_db.customise(DbConn, db_params)
+    real_db.customise(db_constants, DbConn, db_params)
 
     mem_db = importlib.import_module('db.conn_sqlite3')
     # add the database-specific methods to MemConn
-    mem_db.customise(MemConn, {'database': ':memory:'})
+    mem_db.customise(mem_constants, MemConn, {'database': ':memory:'})
 
 #-----------------------------------------------------------------------------
 
@@ -55,8 +64,6 @@ def config_connection(db_params):
 connection_list = []
 connections_active = []
 mem_conn_dict = {}
-#mem_conn_list = []
-#mem_conn_active = []
 connection_lock = threading.Lock()
 
 def _get_connection():
@@ -76,6 +83,9 @@ def _add_connections(n):
         connection_list.append(conn)
         connections_active.append(False)
 
+def _release_connection(pos):  # make connection available for reuse
+    connections_active[pos] = False
+
 def _get_mem_connection(mem_id):
     with connection_lock:
         if mem_id not in mem_conn_dict:
@@ -85,7 +95,7 @@ def _get_mem_connection(mem_id):
         mem_conn_active = mem_conn[1]
         try: # look for an inactive connection
             pos = mem_conn_active.index(False)
-        except ValueError:   # if not found, create 10 more
+        except ValueError:   # if not found, create 2 more
             pos = len(mem_conn_active)
             _add_mem_connections(2, mem_id, mem_conn)
         conn = mem_conn_list[pos]
@@ -100,9 +110,6 @@ def _add_mem_connections(n, mem_id, mem_conn):
         mem_conn_list.append(conn)
         mem_conn_active.append(False)
 
-def _release_connection(pos):  # make connection available for reuse
-    connections_active[pos] = False
-
 def _release_mem_conn(mem_id, pos):  # make connection available for reuse
     mem_conn = mem_conn_dict[mem_id]
     mem_conn_active = mem_conn[1]
@@ -113,19 +120,99 @@ def _close_mem_connections(mem_id):
         mem_conn = mem_conn_dict[mem_id]
         mem_conn_list = mem_conn[0]
         for conn in mem_conn_list:
+            conn.request_queue.put(None)  # tell dbh thread to stop
+            conn.dbh.join()  # wait until it has stopped
             conn.conn.close()  # actually close connection
         del mem_conn_dict[mem_id]
 
 def close_all_connections():
     """
     Close all database connections.
-
     Called at program termination.
     """
     for conn in connection_list:
+        conn.request_queue.put(None)  # tell dbh thread to stop
+        conn.dbh.join()  # wait until it has stopped
         conn.conn.close()  # actually close connection
-#       logger.info('connection %s closed' % conn.pos)
+        # logger.info(f'connection {conn.pos} closed')
+
     logger.info('database connections closed')
+
+#-----------------------------------------------------------------------------
+
+class DbHandler(threading.Thread):
+    def __init__(self, conn):
+        threading.Thread.__init__(self)
+        self.conn = conn
+
+    def run(self):
+        conn = self.conn
+        request_queue = conn.request_queue
+        cur = None
+
+        while True:
+            req = request_queue.get()
+            if req is None:  # 'put' when closing connection
+                break
+            if len(req) == 2:  # loop, 'commit/rollback'
+                if cur is not None:
+                    cur.close()
+                    cur = None
+                loop, command = req
+                if log_db:
+                    db_log.write(f'{datetime.now()}: {id(conn)}: {command.upper()};\n')
+                conn.conn.rollback() if command == 'rollback' else conn.conn.commit()
+                loop.call_soon_threadsafe(conn.wait_event.set)  # safe to release conn
+            else:
+                if cur is None:
+                    cur = conn.conn.cursor()
+                loop, sql, params, return_queue, is_cmd = req
+                if log_db:
+                    db_log.write(f'{datetime.now()}: {id(conn)}: {sql}; {params}\n')
+                    db_log.flush()
+                try:
+                    cur.execute(sql, params)
+                    if is_cmd:
+                        rowcount = cur.rowcount
+                        # sqlite3 returns 'lastrowid' after an INSERT
+                        lastrowid = getattr(cur, 'lastrowid', None)
+                        loop.call_soon_threadsafe(
+                            return_queue.put_nowait, [(rowcount, lastrowid)])
+                    else:
+                        rows = []
+                        for row in cur:
+                            rows.append(row)
+                            if len(rows) == 50:
+                                loop.call_soon_threadsafe(
+                                    return_queue.put_nowait, rows)
+                                rows = []
+                        if rows:
+                            loop.call_soon_threadsafe(
+                                return_queue.put_nowait, rows)
+                    # 'None' tells the caller we have finished
+                    loop.call_soon_threadsafe(return_queue.put_nowait, None)
+                except conn.exception as err:
+                    loop.call_soon_threadsafe(return_queue.put_nowait, err)
+            request_queue.task_done()
+
+#-----------------------------------------------------------------------------
+
+async def async_cursor(conn, sql, params, is_cmd=False, chunk=False):
+    loop = asyncio.get_event_loop()
+    return_queue = asyncio.Queue()
+    conn.request_queue.put((loop, sql, params, return_queue, is_cmd))
+
+    while True:
+        rows = await return_queue.get()
+        if not rows:
+            break
+        if isinstance(rows, Exception):
+            raise rows
+        if chunk:
+            yield rows
+        else:
+            while rows:
+                yield rows.pop(0)
 
 #-----------------------------------------------------------------------------
 
@@ -156,7 +243,7 @@ class Conn:
 
     logger.debug('DbConn in connection.py')
 
-    def __init__(self, pos=None):  # in-memory database does not use pos
+    def __init__(self):
         """
         Create an instance of DbConn.
 
@@ -166,27 +253,95 @@ class Conn:
                             pool knows which connection it refers to.
         :rtype: None
         """
-        self.init(pos)
-        self.pos = pos
 
-    def exec_sql(self, sql, params=None):
-        sql = sql.replace('$fx_', self.func_prefix)
+        self.request_queue = queue.Queue()
+        self.wait_event = asyncio.Event()  # to notify when all requests completed
+        self.dbh = DbHandler(self)
+        self.dbh.start()
+        # self.grouping = False
+        self.tablenames = None
+        self.joins = {}
+        self.save_tablenames = []
+
+    async def exec_cmd(self, sql, params=None, *, context=None, raw=False):
         if params is None:
             params = []
-        if log_db:
-            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
-        self.cur.execute(sql, params)
-        return self.cur
+        # raw is set to True by conn_sqlite3.attach_company() - execute command directly
+        # otherwise it will call check_sql_params, which will call convert_sql, which will loop
+        if not raw:
+            sql, params = await self.check_sql_params(sql, params, context)
+        # async for result in async_cursor(self, sql, params, is_cmd=True):
+        #    self.rowcount, self.lastrowid = result
+        self.rowcount, self.lastrowid = await async_cursor(self, sql, params, is_cmd=True).__anext__()
 
-    def simple_select(self, data_company, table_name, cols,
-            where=None, order=None, debug=False):
+    async def exec_sql(self, sql, params=None, context=None):
+        if params is None:
+            params = []
+        sql, params = await self.check_sql_params(sql, params, context)
+        return async_cursor(self, sql, params)
+
+    async def fetchall(self, sql, params=None, context=None):
+        if params is None:
+            params = []
+        sql, params = await self.check_sql_params(sql, params, context)
+        rows = []
+        async for chunk in async_cursor(self, sql, params, chunk=True):
+            rows += chunk
+        return rows
+
+    async def check_sql_params(self, sql, params, context):
+        sql = sql.replace('$fx_', self.constants.func_prefix)
+
+        # search for occurrences of `...`, replace with sql from specified colummn
+        while '`' in sql:
+            pos_1 = sql.find('`')
+            pos_2 = sql[pos_1+1:].find('`') + pos_1+1
+            computed_col = sql[pos_1+1: pos_2]
+            alias, company, table_name, col_name = computed_col.split('.')
+            if company == '{company}':
+                company = context.company
+            db_table = await db.objects.get_db_table(None, company, table_name)
+            col_defn = db_table.col_dict[col_name]
+            col_sql = col_defn.sql
+            if alias != 'a':
+                col_sql = col_sql.replace('a.', f'{alias}.')
+            sql = sql[:pos_1] + col_sql + sql[pos_2+1:]
+
+        while '{' in sql:
+            pos_1 = sql.find('{')
+            pos_2 = sql.find('}')
+            expr = sql[pos_1+1: pos_2]
+            if expr == 'company':
+                sql = sql[:pos_1] + context.company + sql[pos_2+1:]
+            else:
+                val = getattr(context, expr)
+
+                # find where to insert val in params
+                occurrence = 0
+                while True:
+                    pos = find_occurrence(sql, self.constants.param_style, occurrence)
+                    if pos == -1:
+                        params.append(val)
+                        break
+                    if pos > pos_1:
+                        params.insert(occurrence, val)
+                        break
+                    occurrence += 1
+
+                sql = sql[:pos_1] + self.constants.param_style + sql[pos_2+1:]
+
+        sql, params = await self.convert_sql(sql, params)  # check for any customised changes
+        return sql, params
+
+    async def simple_select(self, company, table_name, cols,
+            where=None, order=None, context=None, debug=False):
         params = []
         sql = 'SELECT '
         sql += ', '.join(cols)
-        if data_company is None:  # ':memory:' table
-            sql += ' FROM {}'.format(table_name)
+        if company is None:  # ':memory:' table
+            sql += f' FROM {table_name}'
         else:
-            sql += ' FROM {}.{}'.format(data_company, table_name)
+            sql += f' FROM {company}.{table_name}'
         if where:
             where_clause = ''
             for test, lbr, col_name, op, expr, rbr in where:
@@ -202,270 +357,222 @@ class Conn:
                     pass  # don't parameterise 'null'
                 else:
                     params.append(expr)
-                    expr = self.param_style
-                where_clause += ' {} {}{} {} {}{}'.format(
-                    test, lbr, col_name, op, expr, rbr)
+                    expr = self.constants.param_style
+                where_clause += f' {test} {lbr}{col_name} {op} {expr}{rbr}'
 
             sql += where_clause
         if order:
             order_clause = ' ORDER BY '
             for ord_col in order:
-############################################
-#               if isinstance(ord_col, tuple):
-#                   col_name, desc = ord_col
-##                  desc = ' DESC' if 'd' in desc.lower() else ''
-#                   desc = ' DESC' if desc else ''
-#               else:
-#                   col_name = ord_col
-#                   desc = ''
-############################################
                 col_name = ord_col
                 desc = ''
-                order_clause += '{}{}, '.format(col_name, desc)
+                order_clause += f'{col_name}{desc}, '
             sql += order_clause[:-2]
 
-        if debug:
-#          logger.debug((sql, params))
-           print(sql, params)
-
-#       print('SIMP', sql, params)
-
-        if log_db:
-            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
-        try:
-            self.cur.execute(sql, params)
-        except self.exception as err:
-#           self.conn.rollback()  # debatable - we already rollback on exception
-            logger.debug('ERROR {}'.format(err))  #[self.msg_pos]))
-#           return iter([])  # or 'raise'?
-            raise
-        return self.cur
-
-    def full_select(self, db_obj, col_names, where, order=None,
-            limit=0, lock=False, param=None, debug=False):
-
-        db_obj.check_perms('select')
-
-#       if db_obj.db_table.audit_trail:
-#           if where:
-#               where.append(('AND', '', 'deleted_id', '=', 0, ''))
-#           else:
-#               where = [('WHERE', '', 'deleted_id', '=', 0, '')]
-
-        sql, params = self.build_select(db_obj, col_names, where, order, limit,
-            lock, param)
-
-#       print('FULL', sql, params)
+        # print('SIMP', sql, params, '\n\n')
 
         if debug:
-           logger.debug((sql, params))
-           print(sql, params)
-
-        if log_db:
-            db_log.write('{}: {}; {}\n'.format(id(self), sql, params))
-        try:
-            self.cur.execute(sql, params)
-        except self.exception as err:
+            # logger.debug((sql, params))
             print(sql, params)
-#           self.conn.rollback()  # debatable - we already rollback on exception
-            logger.debug('ERROR {}'.format(err.args[self.msg_pos]))
-#           return iter([])  # or 'raise'?
+
+        try:
+            cur = await self.exec_sql(sql, params, context)
+        except self.exception as err:
+            logger.debug(f'ERROR {err}')
             raise
-        return self.cur
+        return cur
 
-    def build_select(self, db_obj, col_names, where, order,
-            limit=0, offset=0, lock=False, param=None):
+    async def full_select(self, db_obj, col_names, where, order=None, group=None,
+            limit=0, offset=0, lock=False, param=None, debug=False):
 
-        table_name = db_obj.table_name
+        await db_obj.check_perms('select')
 
-        if db_obj.mem_obj:
-            self.tablenames = '{} a'.format(table_name)
-        else:
-            data_company = db_obj.data_company
-            self.tablenames = '{}.{} a'.format(data_company, table_name)
-        self.joins = {}
+        sql, params = await self.build_select(db_obj.context, db_obj.db_table,
+            col_names, where, order, group, limit, offset, lock, param, debug)
 
-        def get_fld_alias(col_name):
-            if '>' in col_name:
-                src_colname, tgt_colname = col_name.split('>')
-                src_fld = db_obj.getfld(src_colname)
-                tgt_fld = src_fld.foreign_key['tgt_field']
-                tgt_rec = tgt_fld.db_obj
-                fld = tgt_rec.getfld(tgt_colname)
-                if src_colname not in self.joins:
-                    self.build_join(db_obj, src_colname, tgt_fld)
-                alias = self.joins[src_colname]
-            else:
-                fld = db_obj.getfld(col_name)
-                if fld.col_defn.col_type == 'alt':
-                    src_fld = fld.foreign_key['true_src']
-                    col_name = src_fld.col_name
-                    if col_name not in self.joins:
-                        tgt_fld = src_fld.foreign_key['tgt_field']
-                        self.build_join(db_obj, col_name, tgt_fld)
-                    fld = fld.foreign_key['tgt_field']
-                    alias = self.joins[col_name]
+        # print('FULL', sql, params, '\n\n')
+
+        if debug:
+            # logger.debug((sql, params))
+            print(sql, params)
+
+        try:
+            cur = await self.exec_sql(sql, params, context=db_obj.context)
+        except self.exception as err:
+            logger.debug(f'ERROR {err}')
+            raise
+        return cur
+
+    async def build_select(self, context, db_table, col_names, where, order, group=None,
+            limit=0, offset=0, lock=False, param=None, debug=False):
+
+        if self.tablenames is not None:  # existing build is in progress
+            self.save_tablenames.append(self.tablenames)
+
+        if debug:
+            print('BUILD', db_table.table_name, col_names, where, order)
+
+        self.grouping = False
+
+        if group is not None:
+            group_col_names = []
+            for col_name in col_names:
+                if col_name.lower().startswith('sum('):
+                    col_name = col_name[4:-1]
+                if col_name not in group_col_names:
+                    group_col_names.append(col_name)
+            for col_name in group:
+                if col_name not in group_col_names:
+                    group_col_names.append(col_name)
+            for col_name, desc in order:
+                if col_name.lower().startswith('sum('):
+                    col_name = col_name[4:-1]
+                if col_name not in group_col_names:
+                    group_col_names.append(col_name)
+            self.grouping = True
+            temp_table, params = await self.build_select(context, db_table, group_col_names, where, order=[])
+            self.grouping = False
+
+            # in the following, take each column name, extract the final part in case of a
+            #   chained name (if 'fld1>fld2>fld3', take 'fld3') and prefix it with 'tmp.'
+            col_names2 = []
+            for col_name in col_names:
+                # not the correct test for adding "[REAL]" - leave for now [2016-03-16]
+                if col_name.lower().startswith('sum('):
+                    col_names2.append(f'SUM(tmp.{col_name[4:-1].split(">")[-1]}) AS "[REAL]"')
                 else:
-                    alias = 'a'
-            return fld, alias
+                    col_names2.append(f'tmp.{col_name.split(">")[-1]}')
+            group2 = []
+            for col_name in group:
+                group2.append(f'tmp.{col_name.split(">")[-1]}')
+            order2 = []
+            for col_name, desc in order:
+                if col_name.lower().startswith('sum('):
+                    order2.append((f'SUM(tmp.{col_name[4:-1].split(">")[-1]})', desc))
+                else:
+                    order2.append((f'tmp.{col_name.split(">")[-1]}', desc))
 
-        def convert_sql(sql):
-            sql = fld.sql.replace('$fx_', self.func_prefix)
-            sql = sql.replace('{company}', db_obj.data_company)
-            if alias != 'a':
-                # convert all 'a.' into new_prefix
-                # but only if substring begins with 'a.'
-                # ignore if previous chr is not in valid_lead_chrs
-                new_prefix = '{}.'.format(alias)
-                valid_lead_chrs = ' ,()-+=|'  # any others?
-                start = 0
-                while 'a.' in sql[start:]:
-                    pos = sql[start:].index('a.')
-                    if pos > 0:
-                        if sql[start:][pos-1] not in valid_lead_chrs:
-                            start += (pos+2)
-                            continue
-                    sql = sql[:start+pos] + new_prefix + sql[start+pos+2:]
-                    start += (pos+2)
-            return sql
+            sql = ('SELECT {} FROM ({}) AS tmp GROUP BY {} ORDER BY {}'.format(
+                ', '.join(col_names2), temp_table, ', '.join(group2),
+                    ', '.join(['{}{}'.format(x, ' DESC' if y else '') for x, y in order2])))
 
+            if self.save_tablenames:
+                self.tablenames = self.save_tablenames.pop()
+            else:
+                self.tablenames = None
+                self.joins = {}
+
+            return sql, params
+
+        if isinstance(db_table, db.objects.MemTable):
+            self.tablenames = f'{db_table.table_name} a'
+            self.join_company = ''
+        else:
+            self.tablenames = f'{db_table.data_company}.{db_table.table_name}' + ' a'
+            self.join_company = f'{db_table.data_company}.'
+        # self.joins = {}
+
+        col_params = []
         columns = []
         for col_name in col_names:
-            """
-            if '.' in col_name:
-                src_colname, tgt_colname = col_name.split('.')
-                src_fld = db_obj.getfld(src_colname)
-                tgt_fld = src_fld.foreign_key['tgt_field']
-                tgt_rec = tgt_fld.db_obj
-#               fld = tgt_rec.getfld(tgt_colname)
-                fld = tgt_fld
-                if src_colname not in self.joins:
-                    self.build_join(db_obj, src_colname, tgt_fld)
-                alias = self.joins[src_colname]
-            else:
-                fld = db_obj.getfld(col_name)
-                if fld.col_defn.col_type == 'alt':
-                    tgt_fld = fld.foreign_key['tgt_field']
-                    tgt_rec = tgt_fld.db_obj
-#                   fld = tgt_rec.getfld(tgt_colname)
-                    fld = tgt_fld
-                    if col_name not in self.joins:
-                        self.build_join(db_obj, col_name, tgt_fld)
-                    alias = self.joins[col_name]
-                else:
-                    alias = 'a'
-            """
-            fld, alias = get_fld_alias(col_name)
-            if fld.sql:
-                sql = convert_sql(fld.sql)
-                columns.append('({}) as {}'.format(sql, fld.col_name))
-            else:
-                columns.append('{}.{}'.format(alias, fld.col_name))
+
+            if col_name is None:
+                columns.append('NULL')
+                continue
+
+            if isinstance(col_name, int):  # can happen when building 'combo' tree
+                columns.append(str(col_name))
+                continue
+
+            col_text = await self.get_col_text(context, db_table, col_params, col_name)
+            columns.append(col_text)
+
         columns = ', '.join(columns)
 
+        where_params = []
         where_clause = ''
-        params = []
         if where:
-
-            # do we ever use this?
-            if isinstance(where, str):  # if raw string, use it
-                print(__name__, 'YES WE USE IT!')
-                where_clause = where
-                where = []  # to force next bit to exit
 
             for test, lbr, col_name, op, expr, rbr in where:
 
-                """
-                if '.' in col_name:
-                    src_colname, tgt_colname = col_name.split('.')
-                    src_fld = db_obj.getfld(src_colname)
-                    tgt_fld = src_fld.foreign_key['tgt_field']
-                    tgt_rec = tgt_fld.db_obj
-#                   fld = tgt_rec.getfld(tgt_colname)
-                    fld = tgt_fld
-                    if src_colname not in self.joins:
-                        self.build_join(db_obj, src_colname, tgt_fld)
-                    alias = self.joins[src_colname]
-                else:
-                    fld = db_obj.getfld(col_name)
-                    alias = 'a'
-                """
-                fld, alias = get_fld_alias(col_name)
+                if len(lbr) > 1:  # assume it is a lkup filter - see ht.gui_grid.start_grid
+                    lkup_filter = lbr.replace('?', self.constants.param_style)
+                    where_params.append(rbr)  # value to use has been placed in rbr
+                    where_clause += f' {test} {lkup_filter}'
+                    continue
 
-                if fld.sql:
-                    sql = convert_sql(fld.sql)
-                    col = '({})'.format(sql)
-                elif fld.col_defn.data_type == 'TEXT':
-                    col = 'LOWER({}.{})'.format(alias, fld.col_name)
+                col, alias, as_clause = await self.get_col_alias(context, db_table, where_params, col_name)
+                if as_clause is not None:
+                    # next line is a workaround for PostgreSQL
+                    # if col contains SQL that returns 0/1 or '0'/'1', PostgreSQL cannot compare
+                    #   int/text to bool, unless you cast it to bool first
+                    if col.data_type == 'BOOL':
+                        as_clause = f"CAST({as_clause} AS {self.convert_string('BOOL')})"
+                    col_text = as_clause
+                elif col.data_type == 'TEXT':
+                    col_text = f'LOWER({alias}.{col.col_name})'
                 else:
-                    col = '{}.{}'.format(alias, fld.col_name)
+                    col_text = f'{alias}.{col.col_name}'
 
                 if expr is None:
-                    expr = 'null'
+                    expr = 'NULL'
                     if op == '=':
-                        op = 'is'
+                        op = 'IS'
                     elif op == '!=':
-                        op = 'is not'
-
-                if not isinstance(expr, str):  # must be int, dec, date
-                    params.append(expr)
-                    expr = self.param_style
-                elif expr.lower() == 'null':
-                    pass  # don't parameterise 'null'
+                        op = 'IS NOT'
+                elif not isinstance(expr, str):  # must be int, dec, date, bool
+                    where_params.append(expr)
+                    expr = self.constants.param_style
+                elif expr.isdigit():  # integer
+                    where_params.append(int(expr))
+                    expr = self.constants.param_style
                 elif expr.startswith("'"):  # literal string
-                    params.append(expr[1:-1])
-#                   col = 'LOWER({})'.format(col)
-#                   expr = 'LOWER({})'.format(self.param_style)
-                    expr = 'LOWER(' + self.param_style + ')'
-#               elif expr.startswith('c"'):  # expr is a column name
-#                   expr = expr[2:-1]  # strip leading "c'" and trailing "'"
-#                   if '.' in expr:  # can be col_name or fkey_col.target_col
-#                       join_column, expr = expr.split('.')
-#                       if join_column not in self.joins:
-#                           self.build_join(db_obj, join_column)
-#                       join_alias = self.joins[join_column]
-##                      expr = '{}.{}'.format(join_alias, expr)
-#                       expr = join_alias + '.' + expr
-#                   else:
-#                       sql = getattr(db_obj.getfld(expr), 'sql', None)
-#                       if sql is not None:
-#                           while '_param_' in sql:
-#                               sql = sql.replace('_param_', param.pop(0), 1)
-##                          expr =  '({})'.format(sql)
-#                           expr =  '(' + sql + ')'
-#                       else:
-##                          expr = 'a.{}'.format(expr)
-#                           expr = 'a.' + expr
+                    where_params.append(expr[1:-1])
+                    if col.data_type == 'TEXT':
+                        expr = 'LOWER(' + self.constants.param_style + ')'
+                    else:  # could be date
+                        expr = self.constants.param_style
                 elif expr.startswith('('):  # expression
                     # could be a tuple - WHERE title IN ('Mr', 'Mrs')
                     raise NotImplementedError  # does this ever happen
-#               elif expr.startswith('_'):  # parameter
-#                   raise NotImplementedError  # can't use this - company_id = '_sys'
                 elif expr.startswith('?'):  # get user input
                     raise NotImplementedError  # does this ever happen
-#               else:  # must be literal string
-#                   params.append(expr)
-##                  col = 'LOWER({})'.format(col)
-##                  expr = 'LOWER({})'.format(self.param_style)
-#                   expr = 'LOWER(' + self.param_style + ')'
                 else:  # must be a column name
-                    if '.' in expr:  # can be col_name or fkey_col.target_col
-                        join_column, expr = expr.split('.')
-                        if join_column not in self.joins:
-                            self.build_join(db_obj, join_column)
-                        join_alias = self.joins[join_column]
-#                       expr = '{}.{}'.format(join_alias, expr)
-                        expr = join_alias + '.' + expr
-                    else:
-                        sql = getattr(db_obj.getfld(expr), 'sql', None)
-                        if sql is not None:
-                            while '_param_' in sql:
-                                sql = sql.replace('_param_', param.pop(0), 1)
-#                           expr =  '({})'.format(sql)
-                            expr =  '(' + sql + ')'
+
+                    if '.' in expr:  # obj_name.col_name - insert value
+                        obj_name, col_name = expr.split('.')
+
+                        if obj_name == '_ctx':  #'_context':
+                            if col_name == 'ledger_row_id':
+                                where_params.append(getattr(context, 'mod_ledg_id')[1])
+                            else:
+                                where_params.append(getattr(context, col_name))
                         else:
-#                           expr = 'a.{}'.format(expr)
-                            expr = 'a.' + expr
+                            obj = context.data_objects[obj_name]
+                            where_params.append(await obj.getval(col_name))
+                        expr = self.constants.param_style
+
+                    else:
+                        try:
+                            col, alias, as_clause = await self.get_col_alias(
+                                context, db_table, where_params, expr)
+                        except Exception:
+                            import pdb
+                            pdb.set_trace()
+                        if as_clause is not None:
+                            expr = as_clause
+                        elif col.data_type == 'TEXT':
+                            expr = f'LOWER({alias}.{col.col_name})'
+                        else:
+                            expr = f'{alias}.{col.col_name}'
+
+                # duplicate of first test above - removed 2019-09-26
+                # if expr is None:
+                #     expr = 'null'
+                #     if op == '=':
+                #         op = 'is'
+                #     elif op == '!=':
+                #         op = 'is not'
 
                 if op.lower() in ('like', 'not like'):
                     assert isinstance(expr, str)
@@ -473,11 +580,23 @@ class Conn:
                 else:
                     esc = ''
 
-                where_clause += ' {} {}{} {} {}{}{}'.format(
-                    test, lbr, col, op, expr, rbr, esc)
+                where_clause += f' {test} {lbr}{col_text} {op} {expr}{rbr}{esc}'
 
-#           where_clause = where_clause.replace('?', self.param_style)
+        group_params = []
+        group_clause = ''
+        if group:
+            group_list = []
+            for col_name in group:
+                col, alias, as_clause = await self.get_col_alias(
+                    context, db_table, group_params, col_name)
+                if as_clause is not None:
+                    group_list.append(as_clause)
+                else:
+                    group_list.append(f'{alias}.{col.col_name}')
 
+            group_clause = f' GROUP BY {", ".join(group_list)}'
+
+        order_params = []
         order_clause = ''
         if order:
             order_list = []
@@ -485,68 +604,333 @@ class Conn:
                 col_name, desc = ord_col
                 desc = ' DESC' if desc else ''
 
-                """
-                if '.' in col:  # fkey_col.target_col
-                    join_column, col = col.split('.')
-                    if join_column not in self.joins:
-                        self.build_join(db_obj, join_column)
-                    join_alias = self.joins[join_column]
-                    order_by = '{}.{}'.format(join_alias, col)
+                if col_name.lower().startswith('sum('):
+                    build_sum = True
+                    col_name = col_name[4:-1]
                 else:
-                    sql = getattr(db_obj.getfld(col), 'sql', None)
-                    if sql is not None:
-                        while '_param_' in sql:
-                            sql = sql.replace('_param_', param.pop(0), 1)
-                        order_by = '({})'.format(sql)
-                    else:
-                        order_by = 'a.{}'.format(col)
-                order_clause += '{}{}, '.format(order_by, desc)
-                """
+                    build_sum = False
 
-                """
-                if '.' in col_name:
-                    src_colname, tgt_colname = col_name.split('.')
-                    src_fld = db_obj.getfld(src_colname)
-                    tgt_fld = src_fld.foreign_key['tgt_field']
-                    tgt_rec = tgt_fld.db_obj
-#                   fld = tgt_rec.getfld(tgt_colname)
-                    fld = tgt_fld
-                    if src_colname not in self.joins:
-                        self.build_join(db_obj, src_colname, tgt_fld)
-                    alias = self.joins[src_colname]
+                col, alias, as_clause = await self.get_col_alias(
+                    context, db_table, order_params, col_name)
+                if as_clause is not None:
+                    order_list.append(f'{as_clause}{desc}')
+                elif build_sum:
+                    order_list.append(f'SUM({alias}.{col.col_name}){desc}')
                 else:
-                    fld = db_obj.getfld(col_name)
-                    alias = 'a'
-                """
-                fld, alias = get_fld_alias(col_name)
-                if fld.sql:
-                    sql = convert_sql(fld.sql)
-                    order_list.append('({}){}'.format(sql, desc))
-                else:
-                    order_list.append('{}.{}{}'.format(alias, fld.col_name, desc))
+                    order_list.append(f'{alias}.{col.col_name}{desc}')
 
-            order_clause = ' ORDER BY {}'.format(', '.join(order_list))
+            order_clause = f' ORDER BY {", ".join(order_list)}'
 
-        sql = self.form_sql(columns, self.tablenames, where_clause,
-            order_clause, limit, offset, lock)
+        table_params = []
+        # {...} represents a run-time value - extract it and add to parameters
+        while '{' in self.tablenames:
+            pos1 = self.tablenames.find('{')
+            pos2 = self.tablenames.find('}')
+            expr = self.tablenames[pos1+1: pos2]
+            val = getattr(context, expr)
+            table_params.append(val)
+            self.tablenames = '{}{}{}'.format(
+                self.tablenames[:pos1], self.constants.param_style, self.tablenames[pos2+1:])
+
+        params = col_params + table_params + where_params + group_params + order_params
+
+        sql = await self.form_sql(columns, self.tablenames, where_clause,
+            group_clause, order_clause, limit, offset, lock)
+
+        if self.save_tablenames:
+            self.tablenames = self.save_tablenames.pop()
+        else:
+            self.tablenames = None
+            self.joins = {}
 
         return sql, params
 
-    def build_join(self, db_obj, src_colname, tgt_fld):
+    async def get_col_text(self, context, db_table, col_params, col_name):
 
-#       src_fld = db_obj.getfld(src_colname)
-#       tgt_fld = src_fld.foreign_key['tgt_field']
-        tgt_table = tgt_fld.db_obj.table_name
+        if self.tablenames is None:  # called from db.create_view
+            if isinstance(db_table, db.objects.MemTable):
+                self.tablenames = f'{db_table.table_name} a'
+                self.join_company = ''
+            else:
+                self.tablenames = f'{db_table.data_company}.{db_table.table_name} a'
+                self.join_company = f'{db_table.data_company}.'
+            # self.joins = {}
 
-        data_company = tgt_fld.db_obj.data_company
+        if col_name.lower().startswith('sum('):
+            build_sum = True
+            col_name = col_name[4:-1]
+        else:
+            build_sum = False
 
-#       assume only single keys for now
-#       alias = chr(98+len(self.joins))  # b,c,d ...
-        alias = '_' * (len(self.joins) + 1)  # '_', '__', etc
-        test = '{}.{} = a.{} '.format(alias, tgt_fld.col_name, src_colname)
-        self.tablenames += ' LEFT JOIN {}.{} {} ON {}'.format(
-            data_company, tgt_table, alias, test)
-        self.joins[src_colname] = alias
+        col, alias, as_clause = await self.get_col_alias(
+            context, db_table, col_params, col_name)
+        if col is None:
+            col_text = f'NULL AS {col_name}'
+        elif as_clause is not None:
+            if col.data_type == 'DEC' and not self.grouping:
+                # force sqlite3 to return Decimal type
+                col_name = f'"{col.col_name} AS [REAL]"'
+            elif col.data_type == 'BOOL' and not self.grouping:
+                # force sqlite3 to return Bool type
+                col_name = f'"{col.col_name} AS [BOOLTEXT]"'
+            elif col.data_type == 'DTE' and not self.grouping:
+                # force sqlite3 to return Date type
+                col_name = f'"{col.col_name} AS [DATE]"'
+            else:
+                col_name = col.col_name
+            if build_sum:
+                col_text = f'SUM({as_clause}) as {col_name}'
+            else:
+                col_text = f'{as_clause} as {col_name}'
+        elif build_sum:
+            if col.data_type == 'DEC' and not self.grouping:
+                col_text = f'SUM({alias}.{col.col_name}) AS "{col.col_name} [REAL]"'
+            else:
+                col_text = f'SUM({alias}.{col.col_name})'
+        else:
+            col_text = f'{alias}.{col.col_name}'
+
+        return col_text
+
+    async def get_col_alias(self, context, db_table, params, col_name,
+            current_alias='a', trail=()):
+        if '.' in col_name:  # added [2017-08-14]
+            # added 'scale_ptr' columns to gui_grid
+            # need to handle '_param.local_curr_id>scale'
+            obj_name, col_name = col_name.split('.')
+            if obj_name != '_param':
+                print(f'{obj_name}.{col_name}')
+                raise NotImplementedError
+            db_table = await db.objects.get_db_table(context, db_table.data_company, 'adm_params')
+            trail = (id(db_table), )
+            if trail in self.joins:
+                alias = self.joins[trail]
+            else:
+                # alias = chr(122-len(self.joins))  # z, y, x ...
+                alias = self.calc_next_alias()
+                self.tablenames += (
+                    f' LEFT JOIN {db_table.data_company}.adm_params {alias} ON {alias}.row_id = 1')
+                self.joins[trail] = alias
+
+        if '>' in col_name:
+            return await self.walk_colname(
+                context, db_table, params, col_name, current_alias, trail)
+
+        col = db_table.col_dict[col_name]
+
+        if col.col_type == 'virt' and col.sql is None:
+            return None, None, None
+
+        if col.sql is not None:
+            return col, current_alias, await self.check_sql(
+                context, db_table, params, col, current_alias, trail)
+
+        if col.col_type == 'alt':
+            src_colname = col.fkey[2]
+            tgt_colname = col.fkey[1]
+            col_name = src_colname + '>' + tgt_colname
+            return await self.walk_colname(
+                context, db_table, params, col_name, current_alias, trail)
+
+        as_clause = None
+        return col, current_alias, as_clause
+
+    async def check_sql(self, context, db_table, params, col, current_alias, trail):
+        sql = col.sql
+        # following lines moved to check_sql_params() above
+        # if not isinstance(db_table, db.objects.MemTable):
+        #     sql = sql.replace('{company}', db_table.data_company)
+
+        while sql.startswith('['):
+            end_join = sql.find(']')
+            join = sql[1:end_join].lstrip()
+            sql = sql[end_join+1:].lstrip()
+            if join not in self.joins:
+                self.tablenames += f' {join}'
+                self.joins[join] = None
+
+        # following lines moved to check_sql_params() above
+        # # {...} represents a run-time value - extract it and add to parameters
+        # while '{' in sql:
+        #     pos1 = sql.find('{')
+        #     pos2 = sql.find('}')
+        #     expr = sql[pos1+1: pos2]
+        #     val = getattr(context, expr)
+        #     params.append(val)
+        #     sql = f'{sql[:pos1]}{self.constants.param_style}{sql[pos2+1:]}'
+
+        valid_surround_chrs = ' ,()-+=|'  # any others?
+
+        # look for column names starting with 'a.'
+        # if '>' in col_name, work out 'joins'
+        start = 0
+        while 'a.' in sql[start:]:
+            pos = sql[start:].index('a.')
+            if pos > 0:
+                if sql[start:][pos-1] not in valid_surround_chrs:
+                    start += (pos+2)
+                    continue
+
+            for pos2, ch in enumerate(sql[start+pos:]):
+                if ch in valid_surround_chrs:
+                    pos2 += pos
+                    break
+            else:  # we have reached the end
+                pos2 += (pos + 1)
+            col_name = sql[start+pos+2:start+pos2]
+
+            new_col, new_alias, as_clause = await self.get_col_alias(
+                context, db_table, params, col_name, current_alias, trail)
+            if as_clause is not None:
+                sql = sql[:start+pos] + as_clause + sql[start+pos2:]
+                pos2 += (len(as_clause) - len(col_name) - 2)
+            elif new_alias != 'a':
+                new_colname = f'{new_alias}.{new_col.col_name}'
+                sql = sql[:start+pos] + new_colname + sql[start+pos2:]
+                pos2 += (len(new_colname) - len(col_name) - 2)
+
+            start += pos2
+
+        if col.data_type == 'DEC' and '/' in sql:
+            sql = f'ROUND({sql}, {col.db_scale})'
+
+        return f'({sql})' if sql.startswith('SELECT ') else sql
+
+    async def walk_colname(self, context, db_table, params, col_name, current_alias, trail):
+        src_tbl = db_table
+        src_alias = current_alias
+
+        fkey_path = col_name.split('>')
+        src_colname = fkey_path.pop(0)
+        src_col = src_tbl.col_dict[src_colname]
+
+        if src_col.sql is not None:
+            # pch_ipch_subinv.tot_party.sql contains the following -
+            #     a.tran_det_row_id>party_currency_id>scale
+            #
+            # tran_det_row_id can point to ap_tran_inv_det.row_id
+            #
+            # ap_tran_inv_det.party_currency_id.sql consists of -
+            #     a.tran_row_id>supp_row_id>currency_id
+            #
+            # the following block of code replaces the original sql with -
+            #     a.tran_det_row_id>tran_row_id>supp_row_id>currency_id>scale
+            #
+            if not src_col.sql.startswith('a.'):
+                print(src_col.col_name, src_col.sql)
+                input()
+                raise NotImplementedError
+            sub_sql = src_col.sql[2:]
+            if '>' in sub_sql:
+                sub_path = sub_sql.split('>')
+                src_colname = sub_path.pop(0)
+                fkey_path = sub_path + fkey_path
+            else:
+                src_colname = sub_sql
+            src_col = src_tbl.col_dict[src_colname]
+
+        fkey = src_col.fkey
+        tgt_tblname = fkey[0]
+        tgt_colname = fkey[1]
+
+        if isinstance(tgt_tblname, str):
+            if '.' in tgt_tblname:
+                tgt_company, tgt_tblname = tgt_tblname.split('.')
+            else:
+                tgt_company = db_table.data_company
+            if tgt_company == '{mem}':
+                tgt_tbl = await db.objects.get_mem_table(
+                    context, tgt_company, tgt_tblname)
+            else:
+                tgt_tbl = await db.objects.get_db_table(
+                    context, tgt_company, tgt_tblname)
+
+            tgt_col = tgt_tbl.col_dict[tgt_colname]
+            src_alias, tgt_alias, trail = self.get_alias(src_col, tgt_col, current_alias, trail)
+            src_tbl = tgt_tbl
+
+            return await self.get_col_alias(
+                context, tgt_tbl, params, '>'.join(fkey_path), tgt_alias, trail)
+
+        else:
+            as_clause_rows = []
+            as_clause_rows.append('CASE')
+
+            col_name2, vals_fkeys = tgt_tblname
+            for tgt_val, tgt_tblname in vals_fkeys:
+
+                if '.' in tgt_tblname:
+                    tgt_company, tgt_tblname = tgt_tblname.split('.')
+                else:
+                    tgt_company = db_table.data_company
+                if tgt_company == '{mem}':
+                    tgt_tbl = await db.objects.get_mem_table(
+                        context, tgt_company, tgt_tblname)
+                else:
+                    tgt_tbl = await db.objects.get_db_table(
+                        context, tgt_company, tgt_tblname)
+
+                tgt_col = tgt_tbl.col_dict[tgt_colname]
+
+                # return into 'trail_' - keep 'trail' untouched for next iteration
+                src_alias, tgt_alias, trail_ = self.get_alias(
+                    src_col, tgt_col, current_alias, trail)
+
+                tgt_col, tgt_alias, as_clause = await self.get_col_alias(
+                    context, tgt_tbl, params, '>'.join(fkey_path), tgt_alias, trail_)
+
+                if as_clause is not None:
+                    tgt = as_clause
+                else:
+                    tgt = f'{tgt_alias}.{tgt_col.col_name}'
+
+                as_clause_rows.append(
+                    f'WHEN {src_alias}.{col_name2} = {tgt_val!r} THEN {tgt}'
+                    )
+
+            as_clause_rows.append('END')
+            as_clause = ' '.join(as_clause_rows)
+
+            # return the latest tgt_col - assume they are all similar
+            # return None for alias - not used, as_clause is used instead
+            return tgt_col, None, as_clause
+
+    def get_alias(self, src_col, tgt_col, current_alias, trail):
+        if trail:
+            src_alias = self.joins[trail]
+        elif src_col.sql:  # added [2017-10-15]
+            sql = src_col.sql
+            while sql.startswith('['):
+                end_join = sql.find(']')
+                sql = sql[end_join+1:].lstrip()  # remove join from sql
+            # this is fragile! only works if sql.split('.')[1] == src_col.col_name
+            # does this work at all? [2018-03-22]
+            # simple joins are handled differently, complex ones need more thought
+            #   - see various virt columns in ar_openitems
+            # no longer used [2019-02-19]
+            src_alias = sql.split('.')[0]
+        else:
+            src_alias = current_alias
+
+        trail += (id(src_col), id(tgt_col)),
+
+        if trail in self.joins:
+            tgt_alias = self.joins[trail]
+        else:
+            # tgt_alias = chr(122-len(self.joins))  # z, y, x ...
+            tgt_alias = self.calc_next_alias()
+            self.joins[trail] = tgt_alias
+            tgt_table = tgt_col.table_name
+            test = f'{tgt_alias}.{tgt_col.col_name} = {src_alias}.{src_col.col_name}'
+            self.tablenames += f' LEFT JOIN {self.join_company}{tgt_table} {tgt_alias} ON {test}'
+
+        return src_alias, tgt_alias, trail
+
+    def calc_next_alias(self):
+        d = {n: chr(97+n) for n in range(10)}  # {0: 'a', 1: 'b', ...}
+        lng = len(self.joins)  # this assumes there will never be > 999 joins!
+        alias = d[lng//100] + d[lng%100//10] + d[lng%10]  # 123 becomes 'bcd'
+        return alias
 
 #-----------------------------------------------------------------------------
 
@@ -561,11 +945,18 @@ class DbConn(Conn):
                             pool knows which connection it refers to.
         :rtype: None
         """
+
+        Conn.__init__(self)
+
         self.init(pos)
         self.pos = pos
+        self.constants = db_constants
 
-    def release(self, rollback=False):  # return connection to connection pool
-        self.conn.rollback() if rollback else self.conn.commit()
+    async def release(self, rollback=False):  # return connection to connection pool
+        self.wait_event.clear()  # ask to be notified when all requests completed
+        loop = asyncio.get_event_loop()
+        self.request_queue.put((loop, 'rollback' if rollback else 'commit'))
+        await self.wait_event.wait()  # when set, safe to release connection
         _release_connection(self.pos)
 
 class MemConn(Conn):
@@ -579,12 +970,19 @@ class MemConn(Conn):
                             pool knows which connection it refers to.
         :rtype: None
         """
+
+        Conn.__init__(self)
+
         self.init(pos, mem_id)
         self.pos = pos
+        self.constants = mem_constants
         self.mem_id = mem_id
 
-    def release(self, rollback=False):  # return connection to connection pool
-        self.conn.rollback() if rollback else self.conn.commit()
+    async def release(self, rollback=False):  # return connection to connection pool
+        self.wait_event.clear()  # ask to be notified when all requests completed
+        loop = asyncio.get_event_loop()
+        self.request_queue.put((loop, 'rollback' if rollback else 'commit'))
+        await self.wait_event.wait()  # when set, safe to release connection
         _release_mem_conn(self.mem_id, self.pos)
 
 #-----------------------------------------------------------------------------
@@ -598,81 +996,85 @@ class DbSession:
     It is acquired by calling :func:`~db.api.start_db_session`. The function
     creates an instance of this class, and returns it to the caller.
 
-    __enter__ is called when 'with db_session as db_mem_conn' is executed -
+    get_connection() is a context manager function
+    it is called when 'with db_session.get_connection() as db_mem_conn' is executed
 
-    * check if the session has an active database connection. If not,
-      acquire a db connection from the connection pool and an in-memory
-      connection from the mem_conn pool
-    * increment 'no_connections' to keep track of how many times
-      we have been called
-    * return a tuple containing the db connection and the in-memory
-      connection to the caller
+    code up to the 'yield' is executed when the 'with' block is entered
+    the connection is 'yielded'
+    code after the 'yield' is executed when the 'with' block is exited
 
-    __exit__ is called when the 'with' code block ends -
+    N.B. exception handling
+    calls to get_connection() can be nested - num_connections is incremented for each call
+    if there is an exception, it is caught, and num_connections is decremented
+    if num_connections == 0 we perform the cleanup
+    the exception is then re-raised
+    if num_connections is > 0, it will be passed to the next level and caught there,
+      else it will be passed to the caller for further handling
+    BTW this is why we do not use 'finally' - it could be done, but awkwardly
 
-    * decrement 'no_connections'
-    * if the number of connections becomes zero -
-      * release both connections, which causes them to be 'committed'
-        and then returned to their respective pools 
     """
     def __init__(self, mem_id=None):
         self.mem_id = mem_id
         self.db_mem_conn = None
-        self.no_connections = 0
+        self.num_connections = 0
         self.after_commit = []
+        self.after_rollback = []
 
-    def __enter__(self):
-        if self.db_mem_conn is None:
-
-            # all updates in same transaction use same timestamp
-            timestamp = datetime.now()
+    @asynccontextmanager
+    async def get_connection(self):
+        if not self.num_connections:  # get connection, set up
+            timestamp = datetime.now()  # all updates in same transaction use same timestamp
             db_conn = _get_connection()
-            db_conn.cur = db_conn.cursor()
             db_conn.timestamp = timestamp
             if self.mem_id is not None:
                 mem_conn = _get_mem_connection(self.mem_id)
-                mem_conn.cur = mem_conn.cursor()
                 mem_conn.timestamp = timestamp
             else:
                 mem_conn = None
             self.db_mem_conn = DbMemConn(db_conn, mem_conn)
-
             if log_db:
-                db_log.write('{}: START\n'.format(id(db_conn)))
+                db_log.write(f'{datetime.now()}: {id(db_conn)}: START db\n')
+                if self.mem_id is not None:
+                    db_log.write(f'{datetime.now()}: {id(mem_conn)}: START mem\n')
 
-        self.no_connections += 1
-        return self.db_mem_conn
+        self.num_connections += 1
+        try:
+            yield self.db_mem_conn
 
-    def __exit__(self, type, exc, tb):
-        if type is not None:  # an exception occurred
-            if self.db_mem_conn is not None:  # can happen if > 1 exception raised
-                db_conn, mem_conn = self.db_mem_conn
-                db_conn.cur.close()
-                db_conn.release(rollback=True)  # rollback, return connection to pool
+            # continue after 'with' block completed
+            self.num_connections -= 1
+            if not self.num_connections:
+                await db_conn.release()  # commit, return connection to pool
                 if mem_conn is not None:
-                    mem_conn.cur.close()
-                    mem_conn.release(rollback=True)  # rollback, return connection to pool
+                    await mem_conn.release()  # commit, return connection to pool
                 self.db_mem_conn = None
-                self.no_connections = 0
-                self.after_commit = []
+                while self.after_commit:
+                    callback, *args = self.after_commit.pop(0)
+                    await callback(*args)
+                self.after_rollback.clear()
                 if log_db:
-                    db_log.write('{}: ROLLBACK\n\n'.format(id(db_conn)))
-            return  # will reraise exception
+                    db_log.write(f'{datetime.now()}: {id(db_conn)}: COMMIT db\n')
+                    if mem_conn is not None:
+                        db_log.write(f'{datetime.now()}: {id(mem_conn)}: COMMIT mem\n')
+                    db_log.write('\n')
 
-        self.no_connections -= 1
-        if not self.no_connections:
-            db_conn, mem_conn = self.db_mem_conn
-            db_conn.cur.close()
-            db_conn.release()  # commit, return connection to pool
-            if mem_conn is not None:
-                mem_conn.cur.close()
-                mem_conn.release()  # commit, return connection to pool
-            self.db_mem_conn = None
-            if log_db:
-                db_log.write('{}: COMMIT\n\n'.format(id(db_conn)))
-            while self.after_commit:
-                callback = self.after_commit.pop(0)
-                callback[0](*callback[1:])
+        except Exception:  # catch any exception - re-raised below
+            self.num_connections -= 1
+            if not self.num_connections:
+                await db_conn.release(rollback=True)  # rollback, return connection to pool
+                if mem_conn is not None:
+                    await mem_conn.release(rollback=True)  # rollback, return connection to pool
+                self.db_mem_conn = None
+                while self.after_rollback:
+                    callback, *args = self.after_rollback.pop(0)
+                    await callback(*args)
+                self.after_commit.clear()
+                if log_db:
+                    db_log.write(f'{datetime.now()}: {id(db_conn)}: ROLLBACK db\n')
+                    if mem_conn is not None:
+                        db_log.write(f'{datetime.now()}: {id(mem_conn)}: ROLLBACK mem\n')
+                    db_log.write('\n')
+            raise  # re-raise exception
 
     def close(self):  # called from ht.form.close_form()
         _close_mem_connections(self.mem_id)

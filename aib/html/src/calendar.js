@@ -41,7 +41,7 @@ function show_cal(parent, current_value, callback) {
   for (var i=0; i<42; i++) {
     var dd = calendar.cal_page.childNodes[i];
     dd.innerHTML = dates[i];
-    if (dates[i] == calendar.current_day) {
+    if (dates[i] === calendar.current_day) {
       dd.style.background = 'darkblue';
       dd.style.color = 'white';
       };
@@ -161,7 +161,7 @@ calendar.onchange_mth = function(option_selected) {
       dd.innerHTML = dates[i];
       };
     // TODO
-    // the next lines cater for current_day == 31, but last_day == 30
+    // the next lines cater for current_day === 31, but last_day === 30
     // it works, but it would be nice to revert to 31 if possible on the next change
     // at present we have lost that information, so cannot be done
     if (calendar.current_day > calendar.last_day)
@@ -198,12 +198,14 @@ args.type = 'choice';
 args.ref = '0';
 args.lng = 40;
 args.value = 0;
-args.help_msg = 'Month';
+args.help_msg = 'Month - Ctrl+left/right to change';
 args.readonly = false;
 args.amend_ok = true;
 args.allow_amend = true;
-var choices = [[0, 'Jan'], [1, 'Feb'], [2, 'Mar'], [3, 'Apr'], [4, 'May'], [5, 'Jun'],
-  [6, 'Jul'], [7, 'Aug'], [8, 'Sep'], [9, 'Oct'], [10, 'Nov'], [11, 'Dec']];
+//var choices = [[0, 'Jan'], [1, 'Feb'], [2, 'Mar'], [3, 'Apr'], [4, 'May'], [5, 'Jun'],
+//  [6, 'Jul'], [7, 'Aug'], [8, 'Sep'], [9, 'Oct'], [10, 'Nov'], [11, 'Dec']];
+var choices = {0: 'Jan', 1: 'Feb', 2: 'Mar', 3: 'Apr', 4: 'May', 5: 'Jun',
+  6: 'Jul', 7: 'Aug', 8: 'Sep', 9: 'Oct', 10: 'Nov', 11: 'Dec'};
 args.choices = [null, choices];
 args.callback = calendar.onchange_mth;
 
@@ -218,7 +220,7 @@ args.type = 'spin';
 args.ref = '1';
 args.lng = 40;
 args.value = 0;
-args.help_msg = 'Year';
+args.help_msg = 'Year - Ctrl+up/down to change';
 args.readonly = false;
 args.amend_ok = true;
 args.allow_amend = true;
@@ -310,48 +312,89 @@ cal_page.lost_focus = function() {
 
 cal_page.onkey = function(e) {
   if (!e) e=window.event;
-  if (e.altKey || e.ctrlKey)
+  if (e.altKey)
     return;
-  if (e.keyCode == 9)  // tab
+  if (e.keyCode === 9)  // tab
     return;
-  var current_day = calendar.current_day;
-  if (e.keyCode == 13) { // Enter
-    var new_date = new Date(calendar.current_year, calendar.current_month, calendar.current_day);
-    calendar.close_window(new_date);
-    }
-  else if (e.keyCode == 27) { // Escape
-    var new_date = null;
-    calendar.close_window(new_date);
-    }
-  else if (e.keyCode == 37) {  // left
-    if (calendar.current_day > 1)
-      calendar.onchange_day(calendar.current_day-1);
-    }
-  else if (e.keyCode == 38) {  // up
-    if (calendar.current_day > 7)
-      calendar.onchange_day(calendar.current_day-7);
-    }
-  else if (e.keyCode == 39) {  // right
-    if (calendar.current_day < calendar.last_day)
-      calendar.onchange_day(calendar.current_day+1);
-    }
-  else if (e.keyCode == 40) {  // down
-    if (calendar.current_day < (calendar.last_day-6))
-      calendar.onchange_day(calendar.current_day+7);
-    }
-  else if (e.keyCode == 36) {  // home
-    if (calendar.current_day > 1)
-      calendar.onchange_day(1);
-    }
-  else if (e.keyCode == 35) {  // end
-    if (calendar.current_day < calendar.last_day)
-      calendar.onchange_day(calendar.last_day);
+  if (e.ctrlKey) {
+    switch (e.keyCode) {
+      case 37:  // left - prev month
+        if (calendar.current_month === 0) {
+          calendar.onchange_yr(calendar.current_year-1);
+          calendar.data_yr.set_value_from_server(calendar.current_year);
+          calendar.onchange_mth(11);
+          calendar.data_mth.set_value_from_server(calendar.current_month);
+          }
+        else {
+          calendar.onchange_mth(calendar.current_month-1);
+          calendar.data_mth.set_value_from_server(calendar.current_month);
+          };
+        break;
+      case 38:  // up - next year
+        calendar.onchange_yr(calendar.current_year+1);
+        calendar.data_yr.set_value_from_server(calendar.current_year);
+        break;
+      case 39:  // right - next month
+        if (calendar.current_month === 11) {
+          calendar.onchange_yr(calendar.current_year+1);
+          calendar.data_yr.set_value_from_server(calendar.current_year);
+          calendar.onchange_mth(0);
+          calendar.data_mth.set_value_from_server(calendar.current_month);
+          }
+        else {
+          calendar.onchange_mth(calendar.current_month+1);
+          calendar.data_mth.set_value_from_server(calendar.current_month);
+          };
+        break;
+      case 40:  // down - prev year
+        calendar.onchange_yr(calendar.current_year-1);
+        calendar.data_yr.set_value_from_server(calendar.current_year);
+        break;
+      };
+    var dd = cal_page.childNodes[calendar.current_day+calendar.first_day-1];
+    dd.style.background = 'darkblue';
+    dd.style.color = 'white';
+    return;
+    };
+  switch (e.keyCode) {
+    case 13:  // Enter
+        var new_date = new Date(calendar.current_year, calendar.current_month, calendar.current_day);
+        calendar.close_window(new_date);
+      break;
+    case 27:  // Escape
+      var new_date = null;
+      calendar.close_window(new_date);
+      break;
+    case 37:  // left
+      if (calendar.current_day > 1)
+        calendar.onchange_day(calendar.current_day-1);
+      break;
+    case 38:  // up
+      if (calendar.current_day > 7)
+        calendar.onchange_day(calendar.current_day-7);
+      break;
+    case 39:  // right
+      if (calendar.current_day < calendar.last_day)
+        calendar.onchange_day(calendar.current_day+1);
+      break;
+    case 40:  // down
+      if (calendar.current_day < (calendar.last_day-6))
+        calendar.onchange_day(calendar.current_day+7);
+      break;
+    case 36:  // home
+      if (calendar.current_day > 1)
+        calendar.onchange_day(1);
+      break;
+    case 35:  // end
+      if (calendar.current_day < calendar.last_day)
+        calendar.onchange_day(calendar.last_day);
+      break;
     };
   e.cancelBubble = true;
   return false;
   };
 
-if (navigator.appName == 'Opera')
+if (navigator.appName === 'Opera')
   cal_page.onkeypress = cal_page.onkey
 else
   cal_page.onkeydown = cal_page.onkey;

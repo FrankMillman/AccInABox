@@ -1,0 +1,161 @@
+<form name="cb_receipt" title="Cash book receipt" before_start_form="
+  <<action>>
+    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_rec` action=`lock`/>>
+  <</action>>
+  " on_close_form="
+  <<action>>
+    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_rec` action=`unlock`/>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="cb_rec" table_name="cb_tran_rec" is_formview_obj="true"/>
+    <db_obj name="cb_det" table_name="cb_tran_rec_det" parent="cb_rec"/>
+    <db_obj name="isls" table_name="sls_isls_subinv" parent="cb_det"/>
+    <db_obj name="nsls" table_name="sls_nsls_subinv" parent="cb_det"/>
+    <db_obj name="ar_rec" table_name="ar_subtran_rec" parent="cb_det"/>
+    <db_obj name="cb_orec" table_name="cb_orec_subtran" parent="cb_det"/>
+    <db_obj name="com" table_name="cb_comments" parent="cb_det"/>
+  </db_objects>
+
+  <mem_objects>
+  </mem_objects>
+
+  <input_params/>
+  <output_params/>
+  <frame main_object="cb_rec">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+
+      <row/>
+      <col/>
+      <label value="Receipt no:"/>
+      <col/>
+      <input obj_name="cb_rec" col_name="tran_number" lng="80" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Date:"/>
+      <col/>
+      <input obj_name="cb_rec" col_name="tran_date" lng="84" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Received from:"/>
+      <col/>
+      <input obj_name="cb_rec" col_name="payer" lng="200" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Amount:"/>
+      <col/>
+      <input obj_name="cb_rec" col_name="amount" lng="100" readonly="true" skip="true"/>
+
+      <block/>
+      <grid data_object="cb_det" growable="true" num_grid_rows="5" readonly="true"
+          footer_row="[`'Total:'`, `cb_rec.amount_cb`]">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="display_descr" lng="80"/>
+          <cur_col col_name="rec_cb" lng="120"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="line_no"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <grid_frame main_object="cb_det">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <input obj_name="cb_det" col_name="line_type" radio="false" form_dflt="
+            <<form_dflt>>
+              <<prev_value/>>
+            <</form_dflt>>
+            "/>
+          <subtran_frame subtran_obj="cb_det" subtran_col="line_type">
+            <subtran_body subtran_id="isls"/>
+            <subtran_body subtran_id="nsls"/>
+            <subtran_body subtran_id="arec"/>
+            <subtran_body subtran_id="orec"/>
+            <subtran_body subtran_id="com"/>
+          </subtran_frame>
+        </body>
+        <button_row template="Grid_Frame_Grid_RO"/>
+        <frame_methods template="Grid_Frame_Grid_RO"/>
+
+      </grid_frame>
+
+    </body>
+    <button_row template="Transaction"/>
+    <frame_methods template="Transaction"/>
+  </frame>
+  <inline_form name="tran_header" title="Receipt header">
+    <frame main_object="cb_rec">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+
+        <if_ src="_ledger.auto_rec_no" op="is_" tgt="$None"/>
+        <row/>
+        <col/>
+        <label value="Receipt no:"/>
+        <col/>
+        <input obj_name="cb_rec" col_name="tran_number" lng="80"/>
+        <end_if/>
+
+        <row/>
+        <col/>
+        <label value="Date:"/>
+        <col/>
+        <input obj_name="cb_rec" col_name="tran_date" lng="84" form_dflt="
+          <<form_dflt>>
+            <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
+          <</form_dflt>>
+          "/>
+
+        <row/>
+        <col/>
+        <label value="Received from:"/>
+        <col/>
+        <input obj_name="cb_rec" col_name="payer" lng="200"/>
+
+        <!-- <if_ src="_ledger.alt_curr" op="is_" tgt="$True"/>
+        <row/>
+        <col/>
+        <label value="Currency:"/>
+        <col/>
+        <input obj_name="cb_rec" col_name="currency" lng="40"/>
+        <display obj_name="cb_rec" col_name="currency_id>descr" lng="120"/>
+        <end_if/> -->
+
+        <row/>
+        <col/>
+        <label value="Amount:"/>
+        <col/>
+        <input obj_name="cb_rec" col_name="amount" lng="120"/>
+        <display obj_name="cb_rec" col_name="ledger_row_id>currency_id>symbol" lng="10"/>
+
+        <!-- <if_ src="_ledger.alt_curr" op="is_" tgt="$True"/>
+        <row/>
+        <col/>
+        <label value="Cb amount:"/>
+        <col/>
+        <input obj_name="cb_rec" col_name="amount_cb" lng="120"/>
+        <display obj_name="cb_rec" col_name="_ledger.currency_id>symbol" lng="120"/>
+        <end_if/> -->
+
+      </body>
+
+      <button_row template="Transaction_Header"/>
+      <frame_methods template="Transaction_Header"/>
+    </frame>
+  </inline_form>
+</form>

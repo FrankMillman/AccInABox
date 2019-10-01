@@ -1,0 +1,145 @@
+<form name="ar_receipt" title="Ar receipt" before_start_form="
+  <<action>>
+    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_rec` action=`lock`/>>
+  <</action>>
+  " on_close_form="
+  <<action>>
+    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_rec` action=`unlock`/>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="ar_rct" table_name="ar_tran_rct" is_formview_obj="true"/>
+    <db_obj name="ar_det" table_name="ar_tran_rct_det" parent="ar_rct"/>
+    <db_obj name="ar_rec" table_name="ar_subtran_rec" parent="ar_det"/>
+  </db_objects>
+  <mem_objects/>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="ar_rct">
+    <toolbar template="Transaction"/>
+    <body>
+      <block/>
+      <panel/>
+
+      <row/>
+      <col/>
+      <label value="Receipt no:"/>
+      <col/>
+      <input obj_name="ar_rct" col_name="tran_number" lng="84" readonly="true" skip="true"/>
+
+      <col/>
+      <label value="Receipt date:"/>
+      <col/>
+      <input obj_name="ar_rct" col_name="tran_date" lng="84" readonly="true" skip="true"/>
+
+      <col/>
+      <label value="Amount:"/>
+      <col/>
+      <display obj_name="ar_rct" col_name="currency_id>symbol" lng="10"/>
+      <input obj_name="ar_rct" col_name="amount" lng="84" readonly="true" skip="true"/>
+
+      <block/>
+      <grid data_object="ar_det" growable="true" num_grid_rows="5" readonly="true"
+          footer_row="[`'Total:'`, `ar_rct.amount_tran`]">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="display_descr" lng="80"/>
+          <cur_col col_name="rec_amt" lng="120"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="line_no"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <grid_frame main_object="ar_det">
+        <toolbar/>
+        <body>
+
+          <subtran_frame subtran_obj="ar_det" subtran_col="line_type">
+            <subtran_body subtran_id="arec"/>
+          </subtran_frame>
+
+        </body>
+        <button_row template="Grid_Frame_Grid_RO"/>
+        <frame_methods template="Grid_Frame_Grid_RO"/>
+
+      </grid_frame>
+
+    </body>
+    <button_row template="Transaction"/>
+    <frame_methods template="Transaction"/>
+  </frame>
+  <inline_form name="tran_header" title="Receipt header">
+    <frame main_object="ar_rct">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+
+        <if_ src="_ledger.auto_rec_no" op="is_" tgt="$None"/>
+        <row/>
+        <col/>
+        <label value="Receipt no:"/>
+        <col/>
+        <input obj_name="ar_rct" col_name="tran_number" lng="80"/>
+        <end_if/>
+
+        <row/>
+        <col/>
+        <label value="Receipt date:"/>
+        <col/>
+        <input obj_name="ar_rct" col_name="tran_date" lng="84" form_dflt="
+          <<form_dflt>>
+            <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
+          <</form_dflt>>
+          "/>
+
+        <if_ src="_ledger.currency_id" op="is_" tgt="$None"/>
+        <row/>
+        <col/>
+        <label value="Currency:"/>
+        <col/>
+        <input obj_name="ar_rct" col_name="currency" lng="60" form_dflt="
+          <<form_dflt>>
+            <<fld_val name=`_param.local_currency`/>>
+          <</form_dflt>>
+          "/>
+        <display obj_name="ar_rct" col_name="currency_id>descr" lng="140"/>
+        <end_if/>
+
+        <row/>
+        <col/>
+        <label value="Amount:"/>
+        <col/>
+        <input obj_name="ar_rct" col_name="amount" lng="80"/>
+      </body>
+
+      <button_row template="Transaction_Header"/>
+      <frame_methods template="Transaction_Header">
+        <method name="do_save" action="
+          <<action>>
+            <<case>>
+              <<compare src=`ar_rct.amount` op=`=` tgt=`0`>>
+                <<ask title=`Receipt` enter=`No` escape=`No`
+                    question=`No value entered - sure you want to save?`>>
+                  <<response ans=`No`>>
+                  <</response>>
+                  <<response ans=`Yes`>>
+                    <<save_obj obj_name=`ar_rct`/>>
+                  <</response>>
+                <</ask>>
+              <</compare>>
+              <<default>>
+                <<save_obj obj_name=`ar_rct`/>>
+              <</default>>
+            <</case>>
+          <</action>>
+          "/>
+        </frame_methods>
+    </frame>
+  </inline_form>
+</form>

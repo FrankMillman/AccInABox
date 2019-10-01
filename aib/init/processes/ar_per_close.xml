@@ -1,0 +1,247 @@
+<process id="ar_per_close" descr="Ar period close process">
+  <db_objects/>
+  <mem_objects>
+    <mem_obj name="var" descr="Process variables">
+      <mem_col col_name="close_params" data_type="JSON" short_descr="Process parameters" long_descr="Process parameters"/>
+      <mem_col col_name="all_posted" data_type="BOOL" short_descr="All posted?" long_descr="All posted?"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params>
+    <input_param name="close_params" type="data_attr" target="var.close_params" required="false"/>
+  </input_params>
+  <output_params/>
+  <semantic:definitions xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dbobj="http://www.accinabox.org/bpmn/dbobj_definitions" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:memobj="http://www.accinabox.org/bpmn/memobj_definitions" xmlns:semantic="http://www.omg.org/spec/BPMN/20100524/MODEL" id="ar_per_close_0" targetNamespace="http://www.accinabox.org/bpmn">
+    <semantic:itemDefinition id="var_obj" structureRef="memobj:var"/>
+    <semantic:process id="ar_per_close_1" isExecutable="true">
+      <semantic:dataObject id="var" itemSubjectRef="var_obj"/>
+      <semantic:startEvent id="ar_per_close_3" name="Start">
+        <semantic:outgoing>ar_per_close_17</semantic:outgoing>
+      </semantic:startEvent>
+      <semantic:scriptTask id="ar_per_close_5" name="Set 'closing' flag">
+        <semantic:incoming>ar_per_close_17</semantic:incoming>
+        <semantic:outgoing>ar_per_close_19</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.close_params</semantic:sourceRef>
+          <semantic:targetRef>close_params</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:script>custom.artrans_funcs.set_closing_flag</semantic:script>
+      </semantic:scriptTask>
+      <semantic:subProcess id="ar_per_close_61" name="Check all transactions posted">
+        <semantic:incoming>ar_per_close_19</semantic:incoming>
+        <semantic:outgoing>ar_per_close_23</semantic:outgoing>
+        <semantic:startEvent id="ar_per_close_63" name="Start subprocess">
+          <semantic:outgoing>ar_per_close_65</semantic:outgoing>
+        </semantic:startEvent>
+        <semantic:scriptTask id="ar_per_close_7" name="Check all posted">
+          <semantic:incoming>ar_per_close_65</semantic:incoming>
+          <semantic:incoming>ar_per_close_59</semantic:incoming>
+          <semantic:outgoing>ar_per_close_21</semantic:outgoing>
+          <semantic:dataInputAssociation>
+            <semantic:sourceRef>var.close_params</semantic:sourceRef>
+            <semantic:targetRef>close_params</semantic:targetRef>
+          </semantic:dataInputAssociation>
+          <semantic:dataOutputAssociation>
+            <semantic:sourceRef>all_posted</semantic:sourceRef>
+            <semantic:targetRef>var.all_posted</semantic:targetRef>
+          </semantic:dataOutputAssociation>
+          <semantic:script>custom.artrans_funcs.posted_check</semantic:script>
+        </semantic:scriptTask>
+        <semantic:exclusiveGateway id="ar_per_close_9" name="All posted?" default="ar_per_close_57">
+          <semantic:incoming>ar_per_close_21</semantic:incoming>
+          <semantic:outgoing>ar_per_close_69</semantic:outgoing>
+          <semantic:outgoing>ar_per_close_57</semantic:outgoing>
+        </semantic:exclusiveGateway>
+        <semantic:intermediateCatchEvent id="ar_per_close_55" name="Delay">
+          <semantic:incoming>ar_per_close_57</semantic:incoming>
+          <semantic:outgoing>ar_per_close_59</semantic:outgoing>
+          <semantic:timerEventDefinition>
+            <semantic:timeDuration>PT5S</semantic:timeDuration>
+          </semantic:timerEventDefinition>
+        </semantic:intermediateCatchEvent>
+        <semantic:sequenceFlow sourceRef="ar_per_close_7" targetRef="ar_per_close_9" name="" id="ar_per_close_21"/>
+        <semantic:sequenceFlow sourceRef="ar_per_close_9" targetRef="ar_per_close_55" name="" id="ar_per_close_57"/>
+        <semantic:sequenceFlow sourceRef="ar_per_close_55" targetRef="ar_per_close_7" name="" id="ar_per_close_59"/>
+        <semantic:sequenceFlow sourceRef="ar_per_close_63" targetRef="ar_per_close_7" name="" id="ar_per_close_65"/>
+        <semantic:endEvent id="ar_per_close_67" name="End subprocess">
+          <semantic:incoming>ar_per_close_69</semantic:incoming>
+        </semantic:endEvent>
+        <semantic:sequenceFlow sourceRef="ar_per_close_9" targetRef="ar_per_close_67" name="" id="ar_per_close_69">
+          <semantic:conditionExpression>[["check", null, "var.all_posted", "is_", "$True", null]]</semantic:conditionExpression>
+        </semantic:sequenceFlow>
+      </semantic:subProcess>
+      <semantic:scriptTask id="ar_per_close_11" name="Raise interest">
+        <semantic:incoming>ar_per_close_23</semantic:incoming>
+        <semantic:outgoing>ar_per_close_25</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.close_params</semantic:sourceRef>
+          <semantic:targetRef>close_params</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:script>custom.artrans_funcs.raise_interest</semantic:script>
+      </semantic:scriptTask>
+      <semantic:scriptTask id="ar_per_close_13" name="Set 'closed' flag">
+        <semantic:incoming>ar_per_close_25</semantic:incoming>
+        <semantic:outgoing>ar_per_close_27</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.close_params</semantic:sourceRef>
+          <semantic:targetRef>close_params</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:script>custom.artrans_funcs.set_closed_flag</semantic:script>
+      </semantic:scriptTask>
+      <semantic:endEvent id="ar_per_close_15" name="Done">
+        <semantic:incoming>ar_per_close_27</semantic:incoming>
+      </semantic:endEvent>
+      <semantic:boundaryEvent id="ar_per_close_71" name="Timeout check" cancelActivity="false" attachedToRef="ar_per_close_61">
+        <semantic:outgoing>ar_per_close_77</semantic:outgoing>
+        <semantic:timerEventDefinition>
+          <semantic:timeCycle>R/PT10S</semantic:timeCycle>
+        </semantic:timerEventDefinition>
+      </semantic:boundaryEvent>
+      <semantic:scriptTask id="ar_per_close_73" name="Notify manager">
+        <semantic:incoming>ar_per_close_77</semantic:incoming>
+        <semantic:outgoing>ar_per_close_79</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.close_params</semantic:sourceRef>
+          <semantic:targetRef>close_params</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>ctx.user_row_id</semantic:sourceRef>
+          <semantic:targetRef>user_row_id</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:script>custom.artrans_funcs.notify_manager</semantic:script>
+      </semantic:scriptTask>
+      <semantic:endEvent id="ar_per_close_75" name="Manager notified">
+        <semantic:incoming>ar_per_close_79</semantic:incoming>
+      </semantic:endEvent>
+      <semantic:sequenceFlow sourceRef="ar_per_close_3" targetRef="ar_per_close_5" name="" id="ar_per_close_17"/>
+      <semantic:sequenceFlow sourceRef="ar_per_close_5" targetRef="ar_per_close_61" name="" id="ar_per_close_19"/>
+      <semantic:sequenceFlow sourceRef="ar_per_close_61" targetRef="ar_per_close_11" name="" id="ar_per_close_23"/>
+      <semantic:sequenceFlow sourceRef="ar_per_close_11" targetRef="ar_per_close_13" name="" id="ar_per_close_25"/>
+      <semantic:sequenceFlow sourceRef="ar_per_close_13" targetRef="ar_per_close_15" name="" id="ar_per_close_27"/>
+      <semantic:sequenceFlow sourceRef="ar_per_close_71" targetRef="ar_per_close_73" name="" id="ar_per_close_77"/>
+      <semantic:sequenceFlow sourceRef="ar_per_close_73" targetRef="ar_per_close_75" name="" id="ar_per_close_79"/>
+    </semantic:process>
+    <bpmndi:BPMNDiagram id="ar_per_close_2">
+      <bpmndi:BPMNPlane bpmnElement="ar_per_close_1">
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_61" id="ar_per_close_62" isExpanded="true">
+          <dc:Bounds x="240" y="148.55000114440918" width="426" height="204.0"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_3" id="ar_per_close_4">
+          <dc:Bounds width="30" height="30" x="32.0" y="232"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_5" id="ar_per_close_6">
+          <dc:Bounds width="90" height="70" x="123.0" y="212"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_7" id="ar_per_close_8">
+          <dc:Bounds width="90" height="70" x="354" y="212"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_9" id="ar_per_close_10" isMarkerVisible="true">
+          <dc:Bounds width="42" height="42" x="512" y="226"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_11" id="ar_per_close_12">
+          <dc:Bounds width="90" height="70" x="695.0" y="212"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_13" id="ar_per_close_14">
+          <dc:Bounds width="90" height="70" x="852.0" y="212"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_15" id="ar_per_close_16">
+          <dc:Bounds width="32" height="32" x="993.0" y="231"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_55" id="ar_per_close_56">
+          <dc:Bounds x="456" y="166" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_17" id="ar_per_close_18">
+          <di:waypoint x="62.0" y="247"/>
+          <di:waypoint x="123.0" y="247"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_19" id="ar_per_close_20">
+          <di:waypoint x="213.0" y="247"/>
+          <di:waypoint x="240" y="247"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_21" id="ar_per_close_22">
+          <di:waypoint x="444" y="247"/>
+          <di:waypoint x="512" y="247"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_23" id="ar_per_close_24">
+          <di:waypoint x="666" y="247"/>
+          <di:waypoint x="695.0" y="247"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_25" id="ar_per_close_26">
+          <di:waypoint x="785.0" y="247"/>
+          <di:waypoint x="852.0" y="247"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_27" id="ar_per_close_28">
+          <di:waypoint x="942.0" y="247"/>
+          <di:waypoint x="993.0" y="247"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_57" id="ar_per_close_58">
+          <di:waypoint x="533" y="226"/>
+          <di:waypoint x="533" y="181"/>
+          <di:waypoint x="486" y="181"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_59" id="ar_per_close_60">
+          <di:waypoint x="456" y="181"/>
+          <di:waypoint x="399" y="181"/>
+          <di:waypoint x="399" y="212"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_63" id="ar_per_close_64">
+          <dc:Bounds x="294.0" y="232.0" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_65" id="ar_per_close_66">
+          <di:waypoint x="324.0" y="247.0"/>
+          <di:waypoint x="354.0" y="247.0"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_67" id="ar_per_close_68">
+          <dc:Bounds x="584.0" y="232.0" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_69" id="ar_per_close_70">
+          <di:waypoint x="554.0" y="247.0"/>
+          <di:waypoint x="584.0" y="247.0"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_71" id="ar_per_close_72">
+          <dc:Bounds x="593" y="336" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_73" id="ar_per_close_74">
+          <dc:Bounds x="743" y="381" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_75" id="ar_per_close_76">
+          <dc:Bounds x="923" y="401" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_77" id="ar_per_close_78">
+          <di:waypoint x="608" y="366"/>
+          <di:waypoint x="608" y="416"/>
+          <di:waypoint x="743" y="416"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_79" id="ar_per_close_80">
+          <di:waypoint x="833" y="416"/>
+          <di:waypoint x="923" y="416"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+      </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+  </semantic:definitions>
+</process>

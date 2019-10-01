@@ -1,0 +1,79 @@
+<form name="ar_balances" title="Customer balances" before_start_form="
+  <<action>>
+    <<pyfunc name=`custom.date_funcs.setup_balance_date`/>>
+    <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.bal_date_cust`/>>
+  <</action>>
+  ">
+  <db_objects>
+    <db_obj name="cust" table_name="ar_customers"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="var" descr="Variables to pass to formview">
+      <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
+        long_descr="Settings, passed between main form and formview" allow_amend="true"/>
+      <mem_col col_name="balance_date" data_type="DTE" short_descr="Balance date"
+        long_descr="Balance at which date" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="balance_date_vars" descr="Variables for balance date">
+      <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
+        long_descr="Settings, passed between main form and subform" allow_amend="true"/>
+      <mem_col col_name="balance_date" data_type="DTE" short_descr="Balance date"
+        long_descr="Balance at which date" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params/>
+  <output_params/>
+  <frame main_object="cust">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Balances at:"/>
+      <col/>
+      <input obj_name="balance_date_vars" col_name="balance_date" lng="84" readonly="true" skip="true"/>
+      <col/>
+      <button btn_id="change_date" btn_label="Change"
+        help_msg = "Change date"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<sub_form name=`_sys.select_balance_date`>>
+              <<call_params>>
+                <<call_param name=`settings` type=`data_attr` source=`balance_date_vars.settings`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`settings` type=`data_attr` target=`balance_date_vars.settings`/>>
+                <<return_param name=`balance_date` type=`data_attr`
+                  target=`balance_date_vars.balance_date`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.bal_date_cust`/>>
+                  <<restart_grid obj_name=`cust`/>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
+          <</action>>
+        "/>
+
+      <block/>
+      <grid data_object="cust" growable="false" cursor_name="cust_bal">
+        <toolbar>
+          <tool type="img" name="formview" tip="Form view (Ctrl+Enter)" action="
+            <<action>>
+              <<assign src=`balance_date_vars.settings` tgt=`var.settings`/>>
+              <<assign src=`balance_date_vars.balance_date` tgt=`var.balance_date`/>>
+              <<req_formview/>>
+            <</action>>
+            " shortcut="ctrl,13"/>
+          <tool type="nav"/>
+        </toolbar>
+        <grid_methods template="Grid"/>
+      </grid>
+    </body>
+    <button_row/>
+    <frame_methods template="Grid"/>
+  </frame>
+</form>

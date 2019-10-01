@@ -23,3 +23,4 @@ iTreeOpen_src = 'images/tree_open.png';
 iTreeClosed_src = 'images/tree_closed.png';
 iFolderOpen_src = 'images/folder_open.png';
 iFolderClosed_src = 'images/folder_closed.png';
+iGrid_src = 'images/grid.png';
