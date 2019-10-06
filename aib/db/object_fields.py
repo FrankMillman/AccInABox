@@ -580,7 +580,7 @@ class Field:
                     # in ar_alloc_item.xml we add the virtual column 'alloc_cust'
                     #   to the grid where db_obj is ar_openitems
                     # without the next line, it fails because ar_openitems is 'posted',
-                    #   but that is ok because we use it to update ar_allocations
+                    #   but that is ok because we use it to update ar_tran_alloc_det
                     # any implications?
                     and db_obj.db_table.col_dict['posted'].col_type != 'virt'
                     and await db_obj.getval('posted')

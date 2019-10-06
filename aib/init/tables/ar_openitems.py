@@ -509,7 +509,7 @@ virt.append ({
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_tran_alloc_det b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-            "AND (b.tran_type != {tran_type} OR b.tran_row_id != {tran_row_id}) "
+            "AND b.tran_row_id != {tran_row_id} "
             "), 2), 0) "
         "- "
         "CASE "
@@ -520,14 +520,14 @@ virt.append ({
             #         "SELECT SUM(b.alloc_cust) "
             #         "FROM {company}.ar_tran_alloc_det b "
             #         "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-            #         "AND (b.tran_type != {tran_type} OR b.tran_row_id != {tran_row_id}) "
+            #         "AND b.tran_row_id != {tran_row_id} "
             #         "), 2), 0) "
             #     "= 0 THEN 0 "
             "ELSE a.discount_cust - COALESCE(ROUND(("
                 "SELECT SUM(b.discount_cust) "
                 "FROM {company}.ar_tran_alloc_det b "
                 "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-                "AND (b.tran_type != {tran_type} OR b.tran_row_id != {tran_row_id}) "
+                "AND b.tran_row_id != {tran_row_id} "
                 "), 2), 0) "
             "END"
         ),
@@ -542,8 +542,8 @@ virt.append ({
     'scale_ptr'  : 'cust_row_id>currency_id>scale',
     'sql'        : (
         "SELECT b.alloc_cust FROM {company}.ar_tran_alloc_det b "
-        "WHERE b.item_row_id = a.row_id AND b.tran_type = {tran_type} "
-        "AND b.tran_row_id = {tran_row_id} AND b.deleted_id = 0"
+        "WHERE b.item_row_id = a.row_id AND b.tran_row_id = {tran_row_id} "
+        "AND b.deleted_id = 0"
         )
     })
 virt.append ({
@@ -554,7 +554,7 @@ virt.append ({
     'col_head'   : 'Alloc num',
     'sql'        : (
         "SELECT count(*) FROM {company}.ar_tran_alloc b "
-        "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
+        "WHERE b.item_row_id = a.row_id AND b.posted = '1'"
         )
     })
 

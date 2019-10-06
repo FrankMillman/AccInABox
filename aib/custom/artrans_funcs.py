@@ -118,7 +118,7 @@ async def change_balance_sql(caller, xml):
     balance.sql = (
         "SELECT a.amount_cust + COALESCE(("
             "SELECT SUM(b.alloc_cust + b.discount_cust) "
-            "FROM {{company}}.ar_allocations b "
+            "FROM {{company}}.ar_tran_alloc_det b "
             "LEFT JOIN {{company}}.ar_trans c ON c.tran_type = b.tran_type "
                 "AND c.tran_row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND c.tran_date <= {{balance_date}} "
@@ -223,14 +223,18 @@ async def check_stat_date(db_obj, fld, src_val):
 async def get_due_bal(caller, xml):
     # called from ar_alloc_item on start_frame
 
-    arec = caller.data_objects['alloc_header']
-    cust_row_id = await arec.getval('cust_row_id')
+    alloc_hdr = caller.data_objects['alloc_header']
+    cust_row_id = await alloc_hdr.getval('cust_row_id')
 
     due_bal = caller.data_objects['due_bal']
     await due_bal.init()
 
     as_at_date = caller.context.as_at_date
+    this_item_rowid = caller.context.this_item_rowid
 
+    # this uses period-end dates for ageing dates
+    # instead, simple subtract 30, 60, 90, 120 from 'as_at_date'
+    # any preference?
     # periods = await db.cache.get_adm_periods(caller.company)
     # # locate period containing transaction date
     # period_row_id = bisect_left([_.closing_date for _ in periods], as_at_date)
@@ -265,7 +269,9 @@ async def get_due_bal(caller, xml):
         (SELECT
             a.cust_row_id, a.due_date, `a.{company}.ar_openitems.due_cust` AS due
             FROM {company}.ar_openitems a
-            WHERE a.cust_row_id = {cust_row_id} AND a.tran_date <= '{as_at_date}'
+            WHERE a.cust_row_id = {cust_row_id}
+                AND a.tran_date <= '{as_at_date}'
+                AND a.row_id != {this_item_rowid}
         ) AS q
         GROUP BY q.cust_row_id
         """
@@ -284,6 +290,7 @@ async def get_due_bal(caller, xml):
             await due_bal.setval('due_60', row[3], validate=False)
             await due_bal.setval('due_90', row[4], validate=False)
             await due_bal.setval('due_120', row[5], validate=False)
+            # assert not necessary if above sql verified - must be equal by definition
             assert await due_bal.getval('due_total') == (
                 await due_bal.getval('due_curr') +
                 await due_bal.getval('due_30') +
@@ -307,7 +314,7 @@ async def after_save_alloc(caller, xml):
     if alloc_cust == alloc_orig:
         return
 
-    allocations = caller.data_objects['ar_allocations']
+    allocations = caller.data_objects['ar_tran_alloc_det']
     await allocations.init()
     await allocations.setval('item_row_id', await ar_items.getval('row_id'))
 
@@ -434,7 +441,7 @@ async def alloc_ageing(caller, xml):
         conn = db_mem_conn.mem
 
         sql = (
-            f"UPDATE {caller.company}.ar_allocations SET "
+            f"UPDATE {caller.company}.ar_tran_alloc_det SET "
             f"alloc_cust = {due_cust if do_alloc else 0}, "
             f"discount_cust = {balance_cust - due_cust if do_alloc else 0}"
             )
@@ -521,7 +528,7 @@ async def create_disc_crn2(ar_rec, xml):
         return
     discount_local = await ar_rec.getval('alloc_row_id>discount_local')
 
-    ar_allocations = [_ for _ in ar_rec.children if _.table_name == 'ar_allocations'][0]
+    ar_tran_alloc_det = [_ for _ in ar_rec.children if _.table_name == 'ar_tran_alloc_det'][0]
 
     data_objects = ar_rec.context.data_objects
     if 'ar_disc' not in data_objects:
@@ -534,7 +541,7 @@ async def create_disc_crn2(ar_rec, xml):
             ar_rec.context, ar_rec.company, 'sls_nsls_subcrn',
                 parent=data_objects['ar_disc_det'])
         data_objects['disc_allocations'] = await db.objects.get_db_object(
-            ar_rec.context, ar_rec.company, 'ar_allocations', parent=data_objects['ar_disc'])
+            ar_rec.context, ar_rec.company, 'ar_tran_alloc_det', parent=data_objects['ar_disc'])
     ar_disc = data_objects['ar_disc']
     ar_disc_det = data_objects['ar_disc_det']
     nsls = data_objects['nsls']
@@ -567,11 +574,11 @@ async def create_disc_crn2(ar_rec, xml):
     where.append(['AND', '', 'tran_row_id', '=', await ar_rec.getval('row_id'), ''])
     where.append(['AND', '', 'item_row_id', '!=', await ar_rec.getval('item_row_id'), ''])
     where.append(['AND', '', 'discount_cust', '!=', '0', ''])
-    all_disc_det = ar_allocations.select_many(where=where, order=[('row_id', False)])
+    all_disc_det = ar_tran_alloc_det.select_many(where=where, order=[('row_id', False)])
     async for _ in all_disc_det:
         await disc_allocations.init()
-        await disc_allocations.setval('item_row_id', await ar_allocations.getval('item_row_id'))
-        await disc_allocations.setval('alloc_cust', await ar_allocations.getval('discount_cust'))
+        await disc_allocations.setval('item_row_id', await ar_tran_alloc_det.getval('item_row_id'))
+        await disc_allocations.setval('alloc_cust', await ar_tran_alloc_det.getval('discount_cust'))
         await disc_allocations.save()
 
     await ar_disc.post()

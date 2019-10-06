@@ -169,11 +169,11 @@ async def get_aged_bal(caller, xml):
         ) AS q
         GROUP BY q.cust_row_id
         """
-        # JOINs from ar_openitems and ar_allocations to ar_trans must *not* be LEFT JOIN
+        # JOINs from ar_openitems to ar_trans must *not* be LEFT JOIN
         # if transaction is not posted, it will not appear in ar_trans
         # if we use LEFT JOIN, the row is included, but with NULLs for ar_trans
         # if we use JOIN, the row is excluded
-        # this is what we want, as we only want to sum ar_openitems and ar_allocations
+        # this is what we want, as we only want to sum ar_openitems
         #   if the underlying transaction has been posted
 
         # GROUP BY is necessary in case inner select returns no rows

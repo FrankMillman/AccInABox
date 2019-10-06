@@ -423,9 +423,9 @@ virt.append ({
 #     'short_descr': 'Allocation row id',
 #     'long_descr' : 'Allocation row id',
 #     'col_head'   : 'Alloc id',
-#     'fkey'       : ['ar_allocations', 'row_id', None, None, False, None],
+#     'fkey'       : ['ar_tran_alloc_det', 'row_id', None, None, False, None],
 #     'sql'        : (
-#         "SELECT b.row_id FROM {company}.ar_allocations b "
+#         "SELECT b.row_id FROM {company}.ar_tran_alloc_det b "
 #         "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id "
 #         "AND b.item_row_id = a.item_row_id"
 #         ),
@@ -513,7 +513,7 @@ virt.append ({
 #     'dflt_rule'  : None,
 #     'sql'        : (
 #         "a.arec_cust + "
-#             "(SELECT COALESCE((SELECT b.alloc_cust FROM {company}.ar_allocations b "
+#             "(SELECT COALESCE((SELECT b.alloc_cust FROM {company}.ar_tran_alloc_det b "
 #             "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id AND "
 #             "b.item_row_id = a.item_row_id AND b.deleted_id = 0), 0))"
 #         ),
