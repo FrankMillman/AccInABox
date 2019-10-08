@@ -498,8 +498,15 @@ class Form:
                     if param_type == 'data_obj':
                         value = self.data_objects[source]
                     elif param_type == 'data_attr':
+                        if source.startswith('0-'):  # e.g. see ar_alloc_item.xml
+                            reverse_sign = True
+                            source = source[2:]
+                        else:
+                            reverse_sign = False
                         data_obj_name, col_name = source.split('.')
                         value = await self.data_objects[data_obj_name].getval(col_name)
+                    if reverse_sign:
+                        value = 0-value
                 else:
                     value = None
                 return_params[name] = value

@@ -1334,7 +1334,7 @@ class DbObject:
                     cols_to_update.append(fld.col_name)
                     vals_to_update.append(await fld.get_val_for_sql())
 
-        if not cols_to_update:  # possible if children changed but not parent
+        if not cols_to_update:  # possible if child changed but not parent, or if virt fld changed
             self.dirty = False
             return
 

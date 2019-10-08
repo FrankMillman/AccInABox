@@ -50,6 +50,7 @@ class GuiGrid:
         self.temp_data = {}
         self.must_validate = True
         self.readonly = element.get('readonly') == 'true'  # default to False
+        self.hidden = False  # for 'subtype' gui objects
         self.form_dflt = None
         self.before_input = None
 
@@ -519,6 +520,7 @@ class GuiGrid:
             focus_row, found = await self.cursor.start()
             first_row = focus_row - (25 if focus_row > 25 else focus_row)
         else:
+            await self.db_obj.init()
             focus_row = 0
             first_row = 0
 

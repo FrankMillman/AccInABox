@@ -267,7 +267,7 @@ async def get_due_bal(caller, xml):
         SUM(CASE WHEN q.due_date <= '{dates[4]}' THEN q.due ELSE 0 END)
         FROM
         (SELECT
-            a.cust_row_id, a.due_date, `a.{company}.ar_openitems.due_cust` AS due
+            a.cust_row_id, a.due_date, `a.{company}.ar_openitems.due_cust_gui` AS due
             FROM {company}.ar_openitems a
             WHERE a.cust_row_id = {cust_row_id}
                 AND a.tran_date <= '{as_at_date}'
@@ -307,18 +307,18 @@ async def confirm_alloc(ctx, fld, value, xml):
 async def after_save_alloc(caller, xml):
     # called from ar_alloc_item grid row after_save
 
-    ar_items = caller.data_objects['ar_items']
-    alloc_cust_fld = await ar_items.getfld('alloc_cust_gui')
+    ar_item = caller.data_objects['ar_items']
+    alloc_cust_fld = await ar_item.getfld('alloc_cust_gui')
     alloc_cust = await alloc_cust_fld.getval() or 0
     alloc_orig = await alloc_cust_fld.get_orig() or 0
     if alloc_cust == alloc_orig:
         return
 
-    allocations = caller.data_objects['ar_tran_alloc_det']
-    await allocations.init()
-    await allocations.setval('item_row_id', await ar_items.getval('row_id'))
+    alloc_det = caller.data_objects['alloc_detail']
+    await alloc_det.init()
+    await alloc_det.setval('item_row_id', await ar_item.getval('row_id'))
 
-    if allocations.exists and not alloc_cust:
+    if alloc_det.exists and not alloc_cust:
 
         # if alloc_cust has been cleared, delete the row in the allocations table
         #
@@ -331,37 +331,37 @@ async def after_save_alloc(caller, xml):
         #
         # this is what we are doing below
 
-        alloc_row_id = await allocations.getval('row_id')
-        alloc_tran_type = await allocations.getval('tran_type')
-        alloc_tran_rowid = await allocations.getval('tran_row_id')
+        alloc_row_id = await alloc_det.getval('row_id')
+        alloc_tran_type = await alloc_det.getval('tran_type')
+        alloc_tran_rowid = await alloc_det.getval('tran_row_id')
 
-        await allocations.delete(from_upd_on_save=True)  # actually delete
+        await alloc_det.delete(from_upd_on_save=True)  # actually delete
 
-        await allocations.init()
+        await alloc_det.init()
         where = []
         where.append(['WHERE', '', 'tran_type', '=', repr(alloc_tran_type), ''])
         where.append(['AND', '', 'tran_row_id', '=', alloc_tran_rowid, ''])
         where.append(['AND', '', 'row_id', '!=', alloc_row_id, ''])  # exclude the row just deleted
-        all_alloc = allocations.select_many(where=where, order=[])
+        all_alloc = alloc_det.select_many(where=where, order=[])
         async for _ in all_alloc:
-            if await allocations.getval('item_row_id') != await allocations.getval('tran_row_id>item_row_id'):
+            if await alloc_det.getval('item_row_id') != await alloc_det.getval('tran_row_id>item_row_id'):
                 break  # there are existing rows - do nothing
         else:  # this is the only one - delete it
-            assert await allocations.getval('item_row_id') == await allocations.getval('tran_row_id>item_row_id')
-            await allocations.delete(from_upd_on_save=True)  # actually delete
+            assert await alloc_det.getval('item_row_id') == await alloc_det.getval('tran_row_id>item_row_id')
+            await alloc_det.delete(from_upd_on_save=True)  # actually delete
 
     else:
-        await allocations.setval('alloc_cust', alloc_cust)
+        await alloc_det.setval('alloc_cust', alloc_cust)
         # if not alloc_cust:
-        #     await allocations.setval('discount_cust', 0)
-        if alloc_cust == await ar_items.getval('due_cust'):
-            await allocations.setval('discount_cust',
-                await ar_items.getval('balance_cust_as_at') - alloc_cust)
+        #     await alloc_det.setval('discount_cust', 0)
+        if alloc_cust == await ar_item.getval('due_cust'):
+            await alloc_det.setval('discount_cust',
+                await ar_item.getval('balance_cust_as_at') - alloc_cust)
         else:
-            discount_allowable = await ar_items.getval('balance_cust_as_at') - await ar_items.getval('due_cust')
-            discount_allowed = discount_allowable / await ar_items.getval('due_cust') * alloc_cust
-            await allocations.setval('discount_cust', discount_allowed)
-        await allocations.save()
+            discount_allowable = await ar_item.getval('balance_cust_as_at') - await ar_item.getval('due_cust')
+            discount_allowed = discount_allowable / await ar_item.getval('due_cust') * alloc_cust
+            await alloc_det.setval('discount_cust', discount_allowed)
+        await alloc_det.save()
 
     alloc_cust_fld._orig = alloc_cust
 
@@ -371,6 +371,9 @@ async def after_save_alloc(caller, xml):
     unalloc_fld = await vars.getfld('unallocated')
     unallocated = await unalloc_fld.getval()
     await unalloc_fld.setval(unallocated - (alloc_cust - alloc_orig))
+
+    ar_this_item = caller.data_objects['ar_this_item']
+    await ar_this_item.setval('amount_unallocated', await unalloc_fld.getval(), validate=False)
 
 async def alloc_ageing(caller, xml):
     # called from ar_receipt/ar_alloc after select/deselect 'allocate bucket'
@@ -1014,11 +1017,11 @@ async def check_alloc_cust(db_obj, fld, value):
     if 'ar_openitems' not in db_obj.context.data_objects:
         db_obj.context.data_objects['ar_openitems'] = await db.objects.get_db_object(
             db_obj.context, db_obj.company, 'ar_openitems')
-    ar_items = db_obj.context.data_objects['ar_openitems']
+    ar_item = db_obj.context.data_objects['ar_openitems']
     for item_row_id, alloc_cust in value:
-        await ar_items.init()
-        await ar_items.setval('row_id', item_row_id)
-        item_cust_id = await ar_items.getval('tran_row_id>cust_row_id')
+        await ar_item.init()
+        await ar_item.setval('row_id', item_row_id)
+        item_cust_id = await ar_item.getval('tran_row_id>cust_row_id')
         if item_cust_id != tran_cust_id:
             return False
     return True

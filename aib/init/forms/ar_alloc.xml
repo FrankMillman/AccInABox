@@ -48,12 +48,12 @@
       <col/>
       <label value="Original amount:"/>
       <col/>
-      <input obj_name="ar_this_item" col_name="amount_cust" lng="84" readonly="true" skip="true"/>
+      <input obj_name="ar_this_item" col_name="amount_to_alloc" lng="84" readonly="true" skip="true"/>
 
       <col/>
       <label value="Amount to allocate:"/>
       <col/>
-      <input obj_name="ar_this_item" col_name="balance_cust" lng="84" readonly="true" skip="true"/>
+      <input obj_name="ar_this_item" col_name="amount_unallocated" lng="84" readonly="true" skip="true"/>
 
       <row/>
       <col/>
@@ -61,6 +61,8 @@
       <button lng="150" btn_id="alloc" btn_label="Allocate now"
         btn_enabled="true" btn_validate="true" action="
           <<action>>
+            <<recalc obj_name=`ar_this_item` col_name=`no_of_allocations`/>>
+            <<init_obj obj_name=`ar_alloc`/>>
             <<assign src=`ar_this_item.row_id` tgt=`ar_alloc.item_row_id`/>>
             <<assign src=`ar_this_item.no_of_allocations` tgt=`ar_alloc.alloc_no`/>>
             <<save_obj obj_name=`ar_alloc`/>>
@@ -70,8 +72,8 @@
                 <<call_param name=`alloc_detail` type=`data_obj` source=`ar_alloc_det`/>>
                 <<call_param name=`tran_type` type=`data_attr` source=`'ar_alloc'`/>>
                 <<call_param name=`this_item_rowid` type=`data_attr` source=`ar_this_item.row_id`/>>
-                <<call_param name=`amount_to_alloc` type=`data_attr` source=`0-ar_this_item.balance_cust`/>>
-                <<call_param name=`unallocated` type=`data_attr` source=`0-ar_this_item.balance_cust`/>>
+                <<call_param name=`amount_to_alloc` type=`data_attr` source=`0-ar_this_item.amount_to_alloc`/>>
+                <<call_param name=`unallocated` type=`data_attr` source=`0-ar_this_item.amount_unallocated`/>>
               <</call_params>>
               <<return_params>>
               <</return_params>>
@@ -179,16 +181,7 @@
             <</action>>
           "/>
       </button_row>
-
-      <frame_methods template="Transaction_Header">
-        <method name="on_start_frame" action="
-          <<action>>
-            <<!-- init_obj obj_name=`ar_alloc` init_vals=`item_row_id=ar_this_item.row_id`/ -->>
-            <<init_obj obj_name=`ar_alloc`/>>
-            <<assign src=`ar_this_item.row_id` tgt=`ar_alloc.item_row_id`/>>
-          <</action>>
-          "/>
-        </frame_methods>
+      <frame_methods template="Transaction_Header"/>
     </frame>
   </inline_form>
 

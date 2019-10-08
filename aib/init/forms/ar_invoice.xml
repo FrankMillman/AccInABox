@@ -106,7 +106,7 @@
         <frame_methods template="Grid_Frame_Grid_RO">
           <method name="after_save" action="
             <<action>>
-              <<refresh_fld obj_name=`ar_inv` col_name=`inv_tot_amt`/>>
+              <<recalc obj_name=`ar_inv` col_name=`inv_tot_amt`/>>
             <</action>>
             "/>
         </frame_methods>

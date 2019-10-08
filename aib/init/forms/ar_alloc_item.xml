@@ -164,7 +164,7 @@
       <input obj_name="bal_vars" col_name="show_120" after="
         <<after>>
           <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`4`/>>
-          <<restart_grid obj_name=`ar_items`/>>
+          <<!-- restart_grid obj_name=`ar_items`/ -->>
         <</after>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_120" validation="
@@ -182,7 +182,7 @@
       <input obj_name="bal_vars" col_name="show_90" after="
         <<after>>
           <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`3`/>>
-          <<restart_grid obj_name=`ar_items`/>>
+          <<!-- restart_grid obj_name=`ar_items`/ -->>
         <</after>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_90" validation="
@@ -200,7 +200,7 @@
       <input obj_name="bal_vars" col_name="show_60" after="
         <<after>>
           <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`2`/>>
-          <<restart_grid obj_name=`ar_items`/>>
+          <<!-- restart_grid obj_name=`ar_items`/ -->>
         <</after>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_60" validation="
@@ -218,7 +218,7 @@
       <input obj_name="bal_vars" col_name="show_30" after="
         <<after>>
           <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`1`/>>
-          <<restart_grid obj_name=`ar_items`/>>
+          <<!-- restart_grid obj_name=`ar_items`/ -->>
         <</after>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_30" validation="
@@ -236,7 +236,7 @@
       <input obj_name="bal_vars" col_name="show_curr" after="
         <<after>>
           <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`0`/>>
-          <<restart_grid obj_name=`ar_items`/>>
+          <<!-- restart_grid obj_name=`ar_items`/ -->>
         <</after>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_curr" validation="
@@ -254,7 +254,7 @@
       <input obj_name="bal_vars" col_name="show_tot" after="
         <<after>>
           <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`-1`/>>
-          <<restart_grid obj_name=`ar_items`/>>
+          <<!-- restart_grid obj_name=`ar_items`/ -->>
         <</after>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_tot" validation="

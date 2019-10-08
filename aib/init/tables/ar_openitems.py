@@ -557,6 +557,43 @@ virt.append ({
         "WHERE b.item_row_id = a.row_id AND b.posted = '1'"
         )
     })
+virt.append ({
+    'col_name'   : 'amount_to_alloc',
+    'data_type'  : 'DEC',
+    'short_descr': 'Amount to allocate',
+    'long_descr' : 'Amount still to be allocated',
+    'col_head'   : 'Amt alloc',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'sql'        : (
+        "a.amount_cust "
+        "- "
+        "COALESCE(ROUND(("
+            "SELECT SUM(b.alloc_cust) "
+            "FROM {company}.ar_tran_alloc_det b "
+            "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND c.posted = '1'"
+            "), 2), 0)"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'amount_unallocated',
+    'data_type'  : 'DEC',
+    'short_descr': 'Amount unallocated',
+    'long_descr' : 'Amount unallocated from "still to be allocated"',
+    'col_head'   : 'Amt unalloc',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'sql'        : (
+        "a.amount_cust "
+        "- "
+        "COALESCE(ROUND(("
+            "SELECT SUM(b.alloc_cust) "
+            "FROM {company}.ar_tran_alloc_det b "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
+            "), 2), 0)"
+        ),
+    })
 
 # cursor definitions
 cursors = []
@@ -575,16 +612,16 @@ cursors.append({
             False, True, False, False, None, None, None, None],
         ['tran_row_id>tran_date', 80,
             False, True, False, False, None, None, None, None],
-        ['amount_cust', 100,
+        ['amount_to_alloc', 100,
             False, True, False, True, None, None, None, None],
-        ['balance_cust', 100,
+        ['amount_unallocated', 100,
             False, True, False, True, None, None, None, None],
         ],
     'filter': [
         ['WHERE', '(', 'tran_type', '!=', "'ar_inv'", ''],
         ['AND', '', 'tran_type', '!=', "'ar_chg'", ')'],
         ['AND', '', 'posted', '=', "'1'", ''],
-        ['AND', '', 'balance_cust', '!=', '0', ''],
+        ['AND', '', 'amount_to_alloc', '!=', '0', ''],
         ],
     'sequence': [
         ['tran_number', False],

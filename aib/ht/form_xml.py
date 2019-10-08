@@ -153,12 +153,14 @@ async def restart_frame_if_not_grid(caller, xml):
         await caller.restart_frame()
 """
 
-async def refresh_fld(caller, xml):
+async def recalc(caller, xml):
     # called from various places to force recalc of field to refresh screen
     obj_name = xml.get('obj_name')
     col_name = xml.get('col_name')
     db_obj = caller.data_objects[obj_name]
-    await db_obj.getval(col_name)
+    fld = await db_obj.getfld(col_name)
+    fld.must_be_evaluated = True
+    await fld.getval()
 
 async def restart_grid(caller, xml):
     obj_name = xml.get('obj_name')
@@ -516,9 +518,9 @@ async def return_from_subform(caller, state, output_params, xml):
                 data_obj_name = target
                 caller.data_objects[data_obj_name] = output_params[name]
             elif param_type == 'data_attr':
+                value = output_params[name]
                 data_obj_name, col_name = target.split('.')
-                await caller.data_objects[data_obj_name].setval(
-                    col_name, output_params[name])
+                await caller.data_objects[data_obj_name].setval(col_name, value)
 
     # find 'return' element in 'on_return' with attribute 'state' = state
     on_return = xml.find('on_return').find("return[@state='{}']".format(state))
