@@ -520,7 +520,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'unposted_pmt',
-    'descr': 'Payments',
+    'title': 'Unposted ap payments',
     'columns': [
         ['tran_number', 100,
             False, True, False, False, None, None, None, None],

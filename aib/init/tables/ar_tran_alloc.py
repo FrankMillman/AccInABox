@@ -260,7 +260,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'unposted_alloc',
-    'descr': 'Allocations',
+    'title': 'Unposted ar allocations',
     'columns': [
         ['cust_row_id>party_row_id>party_id', 80,
             False, True, False, False, None, None, None, None],

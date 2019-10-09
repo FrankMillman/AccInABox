@@ -197,7 +197,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'divisions',
-    'descr': 'Divisions',
+    'title': 'Maintain divisions',
     'columns': [
         ['division', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, True, False, False, None, None, None, None],

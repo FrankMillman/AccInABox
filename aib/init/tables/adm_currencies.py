@@ -203,7 +203,7 @@ cursors = []
 
 cursors.append({
     'cursor_name': 'curr',
-    'descr': 'Currencies',
+    'title': 'Maintain currencies',
     'columns': [
         ['currency', 60, False, False, False, False, None, None, None, None],
         ['descr', 150, True, False, False, False, None, None, None, None],

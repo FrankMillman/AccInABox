@@ -446,7 +446,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'ar_ledg',
-    'descr': 'Ar ledgers',
+    'title': 'Maintain ar ledger params',
     'columns': [
         ['ledger_id', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],

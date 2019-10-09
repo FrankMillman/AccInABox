@@ -198,7 +198,7 @@ cursors = []
 
 cursors.append({
     'cursor_name': 'locs',
-    'descr': 'Locations',
+    'title': 'Maintain locations',
     'columns': [
         ['location', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, True, False, False, None, None, None, None],

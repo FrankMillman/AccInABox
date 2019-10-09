@@ -216,7 +216,7 @@ virt = []
 cursors = []
 cursors.append({
     'cursor_name': 'supp',
-    'descr': 'Suppliers',
+    'title': 'Maintain suppliers',
     'columns': [
         ['supp_id', 100, False, False, False, False, None, None, None, None],
         ['party_row_id>display_name', 260, True, True, False, False, None, None, None, None],

@@ -434,7 +434,7 @@ async def setup_cursor(module, db_tbl, db_cur, table_name):
         await db_cur.init()
         await db_cur.setval('table_name', table_name)
         await db_cur.setval('cursor_name', cur['cursor_name'])
-        await db_cur.setval('descr', cur['descr'])
+        await db_cur.setval('title', cur['title'])
         await db_cur.setval('columns', cur['columns'])
         await db_cur.setval('filter', cur['filter'])
         await db_cur.setval('sequence', cur['sequence'])
@@ -633,7 +633,7 @@ async def setup_menus(context, conn, company, company_name):
 
     menu = [company_name, 'menu', None, [
         ['Database setup', 'menu', 'db', [
-            ['Setup tables', 'form', '_sys.setup_table'],
+            ['Maintain tables', 'form', '_sys.setup_table'],
             ]],
         ['System setup', 'menu', 'sys', [
             ['Form definitions', 'grid', 'sys_form_defns', '_sys.form_list'],
@@ -641,25 +641,25 @@ async def setup_menus(context, conn, company, company_name):
             ['Menu definitions', 'form', '_sys.setup_menu'],
             ]],
         ['Access control', 'menu', 'acc', [
-            ['Setup roles', 'form', '_sys.setup_roles'],
-            ['Setup users roles', 'form', '_sys.users_roles'],
+            ['Maintain roles', 'form', '_sys.setup_roles'],
+            ['Maintain users roles', 'form', '_sys.users_roles'],
             ]],
         ['Administration', 'menu', 'adm', [
-            ['Setup company parameters', 'form', 'adm_params'],
-            ['Setup financial periods', 'form', 'setup_periods'],
-            ['Setup locations', 'form', 'setup_locations'],
-            ['Setup divisions', 'form', 'setup_divisions'],
-            ['Setup currency codes', 'form', 'setup_currencies'],
-            ['Setup tax codes', 'form', 'setup_tax_codes'],
+            ['Maintain company parameters', 'form', 'adm_params'],
+            ['Maintain financial periods', 'form', 'setup_periods'],
+            ['Maintain locations', 'form', 'setup_locations'],
+            ['Maintain divisions', 'form', 'setup_divisions'],
+            ['Maintain currency codes', 'form', 'setup_currencies'],
+            ['Maintain tax codes', 'form', 'setup_tax_codes'],
             ]],
         ['Organisations', 'menu', 'org', [
-            ['Setup parties', 'grid', 'org_parties', 'parties'],
-            ['Setup message types', 'grid', 'org_msg_types', 'msg_types'],
+            ['Maintain parties', 'grid', 'org_parties', 'parties'],
+            ['Maintain message types', 'grid', 'org_msg_types', 'msg_types'],
             ]],
         ['General ledger', 'menu', 'gl', [
             ['Setup', 'menu', 'gl', [
                 ['G/L parameters', 'form', 'gl_params'],
-                ['Setup periods', 'form', 'setup_ledg_periods'],
+                ['Maintain periods', 'form', 'setup_ledg_periods'],
                 ]],
             ['Gl transactions', 'menu', 'gl', [
                 ]],
@@ -668,8 +668,8 @@ async def setup_menus(context, conn, company, company_name):
             ]],
         ['Cash book', 'menu', 'cb', [
             ['Setup', 'menu', 'cb', [
-                ['Setup receipt codes', 'form', 'setup_orec_codes'],
-                ['Setup payment codes', 'form', 'setup_opmt_codes'],
+                ['Maintain receipt codes', 'form', 'setup_orec_codes'],
+                ['Maintain payment codes', 'form', 'setup_opmt_codes'],
                 ]],
             ['Add new cashbook', 'form', 'cb_ledger_new'],
             ]],
@@ -699,7 +699,7 @@ async def setup_menus(context, conn, company, company_name):
     cb_menu = ['Cash book', 'menu', 'cb', [
         ['Setup', 'menu', 'cb', [
             ['Cash book parameters', 'form', 'cb_params'],
-            ['Setup periods', 'form', 'cb_ledg_periods'],
+            ['Maintain periods', 'form', 'cb_ledg_periods'],
             ]],
         ['Cb transactions', 'menu', 'cb', [
             ['Cash book receipt', 'form', 'cb_receipt'],
@@ -715,7 +715,7 @@ async def setup_menus(context, conn, company, company_name):
     ar_menu = ['Accounts receivable', 'menu', 'ar', [
         ['AR setup', 'menu', 'ar', [
             ['Ledger parameters', 'form', 'ar_params'],
-            ['Setup periods', 'form', 'ar_ledg_periods'],
+            ['Maintain periods', 'form', 'ar_ledg_periods'],
             ['Customers', 'grid', 'ar_customers', 'cust'],
             ['Terms codes', 'grid', 'ar_terms_codes', 'terms_codes'],
             ]],
@@ -736,7 +736,7 @@ async def setup_menus(context, conn, company, company_name):
     ap_menu =['Accounts payable', 'menu', 'ap', [
         ['AP setup', 'menu', 'ap', [
             ['Ledger parameters', 'form', 'ap_params'],
-            ['Setup periods', 'form', 'ap_ledg_periods'],
+            ['Maintain periods', 'form', 'ap_ledg_periods'],
             ['Suppliers', 'grid', 'ap_suppliers', 'supp'],
             ['Terms codes', 'grid', 'ap_terms_codes', 'terms_codes'],
             ]],
@@ -751,7 +751,7 @@ async def setup_menus(context, conn, company, company_name):
     in_menu =['Inventory', 'menu', 'in', [
         ['Warehouse setup', 'menu', 'in', [
             ['Warehouse parameters', 'form', 'in_params'],
-            ['Setup periods', 'form', 'setup_ledg_periods'],
+            ['Maintain periods', 'form', 'setup_ledg_periods'],
             # ['Product codes', 'form', 'setup_prod_codes'],
             # ['Selling prices', 'form', 'setup_sell_prices'],
             ]],

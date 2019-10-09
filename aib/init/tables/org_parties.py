@@ -236,7 +236,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'parties',
-    'descr': 'Parties',
+    'title': 'Maintain parties',
     'columns': [
         ['party_id', 100, False, False, False, False, None, None, None, None],
         ['display_name', 260, True, True, False, False, None, None, None, None],

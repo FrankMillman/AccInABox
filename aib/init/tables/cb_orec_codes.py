@@ -242,7 +242,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'all_orec_codes',
-    'descr': 'All other receipt codes',
+    'title': 'All other receipt codes',
     'columns': [
         ['orec_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],
@@ -254,7 +254,7 @@ cursors.append({
     })
 cursors.append({
     'cursor_name': 'orec_codes',
-    'descr': 'Other receipt codes',
+    'title': 'Maintain other receipt codes',
     'columns': [
         ['orec_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],

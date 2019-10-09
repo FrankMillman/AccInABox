@@ -327,7 +327,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'db_views',
-    'descr': 'Database views',
+    'title': 'Maintain database views',
     'columns': [
         ['view_name', 160, False, False, False, False, None, None, None, None],
         ['short_descr', 250, True, False, False, False, None, None, None, None],

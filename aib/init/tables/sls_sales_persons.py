@@ -122,7 +122,7 @@ cursors = []
 
 cursors.append({
     'cursor_name': 'sales_persons',
-    'descr': 'Sales persons',
+    'title': 'Maintain sales persons',
     'columns': [
         ['sales_person', 80, False, False, False, False, None, None, None, None],
         ['name', 200, True, False, False, False, None, None, None, None],

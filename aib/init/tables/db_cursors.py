@@ -114,11 +114,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'descr',
+    'col_name'   : 'title',
     'data_type'  : 'TEXT',
-    'short_descr': 'Description',
-    'long_descr' : 'Description',
-    'col_head'   : 'Description',
+    'short_descr': 'Title',
+    'long_descr' : 'Title',
+    'col_head'   : 'Title',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,

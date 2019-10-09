@@ -274,7 +274,7 @@ cursors.append({
 """
 cursors.append ({
     'cursor_name': 'cash_books',
-    'descr': 'Cash books',
+    'title': 'Maintain cash book params',
     'columns': [
         ['ledger_id', 80, False, False, False, False, None, None, None, None],
         ['descr', 160, True, False, False, False, None, None, None, None],

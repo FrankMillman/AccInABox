@@ -363,7 +363,7 @@ async def setup_cursor(module, db_tbl, db_cur, table_name):
         await db_cur.init()
         await db_cur.setval('table_name', table_name)
         await db_cur.setval('cursor_name', cur['cursor_name'])
-        await db_cur.setval('descr', cur['descr'])
+        await db_cur.setval('title', cur['title'])
         await db_cur.setval('columns', cur['columns'])
         await db_cur.setval('filter', cur['filter'])
         await db_cur.setval('sequence', cur['sequence'])
@@ -478,7 +478,7 @@ async def setup_menus(context, company, company_name):
 
     menu = [company_name, 'menu', None, [
         ['Database setup', 'menu', 'db', [
-            ['Setup tables', 'form', '_sys.setup_table'],
+            ['Maintain tables', 'form', '_sys.setup_table'],
             ]],
         ['System setup', 'menu', 'sys', [
             ['Form definitions', 'grid', 'sys_form_defns', '_sys.form_list'],
@@ -486,12 +486,12 @@ async def setup_menus(context, company, company_name):
             ['Menu definitions', 'form', '_sys.setup_menu'],
             ]],
         ['Access control', 'menu', 'acc', [
-            ['Setup roles', 'form', 'setup_roles'],
-            ['Setup users roles', 'form', 'users_roles'],
+            ['Maintain roles', 'form', 'setup_roles'],
+            ['Maintain users roles', 'form', 'users_roles'],
             ]],
         ['Directories', 'menu', 'dir', [
-            ['Setup users', 'grid', 'dir_users', 'users'],
-            ['Setup companies', 'form', 'setup_company'],
+            ['Maintain users', 'grid', 'dir_users', 'users'],
+            ['Maintain companies', 'form', 'setup_company'],
             ]],
         ]]
 

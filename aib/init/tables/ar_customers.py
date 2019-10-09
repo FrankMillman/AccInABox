@@ -510,7 +510,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'cust',
-    'descr': 'Customers',
+    'title': 'Maintain customers',
     'columns': [
         ['cust_id', 100, False, False, False, False, None, None, None, None],
         ['party_row_id>display_name', 260, True, True, False, False, None, None, None, None],
@@ -521,7 +521,7 @@ cursors.append({
     })
 cursors.append({
     'cursor_name': 'cust_bal',
-    'descr': 'Customer balances',
+    'title': 'Customer balances',
     'columns': [
         ['cust_id', 80, False, True, False, False, None, None, None, None],
         ['party_row_id>display_name', 150, True, True, False, False, None, None, None, None],
@@ -537,7 +537,7 @@ cursors.append({
     })
 cursors.append({
     'cursor_name': 'cust_bal_2',  # called from ar_subtran_rec.cust_row_id
-    'descr': 'Customer balances',
+    'title': 'Customer balances',
     'columns': [
         ['cust_id', 80, False, True, False, False, None, None, None, None],
         ['party_row_id>display_name', 150, True, True, False, False, None, None, None, None],

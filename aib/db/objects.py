@@ -626,6 +626,7 @@ class DbObject:
         cursor_defn.append(cursor_data['sequence'])
         cursor_defn.append(cursor_data['formview_name'])
         self.cursor_defn = cursor_defn
+        return cursor_data['title']
 
     def set_cursor(self, cursor):
         # called from ht.gui_grid.start_grid() or ht.gui_grid.start_row()

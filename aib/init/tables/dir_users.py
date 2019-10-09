@@ -270,7 +270,7 @@ cursors = []
 
 cursors.append({
     'cursor_name': 'users',
-    'descr': 'Users',
+    'title': 'Maintain users',
     'columns': [
         ['user_id', 100, False, False, False, False, None, None, None, None],
         ['display_name', 260, True, True, False, False, None, None, None, None],

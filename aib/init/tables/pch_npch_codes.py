@@ -290,7 +290,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'all_npch_codes',
-    'descr': 'All pch codes - non-inventory',
+    'title': 'All pch codes - non-inventory',
     'columns': [
         ['npch_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],
@@ -301,7 +301,7 @@ cursors.append({
     })
 cursors.append({
     'cursor_name': 'npch_codes',
-    'descr': 'Purchase codes - non-inventory',
+    'title': 'Maintain purchase codes',
     'columns': [
         ['npch_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],

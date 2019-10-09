@@ -141,7 +141,7 @@ cursors = []
 
 cursors.append({
     'cursor_name': 'tax_rates',
-    'descr': 'Tax rates',
+    'title': 'Maintain tax rates',
     'columns': [
         ['eff_date', 60, False, False, False, False, None, None, None, None],
         ['rate', 80, False, False, False, False, None, None, None, None],

@@ -234,7 +234,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'ar_per',
-    'descr': 'Ar ledger periods',
+    'title': 'Maintain ar ledger periods',
     'columns': [
         ['period_row_id', 60, True, True, False, False, None, None, None, None],
         ['closing_date', 100, False, True, False, False, None, None, None, None],
@@ -246,7 +246,7 @@ cursors.append({
     })
 cursors.append({
     'cursor_name': 'ar_per_stat',
-    'descr': 'Ar ledger per with stat date',
+    'title': 'Ar ledger per with stat date',
     'columns': [
         ['period_row_id', 60, True, True, False, False, None, None, None, None],
         ['statement_date', 100, False, True, False, False, None, None, None, None],

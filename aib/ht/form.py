@@ -190,8 +190,7 @@ class Form:
             grid_obj = await db.objects.get_db_object(
                 self.context, self.company, table_name)
             self.data_objects['grid_obj'] = grid_obj
-            self.context.cursor_name = cursor_name
-            title = f'Setup {grid_obj.db_table.short_descr}'
+            title = await grid_obj.setup_cursor_defn(cursor_name)
 
         try:
             input_params = form_defn.find('input_params')

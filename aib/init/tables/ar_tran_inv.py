@@ -546,7 +546,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'unposted_inv',
-    'descr': 'Invoices',
+    'title': 'Unposted ar invoices',
     'columns': [
         ['tran_number', 100,
             False, True, False, False, None, None, None, None],

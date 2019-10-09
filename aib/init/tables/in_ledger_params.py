@@ -250,7 +250,7 @@ cursors.append({
 """
 cursors.append({
     'cursor_name': 'whouse',
-    'descr': 'Warehouses',
+    'title': 'Maintain warehouse params',
     'columns': [
         ['ledger_id', 100, False, False, False, False, None, None, None, None],
         ['descr', 240, True, False, False, False, None, None, None, None],

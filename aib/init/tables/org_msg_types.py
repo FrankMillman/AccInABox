@@ -122,7 +122,7 @@ cursors = []
 
 cursors.append({
     'cursor_name': 'msg_types',
-    'descr': 'Message types',
+    'title': 'Maintain message types',
     'columns': [
         ['message_type', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],

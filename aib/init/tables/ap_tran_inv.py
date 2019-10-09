@@ -514,7 +514,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'unposted_inv',
-    'descr': 'Invoices',
+    'title': 'Unposted ap invoices',
     'columns': [
         ['supp_row_id>party_row_id>party_id', 80,
             False, True, False, False, None, None, None, None],

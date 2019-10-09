@@ -141,7 +141,7 @@ cursors = []
 
 cursors.append({
     'cursor_name': 'form_list',
-    'descr': 'List of forms',
+    'title': 'Maintain form definitions',
     'columns': [
         ['form_name', 160, False, False, False, False, None, None, None, None],
         ['title', 300, True, False, False, False, None, None, None, None],

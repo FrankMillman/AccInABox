@@ -599,7 +599,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'unallocated',
-    'descr': 'Unallocated items',
+    'title': 'Unallocated items',
     'columns': [
         # ['cust_id', 80,
         ['cust_row_id>party_row_id>party_id', 80,

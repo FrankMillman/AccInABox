@@ -209,7 +209,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'whouse',
-    'descr': 'Warehouses',
+    'title': 'Warehouses',
     'columns': [
         ['wh_row_id>ledger_id', 100, False, False, False, False, None, None, None, None],
         ['wh_row_id>descr', 240, True, False, False, False, None, None, None, None],
@@ -219,7 +219,7 @@ cursors.append({
     })
 cursors.append({
     'cursor_name': 'prod_codes',
-    'descr': 'Product codes',
+    'title': 'Product codes',
     'columns': [
         ['prod_row_id>prod_code', 80, False, False, False, False, None, None, None, None],
         ['prod_row_id>descr', 200, True, False, False, False, None, None, None, None],

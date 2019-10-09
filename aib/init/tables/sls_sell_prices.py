@@ -140,7 +140,7 @@ virt = []
 cursors = []
 cursors.append({
     'cursor_name': 'sell_prices',
-    'descr': 'Selling prices',
+    'title': 'Maintain selling prices',
     'columns': [
         ['eff_date', 60, False, False, False, False, None, None, None, None],
         ['sell_price', 80, False, False, False, False, None, None, None, None],

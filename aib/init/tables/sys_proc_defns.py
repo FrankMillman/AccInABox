@@ -141,7 +141,7 @@ cursors = []
 
 cursors.append({
     'cursor_name': 'proc_list',
-    'descr': 'List of processes',
+    'title': 'Maintain process definitions',
     'columns': [
         ['process_id', 160, False, False, False, False, None, None, None, None],
         ['descr', 300, True, False, False, False, None, None, None, None],

@@ -170,7 +170,7 @@ cursors = []
 
 cursors.append({
     'cursor_name': 'tax_codes',
-    'descr': 'Non-inventory sales tax codes',
+    'title': 'Maintain sales tax codes',
     'columns': [
         ['tax_cat_id>tax_cat', 80, False, True, False, False, None, None, None, None],
         ['tax_code', 80, False, False, False, False, None, None, None, None],

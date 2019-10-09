@@ -600,7 +600,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'unposted_crn',
-    'descr': 'Credit notes',
+    'title': 'Unposted ar credit notes',
     'columns': [
         ['tran_number', 100,
             False, True, False, False, None, None, None, None],

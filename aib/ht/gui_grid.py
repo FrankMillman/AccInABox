@@ -146,9 +146,6 @@ class GuiGrid:
             if self.db_obj.cursor_defn is None:
                 cursor_name = element.get('cursor_name')
                 if cursor_name is None:
-                    if hasattr(self.context, 'cursor_name'):
-                        cursor_name = self.context.cursor_name  # passed in from menu option
-                if cursor_name is None:
                     raise AibError(head=self.db_obj.table_name,
                         body=f'No cursor for {self.db_obj.table_name}')
                 await self.db_obj.setup_cursor_defn(cursor_name)

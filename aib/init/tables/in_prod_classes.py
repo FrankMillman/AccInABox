@@ -254,7 +254,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'all_prod_classes',
-    'descr': 'Product groups and classes',
+    'title': 'Product groups and classes',
     'columns': [
         ['class', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],
@@ -265,7 +265,7 @@ cursors.append({
     })
 cursors.append({
     'cursor_name': 'prod_classes',
-    'descr': 'Product classes',
+    'title': 'Maintain product classes',
     'columns': [
         ['class', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],

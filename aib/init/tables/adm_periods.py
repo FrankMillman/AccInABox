@@ -218,7 +218,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'adm_per',
-    'descr': 'Financial periods',
+    'title': 'Maintain financial periods',
     'columns': [
         ['period_row_id', 80, True, True, False, False, None, None, None, None],
         ['closing_date', 100, False, True, False, False, None, None, None, None],

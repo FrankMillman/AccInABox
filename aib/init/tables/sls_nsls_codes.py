@@ -360,7 +360,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'all_nsls_codes',
-    'descr': 'All sls codes - non-inventory',
+    'title': 'All sls codes - non-inventory',
     'columns': [
         ['nsls_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],
@@ -371,7 +371,7 @@ cursors.append({
     })
 cursors.append({
     'cursor_name': 'nsls_codes',
-    'descr': 'Sales codes - non-inventory',
+    'title': 'Maintain sales codes',
     'columns': [
         ['nsls_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],

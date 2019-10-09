@@ -160,7 +160,7 @@ cursors = []
 
 cursors.append({
     'cursor_name': 'tax_cats',
-    'descr': 'Sales tax categories',
+    'title': 'Maintain sales tax categories',
     'columns': [
         ['tax_cat', 80, False, False, False, False, None, None, None, None],
         ['descr', 200, True, False, False, False, None, None, None, None],

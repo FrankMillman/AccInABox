@@ -148,25 +148,3 @@ cursors = []
 
 # actions
 actions = []
-"""
-actions.append([
-    'upd_checks',
-    [
-        [
-            'module_or_role',
-            'Must have module_row_id or role_id, but not both',
-            [
-                ['check', '(', 'module_row_id', 'is not', '$None', ''],
-                ['and', '', 'role_id', 'is', '$None', ')'],
-                ['or', '(', 'module_row_id', 'is', '$None', ''],
-                ['and', '', 'role_id', 'is not', '$None', ')'],
-                ],
-            ],
-        ],
-    ])
-
-OR
-
-cannot be 'root'
-
-"""

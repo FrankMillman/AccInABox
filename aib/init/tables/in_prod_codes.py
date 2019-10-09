@@ -214,7 +214,7 @@ virt = []
 cursors = []
 cursors.append({
     'cursor_name': 'prod_codes',
-    'descr': 'Product codes',
+    'title': 'Maintain product codes',
     'columns': [
         ['prod_code', 80, False, False, False, False, None, None, None, None],
         ['descr', 200, True, False, False, False, None, None, None, None],

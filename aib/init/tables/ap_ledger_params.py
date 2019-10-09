@@ -350,7 +350,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'ap_ledg',
-    'descr': 'Ap ledgers',
+    'title': 'Maintain ap ledger params',
     'columns': [
         ['ledger_id', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],

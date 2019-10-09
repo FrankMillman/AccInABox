@@ -419,7 +419,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'db_tables',
-    'descr': 'Database tables',
+    'title': 'Maintain database tables',
     'columns': [
         ['table_name', 160, False, False, False, False, None, None, None, None],
         ['short_descr', 250, True, False, False, False, None, None, None, None],

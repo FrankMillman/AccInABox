@@ -242,7 +242,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'all_opmt_codes',
-    'descr': 'All other payment codes',
+    'title': 'All other payment codes',
     'columns': [
         ['opmt_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],
@@ -254,7 +254,7 @@ cursors.append({
     })
 cursors.append({
     'cursor_name': 'opmt_codes',
-    'descr': 'Other payment codes',
+    'title': 'Maintain other payment codes',
     'columns': [
         ['opmt_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],

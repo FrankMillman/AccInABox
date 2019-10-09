@@ -192,7 +192,7 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'cb_per',
-    'descr': 'Cb ledger periods',
+    'title': 'Maintain cb ledger periods',
     'columns': [
         ['period_row_id', 80, True, True, False, False, None, None, None, None],
         ['closing_date', 100, False, True, False, False, None, None, None, None],
