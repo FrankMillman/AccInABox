@@ -352,28 +352,14 @@ async def after_save_alloc(caller, xml):
 
     else:
         await alloc_det.setval('alloc_cust', alloc_cust)
-        # if not alloc_cust:
-        #     await alloc_det.setval('discount_cust', 0)
-        if alloc_cust == await ar_item.getval('due_cust'):
-            await alloc_det.setval('discount_cust',
-                await ar_item.getval('balance_cust_as_at') - alloc_cust)
-        else:
-            discount_allowable = await ar_item.getval('balance_cust_as_at') - await ar_item.getval('due_cust')
-            discount_allowed = discount_allowable / await ar_item.getval('due_cust') * alloc_cust
-            await alloc_det.setval('discount_cust', discount_allowed)
         await alloc_det.save()
 
     alloc_cust_fld._orig = alloc_cust
 
-    # arec = caller.data_objects['arec']
-    # unalloc_fld = await arec.getfld('unallocated')
     vars = caller.data_objects['vars']
     unalloc_fld = await vars.getfld('unallocated')
     unallocated = await unalloc_fld.getval()
     await unalloc_fld.setval(unallocated - (alloc_cust - alloc_orig))
-
-    ar_this_item = caller.data_objects['ar_this_item']
-    await ar_this_item.setval('amount_unallocated', await unalloc_fld.getval(), validate=False)
 
 async def alloc_ageing(caller, xml):
     # called from ar_receipt/ar_alloc after select/deselect 'allocate bucket'

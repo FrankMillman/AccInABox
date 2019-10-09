@@ -6,8 +6,6 @@
   <mem_objects>
 
     <mem_obj name="vars" descr="Form variables">
-      <mem_col col_name="tran_type" data_type="TEXT" short_descr="Tran type"
-        long_descr="Transaction type"/>
       <mem_col col_name="amount_to_alloc" data_type="DEC" short_descr="Amount to allocate"
         long_descr="Amount to allocate" db_scale="2"
         scale_ptr="alloc_header.cust_row_id>currency_id>scale"/>
@@ -72,22 +70,12 @@
         long_descr="Allocate balance of 120 day transactions due" allow_amend="true"/>
       <mem_col col_name="ageing_dates" data_type="JSON" short_descr="Dates for age buckets"
         long_descr="Dates for ageing buckets" allow_amend="true"/>
-      <!-- mem_col col_name="first_date" data_type="DTE" short_descr="First date for selection"
-        long_descr="First date for selection" allow_amend="true"/>
-      <mem_col col_name="last_date" data_type="DTE" short_descr="Last date for selection"
-        long_descr="Last date for selection" allow_amend="true"/ -->
-      <!-- mem_col col_name="amount_to_alloc" data_type="DEC" short_descr="Amount to allocate"
-        long_descr="Amount to allocate" allow_amend="true"/ -->
-      <!-- mem_col col_name="unallocated" data_type="DEC" short_descr="Unallocated"
-        long_descr="Unallocated" allow_amend="true" db_scale="2"
-        scale_ptr="alloc_header.cust_row_id>currency_id>scale"/ -->
     </mem_obj>
   </mem_objects>
 
   <input_params>
     <input_param name="alloc_header" type="data_obj" target="alloc_header" required="true"/>
     <input_param name="alloc_detail" type="data_obj" target="alloc_detail" required="true"/>
-    <input_param name="tran_type" type="data_attr" target="vars.tran_type" required="true"/>
     <input_param name="this_item_rowid" type="data_attr" target="vars.this_item_rowid" required="true"/>
     <input_param name="amount_to_alloc" type="data_attr" target="vars.amount_to_alloc" required="true"/>
     <input_param name="unallocated" type="data_attr" target="vars.unallocated" required="true"/>

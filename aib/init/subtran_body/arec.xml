@@ -53,8 +53,8 @@
         <<save_obj obj_name=`ar_rec`/>>
         <<sub_form name=`ar_alloc_item`>>
           <<call_params>>
-            <<call_param name=`alloc_parent` type=`data_obj` source=`ar_rec`/>>
-            <<call_param name=`tran_type` type=`data_attr` source=`'ar_rec'`/>>
+            <<call_param name=`alloc_header` type=`data_obj` source=`ar_rec`/>>
+            <<call_param name=`alloc_detail` type=`data_obj` source=`ar_rec_alloc`/>>
             <<call_param name=`this_item_rowid` type=`data_attr` source=`ar_rec.item_row_id`/>>
             <<call_param name=`amount_to_alloc` type=`data_attr` source=`ar_rec.arec_cust`/>>
             <<call_param name=`unallocated` type=`data_attr` source=`ar_rec.unallocated`/>>

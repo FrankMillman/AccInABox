@@ -507,7 +507,7 @@ class GuiGrid:
         self.inserted = 0  # 0=existing row  -1=appended row  1=inserted row
 
         if start_val:
-            await self.db_obj.init(init_vals={start_col: start_val})
+            await self.db_obj.init(display=False, init_vals={start_col: start_val})
             if start_col != self.cursor.order[0][0]:
                 # we typically get here if a cursor is sorted by a 'seq' field, but
                 #   the caller supplies an 'alternate key' field
@@ -520,7 +520,7 @@ class GuiGrid:
             focus_row, found = await self.cursor.start()
             first_row = focus_row - (25 if focus_row > 25 else focus_row)
         else:
-            await self.db_obj.init()
+            await self.db_obj.init(display=False)
             focus_row = 0
             first_row = 0
 

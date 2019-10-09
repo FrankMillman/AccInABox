@@ -70,7 +70,6 @@
               <<call_params>>
                 <<call_param name=`alloc_header` type=`data_obj` source=`ar_alloc`/>>
                 <<call_param name=`alloc_detail` type=`data_obj` source=`ar_alloc_det`/>>
-                <<call_param name=`tran_type` type=`data_attr` source=`'ar_alloc'`/>>
                 <<call_param name=`this_item_rowid` type=`data_attr` source=`ar_this_item.row_id`/>>
                 <<call_param name=`amount_to_alloc` type=`data_attr` source=`0-ar_this_item.amount_to_alloc`/>>
                 <<call_param name=`unallocated` type=`data_attr` source=`0-ar_this_item.amount_unallocated`/>>
@@ -82,6 +81,7 @@
                   <<btn_set_focus btn_id=`btn_close`/>>
                 <</return>>
                 <<return state=`completed`>>
+                  <<recalc obj_name=`ar_this_item` col_name=`amount_unallocated`/>>
                   <<btn_set_focus btn_id=`btn_close`/>>
                 <</return>>
               <</on_return>>

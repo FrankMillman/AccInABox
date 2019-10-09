@@ -501,23 +501,26 @@ virt.append ({
     'dflt_rule'  : None,
     'sql'        : "0 - a.arec_local",
     })
-# virt.append ({
-#     'col_name'   : 'unallocated',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Unallocated',
-#     'long_descr' : 'Balance of receipt not allocated',
-#     'col_head'   : 'Unalloc',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'cust_row_id>currency_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : None,
-#     'sql'        : (
-#         "a.arec_cust + "
-#             "(SELECT COALESCE((SELECT b.alloc_cust FROM {company}.ar_tran_alloc_det b "
-#             "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id AND "
-#             "b.item_row_id = a.item_row_id AND b.deleted_id = 0), 0))"
-#         ),
-#     })
+virt.append ({
+    'col_name'   : 'unallocated',
+    'data_type'  : 'DEC',
+    'short_descr': 'Unallocated',
+    'long_descr' : 'Balance of receipt not allocated',
+    'col_head'   : 'Unalloc',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'sql'        : (
+        "a.arec_cust "
+        "- "
+        "COALESCE(ROUND(("
+            "SELECT SUM(b.alloc_cust) "
+            "FROM {company}.ar_subtran_rec_alloc b "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
+            "), 2), 0)"
+        ),
+    })
 
 # cursor definitions
 cursors = []

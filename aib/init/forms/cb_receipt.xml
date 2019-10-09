@@ -13,6 +13,7 @@
     <db_obj name="isls" table_name="sls_isls_subinv" parent="cb_det"/>
     <db_obj name="nsls" table_name="sls_nsls_subinv" parent="cb_det"/>
     <db_obj name="ar_rec" table_name="ar_subtran_rec" parent="cb_det"/>
+    <db_obj name="ar_rec_alloc" table_name="ar_subtran_rec_alloc" parent="ar_rec"/>
     <db_obj name="cb_orec" table_name="cb_orec_subtran" parent="cb_det"/>
     <db_obj name="com" table_name="cb_comments" parent="cb_det"/>
   </db_objects>
