@@ -121,7 +121,7 @@
       <label value="Ledger:"/>
       <display obj_name="var" col_name="ledger_descr" lng="150"/>
       <block/>
-      <grid data_object="ledg_per" growable="false" num_grid_rows="8"
+      <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="_ctx"
           start_col="period_row_id" start_val="var.current_period" readonly="true">
         <toolbar>
           <tool type="nav"/>
