@@ -132,7 +132,6 @@ class Form:
     @log_func
     async def start_form(self, session,
             context=None,  # supplied if form is root form
-            cursor_name=None,   # supplied if lookup selected - taken from fkey
             grid_params=None,   # passed in from menu option if setup_grid
             formview_obj=None,   # supplied if formview or lookdown selected
             ):
@@ -182,8 +181,6 @@ class Form:
             title = form_data['title']
             form_defn = self.form_defn = form_data['form_xml']
         title = title.replace('{comp_name}', db.cache.companies[self.company])
-
-        self.context.cursor_name = cursor_name
 
         if grid_params is not None:  # passed in if setup_grid
             table_name, cursor_name = grid_params

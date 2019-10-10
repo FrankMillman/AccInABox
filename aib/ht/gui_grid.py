@@ -141,8 +141,6 @@ class GuiGrid:
             self.formview_name = element.get('form_name')
         else:
 
-            # old version assumes one cursor_defn per db_obj
-
             if self.db_obj.cursor_defn is None:
                 cursor_name = element.get('cursor_name')
                 if cursor_name is None:
