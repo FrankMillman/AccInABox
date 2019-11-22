@@ -233,7 +233,7 @@ async def get_due_bal(caller, xml):
     this_item_rowid = caller.context.this_item_rowid
 
     # this uses period-end dates for ageing dates
-    # instead, simple subtract 30, 60, 90, 120 from 'as_at_date'
+    # instead, simply subtract 30, 60, 90, 120 from 'as_at_date'
     # any preference?
     # periods = await db.cache.get_adm_periods(caller.company)
     # # locate period containing transaction date
@@ -260,14 +260,14 @@ async def get_due_bal(caller, xml):
     sql = f"""
         SELECT
         sum(q.due), 
-        SUM(CASE WHEN q.due_date > '{dates[1]}' THEN q.due ELSE 0 END),
-        SUM(CASE WHEN q.due_date BETWEEN '{dates[2] + td(1)}' AND '{dates[1]}' THEN q.due ELSE 0 END),
-        SUM(CASE WHEN q.due_date BETWEEN '{dates[3] + td(1)}' AND '{dates[2]}' THEN q.due ELSE 0 END),
-        SUM(CASE WHEN q.due_date BETWEEN '{dates[4] + td(1)}' AND '{dates[3]}' THEN q.due ELSE 0 END),
-        SUM(CASE WHEN q.due_date <= '{dates[4]}' THEN q.due ELSE 0 END)
+        SUM(CASE WHEN q.tran_date > '{dates[1]}' THEN q.due ELSE 0 END),
+        SUM(CASE WHEN q.tran_date BETWEEN '{dates[2] + td(1)}' AND '{dates[1]}' THEN q.due ELSE 0 END),
+        SUM(CASE WHEN q.tran_date BETWEEN '{dates[3] + td(1)}' AND '{dates[2]}' THEN q.due ELSE 0 END),
+        SUM(CASE WHEN q.tran_date BETWEEN '{dates[4] + td(1)}' AND '{dates[3]}' THEN q.due ELSE 0 END),
+        SUM(CASE WHEN q.tran_date <= '{dates[4]}' THEN q.due ELSE 0 END)
         FROM
         (SELECT
-            a.cust_row_id, a.due_date, `a.{company}.ar_openitems.due_cust_gui` AS due
+            a.cust_row_id, a.tran_date, `a.{company}.ar_openitems.due_cust_gui` AS due
             FROM {company}.ar_openitems a
             WHERE a.cust_row_id = {cust_row_id}
                 AND a.tran_date <= '{as_at_date}'
@@ -319,40 +319,11 @@ async def after_save_alloc(caller, xml):
     await alloc_det.setval('item_row_id', await ar_item.getval('row_id'))
 
     if alloc_det.exists and not alloc_cust:
-
         # if alloc_cust has been cleared, delete the row in the allocations table
-        #
-        # if it was the only one for this transaction, there will be a dangling row for
-        #   the 'contra' allocation, where alloc_cust will be zero after the deletion
-        #
-        # it is necessary to actually delete this row as well, otherwise it prevents
-        #   deletion of the transaction itself, because the transaction is referenced
-        #   by the dangling row
-        #
-        # this is what we are doing below
-
-        alloc_row_id = await alloc_det.getval('row_id')
-        alloc_tran_type = await alloc_det.getval('tran_type')
-        alloc_tran_rowid = await alloc_det.getval('tran_row_id')
-
         await alloc_det.delete(from_upd_on_save=True)  # actually delete
-
-        await alloc_det.init()
-        where = []
-        where.append(['WHERE', '', 'tran_type', '=', repr(alloc_tran_type), ''])
-        where.append(['AND', '', 'tran_row_id', '=', alloc_tran_rowid, ''])
-        where.append(['AND', '', 'row_id', '!=', alloc_row_id, ''])  # exclude the row just deleted
-        all_alloc = alloc_det.select_many(where=where, order=[])
-        async for _ in all_alloc:
-            if await alloc_det.getval('item_row_id') != await alloc_det.getval('tran_row_id>item_row_id'):
-                break  # there are existing rows - do nothing
-        else:  # this is the only one - delete it
-            assert await alloc_det.getval('item_row_id') == await alloc_det.getval('tran_row_id>item_row_id')
-            await alloc_det.delete(from_upd_on_save=True)  # actually delete
-
     else:
         await alloc_det.setval('alloc_cust', alloc_cust)
-        await alloc_det.save()
+        await alloc_det.save(from_upd_on_save=True)  # do not update audit trail
 
     alloc_cust_fld._orig = alloc_cust
 
@@ -362,10 +333,9 @@ async def after_save_alloc(caller, xml):
     await unalloc_fld.setval(unallocated - (alloc_cust - alloc_orig))
 
 async def alloc_ageing(caller, xml):
-    # called from ar_receipt/ar_alloc after select/deselect 'allocate bucket'
+    # called from ar_alloc_item after select/deselect 'allocate bucket'
     age = xml.get('age')
     bal_vars = caller.data_objects['bal_vars']
-    # dates = await bal_vars.getval('ageing_dates')
     dates = caller.context.dates
 
     if age == '4':
@@ -410,8 +380,6 @@ async def alloc_ageing(caller, xml):
         await bal_vars.setval('show_curr', False)
         await bal_vars.setval('show_tot', False)
         await show_fld.setval(True)
-        # await bal_vars.setval('first_date', prev_end_date)
-        # await bal_vars.setval('last_date', curr_end_date)
         caller.context.first_date = prev_end_date
         caller.context.last_date = curr_end_date
 
@@ -426,28 +394,54 @@ async def alloc_ageing(caller, xml):
             await bal_vars.setval('alloc_30', False)
             await bal_vars.setval('alloc_curr', False)
 
-    async with caller.db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.mem
+    ar_items = caller.data_objects['ar_items']
+    alloc_hdr = caller.data_objects['alloc_header']
+    alloc_det = caller.data_objects['alloc_detail']
 
-        sql = (
-            f"UPDATE {caller.company}.ar_tran_alloc_det SET "
-            f"alloc_cust = {due_cust if do_alloc else 0}, "
-            f"discount_cust = {balance_cust - due_cust if do_alloc else 0}"
+    cust_row_id = await alloc_hdr.getval('cust_row_id')
+    this_item_rowid = caller.context.this_item_rowid
+
+    async def alloc(conn):
+        where = []
+        where.append(['WHERE', '', 'cust_row_id', '=', cust_row_id, ''])
+        where.append(['AND', '', 'tran_date', '>', prev_end_date, ''])
+        where.append(['AND', '', 'tran_date', '<=', curr_end_date, ''])
+        where.append(['AND', '', 'row_id', '!=', this_item_rowid, ''])
+        where.append(['AND', '', 'due_cust_gui', '!=', 0, ''])
+        all_alloc = ar_items.select_many(where=where, order=[])
+        async for _ in all_alloc:
+            await alloc_det.init(init_vals={
+                'item_row_id': await ar_items.getval('row_id'),
+                'alloc_cust': await ar_items.getval('due_cust_gui'),
+                })
+            await alloc_det.save(from_upd_on_save=True)  # do not update audit trail
+
+    async def unalloc(conn):
+        await conn.exec_cmd(
+            f"DELETE FROM {caller.company}.{alloc_det.table_name} "
+            f"WHERE row_id IN ("
+            f"SELECT a.row_id FROM {caller.company}.{alloc_det.table_name} a "
+            f"JOIN {caller.company}.ar_openitems b ON b.row_id = a.item_row_id "
+            f"WHERE a.tran_row_id = {await alloc_hdr.getval('row_id')} "
+            f"AND b.tran_date BETWEEN '{prev_end_date + td(1)}' AND '{curr_end_date}'"
+            f")"
             )
 
-        params = ()
-        if age > '-1':  # user chose single bucket
-            sql += " WHERE tran_date > {0} AND tran_date <= {0}".format(conn.constants.param_style)
-            params = (prev_end_date, curr_end_date)
-        await conn.exec_cmd(sql, params)
+    async with caller.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        await unalloc(conn)  # always unallocate any allocations first
+        if do_alloc:  # if 'allocate' selected, perform allocation
+            await alloc(conn)
 
-        sql = 'SELECT COALESCE(SUM(alloc_cust), 0) AS "[REAL]" FROM {}'.format(table_name)
-        cur = await conn.exec_sql(sql)
-        allocated, = await cur.__anext__()
+    # alloc = await ar_trans.getfld('allocated')
+    # await alloc.recalc()
 
-    await bal_vars.setval('unallocated', await bal_vars.getval('amt_to_alloc') - allocated)
+    # vars = caller.data_objects['vars']
+    # unalloc_fld = await vars.getfld('unallocated')
+    # unallocated = await unalloc_fld.getval()
+    # await unalloc_fld.setval(unallocated - (alloc_cust - alloc_orig))
 
-    await caller.start_grid('mem_alloc')
+    await caller.start_grid('ar_items')
 
 async def check_unique(db_obj, xml):
     # called from ar_subtran_rec/chg before_insert/update
@@ -1015,6 +1009,8 @@ async def check_alloc_cust(db_obj, fld, value):
 async def check_allocations(db_obj, xml):
     # called from cb_tran_rec/ar_tran_rct after_post
     # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
+    #    or create new column on cb_tran_rec/ar_tran_rct 'allocation_complete'?
+    #    any tran with 'posted' = True and 'alloction_complete' = False must be re-run
     # if ar_subtran_rec has been allocated, set up ar_tran_alloc/det
     det_obj = [_ for _ in db_obj.children if _.table_name == (db_obj.table_name + '_det')][0]
     ar_rec = [_ for _ in det_obj.children if _.table_name == 'ar_subtran_rec']
@@ -1061,13 +1057,7 @@ async def check_allocations(db_obj, xml):
                     alloc_no += 1
                 await ar_tran_alloc.save()
 
-            # set up ar_tran_alloc_det for item being allocated, and save
-            await ar_tran_alloc_det.init()
-            await ar_tran_alloc_det.setval('item_row_id', this_item_row_id)
-            await ar_tran_alloc_det.save(from_upd_on_save=True)
-
             # set up ar_tran_alloc_det for each item allocated against, and save
-            # programatically updates the previous alloc_det with amount allocated
             await ar_tran_alloc_det.init()
             await ar_tran_alloc_det.setval('item_row_id', await ar_rec_alloc.getval('item_row_id'))
             await ar_tran_alloc_det.setval('alloc_cust', await ar_rec_alloc.getval('alloc_cust'))
@@ -1080,6 +1070,8 @@ async def check_allocations(db_obj, xml):
 async def create_disc_crn(ar_tran_alloc, xml):
     # called from ar_tran_alloc - after_post
     # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
+    #    or create new column on ar_tran_alloc 'crn_check_complete'?
+    #    any tran with 'posted' = True and 'crn_check_complete' = False must be re-run
     this_row_id = await ar_tran_alloc.getval('row_id')
     this_item_row_id = await ar_tran_alloc.getval('item_row_id')
     ar_tran_alloc_det = ar_tran_alloc.children[0]
@@ -1169,13 +1161,7 @@ async def allocate_discount(ar_tran_disc, xml):
     await ar_tran_alloc.setval('alloc_no', 0)
     await ar_tran_alloc.save()
 
-    # set up ar_tran_alloc_det for item being allocated, and save
-    await ar_tran_alloc_det.init()
-    await ar_tran_alloc_det.setval('item_row_id', this_item_row_id)
-    await ar_tran_alloc_det.save(from_upd_on_save=True)
-
     # set up ar_tran_alloc_det for each item allocated against, and save
-    # programatically updates the previous alloc_det with amount allocated
     for alloc_item_row_id, alloc_cust, alloc_local in context.allocations:
         await ar_tran_alloc_det.init()
         await ar_tran_alloc_det.setval('item_row_id', alloc_item_row_id)

@@ -240,6 +240,17 @@ virt.append ({
     'sql'        : 'a.item_row_id>tran_row_id>tran_exch_rate',
     })
 virt.append ({
+    'col_name'   : 'det_exists',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Detail row exists?',
+    'long_descr' : 'Have any detail lines been entered?',
+    'col_head'   : '',
+    'sql'        : (
+        "CASE WHEN EXISTS(SELECT * FROM {company}.ar_tran_alloc_det b "
+        "WHERE b.tran_row_id = a.row_id) THEN 1 ELSE 0 END"
+        ),
+    })
+virt.append ({
     'col_name'   : 'unallocated',
     'data_type'  : 'DEC',
     'short_descr': 'Unallocated',
@@ -250,9 +261,12 @@ virt.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'sql'        : (
-        "a.item_row_id>amount_cust + "
-            "(SELECT COALESCE((SELECT b.alloc_cust FROM {company}.ar_tran_alloc_det b "
-            "WHERE b.item_row_id = a.item_row_id AND b.deleted_id = 0), 0))"
+        "a.item_row_id>amount_cust "
+        "+ "
+        "COALESCE(ROUND(("
+            "SELECT b.alloc_cust FROM {company}.ar_tran_alloc_det b "
+            "WHERE b.tran_row_id = a.row_id AND b.deleted_id = 0"
+        "), 2), 0)"
         ),
     })
 

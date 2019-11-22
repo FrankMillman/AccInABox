@@ -517,7 +517,7 @@ virt.append ({
         "COALESCE(ROUND(("
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_subtran_rec_alloc b "
-            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
+            "WHERE b.tran_row_id = a.row_id AND b.deleted_id = 0"
             "), 2), 0)"
         ),
     })

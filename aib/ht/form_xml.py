@@ -519,8 +519,18 @@ async def return_from_subform(caller, state, output_params, xml):
                 caller.data_objects[data_obj_name] = output_params[name]
             elif param_type == 'data_attr':
                 value = output_params[name]
+                if target.startswith('0-'):  # e.g. see ar_alloc.xml
+                    value = 0 - value
+                    target = target[2:]
                 data_obj_name, col_name = target.split('.')
-                await caller.data_objects[data_obj_name].setval(col_name, value)
+                # await caller.data_objects[data_obj_name].setval(col_name, value)
+                # changed [2019-11-19] - do not validate if target field is 'virt'
+                # reason - we only set dirty=True on a virtual field if 'validate' is True
+                # e.g. in ar_alloc on return from ar_alloc_item, we update 'unallocated' with return value,
+                #      but if we then escape, we do not want 'Do you want to save changes?', so do not
+                #      want to set dirty=True
+                tgt_fld = await caller.data_objects[data_obj_name].getfld(col_name)
+                await tgt_fld.setval(value, validate=(tgt_fld.col_defn.col_type != 'virt'))
 
     # find 'return' element in 'on_return' with attribute 'state' = state
     on_return = xml.find('on_return').find("return[@state='{}']".format(state))

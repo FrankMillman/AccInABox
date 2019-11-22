@@ -61,10 +61,6 @@
       <button lng="150" btn_id="alloc" btn_label="Allocate now"
         btn_enabled="true" btn_validate="true" action="
           <<action>>
-            <<recalc obj_name=`ar_this_item` col_name=`no_of_allocations`/>>
-            <<init_obj obj_name=`ar_alloc`/>>
-            <<assign src=`ar_this_item.row_id` tgt=`ar_alloc.item_row_id`/>>
-            <<assign src=`ar_this_item.no_of_allocations` tgt=`ar_alloc.alloc_no`/>>
             <<save_obj obj_name=`ar_alloc`/>>
             <<sub_form name=`ar_alloc_item`>>
               <<call_params>>
@@ -75,13 +71,15 @@
                 <<call_param name=`unallocated` type=`data_attr` source=`0-ar_this_item.amount_unallocated`/>>
               <</call_params>>
               <<return_params>>
+                <<return_param name=`unallocated` type=`data_attr` target=`0-ar_this_item.amount_unallocated`/>>
               <</return_params>>
               <<on_return>>
                 <<return state=`cancelled`>>
+                  <<!-- recalc obj_name=`ar_this_item` col_name=`amount_unallocated`/ -->>
                   <<btn_set_focus btn_id=`btn_close`/>>
                 <</return>>
                 <<return state=`completed`>>
-                  <<recalc obj_name=`ar_this_item` col_name=`amount_unallocated`/>>
+                  <<!-- recalc obj_name=`ar_this_item` col_name=`amount_unallocated`/ -->>
                   <<btn_set_focus btn_id=`btn_close`/>>
                 <</return>>
               <</on_return>>
@@ -100,14 +98,33 @@
       <button btn_id="btn_post" btn_label="Post" btn_enabled="true"
           btn_validate="true" btn_default="true" lng="60" action="
         <<action>>
-          <<req_save/>>
-          <<call method=`do_post`/>>
-          <<call method=`on_req_close`/>>
-          <<restart_grid obj_name=`grid_obj`/>>'
+          <<case>>
+            <<compare src=`ar_alloc.det_exists` op=`=` tgt=`0`>>
+              <<ask title=`Allocation` enter=`Ok` escape=`Ok`
+                  question=`No allocations entered`>>
+                <<response ans=`Ok`>>
+                <</response>>
+              <</ask>>
+            <</compare>>
+            <<default>>
+              <<req_save/>>
+              <<call method=`do_post`/>>
+              <<call method=`on_req_close`/>>
+              <<restart_grid obj_name=`grid_obj`/>>'
+            <</default>>
+          <</case>>
         <</action>>
         "/>
     </button_row>
     <frame_methods template="Form">
+      <method name="on_start_frame" action="
+        <<action>>
+            <<recalc obj_name=`ar_this_item` col_name=`no_of_allocations`/>>
+            <<init_obj obj_name=`ar_alloc`/>>
+            <<assign src=`ar_this_item.row_id` tgt=`ar_alloc.item_row_id`/>>
+            <<assign src=`ar_this_item.no_of_allocations` tgt=`ar_alloc.alloc_no`/>>
+        <</action>>
+      "/>
       <method name="do_save" action="
         <<action>>
           <<save_obj obj_name=`ar_alloc`/>>

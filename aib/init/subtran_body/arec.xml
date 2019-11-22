@@ -60,6 +60,7 @@
             <<call_param name=`unallocated` type=`data_attr` source=`ar_rec.unallocated`/>>
           <</call_params>>
           <<return_params>>
+            <<return_param name=`unallocated` type=`data_attr` target=`ar_rec.unallocated`/>>
           <</return_params>>
           <<on_return>>
             <<return state=`cancelled`>>
