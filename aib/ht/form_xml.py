@@ -133,9 +133,6 @@ async def restore_obj(caller, xml):
     db_obj = caller.data_objects[xml.get('obj_name')]
     if db_obj.dirty:
         await db_obj.restore()
-    for child in db_obj.children:  # mainly for sub_trans
-        if child.dirty:
-            await child.restore()
 
 async def continue_form(caller, xml):
     await caller.continue_form()
@@ -178,8 +175,9 @@ async def req_save(caller, xml):
 
 async def save_obj(caller, xml):
     db_obj = caller.data_objects[xml.get('obj_name')]
-    if db_obj.subtran_parent is not None:
-        db_obj = db_obj.subtran_parent[0]
+    # removed [2019-11-25] - think only used for ar_subtran_rec - should not be necessary
+    # if db_obj.subtran_parent is not None:
+    #     db_obj = db_obj.subtran_parent[0]
     await db_obj.save()
 
 async def post_obj(caller, xml):

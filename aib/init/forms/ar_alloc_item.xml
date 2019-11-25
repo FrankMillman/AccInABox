@@ -270,7 +270,6 @@
           <!-- cur_col col_name="balance_cust" lng="80" readonly="true" skip="true"/ -->
           <cur_col col_name="due_cust_gui" lng="80" readonly="true" skip="true"/>
           <cur_col col_name="alloc_cust_gui" lng="80"/>
-
         </cur_columns>
         <cur_filter>
           <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
@@ -326,7 +325,7 @@
       <method name="on_start_frame" action="
         <<action>>
           <<assign src=`alloc_header.tran_date` tgt=`_ctx.as_at_date`/>>
-          <<assign src=`vars.this_item_rowid` tgt=`_ctx.this_item_rowid`/>>
+          <<!-- assign src=`vars.this_item_rowid` tgt=`_ctx.this_item_rowid`/ -->>
           <<assign src=`alloc_header.row_id` tgt=`_ctx.tran_row_id`/>>
           <<pyfunc name=`custom.artrans_funcs.get_due_bal`/>>
           <<skip_input num=`10`/>>

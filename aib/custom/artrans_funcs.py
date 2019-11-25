@@ -226,11 +226,13 @@ async def get_due_bal(caller, xml):
     alloc_hdr = caller.data_objects['alloc_header']
     cust_row_id = await alloc_hdr.getval('cust_row_id')
 
+    vars = caller.data_objects['vars']
+    this_item_rowid = await vars.getval('this_item_rowid')
+
     due_bal = caller.data_objects['due_bal']
     await due_bal.init()
 
     as_at_date = caller.context.as_at_date
-    this_item_rowid = caller.context.this_item_rowid
 
     # this uses period-end dates for ageing dates
     # instead, simply subtract 30, 60, 90, 120 from 'as_at_date'
@@ -399,9 +401,15 @@ async def alloc_ageing(caller, xml):
     alloc_det = caller.data_objects['alloc_detail']
 
     cust_row_id = await alloc_hdr.getval('cust_row_id')
-    this_item_rowid = caller.context.this_item_rowid
+
+    vars = caller.data_objects['vars']
+    this_item_rowid = await vars.getval('this_item_rowid')
+    unalloc_fld = await vars.getfld('unallocated')
+    unallocated = await unalloc_fld.getval()
+
 
     async def alloc(conn):
+        nonlocal unallocated
         where = []
         where.append(['WHERE', '', 'cust_row_id', '=', cust_row_id, ''])
         where.append(['AND', '', 'tran_date', '>', prev_end_date, ''])
@@ -415,31 +423,34 @@ async def alloc_ageing(caller, xml):
                 'alloc_cust': await ar_items.getval('due_cust_gui'),
                 })
             await alloc_det.save(from_upd_on_save=True)  # do not update audit trail
+            await ar_items.setval('alloc_cust_gui', await alloc_det.getval('alloc_cust'))
+            unallocated -= await alloc_det.getval('alloc_cust')
+            await unalloc_fld.setval(unallocated)
 
     async def unalloc(conn):
-        await conn.exec_cmd(
-            f"DELETE FROM {caller.company}.{alloc_det.table_name} "
-            f"WHERE row_id IN ("
-            f"SELECT a.row_id FROM {caller.company}.{alloc_det.table_name} a "
-            f"JOIN {caller.company}.ar_openitems b ON b.row_id = a.item_row_id "
-            f"WHERE a.tran_row_id = {await alloc_hdr.getval('row_id')} "
-            f"AND b.tran_date BETWEEN '{prev_end_date + td(1)}' AND '{curr_end_date}'"
-            f")"
-            )
+        nonlocal unallocated
+        where = []
+        where.append(['WHERE', '', 'cust_row_id', '=', cust_row_id, ''])
+        where.append(['AND', '', 'tran_date', '>', prev_end_date, ''])
+        where.append(['AND', '', 'tran_date', '<=', curr_end_date, ''])
+        where.append(['AND', '', 'row_id', '!=', this_item_rowid, ''])
+        where.append(['AND', '', 'due_cust_gui', '!=', 0, ''])
+        all_alloc = ar_items.select_many(where=where, order=[])
+        async for _ in all_alloc:
+            await alloc_det.init(init_vals={
+                'item_row_id': await ar_items.getval('row_id'),
+                })
+            if alloc_det.exists:
+                unallocated += await ar_items.getval('alloc_cust_gui')
+                await unalloc_fld.setval(unallocated)
+                await alloc_det.delete(from_upd_on_save=True)  # actually delete
+                await ar_items.setval('alloc_cust_gui', None)
 
     async with caller.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         await unalloc(conn)  # always unallocate any allocations first
         if do_alloc:  # if 'allocate' selected, perform allocation
             await alloc(conn)
-
-    # alloc = await ar_trans.getfld('allocated')
-    # await alloc.recalc()
-
-    # vars = caller.data_objects['vars']
-    # unalloc_fld = await vars.getfld('unallocated')
-    # unallocated = await unalloc_fld.getval()
-    # await unalloc_fld.setval(unallocated - (alloc_cust - alloc_orig))
 
     await caller.start_grid('ar_items')
 
@@ -779,194 +790,194 @@ async def setup_stat_proc(caller, xml):
     # await var.setval('stat_date_ok', True)
     return
 
-async def confirm_alloc_2(caller, fld, value, xml):
-    # called from ar_receipt validation of select/deselect 'allocate bucket'
-    age = xml.get('age')
-    vars = caller.data_objects['vars']
-    cust = caller.data_objects['cust']
-    dates = await vars.getval('ageing_dates')
-    aged_bal = caller.data_objects['aged_bal']
+# async def confirm_alloc_2(caller, fld, value, xml):
+#     # called from ar_receipt validation of select/deselect 'allocate bucket'
+#     age = xml.get('age')
+#     vars = caller.data_objects['vars']
+#     cust = caller.data_objects['cust']
+#     dates = await vars.getval('ageing_dates')
+#     aged_bal = caller.data_objects['aged_bal']
 
-    if age == '4':
-        fld = await vars.getfld('alloc_120')
-        prev_end_date = dates[5]
-        curr_end_date = dates[4]
-        amount = await aged_bal.getval('onetwenty')
-    elif age == '3':
-        fld = await vars.getfld('alloc_90')
-        prev_end_date = dates[4]
-        curr_end_date = dates[3]
-        amount = await aged_bal.getval('ninety')
-    elif age == '2':
-        fld = await vars.getfld('alloc_60')
-        prev_end_date = dates[3]
-        curr_end_date = dates[2]
-        amount = await aged_bal.getval('sixty')
-    elif age == '1':
-        fld = await vars.getfld('alloc_30')
-        prev_end_date = dates[2]
-        curr_end_date = dates[1]
-        amount = await aged_bal.getval('thirty')
-    elif age == '0':
-        fld = await vars.getfld('alloc_curr')
-        prev_end_date = dates[1]
-        curr_end_date = dates[0]
-        amount = await aged_bal.getval('current')
-    elif age == '-1':
-        fld = await vars.getfld('alloc_tot')
-        prev_end_date = dates[5]
-        curr_end_date = dates[0]
-        amount = await aged_bal.getval('total')
+#     if age == '4':
+#         fld = await vars.getfld('alloc_120')
+#         prev_end_date = dates[5]
+#         curr_end_date = dates[4]
+#         amount = await aged_bal.getval('onetwenty')
+#     elif age == '3':
+#         fld = await vars.getfld('alloc_90')
+#         prev_end_date = dates[4]
+#         curr_end_date = dates[3]
+#         amount = await aged_bal.getval('ninety')
+#     elif age == '2':
+#         fld = await vars.getfld('alloc_60')
+#         prev_end_date = dates[3]
+#         curr_end_date = dates[2]
+#         amount = await aged_bal.getval('sixty')
+#     elif age == '1':
+#         fld = await vars.getfld('alloc_30')
+#         prev_end_date = dates[2]
+#         curr_end_date = dates[1]
+#         amount = await aged_bal.getval('thirty')
+#     elif age == '0':
+#         fld = await vars.getfld('alloc_curr')
+#         prev_end_date = dates[1]
+#         curr_end_date = dates[0]
+#         amount = await aged_bal.getval('current')
+#     elif age == '-1':
+#         fld = await vars.getfld('alloc_tot')
+#         prev_end_date = dates[5]
+#         curr_end_date = dates[0]
+#         amount = await aged_bal.getval('total')
 
-    if value == await fld.getval():
-        return
+#     if value == await fld.getval():
+#         return
 
-    message = 'Allocate' if value else 'De-allocate'
+#     message = 'Allocate' if value else 'De-allocate'
 
-    title = 'Confirm allocation'
-    question = '{} all amounts from {} to {} - {} {}?'.format(
-        message, prev_end_date, curr_end_date, await cust.getval('currency'), amount)
-    answers = ['No', 'Yes']
-    default = 'No'
-    escape = 'No'
+#     title = 'Confirm allocation'
+#     question = '{} all amounts from {} to {} - {} {}?'.format(
+#         message, prev_end_date, curr_end_date, await cust.getval('currency'), amount)
+#     answers = ['No', 'Yes']
+#     default = 'No'
+#     escape = 'No'
 
-    ans = await caller.session.request.ask_question(
-        caller.parent, title, question, answers, default, escape)
+#     ans = await caller.session.request.ask_question(
+#         caller.parent, title, question, answers, default, escape)
 
-    if ans == 'No':
-        raise AibError(head='', body='')
+#     if ans == 'No':
+#         raise AibError(head='', body='')
 
-async def alloc_ageing_2(caller, xml):
-    # called from ar_receipt after select/deselect 'allocate bucket'
-    age = xml.get('age')
-    vars = caller.data_objects['vars']
-    dates = await vars.getval('ageing_dates')
-    ar_trans = caller.data_objects['ar_rec']
-    tran_row_id = await ar_trans.getval('row_id')
-    cust_row_id = await ar_trans.getval('cust_row_id')
-    ar_alloc = caller.data_objects['ar_alloc']
+# async def alloc_ageing_2(caller, xml):
+#     # called from ar_receipt after select/deselect 'allocate bucket'
+#     age = xml.get('age')
+#     vars = caller.data_objects['vars']
+#     dates = await vars.getval('ageing_dates')
+#     ar_trans = caller.data_objects['ar_rec']
+#     tran_row_id = await ar_trans.getval('row_id')
+#     cust_row_id = await ar_trans.getval('cust_row_id')
+#     ar_alloc = caller.data_objects['ar_alloc']
 
-    if age == '4':
-        fld = await vars.getfld('alloc_120')
-        show_fld = await vars.getfld('show_120')
-        prev_end_date = dates[5]
-        curr_end_date = dates[4]
-    elif age == '3':
-        fld = await vars.getfld('alloc_90')
-        show_fld = await vars.getfld('show_90')
-        prev_end_date = dates[4]
-        curr_end_date = dates[3]
-    elif age == '2':
-        fld = await vars.getfld('alloc_60')
-        show_fld = await vars.getfld('show_60')
-        prev_end_date = dates[3]
-        curr_end_date = dates[2]
-    elif age == '1':
-        fld = await vars.getfld('alloc_30')
-        show_fld = await vars.getfld('show_30')
-        prev_end_date = dates[2]
-        curr_end_date = dates[1]
-    elif age == '0':
-        fld = await vars.getfld('alloc_curr')
-        show_fld = await vars.getfld('show_curr')
-        prev_end_date = dates[1]
-        curr_end_date = dates[0]
-    elif age == '-1':
-        fld = await vars.getfld('alloc_tot')
-        show_fld = await vars.getfld('show_tot')
-        prev_end_date = dates[5]
-        curr_end_date = dates[0]
-    if fld._before_input == await fld.getval():
-        return
+#     if age == '4':
+#         fld = await vars.getfld('alloc_120')
+#         show_fld = await vars.getfld('show_120')
+#         prev_end_date = dates[5]
+#         curr_end_date = dates[4]
+#     elif age == '3':
+#         fld = await vars.getfld('alloc_90')
+#         show_fld = await vars.getfld('show_90')
+#         prev_end_date = dates[4]
+#         curr_end_date = dates[3]
+#     elif age == '2':
+#         fld = await vars.getfld('alloc_60')
+#         show_fld = await vars.getfld('show_60')
+#         prev_end_date = dates[3]
+#         curr_end_date = dates[2]
+#     elif age == '1':
+#         fld = await vars.getfld('alloc_30')
+#         show_fld = await vars.getfld('show_30')
+#         prev_end_date = dates[2]
+#         curr_end_date = dates[1]
+#     elif age == '0':
+#         fld = await vars.getfld('alloc_curr')
+#         show_fld = await vars.getfld('show_curr')
+#         prev_end_date = dates[1]
+#         curr_end_date = dates[0]
+#     elif age == '-1':
+#         fld = await vars.getfld('alloc_tot')
+#         show_fld = await vars.getfld('show_tot')
+#         prev_end_date = dates[5]
+#         curr_end_date = dates[0]
+#     if fld._before_input == await fld.getval():
+#         return
 
-    if not await show_fld.getval():  # ensure bucket selected is also 'shown'
-        # don't know which is is active - reset all of them
-        await vars.setval('show_120', False)
-        await vars.setval('show_90', False)
-        await vars.setval('show_60', False)
-        await vars.setval('show_30', False)
-        await vars.setval('show_curr', False)
-        await vars.setval('show_tot', False)
-        await show_fld.setval(True)
-        await vars.setval('first_date', prev_end_date)
-        await vars.setval('last_date', curr_end_date)
+#     if not await show_fld.getval():  # ensure bucket selected is also 'shown'
+#         # don't know which is is active - reset all of them
+#         await vars.setval('show_120', False)
+#         await vars.setval('show_90', False)
+#         await vars.setval('show_60', False)
+#         await vars.setval('show_30', False)
+#         await vars.setval('show_curr', False)
+#         await vars.setval('show_tot', False)
+#         await show_fld.setval(True)
+#         await vars.setval('first_date', prev_end_date)
+#         await vars.setval('last_date', curr_end_date)
 
-    do_alloc = await fld.getval()  # True=selected  False=deselected
+#     do_alloc = await fld.getval()  # True=selected  False=deselected
 
-    if age == '-1':  # user chose 'all' buckets
-        if not do_alloc:  # user chose 'deselect all allocations'
-            # don't know which is is active - reset all of them
-            await vars.setval('alloc_120', False)
-            await vars.setval('alloc_90', False)
-            await vars.setval('alloc_60', False)
-            await vars.setval('alloc_30', False)
-            await vars.setval('alloc_curr', False)
+#     if age == '-1':  # user chose 'all' buckets
+#         if not do_alloc:  # user chose 'deselect all allocations'
+#             # don't know which is is active - reset all of them
+#             await vars.setval('alloc_120', False)
+#             await vars.setval('alloc_90', False)
+#             await vars.setval('alloc_60', False)
+#             await vars.setval('alloc_30', False)
+#             await vars.setval('alloc_curr', False)
 
-    async def alloc(conn):
-        sql = (
-            "SELECT temp.row_id, temp.balance FROM "
-            "(SELECT a.row_id, "
-                "-(a.amount_cust + COALESCE( "
-                    "(SELECT SUM(b.alloc_cust + b.disc_cust) "
-                    "FROM {0}.ar_trans_alloc b "
-                    "WHERE b.due_row_id = a.row_id AND b.deleted_id = 0), 0)) as balance "
-                "FROM {0}.ar_trans_due a "
-                "LEFT JOIN {0}.ar_trans b "
-                    "ON b.tran_type = a.tran_type AND b.row_id = a.tran_row_id "
-                "WHERE b.cust_row_id = {1} "
-                "AND b.tran_date > {1} AND b.tran_date <= {1}"
-                ") as temp "
-            "WHERE temp.balance != 0 "
-            .format(caller.company, ar_trans.db_table.constants.param_style)
-            )
-        params = (cust_row_id, prev_end_date, curr_end_date)
+#     async def alloc(conn):
+#         sql = (
+#             "SELECT temp.row_id, temp.balance FROM "
+#             "(SELECT a.row_id, "
+#                 "-(a.amount_cust + COALESCE( "
+#                     "(SELECT SUM(b.alloc_cust + b.disc_cust) "
+#                     "FROM {0}.ar_trans_alloc b "
+#                     "WHERE b.due_row_id = a.row_id AND b.deleted_id = 0), 0)) as balance "
+#                 "FROM {0}.ar_trans_due a "
+#                 "LEFT JOIN {0}.ar_trans b "
+#                     "ON b.tran_type = a.tran_type AND b.row_id = a.tran_row_id "
+#                 "WHERE b.cust_row_id = {1} "
+#                 "AND b.tran_date > {1} AND b.tran_date <= {1}"
+#                 ") as temp "
+#             "WHERE temp.balance != 0 "
+#             .format(caller.company, ar_trans.db_table.constants.param_style)
+#             )
+#         params = (cust_row_id, prev_end_date, curr_end_date)
 
-        async for due_row_id, due_balance in await conn.exec_sql(sql, params):
-            init_vals = {
-                'tran_type': 'ar_rec',
-                'tran_row_id': tran_row_id,
-                'due_row_id': due_row_id,
-                'alloc_cust': due_balance,
-                }
-            await ar_alloc.init(init_vals=init_vals)
-            await ar_alloc.save()
+#         async for due_row_id, due_balance in await conn.exec_sql(sql, params):
+#             init_vals = {
+#                 'tran_type': 'ar_rec',
+#                 'tran_row_id': tran_row_id,
+#                 'due_row_id': due_row_id,
+#                 'alloc_cust': due_balance,
+#                 }
+#             await ar_alloc.init(init_vals=init_vals)
+#             await ar_alloc.save()
 
-    async def unalloc(conn):
-        if age == '-1':  # user chose 'all' buckets
-            sql = (
-                "SELECT a.row_id FROM {0}.ar_trans_alloc a "
-                "WHERE a.tran_type = 'ar_rec' AND a.tran_row_id = {1} "
-                "AND a.deleted_id = '0'"
-                .format(caller.company, ar_trans.db_table.constants.param_style)
-                )
-            params = (tran_row_id, )
-        else:
-            sql = (
-                "SELECT a.row_id FROM {0}.ar_trans_alloc a "
-                "LEFT JOIN {0}.ar_trans_due b ON b.row_id = a.due_row_id "
-                "LEFT JOIN {0}.ar_trans c ON "
-                    "c.tran_type = b.tran_type AND c.row_id = b.tran_row_id "
-                "WHERE a.tran_type = 'ar_rec' AND a.tran_row_id = {1} "
-                "AND a.deleted_id = '0' "
-                "AND c.tran_date > {1} AND c.tran_date <= {1}"
-                .format(caller.company, ar_trans.db_table.constants.param_style)
-                )
-            params = (tran_row_id, prev_end_date, curr_end_date)
+#     async def unalloc(conn):
+#         if age == '-1':  # user chose 'all' buckets
+#             sql = (
+#                 "SELECT a.row_id FROM {0}.ar_trans_alloc a "
+#                 "WHERE a.tran_type = 'ar_rec' AND a.tran_row_id = {1} "
+#                 "AND a.deleted_id = '0'"
+#                 .format(caller.company, ar_trans.db_table.constants.param_style)
+#                 )
+#             params = (tran_row_id, )
+#         else:
+#             sql = (
+#                 "SELECT a.row_id FROM {0}.ar_trans_alloc a "
+#                 "LEFT JOIN {0}.ar_trans_due b ON b.row_id = a.due_row_id "
+#                 "LEFT JOIN {0}.ar_trans c ON "
+#                     "c.tran_type = b.tran_type AND c.row_id = b.tran_row_id "
+#                 "WHERE a.tran_type = 'ar_rec' AND a.tran_row_id = {1} "
+#                 "AND a.deleted_id = '0' "
+#                 "AND c.tran_date > {1} AND c.tran_date <= {1}"
+#                 .format(caller.company, ar_trans.db_table.constants.param_style)
+#                 )
+#             params = (tran_row_id, prev_end_date, curr_end_date)
 
-        async for row_id, in await conn.exec_sql(sql, params):
-            await ar_alloc.init(init_vals={'row_id': row_id})
-            await ar_alloc.delete()
+#         async for row_id, in await conn.exec_sql(sql, params):
+#             await ar_alloc.init(init_vals={'row_id': row_id})
+#             await ar_alloc.delete()
 
-    async with caller.db_session as db_mem_conn:
-        conn = db_mem_conn.db
-        await unalloc(conn)  # always unallocate any allocations first
-        if do_alloc:  # if 'allocate' selected, perform allocation
-            await alloc(conn)
+#     async with caller.db_session as db_mem_conn:
+#         conn = db_mem_conn.db
+#         await unalloc(conn)  # always unallocate any allocations first
+#         if do_alloc:  # if 'allocate' selected, perform allocation
+#             await alloc(conn)
 
-    alloc = await ar_trans.getfld('allocated')
-    await alloc.recalc()
+#     alloc = await ar_trans.getfld('allocated')
+#     await alloc.recalc()
 
-    await caller.start_grid('ar_due')
+#     await caller.start_grid('ar_due')
 
 async def check_ledg_per(caller, xml):
     # called from ar_ledg_per.on_start_row

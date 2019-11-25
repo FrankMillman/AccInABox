@@ -313,6 +313,9 @@ class Conn:
             expr = sql[pos_1+1: pos_2]
             if expr == 'company':
                 sql = sql[:pos_1] + context.company + sql[pos_2+1:]
+            elif sql[pos_1 - 1] == '.':  # assume we are evaluating a table name
+                db_obj = context.data_objects[expr]
+                sql = sql[:pos_1] + db_obj.table_name + sql[pos_2+1:]
             else:
                 val = getattr(context, expr)
 
@@ -794,7 +797,9 @@ class Conn:
         if col.data_type == 'DEC' and '/' in sql:
             sql = f'ROUND({sql}, {col.db_scale})'
 
-        return f'({sql})' if sql.startswith('SELECT ') else sql
+        if sql.startswith('SELECT '):
+            sql = '(' + sql + ')'
+        return sql
 
     async def walk_colname(self, context, db_table, params, col_name, current_alias, trail):
         src_tbl = db_table
