@@ -916,13 +916,18 @@ class Field:
         if self.constant is not None:
             return self.constant  # e.g. tran_type in ar_openitems
         if self.ledger_col:
-            # context.mod_ledg_id set up in advance - e.g. ht.form_xml.get_mod_ledg_id
             ctx_mod_id, ctx_ledg_id = getattr(self.db_obj.context, 'mod_ledg_id', (None, None))
             if ctx_mod_id == self.db_obj.db_table.module_row_id:
-                if ctx_ledg_id is None:
-                    raise AibError(head=self.table_name,
-                        body='Ledger not set up')
-                return ctx_ledg_id
+                # if ctx_ledg_id is None:
+                #     raise AibError(head=self.table_name, body='Ledger not set up')
+                # return ctx_ledg_id
+                # changed [2019-11-27]
+                # when setting up new ledger, we now prompt for 'first financial period'
+                # <mod>_ledger_periods has a ledger_col, but ledger is not yet set up
+                # without this change, an error is raised; with it, user can proceed
+                # ledger_col is a mandatory field, so no danger of it being omitted in error
+                if ctx_ledg_id is not None:
+                    return ctx_ledg_id
         if not from_init and self.col_defn.dflt_rule is not None:
             return await db.dflt_xml.get_db_dflt(self)
         if self.col_defn.dflt_val is not None:
