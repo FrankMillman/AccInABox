@@ -239,6 +239,7 @@ async def setup_other_tables(context, conn, company):
         'org_phone_nos',
         'org_contacts',
         'gl_params',
+        'gl_ledger_periods',
         'gl_codes',
         'sls_nsls_codes',
         'sls_nsls_tax_codes',
@@ -545,6 +546,7 @@ async def setup_forms(context, conn, company):
         await form_defn.save()
 
     await setup_form('adm_params')
+    await setup_form('gl_params')
     await setup_form('ar_params')
     await setup_form('ar_ledger_new')
     await setup_form('ap_params')
@@ -553,10 +555,11 @@ async def setup_forms(context, conn, company):
     await setup_form('in_ledger_new')
     await setup_form('cb_params')
     await setup_form('cb_ledger_new')
-    await setup_form('setup_periods')
+    await setup_form('gl_ledg_periods')
     await setup_form('ar_ledg_periods')
     await setup_form('ap_ledg_periods')
     await setup_form('cb_ledg_periods')
+    await setup_form('in_ledg_periods')
     await setup_form('setup_currencies')
     await setup_form('setup_tax_codes')
     await setup_form('setup_ar_terms_codes')
@@ -659,7 +662,7 @@ async def setup_menus(context, conn, company, company_name):
         ['General ledger', 'menu', 'gl', [
             ['Setup', 'menu', 'gl', [
                 ['G/L parameters', 'form', 'gl_params'],
-                ['Maintain periods', 'form', 'setup_ledg_periods'],
+                ['Maintain periods', 'form', 'gl_ledg_periods'],
                 ]],
             ['Gl transactions', 'menu', 'gl', [
                 ]],
@@ -751,7 +754,7 @@ async def setup_menus(context, conn, company, company_name):
     in_menu =['Inventory', 'menu', 'in', [
         ['Warehouse setup', 'menu', 'in', [
             ['Warehouse parameters', 'form', 'in_params'],
-            ['Maintain periods', 'form', 'setup_ledg_periods'],
+            ['Maintain periods', 'form', 'in_ledg_periods'],
             # ['Product codes', 'form', 'setup_prod_codes'],
             # ['Selling prices', 'form', 'setup_sell_prices'],
             ]],

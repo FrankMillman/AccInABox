@@ -5,8 +5,19 @@
   ">
   <db_objects>
     <db_obj name="ledger" table_name="ar_ledger_params"/>
+    <db_obj name="adm_period" table_name="adm_periods"/>
+    <db_obj name="ledg_per" table_name="ar_ledger_periods"/>
   </db_objects>
-  <mem_objects/>
+  <mem_objects>
+    <mem_obj name="var" descr="Form variables" module_id="ar">
+      <mem_col col_name="first_stat_date" data_type="DTE" short_descr="First statement date"
+        long_descr="First statement date" allow_amend="true"
+        col_checks="[[`first_stat`, `Not in period selected`, [
+          [`check`, ``, `$value`, `&gt;=`, `adm_period.opening_date`, ``],
+          [`and`, ``, `$value`, `&lt;=`, `adm_period.closing_date`, ``]
+          ]]]"/>
+    </mem_obj>
+  </mem_objects>
   <input_params/>
   <output_params/>
   <frame main_object="ledger">
@@ -35,9 +46,155 @@
       <label value="Description"/>
       <col/>
       <input obj_name="ledger" col_name="descr" lng="160"/>
+      <row/>
+      <col/>
+      <label value="Separate statement close?"/>
+      <col/>
+      <input obj_name="ledger" col_name="separate_stat_close"/>
+
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <button lng="150" btn_id="op_per" btn_label="Select opening period"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<inline_form name=`op_period`>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<case>>
+                    <<compare src=`ledger.separate_stat_close` op=`is` tgt=`$True`>>
+                      <<inline_form name=`op_stat_date`>>
+                        <<on_return>>
+                          <<return state=`cancelled`/>>
+                          <<return state=`completed`/>>
+                        <</on_return>>
+                      <</inline_form>>
+                    <</compare>>
+                  <</case>>
+                <</return>>
+              <</on_return>>
+            <</inline_form>>
+          <</action>>
+        " validation="
+        <<validations>>
+          <<validation>>
+            <<case>>
+              <<obj_exists obj_name=`adm_period`/>>
+              <<default>>
+                <<error head=`Opening period` body=`Please select opening period`/>>
+              <</default>>
+            <</case>>
+          <</validation>>
+          <<validation>>
+            <<case>>
+              <<compare src=`ledger.separate_stat_close` op=`is` tgt=`$True`>>
+                <<case>>
+                  <<compare src=`var.first_stat_date` op=`is` tgt=`$None`>>
+                    <<error head=`Opening period` body=`Please enter first statement date`/>>
+                  <</compare>>
+                <</case>>
+              <</compare>>
+            <</case>>
+          <</validation>>
+        <</validations>>
+        "/>
 
     </body>
     <button_row template="Setup_Form_Single"/>
-    <frame_methods template="Setup_Form_Single"/>
+    <frame_methods template="Setup_Form_Single">
+      <method name="after_save" action="
+        <<action>>
+          <<assign src=`ledger.row_id` tgt=`ledg_per.ledger_row_id`/>>
+          <<assign src=`adm_period.period_row_id` tgt=`ledg_per.period_row_id`/>>
+          <<assign src=`'current'` tgt=`ledg_per.state`/>>
+          <<case>>
+            <<compare src=`ledger.separate_stat_close` op=`is` tgt=`$True`>>
+              <<assign src=`var.first_stat_date` tgt=`ledg_per.statement_date`/>>
+              <<assign src=`'open'` tgt=`ledg_per.statement_state`/>>
+            <</compare>>
+            <<default>>
+              <<assign src=`adm_period.closing_date` tgt=`ledg_per.statement_date`/>>
+              <<assign src=`'open'` tgt=`ledg_per.statement_state`/>>
+            <</default>>
+          <</case>>
+          <<save_obj obj_name=`ledg_per`/>>
+        <</action>>
+        "/>
+    </frame_methods>
   </frame>
+  <inline_form name="op_period" title="Opening period">
+    <frame main_object="ledg_per">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <text value="Please select the opening period"/>
+        <block/>
+        <grid data_object="adm_period" growable="false" num_grid_rows="6"
+          cursor_name="adm_per" readonly="true">
+          <toolbar>
+            <tool type="img" name="selected" tip="Item selected (Enter)"
+              shortcut="normal,13" action="
+                <<action>>
+                  <<row_selected/>>
+                <</action>>
+              "/>
+            <tool type="nav"/>
+          </toolbar>
+          <grid_methods template="Grid"/>
+        </grid>
+      </body>
+      <button_row/>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_req_close" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+  <inline_form name="op_stat_date" title="First statement date">
+    <frame main_object="var">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="First statement date:"/>
+        <col/>
+        <input obj_name="var" col_name="first_stat_date" lng="84"/>
+      </body>
+      <button_row>
+        <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
+          btn_validate="true" btn_default="true" lng="60" action="
+            <<action>>
+              <<end_form state=`completed`/>>
+            <</action>>
+          "/>
+      </button_row>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+        <method name="on_req_close" action="
+          <<action>>
+            <<end_form state=`cancelled`/>>
+          <</action>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
 </form>

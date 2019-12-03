@@ -1,27 +1,19 @@
-<form name="ar_ledg_per" title="Ar ledger periods" before_start_form="
+<form name="in_ledg_periods" title="In ledger periods" before_start_form="
   <<action>>
-    <<case>>
-      <<compare src=`_ledger.separate_stat_close` op=`is` tgt=`$True`>>
-        <<assign src=`'ar_per_stat'` tgt=`_ctx.cursor_name`/>>
-      <</compare>>
-      <<default>>
-        <<assign src=`'ar_per'` tgt=`_ctx.cursor_name`/>>
-      <</default>>
-    <</case>>
+    <<assign src=`'in_per'` tgt=`_ctx.cursor_name`/>>
   <</action>>
   ">
 
   <db_objects>
-    <db_obj name="ledg_per" table_name="ar_ledger_periods"/>
+    <db_obj name="adm_period" table_name="adm_periods"/>
+    <db_obj name="ledg_per" table_name="in_ledger_periods"/>
   </db_objects>
   <mem_objects>
-
     <mem_obj name="actions" descr="Possible actions"
         sub_types="[
         [`action`, null,
           [
             [`no_action`, `No action available`, [], []],
-            [`statement_close`, `Start statement close`, [], []],
             [`period_close`, `Start period close`, [], []],
             [`reopen`, `Reopen period`, [], []]
             ]
@@ -30,25 +22,21 @@
       <mem_col col_name="action" data_type="TEXT" short_descr="Action"
         long_descr="Action" col_head="Action" allow_null="true" allow_amend="true"/>
     </mem_obj>
-
-    <mem_obj name="var" descr="Form variables" module_id="ar">
-      <mem_col col_name="enable_stat_close" data_type="BOOL" short_descr="Enable close for statements?"
-        long_descr="Enable close for statements?" allow_amend="true"/>
+    <mem_obj name="var" descr="Form variables" module_id="in">
+      <mem_col col_name="module_id" data_type="TEXT" short_descr="Module id"
+        long_descr="Module id"/>
+      <mem_col col_name="module_descr" data_type="TEXT" short_descr="Module descr"
+        long_descr="Module descr"/>
+      <mem_col col_name="ledger_id" data_type="TEXT" short_descr="Ledger id"
+        long_descr="Ledger id"/>
+      <mem_col col_name="ledger_descr" data_type="TEXT" short_descr="Ledger descr"
+        long_descr="Ledger descr"/>
       <mem_col col_name="close_period" data_type="BOOL" short_descr="Close period?"
         long_descr="Close period?" allow_amend="true"/>
       <mem_col col_name="reopen_period" data_type="BOOL" short_descr="Reopen period?"
         long_descr="Reopen period?" allow_amend="true"/>
       <mem_col col_name="current_period" data_type="INT" short_descr="Current period"
         long_descr="Current period" col_head="Curr" allow_amend="true"/>
-      <mem_col col_name="single_cust" data_type="BOOL" short_descr="Single customer?"
-        long_descr="Single customer?" allow_amend="true"/>
-      <mem_col col_name="cust_row_id" data_type="INT" short_descr="Customer row id"
-        long_descr="Customer row id" allow_amend="true" allow_null="true"
-        fkey="[`ar_customers`, `row_id`, `cust_id`, `cust_id`, false, null]"/>
-      <mem_col col_name="statement_date" data_type="DTE" short_descr="Statement date"
-        long_descr="Statement date" allow_amend="true"/>
-      <mem_col col_name="close_params" data_type="JSON" short_descr="Params for close period"
-        long_descr="Parameters to pass to 'close period process'" allow_amend="true"/>
     </mem_obj>
   </mem_objects>
 
@@ -59,6 +47,15 @@
     <toolbar/>
     <body>
       <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Module:"/>
+      <display obj_name="var" col_name="module_descr" lng="150"/>
+      <col/>
+      <label value="Ledger:"/>
+      <display obj_name="var" col_name="ledger_descr" lng="150"/>
+      <block/>
       <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="_ctx"
           start_col="period_row_id" start_val="var.current_period" readonly="true">
         <toolbar>
@@ -67,7 +64,7 @@
         <grid_methods template="Grid">
           <method name="on_start_row" action="
             <<action>>
-              <<pyfunc name=`custom.artrans_funcs.check_ledg_per`/>>
+              <<pyfunc name=`custom.date_funcs.check_ledg_per`/>>
             <</action>>
           "/>
         </grid_methods>
@@ -75,6 +72,7 @@
       <grid_frame main_object="ledg_per">
         <toolbar/>
         <body>
+
           <subtype_frame subtype_obj="actions" subtype_col="action">
 
             <subtype_body subtype_id="no_action">
@@ -85,51 +83,6 @@
               <label value="Period"/>
               <display obj_name="ledg_per" col_name="period_row_id" lng="20"/>
               <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
-            </subtype_body>
-
-            <subtype_body subtype_id="statement_close">
-              <block/>
-              <panel/>
-              <row/>
-              <col/>
-              <label value="Period"/>
-              <display obj_name="ledg_per" col_name="period_row_id" lng="20"/>
-              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
-              <row/>
-              <col/>
-              <label value="Enable statement close process?"/>
-              <input obj_name="var" col_name="enable_stat_close" after="
-                <<action>>
-                  <<case>>
-                    <<compare src=`var.enable_stat_close` op=`is` tgt=`$True`>>
-                      <<change_button>>
-                        <<btn_enabled btn_id=`close_stat` state=`true`/>>
-                      <</change_button>>
-                    <</compare>>
-                    <<default>>
-                      <<change_button>>
-                        <<btn_enabled btn_id=`close_stat` state=`false`/>>
-                      <</change_button>>
-                    <</default>>
-                  <</case>>
-                <</action>>
-                "/>
-              <row/>
-              <col/>
-              <button btn_id="close_stat" btn_label="Start 'statement close' process"
-                help_msg = "Start 'statement close' process"
-                btn_enabled="false" btn_validate="true" action="
-                  <<action>>
-                    <<inline_form name=`period_close`>>
-                      <<on_return>>
-                        <<return state=`cancelled`>>
-                        <</return>>
-                        <<return state=`completed`>>
-                        <</return>>
-                      <</on_return>>
-                    <</inline_form>>
-                  <</action>>
-                "/>
             </subtype_body>
 
             <subtype_body subtype_id="period_close">
@@ -190,42 +143,11 @@
     <frame_methods/>
   </frame>
   <inline_form name="period_close" title="Start period close process">
-    <frame main_object="ledg_per">
+    <frame main_object="var">
       <toolbar/>
       <body>
         <block/>
         <panel/>
-<!--
-        <if_ src="_ledger.separate_stat_cust" op="is_" tgt="$True"/>
-        <row/>
-        <col/>
-        <label value="Single customer?"/>
-        <col/>
-        <input obj_name="var" col_name="single_cust" after="
-          <<action>>
-            <<case>>
-              <<compare src=`var.single_cust` op=`is` tgt=`$True`>>
-                <<set_readonly target=`var.cust_id` state=`false`/>>
-              <</compare>>
-              <<default>>
-                <<set_readonly target=`var.cust_id` state=`true`/>>
-              <</default>>
-            <</case>>
-          <</action>>
-          "/>
-        <row/>
-        <col/>
-        <label value="Customer id:"/>
-        <col/>
-        <input obj_name="var" col_name="cust_id" lng="80"/>
-        <display obj_name="var" col_name="cust_row_id>party_row_id>display_name" lng="150"/>
-        <end_if/>
--->
-        <row/>
-        <col/>
-        <label value="Statement date:"/>
-        <col/>
-        <input obj_name="var" col_name="statement_date" lng="150"/>
         <row/>
         <col/>
         <label value="Start period close process?"/>
@@ -233,10 +155,9 @@
         <button btn_id="start_period_close" btn_label="Start"
           btn_enabled="true" btn_validate="true" action="
             <<action>>
-              <<pyfunc name=`custom.artrans_funcs.setup_close_params`/>>
-              <<start_process name=`ar_per_close`>>
+              <<start_process name=`period_end`>>
                 <<call_params>>
-                  <<call_param name=`close_params` type=`data_attr` source=`var.close_params`/>>
+                  <<call_param name=`current_period` type=`data_attr` source=`var.current_period`/>>
                 <</call_params>>
                 <<return_params>>
                 <</return_params>>

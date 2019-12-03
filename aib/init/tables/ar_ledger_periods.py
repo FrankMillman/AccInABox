@@ -99,7 +99,7 @@ cols.append ({
     'data_type'  : 'INT',
     'short_descr': 'Period row id',
     'long_descr' : 'Period row id',
-    'col_head'   : 'Period',
+    'col_head'   : 'No',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -156,6 +156,25 @@ cols.append ({
         ],
     })
 cols.append ({
+    'col_name'   : 'stmnt_process_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Id for statement close process',
+    'long_descr' : 'Process id for statement close process',
+    'col_head'   : 'Stmnt proc id',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : True,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['bpm_headers', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'state',
     'data_type'  : 'TEXT',
     'short_descr': 'State',
@@ -180,6 +199,25 @@ cols.append ({
             ['reopened', 'Period reopened'],
         ],
     })
+cols.append ({
+    'col_name'   : 'per_process_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Id for period close process',
+    'long_descr' : 'Process if for period close process',
+    'col_head'   : 'Per proc id',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : True,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['bpm_headers', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []
@@ -200,7 +238,7 @@ virt.append ({
     'data_type'  : 'DTE',
     'short_descr': 'Opening date',
     'long_descr' : 'Opening date',
-    'col_head'   : 'Op date',
+    'col_head'   : 'Start date',
     'sql'        : (
         "SELECT $fx_date_func(b.closing_date, '+', 1) "
         "FROM {company}.adm_periods b "
@@ -212,7 +250,7 @@ virt.append ({
     'data_type'  : 'DTE',
     'short_descr': 'Closing date',
     'long_descr' : 'Closing date',
-    'col_head'   : 'Cl date',
+    'col_head'   : 'End date',
     'sql'        : (
         "SELECT b.closing_date FROM {company}.adm_periods b "
         "WHERE b.row_id = a.period_row_id"
@@ -236,9 +274,9 @@ cursors.append({
     'cursor_name': 'ar_per',
     'title': 'Maintain ar ledger periods',
     'columns': [
-        ['period_row_id', 60, True, True, False, False, None, None, None, None],
+        ['period_row_id', 10, True, True, False, False, None, None, None, None],
         ['closing_date', 100, False, True, False, False, None, None, None, None],
-        ['state', 100, False, True, False, False, None, None, None, None],
+        ['state', 60, False, True, False, False, None, None, None, None],
         ],
     'filter': [],
     'sequence': [['row_id', False]],
@@ -248,11 +286,11 @@ cursors.append({
     'cursor_name': 'ar_per_stat',
     'title': 'Ar ledger per with stat date',
     'columns': [
-        ['period_row_id', 60, True, True, False, False, None, None, None, None],
+        ['period_row_id', 10, True, True, False, False, None, None, None, None],
         ['statement_date', 100, False, True, False, False, None, None, None, None],
-        ['statement_state', 100, False, True, False, False, None, None, None, None],
+        ['statement_state', 60, False, True, False, False, None, None, None, None],
         ['closing_date', 100, False, True, False, False, None, None, None, None],
-        ['state', 100, False, True, False, False, None, None, None, None],
+        ['state', 60, False, True, False, False, None, None, None, None],
         ],
     'filter': [],
     'sequence': [['row_id', False]],
