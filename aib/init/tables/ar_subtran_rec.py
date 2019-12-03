@@ -261,7 +261,7 @@ cols.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
     'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date',
+    'long_descr' : 'Transaction date. Could be derived using fkey, but denormalised to speed up ar_trans view',
     'col_head'   : 'Date',
     'key_field'  : 'N',
     'calculated' : True,
@@ -360,7 +360,11 @@ cols.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
     'short_descr': 'Posted?',
-    'long_descr' : 'Has transaction been posted?',
+    'long_descr' : (
+        'Has transaction been posted? '
+        'Could be derived using fkey, but denormalised to speed up ar_trans view.'
+        'ar_tran_rct_det and cb_tran_rec_det update this column when they are posted - see their on_post action.'
+        ),
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
     'calculated' : False,
