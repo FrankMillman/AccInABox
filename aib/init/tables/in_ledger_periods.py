@@ -154,7 +154,7 @@ virt.append ({
         ),
     })
 virt.append ({
-    'col_name'   : 'op_date',
+    'col_name'   : 'opening_date',
     'data_type'  : 'DTE',
     'short_descr': 'Opening date',
     'long_descr' : 'Opening date',
@@ -166,7 +166,7 @@ virt.append ({
         ),
     })
 virt.append ({
-    'col_name'   : 'cl_date',
+    'col_name'   : 'closing_date',
     'data_type'  : 'DTE',
     'short_descr': 'Closing date',
     'long_descr' : 'Closing date',
@@ -179,6 +179,18 @@ virt.append ({
 
 # cursor definitions
 cursors = []
+cursors.append({
+    'cursor_name': 'in_per',
+    'title': 'Maintain in ledger periods',
+    'columns': [
+        ['period_row_id', 80, True, True, False, False, None, None, None, None],
+        ['closing_date', 100, False, True, False, False, None, None, None, None],
+        ['state', 100, False, True, False, False, None, None, None, None],
+        ],
+    'filter': [],
+    'sequence': [['row_id', False]],
+    'formview_name': None,
+    })
 
 # actions
 actions = []

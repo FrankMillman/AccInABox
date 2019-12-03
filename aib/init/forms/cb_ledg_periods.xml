@@ -2,29 +2,6 @@
   <<action>>
     <<assign src=`'cb_per'` tgt=`_ctx.cursor_name`/>>
   <</action>>
-  " after_start_form="
-  <<action>>
-    <<pyfunc name=`custom.date_funcs.get_curr_per`/>>
-    <<case>>
-      <<compare src=`var.current_period` op=`is` tgt=`$None`>>
-        <<inline_form name=`op_period`>>
-          <<on_return>>
-            <<return state=`cancelled`>>
-              <<end_form state=`cancelled`/>>
-            <</return>>
-            <<return state=`completed`>>
-              <<assign src=`adm_period.period_row_id` tgt=`var.current_period`/>>
-              <<pyfunc name=`custom.date_funcs.save_curr_per` module_id=`cb`/>>
-              <<continue_form/>>
-            <</return>>
-          <</on_return>>
-        <</inline_form>>
-      <</compare>>
-      <<default>>
-        <<continue_form/>>
-      <</default>>
-    <</case>>
-  <</action>>
   ">
 
   <db_objects>
@@ -165,56 +142,6 @@
     <button_row/>
     <frame_methods/>
   </frame>
-  <inline_form name="op_period" title="Opening period">
-    <frame main_object="mem_periods">
-      <toolbar/>
-      <body>
-        <block/>
-        <panel/>
-        <row/>
-        <col/>
-        <label value="Module:"/>
-        <display obj_name="var" col_name="module_descr" lng="150"/>
-        <row/>
-        <col/>
-        <label value="Ledger:"/>
-        <display obj_name="var" col_name="ledger_descr" lng="150"/>
-        <row/>
-        <col/>
-        <text value="No periods have been set up"/>
-        <row/>
-        <col/>
-        <text value="Please select the opening period"/>
-        <block/>
-        <grid data_object="adm_period" growable="false" num_grid_rows="6"
-          cursor_name="adm_per" readonly="true">
-          <toolbar>
-            <tool type="img" name="selected" tip="Item selected (Enter)"
-              shortcut="normal,13" action="
-                <<action>>
-                  <<row_selected/>>
-                <</action>>
-              "/>
-            <tool type="nav"/>
-          </toolbar>
-          <grid_methods template="Grid"/>
-        </grid>
-      </body>
-      <button_row/>
-      <frame_methods>
-        <method name="on_req_cancel" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
-        "/>
-        <method name="on_req_close" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
-        "/>
-      </frame_methods>
-    </frame>
-  </inline_form>
   <inline_form name="period_close" title="Start period close process">
     <frame main_object="var">
       <toolbar/>
