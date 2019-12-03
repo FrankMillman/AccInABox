@@ -333,7 +333,7 @@ function refresh_bpmn(args) {
   var svg = get_obj(svg_ref);
   render_bpmn(svg, nodes, edges);
   };
-  
+
 function append_tasks(args) {
   while (task_div.childNodes.length > 1)  // firstChild is 'task_hdng'
     task_div.removeChild(task_div.lastChild);

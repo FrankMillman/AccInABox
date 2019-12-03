@@ -1234,7 +1234,8 @@ function create_button(frame, json_elem) {
   button.got_focus = function() {
     //debug3(button.label.data + ' got focus amd=' + button.frame.amended());
     button.frame.active_button = button;
-    if (button.frame.amended()) {
+    // if (button.frame.amended()) {  // changed [2019-11-28]
+    if ((button.frame.amended() || !button.frame.obj_exists)) {
       var args = [button.ref];
       send_request('got_focus', args);
       }
