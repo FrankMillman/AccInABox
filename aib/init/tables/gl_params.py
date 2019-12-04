@@ -116,6 +116,16 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'gl_per_setup',
+    'data_type'  : 'BOOL',
+    'short_descr': 'G/l periods set up?',
+    'long_descr' : 'Have general ledger periods been set up?',
+    'col_head'   : 'Gl per',
+    'sql'        : (
+        "CASE WHEN EXISTS (SELECT * FROM {company}.gl_ledger_periods) THEN 1 ELSE 0 END"
+        ),
+    })
 
 # cursor definitions
 cursors = []

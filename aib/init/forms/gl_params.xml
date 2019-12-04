@@ -41,6 +41,7 @@
       <col/>
       <input obj_name="params" col_name="auto_temp_no" lng="250"/>
 
+      <if_ src="params.gl_per_setup" op="is_" tgt="$False"/>
       <block/>
       <panel/>
       <row/>
@@ -68,15 +69,20 @@
           <</validation>>
         <</validations>>
         "/>
+      <end_if/>
 
     </body>
     <button_row template="Setup_Form_Single"/>
     <frame_methods template="Setup_Form_Single">
       <method name="after_save" action="
         <<action>>
-          <<assign src=`adm_period.period_row_id` tgt=`ledg_per.period_row_id`/>>
-          <<assign src=`'current'` tgt=`ledg_per.state`/>>
-          <<save_obj obj_name=`ledg_per`/>>
+          <<case>>
+            <<compare src=`params.gl_per_setup` op=`is` tgt=`$False`>>
+              <<assign src=`adm_period.period_row_id` tgt=`ledg_per.period_row_id`/>>
+              <<assign src=`'current'` tgt=`ledg_per.state`/>>
+              <<save_obj obj_name=`ledg_per`/>>
+            <</compare>>
+          <</case>>
         <</action>>
         "/>
     </frame_methods>
