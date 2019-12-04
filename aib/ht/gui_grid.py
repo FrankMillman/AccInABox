@@ -124,7 +124,7 @@ class GuiGrid:
                         cur_fil.get('lbr'),
                         cur_fil.get('col_name'),
                         cur_fil.get('op'),
-                        cur_fil.get('expr').replace('$company', self.form.company),
+                        cur_fil.get('expr').replace('$company', self.company),
                         cur_fil.get('rbr')]
                     self.cursor_filter.append(fil)
             if not self.db_obj.mem_obj and not self.db_obj.view_obj:
@@ -378,6 +378,10 @@ class GuiGrid:
                 # db_obj.add_delete_func((self, method))
                 # self.on_delete_set.add(db_obj)
                 db_obj.on_delete_func[self] = method
+
+    @property
+    def company(self):
+        return self.form.company
 
     def __str__(self):
         return f"Grid: {self.ref} '{self.obj_name}'"
@@ -730,7 +734,7 @@ class GuiGrid:
             formview_name, param = (_.strip() for _ in formview_name.split(','))
             self.context.formview_param = param
 
-        sub_form = ht.form.Form(self.form.company, formview_name,
+        sub_form = ht.form.Form(self.company, formview_name,
             parent_form=self.form, ctrl_grid=self, callback=(self.return_from_formview, self))
         try:
             await sub_form.start_form(self.session, formview_obj=self.db_obj)
@@ -1138,7 +1142,7 @@ class GuiGrid:
 
         async with self.context.db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
-            company = self.form.company
+            company = self.company
 
             sql = (
                 "SELECT "
@@ -1193,7 +1197,7 @@ class GuiGrid:
 
         async with self.context.db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
-            company = self.form.company
+            company = self.company
 
             sql = (
                 "SELECT "
