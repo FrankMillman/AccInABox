@@ -580,7 +580,6 @@ virt.append ({
     'col_name'   : 'amount_unallocated',
     'data_type'  : 'DEC',
     'short_descr': 'Amount unallocated',
-    'long_descr' : 'Amount unallocated from "still to be allocated" - only used in ar_alloc.xml',
     'long_descr' : (
         'Amount still to be allocated. '
         'Take amount to be allocated as calculated in amount_to_alloc above. '

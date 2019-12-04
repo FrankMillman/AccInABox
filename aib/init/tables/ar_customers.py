@@ -260,7 +260,7 @@ virt.append ({
     'scale_ptr'  : None,
     'sql'        : (
         "SELECT b.statement_date FROM {company}.ar_stat_dates b "
-        "WHERE b.cust_row_id = a.row_id AND period_row_id = "
+        "WHERE b.cust_row_id = a.row_id AND b.period_row_id = "
             "(SELECT c.current_period FROM {company}.ar_curr_periods c "
             "WHERE c.ledger_row_id = a.ledger_row_id)"
         )
