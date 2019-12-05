@@ -13,8 +13,8 @@
       <mem_col col_name="first_pmt_date" data_type="DTE" short_descr="First payment date"
         long_descr="First payment date" allow_amend="true"
         col_checks="[[`first_pmt`, `Not in period selected`, [
-          [`check`, ``, `$value`, `&gt;=`, `adm_period.opening_date`, ``],
-          [`and`, ``, `$value`, `&lt;=`, `adm_period.closing_date`, ``]
+          [`check`, ``, `$value`, `>>=`, `adm_period.opening_date`, ``],
+          [`and`, ``, `$value`, `<<=`, `adm_period.closing_date`, ``]
           ]]]"/>
     </mem_obj>
   </mem_objects>

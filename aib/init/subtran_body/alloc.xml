@@ -202,9 +202,9 @@
       <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
         op="=" expr="ar_rec.cust_row_id" rbr=""/>
       <cur_fil test="AND" lbr="" col_name="tran_date"
-        op="&gt;" expr="bal_vars.first_date" rbr=""/>
+        op=">>" expr="bal_vars.first_date" rbr=""/>
       <cur_fil test="AND" lbr="" col_name="tran_date"
-        op="&lt;=" expr="bal_vars.last_date" rbr=""/>
+        op="<<=" expr="bal_vars.last_date" rbr=""/>
       <cur_fil test="AND" lbr="" col_name="bal_cust_tran"
         op="!=" expr="0" rbr=""/>
     </cur_filter>

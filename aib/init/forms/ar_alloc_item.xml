@@ -275,9 +275,9 @@
           <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
             op="=" expr="alloc_header.cust_row_id" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
-            op="&gt;" expr="_ctx.first_date" rbr=""/>
+            op=">>" expr="_ctx.first_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
-            op="&lt;=" expr="_ctx.last_date" rbr=""/>
+            op="<<=" expr="_ctx.last_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="due_cust_gui"
             op="!=" expr="0" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="posted"

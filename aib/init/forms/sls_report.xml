@@ -52,7 +52,7 @@
         long_descr="Path" allow_amend="true" db_scale="2"/>
       <mem_col col_name="total_sales" data_type="DEC" short_descr="Total sales"
         long_descr="Total sales" allow_null="true" allow_amend="true" db_scale="2"
-        scale_ptr="_param.local_currency_id&gt;scale"/>
+        scale_ptr="_param.local_currency_id>>scale"/>
     </mem_obj>
 -->
     <mem_obj name="var" descr="Variables used in form">
@@ -66,7 +66,7 @@
         long_descr="Path" allow_amend="true" db_scale="2"/>
       <mem_col col_name="total_sales" data_type="DEC" short_descr="Total sales"
         long_descr="Total sales" allow_null="true" allow_amend="true" db_scale="2"
-        scale_ptr="_param.local_currency_id&gt;scale"/>
+        scale_ptr="_param.local_currency_id>>scale"/>
     </mem_obj>
     <mem_obj name="groups" descr="Group categories" sequence="[`seq`, [], null]">
       <mem_col col_name="group_code" data_type="TEXT" short_descr="Code"
@@ -87,8 +87,8 @@
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" allow_amend="true"
         col_checks="[[`range_check`, `Must be from 1 to 3`,
-          [[`check`, ``, `$value`, `&gt;=`, `1`, ``],
-          [`and`, ``, `$value`, `&lt;=`, `3`, ``]]]]"/>
+          [[`check`, ``, `$value`, `>>=`, `1`, ``],
+          [`and`, ``, `$value`, `<<=`, `3`, ``]]]]"/>
 -->
     </mem_obj>
 <!--

@@ -236,9 +236,9 @@
           <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
             op="=" expr="cust.row_id" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
-            op="&gt;" expr="_ctx.first_date" rbr=""/>
+            op=">>" expr="_ctx.first_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
-            op="&lt;=" expr="_ctx.last_date" rbr=""/>
+            op="<<=" expr="_ctx.last_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="balance_cust_as_at"
             op="!=" expr="0" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="posted"
@@ -316,9 +316,9 @@
           <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
             op="=" expr="cust.row_id" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
-            op="&gt;=" expr="_ctx.start_date" rbr=""/>
+            op=">>=" expr="_ctx.start_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
-            op="&lt;=" expr="_ctx.end_date" rbr=""/>
+            op="<<=" expr="_ctx.end_date" rbr=""/>
         </cur_filter>
         <cur_sequence>
           <cur_seq col_name="tran_date"/>

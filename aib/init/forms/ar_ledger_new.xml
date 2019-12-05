@@ -13,8 +13,8 @@
       <mem_col col_name="first_stat_date" data_type="DTE" short_descr="First statement date"
         long_descr="First statement date" allow_amend="true"
         col_checks="[[`first_stat`, `Not in period selected`, [
-          [`check`, ``, `$value`, `&gt;=`, `adm_period.opening_date`, ``],
-          [`and`, ``, `$value`, `&lt;=`, `adm_period.closing_date`, ``]
+          [`check`, ``, `$value`, `>>=`, `adm_period.opening_date`, ``],
+          [`and`, ``, `$value`, `<<=`, `adm_period.closing_date`, ``]
           ]]]"/>
     </mem_obj>
   </mem_objects>
@@ -114,10 +114,6 @@
               <<assign src=`var.first_stat_date` tgt=`ledg_per.statement_date`/>>
               <<assign src=`'open'` tgt=`ledg_per.statement_state`/>>
             <</compare>>
-            <<default>>
-              <<assign src=`adm_period.closing_date` tgt=`ledg_per.statement_date`/>>
-              <<assign src=`'open'` tgt=`ledg_per.statement_state`/>>
-            <</default>>
           <</case>>
           <<save_obj obj_name=`ledg_per`/>>
         <</action>>
