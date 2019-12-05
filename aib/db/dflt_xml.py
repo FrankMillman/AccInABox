@@ -306,9 +306,8 @@ async def assign(fld, xml, debug):
     if target_objname == '_ctx':
         setattr(fld.db_obj.context, target_colname, value_to_assign)
     else:
-        target_record = fld.db_obj.data_objects[target_objname]
-        target_field = await target_record.getfld(target_colname)
-        await target_field.setval(value_to_assign)
+        target_obj = fld.db_obj.data_objects[target_objname]
+        await target_obj.setval(target_colname, value_to_assign)
 
 async def get_val(fld, value):
     if value.startswith('('):  # expression

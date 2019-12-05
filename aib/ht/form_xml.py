@@ -364,13 +364,21 @@ async def assign(caller, xml):
     else:
         value_to_assign = await get_val(caller, source)
 
-    target_objname, target_colname = target.split('.')
+    # target can be objname.colname or objname.colname.keyname if data_type is a JSON dict
+    target_objname, target_colname = target.split('.', maxsplit=1)
     if target_objname == '_ctx':
         setattr(caller.context, target_colname, value_to_assign)
     else:
-        target_record = caller.data_objects[target_objname]
-        target_field = await target_record.getfld(target_colname)
-        await target_field.setval(value_to_assign)
+        target_obj = caller.data_objects[target_objname]
+        if '.' in target_colname:
+            target_colname, target_key = target_colname.split('.')
+            target_fld = await target_obj.getfld(target_colname)
+            assert target_fld.col_defn.data_type == 'JSON'
+            target_dict = target_fld.getval() or {}  # if None, initialise dict
+            target_dict[target_key] = value_to_assign
+            target_fld.setval(target_dict)
+        else:
+            await target_obj.setval(target_colname, value_to_assign)
 
 async def btn_set_focus(caller, xml):
     button = caller.btn_dict[xml.get('btn_id')]
