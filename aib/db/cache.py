@@ -499,6 +499,8 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
                         period_data.payment_date = sub_date
                         period_data.payment_state = sub_state
                     ledger_periods[company][module_row_id][ledger_row_id][period_row_id] = period_data
+                    if state == 'current':
+                        ledger_periods[company][module_row_id][ledger_row_id].current_period = period_row_id
 
     return ledger_periods[company][module_row_id][ledger_row_id]
 
@@ -512,20 +514,6 @@ async def ledger_period_updated(db_obj, xml):
             if ledger_row_id in ledger_periods[company][module_row_id]:
                 with await ledg_per_lock:
                     del ledger_periods[company][module_row_id][ledger_row_id]
-
-# don't cache this - retrieve from database on each request
-async def get_current_period(company, module_row_id, ledger_row_id):
-    module_id = (await get_mod_id(company, module_row_id))[0]
-    async with db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
-        sql = (
-            f"SELECT period_row_id FROM {company}.{module_id}_ledger_periods "
-            f"WHERE ledger_row_id = {conn.constants.param_style} AND state = 'current'"
-            )
-        params = [ledger_row_id]
-        cur = await conn.exec_sql(sql, params)
-        period_row_id, = await cur.__anext__()
-    return period_row_id
 
 #----------------------------------------------------------------------------
 

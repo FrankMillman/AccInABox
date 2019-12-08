@@ -546,9 +546,8 @@ async def get_dflt_date(caller, obj, xml):
     if prev_date is not None:
         return prev_date
     db_obj = obj.fld.db_obj
-    module_row_id, ledger_row_id = db_obj.context.mod_ledg_id
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
-    ledger_periods = await db.cache.get_ledger_periods(db_obj.company, module_row_id, ledger_row_id)
+    ledger_periods = await db.cache.get_ledger_periods(caller.company, *caller.context.mod_ledg_id)
     if ledger_periods == {}:
         raise AibError(head=obj.fld.col_defn.short_descr, body='Ledger periods not set up')
     curr_closing_date = adm_periods[ledger_periods.current_period].closing_date
