@@ -102,8 +102,11 @@ async def alloc_tran_date(fld, xml, debug):
 
     db_obj = fld.db_obj
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
-    # context.cust_mod_ledg_id is set up in custom.artrans_funcs.check_allocations
-    ledger_periods = await db.cache.get_ledger_periods(db_obj.company, *db_obj.context.cust_mod_ledg_id)
+    if hasattr(db_obj.context, 'cust_mod_ledg_id'):  # called from interactive allocation
+        # context.cust_mod_ledg_id is set up in custom.artrans_funcs.check_allocations
+        ledger_periods = await db.cache.get_ledger_periods(db_obj.company, *db_obj.context.cust_mod_ledg_id)
+    else:
+        ledger_periods = await db.cache.get_ledger_periods(db_obj.company, *db_obj.context.mod_ledg_id)
     if ledger_periods == {}:
         raise AibError(head=fld.col_defn.short_descr, body="Ledger periods not set up")
 
