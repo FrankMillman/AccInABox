@@ -862,6 +862,14 @@ async def check_allocations(db_obj, xml):
         ar_tran_alloc = data_objects['ar_tran_alloc']
         ar_tran_alloc_det = data_objects['ar_tran_alloc_det']
         await ar_tran_alloc.init()
+        # if called from cb_tran_rec, context.mod_ledg_id relates to cashbook
+        # in db.dflt_xml.alloc_tran_date, we need mod_ledg_id relating to customer
+        # next block derives this and stores it in context.cust_mod_ledg_id
+        # db.dflt_xml.alloc_tran_date retrieves it from there
+        ar_cust = (await ar_tran_alloc.getfld('item_row_id>cust_row_id>row_id')).db_obj
+        cust_module_row_id = ar_cust.db_table.module_row_id
+        cust_ledger_row_id = await ar_cust.getval('ledger_row_id')
+        ar_tran_alloc.context.cust_mod_ledg_id = (cust_module_row_id, cust_ledger_row_id)
 
         all_alloc = ar_rec_alloc.select_many(where=[], order=[])
         async for _ in all_alloc:

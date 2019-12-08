@@ -101,11 +101,9 @@ async def alloc_tran_date(fld, xml, debug):
     # find first available open period, use first date in that period
 
     db_obj = fld.db_obj
-    module_row_id, ledger_row_id = db_obj.context.mod_ledg_id
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
-    ledger_periods = await db.cache.get_ledger_periods(
-        db_obj.company, module_row_id, ledger_row_id
-        )
+    # context.cust_mod_ledg_id is set up in custom.artrans_funcs.check_allocations
+    ledger_periods = await db.cache.get_ledger_periods(db_obj.company, *db_obj.context.cust_mod_ledg_id)
     if ledger_periods == {}:
         raise AibError(head=fld.col_defn.short_descr, body="Ledger periods not set up")
 
