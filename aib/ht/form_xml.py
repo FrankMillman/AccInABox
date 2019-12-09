@@ -686,12 +686,10 @@ async def get_val(caller, value):
         if obj_name == '_ctx':
             if col_name == 'ledger_row_id':
                 return getattr(caller.context, 'mod_ledg_id')[1]
-            # elif '[' in col_name:  # e.g. _ctx.dates[0]
-            #     pos_1 = col_name.find('[')
-            #     pos_2 = col_name[pos_1:].find(']')
-            #     pos = int(col_name[pos_1+1:pos_1+pos_2])
-            #     col_name = col_name[:pos_1]
-            #     return getattr(caller.context, col_name)[pos]
+            elif col_name == 'current_period':
+                ledger_periods = await db.cache.get_ledger_periods(
+                    caller.company, *caller.context.mod_ledg_id)
+                return ledger_periods.current_period
             else:
                 return getattr(caller.context, col_name)
         else:
