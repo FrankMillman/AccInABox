@@ -115,6 +115,8 @@ class ProcessRoot:
         with await proc_defns.lock:  # prevent clash with other users
             await proc_defns.select_row({'process_id': self.process_id})
             proc_data = await proc_defns.get_data()  # save data in local variable
+        if not proc_data['_exists']:
+            raise AibError(head=f'Process {self.process_id}', body='Process does not exist')
         proc_defn = proc_data['proc_xml']
         assert self.process_id == proc_defn.get('id')
         self.process_name = proc_defn.get('descr')
