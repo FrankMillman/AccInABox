@@ -1685,39 +1685,6 @@ class DateTime(Field):
             errmsg = '{}.{} - not a valid datetime object'.format(
                 self.table_name, self.col_name)
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
-        """
-        MS Sql Server can only accept milliseconds, not microseconds.
-        It rounds millseconds to 3.33ms - always ends in 3, 7, or 0.
-        This method rounds the microsecond portion to match
-          Sql Server's behaviour.
-
-        It is necessary due to our implementation of 'optimistic
-          concurrency control'. Before updating a value, we check that
-          it has not changed since the row was read in. Therefore
-          the object's contents must match exactly with the value
-          returned by the database. This routine ensures that.
-        """
-        if not value.microsecond:
-            return value
-        ms = value.microsecond//1000  # microseconds -> milliseconds
-        incr = (
-            0,   # 120 -> 120
-            -1,  # 121 -> 120
-            1,   # 122 -> 123
-            0,   # 123 -> 123
-            -1,  # 124 -> 123
-            2,   # 125 -> 127
-            1,   # 126 -> 127
-            0,   # 127 -> 127
-            -1,  # 128 -> 127
-            1    # 129 -> 130
-            )
-        ms += incr[ms%10]  # use last digit as index to get increment
-        if ms == 1000:
-            value = value.replace(microsecond=0)
-            value += td(seconds=1)
-        else:
-            value = value.replace(microsecond=(ms*1000))
         return value
 
     async def str_to_val(self, value):

@@ -334,16 +334,19 @@ async def delete_row(self, db_obj, from_upd_on_save):
 async def convert_sql(self, sql, params=None):
     if params is not None:
         # convert any datetime.date [dt] objects to datetime.datetime [dtm] objects
-        # if any(((type(p) is dt) for p in params)):
-        #     params = tuple(
-        #         (dtm(p.year, p.month, p.day) if type(p) is dt else p
-        #             for p in params)
-        #         )
-        if any((isinstance(p, dt) for p in params)):
+        if any(((type(p) is dt) for p in params)):
             params = tuple(
-                (dtm(p.year, p.month, p.day) if isinstance(p, dt) else p
+                (dtm(p.year, p.month, p.day) if type(p) is dt else p
                     for p in params)
                 )
+        # problem using isinstance with datetime types [2019-12-11] -
+        #   'isinstance(dtm, dt)' returns True, which causes a problem
+        #   'type(dtm) is dt' returns False, which avoids the problem
+        # if any((isinstance(p, dt) for p in params)):
+        #     params = tuple(
+        #         (dtm(p.year, p.month, p.day) if isinstance(p, dt) else p
+        #             for p in params)
+        #         )
     # standard sql uses 'LIMIT 1' at end, Sql Server uses 'TOP 1' after SELECT
     while ' LIMIT ' in sql.upper():
         pos = sql.upper().find(' LIMIT ')
@@ -399,7 +402,9 @@ def convert_string(self, string, db_scale=None, text_key=False):
         # DATE does not support ' + 1' to increment day, DATETIME does
         # therefore stick with DATETIME for now [2015-09-23]
         .replace('DTE', 'DATETIME')
-        .replace('DTM', 'DATETIME')
+        # DATETIME is rounded to increments of .000, .003, or .007 seconds
+        # DATETIME2 is accurate to 100ns, so compatible with datetime.datetime type
+        .replace('DTM', 'DATETIME2')
         .replace('DEC', f'DEC (21,{db_scale})')
         .replace('AUTO', 'INT IDENTITY PRIMARY KEY NONCLUSTERED')
         .replace('BOOL', 'BIT')
