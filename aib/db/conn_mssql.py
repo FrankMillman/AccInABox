@@ -334,19 +334,12 @@ async def delete_row(self, db_obj, from_upd_on_save):
 async def convert_sql(self, sql, params=None):
     if params is not None:
         # convert any datetime.date [dt] objects to datetime.datetime [dtm] objects
+        # cannot use 'isinstance(p, dt)' - dtm is a subclass of dt, so false positive when p is a dtm
         if any(((type(p) is dt) for p in params)):
             params = tuple(
                 (dtm(p.year, p.month, p.day) if type(p) is dt else p
                     for p in params)
                 )
-        # problem using isinstance with datetime types [2019-12-11] -
-        #   'isinstance(dtm, dt)' returns True, which causes a problem
-        #   'type(dtm) is dt' returns False, which avoids the problem
-        # if any((isinstance(p, dt) for p in params)):
-        #     params = tuple(
-        #         (dtm(p.year, p.month, p.day) if isinstance(p, dt) else p
-        #             for p in params)
-        #         )
     # standard sql uses 'LIMIT 1' at end, Sql Server uses 'TOP 1' after SELECT
     while ' LIMIT ' in sql.upper():
         pos = sql.upper().find(' LIMIT ')
