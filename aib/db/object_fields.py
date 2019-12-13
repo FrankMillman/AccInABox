@@ -930,8 +930,12 @@ class Field:
                     return ctx_ledg_id
         if not from_init and self.col_defn.dflt_rule is not None:
             return await db.dflt_xml.get_db_dflt(self)
-        if self.col_defn.dflt_val is not None:
-            if self.col_defn.dflt_val.startswith('{'):
+        dflt_val = self.col_defn.dflt_val
+        if dflt_val is not None:
+            if dflt_val.startswith('{'):
+                # if = '{}', empty dict, else contents of '{}' is a column name
+                if dflt_val == '{}':
+                    return '{}'  # assumes data_type is JSON
                 # reason why next line is necessary [2018-03-18] -
                 #
                 #   if '>' in dflt_val, it follows path using fkey
@@ -957,12 +961,12 @@ class Field:
                 # it would work just as well here, and may succeed where the other
                 #   one fails
                 #
-                if from_init and '>' in self.col_defn.dflt_val:
+                if from_init and '>' in dflt_val:
                     return None
                 else:
-                    return await self.db_obj.getval(self.col_defn.dflt_val[1:-1])
+                    return await self.db_obj.getval(dflt_val[1:-1])
             else:
-                return self.col_defn.dflt_val
+                return dflt_val
         # if we get here, None is returned
 
     async def calculated(self):
