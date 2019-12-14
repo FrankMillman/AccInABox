@@ -492,20 +492,14 @@ def create_functions(self):
         )
 
     try:
-        cur.execute("drop function date_func")
+        cur.execute("drop function date_add")
     except self.exception:
         pass
     cur.execute(
-        "CREATE FUNCTION date_func (@date DATETIME, @op NVARCHAR(5), @days INT) "
+        "CREATE FUNCTION date_add (@date DATETIME, @days INT) "
             "RETURNS DATETIME WITH SCHEMABINDING AS "
           "BEGIN "
-            "DECLARE @ans DATETIME "
-            "SET @op = LOWER(@op) "
-            "IF @op = '+' OR @op = 'add' "
-              "SET @ans = @date + @days "
-            "ELSE IF @op = '-' OR @op = 'sub' "
-              "SET @ans = @date - @days "
-            "RETURN @ans "
+            "RETURN DATEADD(day, @days, @date) "
           "END "
         )
 

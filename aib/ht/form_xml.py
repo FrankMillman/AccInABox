@@ -374,7 +374,7 @@ async def assign(caller, xml):
             target_colname, target_key = target_colname.split('.')
             target_fld = await target_obj.getfld(target_colname)
             assert target_fld.col_defn.data_type == 'JSON'
-            target_dict = await target_fld.getval() or {}  # if None, initialise dict
+            target_dict = await target_fld.getval()
             target_dict[target_key] = value_to_assign
             await target_fld.setval(target_dict)
         else:

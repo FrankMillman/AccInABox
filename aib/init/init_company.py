@@ -546,6 +546,7 @@ async def setup_forms(context, conn, company):
         await form_defn.save()
 
     await setup_form('adm_params')
+    await setup_form('setup_periods')
     await setup_form('gl_params')
     await setup_form('ar_params')
     await setup_form('ar_ledger_new')

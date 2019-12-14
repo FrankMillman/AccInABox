@@ -93,11 +93,8 @@ def zfill(string, lng):
     # return template.format(string)
     return f'{string:0>{lng}}'
 
-def date_func(date_string, op, days):
-    if op.lower() in ('+', 'add'):
-        return str(date(*map(int, date_string.split('-'))) + timedelta(days))
-    if op.lower() in ('-', 'sub'):
-        return str(date(*map(int, date_string.split('-'))) - timedelta(days))
+def date_add(date_string, days):
+    return str(date(*map(int, date_string.split('-'))) + timedelta(days))
 
 # replace sqlite3 'round' function - it uses floating point, so rounding errors
 def round_(number, factor):
@@ -190,7 +187,7 @@ def init(self, pos, mem_id=None):
     conn.create_function('subfield', 3, subfield)
     conn.create_function('repeat', 2, repeat)
     conn.create_function('zfill', 2, zfill)
-    conn.create_function('date_func', 3, date_func)
+    conn.create_function('date_add', 2, date_add)
     conn.create_function('round', 2, round_)
 
     self.conn = conn

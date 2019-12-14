@@ -96,7 +96,7 @@ async def load_fin_periods(caller, xml):
                 "a.closing_date "
                 "FROM {0}.adm_periods a "
                 "WHERE "
-                    "(SELECT b.row_id FROM adm_yearends b "
+                    "(SELECT b.row_id FROM {0}.adm_yearends b "
                         "WHERE b.period_row_id >= a.row_id "
                         "ORDER BY b.row_id LIMIT 1) "
                     "= {1} "
@@ -106,7 +106,6 @@ async def load_fin_periods(caller, xml):
             seq = 0
             async for row_id, prev_cl_date, cl_date in await conn.exec_sql(sql):
                 seq += 1
-
                 await fin_period.init(init_vals={
                     'per_no': seq,
                     'per_row_id': row_id,
@@ -118,7 +117,7 @@ async def load_fin_periods(caller, xml):
         # set last period y/e to True
         await fin_period.setval('year_end', True)
         await fin_period.save()
-        await var.setval('ye_date', '    Year ended {}'.format(cl_date))
+        await var.setval('ye_date', f'    Year ended {cl_date!s:10.10}')  # truncate if dtm (MS)
         caller.context.ye_per_no = seq
 
     # see above comments

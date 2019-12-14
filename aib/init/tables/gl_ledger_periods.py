@@ -141,7 +141,7 @@ virt.append ({
     'long_descr' : 'Opening date',
     'col_head'   : 'Op date',
     'sql'        : (
-        "SELECT $fx_date_func(b.closing_date, '+', 1) "
+        "SELECT $fx_date_add(b.closing_date, 1) "
         "FROM {company}.adm_periods b "
         "WHERE b.row_id = a.period_row_id - 1"
         ),
