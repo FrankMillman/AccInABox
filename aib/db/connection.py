@@ -160,7 +160,7 @@ class DbHandler(threading.Thread):
                     cur = None
                 loop, command = req
                 if log_db:
-                    db_log.write(f'{datetime.now()}: {id(conn)}: {command.upper()};\n')
+                    db_log.write(f'{conn.timestamp}: {id(conn)}: {command.upper()};\n')
                 conn.conn.rollback() if command == 'rollback' else conn.conn.commit()
                 loop.call_soon_threadsafe(conn.wait_event.set)  # safe to release conn
             else:
@@ -168,7 +168,7 @@ class DbHandler(threading.Thread):
                     cur = conn.conn.cursor()
                 loop, sql, params, return_queue, is_cmd = req
                 if log_db:
-                    db_log.write(f'{datetime.now()}: {id(conn)}: {sql}; {params}\n')
+                    db_log.write(f'{conn.timestamp}: {id(conn)}: {sql}; {params}\n')
                     db_log.flush()
                 try:
                     cur.execute(sql, params)
@@ -1038,9 +1038,9 @@ class DbSession:
                 mem_conn = None
             self.db_mem_conn = DbMemConn(db_conn, mem_conn)
             if log_db:
-                db_log.write(f'{datetime.now()}: {id(db_conn)}: START db\n')
+                db_log.write(f'{timestamp}: {id(db_conn)}: START db\n')
                 if self.mem_id is not None:
-                    db_log.write(f'{datetime.now()}: {id(mem_conn)}: START mem\n')
+                    db_log.write(f'{timestamp}: {id(mem_conn)}: START mem\n')
 
         self.num_connections += 1
         try:
@@ -1058,9 +1058,9 @@ class DbSession:
                     await callback(*args)
                 self.after_rollback.clear()
                 if log_db:
-                    db_log.write(f'{datetime.now()}: {id(db_conn)}: COMMIT db\n')
+                    db_log.write(f'{timestamp}: {id(db_conn)}: COMMIT db\n')
                     if mem_conn is not None:
-                        db_log.write(f'{datetime.now()}: {id(mem_conn)}: COMMIT mem\n')
+                        db_log.write(f'{timestamp}: {id(mem_conn)}: COMMIT mem\n')
                     db_log.write('\n')
 
         except Exception:  # catch any exception - re-raised below
@@ -1075,9 +1075,9 @@ class DbSession:
                     await callback(*args)
                 self.after_commit.clear()
                 if log_db:
-                    db_log.write(f'{datetime.now()}: {id(db_conn)}: ROLLBACK db\n')
+                    db_log.write(f'{timestamp}: {id(db_conn)}: ROLLBACK db\n')
                     if mem_conn is not None:
-                        db_log.write(f'{datetime.now()}: {id(mem_conn)}: ROLLBACK mem\n')
+                        db_log.write(f'{timestamp}: {id(mem_conn)}: ROLLBACK mem\n')
                     db_log.write('\n')
             raise  # re-raise exception
 

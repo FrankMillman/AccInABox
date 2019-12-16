@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal as D
 
 import db.objects
@@ -192,16 +192,13 @@ def init(self, pos, mem_id=None):
 
     self.conn = conn
     self.exception = (sqlite3.Error, sqlite3.IntegrityError, sqlite3.OperationalError)
-    self.msg_pos = 0
-    self.now = datetime.now
-    self.today = date.today
     self.companies = set()
 
     # conn.set_trace_callback(self.callback)
 
 # sql_log = open('sql_log.txt', 'w', errors='backslashreplace')
 def callback(self, sql_cmd):
-    sql_log.write('{}: {}: {}\n'.format(datetime.now(), id(self), sql_cmd))
+    sql_log.write('{}: {}: {}\n'.format(self.timestamp, id(self), sql_cmd))
     sql_log.flush()
 
 # async def add_lock(self, sql):

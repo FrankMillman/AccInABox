@@ -1,4 +1,3 @@
-from datetime import date, datetime
 import psycopg2
 import psycopg2.extensions  # so that strings are returned as unicode
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
@@ -69,9 +68,6 @@ def init(self, pos):
     self.conn = conn
     self.exception = (psycopg2.ProgrammingError, psycopg2.IntegrityError,
         psycopg2.InternalError)
-    self.msg_pos = 0
-    self.now = datetime.now
-    self.today = date.today
     if not pos:
         self.create_functions()
 

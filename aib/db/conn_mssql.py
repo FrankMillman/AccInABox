@@ -1,6 +1,4 @@
 import pyodbc
-from datetime import date as dt, datetime as dtm
-
 
 def customise(constants, DbConn, db_params):
     # add db-specific methods to DbConn class
@@ -52,10 +50,6 @@ def init(self, pos):
         database=self.database, trusted_connection='Yes')
     self.conn = conn
     self.exception = (pyodbc.DatabaseError, pyodbc.IntegrityError)
-    self.msg_pos = 0
-    # SQL Server 2000/2005 does not have a Date type - apparently 2008 does
-    self.now = dtm.now
-    self.today = dtm.today
     if not pos:  # only need to do this once per database
         self.create_functions()
         conn.autocommit = True
