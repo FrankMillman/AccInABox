@@ -45,11 +45,11 @@ def customise(constants, DbConn, db_params):
     DbConn.pwd = db_params['pwd']
 
 def init(self, pos):
-    # conn = pyodbc.connect(driver='sql server', server='np:(local)',
-    #     database=self.database, user=self.user, password=self.pwd)
     # C:\sqlcmd -S localhost\sqlexpress -E
-    conn = pyodbc.connect(driver='sql server', server=r'localhost\sqlexpress',
-        database=self.database, user=self.user, password=self.pwd, trusted_connection=True)
+    # conn = pyodbc.connect(driver='sql server', server=r'localhost\sqlexpress',
+    #     database=self.database, user=self.user, password=self.pwd, trusted_connection=True)
+    conn = pyodbc.connect(driver='ODBC Driver 17 for Sql Server', server=r'localhost\sqlexpress',
+        database=self.database, trusted_connection='Yes')
     self.conn = conn
     self.exception = (pyodbc.DatabaseError, pyodbc.IntegrityError)
     self.msg_pos = 0
@@ -332,14 +332,6 @@ async def delete_row(self, db_obj, from_upd_on_save):
         await self.exec_cmd(sql, key_vals)
 
 async def convert_sql(self, sql, params=None):
-    if params is not None:
-        # convert any datetime.date [dt] objects to datetime.datetime [dtm] objects
-        # cannot use 'isinstance(p, dt)' - dtm is a subclass of dt, so false positive when p is a dtm
-        if any(((type(p) is dt) for p in params)):
-            params = tuple(
-                (dtm(p.year, p.month, p.day) if type(p) is dt else p
-                    for p in params)
-                )
     # standard sql uses 'LIMIT 1' at end, Sql Server uses 'TOP 1' after SELECT
     while ' LIMIT ' in sql.upper():
         pos = sql.upper().find(' LIMIT ')
@@ -391,10 +383,7 @@ def convert_string(self, string, db_scale=None, text_key=False):
         # https://stackoverflow.com/questions/148398/are-there-any-disadvantages-to-always-using-nvarcharmax
         .replace('TEXT', 'NVARCHAR(50)' if text_key else 'NVARCHAR(4000)')  # or MAX? MAX seems slower
         .replace('PWD', 'NVARCHAR(4000)')
-        # Sql Server 2008 has a DATE type, but not 2005
-        # DATE does not support ' + 1' to increment day, DATETIME does
-        # therefore stick with DATETIME for now [2015-09-23]
-        .replace('DTE', 'DATETIME')
+        .replace('DTE', 'DATE')
         # DATETIME is rounded to increments of .000, .003, or .007 seconds
         # DATETIME2 is accurate to 100ns, so compatible with datetime.datetime type
         .replace('DTM', 'DATETIME2')
@@ -496,8 +485,8 @@ def create_functions(self):
     except self.exception:
         pass
     cur.execute(
-        "CREATE FUNCTION date_add (@date DATETIME, @days INT) "
-            "RETURNS DATETIME WITH SCHEMABINDING AS "
+        "CREATE FUNCTION date_add (@date DATE, @days INT) "
+            "RETURNS DATE WITH SCHEMABINDING AS "
           "BEGIN "
             "RETURN DATEADD(day, @days, @date) "
           "END "

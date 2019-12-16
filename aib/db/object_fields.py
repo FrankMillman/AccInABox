@@ -1523,12 +1523,8 @@ class Decimal(Field):
                 quant, context=Context(traps=[Inexact]))
         except Inexact:
             if scale:
-                # errmsg = '{}.{} - cannot exceed {} decimals'.format(
-                #     self.table_name, self.col_name, scale)
                 errmsg = f'{self.table_name}.{self.col_name} - cannot exceed {scale} decimals'
             else:
-                # errmsg = '{}.{} - no decimals allowed'.format(
-                    # self.table_name, self.col_name)
                 errmsg = f'{self.table_name}.{self.col_name} - no decimals allowed'
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
@@ -1562,14 +1558,6 @@ class Decimal(Field):
 
     async def get_val_from_sql(self, value):
         return await self.check_val(value)
-        # if value is None:
-        #     return None
-        # value = D(value)  # could be integer
-        # if value == int(value):  # if value is an integer, no need to check scale
-        #     return value.quantize(0)
-        # scale = await self.get_scale()
-        # quant = D(str(10**-scale))
-        # return value.quantize(quant, rounding=ROUND_HALF_UP)
 
     async def get_val_from_xml(self, value):
         if value is None:
@@ -1597,8 +1585,6 @@ class Date(Field):
     async def check_val(self, value):
         if value is None:
             return None
-        if isinstance(value, dtm):  # Sql Server uses datetime
-            return dt(value.year, value.month, value.day)  # must check before 'dt'
         if isinstance(value, dt):
             return value
         try:
