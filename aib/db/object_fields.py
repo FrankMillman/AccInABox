@@ -1192,9 +1192,10 @@ class Json(Text):
     async def check_val(self, value):
         if value is None:
             return None
+        if isinstance(value, (str)):  # allow valid JSON-dumped string e.g. '{}'
+            return self.deserialise(value)
         if isinstance(value, (list, dict, bool, tuple)):
             return value
-        # 'str' is valid for JSON, but not for AIB - just use TEXT!
         errmsg = '{}.{} - type is {}, not valid for JSON'.format(
             self.table_name, self.col_name, str(type(value)).split("'")[1])
         raise AibError(head=self.col_defn.short_descr, body=errmsg)

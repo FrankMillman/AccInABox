@@ -117,7 +117,7 @@ async def load_fin_periods(caller, xml):
         # set last period y/e to True
         await fin_period.setval('year_end', True)
         await fin_period.save()
-        await var.setval('ye_date', f'    Year ended {cl_date!s:10.10}')  # truncate if dtm (MS)
+        await var.setval('ye_date', f'    Year ended {cl_date}')
         caller.context.ye_per_no = seq
 
     # see above comments
@@ -241,7 +241,7 @@ async def after_save_row(caller, xml):
         # await caller.start_grid(start_col='per_no', start_val=per_no+1)
     else:
         print('after per_no={} prev_per={}'.format(per_no, prev_per))
-#       await caller.start_grid(start_col='per_no', start_val=per_no+1)
+        # await caller.start_grid(start_col='per_no', start_val=per_no+1)
 
 async def save_fin_year(caller, xml):
     # called from 'save' button or from goto_prev/next above

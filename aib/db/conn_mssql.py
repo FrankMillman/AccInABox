@@ -46,6 +46,7 @@ def init(self, pos):
     # C:\sqlcmd -S localhost\sqlexpress -E
     # conn = pyodbc.connect(driver='sql server', server=r'localhost\sqlexpress',
     #     database=self.database, user=self.user, password=self.pwd, trusted_connection=True)
+    # refer to https://github.com/mkleehammer/pyodbc/issues/658 for info on odbc connection
     conn = pyodbc.connect(driver='ODBC Driver 17 for Sql Server', server=r'localhost\sqlexpress',
         database=self.database, trusted_connection='Yes')
     self.conn = conn
