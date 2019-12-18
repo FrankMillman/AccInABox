@@ -49,6 +49,9 @@ def customise(constants, DbConn, db_params):
     DbConn.database = db_params['database']
     DbConn.callback = callback
 
+def substring(string, start, length):
+    return string[start-1:start-1+length]
+
 def subfield(string, delim, occurrence):
     """
     function to extract specified occurence of subfield from string
@@ -164,9 +167,6 @@ sqlite3.register_adapter(D, lambda d:str(d) + ('' if '.' in str(d) else '.'))
 # Decimal converter (convert back to Decimal on return)
 sqlite3.register_converter('REAL', lambda s: D(s.decode('utf-8')))
 
-# Date converter (convert back to Date on return)
-sqlite3.register_converter('DATE', lambda s: date(*map(int, s.split(b'-'))))
-
 # Boolean adapter (store bool in database as '1'/'0')
 sqlite3.register_adapter(bool, lambda b: str(int(b)))
 # Boolean converter (convert back to bool on return)
@@ -184,6 +184,7 @@ def init(self, pos, mem_id=None):
         conn = sqlite3.connect('{0}/_base'.format(self.database),
             detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
             check_same_thread=False)
+    conn.create_function('substring', 3, substring)
     conn.create_function('subfield', 3, subfield)
     conn.create_function('repeat', 2, repeat)
     conn.create_function('zfill', 2, zfill)
