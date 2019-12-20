@@ -496,7 +496,7 @@ gui_ctrls = {
     'INT'   : (GuiNumCtrl),
     'DEC'   : (GuiNumCtrl),
     'DTE'   : (GuiDateCtrl),
-    'DTM'   : (GuiDateCtrl),
+    'DTM'   : (GuiTextCtrl),
     'BOOL'  : (GuiBoolCtrl),
     'JSON'  : (GuiTextCtrl),
     'XML'   : (GuiTextCtrl),

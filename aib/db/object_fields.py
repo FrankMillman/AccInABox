@@ -1076,8 +1076,8 @@ class Text(Field):
         elif isinstance(value, (int, float)) and not isinstance(value, bool):
             value = str(value)
         else:
-            errmsg = '{}.{} - type is {}, must be str'.format(
-                self.table_name, self.col_name, str(type(value)).split("'")[1])
+            value_type = str(type(value)).split("'")[1]  # e.g. <class 'datetime.date'> -> datetime.date
+            errmsg = f'{self.table_name}.{self.col_name} - type is {value_type}, must be str'
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
         max_len = self.col_defn.max_len  # 0 means no maximum
         if max_len and len(value) > max_len:
@@ -1193,11 +1193,15 @@ class Json(Text):
         if value is None:
             return None
         if isinstance(value, (str)):  # allow valid JSON-dumped string e.g. '{}'
-            return self.deserialise(value)
+            try:
+                return self.deserialise(value)
+            except ValueError:
+                errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Json string'
+                raise AibError(head=self.col_defn.short_descr, body=errmsg)
         if isinstance(value, (list, dict, bool, tuple)):
             return value
-        errmsg = '{}.{} - type is {}, not valid for JSON'.format(
-            self.table_name, self.col_name, str(type(value)).split("'")[1])
+        value_type = str(type(value)).split("'")[1]  # e.g. <class 'datetime.date'> -> datetime.date
+        errmsg = f'{self.table_name}.{self.col_name} - type is {value_type}, not valid for JSON'
         raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     async def str_to_val(self, value):
@@ -1207,8 +1211,7 @@ class Json(Text):
             try:
                 return self.deserialise(value)
             except ValueError:
-                errmsg = '{}.{} - {} not a valid Json string'.format(
-                    self.table_name, self.col_name, value)
+                errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Json string'
                 raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     async def val_to_str(self, value=blank):
@@ -1346,7 +1349,7 @@ class StringXml(Xml):
                 return self.from_string(value, from_gui=True)
             except (etree.XMLSyntaxError, ValueError) as e:
                 raise AibError(head=self.col_defn.short_descr,
-                    body='Xml error - {}'.format(e.args[0]))
+                    body=f'Xml error - {e.args[0]}')
 
     async def val_to_str(self, value=blank):
         try:
@@ -1429,8 +1432,7 @@ class Integer(Field):
         try:
             if self.sequence:
                 if int(value) < 0:
-                    errmsg = '{}.{} - "{}" cannot be negative'.format(
-                        self.table_name, self.col_name, value)
+                    errmsg = f'{self.table_name}.{self.col_name} - "{value}" cannot be negative'
                     raise AibError(head=self.col_defn.short_descr, body=errmsg)
                 return int(value) - 1
             else:
@@ -1514,8 +1516,7 @@ class Decimal(Field):
         try:
             value = D(value)
         except DecimalException:
-            errmsg = '{}.{} - {} not a valid Decimal type'.format(
-                self.table_name, self.col_name, value)
+            errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Decimal type'
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
         scale = await self.get_scale()
         quant = D(str(10**-scale))
@@ -1589,12 +1590,10 @@ class Date(Field):
         if isinstance(value, dt):
             return value
         try:
-            # assumes value is 'yyyy-mm-dd'
-            return dt(*map(int, value.split('-')))
+            return dt.fromisoformat(value)  # assumes value is 'yyyy-mm-dd'
         except ValueError:
             raise AibError(head=self.col_defn.short_descr,
-                body='{}.{} - "{}" is not a valid date'.format(
-                    self.table_name, self.col_name, value))
+                body=f'{self.table_name}.{self.col_name} - "{value}" is not a valid date')
 
     async def get_dflt(self, from_init=False):
         dflt_val = await Field.get_dflt(self, from_init)
@@ -1607,12 +1606,10 @@ class Date(Field):
         if value in (None, ''):
             return None
         try:
-            # value must be 'yyyy-mm-dd'
-            return dt(*map(int, value.split('-')))
+            return dt.fromisoformat(value)  # assumes value is 'yyyy-mm-dd'
         except ValueError:
             raise AibError(head=self.col_defn.short_descr,
-                body='{}.{} - "{}" is not a valid date'.format(
-                    self.table_name, self.col_name, value))
+                body=f'{self.table_name}.{self.col_name} - "{value}" is not a valid date')
 
     async def val_to_str(self, value=blank):
         try:
@@ -1623,7 +1620,7 @@ class Date(Field):
             value = await self.getval()
         if value is None:
             return ''
-        return '{:%Y-%m-%d}'.format(value)  # 'yyyy-mm-dd' - works for dt and dtm
+        return str(value)
 
     async def prev_to_str(self):
         try:
@@ -1632,31 +1629,10 @@ class Date(Field):
             return '*'
         if self._prev is None:
             return ''
-        return '{:%Y-%m-%d}'.format(self._prev)  # 'yyyy-mm-dd' - works for dt and dtm
+        return str(self._prev)
 
     async def get_val_from_sql(self, value):
         return await self.check_val(value)
-        # if value is None:
-        #     return None
-        # if isinstance(value, dtm):  # Sql Server returns a datetime object
-        #     return dt(value.year, value.month, value.day)
-        # if isinstance(value, str):  # sqlite3 can return a string
-        #     try:  # value must be 'yyyy-mm-dd'
-        #         return dt(*map(int, value.split('-')))
-        #     except ValueError:
-        #         raise AibError(head=self.col_defn.short_descr,
-        #             body='{}.{} - "{}" is not a valid date'.format(
-        #                 self.table_name, self.col_name, value))
-        # return value
-
-    async def get_val_for_sql(self):
-        """
-        MS Sql Server only accepts datetime objects, not date objects.
-        [Actually ceODBC does, but pyodbc does not].
-        It *does* accept a string of 'yyyy-mm-dd'.
-        Luckily, PostgreSQL and sqlite3 accept this as well.
-        """
-        return None if self._value is None else str(self._value)  # 'yyyy-mm-dd'
 
     def get_val_for_where(self):
         return None if self._value is None else repr(str(self._value))  # "'yyyy-mm-dd'"
@@ -1672,17 +1648,22 @@ class DateTime(Field):
     async def check_val(self, value):
         if value is None:
             return None
-        if not isinstance(value, dtm):
-            errmsg = '{}.{} - not a valid datetime object'.format(
-                self.table_name, self.col_name)
-            raise AibError(head=self.col_defn.short_descr, body=errmsg)
-        return value
+        if isinstance(value, dtm):
+            return value
+        try:
+            return dtm.strptime(value, '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            raise AibError(head=self.col_defn.short_descr,
+                body='{self.table_name}.{self.col_name} - "{value}" is not a valid datetime')
 
     async def str_to_val(self, value):
         if value in (None, ''):
             return None
-        else:
-            raise NotImplementedError
+        try:
+            return dtm.strptime(value, '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            raise AibError(head=self.col_defn.short_descr,
+                body='{self.table_name}.{self.col_name} - "{value}" is not a valid datetime')
 
     async def val_to_str(self, value=blank):
         try:
@@ -1693,7 +1674,7 @@ class DateTime(Field):
             value = await self.getval()
         if value is None:
             return ''
-        return '{:%Y-%m-%d %H:%M:%S}'.format(value)
+        return value.strftime('%Y-%m-%d %H:%M:%S')
 
     async def prev_to_str(self):
         try:
@@ -1702,7 +1683,7 @@ class DateTime(Field):
             return '*'
         if self._prev is None:
             return ''
-        return '{:%Y-%m-%d %H:%M:%S}'.format(self._prev)
+        return self._prev.strftime('%Y-%m-%d %H:%M:%S')
 
     def get_val_for_where(self):
         raise NotImplementedError
