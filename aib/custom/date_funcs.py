@@ -697,11 +697,11 @@ async def check_stat_date(db_obj, fld, value):
 
     return True
 
-async def check_wh_date(db_obj, fld, wh_row_id):
-    # called from various wh_row_id col_checks using pyfunc
+async def check_wh_date(db_obj, fld, ledger_row_id):
+    # called from various ledger_row_id col_checks using pyfunc
 
-    if wh_row_id is None:  # no dflt_val for wh_row_id
-        return True  # will be called after entry of wh_row_id
+    if ledger_row_id is None:  # no dflt_val for ledger_row_id
+        return True  # will be called after entry of ledger_row_id
 
     try:
         period_row_id = await db_obj.getval('tran_det_row_id>tran_row_id>period_row_id')
@@ -710,7 +710,7 @@ async def check_wh_date(db_obj, fld, wh_row_id):
     module_row_id = await db.cache.get_mod_id(db_obj.company, 'in')
 
     ledger_periods = await db.cache.get_ledger_periods(
-        db_obj.company, module_row_id, wh_row_id)
+        db_obj.company, module_row_id, ledger_row_id)
 
     if ledger_periods is None:
         raise AibError(head=fld.col_defn.short_descr, body='Warehouse period not set up')
@@ -721,14 +721,14 @@ async def check_wh_date(db_obj, fld, wh_row_id):
             ledger_period = await db.objects.get_db_object(
                 db.cache.cache_context, db_obj.company, 'in_ledger_periods')
             await ledger_period.init(init_vals={
-                'ledger_row_id': wh_row_id,
+                'ledger_row_id': ledger_row_id,
                 'period_row_id': period_row_id,
                 'state': 'open',
                 })
             await ledger_period.save()
 
             ledger_periods = await db.cache.get_ledger_periods(
-                db_obj.company, module_row_id, wh_row_id)
+                db_obj.company, module_row_id, ledger_row_id)
 
     if period_row_id not in ledger_periods:
         raise AibError(head=fld.col_defn.short_descr, body='Warehouse period not open')

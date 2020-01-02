@@ -15,7 +15,7 @@ table = {
         ],
     'roll_params'   : None,
     'indexes'       : None,
-    'ledger_col'    : 'wh_row_id',
+    'ledger_col'    : 'ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -81,7 +81,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'wh_row_id',
+    'col_name'   : 'ledger_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Warehouse row id',
     'long_descr' : 'Warehouse row id',
@@ -194,13 +194,13 @@ virt.append ({
                 "+ b.adj_tot_qty + b.sls_tot_qty "
 #               "+ b.qty_pchord_tot + b.qty_slsord_tot "
             "FROM {company}.in_wh_prod_totals b "
-            "WHERE b.wh_row_id = a.wh_row_id AND b.prod_row_id = a.prod_row_id "
+            "WHERE b.ledger_row_id = a.ledger_row_id AND b.prod_row_id = a.prod_row_id "
 #               "AND b.tran_date <= {var.date} "
             "ORDER BY b.tran_date DESC LIMIT 1) "
         "- "
             "COALESCE((SELECT b.alloc_qty "
             "FROM {company}.in_wh_prod_unposted b "
-            "WHERE b.wh_row_id = a.wh_row_id AND b.prod_row_id = a.prod_row_id) "
+            "WHERE b.ledger_row_id = a.ledger_row_id AND b.prod_row_id = a.prod_row_id) "
             ", 0)"
         ),
     })
@@ -211,11 +211,11 @@ cursors.append({
     'cursor_name': 'whouse',
     'title': 'Warehouses',
     'columns': [
-        ['wh_row_id>ledger_id', 100, False, False, False, False, None, None, None, None],
-        ['wh_row_id>descr', 240, True, False, False, False, None, None, None, None],
+        ['ledger_row_id>ledger_id', 100, False, False, False, False, None, None, None, None],
+        ['ledger_row_id>descr', 240, True, False, False, False, None, None, None, None],
         ],
     'filter': [],
-    'sequence': [['wh_row_id>ledger_id', False]],
+    'sequence': [['ledger_row_id>ledger_id', False]],
     })
 cursors.append({
     'cursor_name': 'prod_codes',

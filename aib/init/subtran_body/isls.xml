@@ -7,7 +7,7 @@
   <label value="Warehouse:"/>
   <col/>
   <input obj_name="isls" col_name="ledger_id" lng="80"/>
-  <display obj_name="isls" col_name="wh_prod_row_id>wh_row_id>descr" lng="120"/>
+  <display obj_name="isls" col_name="wh_prod_row_id>ledger_row_id>descr" lng="120"/>
   <end_if/>
   <row/>
   <col/>
