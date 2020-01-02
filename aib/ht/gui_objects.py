@@ -123,8 +123,10 @@ class GuiCtrl:
 
         src_fld = self.fld
         tgt_fld = self.fld.foreign_key['tgt_field']
+        if tgt_fld.db_obj.exists:  # added 2019-12-31 - if vld fails and another selected, error 'cannot amend'
+            await tgt_fld.db_obj.init()  # this prevents the error from occuring
         self.fkey_path = [(src_fld, tgt_fld)]
- 
+
         while True:  # if a chain of fkeys, find the top one
         # while src_fld.col_defn.fkey[5] is None:  # if no cursor defined, check the next one up
         # don't know the reason for the line above [2019-08-26]
@@ -169,10 +171,13 @@ class GuiCtrl:
                     await alt_src.setup_foreign_key()
                 alttgt_obj = alt_src.foreign_key['tgt_field'].db_obj
                 alt_tgt = await alttgt_obj.getfld(alttgt_name_1)
-                true_src = alt_tgt.foreign_key['true_src']
+                if alt_tgt.foreign_key == {}:
+                    await alt_tgt.setup_foreign_key()
+                if alt_tgt.foreign_key['true_src']:  # if an alt_scr, use the true_src
+                    alt_tgt = alt_tgt.foreign_key['true_src']
 
                 if alttgt_obj == tgt_obj:  # alttgt_obj is adm_tax_codes, tgt_obj is adm_tax_codes
-                    lkup_filter = 'a.{} = ?'.format(true_src.col_name)
+                    lkup_filter = 'a.{} = ?'.format(alt_tgt.col_name)
 
                 else:
                     # e.g. sls_isls_subinv.wh_prod_row_id has this fkey -
@@ -189,20 +194,38 @@ class GuiCtrl:
                     #   so we need to create the following filter -
                     #     SELECT * FROM inv_prod_codes a
                     #     WHERE EXISTS(SELECT * FROM inv_wh_prod b
-                    #       WHERE b.prod_row_id = a.row_id AND b.wh_row_id = ?)
+                    #       WHERE b.prod_row_id = a.row_id AND b.ledger_row_id = ?)
+
+                    # e.g. ar_tran_inv.cust_row_id has this fkey -
+                    #   ['ar_customers', 'row_id', 'ledger_id, cust_id', 'ledger_id, cust_id']
+                    #   ledger_id is ar_tran_inv.cust_row_id>ledger_row_id>ledger_id
+                    #   cust_id is ar_tran_inv.cust_row_id>party_row_id>party_id
+                    #
+                    # alttgt_obj is ar_customers, tgt_obj is org_parties
+                    # so we follow the 'else' clause and end up here 
+                    #
+                    # we want to do a lookup on org_parties, but only where there is a row
+                    #   in 'ar_customers' where ar_customers.party_row_id = org_parties.row_id
+                    #   and ar_customers.ledger_row_id = the entered value
+                    # there is no 'path' from org_parties to ar_customers,
+                    #   so we need to create the following filter -
+                    #     SELECT * FROM org_parties a
+                    #     WHERE EXISTS(SELECT * FROM ar_customers b
+                    #       WHERE b.party_row_id = a.row_id AND b.ledger_row_id = ?)
+
                     lkup_filter = (
                         'EXISTS(SELECT * FROM {}.{} b WHERE b.{} = a.{} AND b.{} = ?)'
                         .format(
                             self.fld.db_obj.company,
-                            true_src.table_name,
+                            alt_tgt.table_name,
                             self.fld.foreign_key['tgt_field'].foreign_key['true_src'].col_name,
                             self.fld.foreign_key['tgt_field'].foreign_key['true_src'].
                                 foreign_key['tgt_field'].col_name,
-                            true_src.col_name,
+                            alt_tgt.col_name,
                             ))
 
                 # place filter in tgt_obj.context - it will be picked up in ht.gui_grid.start_grid
-                tgt_obj.context.lkup_filter = (lkup_filter, await true_src.getval())
+                tgt_obj.context.lkup_filter = (lkup_filter, await alt_tgt.getval())
 
         if tgt_obj.db_table.tree_params:
             form_name = '_sys.tree_lookup'
@@ -211,8 +234,9 @@ class GuiCtrl:
             form_name = '_sys.grid_lookup'
             data_inputs['start_col'] = src_fld.foreign_key['tgt_field'].col_name
             data_inputs['start_val'] = value
-            cursor_name = src_fld.col_defn.fkey[5]
-            await tgt_obj.setup_cursor_defn(cursor_name)
+            if tgt_obj.cursor_defn is None:
+                cursor_name = src_fld.col_defn.fkey[5]
+                await tgt_obj.setup_cursor_defn(cursor_name)
 
         sub_form = ht.form.Form(self.parent.form.company, form_name,
             parent_form=self.parent.form, data_inputs=data_inputs,

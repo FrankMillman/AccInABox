@@ -653,10 +653,12 @@ class Field:
                 elif value == tgt_field._value and (
                         tgt_field.db_obj.exists or not tgt_field.db_obj.dirty):
                     # if not exists and not dirty, has just been saved [2018-03-26]
+                    # another possible reason - tgt_field.db_obj.init() has been called,
+                    #   and tgt_field has a dflt_val [2019-12-29]
                     # if this is ok, might as well just test for 'dirty' (?)
                     if true_src:  # don't re-read, but if true_src, set value
-                        true_foreign_key = await true_src.db_obj.get_foreign_key(true_src)
                         if col_name == alt_srcnames[-1]:  # if multi-part key, all parts are present
+                            true_foreign_key = await true_src.db_obj.get_foreign_key(true_src)
                             # must validate true_src - db_obj might exist because we have
                             #   performed a lookup, but true_src might have col_checks
                             await true_src.setval(true_foreign_key['tgt_field']._value)
@@ -664,8 +666,17 @@ class Field:
                     pass  # e.g. ap_tran_inv_tax.tran_det_row_id -> ap_tran_inv_det.row_id
                 else:
                     if true_src:  # this is an alt_src
-                        if col_name == alt_srcnames[0]:  # if multi-part key, only init on first part
-                            await tgt_field.db_obj.init()
+                        # if col_name == alt_srcnames[0]:  # if multi-part key, only init on first part
+                        #     await tgt_field.db_obj.init()
+                        alt_src_pos = alt_srcnames.index(col_name)
+                        if (
+                            alt_src_pos == 0  # this is the first alt_src
+                            or
+                            # if all prior alt_src._value is None, assume their tgt_fields have dflt_vals
+                            # if this fails, it is a programming error - must supply values for alt flds in seq
+                            all(db_obj.fields[_]._value is None for _ in alt_srcnames[:alt_src_pos])
+                            ):
+                                await tgt_field.db_obj.init()
                         await tgt_field.setval(value, display, validate=False)
                         if col_name == alt_srcnames[-1]:  # if multi-part key, all parts are present
                             if not tgt_field.db_obj.exists:
