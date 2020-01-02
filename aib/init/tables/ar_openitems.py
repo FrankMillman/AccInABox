@@ -126,7 +126,7 @@ cols.append ({
             ['ar_chg', 'ar_subtran_chg'],
             ['ar_disc', 'ar_tran_disc'],
             ]],
-        'row_id', 'ledger_id, cust_id, tran_number', 'ledger_id, cust_id, tran_number', True, None],
+        'row_id', 'ledger_row_id, cust_id, tran_number', 'ledger_row_id, cust_id, tran_number', True, None],
     'choices'    : None,
     })
 cols.append ({

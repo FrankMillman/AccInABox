@@ -124,7 +124,7 @@ cols.append ({
             ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
             ]],
         ],
-    'fkey'       : ['ar_customers', 'row_id', 'ledger_id, cust_id', 'ledger_id, cust_id', False, None],
+    'fkey'       : ['ar_customers', 'row_id', 'ledger_row_id, cust_id', 'ledger_row_id, cust_id', False, None],
     'choices'    : None,
     })
 cols.append ({

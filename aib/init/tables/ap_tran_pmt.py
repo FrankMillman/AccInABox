@@ -96,7 +96,7 @@ cols.append ({
     'col_checks' : [['match_ledger', 'Must be part of same ledger [DO WE GET HERE?]', [
         ['check', '', 'supp_row_id>ledger_row_id', '=', '_ledger.row_id', ''],
         ]]],
-    'fkey'       : ['ap_suppliers', 'row_id', 'ledger_id, supp_id', 'ledger_id, supp_id', False, None],
+    'fkey'       : ['ap_suppliers', 'row_id', 'ledger_row_id, supp_id', 'ledger_row_id, supp_id', False, None],
     'choices'    : None,
     })
 cols.append ({

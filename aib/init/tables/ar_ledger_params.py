@@ -381,8 +381,8 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    # 1=last day of month [1, None]
-    # 2=fixed day per month [2, dd] check dd <= 28
+    # 1=last day of month [1, None]  # not required - just set separate_stat_close to False
+    # 2=fixed day per month [2, dd]  # check dd <= 28
     # 3=last weekday of month [3, 0-6, min_days_to_end]
     # 4=manual input [4, None]
     'col_name'   : 'stmt_date',
