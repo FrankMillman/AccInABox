@@ -325,15 +325,15 @@ virt.append ({
     'dflt_val'   : '{tran_row_id>tran_date}',
     'sql'        : "a.tran_row_id>tran_date"
     })
-# virt.append ({
-#     'col_name'   : 'posted',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Posted?',
-#     'long_descr' : 'Posted?',
-#     'col_head'   : 'Posted?',
-#     'dflt_val'   : '{tran_row_id>posted}',
-#     'sql'        : "a.tran_row_id>posted"
-#     })
+virt.append ({
+    'col_name'   : 'posted',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Posted?',
+    'long_descr' : 'Posted?',
+    'col_head'   : 'Posted?',
+    'dflt_val'   : '{tran_row_id>posted}',
+    'sql'        : "a.tran_row_id>posted"
+    })
 # virt.append ({
 #     'col_name'   : 'cust_row_id',
 #     'data_type'  : 'INT',
@@ -411,7 +411,7 @@ cursors = []
 # actions
 actions = []
 actions.append([
-    'upd_on_save', [
+    'upd_on_post', [
         [
             'ar_tran_alloc_det',
             [  # condition - don't update 'self' with total allocation
@@ -428,9 +428,8 @@ actions.append([
                 ['alloc_local', '-', 'alloc_local'],
                 ['discount_local', '-', 'discount_local'],
                 ],
-            [],  # on insert
-            [],  # on update
-            [],  # on delete
+            [],  # on post
+            [],  # on unpost
             ],
         ],
     ])

@@ -136,7 +136,7 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['wh_date', 'Warehouse period not open', [
-            ['check', '', 'wh_prod_row_id>wh_row_id', 'pyfunc', 'custom.date_funcs.check_wh_date', ''],
+            ['check', '', 'wh_prod_row_id>ledger_row_id', 'pyfunc', 'custom.date_funcs.check_wh_date', ''],
             ]],
         ],
     'fkey'       : [
@@ -224,7 +224,7 @@ cols.append ({
     'dflt_rule'  : (
         '<case>'
             # '<compare src="tran_det_row_id>tran_row_id>currency_id" op="eq" '
-            #         'tgt="wh_prod_row_id>wh_row_id>currency_id">'
+            #         'tgt="wh_prod_row_id>ledger_row_id>currency_id">'
             #     '<literal value="1"/>'
             # '</compare>'
             # '<compare src="tran_det_row_id>tran_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
@@ -232,7 +232,7 @@ cols.append ({
             #         '<literal value="1"/>'
             #         '<op type="/"/>'
             #         '<exch_rate>'
-            #             '<fld_val name="wh_prod_row_id>wh_row_id>currency_id"/>'
+            #             '<fld_val name="wh_prod_row_id>ledger_row_id>currency_id"/>'
             #             '<fld_val name="tran_det_row_id>tran_row_id>tran_date"/>'
             #         '</exch_rate>'
             #     '</expr>'
@@ -245,17 +245,17 @@ cols.append ({
             #         '</exch_rate>'
             #         '<op type="/"/>'
             #         '<exch_rate>'
-            #             '<fld_val name="wh_prod_row_id>wh_row_id>currency_id"/>'
+            #             '<fld_val name="wh_prod_row_id>ledger_row_id>currency_id"/>'
             #             '<fld_val name="tran_det_row_id>tran_row_id>tran_date"/>'
             #         '</exch_rate>'
             #     '</expr>'
             # '</default>'
-            '<compare src="wh_prod_row_id>wh_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare src="wh_prod_row_id>ledger_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
                 '<exch_rate>'
-                    '<fld_val name="wh_prod_row_id>wh_row_id>currency_id"/>'
+                    '<fld_val name="wh_prod_row_id>ledger_row_id>currency_id"/>'
                     '<fld_val name="tran_det_row_id>tran_row_id>tran_date"/>'
                 '</exch_rate>'
             '</default>'
@@ -382,7 +382,7 @@ virt.append ({
     'long_descr' : 'Invoice net amount in w/house currency',
     'col_head'   : 'Inv net wh',
     'db_scale'   : 2,
-    'scale_ptr'  : 'wh_prod_row_id>wh_row_id>currency_id>scale',
+    'scale_ptr'  : 'wh_prod_row_id>ledger_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
@@ -557,7 +557,7 @@ actions.append([
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['wh_row_id', 'wh_prod_row_id>wh_row_id'],  # tgt_col, src_col
+                ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['class_row_id', 'wh_prod_row_id>prod_row_id>class_row_id'],
                 ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
                 ],

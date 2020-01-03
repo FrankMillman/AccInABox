@@ -1,63 +1,47 @@
-<form name="cb_ledger_new" title="Set up new cb ledger" on_close_form="
+<form name="gl_params" title="Set up general ledger parameters" before_start_form="
   <<action>>
-    <<pyfunc name=`db.cache.menu_updated`/>>
+    <<assign src=`1` tgt=`params.row_id`/>>
   <</action>>
   ">
   <db_objects>
-    <db_obj name="ledger" table_name="cb_ledger_params" is_formview_obj="true"/>
+    <db_obj name="params" table_name="gl_params"/>
     <db_obj name="adm_period" table_name="adm_periods"/>
-    <db_obj name="ledg_per" table_name="cb_ledger_periods"/>
+    <db_obj name="ledg_per" table_name="gl_ledger_periods"/>
   </db_objects>
   <mem_objects/>
   <input_params/>
   <output_params/>
-  <frame main_object="ledger">
+  <frame main_object="params">
     <toolbar/>
     <body>
       <block/>
       <panel/>
-      <row/>
-      <col/>
-      <label value="Cash book id:"/>
-      <col/>
-      <input obj_name="ledger" col_name="ledger_id" lng="60" validation="
-        <<validations>>
-          <<validation>>
-            <<case>>
-              <<obj_exists obj_name=`ledger`>>
-                <<init_obj obj_name=`ledger`/>>
-                <<error head=`Parameter` body=`Already exists`/>>
-              <</obj_exists>>
-            <</case>>
-          <</validation>>
-        <</validations>>
-        "/>
-      <row/>
-      <col/>
-      <label value="Description:"/>
-      <col/>
-      <input obj_name="ledger" col_name="descr" lng="160"/>
 
-      <block/>
-      <panel/>
-      <if_ src="_param.currency_id" op="is_" tgt="$None"/>
+<!--
       <row/>
       <col/>
-      <label value="Currency"/>
+      <label value="Company Id:"/>
       <col/>
-      <input obj_name="ledger" col_name="currency" lng="60"/>
-      <end_if/>
+      <input obj_name="params" col_name="company_id" lng="60"/>
       <row/>
       <col/>
-      <label value="Parameters for receipt no"/>
+      <label value="Company name:"/>
       <col/>
-      <input obj_name="ledger" col_name="auto_rec_no" lng="250"/>
-      <row/>
-      <col/>
-      <label value="Parameters for payment no"/>
-      <col/>
-      <input obj_name="ledger" col_name="auto_pmt_no" lng="250"/>
+      <input obj_name="params" col_name="company_name" lng="160"/>
+-->
 
+      <row/>
+      <col/>
+      <label value="Parameters for journal no"/>
+      <col/>
+      <input obj_name="params" col_name="auto_jnl_no" lng="250"/>
+      <row/>
+      <col/>
+      <label value="Parameters for temp jnl no"/>
+      <col/>
+      <input obj_name="params" col_name="auto_temp_no" lng="250"/>
+
+      <if_ src="params.gl_per_setup" op="is_" tgt="$False"/>
       <block/>
       <panel/>
       <row/>
@@ -85,16 +69,20 @@
           <</validation>>
         <</validations>>
         "/>
+      <end_if/>
 
     </body>
     <button_row template="Setup_Form_Single"/>
     <frame_methods template="Setup_Form_Single">
       <method name="after_save" action="
         <<action>>
-          <<assign src=`ledger.row_id` tgt=`ledg_per.ledger_row_id`/>>
-          <<assign src=`adm_period.period_row_id` tgt=`ledg_per.period_row_id`/>>
-          <<assign src=`'current'` tgt=`ledg_per.state`/>>
-          <<save_obj obj_name=`ledg_per`/>>
+          <<case>>
+            <<compare src=`params.gl_per_setup` op=`is` tgt=`$False`>>
+              <<assign src=`adm_period.period_row_id` tgt=`ledg_per.period_row_id`/>>
+              <<assign src=`'current'` tgt=`ledg_per.state`/>>
+              <<save_obj obj_name=`ledg_per`/>>
+            <</compare>>
+          <</case>>
         <</action>>
         "/>
     </frame_methods>

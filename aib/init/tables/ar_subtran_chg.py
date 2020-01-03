@@ -259,7 +259,7 @@ cols.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
     'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date',
+    'long_descr' : 'Transaction date. Could be derived using fkey, but denormalised to speed up ar_trans view',
     'col_head'   : 'Date',
     'key_field'  : 'N',
     'calculated' : True,
@@ -349,7 +349,11 @@ cols.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
     'short_descr': 'Posted?',
-    'long_descr' : 'Has transaction been posted?',
+    'long_descr' : (
+        'Has transaction been posted? '
+        'Could be derived using fkey, but denormalised to speed up ar_trans view.'
+        'ap_tran_inv_det and cb_tran_pmt_det update this column when they are posted - see their on_post action.'
+        ),
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
     'calculated' : False,
@@ -367,15 +371,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'tran_date',
-#     'data_type'  : 'DTE',
-#     'short_descr': 'Transaction date',
-#     'long_descr' : 'Transaction date',
-#     'col_head'   : 'Tran date',
-#     'dflt_val'   : '{tran_det_row_id>tran_row_id>tran_date}',
-#     'sql'        : "a.tran_det_row_id>tran_row_id>tran_date"
-#     })
 # virt.append ({
 #     'col_name'   : 'text',
 #     'data_type'  : 'TEXT',
@@ -405,15 +400,6 @@ virt.append ({
     # 'fkey'       : ['adm_currencies', 'row_id', None, None, False, None],
     'sql'        : "a.tran_det_row_id>tran_row_id>currency_id"
     })
-# virt.append ({
-#     'col_name'   : 'posted',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Posted?',
-#     'long_descr' : 'Has transaction been posted?',
-#     'col_head'   : 'Posted?',
-#     'dflt_val'   : '{tran_det_row_id>tran_row_id>posted}',
-#     'sql'        : "a.tran_det_row_id>tran_row_id>posted"
-#     })
 # virt.append ({
 #     'col_name'   : 'chg_local',
 #     'data_type'  : 'DEC',

@@ -68,8 +68,8 @@
         long_descr="Show 120 day transactions due" allow_amend="true"/>
       <mem_col col_name="alloc_120" data_type="BOOL" short_descr="Allocate to 120 day trans due"
         long_descr="Allocate balance of 120 day transactions due" allow_amend="true"/>
-      <mem_col col_name="ageing_dates" data_type="JSON" short_descr="Dates for age buckets"
-        long_descr="Dates for ageing buckets" allow_amend="true"/>
+      <!-- mem_col col_name="ageing_dates" data_type="JSON" short_descr="Dates for age buckets"
+        long_descr="Dates for ageing buckets" allow_amend="true"/ -->
     </mem_obj>
   </mem_objects>
 
@@ -82,6 +82,7 @@
   </input_params>
 
   <output_params>
+    <output_param name="unallocated" type="data_attr" source="vars.unallocated"/>
   </output_params>
 
   <frame main_object="vars">
@@ -269,15 +270,14 @@
           <!-- cur_col col_name="balance_cust" lng="80" readonly="true" skip="true"/ -->
           <cur_col col_name="due_cust_gui" lng="80" readonly="true" skip="true"/>
           <cur_col col_name="alloc_cust_gui" lng="80"/>
-
         </cur_columns>
         <cur_filter>
           <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
             op="=" expr="alloc_header.cust_row_id" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
-            op="&gt;" expr="_ctx.first_date" rbr=""/>
+            op=">>" expr="_ctx.first_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
-            op="&lt;=" expr="_ctx.last_date" rbr=""/>
+            op="<<=" expr="_ctx.last_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="due_cust_gui"
             op="!=" expr="0" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="posted"
@@ -306,7 +306,7 @@
             <<case>>
               <<compare src=`vars.unallocated` op=`!=` tgt=`0`>>
                 <<ask title=`Unallocated` enter=`No` escape=`No`
-                    question=`Not fully allocated - sure you want to save?`>>
+                    question=`Not fully allocated - sure you want to return?`>>
                   <<response ans=`No`>>
                   <</response>>
                   <<response ans=`Yes`>>
@@ -325,11 +325,30 @@
       <method name="on_start_frame" action="
         <<action>>
           <<assign src=`alloc_header.tran_date` tgt=`_ctx.as_at_date`/>>
-          <<assign src=`vars.this_item_rowid` tgt=`_ctx.this_item_rowid`/>>
+          <<!-- assign src=`vars.this_item_rowid` tgt=`_ctx.this_item_rowid`/ -->>
           <<assign src=`alloc_header.row_id` tgt=`_ctx.tran_row_id`/>>
           <<pyfunc name=`custom.artrans_funcs.get_due_bal`/>>
           <<skip_input num=`10`/>>
         <</action>>
+        "/>
+      <method name="on_req_cancel" action="
+          <<action>>
+            <<case>>
+              <<compare src=`vars.unallocated` op=`!=` tgt=`0`>>
+                <<ask title=`Unallocated` enter=`No` escape=`No`
+                    question=`Not fully allocated - sure you want to return?`>>
+                  <<response ans=`No`>>
+                  <</response>>
+                  <<response ans=`Yes`>>
+                    <<end_form state=`completed`/>>
+                  <</response>>
+                <</ask>>
+              <</compare>>
+              <<default>>
+                <<end_form state=`completed`/>>
+              <</default>>
+            <</case>>
+          <</action>>
         "/>
     </frame_methods>
 

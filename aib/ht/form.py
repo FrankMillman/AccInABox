@@ -501,8 +501,8 @@ class Form:
                             reverse_sign = False
                         data_obj_name, col_name = source.split('.')
                         value = await self.data_objects[data_obj_name].getval(col_name)
-                    if reverse_sign:
-                        value = 0-value
+                        if reverse_sign:
+                            value = 0 - value
                 else:
                     value = None
                 return_params[name] = value
@@ -1251,7 +1251,7 @@ class Frame:
 
         active_subtype_id = subtype_record[0]
 
-        if value is '' or value is None:  # default to first sub_type if it exists
+        if value == '' or value is None:  # default to first sub_type if it exists
             if subtype_record[1]:
                 value = next(iter(subtype_record[1]))
             else:

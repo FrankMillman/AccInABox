@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
-    'ledger_col'    : None,
+    'ledger_col'    : 'wh_prod_row_id>ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -92,7 +92,7 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : [
-        'in_wh_prod', 'row_id', 'ledger_id, prod_code', 'ledger_id, prod_code', False, None
+        'in_wh_prod', 'row_id', 'ledger_row_id, prod_code', 'ledger_row_id, prod_code', False, None
         ],
     'choices'    : None,
     })

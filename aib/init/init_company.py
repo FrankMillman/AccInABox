@@ -239,6 +239,7 @@ async def setup_other_tables(context, conn, company):
         'org_phone_nos',
         'org_contacts',
         'gl_params',
+        'gl_ledger_periods',
         'gl_codes',
         'sls_nsls_codes',
         'sls_nsls_tax_codes',
@@ -545,6 +546,8 @@ async def setup_forms(context, conn, company):
         await form_defn.save()
 
     await setup_form('adm_params')
+    await setup_form('setup_periods')
+    await setup_form('gl_params')
     await setup_form('ar_params')
     await setup_form('ar_ledger_new')
     await setup_form('ap_params')
@@ -553,10 +556,11 @@ async def setup_forms(context, conn, company):
     await setup_form('in_ledger_new')
     await setup_form('cb_params')
     await setup_form('cb_ledger_new')
-    await setup_form('setup_periods')
+    await setup_form('gl_ledg_periods')
     await setup_form('ar_ledg_periods')
     await setup_form('ap_ledg_periods')
     await setup_form('cb_ledg_periods')
+    await setup_form('in_ledg_periods')
     await setup_form('setup_currencies')
     await setup_form('setup_tax_codes')
     await setup_form('setup_ar_terms_codes')
@@ -609,6 +613,7 @@ async def setup_processes(context, conn, company):
         await proc_defn.save()
 
     await setup_process('ar_per_close')
+    await setup_process('ar_stat_close')
 
 async def setup_menus(context, conn, company, company_name):
     db_obj = await db.objects.get_db_object(context, company, 'sys_menu_defns')
@@ -659,12 +664,12 @@ async def setup_menus(context, conn, company, company_name):
         ['General ledger', 'menu', 'gl', [
             ['Setup', 'menu', 'gl', [
                 ['G/L parameters', 'form', 'gl_params'],
-                ['Maintain periods', 'form', 'setup_ledg_periods'],
                 ]],
             ['Gl transactions', 'menu', 'gl', [
                 ]],
             ['Gl reports', 'menu', 'gl', [
                 ]],
+            ['Period end procedure', 'form', 'gl_ledg_periods'],
             ]],
         ['Cash book', 'menu', 'cb', [
             ['Setup', 'menu', 'cb', [
@@ -699,7 +704,6 @@ async def setup_menus(context, conn, company, company_name):
     cb_menu = ['Cash book', 'menu', 'cb', [
         ['Setup', 'menu', 'cb', [
             ['Cash book parameters', 'form', 'cb_params'],
-            ['Maintain periods', 'form', 'cb_ledg_periods'],
             ]],
         ['Cb transactions', 'menu', 'cb', [
             ['Cash book receipt', 'form', 'cb_receipt'],
@@ -710,12 +714,12 @@ async def setup_menus(context, conn, company, company_name):
         ['Cb reports', 'menu', 'cb', [
             ['Cash book report', 'form', 'cb_cashbook'],
             ]],
+        ['Period end procedure', 'form', 'cb_ledg_periods'],
         ]]
 
     ar_menu = ['Accounts receivable', 'menu', 'ar', [
         ['AR setup', 'menu', 'ar', [
             ['Ledger parameters', 'form', 'ar_params'],
-            ['Maintain periods', 'form', 'ar_ledg_periods'],
             ['Customers', 'grid', 'ar_customers', 'cust'],
             ['Terms codes', 'grid', 'ar_terms_codes', 'terms_codes'],
             ]],
@@ -727,16 +731,15 @@ async def setup_menus(context, conn, company, company_name):
             ['Review unposted receipts', 'grid', 'ar_tran_rct', 'unposted_rct'],
             ]],
         ['AR enquiries', 'menu', 'ar', [
-            # ['AR balances', 'grid', 'ar_customers', 'cust_bal'],
             ['AR balances', 'form', 'ar_balances'],
             ['Sales report', 'form', 'sls_report'],
             ]],
+        ['Period end procedure', 'form', 'ar_ledg_periods'],
         ]]
 
     ap_menu =['Accounts payable', 'menu', 'ap', [
         ['AP setup', 'menu', 'ap', [
             ['Ledger parameters', 'form', 'ap_params'],
-            ['Maintain periods', 'form', 'ap_ledg_periods'],
             ['Suppliers', 'grid', 'ap_suppliers', 'supp'],
             ['Terms codes', 'grid', 'ap_terms_codes', 'terms_codes'],
             ]],
@@ -746,15 +749,14 @@ async def setup_menus(context, conn, company, company_name):
             ['Review unposted invoices', 'grid', 'ap_tran_inv', 'unposted_inv'],
             ['Review unposted payments', 'grid', 'ap_tran_pmt', 'unposted_pmt'],
             ]],
+        ['Period end procedure', 'form', 'ap_ledg_periods'],
         ]]
 
     in_menu =['Inventory', 'menu', 'in', [
         ['Warehouse setup', 'menu', 'in', [
             ['Warehouse parameters', 'form', 'in_params'],
-            ['Maintain periods', 'form', 'setup_ledg_periods'],
-            # ['Product codes', 'form', 'setup_prod_codes'],
-            # ['Selling prices', 'form', 'setup_sell_prices'],
             ]],
+        ['Period end procedure', 'form', 'in_ledg_periods'],
         ]]
 
     async def parse_menu(menu_opt, parent_id, module_id=None):

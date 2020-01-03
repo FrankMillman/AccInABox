@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal as D
 
 import db.objects
@@ -49,6 +49,9 @@ def customise(constants, DbConn, db_params):
     DbConn.database = db_params['database']
     DbConn.callback = callback
 
+def substring(string, start, length):
+    return string[start-1:start-1+length]
+
 def subfield(string, delim, occurrence):
     """
     function to extract specified occurence of subfield from string
@@ -93,11 +96,8 @@ def zfill(string, lng):
     # return template.format(string)
     return f'{string:0>{lng}}'
 
-def date_func(date_string, op, days):
-    if op.lower() in ('+', 'add'):
-        return str(date(*map(int, date_string.split('-'))) + timedelta(days))
-    if op.lower() in ('-', 'sub'):
-        return str(date(*map(int, date_string.split('-'))) - timedelta(days))
+def date_add(date_string, days):
+    return str(date(*map(int, date_string.split('-'))) + timedelta(days))
 
 # replace sqlite3 'round' function - it uses floating point, so rounding errors
 def round_(number, factor):
@@ -167,9 +167,6 @@ sqlite3.register_adapter(D, lambda d:str(d) + ('' if '.' in str(d) else '.'))
 # Decimal converter (convert back to Decimal on return)
 sqlite3.register_converter('REAL', lambda s: D(s.decode('utf-8')))
 
-# Date converter (convert back to Date on return)
-sqlite3.register_converter('DATE', lambda s: date(*map(int, s.split(b'-'))))
-
 # Boolean adapter (store bool in database as '1'/'0')
 sqlite3.register_adapter(bool, lambda b: str(int(b)))
 # Boolean converter (convert back to bool on return)
@@ -187,24 +184,22 @@ def init(self, pos, mem_id=None):
         conn = sqlite3.connect('{0}/_base'.format(self.database),
             detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
             check_same_thread=False)
+    conn.create_function('substring', 3, substring)
     conn.create_function('subfield', 3, subfield)
     conn.create_function('repeat', 2, repeat)
     conn.create_function('zfill', 2, zfill)
-    conn.create_function('date_func', 3, date_func)
+    conn.create_function('date_add', 2, date_add)
     conn.create_function('round', 2, round_)
 
     self.conn = conn
     self.exception = (sqlite3.Error, sqlite3.IntegrityError, sqlite3.OperationalError)
-    self.msg_pos = 0
-    self.now = datetime.now
-    self.today = date.today
     self.companies = set()
 
     # conn.set_trace_callback(self.callback)
 
 # sql_log = open('sql_log.txt', 'w', errors='backslashreplace')
 def callback(self, sql_cmd):
-    sql_log.write('{}: {}: {}\n'.format(datetime.now(), id(self), sql_cmd))
+    sql_log.write('{}: {}: {}\n'.format(self.timestamp, id(self), sql_cmd))
     sql_log.flush()
 
 # async def add_lock(self, sql):

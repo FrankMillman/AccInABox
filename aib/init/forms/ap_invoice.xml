@@ -224,10 +224,10 @@
             <</obj_exists>>
             <<default>>
               <<change_button>>
-                <<btn_enabled btn_id=&quot;btn_post&quot; state=&quot;false&quot;/>>
+                <<btn_enabled btn_id=`btn_post` state=`false`/>>
               <</change_button>>
               <<change_button>>
-                <<btn_enabled btn_id=&quot;btn_close&quot; state=&quot;false&quot;/>>
+                <<btn_enabled btn_id=`btn_close` state=`false`/>>
               <</change_button>>
               <<inline_form name=`inv_header`>>
                 <<on_return>>
@@ -236,10 +236,10 @@
                   <</return>>
                   <<return state=`completed`>>
                     <<change_button>>
-                      <<btn_enabled btn_id=&quot;btn_post&quot; state=&quot;true&quot;/>>
+                      <<btn_enabled btn_id=`btn_post` state=`true`/>>
                     <</change_button>>
                     <<change_button>>
-                      <<btn_enabled btn_id=&quot;btn_close&quot; state=&quot;true&quot;/>>
+                      <<btn_enabled btn_id=`btn_close` state=`true`/>>
                     <</change_button>>
                     <<restart_frame/>>
                   <</return>>

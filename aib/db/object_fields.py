@@ -653,10 +653,12 @@ class Field:
                 elif value == tgt_field._value and (
                         tgt_field.db_obj.exists or not tgt_field.db_obj.dirty):
                     # if not exists and not dirty, has just been saved [2018-03-26]
+                    # another possible reason - tgt_field.db_obj.init() has been called,
+                    #   and tgt_field has a dflt_val [2019-12-29]
                     # if this is ok, might as well just test for 'dirty' (?)
                     if true_src:  # don't re-read, but if true_src, set value
-                        true_foreign_key = await true_src.db_obj.get_foreign_key(true_src)
                         if col_name == alt_srcnames[-1]:  # if multi-part key, all parts are present
+                            true_foreign_key = await true_src.db_obj.get_foreign_key(true_src)
                             # must validate true_src - db_obj might exist because we have
                             #   performed a lookup, but true_src might have col_checks
                             await true_src.setval(true_foreign_key['tgt_field']._value)
@@ -664,8 +666,17 @@ class Field:
                     pass  # e.g. ap_tran_inv_tax.tran_det_row_id -> ap_tran_inv_det.row_id
                 else:
                     if true_src:  # this is an alt_src
-                        if col_name == alt_srcnames[0]:  # if multi-part key, only init on first part
-                            await tgt_field.db_obj.init()
+                        # if col_name == alt_srcnames[0]:  # if multi-part key, only init on first part
+                        #     await tgt_field.db_obj.init()
+                        alt_src_pos = alt_srcnames.index(col_name)
+                        if (
+                            alt_src_pos == 0  # this is the first alt_src
+                            or
+                            # if all prior alt_src._value is None, assume their tgt_fields have dflt_vals
+                            # if this fails, it is a programming error - must supply values for alt flds in seq
+                            all(db_obj.fields[_]._value is None for _ in alt_srcnames[:alt_src_pos])
+                            ):
+                                await tgt_field.db_obj.init()
                         await tgt_field.setval(value, display, validate=False)
                         if col_name == alt_srcnames[-1]:  # if multi-part key, all parts are present
                             if not tgt_field.db_obj.exists:
@@ -916,17 +927,26 @@ class Field:
         if self.constant is not None:
             return self.constant  # e.g. tran_type in ar_openitems
         if self.ledger_col:
-            # context.mod_ledg_id set up in advance - e.g. ht.form_xml.get_mod_ledg_id
             ctx_mod_id, ctx_ledg_id = getattr(self.db_obj.context, 'mod_ledg_id', (None, None))
             if ctx_mod_id == self.db_obj.db_table.module_row_id:
-                if ctx_ledg_id is None:
-                    raise AibError(head=self.table_name,
-                        body='Ledger not set up')
-                return ctx_ledg_id
+                # if ctx_ledg_id is None:
+                #     raise AibError(head=self.table_name, body='Ledger not set up')
+                # return ctx_ledg_id
+                # changed [2019-11-27]
+                # when setting up new ledger, we now prompt for 'first financial period'
+                # <mod>_ledger_periods has a ledger_col, but ledger is not yet set up
+                # without this change, an error is raised; with it, user can proceed
+                # ledger_col is a mandatory field, so no danger of it being omitted in error
+                if ctx_ledg_id is not None:
+                    return ctx_ledg_id
         if not from_init and self.col_defn.dflt_rule is not None:
             return await db.dflt_xml.get_db_dflt(self)
-        if self.col_defn.dflt_val is not None:
-            if self.col_defn.dflt_val.startswith('{'):
+        dflt_val = self.col_defn.dflt_val
+        if dflt_val is not None:
+            if dflt_val.startswith('{'):
+                # if = '{}', empty dict, else contents of '{}' is a column name
+                if dflt_val == '{}':
+                    return '{}'  # assumes data_type is JSON
                 # reason why next line is necessary [2018-03-18] -
                 #
                 #   if '>' in dflt_val, it follows path using fkey
@@ -952,12 +972,12 @@ class Field:
                 # it would work just as well here, and may succeed where the other
                 #   one fails
                 #
-                if from_init and '>' in self.col_defn.dflt_val:
+                if from_init and '>' in dflt_val:
                     return None
                 else:
-                    return await self.db_obj.getval(self.col_defn.dflt_val[1:-1])
+                    return await self.db_obj.getval(dflt_val[1:-1])
             else:
-                return self.col_defn.dflt_val
+                return dflt_val
         # if we get here, None is returned
 
     async def calculated(self):
@@ -1067,8 +1087,8 @@ class Text(Field):
         elif isinstance(value, (int, float)) and not isinstance(value, bool):
             value = str(value)
         else:
-            errmsg = '{}.{} - type is {}, must be str'.format(
-                self.table_name, self.col_name, str(type(value)).split("'")[1])
+            value_type = str(type(value)).split("'")[1]  # e.g. <class 'datetime.date'> -> datetime.date
+            errmsg = f'{self.table_name}.{self.col_name} - type is {value_type}, must be str'
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
         max_len = self.col_defn.max_len  # 0 means no maximum
         if max_len and len(value) > max_len:
@@ -1183,11 +1203,16 @@ class Json(Text):
     async def check_val(self, value):
         if value is None:
             return None
+        if isinstance(value, (str)):  # allow valid JSON-dumped string e.g. '{}'
+            try:
+                return self.deserialise(value)
+            except ValueError:
+                errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Json string'
+                raise AibError(head=self.col_defn.short_descr, body=errmsg)
         if isinstance(value, (list, dict, bool, tuple)):
             return value
-        # 'str' is valid for JSON, but not for AIB - just use TEXT!
-        errmsg = '{}.{} - type is {}, not valid for JSON'.format(
-            self.table_name, self.col_name, str(type(value)).split("'")[1])
+        value_type = str(type(value)).split("'")[1]  # e.g. <class 'datetime.date'> -> datetime.date
+        errmsg = f'{self.table_name}.{self.col_name} - type is {value_type}, not valid for JSON'
         raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     async def str_to_val(self, value):
@@ -1197,8 +1222,7 @@ class Json(Text):
             try:
                 return self.deserialise(value)
             except ValueError:
-                errmsg = '{}.{} - {} not a valid Json string'.format(
-                    self.table_name, self.col_name, value)
+                errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Json string'
                 raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     async def val_to_str(self, value=blank):
@@ -1336,7 +1360,7 @@ class StringXml(Xml):
                 return self.from_string(value, from_gui=True)
             except (etree.XMLSyntaxError, ValueError) as e:
                 raise AibError(head=self.col_defn.short_descr,
-                    body='Xml error - {}'.format(e.args[0]))
+                    body=f'Xml error - {e.args[0]}')
 
     async def val_to_str(self, value=blank):
         try:
@@ -1419,8 +1443,7 @@ class Integer(Field):
         try:
             if self.sequence:
                 if int(value) < 0:
-                    errmsg = '{}.{} - "{}" cannot be negative'.format(
-                        self.table_name, self.col_name, value)
+                    errmsg = f'{self.table_name}.{self.col_name} - "{value}" cannot be negative'
                     raise AibError(head=self.col_defn.short_descr, body=errmsg)
                 return int(value) - 1
             else:
@@ -1504,8 +1527,7 @@ class Decimal(Field):
         try:
             value = D(value)
         except DecimalException:
-            errmsg = '{}.{} - {} not a valid Decimal type'.format(
-                self.table_name, self.col_name, value)
+            errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Decimal type'
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
         scale = await self.get_scale()
         quant = D(str(10**-scale))
@@ -1514,12 +1536,8 @@ class Decimal(Field):
                 quant, context=Context(traps=[Inexact]))
         except Inexact:
             if scale:
-                # errmsg = '{}.{} - cannot exceed {} decimals'.format(
-                #     self.table_name, self.col_name, scale)
                 errmsg = f'{self.table_name}.{self.col_name} - cannot exceed {scale} decimals'
             else:
-                # errmsg = '{}.{} - no decimals allowed'.format(
-                    # self.table_name, self.col_name)
                 errmsg = f'{self.table_name}.{self.col_name} - no decimals allowed'
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
@@ -1553,14 +1571,6 @@ class Decimal(Field):
 
     async def get_val_from_sql(self, value):
         return await self.check_val(value)
-        # if value is None:
-        #     return None
-        # value = D(value)  # could be integer
-        # if value == int(value):  # if value is an integer, no need to check scale
-        #     return value.quantize(0)
-        # scale = await self.get_scale()
-        # quant = D(str(10**-scale))
-        # return value.quantize(quant, rounding=ROUND_HALF_UP)
 
     async def get_val_from_xml(self, value):
         if value is None:
@@ -1588,17 +1598,13 @@ class Date(Field):
     async def check_val(self, value):
         if value is None:
             return None
-        if isinstance(value, dtm):  # Sql Server uses datetime
-            return dt(value.year, value.month, value.day)  # must check before 'dt'
         if isinstance(value, dt):
             return value
         try:
-            # assumes value is 'yyyy-mm-dd'
-            return dt(*map(int, value.split('-')))
+            return dt.fromisoformat(value)  # assumes value is 'yyyy-mm-dd'
         except ValueError:
             raise AibError(head=self.col_defn.short_descr,
-                body='{}.{} - "{}" is not a valid date'.format(
-                    self.table_name, self.col_name, value))
+                body=f'{self.table_name}.{self.col_name} - "{value}" is not a valid date')
 
     async def get_dflt(self, from_init=False):
         dflt_val = await Field.get_dflt(self, from_init)
@@ -1611,12 +1617,10 @@ class Date(Field):
         if value in (None, ''):
             return None
         try:
-            # value must be 'yyyy-mm-dd'
-            return dt(*map(int, value.split('-')))
+            return dt.fromisoformat(value)  # assumes value is 'yyyy-mm-dd'
         except ValueError:
             raise AibError(head=self.col_defn.short_descr,
-                body='{}.{} - "{}" is not a valid date'.format(
-                    self.table_name, self.col_name, value))
+                body=f'{self.table_name}.{self.col_name} - "{value}" is not a valid date')
 
     async def val_to_str(self, value=blank):
         try:
@@ -1627,7 +1631,7 @@ class Date(Field):
             value = await self.getval()
         if value is None:
             return ''
-        return '{:%Y-%m-%d}'.format(value)  # 'yyyy-mm-dd' - works for dt and dtm
+        return str(value)
 
     async def prev_to_str(self):
         try:
@@ -1636,31 +1640,10 @@ class Date(Field):
             return '*'
         if self._prev is None:
             return ''
-        return '{:%Y-%m-%d}'.format(self._prev)  # 'yyyy-mm-dd' - works for dt and dtm
+        return str(self._prev)
 
     async def get_val_from_sql(self, value):
         return await self.check_val(value)
-        # if value is None:
-        #     return None
-        # if isinstance(value, dtm):  # Sql Server returns a datetime object
-        #     return dt(value.year, value.month, value.day)
-        # if isinstance(value, str):  # sqlite3 can return a string
-        #     try:  # value must be 'yyyy-mm-dd'
-        #         return dt(*map(int, value.split('-')))
-        #     except ValueError:
-        #         raise AibError(head=self.col_defn.short_descr,
-        #             body='{}.{} - "{}" is not a valid date'.format(
-        #                 self.table_name, self.col_name, value))
-        # return value
-
-    async def get_val_for_sql(self):
-        """
-        MS Sql Server only accepts datetime objects, not date objects.
-        [Actually ceODBC does, but pyodbc does not].
-        It *does* accept a string of 'yyyy-mm-dd'.
-        Luckily, PostgreSQL and sqlite3 accept this as well.
-        """
-        return None if self._value is None else str(self._value)  # 'yyyy-mm-dd'
 
     def get_val_for_where(self):
         return None if self._value is None else repr(str(self._value))  # "'yyyy-mm-dd'"
@@ -1676,50 +1659,22 @@ class DateTime(Field):
     async def check_val(self, value):
         if value is None:
             return None
-        if not isinstance(value, dtm):
-            errmsg = '{}.{} - not a valid datetime object'.format(
-                self.table_name, self.col_name)
-            raise AibError(head=self.col_defn.short_descr, body=errmsg)
-        """
-        MS Sql Server can only accept milliseconds, not microseconds.
-        It rounds millseconds to 3.33ms - always ends in 3, 7, or 0.
-        This method rounds the microsecond portion to match
-          Sql Server's behaviour.
-
-        It is necessary due to our implementation of 'optimistic
-          concurrency control'. Before updating a value, we check that
-          it has not changed since the row was read in. Therefore
-          the object's contents must match exactly with the value
-          returned by the database. This routine ensures that.
-        """
-        if not value.microsecond:
+        if isinstance(value, dtm):
             return value
-        ms = value.microsecond//1000  # microseconds -> milliseconds
-        incr = (
-            0,   # 120 -> 120
-            -1,  # 121 -> 120
-            1,   # 122 -> 123
-            0,   # 123 -> 123
-            -1,  # 124 -> 123
-            2,   # 125 -> 127
-            1,   # 126 -> 127
-            0,   # 127 -> 127
-            -1,  # 128 -> 127
-            1    # 129 -> 130
-            )
-        ms += incr[ms%10]  # use last digit as index to get increment
-        if ms == 1000:
-            value = value.replace(microsecond=0)
-            value += td(seconds=1)
-        else:
-            value = value.replace(microsecond=(ms*1000))
-        return value
+        try:
+            return dtm.strptime(value, '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            raise AibError(head=self.col_defn.short_descr,
+                body='{self.table_name}.{self.col_name} - "{value}" is not a valid datetime')
 
     async def str_to_val(self, value):
         if value in (None, ''):
             return None
-        else:
-            raise NotImplementedError
+        try:
+            return dtm.strptime(value, '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            raise AibError(head=self.col_defn.short_descr,
+                body='{self.table_name}.{self.col_name} - "{value}" is not a valid datetime')
 
     async def val_to_str(self, value=blank):
         try:
@@ -1730,7 +1685,7 @@ class DateTime(Field):
             value = await self.getval()
         if value is None:
             return ''
-        return '{:%Y-%m-%d %H:%M:%S}'.format(value)
+        return value.strftime('%Y-%m-%d %H:%M:%S')
 
     async def prev_to_str(self):
         try:
@@ -1739,7 +1694,7 @@ class DateTime(Field):
             return '*'
         if self._prev is None:
             return ''
-        return '{:%Y-%m-%d %H:%M:%S}'.format(self._prev)
+        return self._prev.strftime('%Y-%m-%d %H:%M:%S')
 
     def get_val_for_where(self):
         raise NotImplementedError

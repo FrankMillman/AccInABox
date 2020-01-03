@@ -101,11 +101,12 @@ async def alloc_tran_date(fld, xml, debug):
     # find first available open period, use first date in that period
 
     db_obj = fld.db_obj
-    module_row_id, ledger_row_id = db_obj.context.mod_ledg_id
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
-    ledger_periods = await db.cache.get_ledger_periods(
-        db_obj.company, module_row_id, ledger_row_id
-        )
+    if hasattr(db_obj.context, 'cust_mod_ledg_id'):  # called from interactive allocation
+        # context.cust_mod_ledg_id is set up in custom.artrans_funcs.check_allocations
+        ledger_periods = await db.cache.get_ledger_periods(db_obj.company, *db_obj.context.cust_mod_ledg_id)
+    else:
+        ledger_periods = await db.cache.get_ledger_periods(db_obj.company, *db_obj.context.mod_ledg_id)
     if ledger_periods == {}:
         raise AibError(head=fld.col_defn.short_descr, body="Ledger periods not set up")
 
@@ -306,9 +307,8 @@ async def assign(fld, xml, debug):
     if target_objname == '_ctx':
         setattr(fld.db_obj.context, target_colname, value_to_assign)
     else:
-        target_record = fld.db_obj.data_objects[target_objname]
-        target_field = await target_record.getfld(target_colname)
-        await target_field.setval(value_to_assign)
+        target_obj = fld.db_obj.data_objects[target_objname]
+        await target_obj.setval(target_colname, value_to_assign)
 
 async def get_val(fld, value):
     if value.startswith('('):  # expression

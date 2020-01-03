@@ -133,9 +133,6 @@ async def restore_obj(caller, xml):
     db_obj = caller.data_objects[xml.get('obj_name')]
     if db_obj.dirty:
         await db_obj.restore()
-    for child in db_obj.children:  # mainly for sub_trans
-        if child.dirty:
-            await child.restore()
 
 async def continue_form(caller, xml):
     await caller.continue_form()
@@ -178,8 +175,9 @@ async def req_save(caller, xml):
 
 async def save_obj(caller, xml):
     db_obj = caller.data_objects[xml.get('obj_name')]
-    if db_obj.subtran_parent is not None:
-        db_obj = db_obj.subtran_parent[0]
+    # removed [2019-11-25] - think only used for ar_subtran_rec - should not be necessary
+    # if db_obj.subtran_parent is not None:
+    #     db_obj = db_obj.subtran_parent[0]
     await db_obj.save()
 
 async def post_obj(caller, xml):
@@ -366,13 +364,21 @@ async def assign(caller, xml):
     else:
         value_to_assign = await get_val(caller, source)
 
-    target_objname, target_colname = target.split('.')
+    # target can be objname.colname or objname.colname.keyname if data_type is a JSON dict
+    target_objname, target_colname = target.split('.', maxsplit=1)
     if target_objname == '_ctx':
         setattr(caller.context, target_colname, value_to_assign)
     else:
-        target_record = caller.data_objects[target_objname]
-        target_field = await target_record.getfld(target_colname)
-        await target_field.setval(value_to_assign)
+        target_obj = caller.data_objects[target_objname]
+        if '.' in target_colname:
+            target_colname, target_key = target_colname.split('.')
+            target_fld = await target_obj.getfld(target_colname)
+            assert target_fld.col_defn.data_type == 'JSON'
+            target_dict = await target_fld.getval()
+            target_dict[target_key] = value_to_assign
+            await target_fld.setval(target_dict)
+        else:
+            await target_obj.setval(target_colname, value_to_assign)
 
 async def btn_set_focus(caller, xml):
     button = caller.btn_dict[xml.get('btn_id')]
@@ -519,8 +525,18 @@ async def return_from_subform(caller, state, output_params, xml):
                 caller.data_objects[data_obj_name] = output_params[name]
             elif param_type == 'data_attr':
                 value = output_params[name]
+                if target.startswith('0-'):  # e.g. see ar_alloc.xml
+                    value = 0 - value
+                    target = target[2:]
                 data_obj_name, col_name = target.split('.')
-                await caller.data_objects[data_obj_name].setval(col_name, value)
+                # await caller.data_objects[data_obj_name].setval(col_name, value)
+                # changed [2019-11-19] - do not validate if target field is 'virt'
+                # reason - we only set dirty=True on a virtual field if 'validate' is True
+                # e.g. in ar_alloc on return from ar_alloc_item, we update 'unallocated' with return value,
+                #      but if we then escape, we do not want 'Do you want to save changes?', so do not
+                #      want to set dirty=True
+                tgt_fld = await caller.data_objects[data_obj_name].getfld(col_name)
+                await tgt_fld.setval(value, validate=(tgt_fld.col_defn.col_type != 'virt'))
 
     # find 'return' element in 'on_return' with attribute 'state' = state
     on_return = xml.find('on_return').find("return[@state='{}']".format(state))
@@ -670,12 +686,10 @@ async def get_val(caller, value):
         if obj_name == '_ctx':
             if col_name == 'ledger_row_id':
                 return getattr(caller.context, 'mod_ledg_id')[1]
-            # elif '[' in col_name:  # e.g. _ctx.dates[0]
-            #     pos_1 = col_name.find('[')
-            #     pos_2 = col_name[pos_1:].find(']')
-            #     pos = int(col_name[pos_1+1:pos_1+pos_2])
-            #     col_name = col_name[:pos_1]
-            #     return getattr(caller.context, col_name)[pos]
+            elif col_name == 'current_period':
+                ledger_periods = await db.cache.get_ledger_periods(
+                    caller.company, *caller.context.mod_ledg_id)
+                return ledger_periods.current_period
             else:
                 return getattr(caller.context, col_name)
         else:

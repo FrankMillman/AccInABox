@@ -10,7 +10,7 @@
   <db_objects>
     <db_obj name="cb_pmt" table_name="cb_tran_pmt" is_formview_obj="true"/>
     <db_obj name="cb_pmt_det" table_name="cb_tran_pmt_det" parent="cb_pmt"/>
-    <db_obj name="in_ledg" table_name="in_ledger_params" fkey="cb_in_det.wh_row_id"/>
+    <db_obj name="in_ledg" table_name="in_ledger_params" fkey="cb_in_det.ledger_row_id"/>
     <db_obj name="prod" table_name="inv_prod_codes" fkey="cb_invdet.prod_row_id"/>
     <db_obj name="currency" table_name="adm_currencies" fkey="cb_inv.currency_id"/>
     <db_obj name="terms_code" table_name="cb_terms_codes" fkey="cb_inv.terms_code_id"/>
@@ -198,10 +198,10 @@
             <</obj_exists>>
             <<default>>
               <<change_button>>
-                <<btn_enabled btn_id=&quot;btn_post&quot; state=&quot;false&quot;/>>
+                <<btn_enabled btn_id=`btn_post` state=`false`/>>
               <</change_button>>
               <<change_button>>
-                <<btn_enabled btn_id=&quot;btn_close&quot; state=&quot;false&quot;/>>
+                <<btn_enabled btn_id=`btn_close` state=`false`/>>
               <</change_button>>
               <<inline_form name=`pmt_header`>>
                 <<on_return>>
@@ -210,10 +210,10 @@
                   <</return>>
                   <<return state=`completed`>>
                     <<change_button>>
-                      <<btn_enabled btn_id=&quot;btn_post&quot; state=&quot;true&quot;/>>
+                      <<btn_enabled btn_id=`btn_post` state=`true`/>>
                     <</change_button>>
                     <<change_button>>
-                      <<btn_enabled btn_id=&quot;btn_close&quot; state=&quot;true&quot;/>>
+                      <<btn_enabled btn_id=`btn_close` state=`true`/>>
                     <</change_button>>
                     <<restart_frame/>>
                   <</return>>

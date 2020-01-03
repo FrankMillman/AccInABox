@@ -177,34 +177,34 @@ async def get_ledger_params(company, module_row_id, ledger_row_id):
 
         if module_row_id not in ledger_params[company]:
             ledger_params[company][module_row_id] = {}
-            module_id, descr = await get_mod_id(company, module_row_id)
+            module_id = (await get_mod_id(company, module_row_id))[0]
             table_name = f'{module_id}_ledger_params'
-
-            # create separate ledg_obj for each ledger
-            async with db_session.get_connection() as db_mem_conn:
-                conn = db_mem_conn.db
-                sql = f'SELECT row_id FROM {company}.{table_name} WHERE deleted_id = 0'
-                async for ledg_row_id, in await conn.exec_sql(sql):
-                    ledg_obj = await db.objects.get_db_object(cache_context, company, table_name)
-                    await ledg_obj.add_all_virtual()
-                    await ledg_obj.setval('row_id', ledg_row_id)  # to force a SELECT
-                    ledger_params[company][module_row_id][ledg_row_id] = ledg_obj
 
             # create 'blank' ledg_obj for use if db_obj.exists is False
             ledg_obj = await db.objects.get_db_object(cache_context, company, table_name)
             await ledg_obj.add_all_virtual()
             ledger_params[company][module_row_id][None] = ledg_obj
 
+        if ledger_row_id not in ledger_params[company][module_row_id]:
+            module_id = (await get_mod_id(company, module_row_id))[0]
+            table_name = f'{module_id}_ledger_params'
+            ledg_obj = await db.objects.get_db_object(cache_context, company, table_name)
+            await ledg_obj.add_all_virtual()
+            await ledg_obj.setval('row_id', ledger_row_id)  # to force a SELECT
+            ledger_params[company][module_row_id][ledger_row_id] = ledg_obj
+
     return ledger_params[company][module_row_id][ledger_row_id]
 
-# callback on change of ledger_params - various ledgers.actions.after_commit
+# callback on change of ledger_params - {module_id}_ledger_params.actions.after_commit
 async def ledger_updated(db_obj, xml):
     company = db_obj.company
     if company in ledger_params:
         module_row_id = db_obj.db_table.module_row_id
         if module_row_id in ledger_params[company]:
-            with await ledg_param_lock:
-                del ledger_params[company][module_row_id]  # force re-build on next call to get
+            ledger_row_id = await db_obj.getval('row_id')
+            if ledger_row_id in ledger_params[company][module_row_id]:
+                with await ledg_param_lock:
+                    del ledger_params[company][module_row_id][ledger_row_id]  # force re-build on next call to get
 
 # callback on change of gl_params.actions.after_commit
 async def gl_param_updated(db_obj, xml):
@@ -443,49 +443,6 @@ async def get_due_date(company, tran_date, terms):
 #-----------------------------------------------------------------------------
 
 """
-# 'ledger_periods' - a dictionary keyed on 'company' to store financial periods
-#     for each company/module/ledger
-# the value for each company is a dictionary -
-#
-#   key: (module_row_id, ledger_row_id)
-#   value: a  dictionary of all periods -
-#     key: period_row_id
-#     value: period state
-#
-#   'current_period' is also stored in the same dictionary -
-#     key: 'curr'  # all others keys are int's, so no danger of clashing
-#     value: period_row_id of current period
-
-ledger_periods = {}
-async def get_ledger_periods(company):
-    if company not in ledger_periods:
-        adm_per_dict = DD(OD)
-        ledger_period = await db.objects.get_db_object(cache_context, company, 'adm_ledger_periods')
-        all_per = ledger_period.select_many(where=[],
-            order=[('module_row_id', False), ('ledger_row_id', False), ('period_row_id', False)])
-        async for _ in all_per:
-            mod_ledg_id = (
-                await ledger_period.getval('module_row_id'), 
-                await ledger_period.getval('ledger_row_id')
-                )
-            period_row_id = await ledger_period.getval('period_row_id')
-            adm_per_dict[mod_ledg_id][period_row_id] = await ledger_period.getval('state')
-            if await ledger_period.getval('current_period'):
-                adm_per_dict[mod_ledg_id]['curr'] = period_row_id
-        ledger_periods[company] = adm_per_dict
-
-    return ledger_periods[company]
-
-# callback on change of ledger_period - adm_ledger_periods.actions.after_commit
-async def ledger_period_updated(db_obj, xml):
-    company = db_obj.company
-    if company in ledger_periods:
-        del ledger_periods[company]
-"""
-
-#-----------------------------------------------------------------------------
-
-"""
 'ledger_periods' - a dictionary keyed on 'company' to store financial periods
     for each company/module/ledger
 
@@ -509,21 +466,14 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
         if company not in ledger_periods:
             ledger_periods[company] = {}
         if module_row_id not in ledger_periods[company]:
-            module_id = (await get_mod_id(company, module_row_id))[0]
             ledger_periods[company][module_row_id] = {}
+        if ledger_row_id not in ledger_periods[company][module_row_id]:
+            ledger_periods[company][module_row_id][ledger_row_id] = OD()
+            module_id = (await get_mod_id(company, module_row_id))[0]
 
             async with db_session.get_connection() as db_mem_conn:
                 conn = db_mem_conn.db
-
-                # select all ledgers for this module
-                async for ledg_row_id, in await conn.exec_sql(
-                        f'SELECT a.row_id '
-                        f'FROM {company}.{module_id}_ledger_params a '
-                        f'WHERE a.deleted_id = 0'
-                        ):
-                    ledger_periods[company][module_row_id][ledg_row_id] = OD()
-
-                # select all periods for each module/ledger combination, with their current state
+                # select all periods for module/ledger combination, with their current state
                 if module_id == 'ar':
                     sub_date = 'statement_date'
                     sub_state = 'statement_state'
@@ -533,11 +483,14 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
                 else:
                     sub_date = 'null'
                     sub_state = 'null'
-                async for ledg_row_id, period_row_id, state, sub_date, sub_state in await conn.exec_sql(
-                        f'SELECT ledger_row_id, period_row_id, state, {sub_date}, {sub_state} '
-                        f'FROM {company}.{module_id}_ledger_periods '
-                        f'WHERE deleted_id = 0'
-                        ):
+                sql = (
+                    f'SELECT period_row_id, state, {sub_date}, {sub_state} '
+                    f'FROM {company}.{module_id}_ledger_periods '
+                    f'WHERE ledger_row_id = {conn.constants.param_style} AND deleted_id = 0 '
+                    f'ORDER BY period_row_id'
+                    )
+                params = [ledger_row_id]
+                async for period_row_id, state, sub_date, sub_state in await conn.exec_sql(sql, params):
                     period_data = SN(state=state)
                     if module_id == 'ar':
                         period_data.statement_date = sub_date
@@ -545,20 +498,22 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
                     elif module_id == 'ap':
                         period_data.payment_date = sub_date
                         period_data.payment_state = sub_state
-                    ledger_periods[company][module_row_id][ledg_row_id][period_row_id] = period_data
+                    ledger_periods[company][module_row_id][ledger_row_id][period_row_id] = period_data
                     if state == 'current':
-                        ledger_periods[company][module_row_id][ledg_row_id].current_period = period_row_id
+                        ledger_periods[company][module_row_id][ledger_row_id].current_period = period_row_id
 
     return ledger_periods[company][module_row_id][ledger_row_id]
 
-# callback on change of ledger_period - {mod}_ledger_periods.actions.after_commit
+# callback on change of ledger_period - {module_id}_ledger_periods.actions.after_commit
 async def ledger_period_updated(db_obj, xml):
     company = db_obj.company
-    module_row_id = db_obj.db_table.module_row_id
-    with await ledg_per_lock:
-        if company in ledger_periods:
-            if module_row_id in ledger_periods[company]:
-                del ledger_periods[company][module_row_id]
+    if company in ledger_periods:
+        module_row_id = db_obj.db_table.module_row_id
+        if module_row_id in ledger_periods[company]:
+            ledger_row_id = await db_obj.getval('ledger_row_id')
+            if ledger_row_id in ledger_periods[company][module_row_id]:
+                with await ledg_per_lock:
+                    del ledger_periods[company][module_row_id][ledger_row_id]
 
 #----------------------------------------------------------------------------
 

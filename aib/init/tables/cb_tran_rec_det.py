@@ -131,7 +131,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['cb_tran_rec', 'row_id', 'ledger_id, tran_number', 'ledger_id, tran_number', True, None],
+    'fkey'       : ['cb_tran_rec', 'row_id', None, None, True, None],
     'choices'    : None,
     })
 cols.append ({

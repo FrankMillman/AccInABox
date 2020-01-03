@@ -126,7 +126,7 @@ cols.append ({
             ['ar_chg', 'ar_subtran_chg'],
             ['ar_disc', 'ar_tran_disc'],
             ]],
-        'row_id', 'ledger_id, cust_id, tran_number', 'ledger_id, cust_id, tran_number', True, None],
+        'row_id', 'ledger_row_id, cust_id, tran_number', 'ledger_row_id, cust_id, tran_number', True, None],
     'choices'    : None,
     })
 cols.append ({
@@ -508,26 +508,20 @@ virt.append ({
         "COALESCE(ROUND(("
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_tran_alloc_det b "
+            "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-            "AND b.tran_row_id != {tran_row_id} "
+            "AND c.posted = '1' "
             "), 2), 0) "
         "- "
         "CASE "
             "WHEN a.discount_date IS NULL THEN 0 "
             "WHEN {as_at_date} > a.discount_date THEN 0 "
-            # "WHEN a.amount_cust - "
-            #     "COALESCE(ROUND(("
-            #         "SELECT SUM(b.alloc_cust) "
-            #         "FROM {company}.ar_tran_alloc_det b "
-            #         "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-            #         "AND b.tran_row_id != {tran_row_id} "
-            #         "), 2), 0) "
-            #     "= 0 THEN 0 "
             "ELSE a.discount_cust - COALESCE(ROUND(("
                 "SELECT SUM(b.discount_cust) "
                 "FROM {company}.ar_tran_alloc_det b "
+                "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
                 "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-                "AND b.tran_row_id != {tran_row_id} "
+                "AND c.posted = '1' "
                 "), 2), 0) "
             "END"
         ),
@@ -541,7 +535,7 @@ virt.append ({
     'db_scale'   : 2,
     'scale_ptr'  : 'cust_row_id>currency_id>scale',
     'sql'        : (
-        "SELECT b.alloc_cust FROM {company}.ar_tran_alloc_det b "
+        "SELECT b.alloc_cust FROM {company}.{alloc_detail} b "
         "WHERE b.item_row_id = a.row_id AND b.tran_row_id = {tran_row_id} "
         "AND b.deleted_id = 0"
         )
@@ -561,7 +555,13 @@ virt.append ({
     'col_name'   : 'amount_to_alloc',
     'data_type'  : 'DEC',
     'short_descr': 'Amount to allocate',
-    'long_descr' : 'Amount still to be allocated',
+    'long_descr' : (
+        'Amount to be allocated. '
+        'Take original amount, subtract all allocations where ar_tran_alloc has been posted. '
+        'This includes allocations made against this item from another item (c.item_row_id != a.row_id) '
+        'and allocations made from this item against other items (c.item_row_id = a.row_id). '
+        'NB Only used in ar_alloc.xml.'
+        ),
     'col_head'   : 'Amt alloc',
     'db_scale'   : 2,
     'scale_ptr'  : 'cust_row_id>currency_id>scale',
@@ -580,7 +580,15 @@ virt.append ({
     'col_name'   : 'amount_unallocated',
     'data_type'  : 'DEC',
     'short_descr': 'Amount unallocated',
-    'long_descr' : 'Amount unallocated from "still to be allocated"',
+    'long_descr' : (
+        'Amount still to be allocated. '
+        'Take amount to be allocated as calculated in amount_to_alloc above. '
+        'Deduct any allocations made from this item against other items (c.item_row_id = a.row_id) '
+        'where ar_tran_alloc is unposted. The assumption is that they all relate to the allocation '
+        'being entered. If two users are allocating the same item at the same time this would be '
+        'incorrect, but very unlikely. '
+        'NB Only used in ar_alloc.xml.'
+        ),
     'col_head'   : 'Amt unalloc',
     'db_scale'   : 2,
     'scale_ptr'  : 'cust_row_id>currency_id>scale',
@@ -590,7 +598,15 @@ virt.append ({
         "COALESCE(ROUND(("
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_tran_alloc_det b "
-            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
+            "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND c.posted = '1'"
+            "), 2), 0)"
+        "+ "
+        "COALESCE(ROUND(("
+            "SELECT SUM(b.alloc_cust) "
+            "FROM {company}.ar_tran_alloc_det b "
+            "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
+            "WHERE c.item_row_id = a.row_id AND b.deleted_id = 0 AND c.posted = '0'"
             "), 2), 0)"
         ),
     })

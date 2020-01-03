@@ -1,4 +1,3 @@
-from datetime import date, datetime
 import psycopg2
 import psycopg2.extensions  # so that strings are returned as unicode
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
@@ -69,9 +68,6 @@ def init(self, pos):
     self.conn = conn
     self.exception = (psycopg2.ProgrammingError, psycopg2.IntegrityError,
         psycopg2.InternalError)
-    self.msg_pos = 0
-    self.now = datetime.now
-    self.today = date.today
     if not pos:
         self.create_functions()
 
@@ -441,19 +437,10 @@ def create_functions(self):
         )
 
     cur.execute(
-        "CREATE OR REPLACE FUNCTION date_func (DATE, VARCHAR, INT) "
+        "CREATE OR REPLACE FUNCTION date_add (DATE, INT) "
             "RETURNS DATE LANGUAGE 'plpgsql' IMMUTABLE AS $$ "
-          "DECLARE "
-            "_date ALIAS FOR $1;"
-            "_op VARCHAR := LOWER($2);"
-            "_days ALIAS FOR $3;"
           "BEGIN "
-            "IF _op = '+' OR _op = 'add' THEN "
-              "RETURN _date + _days; "
-            "END IF;"
-            "IF _op = '-' OR _op = 'sub' THEN "
-              "RETURN _date - _days; "
-            "END IF;"
+            "RETURN $1 + $2; "
           "END;"
           "$$;"
         )

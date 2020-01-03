@@ -226,14 +226,16 @@ async def get_due_bal(caller, xml):
     alloc_hdr = caller.data_objects['alloc_header']
     cust_row_id = await alloc_hdr.getval('cust_row_id')
 
+    vars = caller.data_objects['vars']
+    this_item_rowid = await vars.getval('this_item_rowid')
+
     due_bal = caller.data_objects['due_bal']
     await due_bal.init()
 
     as_at_date = caller.context.as_at_date
-    this_item_rowid = caller.context.this_item_rowid
 
     # this uses period-end dates for ageing dates
-    # instead, simple subtract 30, 60, 90, 120 from 'as_at_date'
+    # instead, simply subtract 30, 60, 90, 120 from 'as_at_date'
     # any preference?
     # periods = await db.cache.get_adm_periods(caller.company)
     # # locate period containing transaction date
@@ -260,14 +262,14 @@ async def get_due_bal(caller, xml):
     sql = f"""
         SELECT
         sum(q.due), 
-        SUM(CASE WHEN q.due_date > '{dates[1]}' THEN q.due ELSE 0 END),
-        SUM(CASE WHEN q.due_date BETWEEN '{dates[2] + td(1)}' AND '{dates[1]}' THEN q.due ELSE 0 END),
-        SUM(CASE WHEN q.due_date BETWEEN '{dates[3] + td(1)}' AND '{dates[2]}' THEN q.due ELSE 0 END),
-        SUM(CASE WHEN q.due_date BETWEEN '{dates[4] + td(1)}' AND '{dates[3]}' THEN q.due ELSE 0 END),
-        SUM(CASE WHEN q.due_date <= '{dates[4]}' THEN q.due ELSE 0 END)
+        SUM(CASE WHEN q.tran_date > '{dates[1]}' THEN q.due ELSE 0 END),
+        SUM(CASE WHEN q.tran_date BETWEEN '{dates[2] + td(1)}' AND '{dates[1]}' THEN q.due ELSE 0 END),
+        SUM(CASE WHEN q.tran_date BETWEEN '{dates[3] + td(1)}' AND '{dates[2]}' THEN q.due ELSE 0 END),
+        SUM(CASE WHEN q.tran_date BETWEEN '{dates[4] + td(1)}' AND '{dates[3]}' THEN q.due ELSE 0 END),
+        SUM(CASE WHEN q.tran_date <= '{dates[4]}' THEN q.due ELSE 0 END)
         FROM
         (SELECT
-            a.cust_row_id, a.due_date, `a.{company}.ar_openitems.due_cust_gui` AS due
+            a.cust_row_id, a.tran_date, `a.{company}.ar_openitems.due_cust_gui` AS due
             FROM {company}.ar_openitems a
             WHERE a.cust_row_id = {cust_row_id}
                 AND a.tran_date <= '{as_at_date}'
@@ -301,7 +303,6 @@ async def get_due_bal(caller, xml):
 
 async def confirm_alloc(ctx, fld, value, xml):
     # called from ar_alloc_item after various 'alloc' check boxes
-    # see confirm_alloc2 below - must decide if required or not
     return
 
 async def after_save_alloc(caller, xml):
@@ -319,40 +320,11 @@ async def after_save_alloc(caller, xml):
     await alloc_det.setval('item_row_id', await ar_item.getval('row_id'))
 
     if alloc_det.exists and not alloc_cust:
-
         # if alloc_cust has been cleared, delete the row in the allocations table
-        #
-        # if it was the only one for this transaction, there will be a dangling row for
-        #   the 'contra' allocation, where alloc_cust will be zero after the deletion
-        #
-        # it is necessary to actually delete this row as well, otherwise it prevents
-        #   deletion of the transaction itself, because the transaction is referenced
-        #   by the dangling row
-        #
-        # this is what we are doing below
-
-        alloc_row_id = await alloc_det.getval('row_id')
-        alloc_tran_type = await alloc_det.getval('tran_type')
-        alloc_tran_rowid = await alloc_det.getval('tran_row_id')
-
         await alloc_det.delete(from_upd_on_save=True)  # actually delete
-
-        await alloc_det.init()
-        where = []
-        where.append(['WHERE', '', 'tran_type', '=', repr(alloc_tran_type), ''])
-        where.append(['AND', '', 'tran_row_id', '=', alloc_tran_rowid, ''])
-        where.append(['AND', '', 'row_id', '!=', alloc_row_id, ''])  # exclude the row just deleted
-        all_alloc = alloc_det.select_many(where=where, order=[])
-        async for _ in all_alloc:
-            if await alloc_det.getval('item_row_id') != await alloc_det.getval('tran_row_id>item_row_id'):
-                break  # there are existing rows - do nothing
-        else:  # this is the only one - delete it
-            assert await alloc_det.getval('item_row_id') == await alloc_det.getval('tran_row_id>item_row_id')
-            await alloc_det.delete(from_upd_on_save=True)  # actually delete
-
     else:
         await alloc_det.setval('alloc_cust', alloc_cust)
-        await alloc_det.save()
+        await alloc_det.save(from_upd_on_save=True)  # do not update audit trail
 
     alloc_cust_fld._orig = alloc_cust
 
@@ -362,10 +334,9 @@ async def after_save_alloc(caller, xml):
     await unalloc_fld.setval(unallocated - (alloc_cust - alloc_orig))
 
 async def alloc_ageing(caller, xml):
-    # called from ar_receipt/ar_alloc after select/deselect 'allocate bucket'
+    # called from ar_alloc_item after select/deselect 'allocate bucket'
     age = xml.get('age')
     bal_vars = caller.data_objects['bal_vars']
-    # dates = await bal_vars.getval('ageing_dates')
     dates = caller.context.dates
 
     if age == '4':
@@ -410,8 +381,6 @@ async def alloc_ageing(caller, xml):
         await bal_vars.setval('show_curr', False)
         await bal_vars.setval('show_tot', False)
         await show_fld.setval(True)
-        # await bal_vars.setval('first_date', prev_end_date)
-        # await bal_vars.setval('last_date', curr_end_date)
         caller.context.first_date = prev_end_date
         caller.context.last_date = curr_end_date
 
@@ -426,28 +395,63 @@ async def alloc_ageing(caller, xml):
             await bal_vars.setval('alloc_30', False)
             await bal_vars.setval('alloc_curr', False)
 
+    ar_items = caller.data_objects['ar_items']
+    alloc_hdr = caller.data_objects['alloc_header']
+    alloc_det = caller.data_objects['alloc_detail']
+
+    cust_row_id = await alloc_hdr.getval('cust_row_id')
+
+    vars = caller.data_objects['vars']
+    this_item_rowid = await vars.getval('this_item_rowid')
+    unalloc_fld = await vars.getfld('unallocated')
+    unallocated = await unalloc_fld.getval()
+
+
+    async def alloc(conn):
+        nonlocal unallocated
+        where = []
+        where.append(['WHERE', '', 'cust_row_id', '=', cust_row_id, ''])
+        where.append(['AND', '', 'tran_date', '>', prev_end_date, ''])
+        where.append(['AND', '', 'tran_date', '<=', curr_end_date, ''])
+        where.append(['AND', '', 'row_id', '!=', this_item_rowid, ''])
+        where.append(['AND', '', 'due_cust_gui', '!=', 0, ''])
+        all_alloc = ar_items.select_many(where=where, order=[])
+        async for _ in all_alloc:
+            await alloc_det.init(init_vals={
+                'item_row_id': await ar_items.getval('row_id'),
+                'alloc_cust': await ar_items.getval('due_cust_gui'),
+                })
+            await alloc_det.save(from_upd_on_save=True)  # do not update audit trail
+            await ar_items.setval('alloc_cust_gui', await alloc_det.getval('alloc_cust'))
+            unallocated -= await alloc_det.getval('alloc_cust')
+            await unalloc_fld.setval(unallocated)
+
+    async def unalloc(conn):
+        nonlocal unallocated
+        where = []
+        where.append(['WHERE', '', 'cust_row_id', '=', cust_row_id, ''])
+        where.append(['AND', '', 'tran_date', '>', prev_end_date, ''])
+        where.append(['AND', '', 'tran_date', '<=', curr_end_date, ''])
+        where.append(['AND', '', 'row_id', '!=', this_item_rowid, ''])
+        where.append(['AND', '', 'due_cust_gui', '!=', 0, ''])
+        all_alloc = ar_items.select_many(where=where, order=[])
+        async for _ in all_alloc:
+            await alloc_det.init(init_vals={
+                'item_row_id': await ar_items.getval('row_id'),
+                })
+            if alloc_det.exists:
+                unallocated += await ar_items.getval('alloc_cust_gui')
+                await unalloc_fld.setval(unallocated)
+                await alloc_det.delete(from_upd_on_save=True)  # actually delete
+                await ar_items.setval('alloc_cust_gui', None)
+
     async with caller.db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.mem
+        conn = db_mem_conn.db
+        await unalloc(conn)  # always unallocate any allocations first
+        if do_alloc:  # if 'allocate' selected, perform allocation
+            await alloc(conn)
 
-        sql = (
-            f"UPDATE {caller.company}.ar_tran_alloc_det SET "
-            f"alloc_cust = {due_cust if do_alloc else 0}, "
-            f"discount_cust = {balance_cust - due_cust if do_alloc else 0}"
-            )
-
-        params = ()
-        if age > '-1':  # user chose single bucket
-            sql += " WHERE tran_date > {0} AND tran_date <= {0}".format(conn.constants.param_style)
-            params = (prev_end_date, curr_end_date)
-        await conn.exec_cmd(sql, params)
-
-        sql = 'SELECT COALESCE(SUM(alloc_cust), 0) AS "[REAL]" FROM {}'.format(table_name)
-        cur = await conn.exec_sql(sql)
-        allocated, = await cur.__anext__()
-
-    await bal_vars.setval('unallocated', await bal_vars.getval('amt_to_alloc') - allocated)
-
-    await caller.start_grid('mem_alloc')
+    await caller.start_grid('ar_items')
 
 async def check_unique(db_obj, xml):
     # called from ar_subtran_rec/chg before_insert/update
@@ -572,30 +576,29 @@ async def create_disc_crn2(ar_rec, xml):
 
     await ar_disc.post()
 
-async def posted_check(caller, args):
-    params = args['close_params']
+async def posted_check(caller, params):
     context = caller.context
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
-        stat_date = params['statement_date']
+        check_date = params['check_date']
         where = []
-        where.append(['WHERE', '', 'tran_date', '<=', stat_date, ''])
+        where.append(['WHERE', '', 'tran_date', '<=', check_date, ''])
         where.append(['AND', '', 'posted', '=', False, ''])
-        if params['single_cust']:
-            cust_row_id = params['cust_row_id']
-            where.append(['AND', '', 'cust_row_id', '=', cust_row_id, ''])
+        # if params['single_cust']:
+        #     cust_row_id = params['cust_row_id']
+        #     where.append(['AND', '', 'cust_row_id', '=', cust_row_id, ''])
 
         params = []
         sql = 'SELECT CASE WHEN EXISTS ('
 
         table_names = [
-            'ar_tran_inv',     # efficient - indexed on tran_date where 'posted' = 0
-            'ar_tran_crn',     #    ''
-            'ar_tran_disc',    #    ''
-            'ar_tran_alloc',   #    ''
-            'ar_subtran_rec',  # inefficient - needs a solution!
-            'ar_subtran_chg',  #    ''
+            'ar_tran_inv',
+            'ar_tran_crn',
+            'ar_tran_disc',
+            'ar_tran_alloc',
+            'ar_subtran_rec',
+            'ar_subtran_chg',
             ]
 
         for table_name in table_names:
@@ -615,31 +618,12 @@ async def posted_check(caller, args):
     print('check all posted:', return_params)
     return return_params
 
-async def raise_interest(caller, args):
-    params = args['close_params']
-
+async def raise_interest(caller, params):
     print('raise_interest')
-    await asyncio.sleep(1)
     return
 
-async def setup_close_params(caller, xml):
-    var = caller.data_objects['var']
-    module_row_id, ledger_row_id = caller.context.mod_ledg_id
-    ledger_param = await db.cache.get_ledger_params(
-            caller.company, module_row_id, ledger_row_id)
-    close_params = {
-        'current_period': await var.getval('current_period'),
-        'separate_stat_cust': await ledger_param.getval('separate_stat_cust'),
-        'single_cust': await var.getval('single_cust'),
-        'cust_row_id': await var.getval('cust_row_id'),
-        'statement_date': await var.getval('statement_date'),
-        }
-    await var.setval('close_params', close_params)
-
-async def set_closing_flag(caller, args):
+async def set_stat_closing_flag(caller, params):
     print('set_closing_flag')
-    params = args['close_params']
-    print(params)
 
     async def handle_all_cust():
         if 'ar_ledg_per' not in caller.context.data_objects:
@@ -648,10 +632,11 @@ async def set_closing_flag(caller, args):
         ledg_per = caller.context.data_objects['ar_ledg_per']
         await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
         await ledg_per.setval('period_row_id', params['current_period'])
-        if await ledg_per.getval('state') != 'open':
-            raise AibError(head='Closing flag', body='Closing flag already set')
-        await ledg_per.setval('statement_date', params['statement_date'])
-        await ledg_per.setval('state', 'stat_closing')
+        if await ledg_per.getval('statement_state') != 'open':
+            raise AibError(head='Closing flag', body='Statement period is not open')
+        await ledg_per.setval('statement_state', 'closing')
+        process_row_id = await caller.manager.process.root.bpm_detail.getval('header_row_id')
+        await ledg_per.setval('stmnt_process_id', process_row_id)
         await ledg_per.save()
 
     async def handle_single_cust():
@@ -700,7 +685,7 @@ async def set_closing_flag(caller, args):
         if await ledg_per.getval('state') != 'open':
             raise AibError(head='Closing flag', body='Closing flag already set')
         await ledg_per.setval('statement_date', params['statement_date'])
-        await ledg_per.setval('state', 'stat_closing')
+        await ledg_per.setval('state', 'closing')
         await ledg_per.save()
 
     if not params['separate_stat_cust']:
@@ -710,71 +695,112 @@ async def set_closing_flag(caller, args):
     else:
         await handle_unhandled_cust()
 
-async def set_closed_flag(caller, args):
-    print('set_closed_flag')
-    params = args['close_params']
+async def set_per_closing_flag(caller, params):
+    print('set_closing_flag')
 
-    async with caller.context.db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
-        stat_date = params['statement_date']
-        if not params['separate_stat_cust']:
-            if 'ar_ledg_per' not in caller.context.data_objects:
-                caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
-                    caller.context, caller.company, 'ar_ledger_periods')
-            ledg_per = caller.context.data_objects['ar_ledg_per']
-            await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
-            await ledg_per.setval('period_row_id', params['current_period'])
-            if await ledg_per.getval('state') != 'stat_closing':
-                raise AibError(head='Closing flag', body='Closing flag not set')
-            await ledg_per.setval('state', 'stat_closed')
-            await ledg_per.save()
-        elif params['single_cust']:
-            cust_row_id = params['cust_row_id']
-            if 'ar_stat_dates' not in caller.context.data_objects:
-                caller.context.data_objects['ar_stat_dates'] = await db.objects.get_db_object(
-                    caller.context, caller.company, 'ar_stat_dates')
-            stat_dates = caller.context.data_objects['ar_stat_dates']
-            await stat_dates.setval('cust_row_id', cust_row_id)
-            await stat_dates.setval('period_row_id', params['current_period'])
-            await stat_dates.setval('statement_date', params['statement_date'])
-            if await stat_dates.getval('state') != 'closing':
-                raise AibError(head='Closing flag', body='Closing flag not set')
-            await stat_dates.setval('state', 'closed')
-            await stat_dates.save()
-        else:
-            if 'ar_customers' not in caller.context.data_objects:
-                caller.context.data_objects['ar_customers'] = await db.objects.get_db_object(
-                    caller.context, caller.company, 'ar_customers')
-            ar_cust = caller.context.data_objects['ar_customers']
-            if 'ar_stat_dates' not in caller.context.data_objects:
-                caller.context.data_objects['ar_stat_dates'] = await db.objects.get_db_object(
-                    caller.context, caller.company, 'ar_stat_dates')
-            stat_dates = caller.context.data_objects['ar_stat_dates']
-            if 'ar_ledg_per' not in caller.context.data_objects:
-                caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
-                    caller.context, caller.company, 'ar_ledger_periods')
-            ledg_per = caller.context.data_objects['ar_ledg_per']
+    if 'ar_ledg_per' not in caller.context.data_objects:
+        caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
+            caller.context, caller.company, 'ar_ledger_periods')
+    ledg_per = caller.context.data_objects['ar_ledg_per']
+    await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
+    await ledg_per.setval('period_row_id', params['current_period'])
+    if await ledg_per.getval('state') not in ('current', 'open'):
+        raise AibError(head='Closing flag', body='Period is not open')
+    await ledg_per.setval('state', 'closing')
+    await ledg_per.save()
 
-            all_stat = stat_dates.select_many(where=[
-                ['WHERE', '', 'period_row_id', '=', params['current_period'], ''],
-                ['AND', '', 'state', '=', "'closing'", '']
-                ], order=[])
-            async for _ in all_stat:
-                await stat_dates.setval('state', 'closed')
-                await stat_dates.save()
+async def set_stat_closed_flag(caller, params):
+    print('set_stat_closed_flag')
 
-            await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
-            await ledg_per.setval('period_row_id', params['current_period'])
-            if await ledg_per.getval('state') != 'stat_closing':
-                raise AibError(head='Closing flag', body='Closing flag not set')
-            await ledg_per.setval('state', 'stat_closed')
-            await ledg_per.save()
-    return
+    if not params['separate_stat_cust']:
+        if 'ar_ledg_per' not in caller.context.data_objects:
+            caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
+                caller.context, caller.company, 'ar_ledger_periods')
+        ledg_per = caller.context.data_objects['ar_ledg_per']
+        await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
+        await ledg_per.setval('period_row_id', params['current_period'])
+        if await ledg_per.getval('statement_state') != 'closing':
+            raise AibError(head='Closing flag', body='Closing flag not set')
+        await ledg_per.setval('statement_state', 'closed')
+        await ledg_per.save()
 
-async def notify_manager(caller, args):
+        # set next month statement date
+        await ledg_per.init()
+        await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
+        await ledg_per.setval('period_row_id', params['current_period'] + 1)
+        await ledg_per.setval('statement_date', params['next_stat_date'])
+        await ledg_per.save()
+
+        return
+
+    # if params['single_cust']:
+    #     cust_row_id = params['cust_row_id']
+    #     if 'ar_stat_dates' not in caller.context.data_objects:
+    #         caller.context.data_objects['ar_stat_dates'] = await db.objects.get_db_object(
+    #             caller.context, caller.company, 'ar_stat_dates')
+    #     stat_dates = caller.context.data_objects['ar_stat_dates']
+    #     await stat_dates.setval('cust_row_id', cust_row_id)
+    #     await stat_dates.setval('period_row_id', params['current_period'])
+    #     await stat_dates.setval('statement_date', params['statement_date'])
+    #     if await stat_dates.getval('state') != 'closing':
+    #         raise AibError(head='Closing flag', body='Closing flag not set')
+    #     await stat_dates.setval('state', 'closed')
+    #     await stat_dates.save()
+    #     return
+
+    # if 'ar_customers' not in caller.context.data_objects:
+    #     caller.context.data_objects['ar_customers'] = await db.objects.get_db_object(
+    #         caller.context, caller.company, 'ar_customers')
+    # ar_cust = caller.context.data_objects['ar_customers']
+    # if 'ar_stat_dates' not in caller.context.data_objects:
+    #     caller.context.data_objects['ar_stat_dates'] = await db.objects.get_db_object(
+    #         caller.context, caller.company, 'ar_stat_dates')
+    # stat_dates = caller.context.data_objects['ar_stat_dates']
+    # if 'ar_ledg_per' not in caller.context.data_objects:
+    #     caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
+    #         caller.context, caller.company, 'ar_ledger_periods')
+    # ledg_per = caller.context.data_objects['ar_ledg_per']
+
+    # all_stat = stat_dates.select_many(where=[
+    #     ['WHERE', '', 'period_row_id', '=', params['current_period'], ''],
+    #     ['AND', '', 'state', '=', "'closing'", '']
+    #     ], order=[])
+    # async for _ in all_stat:
+    #     await stat_dates.setval('state', 'closed')
+    #     await stat_dates.save()
+
+    # await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
+    # await ledg_per.setval('period_row_id', params['current_period'])
+    # if await ledg_per.getval('state') != 'stat_closing':
+    #     raise AibError(head='Closing flag', body='Closing flag not set')
+    # await ledg_per.setval('state', 'stat_closed')
+    # await ledg_per.save()
+
+async def set_per_closed_flag(caller, params):
+    print('set_per_closed_flag')
+
+    if 'ar_ledg_per' not in caller.context.data_objects:
+        caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
+            caller.context, caller.company, 'ar_ledger_periods')
+    ledg_per = caller.context.data_objects['ar_ledg_per']
+    await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
+    await ledg_per.setval('period_row_id', params['period_to_close'])
+    if await ledg_per.getval('state') != 'closing':
+        raise AibError(head='Closing flag', body='Closing flag not set')
+    await ledg_per.setval('state', 'closed')
+    await ledg_per.save()
+
+    if params['period_to_close'] == params['current_period']:
+        # set next month statement date
+        await ledg_per.init()
+        await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
+        await ledg_per.setval('period_row_id', params['current_period'] + 1)
+        await ledg_per.setval('state', 'current')
+        await ledg_per.save()
+
+async def notify_manager(caller, params):
     print('notify_manager')
-    params = args['close_params']
-    user_row_id = args['user_row_id']
+    user_row_id = params['user_row_id']
 
     await asyncio.sleep(1)
     return
@@ -785,236 +811,76 @@ async def setup_stat_proc(caller, xml):
     # await var.setval('stat_date_ok', True)
     return
 
-async def confirm_alloc_2(caller, fld, value, xml):
-    # called from ar_receipt validation of select/deselect 'allocate bucket'
-    age = xml.get('age')
-    vars = caller.data_objects['vars']
-    cust = caller.data_objects['cust']
-    dates = await vars.getval('ageing_dates')
-    aged_bal = caller.data_objects['aged_bal']
-
-    if age == '4':
-        fld = await vars.getfld('alloc_120')
-        prev_end_date = dates[5]
-        curr_end_date = dates[4]
-        amount = await aged_bal.getval('onetwenty')
-    elif age == '3':
-        fld = await vars.getfld('alloc_90')
-        prev_end_date = dates[4]
-        curr_end_date = dates[3]
-        amount = await aged_bal.getval('ninety')
-    elif age == '2':
-        fld = await vars.getfld('alloc_60')
-        prev_end_date = dates[3]
-        curr_end_date = dates[2]
-        amount = await aged_bal.getval('sixty')
-    elif age == '1':
-        fld = await vars.getfld('alloc_30')
-        prev_end_date = dates[2]
-        curr_end_date = dates[1]
-        amount = await aged_bal.getval('thirty')
-    elif age == '0':
-        fld = await vars.getfld('alloc_curr')
-        prev_end_date = dates[1]
-        curr_end_date = dates[0]
-        amount = await aged_bal.getval('current')
-    elif age == '-1':
-        fld = await vars.getfld('alloc_tot')
-        prev_end_date = dates[5]
-        curr_end_date = dates[0]
-        amount = await aged_bal.getval('total')
-
-    if value == await fld.getval():
-        return
-
-    message = 'Allocate' if value else 'De-allocate'
-
-    title = 'Confirm allocation'
-    question = '{} all amounts from {} to {} - {} {}?'.format(
-        message, prev_end_date, curr_end_date, await cust.getval('currency'), amount)
-    answers = ['No', 'Yes']
-    default = 'No'
-    escape = 'No'
-
-    ans = await caller.session.request.ask_question(
-        caller.parent, title, question, answers, default, escape)
-
-    if ans == 'No':
-        raise AibError(head='', body='')
-
-async def alloc_ageing_2(caller, xml):
-    # called from ar_receipt after select/deselect 'allocate bucket'
-    age = xml.get('age')
-    vars = caller.data_objects['vars']
-    dates = await vars.getval('ageing_dates')
-    ar_trans = caller.data_objects['ar_rec']
-    tran_row_id = await ar_trans.getval('row_id')
-    cust_row_id = await ar_trans.getval('cust_row_id')
-    ar_alloc = caller.data_objects['ar_alloc']
-
-    if age == '4':
-        fld = await vars.getfld('alloc_120')
-        show_fld = await vars.getfld('show_120')
-        prev_end_date = dates[5]
-        curr_end_date = dates[4]
-    elif age == '3':
-        fld = await vars.getfld('alloc_90')
-        show_fld = await vars.getfld('show_90')
-        prev_end_date = dates[4]
-        curr_end_date = dates[3]
-    elif age == '2':
-        fld = await vars.getfld('alloc_60')
-        show_fld = await vars.getfld('show_60')
-        prev_end_date = dates[3]
-        curr_end_date = dates[2]
-    elif age == '1':
-        fld = await vars.getfld('alloc_30')
-        show_fld = await vars.getfld('show_30')
-        prev_end_date = dates[2]
-        curr_end_date = dates[1]
-    elif age == '0':
-        fld = await vars.getfld('alloc_curr')
-        show_fld = await vars.getfld('show_curr')
-        prev_end_date = dates[1]
-        curr_end_date = dates[0]
-    elif age == '-1':
-        fld = await vars.getfld('alloc_tot')
-        show_fld = await vars.getfld('show_tot')
-        prev_end_date = dates[5]
-        curr_end_date = dates[0]
-    if fld._before_input == await fld.getval():
-        return
-
-    if not await show_fld.getval():  # ensure bucket selected is also 'shown'
-        # don't know which is is active - reset all of them
-        await vars.setval('show_120', False)
-        await vars.setval('show_90', False)
-        await vars.setval('show_60', False)
-        await vars.setval('show_30', False)
-        await vars.setval('show_curr', False)
-        await vars.setval('show_tot', False)
-        await show_fld.setval(True)
-        await vars.setval('first_date', prev_end_date)
-        await vars.setval('last_date', curr_end_date)
-
-    do_alloc = await fld.getval()  # True=selected  False=deselected
-
-    if age == '-1':  # user chose 'all' buckets
-        if not do_alloc:  # user chose 'deselect all allocations'
-            # don't know which is is active - reset all of them
-            await vars.setval('alloc_120', False)
-            await vars.setval('alloc_90', False)
-            await vars.setval('alloc_60', False)
-            await vars.setval('alloc_30', False)
-            await vars.setval('alloc_curr', False)
-
-    async def alloc(conn):
-        sql = (
-            "SELECT temp.row_id, temp.balance FROM "
-            "(SELECT a.row_id, "
-                "-(a.amount_cust + COALESCE( "
-                    "(SELECT SUM(b.alloc_cust + b.disc_cust) "
-                    "FROM {0}.ar_trans_alloc b "
-                    "WHERE b.due_row_id = a.row_id AND b.deleted_id = 0), 0)) as balance "
-                "FROM {0}.ar_trans_due a "
-                "LEFT JOIN {0}.ar_trans b "
-                    "ON b.tran_type = a.tran_type AND b.row_id = a.tran_row_id "
-                "WHERE b.cust_row_id = {1} "
-                "AND b.tran_date > {1} AND b.tran_date <= {1}"
-                ") as temp "
-            "WHERE temp.balance != 0 "
-            .format(caller.company, ar_trans.db_table.constants.param_style)
-            )
-        params = (cust_row_id, prev_end_date, curr_end_date)
-
-        async for due_row_id, due_balance in await conn.exec_sql(sql, params):
-            init_vals = {
-                'tran_type': 'ar_rec',
-                'tran_row_id': tran_row_id,
-                'due_row_id': due_row_id,
-                'alloc_cust': due_balance,
-                }
-            await ar_alloc.init(init_vals=init_vals)
-            await ar_alloc.save()
-
-    async def unalloc(conn):
-        if age == '-1':  # user chose 'all' buckets
-            sql = (
-                "SELECT a.row_id FROM {0}.ar_trans_alloc a "
-                "WHERE a.tran_type = 'ar_rec' AND a.tran_row_id = {1} "
-                "AND a.deleted_id = '0'"
-                .format(caller.company, ar_trans.db_table.constants.param_style)
-                )
-            params = (tran_row_id, )
-        else:
-            sql = (
-                "SELECT a.row_id FROM {0}.ar_trans_alloc a "
-                "LEFT JOIN {0}.ar_trans_due b ON b.row_id = a.due_row_id "
-                "LEFT JOIN {0}.ar_trans c ON "
-                    "c.tran_type = b.tran_type AND c.row_id = b.tran_row_id "
-                "WHERE a.tran_type = 'ar_rec' AND a.tran_row_id = {1} "
-                "AND a.deleted_id = '0' "
-                "AND c.tran_date > {1} AND c.tran_date <= {1}"
-                .format(caller.company, ar_trans.db_table.constants.param_style)
-                )
-            params = (tran_row_id, prev_end_date, curr_end_date)
-
-        async for row_id, in await conn.exec_sql(sql, params):
-            await ar_alloc.init(init_vals={'row_id': row_id})
-            await ar_alloc.delete()
-
-    async with caller.db_session as db_mem_conn:
-        conn = db_mem_conn.db
-        await unalloc(conn)  # always unallocate any allocations first
-        if do_alloc:  # if 'allocate' selected, perform allocation
-            await alloc(conn)
-
-    alloc = await ar_trans.getfld('allocated')
-    await alloc.recalc()
-
-    await caller.start_grid('ar_due')
-
 async def check_ledg_per(caller, xml):
     # called from ar_ledg_per.on_start_row
-    ledg_per = caller.data_objects['ledg_per']
+    ledg_per = caller.data_objects['ar_ledg_per']
     actions = caller.data_objects['actions']
 
-    await actions.setval('action', 'no_action')  # initial state
-    if ledg_per.exists:
+    if not ledg_per.exists:  # on bottom 'blank' row
+        await actions.setval('action', 'no_period')
+        return
 
+    var = caller.data_objects['var']
+    action_cache = await var.getval('action_cache')
+    period_row_id = await ledg_per.getval('period_row_id')
+    if period_row_id in action_cache:  # 'action' has already been set up - just return it
+        await actions.setval('action', action_cache[period_row_id])
+        return
+
+    async def set_action(action):
+        await actions.setval('action', action)
+        action_cache[period_row_id] = action
+        await var.setval('action_cache', action_cache)
+
+    await set_action('no_action')  # initial state
+
+    ledger_periods = await db.cache.get_ledger_periods(caller.company, *caller.context.mod_ledg_id)
+    if period_row_id > ledger_periods.current_period:
+        return  # no action possible until prior current period closed
+
+    ledger_params = await db.cache.get_ledger_params(caller.company, *caller.context.mod_ledg_id)
+    separate_stat_close = await ledger_params.getval('separate_stat_close')
+
+    if separate_stat_close:
+        statement_date = await ledg_per.getval('statement_date')
+        # if statement_date is None:  # should never happen
+        #     return
+        assert statement_date is not None
         if await ledg_per.getval('statement_state') == 'open':
-            if await ledg_per.getval('statement_date') <= dt.today():
-                await actions.setval('action', 'statement_close')
+            if statement_date <= dt.today():
+                await set_action('statement_close')
+                stmt_date_param = await ledger_params.getval('stmt_date')
+                if stmt_date_param[0] == 2:  # fixed day per month
+                    next_stat_date = dt(
+                        statement_date.year+(statement_date.month//12),
+                        statement_date.month%12+1,
+                        stmt_date_param[1])
+                adm_periods = await db.cache.get_adm_periods(caller.company)
+                next_per = adm_periods[period_row_id+1]
+                await var.setval('next_per_op_date', next_per.opening_date)
+                await var.setval('next_per_cl_date', next_per.closing_date)
+                await var.setval('next_stat_date', next_stat_date)
+            return
+        if await ledg_per.getval('statement_state') == 'closing':
+            await set_action('statement_closing')
             return
 
-        if await ledg_per.getval('state') == 'current':
-            if await ledg_per.getval('closing_date') <= dt.today():
-                await actions.setval('action', 'period_close')
-            return
-
-        if await ledg_per.getval('state') == 'closed':
-            await actions.setval('action', 'reopen')
-            return
-
-async def check_alloc_cust(db_obj, fld, value):
-    # called as validation from ar_subtran_rec.allocations
-    # check that all item cust_ids match the transaction cust_id
-    tran_cust_id = await db_obj.getval('cust_row_id')
-    if 'ar_openitems' not in db_obj.context.data_objects:
-        db_obj.context.data_objects['ar_openitems'] = await db.objects.get_db_object(
-            db_obj.context, db_obj.company, 'ar_openitems')
-    ar_item = db_obj.context.data_objects['ar_openitems']
-    for item_row_id, alloc_cust in value:
-        await ar_item.init()
-        await ar_item.setval('row_id', item_row_id)
-        item_cust_id = await ar_item.getval('tran_row_id>cust_row_id')
-        if item_cust_id != tran_cust_id:
-            return False
-    return True
+    if await ledg_per.getval('state') in ('current', 'reopened'):
+        if await ledg_per.getval('closing_date') <= dt.today():
+            await set_action('period_close')
+        return
+    if await ledg_per.getval('state') == 'closing':
+        await set_action('period_closing')
+        return
+    if await ledg_per.getval('state') == 'closed':
+        await set_action('reopen')
+        return
 
 async def check_allocations(db_obj, xml):
     # called from cb_tran_rec/ar_tran_rct after_post
     # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
+    #    or create new column on cb_tran_rec/ar_tran_rct 'allocation_complete'?
+    #    any tran with 'posted' = True and 'alloction_complete' = False must be re-run
     # if ar_subtran_rec has been allocated, set up ar_tran_alloc/det
     det_obj = [_ for _ in db_obj.children if _.table_name == (db_obj.table_name + '_det')][0]
     ar_rec = [_ for _ in det_obj.children if _.table_name == 'ar_subtran_rec']
@@ -1045,6 +911,14 @@ async def check_allocations(db_obj, xml):
         ar_tran_alloc = data_objects['ar_tran_alloc']
         ar_tran_alloc_det = data_objects['ar_tran_alloc_det']
         await ar_tran_alloc.init()
+        # if called from cb_tran_rec, context.mod_ledg_id relates to cashbook
+        # in db.dflt_xml.alloc_tran_date, we need mod_ledg_id relating to customer
+        # next block derives this and stores it in context.cust_mod_ledg_id
+        # db.dflt_xml.alloc_tran_date retrieves it from there
+        ar_cust = (await ar_tran_alloc.getfld('item_row_id>cust_row_id>row_id')).db_obj
+        cust_module_row_id = ar_cust.db_table.module_row_id
+        cust_ledger_row_id = await ar_cust.getval(ar_cust.db_table.ledger_col)
+        ar_tran_alloc.context.cust_mod_ledg_id = (cust_module_row_id, cust_ledger_row_id)
 
         all_alloc = ar_rec_alloc.select_many(where=[], order=[])
         async for _ in all_alloc:
@@ -1061,13 +935,7 @@ async def check_allocations(db_obj, xml):
                     alloc_no += 1
                 await ar_tran_alloc.save()
 
-            # set up ar_tran_alloc_det for item being allocated, and save
-            await ar_tran_alloc_det.init()
-            await ar_tran_alloc_det.setval('item_row_id', this_item_row_id)
-            await ar_tran_alloc_det.save(from_upd_on_save=True)
-
             # set up ar_tran_alloc_det for each item allocated against, and save
-            # programatically updates the previous alloc_det with amount allocated
             await ar_tran_alloc_det.init()
             await ar_tran_alloc_det.setval('item_row_id', await ar_rec_alloc.getval('item_row_id'))
             await ar_tran_alloc_det.setval('alloc_cust', await ar_rec_alloc.getval('alloc_cust'))
@@ -1080,6 +948,8 @@ async def check_allocations(db_obj, xml):
 async def create_disc_crn(ar_tran_alloc, xml):
     # called from ar_tran_alloc - after_post
     # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
+    #    or create new column on ar_tran_alloc 'crn_check_complete'?
+    #    any tran with 'posted' = True and 'crn_check_complete' = False must be re-run
     this_row_id = await ar_tran_alloc.getval('row_id')
     this_item_row_id = await ar_tran_alloc.getval('item_row_id')
     ar_tran_alloc_det = ar_tran_alloc.children[0]
@@ -1169,13 +1039,7 @@ async def allocate_discount(ar_tran_disc, xml):
     await ar_tran_alloc.setval('alloc_no', 0)
     await ar_tran_alloc.save()
 
-    # set up ar_tran_alloc_det for item being allocated, and save
-    await ar_tran_alloc_det.init()
-    await ar_tran_alloc_det.setval('item_row_id', this_item_row_id)
-    await ar_tran_alloc_det.save(from_upd_on_save=True)
-
     # set up ar_tran_alloc_det for each item allocated against, and save
-    # programatically updates the previous alloc_det with amount allocated
     for alloc_item_row_id, alloc_cust, alloc_local in context.allocations:
         await ar_tran_alloc_det.init()
         await ar_tran_alloc_det.setval('item_row_id', alloc_item_row_id)

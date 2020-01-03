@@ -177,25 +177,6 @@ cols.append ({
     'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'current_period',
-    'data_type'  : 'INT',
-    'short_descr': 'Current period',
-    'long_descr' : 'Current period',
-    'col_head'   : 'Curr',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : True,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : ['adm_periods', 'row_id', None, None, False, None],
-    'choices'    : None,
-    })
 
 # virtual column definitions
 virt = []

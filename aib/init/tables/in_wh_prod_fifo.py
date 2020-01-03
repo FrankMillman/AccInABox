@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
-    'ledger_col'    : None,
+    'ledger_col'    : 'wh_prod_row_id>ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -92,7 +92,7 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : [
-        'in_wh_prod', 'row_id', 'ledger_id, prod_code', 'ledger_id, prod_code', False, None
+        'in_wh_prod', 'row_id', 'ledger_row_id, prod_code', 'ledger_row_id, prod_code', False, None
         ],
     'choices'    : None,
     })
@@ -178,7 +178,7 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'wh_prod_row_id>wh_row_id>currency_id>scale',
+    'scale_ptr'  : 'wh_prod_row_id>ledger_row_id>currency_id>scale',
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -235,7 +235,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'wh_prod_row_id>wh_row_id>currency_id>scale',
+    'scale_ptr'  : 'wh_prod_row_id>ledger_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -296,7 +296,7 @@ virt.append ({
     'long_descr' : 'Balance outstanding - whouse currency',
     'col_head'   : 'Balance',
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>wh_prod_row_id>wh_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_row_id>wh_prod_row_id>ledger_row_id>currency_id>scale',
 #   'sql'        : (
 #       "a.cost_whouse + COALESCE((SELECT SUM(b.cost_whouse) "
 #       "FROM {company}.in_wh_prod_alloc b "
@@ -359,7 +359,7 @@ virt.append ({
     'long_descr' : 'Unallocated - warehouse currency',
     'col_head'   : 'Unalloc wh',
     'db_scale'   : 2,
-    'scale_ptr'  : 'wh_prod_row_id>wh_row_id>currency_id>scale',
+    'scale_ptr'  : 'wh_prod_row_id>ledger_row_id>currency_id>scale',
     'dflt_rule'  : (
         '<expr>'
           '<fld_val name="orig_whouse"/>'

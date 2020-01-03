@@ -546,9 +546,8 @@ async def get_dflt_date(caller, obj, xml):
     if prev_date is not None:
         return prev_date
     db_obj = obj.fld.db_obj
-    module_row_id, ledger_row_id = db_obj.context.mod_ledg_id
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
-    ledger_periods = await db.cache.get_ledger_periods(db_obj.company, module_row_id, ledger_row_id)
+    ledger_periods = await db.cache.get_ledger_periods(caller.company, *caller.context.mod_ledg_id)
     if ledger_periods == {}:
         raise AibError(head=obj.fld.col_defn.short_descr, body='Ledger periods not set up')
     curr_closing_date = adm_periods[ledger_periods.current_period].closing_date
@@ -698,11 +697,11 @@ async def check_stat_date(db_obj, fld, value):
 
     return True
 
-async def check_wh_date(db_obj, fld, wh_row_id):
-    # called from various wh_row_id col_checks using pyfunc
+async def check_wh_date(db_obj, fld, ledger_row_id):
+    # called from various ledger_row_id col_checks using pyfunc
 
-    if wh_row_id is None:  # no dflt_val for wh_row_id
-        return True  # will be called after entry of wh_row_id
+    if ledger_row_id is None:  # no dflt_val for ledger_row_id
+        return True  # will be called after entry of ledger_row_id
 
     try:
         period_row_id = await db_obj.getval('tran_det_row_id>tran_row_id>period_row_id')
@@ -711,7 +710,7 @@ async def check_wh_date(db_obj, fld, wh_row_id):
     module_row_id = await db.cache.get_mod_id(db_obj.company, 'in')
 
     ledger_periods = await db.cache.get_ledger_periods(
-        db_obj.company, module_row_id, wh_row_id)
+        db_obj.company, module_row_id, ledger_row_id)
 
     if ledger_periods is None:
         raise AibError(head=fld.col_defn.short_descr, body='Warehouse period not set up')
@@ -722,14 +721,14 @@ async def check_wh_date(db_obj, fld, wh_row_id):
             ledger_period = await db.objects.get_db_object(
                 db.cache.cache_context, db_obj.company, 'in_ledger_periods')
             await ledger_period.init(init_vals={
-                'ledger_row_id': wh_row_id,
+                'ledger_row_id': ledger_row_id,
                 'period_row_id': period_row_id,
                 'state': 'open',
                 })
             await ledger_period.save()
 
             ledger_periods = await db.cache.get_ledger_periods(
-                db_obj.company, module_row_id, wh_row_id)
+                db_obj.company, module_row_id, ledger_row_id)
 
     if period_row_id not in ledger_periods:
         raise AibError(head=fld.col_defn.short_descr, body='Warehouse period not open')
@@ -737,44 +736,6 @@ async def check_wh_date(db_obj, fld, wh_row_id):
         raise AibError(head=fld.col_defn.short_descr, body='Warehouse period is closed')
 
     return True
-
-async def get_curr_per(caller, xml):
-    # called from after_start_form in {mod}_ledg_periods
-    var = caller.context.data_objects['var']
-    module_id, module_descr, ledger_id, ledger_descr = (
-        await db.cache.get_mod_ledg_name(caller.company, caller.context.mod_ledg_id))
-    await var.setval('module_id', module_id)
-    await var.setval('module_descr', module_descr)
-    await var.setval('ledger_id', ledger_id)
-    await var.setval('ledger_descr', ledger_descr)
-
-    ledger_periods = await db.cache.get_ledger_periods(caller.company, *caller.context.mod_ledg_id)
-    if ledger_periods:  # periods have been set up
-        await var.setval('current_period', ledger_periods.current_period)
-    # if periods not set up, form automatically asks user to select opening period
-
-async def save_curr_per(caller, xml):
-    # called on return from entering Opening period in inline form
-    var = caller.context.data_objects['var']
-    ledger_period = caller.context.data_objects['ledg_per']
-    period_row_id = await var.getval('current_period')  # opening period selected by user
-    init_vals = {
-        'period_row_id': period_row_id,
-        'state': 'current',
-        }
-    module_id = xml.get('mdule_id')
-    if module_id == 'ar':
-        first_stat_date = await var.getval('first_stat_date')
-        if first_stat_date is not None:
-            init_vals['statement_date'] = first_stat_date
-            init_vals['statement_state'] = 'open'
-    elif module_id == 'ap':
-        first_pmt_date = await var.getval('first_pmt_date')
-        if first_pmt_date is not None:
-            init_vals['payment_date'] = first_pmt_date
-            init_vals['payment_state'] = 'open'
-    await ledger_period.init(init_vals=init_vals)
-    await ledger_period.save()
 
 async def check_ledg_per(caller, xml):
     # called from cb_ledg_per.on_start_row

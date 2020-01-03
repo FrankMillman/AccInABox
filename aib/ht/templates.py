@@ -73,9 +73,14 @@ btn_save = (
 # if validation fails, user must press 'Esc'
 # reason - 'Enter' always returns 'state=completed'
 #          if nothing entered, we want to return 'state=cancelled'
+# changed back to "false" [2019-11-26]
+# on selecting 'Add new <module>' (template=Setup_Form_Single), showing an error message
+#   when pressing "Enter" on an empty form feels counter-intuitive
+# cannot remember why 'state=cancelled' was important
+# find an example, and try to find a solution for all scenarios
 btn_close = (
     '<button btn_id="btn_close" btn_label="{close_text}" btn_enabled="true" '
-        'btn_validate="true" btn_default="true" lng="60" action="'
+        'btn_validate="false" btn_default="true" lng="60" action="'
       '&lt;action&gt;'
         '&lt;case&gt;'
           '&lt;has_temp_data&gt;'  # user changed field and pressed Enter

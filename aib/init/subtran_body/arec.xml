@@ -50,7 +50,7 @@
   <button lng="150" btn_id="alloc" btn_label="Allocate now"
     btn_enabled="true" btn_validate="true" action="
       <<action>>
-        <<save_obj obj_name=`ar_rec`/>>
+        <<req_save/>>
         <<sub_form name=`ar_alloc_item`>>
           <<call_params>>
             <<call_param name=`alloc_header` type=`data_obj` source=`ar_rec`/>>
@@ -60,6 +60,7 @@
             <<call_param name=`unallocated` type=`data_attr` source=`ar_rec.unallocated`/>>
           <</call_params>>
           <<return_params>>
+            <<return_param name=`unallocated` type=`data_attr` target=`ar_rec.unallocated`/>>
           <</return_params>>
           <<on_return>>
             <<return state=`cancelled`>>

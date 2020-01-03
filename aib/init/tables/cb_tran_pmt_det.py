@@ -321,3 +321,23 @@ actions.append([
             ],
         ],
     ])
+actions.append([
+    'upd_on_post', [
+        [
+            'ar_subtran_chg',  # table name
+            [  # condition
+                ['where', '', 'line_type', '=', "'archg'", ''],
+            ],
+            False,  # split source?
+            [  # key fields
+                ['tran_type', "'cb_pmt'"],  # tgt_col, src_col
+                ['tran_det_row_id', 'row_id'],
+                ],
+            [],  # aggregation
+            [  # on post
+                ['posted', '=', True],  # tgt_col, op, src_col
+                ],
+            [],  # on unpost
+            ],
+        ],
+    ])

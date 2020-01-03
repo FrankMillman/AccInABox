@@ -1090,6 +1090,11 @@ class DbObject:
         self.dirty = False
 
     async def restore(self, display=True, from_delete=False):
+
+        for child in self.children:  # mainly for sub_trans
+            if child.dirty:
+                await child.restore()
+
         if not self.dirty:  # nothing to restore [do we ever get here?]
             if display:
                 # possible sequence of events -

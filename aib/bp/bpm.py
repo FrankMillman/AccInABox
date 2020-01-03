@@ -1,3 +1,4 @@
+
 """
 This is the Business Process Management module.
 """
@@ -13,7 +14,6 @@ from json import dumps, loads
 from datetime import datetime as dtm
 
 import db
-from db.chk_constraints import eval_expr
 import ht.htm
 from common import AibError
 
@@ -115,6 +115,8 @@ class ProcessRoot:
         with await proc_defns.lock:  # prevent clash with other users
             await proc_defns.select_row({'process_id': self.process_id})
             proc_data = await proc_defns.get_data()  # save data in local variable
+        if not proc_data['_exists']:
+            raise AibError(head=f'Process {self.process_id}', body='Process does not exist')
         proc_defn = proc_data['proc_xml']
         assert self.process_id == proc_defn.get('id')
         self.process_name = proc_defn.get('descr')
@@ -372,7 +374,7 @@ class process:
         self.data_objects = {}
 
     def setup_elements(self, process_elem):
-        self.elem_name = process_elem.get('name')
+        # self.elem_name = process_elem.get('name')  # already set up in __init__()
         for elem in process_elem:
             elem_id = elem.get('id')
             elem_tag = elem.tag[len(S):]
