@@ -1,3 +1,4 @@
+
 """
 This is the Business Process Management module.
 """
@@ -13,7 +14,6 @@ from json import dumps, loads
 from datetime import datetime as dtm
 
 import db
-from db.chk_constraints import eval_expr
 import ht.htm
 from common import AibError
 
@@ -374,7 +374,7 @@ class process:
         self.data_objects = {}
 
     def setup_elements(self, process_elem):
-        self.elem_name = process_elem.get('name')
+        # self.elem_name = process_elem.get('name')  # already set up in __init__()
         for elem in process_elem:
             elem_id = elem.get('id')
             elem_tag = elem.tag[len(S):]

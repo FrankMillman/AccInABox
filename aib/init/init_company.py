@@ -613,6 +613,7 @@ async def setup_processes(context, conn, company):
         await proc_defn.save()
 
     await setup_process('ar_per_close')
+    await setup_process('ar_stat_close')
 
 async def setup_menus(context, conn, company, company_name):
     db_obj = await db.objects.get_db_object(context, company, 'sys_menu_defns')
@@ -730,7 +731,6 @@ async def setup_menus(context, conn, company, company_name):
             ['Review unposted receipts', 'grid', 'ar_tran_rct', 'unposted_rct'],
             ]],
         ['AR enquiries', 'menu', 'ar', [
-            # ['AR balances', 'grid', 'ar_customers', 'cust_bal'],
             ['AR balances', 'form', 'ar_balances'],
             ['Sales report', 'form', 'sls_report'],
             ]],

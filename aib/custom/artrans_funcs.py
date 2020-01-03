@@ -576,19 +576,18 @@ async def create_disc_crn2(ar_rec, xml):
 
     await ar_disc.post()
 
-async def posted_check(caller, args):
-    params = args['close_params']
+async def posted_check(caller, params):
     context = caller.context
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
-        stat_date = params['statement_date']
+        check_date = params['check_date']
         where = []
-        where.append(['WHERE', '', 'tran_date', '<=', stat_date, ''])
+        where.append(['WHERE', '', 'tran_date', '<=', check_date, ''])
         where.append(['AND', '', 'posted', '=', False, ''])
-        if params['single_cust']:
-            cust_row_id = params['cust_row_id']
-            where.append(['AND', '', 'cust_row_id', '=', cust_row_id, ''])
+        # if params['single_cust']:
+        #     cust_row_id = params['cust_row_id']
+        #     where.append(['AND', '', 'cust_row_id', '=', cust_row_id, ''])
 
         params = []
         sql = 'SELECT CASE WHEN EXISTS ('
@@ -619,31 +618,12 @@ async def posted_check(caller, args):
     print('check all posted:', return_params)
     return return_params
 
-async def raise_interest(caller, args):
-    params = args['close_params']
-
+async def raise_interest(caller, params):
     print('raise_interest')
-    await asyncio.sleep(1)
     return
 
-async def setup_close_params(caller, xml):
-    var = caller.data_objects['var']
-    module_row_id, ledger_row_id = caller.context.mod_ledg_id
-    ledger_param = await db.cache.get_ledger_params(
-            caller.company, module_row_id, ledger_row_id)
-    close_params = {
-        'current_period': await var.getval('current_period'),
-        'separate_stat_cust': await ledger_param.getval('separate_stat_cust'),
-        'single_cust': await var.getval('single_cust'),
-        'cust_row_id': await var.getval('cust_row_id'),
-        'statement_date': await var.getval('statement_date'),
-        }
-    await var.setval('close_params', close_params)
-
-async def set_closing_flag(caller, args):
+async def set_stat_closing_flag(caller, params):
     print('set_closing_flag')
-    params = args['close_params']
-    print(params)
 
     async def handle_all_cust():
         if 'ar_ledg_per' not in caller.context.data_objects:
@@ -652,10 +632,11 @@ async def set_closing_flag(caller, args):
         ledg_per = caller.context.data_objects['ar_ledg_per']
         await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
         await ledg_per.setval('period_row_id', params['current_period'])
-        if await ledg_per.getval('state') != 'open':
-            raise AibError(head='Closing flag', body='Closing flag already set')
-        await ledg_per.setval('statement_date', params['statement_date'])
-        await ledg_per.setval('state', 'stat_closing')
+        if await ledg_per.getval('statement_state') != 'open':
+            raise AibError(head='Closing flag', body='Statement period is not open')
+        await ledg_per.setval('statement_state', 'closing')
+        process_row_id = await caller.manager.process.root.bpm_detail.getval('header_row_id')
+        await ledg_per.setval('stmnt_process_id', process_row_id)
         await ledg_per.save()
 
     async def handle_single_cust():
@@ -704,7 +685,7 @@ async def set_closing_flag(caller, args):
         if await ledg_per.getval('state') != 'open':
             raise AibError(head='Closing flag', body='Closing flag already set')
         await ledg_per.setval('statement_date', params['statement_date'])
-        await ledg_per.setval('state', 'stat_closing')
+        await ledg_per.setval('state', 'closing')
         await ledg_per.save()
 
     if not params['separate_stat_cust']:
@@ -714,71 +695,112 @@ async def set_closing_flag(caller, args):
     else:
         await handle_unhandled_cust()
 
-async def set_closed_flag(caller, args):
-    print('set_closed_flag')
-    params = args['close_params']
+async def set_per_closing_flag(caller, params):
+    print('set_closing_flag')
 
-    async with caller.context.db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
-        stat_date = params['statement_date']
-        if not params['separate_stat_cust']:
-            if 'ar_ledg_per' not in caller.context.data_objects:
-                caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
-                    caller.context, caller.company, 'ar_ledger_periods')
-            ledg_per = caller.context.data_objects['ar_ledg_per']
-            await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
-            await ledg_per.setval('period_row_id', params['current_period'])
-            if await ledg_per.getval('state') != 'stat_closing':
-                raise AibError(head='Closing flag', body='Closing flag not set')
-            await ledg_per.setval('state', 'stat_closed')
-            await ledg_per.save()
-        elif params['single_cust']:
-            cust_row_id = params['cust_row_id']
-            if 'ar_stat_dates' not in caller.context.data_objects:
-                caller.context.data_objects['ar_stat_dates'] = await db.objects.get_db_object(
-                    caller.context, caller.company, 'ar_stat_dates')
-            stat_dates = caller.context.data_objects['ar_stat_dates']
-            await stat_dates.setval('cust_row_id', cust_row_id)
-            await stat_dates.setval('period_row_id', params['current_period'])
-            await stat_dates.setval('statement_date', params['statement_date'])
-            if await stat_dates.getval('state') != 'closing':
-                raise AibError(head='Closing flag', body='Closing flag not set')
-            await stat_dates.setval('state', 'closed')
-            await stat_dates.save()
-        else:
-            if 'ar_customers' not in caller.context.data_objects:
-                caller.context.data_objects['ar_customers'] = await db.objects.get_db_object(
-                    caller.context, caller.company, 'ar_customers')
-            ar_cust = caller.context.data_objects['ar_customers']
-            if 'ar_stat_dates' not in caller.context.data_objects:
-                caller.context.data_objects['ar_stat_dates'] = await db.objects.get_db_object(
-                    caller.context, caller.company, 'ar_stat_dates')
-            stat_dates = caller.context.data_objects['ar_stat_dates']
-            if 'ar_ledg_per' not in caller.context.data_objects:
-                caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
-                    caller.context, caller.company, 'ar_ledger_periods')
-            ledg_per = caller.context.data_objects['ar_ledg_per']
+    if 'ar_ledg_per' not in caller.context.data_objects:
+        caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
+            caller.context, caller.company, 'ar_ledger_periods')
+    ledg_per = caller.context.data_objects['ar_ledg_per']
+    await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
+    await ledg_per.setval('period_row_id', params['current_period'])
+    if await ledg_per.getval('state') not in ('current', 'open'):
+        raise AibError(head='Closing flag', body='Period is not open')
+    await ledg_per.setval('state', 'closing')
+    await ledg_per.save()
 
-            all_stat = stat_dates.select_many(where=[
-                ['WHERE', '', 'period_row_id', '=', params['current_period'], ''],
-                ['AND', '', 'state', '=', "'closing'", '']
-                ], order=[])
-            async for _ in all_stat:
-                await stat_dates.setval('state', 'closed')
-                await stat_dates.save()
+async def set_stat_closed_flag(caller, params):
+    print('set_stat_closed_flag')
 
-            await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
-            await ledg_per.setval('period_row_id', params['current_period'])
-            if await ledg_per.getval('state') != 'stat_closing':
-                raise AibError(head='Closing flag', body='Closing flag not set')
-            await ledg_per.setval('state', 'stat_closed')
-            await ledg_per.save()
-    return
+    if not params['separate_stat_cust']:
+        if 'ar_ledg_per' not in caller.context.data_objects:
+            caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
+                caller.context, caller.company, 'ar_ledger_periods')
+        ledg_per = caller.context.data_objects['ar_ledg_per']
+        await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
+        await ledg_per.setval('period_row_id', params['current_period'])
+        if await ledg_per.getval('statement_state') != 'closing':
+            raise AibError(head='Closing flag', body='Closing flag not set')
+        await ledg_per.setval('statement_state', 'closed')
+        await ledg_per.save()
 
-async def notify_manager(caller, args):
+        # set next month statement date
+        await ledg_per.init()
+        await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
+        await ledg_per.setval('period_row_id', params['current_period'] + 1)
+        await ledg_per.setval('statement_date', params['next_stat_date'])
+        await ledg_per.save()
+
+        return
+
+    # if params['single_cust']:
+    #     cust_row_id = params['cust_row_id']
+    #     if 'ar_stat_dates' not in caller.context.data_objects:
+    #         caller.context.data_objects['ar_stat_dates'] = await db.objects.get_db_object(
+    #             caller.context, caller.company, 'ar_stat_dates')
+    #     stat_dates = caller.context.data_objects['ar_stat_dates']
+    #     await stat_dates.setval('cust_row_id', cust_row_id)
+    #     await stat_dates.setval('period_row_id', params['current_period'])
+    #     await stat_dates.setval('statement_date', params['statement_date'])
+    #     if await stat_dates.getval('state') != 'closing':
+    #         raise AibError(head='Closing flag', body='Closing flag not set')
+    #     await stat_dates.setval('state', 'closed')
+    #     await stat_dates.save()
+    #     return
+
+    # if 'ar_customers' not in caller.context.data_objects:
+    #     caller.context.data_objects['ar_customers'] = await db.objects.get_db_object(
+    #         caller.context, caller.company, 'ar_customers')
+    # ar_cust = caller.context.data_objects['ar_customers']
+    # if 'ar_stat_dates' not in caller.context.data_objects:
+    #     caller.context.data_objects['ar_stat_dates'] = await db.objects.get_db_object(
+    #         caller.context, caller.company, 'ar_stat_dates')
+    # stat_dates = caller.context.data_objects['ar_stat_dates']
+    # if 'ar_ledg_per' not in caller.context.data_objects:
+    #     caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
+    #         caller.context, caller.company, 'ar_ledger_periods')
+    # ledg_per = caller.context.data_objects['ar_ledg_per']
+
+    # all_stat = stat_dates.select_many(where=[
+    #     ['WHERE', '', 'period_row_id', '=', params['current_period'], ''],
+    #     ['AND', '', 'state', '=', "'closing'", '']
+    #     ], order=[])
+    # async for _ in all_stat:
+    #     await stat_dates.setval('state', 'closed')
+    #     await stat_dates.save()
+
+    # await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
+    # await ledg_per.setval('period_row_id', params['current_period'])
+    # if await ledg_per.getval('state') != 'stat_closing':
+    #     raise AibError(head='Closing flag', body='Closing flag not set')
+    # await ledg_per.setval('state', 'stat_closed')
+    # await ledg_per.save()
+
+async def set_per_closed_flag(caller, params):
+    print('set_per_closed_flag')
+
+    if 'ar_ledg_per' not in caller.context.data_objects:
+        caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
+            caller.context, caller.company, 'ar_ledger_periods')
+    ledg_per = caller.context.data_objects['ar_ledg_per']
+    await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
+    await ledg_per.setval('period_row_id', params['period_to_close'])
+    if await ledg_per.getval('state') != 'closing':
+        raise AibError(head='Closing flag', body='Closing flag not set')
+    await ledg_per.setval('state', 'closed')
+    await ledg_per.save()
+
+    if params['period_to_close'] == params['current_period']:
+        # set next month statement date
+        await ledg_per.init()
+        await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
+        await ledg_per.setval('period_row_id', params['current_period'] + 1)
+        await ledg_per.setval('state', 'current')
+        await ledg_per.save()
+
+async def notify_manager(caller, params):
     print('notify_manager')
-    params = args['close_params']
-    user_row_id = args['user_row_id']
+    user_row_id = params['user_row_id']
 
     await asyncio.sleep(1)
     return
@@ -791,41 +813,68 @@ async def setup_stat_proc(caller, xml):
 
 async def check_ledg_per(caller, xml):
     # called from ar_ledg_per.on_start_row
-    ledg_per = caller.data_objects['ledg_per']
+    ledg_per = caller.data_objects['ar_ledg_per']
     actions = caller.data_objects['actions']
 
-    await actions.setval('action', 'no_action')  # initial state
-    if ledg_per.exists:
+    if not ledg_per.exists:  # on bottom 'blank' row
+        await actions.setval('action', 'no_period')
+        return
 
+    var = caller.data_objects['var']
+    action_cache = await var.getval('action_cache')
+    period_row_id = await ledg_per.getval('period_row_id')
+    if period_row_id in action_cache:  # 'action' has already been set up - just return it
+        await actions.setval('action', action_cache[period_row_id])
+        return
+
+    async def set_action(action):
+        await actions.setval('action', action)
+        action_cache[period_row_id] = action
+        await var.setval('action_cache', action_cache)
+
+    await set_action('no_action')  # initial state
+
+    ledger_periods = await db.cache.get_ledger_periods(caller.company, *caller.context.mod_ledg_id)
+    if period_row_id > ledger_periods.current_period:
+        return  # no action possible until prior current period closed
+
+    ledger_params = await db.cache.get_ledger_params(caller.company, *caller.context.mod_ledg_id)
+    separate_stat_close = await ledger_params.getval('separate_stat_close')
+
+    if separate_stat_close:
+        statement_date = await ledg_per.getval('statement_date')
+        # if statement_date is None:  # should never happen
+        #     return
+        assert statement_date is not None
         if await ledg_per.getval('statement_state') == 'open':
-            if await ledg_per.getval('statement_date') <= dt.today():
-                await actions.setval('action', 'statement_close')
+            if statement_date <= dt.today():
+                await set_action('statement_close')
+                stmt_date_param = await ledger_params.getval('stmt_date')
+                if stmt_date_param[0] == 2:  # fixed day per month
+                    next_stat_date = dt(
+                        statement_date.year+(statement_date.month//12),
+                        statement_date.month%12+1,
+                        stmt_date_param[1])
+                adm_periods = await db.cache.get_adm_periods(caller.company)
+                next_per = adm_periods[period_row_id+1]
+                await var.setval('next_per_op_date', next_per.opening_date)
+                await var.setval('next_per_cl_date', next_per.closing_date)
+                await var.setval('next_stat_date', next_stat_date)
+            return
+        if await ledg_per.getval('statement_state') == 'closing':
+            await set_action('statement_closing')
             return
 
-        if await ledg_per.getval('state') == 'current':
-            if await ledg_per.getval('closing_date') <= dt.today():
-                await actions.setval('action', 'period_close')
-            return
-
-        if await ledg_per.getval('state') == 'closed':
-            await actions.setval('action', 'reopen')
-            return
-
-async def check_alloc_cust(db_obj, fld, value):
-    # called as validation from ar_subtran_rec.allocations
-    # check that all item cust_ids match the transaction cust_id
-    tran_cust_id = await db_obj.getval('cust_row_id')
-    if 'ar_openitems' not in db_obj.context.data_objects:
-        db_obj.context.data_objects['ar_openitems'] = await db.objects.get_db_object(
-            db_obj.context, db_obj.company, 'ar_openitems')
-    ar_item = db_obj.context.data_objects['ar_openitems']
-    for item_row_id, alloc_cust in value:
-        await ar_item.init()
-        await ar_item.setval('row_id', item_row_id)
-        item_cust_id = await ar_item.getval('tran_row_id>cust_row_id')
-        if item_cust_id != tran_cust_id:
-            return False
-    return True
+    if await ledg_per.getval('state') in ('current', 'reopened'):
+        if await ledg_per.getval('closing_date') <= dt.today():
+            await set_action('period_close')
+        return
+    if await ledg_per.getval('state') == 'closing':
+        await set_action('period_closing')
+        return
+    if await ledg_per.getval('state') == 'closed':
+        await set_action('reopen')
+        return
 
 async def check_allocations(db_obj, xml):
     # called from cb_tran_rec/ar_tran_rct after_post
@@ -868,7 +917,7 @@ async def check_allocations(db_obj, xml):
         # db.dflt_xml.alloc_tran_date retrieves it from there
         ar_cust = (await ar_tran_alloc.getfld('item_row_id>cust_row_id>row_id')).db_obj
         cust_module_row_id = ar_cust.db_table.module_row_id
-        cust_ledger_row_id = await ar_cust.getval('ledger_row_id')
+        cust_ledger_row_id = await ar_cust.getval(ar_cust.db_table.ledger_col)
         ar_tran_alloc.context.cust_mod_ledg_id = (cust_module_row_id, cust_ledger_row_id)
 
         all_alloc = ar_rec_alloc.select_many(where=[], order=[])
