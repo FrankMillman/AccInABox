@@ -117,9 +117,6 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : [
-        ['match_ledger', 'Must be part of same ledger [DO WE GET HERE?]', [
-            ['check', '', 'cust_row_id>ledger_row_id', '=', '_ledger.row_id', ''],
-            ]],
         ['stat_date', 'Invalid date', [
             ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
             ]],

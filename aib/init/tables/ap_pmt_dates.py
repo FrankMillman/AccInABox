@@ -90,9 +90,6 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-#   'col_checks' : [['match_ledger', 'Must be part of same ledger', [
-#       ['check', '', 'supp_row_id>ledger_row_id', '=', '_ledger.row_id', ''],
-#       ]]],
     'col_checks' : None,
     'fkey'       : ['ap_suppliers', 'row_id', 'supp_id', 'supp_id', False, 'supp'],
     'choices'    : None,

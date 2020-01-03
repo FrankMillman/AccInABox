@@ -93,9 +93,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : [['match_ledger', 'Must be part of same ledger [DO WE GET HERE?]', [
-        ['check', '', 'cust_row_id>ledger_row_id', '=', '_ledger.row_id', ''],
-        ]]],
+    'col_checks' : None,
     'fkey'       : ['ar_customers', 'row_id', 'ledger_row_id, cust_id', 'ledger_row_id, cust_id', False, None],
     'choices'    : None,
     })

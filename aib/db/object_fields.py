@@ -69,7 +69,6 @@ class Field:
         self.table_id = col_defn.table_id
         self.table_name = col_defn.table_name
         self.col_name = col_defn.col_name
-        # self.gui_obj = weakref.WeakSet()  # []  # gui_objects to be notified of changes
         self.gui_obj = ()  # gui_objects to be notified of changes
         self.gui_subtype = WKD()  # if set by form, notify gui on change
         self.flds_to_recalc = ()  # change to WeakSet if any exist
@@ -77,9 +76,6 @@ class Field:
         self.fkey_parent = None
 
         self.ledger_col = (self.col_name == db_obj.db_table.ledger_col)
-        self.ledger_vld = (db_obj.db_table.ledger_col is not None and
-            self.col_name == db_obj.db_table.ledger_col.split('>')[0])
-
         self.must_be_evaluated = False  # if set to True, recalc on getval, then reset to False
 
         self.children = []  # list of xrefs to child fkey fields
@@ -547,14 +543,12 @@ class Field:
                     raise AibError(head=col_defn.short_descr, body=errmsg)
 
         if not from_init:
-            if self.ledger_vld:  # added 2018-07-11 - if ok, don't need col_checks
-                ctx_mod_id, ctx_ledg_id = getattr(db_obj.context, 'mod_ledg_id', (None, None))
-                if ctx_mod_id == db_obj.db_table.module_row_id:
-                    if ctx_ledg_id != await db_obj.getval(db_obj.db_table.ledger_col):
-                        raise AibError(head=self.table_name,
-                            body='Sub-ledger must be ' +
-                                (await db.cache.get_mod_ledg_name(
-                                    db_obj.company, (ctx_mod_id, ctx_ledg_id)))[2])
+            if self.ledger_col:  # check subledger matches ctx.mod_ledg_id if present
+                mod_ledg_id = getattr(db_obj.context, 'mod_ledg_id', (None, None))
+                if db_obj.db_table.module_row_id == mod_ledg_id[0]:
+                    if value != mod_ledg_id[1]:
+                        raise AibError(head=self.table_name, body='Sub-ledger must be ' +
+                            (await db.cache.get_mod_ledg_name(db_obj.company, mod_ledg_id))[2])
 
         changed = await self.value_changed(value)
 
@@ -929,15 +923,7 @@ class Field:
         if self.ledger_col:
             ctx_mod_id, ctx_ledg_id = getattr(self.db_obj.context, 'mod_ledg_id', (None, None))
             if ctx_mod_id == self.db_obj.db_table.module_row_id:
-                # if ctx_ledg_id is None:
-                #     raise AibError(head=self.table_name, body='Ledger not set up')
-                # return ctx_ledg_id
-                # changed [2019-11-27]
-                # when setting up new ledger, we now prompt for 'first financial period'
-                # <mod>_ledger_periods has a ledger_col, but ledger is not yet set up
-                # without this change, an error is raised; with it, user can proceed
-                # ledger_col is a mandatory field, so no danger of it being omitted in error
-                if ctx_ledg_id is not None:
+                if ctx_ledg_id is not None:  # can be None when setting up ledger_periods
                     return ctx_ledg_id
         if not from_init and self.col_defn.dflt_rule is not None:
             return await db.dflt_xml.get_db_dflt(self)
@@ -1006,9 +992,9 @@ class Field:
                             ledger_col = self.db_obj.db_table.ledger_col
                             if ledger_col is None:
                                 raise AibError(
-                                head='Checking calculated',
-                                body=f'No ledger col defined for {self.db_obj.table_name}'
-                                )
+                                    head='Checking calculated',
+                                    body=f'No ledger col defined for {self.db_obj.table_name}'
+                                    )
                             ledger_row_id = await self.db_obj.getval(ledger_col)
                         db_obj = await db.cache.get_ledger_params(
                             self.db_obj.company, module_row_id, ledger_row_id)
