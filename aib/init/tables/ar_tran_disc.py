@@ -141,9 +141,6 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    # 'col_checks' : [['per_date', 'Invalid date', [
-    #     ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
-    #   ]]],
     'fkey'       : None,
     'choices'    : None,
     })
@@ -552,18 +549,6 @@ cursors = []
 
 # actions
 actions = []
-actions.append([
-    'upd_checks', [
-        [
-            'recheck_date',
-            'Period is closed',
-            [
-                ['check', '', '$exists', 'is', '$True', ''],
-                ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
-                ],
-            ],
-        ],
-    ])
 actions.append([
     'upd_on_save', [
         [

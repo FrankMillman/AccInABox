@@ -80,29 +80,6 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date',
-    'col_head'   : 'Date',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : [
-        ['per_date', 'Invalid date', [
-            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
-            ]],
-        ],
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'cust_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Customer row id',
@@ -117,11 +94,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : [
-        ['stat_date', 'Statement period not open', [
-            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
-            ]],
-        ],
+    'col_checks' : None,
     'fkey'       : ['ar_customers', 'row_id', 'ledger_row_id, cust_id', 'ledger_row_id, cust_id', False, None],
     'choices'    : None,
     })
@@ -167,6 +140,32 @@ cols.append ({
         '</case>'
         ),
     'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Transaction date',
+    'long_descr' : 'Transaction date',
+    'col_head'   : 'Date',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : [
+        ['per_date', 'Period not open', [
+            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+            ]],
+        ['stat_date', 'Statement period not open', [
+            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
+            ]],
+        ],
     'fkey'       : None,
     'choices'    : None,
     })
@@ -568,11 +567,19 @@ actions = []
 actions.append([
     'upd_checks', [
         [
-            'recheck_date',
+            'recheck_tran_date',
             'Period is closed',
             [
                 ['check', '', '$exists', 'is', '$True', ''],
                 ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+                ],
+            ],
+        [
+            'recheck_stat_date',
+            'Statement period closed',
+            [
+                ['check', '', '$exists', 'is', '$True', ''],
+                ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
                 ],
             ],
         ],

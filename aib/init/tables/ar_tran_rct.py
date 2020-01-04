@@ -78,29 +78,6 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date',
-    'col_head'   : 'Date',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : [
-        ['per_date', 'Invalid date', [
-            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
-            ]],
-        ],
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'ledger_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Ledger row id',
@@ -161,6 +138,29 @@ cols.append ({
         '</case>'
         ),
     'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Transaction date',
+    'long_descr' : 'Transaction date',
+    'col_head'   : 'Date',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : [
+        ['per_date', 'Period not open', [
+            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+            ]],
+        ],
     'fkey'       : None,
     'choices'    : None,
     })

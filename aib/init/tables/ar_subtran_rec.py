@@ -127,7 +127,7 @@ cols.append ({
     'col_name'   : 'cust_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Customer row id',
-    'long_descr' : 'Customer row id',
+    'long_descr' : 'Customer row id. In theory, should check if statement period still open. Leave for now.',
     'col_head'   : 'Customer',
     'key_field'  : 'B',
     'calculated' : False,
@@ -139,34 +139,12 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : [
-        ['stat_date', 'Invalid date', [
-            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
-            ]],
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', 'cust_row_id>currency_id', '=', 'tran_det_row_id>tran_row_id>currency_id', ''],
             ['or', '', '_ledger.alt_curr', 'is', '$True', '']
             ]],
         ],
     'fkey'       : ['ar_customers', 'row_id', 'ledger_id, cust_id', 'ledger_id, cust_id', False, 'cust_bal_2'],
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'text',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Description',
-    'long_descr' : 'Description',
-    'col_head'   : 'Description',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 30,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : '{tran_det_row_id>tran_row_id>text}',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
@@ -220,6 +198,25 @@ cols.append ({
           '</default>'
         '</case>'
         ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Description',
+    'long_descr' : 'Description',
+    'col_head'   : 'Description',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 30,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{tran_det_row_id>tran_row_id>text}',
+    'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,

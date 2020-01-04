@@ -131,9 +131,11 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : [['per_date', 'Invalid date', [
-        ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
-      ]]],
+    'col_checks' : [
+        ['per_date', 'Period not open', [
+            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+            ]],
+        ],
     'fkey'       : None,
     'choices'    : None,
     })

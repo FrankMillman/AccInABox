@@ -626,58 +626,25 @@ async def check_tran_date(db_obj, fld, value):
     #         raise AibDenied(
     #             head='Transaction date', body='Period not open')
 
-    # if module_id == 'ar':
-    #     statement_date = ledger_periods[period_row_id].statement_date
-    #     if statement_date is not None:
-    #         if value <= statement_date:
-    #             raise AibError(head='Transaction date',
-    #                 body='Statement period is closed')
-
-    #     ledger_params = await db.cache.get_ledger_params(db_obj)
-    #     if await ledger_params.getval('separate_stat_cust'):
-    #         if 'stat_dates' not in db_obj.context.data_objects:
-    #             db_obj.context.data_objects['stat_dates'] = await db.objects.get_db_object(
-    #                 db_obj.context, db_obj.company, 'ar_stat_dates')
-    #         stat_dates = db_obj.context.data_objects['stat_dates']
-    #         await stat_dates.init(init_vals={
-    #             'cust_row_id': await db_obj.getval('cust_row_id'),
-    #             'period_row_id': period_row_id,
-    #             })
-    #         if stat_dates.exists:
-    #             if value <= await stat_dates.getval('statement_date'):
-    #                 raise AibError(head='Transaction date', body='Statement period closed')
-
     await db_obj.setval('period_row_id', period_row_id)
 
     return True
 
 async def check_stat_date(db_obj, fld, value):
-    # called as col_check from cust_row_id - assumes tran_date has been entered
+    # called as col_check from tran_date
     module_row_id = db_obj.db_table.module_row_id
-    ledger_row_id = await fld.foreign_key['tgt_field'].db_obj.getval('ledger_row_id')
+    ledger_row_id = await db_obj.getval(db_obj.db_table.ledger_col)
     ledger_params = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
     if not await ledger_params.getval('separate_stat_close'):
         return True
 
-    tran_date = await db_obj.getval('tran_date')
-    if tran_date is None:
-        # this is not great [2019-03-08]
-        # cust_row_id is an alt_key for transactions, so it can be used to retrieve an existing row
-        # but it has a validation on it that calls this function, which checks stat_date
-        # the validation is only required if we are trying to create a new transaction
-        # there is no easy way to distinguish between entering cust_row_id for a new tran, or
-        #   entering it for retrieval purposes
-        # this uses the dubious logic that if we are creating a new tran, the tran_date will
-        #   have been entered first (probable, but not guaranteed)
-        # therefore if tran_date is None, we must be retrieving, therefore do not validate stat_date
-        return True
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
-    period_row_id = bisect_left([_.closing_date for _ in adm_periods], tran_date)
+    period_row_id = bisect_left([_.closing_date for _ in adm_periods], value)
     ledger_periods = await db.cache.get_ledger_periods(db_obj.company, module_row_id, ledger_row_id)
     statement_state = ledger_periods[period_row_id].statement_state
     if statement_state != 'open':
         statement_date = ledger_periods[period_row_id].statement_date
-        if tran_date <= statement_date:
+        if value <= statement_date:
             # raise AibError(head='Transaction date', body='Statement period is closed')
             return False
 
@@ -691,7 +658,7 @@ async def check_stat_date(db_obj, fld, value):
             'period_row_id': period_row_id,
             })
         if stat_dates.exists:
-            if tran_date <= await stat_dates.getval('statement_date'):
+            if value <= await stat_dates.getval('statement_date'):
                 # raise AibError(head='Transaction date', body='Statement period closed')
                 return False
 
