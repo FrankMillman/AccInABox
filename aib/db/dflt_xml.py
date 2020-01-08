@@ -241,6 +241,13 @@ async def literal(fld, xml, debug):
         return True
     if val == '$False':
         return False
+    if val.startswith('closing_date('):
+        db_obj = fld.db_obj
+        period_no = await db_obj.getval(val[13:-1])
+        adm_periods = await db.cache.get_adm_periods(db_obj.company)
+        return adm_periods[period_no].closing_date
+    if val.startswith('td('):
+        return td(int(val[3:-1]))
     return val
 
 async def pyfunc(fld, xml, debug):

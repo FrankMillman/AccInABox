@@ -21,17 +21,6 @@
   <col/>
   <label value="Effective date:"/>
   <col/>
-  <input obj_name="nsls" col_name="eff_date" lng="84" form_dflt="
-    <<form_dflt>>
-      <<case>>
-        <<compare src=`$Prev` op=`eq` tgt=`$None`>>
-          <<fld_val name=`tran_det_row_id>tran_row_id>tran_date`/>>
-        <</compare>>
-        <<default>>
-          <<prev_value/>>
-        <</default>>
-      <</case>>
-    <</form_dflt>>
-    "/>
+  <input obj_name="nsls" col_name="eff_date" lng="84"/>
   <end_if/>
 </subtype_body>

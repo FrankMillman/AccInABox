@@ -210,22 +210,27 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'chg_eff_date',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'TEXT',
     'short_descr': 'Change effective date?',
     'long_descr' : 'Allow change of effective date?',
     'col_head'   : 'Chg eff?',
     'key_field'  : 'N',
     'calculated' : ['_param.eff_date_nsls', 'is_', False],
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
+    'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
-    'choices'    : None,
+    'choices'    : [
+            ['0', 'Not allowed'],
+            ['1', '1st of next period'],
+            ['2', 'Allow multi periods'],
+            ['3', 'Other'],
+        ],
     })
 cols.append ({
     'col_name'   : 'unearned_gl_code_id',
@@ -247,9 +252,9 @@ cols.append ({
             'unearned',
             'Unearned code required',
             [
-                ['check', '(', 'chg_eff_date', 'is', '$False', ''],
+                ['check', '(', 'chg_eff_date', '=', '0', ''],
                 ['and', '', '$value', 'is', '$None', ')'],
-                ['or', '', 'chg_eff_date', 'is', '$True', ''],
+                ['or', '', 'chg_eff_date', '!=', '0', ''],
                 ],
             ],
         ],
