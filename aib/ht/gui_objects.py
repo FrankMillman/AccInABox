@@ -72,7 +72,11 @@ class GuiCtrl:
         #   on the key field will trigger read_row, which will over-write any changes
         # not sure if this logic belongs in the ht module or in the db module
         if not fld.col_defn.allow_amend and fld.db_obj.exists:
-            assert self.ref not in temp_data  # user should not be able to enter a value
+            if self.ref in temp_data:
+                # ok if just selected from lookup [added 2020-01-21]
+                if temp_data[self.ref] != await fld.getval():
+                    raise AibError(head=f'{fld.table_name}.{fld.col_name}',
+                        body='Field cannot be amended')
             return
 
         if self.ref in temp_data:  # user has entered a value

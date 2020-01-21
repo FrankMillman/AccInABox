@@ -9,6 +9,8 @@ import db.cache
 from common import AibError
 
 async def eval_infix(elem, db_obj, fld, value):
+    # avoiding simple things like ' '*(10**200) seems quite difficult [Robin Becker, ReportLab]
+
     # Step 1 - convert infix expression to postfix notation
 
     end_char = ' ()+-*/'  # characters that denote end of value/function

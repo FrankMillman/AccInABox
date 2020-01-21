@@ -694,10 +694,17 @@ class Field:
                             # i.e. there could be a col_check on the true_src, but not on the alt_src
                             true_foreign_key = await true_src.db_obj.get_foreign_key(true_src)
                             await true_src.setval(true_foreign_key['tgt_field']._value, display=display)
-                            # next line unnecessary? already checked in setval
-                            # if display:
-                            #     for obj in true_src.gui_obj:
-                            #         await obj._redisplay()
+                            # next 2 lines added 2020-01-21
+                            # if true_src is an alt_key, it has been used to read db_obj
+                            # e.g. ar_customers.party_row_id is an fkey to org_parties and
+                            #   an alt_key to ar_customers
+                            # ar_customers.cust_id is an alt_src to ar_customers.party_row_id
+                            # if we have entered ar_customers.cust_id and we get this far,
+                            #   ar_customers must have been successfully read in
+                            # in this case, we must set 'changed' to False, otherwise lower
+                            #   down 'dirty' is set to True, which is not correct
+                            if true_src.table_keys and self.db_obj.exists:
+                                changed = False
                     else:
                         await tgt_field.read_row(value, display)
                         if not tgt_field.db_obj.exists:
