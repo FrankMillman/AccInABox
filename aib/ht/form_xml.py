@@ -2,7 +2,7 @@ import importlib
 import asyncio
 import operator
 import re
-from json import dumps
+from json import dumps, loads
 
 import db.cache
 import ht.form
@@ -149,6 +149,17 @@ async def restart_frame_if_not_grid(caller, xml):
     else:
         await caller.restart_frame()
 """
+
+async def get_op_cl_bal(caller, xml):
+    # receive col names for op_bal, cl_bal, tot trans
+    # populate fields, verify that op_bal + tot = cl_bal
+    # assumes that 'context' values for start_date, end_date, etc have been populated
+    op_fld, cl_fld, tot_fld = loads(xml.get('args').replace("'", '"'))
+    async with caller.context.db_session.get_connection():  # starts a transaction
+        op_bal = await caller.db_obj.getval(op_fld)
+        cl_bal = await caller.db_obj.getval(cl_fld)
+        tot = await caller.db_obj.getval(tot_fld)
+    assert (op_bal + tot == cl_bal), f'{op_bal} + {tot} != {cl_bal}'
 
 async def recalc(caller, xml):
     # called from various places to force recalc of field to refresh screen

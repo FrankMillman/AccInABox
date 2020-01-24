@@ -76,9 +76,11 @@ async def create_view(context, conn, company_id, view_name):
 ,BASE_TABLES
 ,PATH_TO_ROW
 ,FILTER
-,DEFAULT_CURSOR
-,SETUP_FORM
-) = range(13)
+,SEQUENCE
+,LEDGER_COL
+,DEFN_COMPANY
+,DATA_COMPANY
+) = range(15)
 
 # db_view_cols columns
 (ROW_ID

@@ -155,7 +155,7 @@ virt.append ({
     'col_head'   : 'Bal cb',
     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
     'sql'        : (
-        "SUM(a.amount_cb) OVER (ORDER BY a.tran_date, a.tran_type, a.tran_row_id) + {op_bal_cb}"
+        "SUM(a.amount_cb) OVER (ORDER BY a.tran_date, a.tran_type, a.tran_row_id) + {cb_trans.op_bal_cb}"
         )
     })
 virt.append ({
@@ -166,7 +166,58 @@ virt.append ({
     'col_head'   : 'Bal local',
     'scale_ptr'  : '_param.local_curr_id>scale',
     'sql'        : (
-        "SUM(a.amount_local) OVER (ORDER BY a.tran_date, a.tran_type, a.tran_row_id) + {op_bal_local}"
+        "SUM(a.amount_local) OVER (ORDER BY a.tran_date, a.tran_type, a.tran_row_id) + {cb_trans.op_bal_local}"
+        )
+    })
+virt.append ({
+    'col_name'   : 'op_bal_cb',
+    'data_type'  : 'DEC',
+    'short_descr': 'Opening bal - cb currency',
+    'long_descr' : 'Opening balance - cash book currency',
+    'col_head'   : 'Op bal cb',
+    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
+    'sql'        : (
+        "SELECT "
+            "COALESCE((SELECT `a.{company}.cb_totals.balance_cb` AS \"x [REAL]\" "
+            "FROM {company}.cb_totals a "
+            "WHERE a.ledger_row_id = {ledger_row_id} "
+            "AND a.tran_date < {start_date} "
+            "AND a.deleted_id = 0 "
+            "ORDER BY a.tran_date DESC "
+            "LIMIT 1), 0)"
+        )
+    })
+virt.append ({
+    'col_name'   : 'cl_bal_cb',
+    'data_type'  : 'DEC',
+    'short_descr': 'Closing bal - cb currency',
+    'long_descr' : 'Closing balance - cash book currency',
+    'col_head'   : 'Cl bal cb',
+    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
+    'sql'        : (
+        "SELECT "
+            "COALESCE((SELECT `a.{company}.cb_totals.balance_cb` AS \"x [REAL]\" "
+            "FROM {company}.cb_totals a "
+            "WHERE a.ledger_row_id = {ledger_row_id} "
+            "AND a.tran_date <= {end_date} "
+            "AND a.deleted_id = 0 "
+            "ORDER BY a.tran_date DESC "
+            "LIMIT 1), 0)"
+        )
+    })
+virt.append ({
+    'col_name'   : 'tot_cb',
+    'data_type'  : 'DEC',
+    'short_descr': 'Tran total - cb currency',
+    'long_descr' : 'Transaction total - cash book currency',
+    'col_head'   : 'Total cb',
+    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
+    'sql'        : (
+        "SELECT "
+            "COALESCE((SELECT SUM(a.amount_cb) AS \"x [REAL]\" "
+            "FROM {company}.cb_trans a "
+            "WHERE a.ledger_row_id = {ledger_row_id} "
+            "AND a.tran_date BETWEEN {start_date} AND {end_date}), 0)"
         )
     })
 

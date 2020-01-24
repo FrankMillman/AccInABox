@@ -73,7 +73,6 @@ class GuiGrid:
         self.context = parent.context
         self.formview_frame = None
         self.grid_frame = None
-        self.running_balance = element.get('running_balance')
         self.start_col = element.get('start_col')
         self.start_val = element.get('start_val')
         self.auto_start = element.get('auto_start') != 'false'  # default to True
@@ -82,6 +81,7 @@ class GuiGrid:
         self.ref = ref
         self.pos = pos
 
+        self.on_start_grid = None
         self.on_start_row = []
         # self.on_read_set = set()
         # self.on_clean_set = set()
@@ -356,7 +356,9 @@ class GuiGrid:
             method = etree.fromstring(method.get('action'), parser=parser)
 
             self.methods[method_name] = method
-            if method_name == 'on_start_row':
+            if method_name == 'on_start_grid':
+                self.on_start_grid = method
+            elif method_name == 'on_start_row':
                 self.on_start_row.append(method)
             elif method_name == 'on_read':  # set up callback on db_object
                 db_obj = self.data_objects[obj_name]
@@ -461,15 +463,8 @@ class GuiGrid:
                 f'start_col={start_col} start_val={start_val!r}\n\n'
                 )
 
-        if self.running_balance is not None:
-            if self.running_balance == 'ar_trans':
-                op_bal, cl_bal = await self.get_running_total_artrans()
-            elif self.running_balance == 'cb_trans':
-                op_bal, cl_bal = await self.get_running_total_cbtrans()
-
-            tran_vars = self.context.data_objects['tran_vars']
-            await tran_vars.setval('op_bal', op_bal)  # supply value for header row
-            await tran_vars.setval('cl_bal', cl_bal)  # supply value for footer row
+        if self.on_start_grid is not None:
+            await ht.form_xml.exec_xml(self, self.on_start_grid)
 
         sub_filter = []  # for any additional tests
         test = 'AND' if self.cursor_filter else 'WHERE'
@@ -1131,115 +1126,3 @@ class GuiGrid:
             await ht.form_xml.exec_xml(self, self.methods['on_req_close'])
         else:
             await self.parent.on_req_close()
-
-    async def get_running_total_artrans(self):
-        # the following is hard-coded for 'customer currency'/ascending sequence
-        # will need parameters for 'local currency'/descending sequence
-        cust = self.context.data_objects['cust']
-        cust_row_id = await cust.getval('row_id')
-        start_date = self.context.start_date
-        end_date = self.context.end_date
-
-        async with self.context.db_session.get_connection() as db_mem_conn:
-            conn = db_mem_conn.db
-            company = self.company
-
-            sql = (
-                "SELECT "
-                    f"COALESCE((SELECT `a.{company}.ar_cust_totals.balance_cus` AS \"x [REAL]\" "
-                    f"FROM {company}.ar_cust_totals a "
-                    f"WHERE a.cust_row_id = {conn.constants.param_style} "
-                    f"AND a.tran_date < {conn.constants.param_style} "
-                    "AND a.deleted_id = 0 "
-                    "ORDER BY a.tran_date DESC "
-                    "LIMIT 1), 0), "
-                    f"COALESCE((SELECT `a.{company}.ar_cust_totals.balance_cus` AS \"x [REAL]\" "
-                    f"FROM {company}.ar_cust_totals a "
-                    f"WHERE a.cust_row_id = {conn.constants.param_style} "
-                    f"AND a.tran_date <= {conn.constants.param_style} "
-                    "AND a.deleted_id = 0 "
-                    "ORDER BY a.tran_date DESC "
-                    "LIMIT 1), 0) "
-                )
-            params = (cust_row_id, start_date, cust_row_id, end_date)
-            async for row in await conn.exec_sql(sql, params):
-                op_bal, cl_bal = row
-
-            sql = (
-                "SELECT "
-                    "COALESCE((SELECT SUM(a.amount_cust) AS \"x [REAL]\" "
-                    f"FROM {company}.ar_trans a "
-                    f"WHERE a.cust_row_id = {conn.constants.param_style} "
-                    f"AND a.tran_date BETWEEN {conn.constants.param_style} "
-                    f"AND {conn.constants.param_style}) "
-                    ", 0)"
-                )
-            params = (cust_row_id, start_date, end_date)
-            async for row in await conn.exec_sql(sql, params):
-                tot, = row
-
-        cr_limit_fld = await cust.getfld('credit_limit')  # used to round values
-        op_bal = await cr_limit_fld.check_val(op_bal)
-        cl_bal = await cr_limit_fld.check_val(cl_bal)
-        tot = await cr_limit_fld.check_val(tot)
-        assert op_bal + tot - cl_bal == 0  # or raise AibError?
-
-        self.context.op_bal_cust = op_bal  # used by ar_trans.balance_cust.sql
-
-        return op_bal, cl_bal
-
-    async def get_running_total_cbtrans(self):
-        # the following is hard-coded for 'cashbook currency'/ascending sequence
-        # will need parameters for 'local currency'/descending sequence
-        module_row_id, ledger_row_id = self.context.mod_ledg_id
-        start_date = self.context.start_date
-        end_date = self.context.end_date
-
-        async with self.context.db_session.get_connection() as db_mem_conn:
-            conn = db_mem_conn.db
-            company = self.company
-
-            sql = (
-                "SELECT "
-                    f"COALESCE((SELECT `a.{company}.cb_totals.balance_cb` AS \"x [REAL]\" "
-                    f"FROM {company}.cb_totals a "
-                    f"WHERE a.ledger_row_id = {conn.constants.param_style} "
-                    f"AND a.tran_date < {conn.constants.param_style} "
-                    "AND a.deleted_id = 0 "
-                    "ORDER BY a.tran_date DESC "
-                    "LIMIT 1), 0), "
-                    f"COALESCE((SELECT `a.{company}.cb_totals.balance_cb` AS \"x [REAL]\" "
-                    f"FROM {company}.cb_totals a "
-                    f"WHERE a.ledger_row_id = {conn.constants.param_style} "
-                    f"AND a.tran_date <= {conn.constants.param_style} "
-                    "AND a.deleted_id = 0 "
-                    "ORDER BY a.tran_date DESC "
-                    "LIMIT 1), 0) "
-                )
-            params = (ledger_row_id, start_date, ledger_row_id, end_date)
-            async for row in await conn.exec_sql(sql, params):
-                op_bal, cl_bal = row
-
-            sql = (
-                "SELECT "
-                    "COALESCE((SELECT SUM(a.amount_cb) AS \"x [REAL]\" "
-                    f"FROM {company}.cb_trans a "
-                    f"WHERE a.ledger_row_id = {conn.constants.param_style} "
-                    f"AND a.tran_date BETWEEN {conn.constants.param_style} "
-                    f"AND {conn.constants.param_style}) "
-                    ", 0)"
-                )
-            params = (ledger_row_id, start_date, end_date)
-            async for row in await conn.exec_sql(sql, params):
-                tot, = row
-
-        tran = self.context.data_objects['cb_trans']
-        tran_fld = await tran.getfld('amount_cb')  # used to round values
-        op_bal = await tran_fld.check_val(op_bal)
-        cl_bal = await tran_fld.check_val(cl_bal)
-        tot = await tran_fld.check_val(tot)
-        assert op_bal + tot - cl_bal == 0  # or raise AibError?
-
-        self.context.op_bal_cb = op_bal  # used by cb_trans.balance_cb.sql
-
-        return op_bal, cl_bal

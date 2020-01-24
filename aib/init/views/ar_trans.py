@@ -142,6 +142,24 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'debit_cust',
+    'data_type'  : 'DEC',
+    'short_descr': 'Debit - customer currency',
+    'long_descr' : 'Debit amount - customer currency',
+    'col_head'   : 'Debit',
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'sql'        : "CASE WHEN a.amount_cust >= 0 THEN a.amount_cust ELSE NULL END",
+    })
+virt.append ({
+    'col_name'   : 'credit_cust',
+    'data_type'  : 'DEC',
+    'short_descr': 'Credit - customer currency',
+    'long_descr' : 'Credit amount - customer currency',
+    'col_head'   : 'Credit',
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'sql'        : "CASE WHEN a.amount_cust < 0 THEN 0 - a.amount_cust ELSE NULL END",
+    })
+virt.append ({
     'col_name'   : 'balance_cust',
     'data_type'  : 'DEC',
     'short_descr': 'Balance - customer currency',
@@ -149,7 +167,7 @@ virt.append ({
     'col_head'   : 'Bal cust',
     'scale_ptr'  : 'cust_row_id>currency_id>scale',
     'sql'        : (
-        "SUM(a.amount_cust) OVER (ORDER BY a.tran_date, a.tran_type, a.tran_row_id) + {op_bal_cust}"
+        "SUM(a.amount_cust) OVER (ORDER BY a.tran_date, a.tran_type, a.tran_row_id) + {ar_trans.op_bal_cust}"
         )
     })
 virt.append ({
@@ -160,7 +178,59 @@ virt.append ({
     'col_head'   : 'Bal local',
     'scale_ptr'  : '_param.local_curr_id>scale',
     'sql'        : (
-        "SUM(a.amount_local) OVER (ORDER BY a.tran_date, a.tran_type, a.tran_row_id) + {op_bal_local}"
+        "SUM(a.amount_local) OVER (ORDER BY a.tran_date, a.tran_type, a.tran_row_id) + {ar_trans.op_bal_local}"
+        )
+    })
+virt.append ({
+    'col_name'   : 'op_bal_cust',
+    'data_type'  : 'DEC',
+    'short_descr': 'Opening bal - cust currency',
+    'long_descr' : 'Opening balance - customer currency',
+    'col_head'   : 'Op bal cust',
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'sql'        : (
+        "SELECT "
+          "COALESCE((SELECT `a.{company}.ar_cust_totals.balance_cus` AS \"x [REAL]\" "
+            "FROM {company}.ar_cust_totals a "
+            "WHERE a.cust_row_id = {cust_row_id} "
+            "AND a.tran_date < {start_date} "
+            "AND a.deleted_id = 0 "
+            "ORDER BY a.tran_date DESC "
+            "LIMIT 1), 0)"
+        )
+    })
+virt.append ({
+    'col_name'   : 'cl_bal_cust',
+    'data_type'  : 'DEC',
+    'short_descr': 'Closing bal - cust currency',
+    'long_descr' : 'Closing balance - customer currency',
+    'col_head'   : 'Cl bal cust',
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'sql'        : (
+        "SELECT "
+          "COALESCE((SELECT `a.{company}.ar_cust_totals.balance_cus` AS \"x [REAL]\" "
+            "FROM {company}.ar_cust_totals a "
+            "WHERE a.cust_row_id = {cust_row_id} "
+            "AND a.tran_date <= {end_date} "
+            "AND a.deleted_id = 0 "
+            "ORDER BY a.tran_date DESC "
+            "LIMIT 1), 0)"
+        )
+    })
+virt.append ({
+    'col_name'   : 'tot_cust',
+    'data_type'  : 'DEC',
+    'short_descr': 'Tran total - cust currency',
+    'long_descr' : 'Transaction total - customer currency',
+    'col_head'   : 'Total cust',
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'sql'        : (
+        "SELECT "
+          "COALESCE((SELECT SUM(a.amount_cust) AS \"x [REAL]\" "
+            "FROM {company}.ar_trans a "
+            "WHERE a.cust_row_id = {cust_row_id} "
+            "AND a.tran_date BETWEEN {start_date} AND {end_date})"
+            ", 0)"
         )
     })
 

@@ -1512,7 +1512,10 @@ class Decimal(Field):
             return value.quantize(0)
         scale = await self.get_scale()
         quant = D(str(10**-scale))
-        return value.quantize(quant, rounding=ROUND_HALF_UP)
+        # If value is D(-1.56319401867222e-13), rounding returns D('-0.00')
+        # This messes up formatting on the client
+        # Adding 'or D(0)' forces it to return zero
+        return value.quantize(quant, rounding=ROUND_HALF_UP) or D(0)
 
     async def str_to_val(self, value):
         if value in (None, ''):

@@ -3,10 +3,6 @@
     <<assign src=`var.settings` tgt=`balance_date_vars.settings`/>>
     <<assign src=`var.balance_date` tgt=`balance_date_vars.balance_date`/>>
     <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
-    <<assign src=`date_range_vars.start_date` tgt=`tran_vars.start_date`/>>
-    <<assign src=`date_range_vars.end_date` tgt=`tran_vars.end_date`/>>
-    <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
-    <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
   <</action>>
   ">
   <db_objects>
@@ -17,28 +13,6 @@
     <db_obj name="ar_trans" table_name="ar_trans" view="true"/>
   </db_objects>
   <mem_objects>
-    <!--
-    <mem_obj name="aged_bal" descr="Aged balance in customer currency">
-      <mem_col col_name="total" data_type="DEC" short_descr="Total"
-        long_descr="Total" col_head="Total" allow_null="true"
-        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
-      <mem_col col_name="current" data_type="DEC" short_descr="Current"
-        long_descr="Current" col_head="Current" allow_null="true"
-        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
-      <mem_col col_name="thirty" data_type="DEC" short_descr="30 days"
-        long_descr="30 days" col_head="30 days" allow_null="true"
-        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
-      <mem_col col_name="sixty" data_type="DEC" short_descr="60 days"
-        long_descr="60 days" col_head="60 days" allow_null="true"
-        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
-      <mem_col col_name="ninety" data_type="DEC" short_descr="90 days"
-        long_descr="90 days" col_head="90 days" allow_null="true"
-        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
-      <mem_col col_name="onetwenty" data_type="DEC" short_descr="120 days"
-        long_descr="120 days" col_head="120 days" allow_null="true"
-        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
-    </mem_obj>
-    -->
     <mem_obj name="bal_vars" descr="Variables for 'Balance' tab">
       <mem_col col_name="show_tot" data_type="BOOL" short_descr="Show all trans due"
         long_descr="Show all transactions due" allow_amend="true" dflt_val="true"/>
@@ -52,18 +26,8 @@
         long_descr="Show 90 day transactions due" allow_amend="true"/>
       <mem_col col_name="show_120" data_type="BOOL" short_descr="Show 120 day trans due"
         long_descr="Show 120 day transactions due" allow_amend="true"/>
-      <!-- mem_col col_name="ageing_dates" data_type="JSON" short_descr="Dates for age buckets"
-        long_descr="Dates for ageing buckets" allow_amend="true"/>
-      <mem_col col_name="first_date" data_type="DTE" short_descr="First date for selection"
-        long_descr="First date for selection" allow_amend="true"/>
-      <mem_col col_name="last_date" data_type="DTE" short_descr="Last date for selection"
-        long_descr="Last date for selection" allow_amend="true"/ -->
     </mem_obj>
     <mem_obj name="tran_vars" descr="Variables for 'Transactions' tab">
-      <mem_col col_name="start_date" data_type="DTE" short_descr="Start date"
-        long_descr="Transactions from this date" allow_amend="true"/>
-      <mem_col col_name="end_date" data_type="DTE" short_descr="End date"
-        long_descr="Transactions to this date" allow_amend="true"/>
       <mem_col col_name="op_bal" data_type="DEC" short_descr="Opening balance"
         long_descr="Opening balance" col_head="B/F" allow_amend="true"
         db_scale="2" scale_ptr="currency.scale"/>
@@ -138,6 +102,18 @@
                 <</return>>
               <</on_return>>
             <</sub_form>>
+          <</action>>
+        "/>
+      <col/>
+      <button btn_id="ar_stat" btn_label="Statement" help_msg = "Show statement"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<run_report name=`ar_statement`>>
+              <<call_params>>
+                <<call_param name=`cust` type=`data_obj` source=`cust`/>>
+                <<call_param name=`stat_date` type=`data_attr` source=`balance_date_vars.balance_date`/>>
+              <</call_params>>
+            <</run_report>>
           <</action>>
         "/>
 
@@ -259,11 +235,11 @@
       <col/>
       <label value="From:"/>
       <col/>
-      <input obj_name="tran_vars" col_name="start_date" lng="84" readonly="true" skip="true"/>
+      <input obj_name="date_range_vars" col_name="start_date" lng="84" readonly="true" skip="true"/>
       <col/>
       <label value="To:"/>
       <col/>
-      <input obj_name="tran_vars" col_name="end_date" lng="84" readonly="true" skip="true"/>
+      <input obj_name="date_range_vars" col_name="end_date" lng="84" readonly="true" skip="true"/>
       <col/>
       <button btn_id="change_dates" btn_label="Change" help_msg = "Change dates"
         btn_enabled="true" btn_validate="true" action="
@@ -280,10 +256,6 @@
               <<on_return>>
                 <<return state=`cancelled`/>>
                 <<return state=`completed`>>
-                  <<assign src=`date_range_vars.start_date` tgt=`tran_vars.start_date`/>>
-                  <<assign src=`date_range_vars.end_date` tgt=`tran_vars.end_date`/>>
-                  <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
-                  <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
                   <<restart_grid obj_name=`ar_trans`/>>
                 <</return>>
               <</on_return>>
@@ -292,15 +264,14 @@
         "/>
 
       <block/>
-      <grid data_object="ar_trans" growable="false" num_grid_rows="8" running_balance="ar_trans"
-          header_row="[`tran_vars.start_date`, `'Bal b/f'`, null, null, `tran_vars.op_bal`]"
-          footer_row="[`tran_vars.end_date`, `'Bal c/f'`, null, null, `tran_vars.cl_bal`]">
+      <grid data_object="ar_trans" growable="false" num_grid_rows="8"
+          header_row="[`date_range_vars.start_date`, `'Bal b/f'`, null, null, `tran_vars.op_bal`]"
+          footer_row="[`date_range_vars.end_date`, `'Bal c/f'`, null, null, `tran_vars.cl_bal`]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,13" action="
               <<action>>
                 <<select_from_view/>>
-                <<!--req_formview/-->>
               <</action>>
             "/>
           <tool type="nav"/>
@@ -316,16 +287,27 @@
           <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
             op="=" expr="cust.row_id" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
-            op=">>=" expr="_ctx.start_date" rbr=""/>
+            op=">>=" expr="date_range_vars.start_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
-            op="<<=" expr="_ctx.end_date" rbr=""/>
+            op="<<=" expr="date_range_vars.end_date" rbr=""/>
         </cur_filter>
         <cur_sequence>
           <cur_seq col_name="tran_date"/>
           <cur_seq col_name="tran_type"/>
           <cur_seq col_name="tran_row_id"/>
         </cur_sequence>
-        <grid_methods template="Grid"/>
+        <grid_methods template="Grid">
+          <method name="on_start_grid" action="
+            <<action>>
+              <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
+              <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
+              <<assign src=`cust.row_id` tgt=`_ctx.cust_row_id`/>>
+              <<get_op_cl_bal args=`['op_bal_cust', 'cl_bal_cust', 'tot_cust']`/>>
+              <<assign src=`ar_trans.op_bal_cust` tgt=`tran_vars.op_bal`/>>
+              <<assign src=`ar_trans.cl_bal_cust` tgt=`tran_vars.cl_bal`/>>
+            <</action>>
+            "/>
+        </grid_methods>
       </grid>
 
       <nb_end/>
@@ -335,7 +317,6 @@
     <frame_methods template="Query_Form">
       <method name="on_start_frame" action="
         <<action>>
-          <<!-- init_obj obj_name=`aged_bal`/ -->>
           <<init_obj obj_name=`bal_vars`/>>
           <<assign src=`var.settings` tgt=`balance_date_vars.settings`/>>
           <<assign src=`_ctx.bal_date_cust` tgt=`balance_date_vars.balance_date`/>>

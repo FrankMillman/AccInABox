@@ -317,7 +317,12 @@ class Conn:
                 db_obj = context.data_objects[expr]
                 sql = sql[:pos_1] + db_obj.table_name + sql[pos_2+1:]
             else:
-                val = getattr(context, expr)
+                if '.' in expr:
+                    table_name, col_name = expr.split('.')
+                    db_obj = context.data_objects[table_name]
+                    val = await db_obj.getval(col_name)
+                else:
+                    val = getattr(context, expr)
 
                 # find where to insert val in params
                 occurrence = 0
