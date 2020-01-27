@@ -469,6 +469,7 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('AUTO', 'INTEGER PRIMARY KEY')
         .replace('JSON', 'TEXT')
         .replace('FXML', 'BLOB')
+        .replace('RXML', 'BLOB')
         .replace('PXML', 'BLOB')
         .replace('SXML', 'TEXT')
         .replace('BOOL', 'BOOLTEXT')

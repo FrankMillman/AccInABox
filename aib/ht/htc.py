@@ -15,6 +15,7 @@ import email.utils
 from json import loads, dumps
 import itertools
 import random
+import io
 
 import logging
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ from common import AibError
 from common import log, debug
 
 sessions = {}  # key=session_id, value=session instance
+pdf_dict = {}  # key=pdf_name, value=function to generate pdf
 
 #----------------------------------------------------------------------------
 
@@ -280,6 +282,9 @@ class ResponseHandler:
     #----------------------------
     # actions to return to client
     #----------------------------
+
+    def send_pdf(self, pdf_name):
+        self.reply.append(('show_pdf', pdf_name))
 
     def send_gui(self, gui):
         self.reply.append(('setup_form', gui))
@@ -720,17 +725,17 @@ async def handle_client(client_reader, client_writer):
         if len(messages) == 1 and messages[0][0] == 'tick':
             session.tick = time.time()  # don't put in queue - might block
             response = Response(client_writer, 200)
-
             task_list, activetasks_version = ht.htm.get_task_list(
                 session.user_row_id, session.last_activetasks_version)
-            if task_list is not None:
+            if task_list is None:
+                response.send_headers()
+            else:
                 response.add_header('Content-type', 'application/json; charset=utf-8')
                 response.add_header('Transfer-Encoding', 'chunked')
                 response.send_headers()
                 reply = [('append_tasks', task_list)]
                 response.write(dumps(reply))
                 session.last_activetasks_version = activetasks_version
-
             response.write_eof()
         elif session.questions:  # reply to question - handle it straight away
             responder = ResponseHandler()
@@ -752,6 +757,18 @@ async def handle_client(client_reader, client_writer):
                 # if not, sticking with an asyncio.Queue() may be safer
                 print('ht.htc: request queue not empty!\n')
             await session.request_queue.put((client_writer, messages))
+    elif path.endswith('.pdf'):
+        response = Response(client_writer, 200)
+        response.add_header('Content-type', 'application/pdf')
+        response.send_headers()
+        path = urllib.parse.unquote(path)
+        pdf_key = path[1:]  # strip leading '/'
+        # cannot use next line due to Chrome bug - GET received twice!
+        # pdf_handler = pdf_dict.pop(pdf_key)
+        pdf_handler = pdf_dict[pdf_key]
+        await pdf_handler(response.writer)  # generate pdf, write to socket
+        response.writer.write(b'\r\n')
+        response.write_eof()
     elif path.startswith('/dev'):
         path = path[4:]
         send_js(client_writer, path, dev=True)

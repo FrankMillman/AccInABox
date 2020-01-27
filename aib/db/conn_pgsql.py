@@ -353,6 +353,7 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('AUTO', 'SERIAL PRIMARY KEY')
         .replace('JSON', 'VARCHAR')
         .replace('FXML', 'BYTEA')
+        .replace('RXML', 'BYTEA')
         .replace('PXML', 'BYTEA')
         .replace('SXML', 'VARCHAR')
         .replace('NOW()', 'CURRENT_TIMESTAMP')

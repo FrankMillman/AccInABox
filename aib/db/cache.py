@@ -564,6 +564,19 @@ async def get_form_title(company, form_name):
 
 #----------------------------------------------------------------------------
 
+# cache to store report_defns data object for each company
+report_defns = {}
+async def get_report_defns(company):
+    if company not in report_defns:
+        db_obj = await db.objects.get_db_object(
+            cache_context, company, 'sys_report_defns')
+        # must set lock before using, to prevent clashes
+        db_obj.lock = asyncio.Lock()
+        report_defns[company] = db_obj
+    return report_defns[company]
+
+#----------------------------------------------------------------------------
+
 # cache to store proc_defns data object for each company
 proc_defns = {}
 async def get_proc_defns(company):

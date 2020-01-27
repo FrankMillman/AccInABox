@@ -1342,6 +1342,10 @@ class ProcessXml(Xml):
 class FormXml(Xml):
     schema = etree.XMLSchema(file=os.path.join(schema_path, 'form.xsd'))
 
+class ReportXml(Xml):
+    # schema = etree.XMLSchema(file=os.path.join(schema_path, 'report.xsd'))
+    pass
+
 class StringXml(Xml):
     parser = etree.XMLParser(remove_blank_text=True)
 
@@ -1790,6 +1794,7 @@ DATA_TYPES = {
     'JSON' :Json,
     'FXML' :FormXml,
     'PXML' :ProcessXml,
+    'RXML' :ReportXml,
     'SXML' :StringXml,
     'AUTO' :Integer,
     }

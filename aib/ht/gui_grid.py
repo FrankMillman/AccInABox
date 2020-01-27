@@ -176,7 +176,6 @@ class GuiGrid:
                 self.data_cols.append(i)
                 if lng:
                     self.grid_cols.append(data_col)  # to xref cursor col to grid col
-                data_col += 1
 
                 self.col_names.append(col_name)
                 fld = await self.db_obj.getfld(col_name)

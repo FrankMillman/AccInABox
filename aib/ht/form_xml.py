@@ -5,8 +5,10 @@ import re
 from json import dumps, loads
 
 import db.cache
+import ht.htc
 import ht.form
 import ht.gui_grid
+import rep.report
 import bp.bpm
 from common import AibError, AibDenied
 from common import log, debug
@@ -584,6 +586,53 @@ async def start_process(caller, xml):
     context = db.cache.get_new_context(caller.context.user_row_id,
         caller.context.sys_admin, id(process), caller.context.mod_ledg_id)
     await process.start_process(context)
+
+async def run_report(caller, xml):
+    data_inputs = {}  # input parameters to be passed to process
+    for call_param in xml.find('call_params'):
+        param_name = call_param.get('name')
+        param_type = call_param.get('type')
+        source = call_param.get('source')
+        if param_type == 'data_obj':
+            value = caller.data_objects[source]
+        elif param_type == 'data_attr':
+            if source.startswith("'"):
+                value = source[1:-1]
+            elif '.' in source:
+                obj_name, col_name = source.split('.')
+                if obj_name == '_param':
+                    db_obj = await db.cache.get_adm_params(caller.company)
+                elif obj_name == '_ledger':
+                    module_row_id, ledger_row_id = caller.context.mod_ledg_id
+                    db_obj = await db.cache.get_ledger_params(
+                         caller.company, module_row_id, ledger_row_id)
+                else:
+                    db_obj = caller.data_objects[obj_name]
+                value = await db_obj.getval(col_name)
+            else:
+                raise NotImplementedError
+        data_inputs[param_name] = value
+
+    report_name = xml.get('name')
+    report = rep.report.Report(caller.company, report_name, data_inputs=data_inputs)
+    context = db.cache.get_new_context(caller.context.user_row_id,
+        caller.context.sys_admin, id(report), caller.context.mod_ledg_id)
+    await report.start_report(caller.session, context)
+
+    # set up pdf name, replace {...} with actual values
+    pdf_name = report.pdf_name
+    while '{' in pdf_name:
+        pos_1 = pdf_name.find('{')
+        pos_2 = pdf_name.find('}')
+        expr = pdf_name[pos_1+1: pos_2]
+        table_name, col_name = expr.split('.')
+        db_obj = context.data_objects[table_name]
+        fld = await db_obj.getfld(col_name)
+        pdf_name = pdf_name[:pos_1] + await fld.val_to_str() + pdf_name[pos_2+1:]
+    pdf_name = f'{pdf_name}.pdf'
+
+    ht.htc.pdf_dict[pdf_name] = report.run_report  # function to generate pdf
+    caller.session.responder.send_pdf(pdf_name)  # browser 'opens' pdf, ht.htc invokes function
 
 async def find_row(caller, xml):
     grid_ref, row = caller.btn_args

@@ -256,6 +256,7 @@ async def setup_other_tables(context, conn, company):
         'dir_companies',
         'dir_users_companies',
         'sys_form_defns',
+        'sys_report_defns',
         'sys_proc_defns',
         'sys_menu_defns',
         'acc_roles',

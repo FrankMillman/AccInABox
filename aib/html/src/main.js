@@ -353,7 +353,7 @@ function process_response(response_text) {
       var msg = response[i];
       var msg_type = msg[0];
       var msg_args = msg[1];
-//      debug3('msg ' + msg_type);
+      // debug3('msg ' + msg_type);
       if (dbg)
         if (
             ['setup_form', 'start_menu', 'start_grid', 'recv_rows', 'redisplay']
@@ -390,6 +390,7 @@ function process_response(response_text) {
         case 'delete_node': delete_node(msg_args); break;
         case 'set_subtype': set_subtype(msg_args); break;
         case 'append_tasks': append_tasks(msg_args); break;
+        case 'show_pdf': show_pdf(msg_args); break;
         case 'exception': exception(msg_args); break;
         default: debug3('UNKNOWN ' + msg_type + ': ' + msg_args);
         };

@@ -30,6 +30,7 @@ async def init_company(company, company_name):
         await setup_other_tables(context, conn, company)  # data tables for company
         await setup_views(context, conn, company)  # database views for company
         await setup_forms(context, conn, company)
+        await setup_reports(context, conn, company)
         await setup_processes(context, conn, company)
         await setup_menus(context, conn, company, company_name)
 
@@ -197,6 +198,7 @@ async def setup_sys_tables(context, conn, company):
         'acc_table_perms',
         'acc_users_roles',
         'sys_form_defns',
+        'sys_report_defns',
         'sys_proc_defns',
         'sys_menu_defns',
         ]
@@ -588,6 +590,32 @@ async def setup_forms(context, conn, company):
     await setup_form('setup_orec_codes')
     await setup_form('setup_opmt_codes')
     await setup_form('cb_cashbook')
+
+async def setup_reports(context, conn, company):
+    # schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
+    # parser = etree.XMLParser(
+    #     schema=etree.XMLSchema(file=os.path.join(schema_path, 'report.xsd')),
+    #     attribute_defaults=True, remove_comments=True, remove_blank_text=True)
+    parser = etree.XMLParser(
+        attribute_defaults=True, remove_comments=True, remove_blank_text=True)
+    report_path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'reports')
+    report_defn = await db.objects.get_db_object(context, company, 'sys_report_defns')
+
+    async def setup_report(report_name):
+        xml = open('{}/{}.xml'.format(report_path, report_name)).read()
+        await report_defn.init()
+        await report_defn.setval('report_name', report_name)
+        xml = xml.replace('`', '&quot;').replace('<<', '&lt;').replace(
+            '>>', '&gt;').replace('&&', '&amp;')
+        try:
+            report_xml = etree.fromstring(xml, parser=parser)
+        except (etree.XMLSyntaxError, ValueError, TypeError) as e:
+            raise AibError(head=report_name, body=e.args[0])
+        await report_defn.setval('descr', report_xml.get('descr'))
+        await report_defn.setval('report_xml', report_xml)
+        await report_defn.save()
+
+    await setup_report('ar_statement')
 
 async def setup_processes(context, conn, company):
     parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)

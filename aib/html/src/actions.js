@@ -356,14 +356,14 @@ function append_tasks(args) {
     };
   };
 
-  function exception(args) {
-  //document.body.innerHTML =
-  //  args.join('<br>').replace(/ /g, '\xa0');  // replace all ' ' with &nbsp;
-  //debug3(
-  //  args.join('<br>').replace(/ /g, '\xa0'));  // replace all ' ' with &nbsp;
-
-  traceback = args.join('<br>').replace(/ /g, '\xa0');
+function show_pdf(args) {
+  var pdf_name = args;
+  // delay to allow onkeyup signal to be sent to correct window
+  setTimeout(function() {window.open(pdf_name, '_blank')}, 150);
+  };
+ 
+function exception(args) {
+  traceback = args.join('<br>').replace(/ /g, '\xa0');  // replace all ' ' with &nbsp
   window.open('../error.html');  // it will read 'traceback' and display it
-
   clearInterval(tick);  // stop sending 'tick' to server
   };

@@ -1,0 +1,74 @@
+<report name="ar_statement" descr="Ar statement" pdf_name="Statement {ar_cust.cust_id} {var.stat_date}">
+
+  <db_objects>
+    <db_obj name="ar_trans" table_name="ar_trans" parent="ar_cust" view="true"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="var" descr="Report variables">
+      <mem_col col_name="op_bal" data_type="DEC" short_descr="Opening balance"
+        long_descr="Opening balance" col_head="B/F" allow_amend="true"
+        db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="cl_bal" data_type="DEC" short_descr="Closing balance"
+        long_descr="Closing balance" col_head="C/F" allow_amend="true"
+        db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="stat_date" data_type="DTE" short_descr="Statement date"
+        long_descr="Statement date"/>
+    </mem_obj>
+  </mem_objects>
+
+  <input_params>
+    <input_param name="cust" type="data_obj" target="ar_cust" required="true"/>
+    <input_param name="stat_date" type="data_attr" target="var.stat_date" required="true"/>
+  </input_params>
+  <output_params/>
+
+  <page pagesize="A4" font="Courier 14">
+    <block x1="15" y1="15" x2="-16" y2="-16" border="0.5" stroke="red">
+      <block x1="15" y1="15" x2="-16" y2="37" border="0">
+        <panel/>
+        <row/>
+        <string x="c" y="22" value="Blackbird Properties" align="centre" font="Helvetica-Bold 22"/>
+      </block>
+
+      <block x1="15" y1="40" x2="320" y2="136" border="0.5" font="Courier 10">
+        <field x="10" y="16" name="ar_cust.party_row_id>display_name"/>
+      </block>
+      <block x1="325" y1="40" x2="-16" y2="136" border="0.5" font="Courier 10">
+        <string x="c" y="16" value="Statement" align="centre" font="Courier-Bold 12"/>
+        <string x="5" y="38" value="Date:"/>
+        <field x="120" y="38" name="var.stat_date"/>
+        <string x="5" y="60" value="Page:"/>
+        <string x="5" y="82" value="Account number:"/>
+        <field x="120" y="82" name="ar_cust.cust_id"/>
+      </block>
+      <block x1="15" y1="140" x2="-16" y2="-200" border="0.5" font="Courier 10">
+        <grid data_object="ar_trans">
+          <col_head vert="0.5" ul="0.5" bkg="(0.95, 0.95, 0.95)"  font="Courier-Bold 12" align="centre"/>
+          <cur_cols vert="0.5" ul="0" bkg="((1, 1, 1), (0.95, 0.95, 0.95))">
+            <cur_col col_name="tran_date" wd="80" align="centre"/>
+            <cur_col col_name="tran_type" wd="60"/>
+            <cur_col col_name="tran_number" wd="80"/>
+            <cur_col col_name="text" wd="-1"/>
+            <cur_col col_name="debit_cust" wd="80" align="right"/>
+            <cur_col col_name="credit_cust" wd="80" align="right"/>
+            <!-- cur_col col_name="balance_cust" wd="80" align="right"/ -->
+          </cur_cols>
+          <cur_filter>
+            <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
+              op="=" expr="ar_cust.row_id" rbr=""/>
+            <!-- cur_fil test="AND" lbr="" col_name="tran_date"
+              op=">>=" expr="_ctx.start_date" rbr=""/>
+            <cur_fil test="AND" lbr="" col_name="tran_date"
+              op="<<=" expr="_ctx.end_date" rbr=""/ -->
+          </cur_filter>
+          <cur_sequence>
+            <cur_seq col_name="tran_date"/>
+            <cur_seq col_name="tran_type"/>
+            <cur_seq col_name="tran_row_id"/>
+          </cur_sequence>
+        </grid>
+      </block>
+    </block>
+
+  </page>
+</report>

@@ -387,6 +387,7 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('BOOL', 'BIT')
         .replace('JSON', 'NVARCHAR(MAX)')
         .replace('FXML', 'VARBINARY(MAX)')
+        .replace('RXML', 'VARBINARY(MAX)')
         .replace('PXML', 'VARBINARY(MAX)')
         .replace('SXML', 'NVARCHAR(MAX)')
         .replace('NOW()', 'GETDATE()')

@@ -186,6 +186,7 @@ cols.append ({
             ['JSON', 'Json'],
             ['SXML', 'Xml'],
             ['FXML', 'Form definition'],
+            ['RXML', 'Report definition'],
             ['PXML', 'Process definition'],
         ],
     })
