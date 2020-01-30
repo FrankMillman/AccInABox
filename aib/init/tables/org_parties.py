@@ -98,9 +98,16 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="_param.auto_party_id" op="is_not" tgt="$None">'
+          '<obj_exists>'
+            '<fld_val name="party_id"/>'
+          '</obj_exists>'
+          '<default>'
+            '<case>'
+              '<compare src="_param.auto_party_id" op="is_not" tgt="$None">'
                 '<auto_gen args="_param.auto_party_id"/>'
-            '</compare>'
+              '</compare>'
+            '</case>'
+          '</default>'
         '</case>'
         ),
     'col_checks' : None,
