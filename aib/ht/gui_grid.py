@@ -165,7 +165,15 @@ class GuiGrid:
                               #   {data_col_pos: scale_col_pos}
         scale_ptr_dict = {}  # for each scale ptr, create scale column {scale_ptr: scale_col_pos}
         expand_col = 0  # expand first column unless over-ridden
-        for i, col_defn in enumerate(columns):
+        # cannot use next line due to lxml 'bug' [2020-01-31]
+        # we might append a new col_defn while processing 'columns'
+        # if we are on the last col_defn at the time, lxml does not include the
+        #   new col_defn in the iteration
+        # solution - revert to old-fashioned method of using manually-controlled subscript
+        # for pos, col_defn in enumerate(columns):
+        pos =  0
+        while pos < len(columns):
+            col_defn = columns[pos]
             if col_defn[0] == 'cur_col':
                 (col_name, lng, expand, readonly, skip, reverse, before,
                     form_dflt, validation, after) = col_defn[1:]
@@ -173,7 +181,7 @@ class GuiGrid:
                 readonly = self.form.readonly or readonly  # form.readonly takes precedence
 
                 data_col = len(self.data_cols)
-                self.data_cols.append(i)
+                self.data_cols.append(pos)
                 if lng:
                     self.grid_cols.append(data_col)  # to xref cursor col to grid col
 
@@ -199,7 +207,7 @@ class GuiGrid:
                             None,       # after
                             ]
                         columns.append(scale_ptr_col)
-                    self.scale_xref[i] = scale_ptr_dict[scale_ptr]
+                    self.scale_xref[pos] = scale_ptr_dict[scale_ptr]
 
                 pwd = ''
                 lkup = False
@@ -240,7 +248,7 @@ class GuiGrid:
                 # parent.flds_notified.append((fld, gui_obj))
 
                 if expand:
-                    expand_col = i
+                    expand_col = pos
 
             elif col_defn[0] == 'cur_btn':
                 btn_label, btn_id, lng, action = col_defn[1:]
@@ -253,6 +261,8 @@ class GuiGrid:
                     lng, enabled, must_validate, default, help_msg, action)
                 self.btn_dict[btn_id] = button
                 button.grid = self
+
+            pos += 1
 
         num_grid_rows = int(element.get('num_grid_rows', 10))  # default to 10
         self.growable = (element.get('growable') == 'true')
