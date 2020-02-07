@@ -82,23 +82,29 @@ def start():
     loop.run_forever()
 
 def stop(htc_args):
-#   input(_('Press <enter> to stop\n'))
     print(_('Type "q" to stop\n'))
     while True:
         q = input()
         if q == 'q':
             break
 
-    if debug:
-        log.close()
-
     # tell human task client to terminate
     loop = htc_args[0]
     asyncio.run_coroutine_threadsafe(ht.htc.shutdown(*htc_args), loop)
 
+    if debug:
+        if log != sys.stderr:
+            log.flush()
+            log.close()
+
     if log_db:
-        db_log.close()
-#   log.close()
+        if db_log != sys.stderr:
+            db_log.flush()
+            db_log.close()
+
+    # from Python 3.8, there is a problem leaving the interpreter to remove this
+    # deleting it explicitly fixes the problem
+    del db.cache.cache_context
 
 # custom excepthook to be implemented ...
 """
