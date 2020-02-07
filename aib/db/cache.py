@@ -212,6 +212,15 @@ async def gl_param_updated(db_obj, xml):
 
 # callback to set up ledger role - {module_id}_ledger_params.actions.after_insert
 async def ledger_inserted(db_obj, xml):
+
+    # force re-evaluation of ledger_id in adm_params
+    params = await get_adm_params(db_obj.company)
+    ledger_split = db_obj.table_name.split('_')  # {module_id}_ledger_params
+    ledger_split[2] = 'id'  # becomes {module_id}_ledger_id
+    ledger_id = '_'.join(ledger_split)
+    fld = await params.getfld(ledger_id)
+    fld.must_be_evaluated = True
+
     company = db_obj.company
     module_row_id = db_obj.db_table.module_row_id
     ledger_row_id = await db_obj.getval('row_id')
