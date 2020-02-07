@@ -629,7 +629,7 @@ class DbObject:
         return cursor_data['title']
 
     def set_cursor(self, cursor):
-        # called from ht.gui_grid.start_grid() or ht.gui_grid.start_row()
+        # called from ht.gui_grid.start_grid() or ht.gui_grid.start_row() or rep.report.Grid._ainit_()
         self.cursor = cursor
 
     async def close_cursor(self):

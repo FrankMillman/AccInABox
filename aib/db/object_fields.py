@@ -544,11 +544,14 @@ class Field:
 
         if not from_init:
             if self.ledger_col:  # check subledger matches ctx.mod_ledg_id if present
-                mod_ledg_id = getattr(db_obj.context, 'mod_ledg_id', (None, None))
-                if db_obj.db_table.module_row_id == mod_ledg_id[0]:
-                    if value != mod_ledg_id[1]:
-                        raise AibError(head=self.table_name, body='Sub-ledger must be ' +
-                            (await db.cache.get_mod_ledg_name(db_obj.company, mod_ledg_id))[2])
+                ctx_mod_id, ctx_ledg_id = getattr(db_obj.context, 'mod_ledg_id', (None, None))
+                if ctx_mod_id == db_obj.db_table.module_row_id:
+                    if ctx_ledg_id is not None:  # can be None when setting up ledger_periods
+                        if value != ctx_ledg_id:
+                            ledger_id = (await db.cache.get_mod_ledg_name(
+                                db_obj.company, (ctx_mod_id, ctx_ledg_id)))[2]
+                            raise AibError(head=self.table_name,
+                                body=f'Sub-ledger must be {ledger_id}')
 
         changed = await self.value_changed(value)
 
