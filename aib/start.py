@@ -102,10 +102,6 @@ def stop(htc_args):
             db_log.flush()
             db_log.close()
 
-    # from Python 3.8, there is a problem leaving the interpreter to remove this
-    # deleting it explicitly fixes the problem
-    del db.cache.cache_context
-
 # custom excepthook to be implemented ...
 """
 def excepthook(type, value, traceback):

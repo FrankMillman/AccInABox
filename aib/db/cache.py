@@ -19,7 +19,7 @@ class delwatcher:
         self.id = ('context', obj.mem_id, id(obj))
         # print('***', *self.id, 'created ***')
         delwatcher_set.add(self.id)
-    def __del__(self):
+    def __del__(self, delwatcher_set=delwatcher_set):
         # print('***', *self.id, 'deleted ***')
         delwatcher_set.remove(self.id)
 
