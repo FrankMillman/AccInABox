@@ -699,6 +699,7 @@ async def get_next(db_obj, key):
         next_no = curr_no + 1
         await genno.setval('number', next_no)
         await genno.save(from_upd_on_save=True)  # suppress updating audit trail
+        genno.context = cache_context  # break circular reference to db_obj
         return next_no
 
 #----------------------------------------------------------------------------
