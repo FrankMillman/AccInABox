@@ -188,9 +188,6 @@ async def req_save(caller, xml):
 
 async def save_obj(caller, xml):
     db_obj = caller.data_objects[xml.get('obj_name')]
-    # removed [2019-11-25] - think only used for ar_subtran_rec - should not be necessary
-    # if db_obj.subtran_parent is not None:
-    #     db_obj = db_obj.subtran_parent[0]
     await db_obj.save()
 
 async def post_obj(caller, xml):

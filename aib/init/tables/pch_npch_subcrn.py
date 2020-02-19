@@ -386,7 +386,7 @@ actions = []
 actions.append([
     'upd_on_save', [
         [
-            'pch_npch_tax',
+            'pch_npch_crntax',
             None,  # condition
 
             True,  # split source?

@@ -66,7 +66,7 @@ async def pyfunc(db_obj, xml):
 async def create_company(db_obj, xml):
     # run init_company() as a background task
     args = (await db_obj.getval('company_id'), await db_obj.getval('company_name'))
-    future = asyncio.ensure_future(init_company.init_company(*args))
+    future = asyncio.create_task(init_company.init_company(*args))
     future.add_done_callback(company_created)
 
 # callback when company created - notify user (how?)

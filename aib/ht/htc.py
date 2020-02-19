@@ -75,7 +75,7 @@ class Session:
         self.tick = time.time()
 
         # start background task to wait for and process requests
-        asyncio.ensure_future(self.await_requests())
+        asyncio.create_task(self.await_requests())
 
         self._del = delwatcher(self)
 
@@ -766,7 +766,7 @@ async def handle_client(client_reader, client_writer):
         # cannot use next line due to Chrome bug - GET received twice!
         # pdf_handler = pdf_dict.pop(pdf_key)
         pdf_handler = pdf_dict[pdf_key]
-        await pdf_handler(response.writer)  # generate pdf, write to socket
+        await pdf_handler(client_writer)  # generate pdf, write to socket
         response.writer.write(b'\r\n')
         response.write_eof()
     elif path.startswith('/dev'):

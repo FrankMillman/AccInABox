@@ -409,7 +409,7 @@ class process:
 
     def start_background_task(self, *args):
         task, *args = args
-        future = asyncio.ensure_future(task(*args))
+        future = asyncio.create_task(task(*args))
         future.add_done_callback(self.background_task_completed)
         return future
 
@@ -417,7 +417,7 @@ class process:
         try:
             future.result()  # don't need return value, but do need to catch any exception
         except Exception:
-            asyncio.ensure_future(self.root.process.r_process.terminate_process())
+            asyncio.create_task(self.root.process.r_process.terminate_process())
             raise
 
     async def start(self, trigger):
@@ -1038,10 +1038,10 @@ class rTimerNoninterruptingBoundaryEvent(rFlowElement):
             # call asyncio.sleep in chunks of 3600 secs (1 hour)
             while delay > 3600:
                 # keep a reference to self.timer so that it can be cancelled in self.terminate_element()
-                self.timer = asyncio.ensure_future(asyncio.sleep(3600))
+                self.timer = asyncio.create_task(asyncio.sleep(3600))
                 await self.timer
                 delay -= 3600  # or calculate actual time elapsed?
-            self.timer = asyncio.ensure_future(asyncio.sleep(delay))
+            self.timer = asyncio.create_task(asyncio.sleep(delay))
             await self.timer
         except asyncio.CancelledError:
             return
