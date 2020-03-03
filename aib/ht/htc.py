@@ -45,10 +45,8 @@ class delwatcher:
 
 #----------------------------------------------------------------------------
 
-db_session = db.api.start_db_session()
-sys_admin = True  # only used to read menus and permissions
-
-#----------------------------------------------------------------------------
+db_session = db.api.start_db_session()  # used to select menus from db
+menu_lock = asyncio.Lock()  # to prevent 2 users selecting menus simultaneously
 
 class Session:
     def __init__(self, session_id, user_row_id):
@@ -92,13 +90,6 @@ class Session:
 
     async def await_requests(self):
         # this is a background task (1 per session) to execute requests sequentially
-        #
-        # not ideal to have a background task for each Session [2019-09-02]
-        # possible alternative approach -
-        #   let each Session await its own Queue
-        #   on get(), create background task to handle response
-        #   would need a flag to indicate 'completed', before 'getting' the next request
-        # most Sessions would be 'idle', so fewer background tasks at any one time
         request_queue = self.request_queue = asyncio.Queue()
         while True:
             request = await request_queue.get()
@@ -149,7 +140,8 @@ class Session:
         dir_user = self.dir_user  # set up in on_get_login()
         del self.dir_user
 
-        client_menu = await self.setup_menu()
+        with await menu_lock:  # to prevent 2 users selecting menus simultaneously
+            client_menu = await self.setup_menu()
 
         if len(client_menu) > 1:
             session.responder.reply.append(('start_menu', client_menu))
@@ -580,7 +572,7 @@ dummy_id_counter = itertools.count(1)
 def send_js(srv, path, dev):
 
     response = Response(srv, 200)
-    if path == '':  #in ('', '/'):
+    if path == '':
         if dev:
             fname = 'init.html'
             response.add_header('Content-type', 'text/html')
@@ -740,22 +732,7 @@ async def handle_client(client_reader, client_writer):
         elif session.questions:  # reply to question - handle it straight away
             responder = ResponseHandler()
             await responder.handle_response(session, (client_writer, messages))
-        else:  # put it in the queue to be handled next
-            if not session.request_queue.empty():
-                # to be monitored [2018-03-07]
-                # if it never happens, we do not need the background task await_requests()
-                # if it does happen, experiment with replacing the background task with an
-                #   asyncio.Lock() to ensure one request completes before the next one starts
-                # be careful [2018-11-08]
-                # it could happen if client clicks quickly, maybe in different windows, and sends
-                #    second request before receiving reply to first one
-                # so to test, must try to reproduce this situation
-                # another thought [2019-02-21]
-                # if we do switch to using asyncio.Lock(), and there is more than one
-                #   'handle_client' task waiting, is there any guarantee that they
-                #   will be processed in the order they arrived
-                # if not, sticking with an asyncio.Queue() may be safer
-                print('ht.htc: request queue not empty!\n')
+        else:  # put it in the session queue to be handled next
             await session.request_queue.put((client_writer, messages))
     elif path.endswith('.pdf'):
         response = Response(client_writer, 200)
@@ -856,9 +833,9 @@ def setup(params):
     server = loop.run_until_complete(asyncio.start_server(accept_client, host, port))
     logger.info(f'task client listening on port {port}')
 
+    # cnt = asyncio.ensure_future(counter())
     loop.run_until_complete(db.cache.setup_companies())
     session_check = asyncio.ensure_future(check_sessions())  # start background task
-    # cnt = asyncio.ensure_future(counter())
     # run_tests = asyncio.ensure_future(run_test())  # start background task
     run_tests = None
 
