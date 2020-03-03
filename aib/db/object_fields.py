@@ -94,13 +94,6 @@ class Field:
             self.foreign_key = None
         else:
             self.foreign_key = {}  # un-initialised foreign key
-            if db_obj.parent is None:
-                child_obj = False
-            elif db_obj.parent[0] != self.col_name:  # e.g. dir_users_companies.company_id
-                child_obj = False
-            else:
-                child_obj = True
-            # if not child_obj:  # else fkey will be set up in db.objects()
             if col_defn.fkey[FK_IS_ALT]:
                 self.getval = self._getval_fkey  # on getval(), set up fkey before calling _getval()
 
@@ -145,8 +138,6 @@ class Field:
     async def setup_foreign_key(self):
         fkey = self.col_defn.fkey
         if fkey is None:
-            # errmsg = '{}.{}: foreign key does not exist'.format(
-            #     self.table_name, self.col_name)
             errmsg = f'{self.table_name}.{self.col_name}: foreign key does not exist'
             raise AibError(head=self.table_name, body=errmsg)
 
@@ -281,30 +272,14 @@ class Field:
             await self.setup_foreign_key()
         foreign_key = await self.db_obj.get_foreign_key(self)
         tgt_fld = foreign_key['tgt_field']
-        # if await self.getval() is not None:
         value = await self.getval()
         if value is not None:
             if value != tgt_fld._value:  # set up fk object if applicable
-                # await tgt_fld.db_obj.init()  # added 2017-10-08
-                # await tgt_fld.setval(self._value)  # added 2016-11-08 - monitor
                 await tgt_fld.db_obj.select_row(keys={tgt_fld.col_name: value}, display=False)
         return tgt_fld.db_obj
 
-        # if isinstance(self.foreign_key, dict):
-        #     return self.foreign_key['tgt_field'].db_obj
-        # col_name, vals_fkeys = self.foreign_key
-        # try:
-        #     foreign_key = await vals_fkeys[self.db_obj.getval(col_name)]
-        # except KeyError:
-        #     errmsg = '{} not a valid value for {}'.format(
-        #         await self.db_obj.getval(col_name), col_name)
-        #     raise AibError(head=self.col_defn.short_descr, body=errmsg)
-        # return foreign_key['tgt_field'].db_obj
-
     def notify_recalc(self, fld):
-        # print('recalc {}.{} if {}.{} changes'.format(
-        #     fld.table_name, fld.col_name,
-        #     self.table_name,self.col_name))
+        # print(f'recalc {fld.table_name}.{fld.col_name} if {self.table_name}.{self.col_name} changes')
         if self.flds_to_recalc == ():
             self.flds_to_recalc = weakref.WeakSet()
         self.flds_to_recalc.add(fld)
@@ -315,7 +290,7 @@ class Field:
 
         if self.col_defn.dflt_rule is not None:
             orig_value = await db.dflt_xml.get_db_dflt(self, orig=True)
-            # print('{}.{} {} -> {}'.format(self.table_name, self.col_name, self._value, dflt_value))
+            # print(f'{self.table_name}.{self.col_name} {self._value} -> {dflt_value}')
             if orig_value is not None:  # added 2016-04-17 - to be tested
                 if orig_value != self._orig:
                     orig_value = await self.get_val_from_sql(orig_value)
@@ -331,29 +306,7 @@ class Field:
                     if dflt_value is not None:
                         if dflt_value != self._value:
                             await self.setval(dflt_value, display=display, validate=False)
-                            # # must test for foreign_key [20018-11-03]
-                            # # either set 'validate' to True, or set 'validate' to False and test separately
-                            # await self.setval(dflt_value, display=display, validate=False)
-                            # if self.foreign_key is not None:
-                            #     if self.foreign_key == {}:  # not yet set up
-                            #         await self.setup_foreign_key()
-                            #     foreign_key = await self.db_obj.get_foreign_key(self)
-                            #     tgt_field = foreign_key['tgt_field']
-                            #     if tgt_field._value != self._value:
-                            #         if self._value is None:
-                            #             await tgt_field.db_obj.init()
-                            #         else:
-                            #             await tgt_field.read_row(self._value, display)
-                            #     alt_src = foreign_key['alt_src']
-                            #     for alt_src_fld in alt_src:
-                            #         alt_src_fld._value = (
-                            #             alt_src_fld.foreign_key['tgt_field']._value)
-                            #         if display:
-                            #             for obj in alt_src_fld.gui_obj:
-                            #                 await obj._redisplay()
-
                 return
-            # else: pass  # do not recalc literal dflt_val - that is for init only (messy)
 
         if self.col_defn.dflt_rule is not None:
             dflt_value = await self.check_val(
@@ -367,48 +320,12 @@ class Field:
         # print(f'recalc {self.table_name}.{self.col_name}')
 
         sql = self.col_defn.sql.replace('{company}', self.db_obj.company)
-
-        # if sql.startswith('['):
-        #     end_join = sql.find(']')
-        #     join = sql[1:end_join]
-        #     sql = sql[end_join+1:]
-
-        #     if join.startswith('('):
-        #         lbr = rbr = 0  # find first lbr and matching rbr
-        #         for pos, ch in enumerate(join):
-        #             if ch == '(':
-        #                 if not lbr:  # must be the first lbr
-        #                     lbr = pos
-        #                 rbr += 1
-        #             elif ch == ')':
-        #                 rbr -= 1
-        #                 if not rbr:  # must be the matching rbr
-        #                     rbr = pos
-        #                     break
-
-        #         prefix = join[:lbr]  # LEFT JOIN
-        #         select = join[lbr:rbr+1]  # (SELECT ...)
-        #         suffix = join[rbr+1:]  # alias ON ... = ...
-
-        #     else:
- 
-        #         prefix = join[:10]  # LEFT JOIN
-        #         select = ' (SELECT * FROM '
-        #         suffix = join[10:] + ') ' + sql.split('.')[0] # alias ON ... = ...
-        #         sql = sql.split('.')[1]  # extract col_name from table_name.col_name
-
-        #     sql = 'SELECT {} FROM {} {}'.format(
-        #         sql,
-        #         select,
-        #         suffix.replace(' ON ', ' WHERE ')
-        #         )
-
         param_style = self.db_obj.db_table.constants.param_style
         param_pos = []
         params = []
         for dep in self.col_defn.sql_a_cols:
             fld = await self.db_obj.getfld(dep)
-            col = 'a.{}'.format(dep)
+            col = f'a.{dep}'
             pos = sql.find(col)
             value = await fld.get_val_for_sql()
             if value is None:
@@ -423,22 +340,7 @@ class Field:
             params.insert(pos_to_insert, value)
             param_pos.insert(pos_to_insert, pos)
 
-        if self.col_defn.data_type == 'DEC':
-            # # force sqlite3 to return Decimal type
-            # pos = sql.find(' FROM')
-            # if pos == -1:
-            #     sql += ' AS "x [REAL]"'
-            # else:
-            #     sql = '{} AS "x [REAL]" {}'.format(sql[:pos], sql[pos:])
-            # sql += ' AS "x [REAL]"'
-            pass
-        elif self.col_defn.data_type == 'BOOL':
-            # # force sqlite3 to return Bool type
-            # pos = sql.find(' FROM')
-            # if pos == -1:
-            #     sql += ' AS "x [BOOLTEXT]"'
-            # else:
-            #     sql = '{} AS "x [BOOLTEXT]" {}'.format(sql[:pos], sql[pos:])
+        if self.col_defn.data_type == 'BOOL':
             sql += ' AS "x [BOOLTEXT]"'
 
         if sql[:7].upper() != 'SELECT ':
@@ -449,36 +351,6 @@ class Field:
                 conn = db_mem_conn.mem
             else:
                 conn = db_mem_conn.db
-
-            # conn.tablenames = None
-            # conn.joins = {}
-            # col_text = await conn.get_col_text(self.db_obj, [], self.col_name)
-
-            # if 'LEFT JOIN' in conn.tablenames:
-            #     sql = 'SELECT {} FROM {}'.format(col_text, conn.tablenames)
-            # else:
-            #     sql = 'SELECT ' + col_text
-
-            # param_style = self.db_obj.db_table.constants.param_style
-            # param_pos = []
-            # params = []
-            # for dep in self.deps:
-            #     fld = await self.db_obj.getfld(dep)
-            #     dep = 'a.{}'.format(dep)
-            #     pos = sql.find(dep)
-            #     sql = sql.replace(dep, param_style, 1)
-            #     pos_to_insert = len([x for x in param_pos if x < pos])
-            #     params.insert(pos_to_insert, await fld.get_val_for_sql())
-            #     param_pos.insert(pos_to_insert, pos)
-
-            # # works for now, but not thought through! [2018-04-23]
-            # if 'LEFT JOIN' in conn.tablenames:
-            #     sql += ' WHERE a.row_id = {}'.format(param_style)
-            #     params.append(await self.db_obj.getval('row_id'))
-
-            # print(f'{self.table_name}.{self.col_name}')
-            # print(sql, params)
-            # input()
 
             cur = await conn.exec_sql(sql, params, context=self.db_obj.context)
             try:
@@ -496,10 +368,10 @@ class Field:
         value = await self.check_val(value)
 
         # print('-'*20)
-        # print('{}.{}'.format(self.table_name, self.col_name))
+        # print(f'{self.table_name}.{self.col_name}')
         # print(sql)
         # print(params)
-        # print('value = "{}"'.format(value))
+        # print(f'value = "{value}"')
         # print('='*20)
         # print()
 
@@ -563,7 +435,6 @@ class Field:
                     body='Permission denied')
             allow_amend = col_defn.allow_amend
             if allow_amend not in (False, True):
-                # allow_amend = await eval_expr(deepcopy(allow_amend), db_obj, self)
                 allow_amend = await eval_expr(allow_amend, db_obj, self)
             if not db_obj.exists and col_defn.key_field != 'N':
                 pass  # trying to select
@@ -602,11 +473,10 @@ class Field:
             elif self._value is None:
                 pass  # to cater for new 'user' column - allow first-time value
             else:
-                errmsg = '{}.{}: amendment not allowed {} -> {}'.format(
-                    self.table_name, col_name, self._value, value)
+                errmsg = f'{self.table_name}.{col_name}: amendment not allowed {self._value} -> {value}'
                 raise AibError(head=self.table_name, body=errmsg)
 
-        if self.table_keys and value is not None and not from_sql and not self.db_obj.exists:
+        if self.table_keys and value is not None and not from_sql and not db_obj.exists:
             # 1. if value is None, do not trigger read_row
             # 2. if from_sql, we have just selected the row and are
             #      populating the fields - do not trigger another read_row!
@@ -632,10 +502,12 @@ class Field:
                                     raise
 
         if self.foreign_key is not None:
-            if validate or changed:
-                # check that value exists as key on foreign table, read fk_object
-                # if self.foreign_key == {}:  # not yet set up
-                #     await self.setup_foreign_key()
+            if validate or (changed and self.foreign_key and self.fkey_parent is None):
+                # if validate is True, always check
+                # else if changed is False, never check
+                # else if this is a child fkey (fkey_parent is not None), no need to check
+                # else if value has changed, but foreign_key not set up,
+                #   no need to check yet - wait until value is accessed
                 foreign_key = await db_obj.get_foreign_key(self)
                 tgt_field = foreign_key['tgt_field']
                 true_src = foreign_key['true_src']
@@ -647,24 +519,34 @@ class Field:
                 if value is None:
                     if self._value is not None:  # added 2018-03-15
                         await tgt_field.db_obj.init()
-                elif value == tgt_field._value and (
-                        tgt_field.db_obj.exists or not tgt_field.db_obj.dirty):
-                    # if not exists and not dirty, has just been saved [2018-03-26]
-                    # another possible reason - tgt_field.db_obj.init() has been called,
-                    #   and tgt_field has a dflt_val [2019-12-29]
-                    # if this is ok, might as well just test for 'dirty' (?)
+                elif value == tgt_field._value:
+                    assert not tgt_field.db_obj.dirty,  (
+                        f'{self.table_name}.{col_name} > '
+                        f'{tgt_field.table_name}.{tgt_field.col_name} is dirty!'
+                        )
+                    # main reason - we have read in the foreign object using an alt_src,
+                    #   now we are checking the true_src - same object
                     if true_src:  # don't re-read, but if true_src, set value
                         if col_name == alt_srcnames[-1]:  # if multi-part key, all parts are present
-                            true_foreign_key = await true_src.db_obj.get_foreign_key(true_src)
+                            true_foreign_key = await db_obj.get_foreign_key(true_src)
                             # must validate true_src - db_obj might exist because we have
                             #   performed a lookup, but true_src might have col_checks
                             await true_src.setval(true_foreign_key['tgt_field']._value)
-                elif self.db_obj.parent and tgt_field == self.db_obj.parent[1]:
+                            # next 2 lines added 2020-02-26
+                            # if true_src.table_keys, it has been used to read db_obj
+                            # e.g. ar_customers.party_row_id is an fkey to org_parties and
+                            #   an alt_key to ar_customers
+                            # ar_customers.cust_id is an alt_src to ar_customers.party_row_id
+                            # if we have entered ar_customers.cust_id and we get this far,
+                            #   ar_customers must have been successfully read in
+                            # in this case, we must set 'changed' to False, otherwise lower
+                            #   down 'dirty' is set to True, which is not correct
+                            if true_src.table_keys and db_obj.exists:
+                                changed = False
+                elif db_obj.parent and tgt_field == db_obj.parent[1]:
                     pass  # e.g. ap_tran_inv_tax.tran_det_row_id -> ap_tran_inv_det.row_id
                 else:
                     if true_src:  # this is an alt_src
-                        # if col_name == alt_srcnames[0]:  # if multi-part key, only init on first part
-                        #     await tgt_field.db_obj.init()
                         alt_src_pos = alt_srcnames.index(col_name)
                         if (
                             alt_src_pos == 0  # this is the first alt_src
@@ -685,20 +567,18 @@ class Field:
                                             altsrc_val = value
                                         else:
                                             altsrc_val = await db_obj.getval(altsrc_name)
-                                        where.append('{}={}'.format(altsrc_name, altsrc_val))
-                                    errmsg = '{} not found where {}'.format(
-                                        tgt_field.table_name, ' and '.join(where))
+                                        where.append(f'{altsrc_name}={altsrc_val}')
+                                    errmsg = f'{tgt_field.table_name} not found where {" and ".join(where)}'
                                 else:
-                                    errmsg = '{} not found on {}'.format(
-                                        value, tgt_field.table_name)
+                                    errmsg = f'{value} not found on {tgt_field.table_name}'
                                 raise AibError(head=col_defn.short_descr, body=errmsg)
                             value = tgt_field._value  # to change (eg) 'a001' to 'A001'
                             # must call setval, in case validation required
                             # i.e. there could be a col_check on the true_src, but not on the alt_src
-                            true_foreign_key = await true_src.db_obj.get_foreign_key(true_src)
+                            true_foreign_key = await db_obj.get_foreign_key(true_src)
                             await true_src.setval(true_foreign_key['tgt_field']._value, display=display)
                             # next 2 lines added 2020-01-21
-                            # if true_src is an alt_key, it has been used to read db_obj
+                            # if true_src.table_keys, it has been used to read db_obj
                             # e.g. ar_customers.party_row_id is an fkey to org_parties and
                             #   an alt_key to ar_customers
                             # ar_customers.cust_id is an alt_src to ar_customers.party_row_id
@@ -706,14 +586,13 @@ class Field:
                             #   ar_customers must have been successfully read in
                             # in this case, we must set 'changed' to False, otherwise lower
                             #   down 'dirty' is set to True, which is not correct
-                            if true_src.table_keys and self.db_obj.exists:
+                            if true_src.table_keys and db_obj.exists:
                                 changed = False
                     else:
                         await tgt_field.read_row(value, display)
                         if not tgt_field.db_obj.exists:
                             await tgt_field.db_obj.init()
-                            errmsg = '{} not found on {}'.format(
-                                value, tgt_field.table_name)
+                            errmsg = f'{value} not found on {tgt_field.table_name}'
                             raise AibError(head=col_defn.short_descr, body=errmsg)
                         value = tgt_field._value  # to change (eg) 'a001' to 'A001'
 
@@ -721,7 +600,7 @@ class Field:
             # check for constant
             if self.constant is not None:
                 if value != self.constant:
-                    errmsg = 'Value must be {}'.format(self.constant)
+                    errmsg = f'Value must be {self.constant}'
                     raise AibError(head=self.table_name, body=errmsg)
             # check for fkey_parent
             if self.fkey_parent is not None:
@@ -785,8 +664,7 @@ class Field:
             alt_src = foreign_key['alt_src']
             # if this is a true source, change alt source
             for alt_src_fld in alt_src:
-                alt_foreign_key = await alt_src_fld.db_obj.get_foreign_key(alt_src_fld)
-                # alt_src_fld._value = alt_src_fld.foreign_key['tgt_field']._value
+                alt_foreign_key = await db_obj.get_foreign_key(alt_src_fld)
                 alt_src_fld._value = alt_foreign_key['tgt_field']._value
                 if display:
                     for obj in alt_src_fld.gui_obj:
@@ -1088,8 +966,7 @@ class Text(Field):
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
         max_len = self.col_defn.max_len  # 0 means no maximum
         if max_len and len(value) > max_len:
-            errmsg = '{}.{} - maximum length is {}'.format(
-                self.table_name, self.col_name, max_len)
+            errmsg = f'{self.table_name}.{self.col_name} - maximum length is {max_len}'
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
         return value
 
@@ -1433,8 +1310,7 @@ class Integer(Field):
         try:
             return int(value)
         except ValueError:
-            errmsg = '{}.{} - "{}" is not an integer'.format(
-                self.table_name, self.col_name, value)
+            errmsg = f'{self.table_name}.{self.col_name} - "{value}" is not an integer'
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     async def str_to_val(self, value):
@@ -1449,8 +1325,7 @@ class Integer(Field):
             else:
                 return int(value)
         except (ValueError, TypeError):
-            errmsg = '{}.{} - "{}" is not an integer'.format(
-                self.table_name, self.col_name, value)
+            errmsg = f'{self.table_name}.{self.col_name} - "{value}" is not an integer'
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     async def val_to_str(self, value=blank):
@@ -1512,8 +1387,7 @@ class Decimal(Field):
         try:
             value = D(value)
         except DecimalException:
-            errmsg = '{}.{} - {} not a valid Decimal type'.format(
-                self.table_name, self.col_name, value)
+            errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Decimal type'
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
         if value == int(value):  # if value is an integer, no need to check scale
             return value.quantize(0)
@@ -1555,7 +1429,6 @@ class Decimal(Field):
             return ''
         if scale is None:
             scale = await self.get_scale()
-        # output = '{{:.{}f}}'.format(scale)
         output = f'{{:.{scale}f}}'
         return output.format(value)
 
@@ -1568,8 +1441,8 @@ class Decimal(Field):
             value = self._prev
         if value is None:
             return ''
-        output = '{{:.{}f}}'.format(await self.get_scale())
-        # output = f'{{:.{await self.get_scale()}f}}'  # does not work in Python 3.6 - try in 3.7
+        scale = await self.get_scale()
+        output = f'{{:.{scale}f}}'
         return output.format(value)
 
     async def get_val_from_sql(self, value):

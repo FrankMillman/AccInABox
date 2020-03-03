@@ -644,12 +644,6 @@ class DbObject:
             await fld.setup_foreign_key()
 
         if isinstance(fld.foreign_key, dict):
-            # tgt_fld = fld.foreign_key['tgt_field']
-            # # value = await fld.getval()
-            # value = fld._value_  # if not evaluated yet, any need to evaluate now? [2019-01-21]
-            # if value is not None:
-            #     if value != tgt_fld._value:
-            #         await tgt_fld.db_obj.select_row(keys={tgt_fld.col_name: value}, display=False)
             return [fld.foreign_key] if all else fld.foreign_key
         else:
             col_name, vals_fkeys = fld.foreign_key
@@ -3492,27 +3486,12 @@ async def setup_fkey(db_table, context, company, col):
     for altsrc_name, alttgt_name in zip(
             (_.strip() for _ in altsrc_name.split(',')),
             (_.strip() for _ in alttgt_name.split(',')),
-            # map(str.strip, altsrc_name.split(',')),
-            # map(str.strip, alttgt_name.split(',')),
             ):
 
         assert altsrc_name not in db_table.col_dict, (
             f'{altsrc_name} exists in {db_table.table_name}')
-        try:
-            assert '>' not in alttgt_name
-            fk_coldefn = fk_table.col_dict[alttgt_name]
-        except KeyError:  # next level fkey not yet set up
-            print('WE SHOULD NOT GET HERE')
-            import pdb
-            pdb.set_trace()
-            alttgt_coldefn = [col for col in fk_table.col_list
-                if col.fkey is not None and col.fkey[2] == alttgt_name][0]
 
-            await get_db_table(
-                context, company, alttgt_coldefn.fkey[FK_TARGET_TABLE])
-
-            fk_coldefn = fk_table.col_dict[alttgt_name]
-
+        fk_coldefn = fk_table.col_dict[alttgt_name]
         altsrc_coldefn = fk_coldefn.clone()
         altsrc_coldefn.row_id = -1
         altsrc_coldefn.table_id = col.table_id
