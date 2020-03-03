@@ -1,10 +1,13 @@
 import sqlite3
 import os
+import asyncio
 from datetime import date, timedelta
 from decimal import Decimal as D
 
 import db.objects
 import db.cache
+
+attach_lock = asyncio.Lock()  # to ensure that two processes don't try to attach at the same time
 
 def customise(constants, DbConn, db_params):
     # add db-specific methods to DbConn class
@@ -235,10 +238,11 @@ async def form_sql(self, columns, tablenames, where_clause='',
 async def attach_company(self, company):
     if company is None:  # ':memory:' table
         return
-    if company not in self.companies:
-        await self.exec_cmd(f"attach '{self.database}/{company}' as {company}", raw=True)
-        await self.exec_cmd(f"pragma {company}.foreign_keys = on", raw=True)
-        self.companies.add(company)
+    with await attach_lock:
+        if company not in self.companies:
+            await self.exec_cmd(f"attach '{self.database}/{company}' as {company}", raw=True)
+            await self.exec_cmd(f"pragma {company}.foreign_keys = on", raw=True)
+            self.companies.add(company)
 
 async def convert_sql(self, sql, params=None):
     for word in sql.split():
