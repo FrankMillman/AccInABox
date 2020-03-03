@@ -38,7 +38,7 @@ async def init_company(company, company_name):
         conn = db_mem_conn.db
         await setup_init_data(context, conn, company, company_name)
 
-    return 'company {} created'.format(company)
+    return f'company {company} created'
 
 async def setup_db_tables(context, conn, company, company_name):
     tables = [

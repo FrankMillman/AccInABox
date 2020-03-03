@@ -78,7 +78,7 @@
               <col/>
               <label value="Allow change effective date?"/>
               <col/>
-              <input obj_name="nsls_code" col_name="chg_eff_date"/>
+              <input obj_name="nsls_code" col_name="chg_eff_date" lng="130"/>
               <row/>
               <col/>
               <label value="Unearned gl code:"/>

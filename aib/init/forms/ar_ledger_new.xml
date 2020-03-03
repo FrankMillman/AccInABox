@@ -65,7 +65,7 @@
                 <<return state=`completed`>>
                   <<case>>
                     <<compare src=`ledger.separate_stat_close` op=`is` tgt=`$True`>>
-                      <<inline_form name=`op_stat_date`>>
+                      <<inline_form name=`stat_params`>>
                         <<on_return>>
                           <<return state=`cancelled`/>>
                           <<return state=`completed`/>>
@@ -159,7 +159,7 @@
       </frame_methods>
     </frame>
   </inline_form>
-  <inline_form name="op_stat_date" title="First statement date">
+  <inline_form name="stat_params" title="Statement parameters">
     <frame main_object="var">
       <toolbar/>
       <body>
@@ -170,6 +170,11 @@
         <label value="First statement date:"/>
         <col/>
         <input obj_name="var" col_name="first_stat_date" lng="84"/>
+        <row/>
+        <col/>
+        <label value="Statement date parameter:"/>
+        <col/>
+        <input obj_name="ledger" col_name="stmt_date" lng="84"/>
       </body>
       <button_row>
         <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
