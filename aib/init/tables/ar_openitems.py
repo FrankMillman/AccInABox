@@ -126,7 +126,7 @@ cols.append ({
             ['ar_chg', 'ar_subtran_chg'],
             ['ar_disc', 'ar_tran_disc'],
             ]],
-        'row_id', 'ledger_row_id, cust_id, tran_number', 'ledger_row_id, cust_id, tran_number', True, None],
+        'row_id', None, None, True, None],
     'choices'    : None,
     })
 cols.append ({
@@ -347,14 +347,14 @@ virt = []
 #     'col_head'   : 'Tran date',
 #     'sql'        : 'a.tran_row_id>tran_date',
 #     })
-# virt.append ({
-#     'col_name'   : 'tran_number',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Transaction number',
-#     'long_descr' : 'Transaction number',
-#     'col_head'   : 'Tran no',
-#     'sql'        : 'a.tran_row_id>tran_number',
-#     })
+virt.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction number',
+    'long_descr' : 'Transaction number',
+    'col_head'   : 'Tran no',
+    'sql'        : 'a.tran_row_id>tran_number',
+    })
 # virt.append ({
 #     'col_name'   : 'posted',
 #     'data_type'  : 'BOOL',

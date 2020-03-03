@@ -120,7 +120,7 @@ cols.append ({
             ['ap_crn', 'ap_tran_crn'],
             ['ap_pmt', 'ap_tran_pmt'],
             ]],
-        'row_id', 'ledger_row_id, supp_id, tran_number', 'ledger_row_id, supp_id, tran_number', True, None],
+        'row_id', None, None, True, None],
     'choices'    : None,
     })
 cols.append ({

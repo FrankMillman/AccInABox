@@ -98,10 +98,7 @@ cols.append ({
             ['check', '', 'item_row_id>tran_row_id>posted', 'is', '$True', ''],
             ]],
         ],
-    'fkey'       : [
-        'ar_openitems', 'row_id', 'item_tran_type, ledger_row_id, item_cust_id, item_tran_number, item_split_no',
-        'tran_type, ledger_row_id, cust_id, tran_number, split_no', False, None
-        ],
+    'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({
