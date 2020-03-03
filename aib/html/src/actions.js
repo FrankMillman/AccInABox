@@ -38,6 +38,19 @@ function got_focus(new_focus) {
 
 //  if (new_focus_form.disable_count) return;
 
+  if (new_focus_form.root !== root_zindex[root_zindex.length-1]) {
+    // focus set on non-active root - make it active
+    var old_pos = new_focus_form.root.zindex;
+    var new_pos = root_zindex.length-1;
+    root_zindex.splice(new_pos, 0, root_zindex.splice(old_pos, 1)[0]);
+    for (var i=old_pos; i<= new_pos; i++) {
+      var root = root_zindex[i];
+      root.zindex = i;
+      for (var j=0, root_length=root.length; j<root_length; j++)
+        root[j].style.zIndex = (i*100) + j;
+      };
+    };
+
   if (new_focus_form.current_focus === new_focus) {
     // can get here after errmsg box dismissed
     new_focus_form.focus_from_server = false;

@@ -1980,7 +1980,7 @@ if (grid.header_row.length) {
       var target = grid.kbd_shortcuts['ctrl'][e.keyCode];
     else if (e.shiftKey)
       var target = grid.kbd_shortcuts['shift'][e.keyCode];
-    else
+    else if (!grid.amended())  // Enter can mean 'save' if amended, or 'select' if not
       var target = grid.kbd_shortcuts['normal'][e.keyCode];
 
     if (target !== undefined) {
