@@ -110,9 +110,9 @@ async def load_form_xml(caller, xml):
             'name': obj_name, 'descr': db_table.short_descr})
         await obj_names.save()
 
-        for col_defn in db_table.col_list:
-            await col_names.init(init_vals={
-                'name': col_defn.col_name, 'descr': col_defn.short_descr})
+        for seq, col_defn in enumerate(db_table.col_list):
+            await col_names.init(init_vals={'name': col_defn.col_name,
+                'descr': col_defn.short_descr, 'seq': seq})
             await col_names.save()
         # """
 
@@ -122,9 +122,9 @@ async def load_form_xml(caller, xml):
             'name': memobj.get('name'), 'descr': memobj.get('descr')})
         await obj_names.save()
         obj_row_id = await obj_names.getval('row_id')
-        for memcol in memobj.iter('mem_col'):
-            await col_names.init(init_vals={'obj_id': obj_row_id,
-                'name': memcol.get('col_name'), 'descr': memcol.get('short_descr')})
+        for seq, memcol in enumerate(memobj.iter('mem_col')):
+            await col_names.init(init_vals={'name': memcol.get('col_name'),
+                'descr': memcol.get('short_descr'), 'seq': seq})
             await col_names.save()
 
     frame_xml = form_xml.find('frame')

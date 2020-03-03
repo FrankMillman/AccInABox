@@ -785,6 +785,8 @@ class DbObject:
         field.must_be_evaluated = True  # ensure it is evaluated the first time it is accessed
 
     async def select_row_from_cursor(self, row, display):
+        if row == -1:  # on blank row
+            return
         keys = await self.cursor.get_keys(row)
         await self.select_row(keys, display=display)
         if not self.exists:
@@ -2299,6 +2301,8 @@ class DbObject:
         min = 0
         if not self.exists or parent_changed:
             max += 1
+        if not self.exists and new_seq == max:
+            return  # appending - nothing to adjust
         if new_seq > max:
             new_seq = max
             await self.setval(seq_col_name, new_seq)
