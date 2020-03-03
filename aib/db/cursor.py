@@ -54,9 +54,9 @@ class Cursor:
 
         if self.db_obj.mem_obj:
             mem_id = self.db_obj.context.mem_id
-            self.conn = db.connection._get_mem_connection(mem_id)
+            self.conn = await db.connection._get_mem_connection(mem_id)
         else:
-            self.conn = db.connection._get_connection()
+            self.conn = await db.connection._get_connection()
 
         if log_db:
             db_log.write(f'{id(self.conn)}: START cursor\n')

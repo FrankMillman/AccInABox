@@ -64,30 +64,31 @@ def config_connection(db_params):
 connection_list = []
 connections_active = []
 mem_conn_dict = {}
-connection_lock = threading.Lock()
+connection_lock = asyncio.Lock()
 
-def _get_connection():
-    with connection_lock:
+async def _get_connection():
+    with await connection_lock:
         try: # look for an inactive connection
             pos = connections_active.index(False)
         except ValueError:   # if not found, create 10 more
             pos = len(connections_active)
-            _add_connections(10)
+            await _add_connections(10)
         conn = connection_list[pos]
         connections_active[pos] = True
     return conn
 
-def _add_connections(n):
+async def _add_connections(n):
     for _ in range(n):
-        conn = DbConn(len(connection_list))
+        conn = DbConn()
+        await conn._ainit_(len(connection_list))
         connection_list.append(conn)
         connections_active.append(False)
 
 def _release_connection(pos):  # make connection available for reuse
     connections_active[pos] = False
 
-def _get_mem_connection(mem_id):
-    with connection_lock:
+async def _get_mem_connection(mem_id):
+    with await connection_lock:
         if mem_id not in mem_conn_dict:
             mem_conn_dict[mem_id] = ([], [])  # conn_list, conn_active
         mem_conn = mem_conn_dict[mem_id]
@@ -97,16 +98,17 @@ def _get_mem_connection(mem_id):
             pos = mem_conn_active.index(False)
         except ValueError:   # if not found, create 2 more
             pos = len(mem_conn_active)
-            _add_mem_connections(2, mem_id, mem_conn)
+            await _add_mem_connections(2, mem_id, mem_conn)
         conn = mem_conn_list[pos]
         mem_conn_active[pos] = True
     return conn
 
-def _add_mem_connections(n, mem_id, mem_conn):
+async def _add_mem_connections(n, mem_id, mem_conn):
     mem_conn_list = mem_conn[0]
     mem_conn_active = mem_conn[1]
     for _ in range(n):
-        conn = MemConn(len(mem_conn_list), mem_id)
+        conn = MemConn()
+        await conn._ainit_(len(mem_conn_list), mem_id)
         mem_conn_list.append(conn)
         mem_conn_active.append(False)
 
@@ -122,7 +124,7 @@ def _close_mem_connections(mem_id):
         for conn in mem_conn_list:
             conn.request_queue.put(None)  # tell dbh thread to stop
             conn.dbh.join()  # wait until it has stopped
-            conn.conn.close()  # actually close connection
+            conn.conn.close()  # actually close connection, which also removes db from memory
         del mem_conn_dict[mem_id]
 
 def close_all_connections():
@@ -198,7 +200,7 @@ class DbHandler(threading.Thread):
 #-----------------------------------------------------------------------------
 
 async def async_cursor(conn, sql, params, is_cmd=False, chunk=False):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return_queue = asyncio.Queue()
     conn.request_queue.put((loop, sql, params, return_queue, is_cmd))
 
@@ -243,7 +245,7 @@ class Conn:
 
     logger.debug('DbConn in connection.py')
 
-    def __init__(self):
+    async def _ainit_(self):
         """
         Create an instance of DbConn.
 
@@ -258,7 +260,6 @@ class Conn:
         self.wait_event = asyncio.Event()  # to notify when all requests completed
         self.dbh = DbHandler(self)
         self.dbh.start()
-        # self.grouping = False
         self.tablenames = None
         self.joins = {}
         self.save_tablenames = []
@@ -945,7 +946,7 @@ class Conn:
 #-----------------------------------------------------------------------------
 
 class DbConn(Conn):
-    def __init__(self, pos):
+    async def _ainit_(self, pos):
         """
         Create an instance of DbConn.
 
@@ -956,21 +957,24 @@ class DbConn(Conn):
         :rtype: None
         """
 
-        Conn.__init__(self)
+        await Conn._ainit_(self)
 
-        self.init(pos)
+        # set up db connection - this blocks, so use run_in_executor()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self.init, pos)
+
         self.pos = pos
         self.constants = db_constants
 
     async def release(self, rollback=False):  # return connection to connection pool
         self.wait_event.clear()  # ask to be notified when all requests completed
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         self.request_queue.put((loop, 'rollback' if rollback else 'commit'))
         await self.wait_event.wait()  # when set, safe to release connection
         _release_connection(self.pos)
 
 class MemConn(Conn):
-    def __init__(self, pos, mem_id):
+    async def _ainit_(self, pos, mem_id):
         """
         Create an instance of DbConn.
 
@@ -981,16 +985,19 @@ class MemConn(Conn):
         :rtype: None
         """
 
-        Conn.__init__(self)
+        await Conn._ainit_(self)
 
-        self.init(pos, mem_id)
+        # set up db connection - this blocks, so use run_in_executor()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self.init, pos, mem_id)
+
         self.pos = pos
         self.constants = mem_constants
         self.mem_id = mem_id
 
     async def release(self, rollback=False):  # return connection to connection pool
         self.wait_event.clear()  # ask to be notified when all requests completed
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         self.request_queue.put((loop, 'rollback' if rollback else 'commit'))
         await self.wait_event.wait()  # when set, safe to release connection
         _release_mem_conn(self.mem_id, self.pos)
@@ -1034,10 +1041,10 @@ class DbSession:
     async def get_connection(self):
         if not self.num_connections:  # get connection, set up
             timestamp = datetime.now()  # all updates in same transaction use same timestamp
-            db_conn = _get_connection()
+            db_conn = await _get_connection()
             db_conn.timestamp = timestamp
             if self.mem_id is not None:
-                mem_conn = _get_mem_connection(self.mem_id)
+                mem_conn = await _get_mem_connection(self.mem_id)
                 mem_conn.timestamp = timestamp
             else:
                 mem_conn = None

@@ -825,9 +825,9 @@ class DbObject:
 
         if self.mem_obj:
             mem_id = self.context.mem_id
-            conn = db.connection._get_mem_connection(mem_id)
+            conn = await db.connection._get_mem_connection(mem_id)
         else:
-            conn = db.connection._get_connection()
+            conn = await db.connection._get_connection()
 
         if log_db:
             db_log.write(f'{id(conn)}: START many\n')
@@ -3164,7 +3164,7 @@ class ClonedTable(MemTable):
         self.ledger_col = None
         self.cursor_defn = clone_from.cursor_defn  # always None at this point?
 
-        conn = db.connection._get_mem_connection(context.mem_id)
+        conn = await db.connection._get_mem_connection(context.mem_id)
 
         if log_db:
             db_log.write('{}: create clone {}\n'.format(id(conn), table_name))
