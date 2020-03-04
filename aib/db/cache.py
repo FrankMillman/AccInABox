@@ -33,10 +33,19 @@ class Context:
         self._mod_ledg_id = mod_ledg_id
         self._db_session = db.connection.DbSession(mem_id)
         self._data_objects = {}  # dictionary of shared data objects
+        self._mem_tables_open = {}  # dictionary of mem tables opened
         self.in_db_save = False
         self.in_db_post = False
 
         self._del = delwatcher(self)
+
+    async def close(self):  # called from various places when context completed
+        if self.mem_id is not None:
+            # close mem_db connections - this blocks, so use run_in_executor()
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None,
+                db.connection._close_mem_connections, self.mem_id)
+
     # set attributes to read-only - users can add own attributes at will
     @property
     def user_row_id(self):
@@ -56,6 +65,9 @@ class Context:
     @property
     def data_objects(self):
         return self._data_objects
+    @property
+    def mem_tables_open(self):
+        return self._mem_tables_open
 
 def get_new_context(user_row_id, sys_admin, mem_id=None, mod_ledg_id=(None, None)):
     return Context(user_row_id, sys_admin, mem_id, mod_ledg_id)

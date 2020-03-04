@@ -1093,7 +1093,4 @@ class DbSession:
                     db_log.write('\n')
             raise  # re-raise exception
 
-    def close(self):  # called from ht.form.close_form()
-        _close_mem_connections(self.mem_id)
-
 #----------------------------------------------------------------------------

@@ -238,8 +238,10 @@ class ProcessRoot:
             await bpm_detail.setval('element_name', self.process_name)
             await bpm_detail.setval('state', 'active')
             await bpm_detail.setval('start_time', dtm.now())
-            context_data = {k: v for k, v in vars(self.context).items() if k not in
-               ('_mem_id', '_db_session', '_data_objects', 'in_db_save', 'in_db_post', '_del')}
+            # context_data = {k: v for k, v in vars(self.context).items() if k not in
+            #    ('_mem_id', '_db_session', '_data_objects', 'in_db_save', 'in_db_post', '_del')}
+            context_data = {k: v for k, v in vars(self.context).items()
+                if not k.startswith('_') and k not in ('in_db_save', 'in_db_post')}
             await bpm_detail.setval('data_imported', [context_data, self.data_inputs])
             await bpm_detail.save()
             # save row_id so that the row can be updated on completion/termination
@@ -347,7 +349,7 @@ class ProcessRoot:
             await bpm_header.setval('state', state)
             await bpm_header.save()
 
-        self.context.db_session.close()  # close in_memory db connections
+        await self.context.close()  # close in_memory db connections
         del active_processes[self.process_ref]
         if self.callback is not None:
             callback, *args = self.callback

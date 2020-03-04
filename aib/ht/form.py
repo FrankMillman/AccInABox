@@ -201,7 +201,7 @@ class Form:
             del self.root.form_list[-1]
             if self.parent_form is None:
                 assert len(self.root.form_list) == 0
-                self.db_session.close()  # close in_memory db connections
+                await self.context.close()  # close in_memory db connections
                 del self.session.active_roots[self.root.ref]
             raise
 
@@ -595,31 +595,18 @@ class Form:
             # self.obj_dict = None
             # self.first_input = None
 
-        # self.db_session.close()  # close in_memory db connections
-
-        # self.data_objects = None
-
-        # self.grid_dict.clear()
-
-        # del self.form  # remove circular reference
-
         del self.root.form_list[-1]
 
         if self.parent_form is None:
             assert len(self.root.form_list) == 0
-            self.db_session.close()  # close in_memory db connections
+            await self.context.close()  # close in_memory db connections
             del self.session.active_roots[self.root.ref]
-            # self.context.data_objects.clear()
-            # self.mem_tables.clear()
-            # del self.root
-            # del self.context
         else:  # closing a sub_form
             # remove/restore any references to mem_tables created by sub_form
             for mem_tablename in self.mem_tables:
                 mem_table, old_path = self.mem_tables[mem_tablename]
                 if old_path is None:
                     del self.data_objects[mem_tablename]
-                    # self.mem_tables[mem_tablename] = None  # remove circular reference
                 else:
                     self.data_objects[mem_tablename] = self.data_objects[old_path]
 

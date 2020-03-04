@@ -148,20 +148,20 @@ async def get_mem_table(context, company, table_name, table_defn=None):
 
     table_key = (id(context), table_name.lower())
     if table_defn is not None:
-        if table_key in tables_open:
+        if table_key in context.mem_tables_open:
             raise AibError(head='Create mem table',
                 body=f'Another in-memory table {table_name!r} already exists')
     if table_defn is None:
-        if table_key not in tables_open:
+        if table_key not in context.mem_tables_open:
             raise AibError(head='Mem table - get alias',
                 body=f'In-memory table {table_name!r} does not exist')
 
-    if table_key not in tables_open:
+    if table_key not in context.mem_tables_open:
         mem_table = MemTable()
         await mem_table._ainit_(context, company, table_name, table_defn)
-        tables_open[table_key] = mem_table
+        context.mem_tables_open[table_key] = mem_table
 
-    return tables_open[table_key]
+    return context.mem_tables_open[table_key]
 
 async def get_clone_object(context, company, table_name, clone_from, parent=None):
     # get a copy of an in-memory table cloned from a database table
@@ -178,7 +178,7 @@ async def get_clone_object(context, company, table_name, clone_from, parent=None
 
 async def get_db_table(context, db_company, table_name):
 
-    table_key = db_company.lower() + '.' + table_name.lower()
+    table_key = (db_company.lower(), table_name.lower())
 
     if table_key in tables_open:
         return tables_open[table_key]

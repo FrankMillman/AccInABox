@@ -277,12 +277,13 @@ async def on_insert(fld, xml, debug):
     return fld.db_obj.context.in_db_save and not fld.db_obj.exists
 
 async def on_post(fld, xml, debug):
-    posted = await fld.db_obj.getfld('posted')
-    if posted.col_defn.dflt_val is not None:
-        if posted.col_defn.dflt_val.startswith('{'):  # must be a virtual field pointing to 'posted'
-            # get the underlying field 'posted', not the virtual field
-            posted = await posted.db_obj.getfld(posted.col_defn.dflt_val[1:-1])
-    return await posted.getval() and not await posted.get_orig()
+    return fld.db_obj.context.in_db_post
+    # posted = await fld.db_obj.getfld('posted')
+    # if posted.col_defn.dflt_val is not None:
+    #     if posted.col_defn.dflt_val.startswith('{'):  # must be a virtual field pointing to 'posted'
+    #         # get the underlying field 'posted', not the virtual field
+    #         posted = await posted.db_obj.getfld(posted.col_defn.dflt_val[1:-1])
+    # return await posted.getval() and not await posted.get_orig()
 
 async def compare(fld, xml, debug):
     # <<compare src=`_param.ar_multi_curr` op=`is_` tgt=`$True`>>
