@@ -104,18 +104,6 @@
             <</sub_form>>
           <</action>>
         "/>
-      <col/>
-      <button btn_id="ar_stat" btn_label="Statement" help_msg = "Show statement"
-        btn_enabled="true" btn_validate="true" action="
-          <<action>>
-            <<run_report name=`ar_statement`>>
-              <<call_params>>
-                <<call_param name=`cust` type=`data_obj` source=`cust`/>>
-                <<call_param name=`stat_date` type=`data_attr` source=`balance_date_vars.balance_date`/>>
-              <</call_params>>
-            <</run_report>>
-          <</action>>
-        "/>
 
       <block/>
       <panel/>
@@ -260,6 +248,19 @@
                 <</return>>
               <</on_return>>
             <</sub_form>>
+          <</action>>
+        "/>
+      <col/>
+      <button btn_id="ar_stat" btn_label="Statement" help_msg = "Show statement"
+        btn_enabled="true" btn_validate="true" action="
+          <<action>>
+            <<run_report name=`ar_statement`>>
+              <<call_params>>
+                <<call_param name=`cust` type=`data_obj` source=`cust`/>>
+                <<call_param name=`start_date` type=`data_attr` source=`date_range_vars.start_date`/>>
+                <<call_param name=`end_date` type=`data_attr` source=`date_range_vars.end_date`/>>
+              <</call_params>>
+            <</run_report>>
           <</action>>
         "/>
 

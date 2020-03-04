@@ -3,12 +3,7 @@ import os
 import gzip
 from lxml import etree
 parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
-import operator
-import itertools
-from collections import OrderedDict as OD
-from types import SimpleNamespace as SN
-from json import loads, dumps
-import asyncio
+from json import loads
 
 from reportlab.pdfgen import canvas
 from reportlab.lib import pagesizes
@@ -21,14 +16,7 @@ logger = logging.getLogger(__name__)
 import db.api
 import db.objects
 import db.cache
-import ht.htc
-import ht.gui_objects
-import ht.gui_grid
-import ht.gui_tree
-import ht.gui_bpmn
-import ht.form_xml
-import ht.templates
-from ht.default_xml import get_form_dflt
+import rep.rep_xml
 from common import AibError
 from common import log, debug
 
@@ -70,24 +58,11 @@ class Report:
         self.data_inputs = data_inputs
         self.report = self
 
-    def add_obj(self, obj):
-        ref = next(self.obj_id)
-        self.obj_dict[ref] = obj
-        pos = len(self.obj_list)
-        self.obj_list.append(obj)
-        return f'{self.ref}_{ref}', pos
-
     @log_func
     async def start_report(self, session, context):
 
-        # self.pdf_fd = pdf_fd
         self.context = context
         self.data_objects = context.data_objects
-        self.ref = '0'
-
-        self.obj_list = []  # list of frames for this report
-        self.obj_dict = {}  # dict of objects for this report
-        self.obj_id = itertools.count()  # seq id for objects for this report
 
         # read report_defn from 'sys_report_defns'
         if '.' in self.report_name:
@@ -100,7 +75,6 @@ class Report:
             report_data = await report_defns.get_data()  # save data in local variable
         if not report_data['_exists']:
             raise AibError(head=f'Report {self.report_name}', body='Report does not exist')
-        # descr = report_data['descr']
         report_defn = self.report_defn = report_data['report_xml']
         self.pdf_name = report_defn.get('pdf_name')
 
@@ -200,312 +174,442 @@ class Report:
     async def run_report(self, pdf_fd):
         report_defn = self.report_defn
 
-        def get_x(x):
-            x = float(x)
-            x1, _, x2, _ = coords[-1]
-            if x < 0:
-                x += (x2 + 1)
-            else:
-                x += x1
-            return x
+        page = report_defn.find('page')
+        wd, ht = getattr(pagesizes, page.get('pagesize'))
+        if page.get('landscape') == 'true':  # default to false
+            ht, wd = wd, ht
+        coords = (0, 0, wd, ht)
+        font = page.get('font', 'Courier 14')
+        fontname, fontsize = font.split()
+        font = (fontname, int(fontsize))
 
-        def get_y(y):
-            y = float(y)
-            _, y1, _, y2 = coords[-1]
+        # set up report definition
+        blocks = []
+        for block_xml in page.findall('block'):
+            block = Block()
+            await block._ainit_(self, block_xml, coords, font)
+            blocks.append(block)
+
+        # run report
+        c = canvas.Canvas(pdf_fd, pagesize=(wd, ht))
+        c.setFont(*font)
+
+        c.complete = False  # set to True when last page printed
+        while not c.complete:
+            c.complete = True  # can be reset to False by grid if more rows to print
+            for block in blocks:
+                await block.gen_pdf(c)
+            c.showPage()
+        c.save()
+
+        await self.context.close()  # close in_memory db connections
+
+#----------------------------------------------------------------------------
+
+class Panel:
+    async def _ainit_(self, report, element, coords, font):
+        self.report = report
+        self.element = element
+        self.coords = coords
+        self.font = font
+
+    async def gen_pdf(self, c):
+        for element in self.element:
+            if element.tag == 'string':
+                value = element.get('value')
+                if value == '{pageno}':
+                    value = str(c._pageNumber)
+            elif element.tag == 'field':
+                obj_name, col_name = element.get('name').split('.')
+                db_obj = self.report.data_objects[obj_name]
+                fld = await db_obj.getfld(col_name)
+                value = await fld.val_to_str()
+            x1, y1, x2, y2 = self.coords
+            ht = c._pagesize[1]
+            x = element.get('x')
+            if x == 'c':  # 'centre' - only allowed in strings
+                x = x1 + ((x2 - x1) / 2)
+            else:
+                x = float(x)
+                if x < 0:
+                    x += (x2 + 1)
+                else:
+                    x += x1
+            y = float(element.get('y'))
             if y < 0:
                 y += (y2 + 1)
             else:
                 y += y1
-            return ht - y
+            y = ht - y
 
-        page = report_defn.find('page')
-        wd, ht = getattr(pagesizes, page.get('pagesize', 'A4'))
-        c = canvas.Canvas(pdf_fd, pagesize=(wd, ht))
-        coords = [(0, 0, wd, ht)]
-        font = page.get('font', 'Courier 14')
-        fontname, fontsize = font.split()
-        c.setFont(fontname, int(fontsize))
+            c.setFillGray(0, 1)  # black, alpha=1
+            font = element.get('font')
+            if font is not None:
+                fontname, fontsize = font.split()
+                c.setFont(fontname, int(fontsize))
+            y += (c._fontsize / 4.3)  # offset to get baseline for font
+            if element.get('align') == 'centre':
+                c.drawCentredString(x, y, value)
+            elif element.get('align') == 'right':
+                c.drawRightString(x, y, value)
+            else:
+                c.drawString(x, y, value)
+            if font is not None:
+                c.setFont(*self.font)  # reset to default
 
-        async def build_block(c, block):
-            for element in block:
-                if element.tag == 'block':
-                    old_x1, old_y1, old_x2, old_y2 = coords[-1]
-                    new_x1 = float(element.get('x1'))
-                    new_y1 = float(element.get('y1'))
-                    new_x2 = float(element.get('x2'))
-                    new_y2 = float(element.get('y2'))
-                    coords.append([
-                        new_x1 + old_x1,
-                        new_y1 + old_y1,
-                        new_x2 + (old_x2 if new_x2 < 0 else old_x1),
-                        new_y2 + (old_y2 if new_y2 < 0 else old_y1),
-                        ])
-                    font = element.get('font')
-                    if font is not None:
-                        save_font = (c._fontname, c._fontsize)
-                        fontname, fontsize = font.split()
-                        c.setFont(fontname, int(fontsize))
-                    border = element.get('border')
-                    if border is not None:
-                        bkg = element.get('bkg')
-                        if bkg is None:
-                            fill = 0
-                        else:
-                            fill = 1
-                            c.setFillColor(getattr(colors, bkg))
-                        if border == '0':
-                            stroke = 0
-                        else:
-                            c.setLineWidth(float(border))
-                            stroke = element.get('stroke')
-                            if stroke is None:
-                                c.setStrokeGray(0.5)
-                            else:
-                                c.setStrokeColor(getattr(colors, stroke))
-                            stroke = 1
-                        x1, y1, x2, y2 = coords[-1]
-                        c.rect(x1, ht-y1, x2-x1, y1-y2, stroke=stroke, fill=fill)
-                    await build_block(c, element)
-                    if font is not None:
-                        c.setFont(*save_font)
-                    coords.pop()
-                elif element.tag == 'grid':
-                    db_obj = self.data_objects[element.get('data_object')]
-                    if db_obj.mem_obj:
-                        cursor = db.cursor.MemCursor(db_obj)
+class Grid:
+    async def _ainit_(self, report, element, coords, font):
+        self.report = report
+        self.element = element
+        self.coords = coords
+        self.font = font
+
+        db_obj = self.report.data_objects[element.get('data_object')]
+        if db_obj.mem_obj:
+            cursor = db.cursor.MemCursor(db_obj)
+        else:
+            cursor = db.cursor.DbCursor(db_obj)
+        db_obj.set_cursor(cursor)
+        col_names = []
+        data_cols = []  # for each col, store fld
+        report_cols = []  # store data_col pos if wd != 0
+        col_wds = []  # store wd if wd != 0
+        scale_xref = {}  # if col has a scale_ptr, use scale column to store scale
+        scale_ptr_dict = {}  # for each scale ptr, create scale column {scale_ptr: scale_col_pos}
+
+        cols = element.find('cur_cols')
+        # for pos, col in enumerate(cols):  # see notes in ht.gui_grid
+        pos =  0
+        while pos < len(cols):
+            col = cols[pos]
+            col_name = col.get('col_name')
+            col_names.append(col_name)
+            fld = await db_obj.getfld(col_name)
+            data_cols.append(fld)
+
+            wd = int(col.get('wd'))
+            if wd:  # 0 means do not include column in report
+                report_cols.append(pos)  # to xref report col to data col
+                col_wd = {}
+                col_wd['wd'] = wd  # column width - calculate x1, x2 below
+                col_wd['align'] = col.get('align')
+                col_wd['col_head'] = fld.col_defn.col_head
+                col_wds.append(col_wd)
+
+            if fld.col_defn.scale_ptr is not None:
+                scale_ptr = fld.col_defn.scale_ptr
+                if scale_ptr not in scale_ptr_dict:
+                    scale_ptr_dict[scale_ptr] = len(cols)
+                    # create column for scale_ptr
+                    scale_ptr_col = etree.Element('col', attrib={'col_name': scale_ptr, 'wd': '0'})
+                    cols.append(scale_ptr_col)
+                scale_xref[pos] = scale_ptr_dict[scale_ptr]
+
+            pos += 1
+
+        cursor_filter = []
+        cur_filter = element.find('cur_filter')
+        if cur_filter is not None:
+            for cur_fil in cur_filter.iter('cur_fil'):
+                fil = [
+                    cur_fil.get('test'),
+                    cur_fil.get('lbr'),
+                    cur_fil.get('col_name'),
+                    cur_fil.get('op'),
+                    cur_fil.get('expr').replace('$company', self.report.company),
+                    cur_fil.get('rbr')]
+                cursor_filter.append(fil)
+        if not db_obj.mem_obj and not db_obj.view_obj:
+            test = 'AND' if cursor_filter else 'WHERE'
+            cursor_filter.append((test, '', 'deleted_id', '=', 0, ''))
+        cursor_sequence = []
+        cur_sequence = element.find('cur_sequence')
+        if cur_sequence is not None:
+            for cur_seq in cur_sequence.iter('cur_seq'):
+                seq = [
+                    cur_seq.get('col_name'),
+                    cur_seq.get('desc') == 'true']
+                cursor_sequence.append(seq)
+
+        x1, _, x2, _ = coords
+
+        # for each col_wd, calculate start_x and end_x, with l/r margin of 5
+        expand_col = None  # if col_wd = -1, expand to fill grid_wd
+        shift = x1  # displacement from x1
+        for pos, col_wd in enumerate(col_wds):
+            wd = col_wd['wd']
+            start_x = shift + 5  # left margin
+            if wd == -1:  # store start_x, calculate end_x below
+                col_wd['start_x'] = start_x
+                expand_col = pos
+                break
+            else:
+                end_x = shift + wd - 5  # right margin
+                col_wd['start_x'] = start_x
+                col_wd['end_x'] = end_x
+                shift += wd
+
+        if expand_col is not None:
+            shift = x2  # displacement from x2
+            for pos, col_wd in enumerate(reversed(col_wds)):
+                wd = col_wd['wd']
+                end_x = shift - 5  # right margin
+                if expand_col == len(col_wds) - pos - 1:
+                    col_wd['end_x'] = end_x
+                    break
+                else:
+                    start_x = shift - wd + 5  # left margin
+                    col_wd['start_x'] = start_x
+                    col_wd['end_x'] = end_x
+                    shift -= wd
+
+        await cursor.start_cursor(col_names, cursor_filter, cursor_sequence)
+
+        self.db_obj = db_obj
+        self.cursor = cursor
+        self.num_rows = cursor.num_rows
+        self.current_row = 0
+        self.first_subset_row = 0
+        self.data_cols = data_cols
+        self.report_cols = report_cols
+        self.col_wds = col_wds
+        self.scale_xref = scale_xref
+        self.vert = cols.get('vert', '0')
+
+        methods = element.find('grid_methods')
+        if methods is not None:
+            for method in methods:
+                if method.get('name') == 'on_start_grid':
+                    method = etree.fromstring(method.get('action'), parser=parser)
+                    await rep.rep_xml.exec_xml(self, method)
+
+    async def get_next_row(self):
+        if self.current_row == self.first_subset_row:
+            self.last_subset_row = self.first_subset_row + 50
+            if self.last_subset_row > self.num_rows:
+                self.last_subset_row = self.num_rows
+            self.fetch_rows = self.cursor.fetch_rows(
+                self.first_subset_row, self.last_subset_row)  # async generator
+            self.first_subset_row = self.last_subset_row  # get ready to fetch next subset
+
+        self.current_row += 1
+        return await self.fetch_rows.__anext__()
+
+    def gen_col_head(self, c, col_head):
+        x1, y1, x2, y2 = self.coords
+        ht = c._pagesize[1]
+        font = col_head.get('font')
+        if font is not None:
+            fontname, fontsize = font.split()
+            c.setFont(fontname, int(fontsize))
+
+        vert = col_head.get('vert', '0')
+        if vert != '0':
+            c.setLineWidth(float(vert))
+            p = c.beginPath()
+            for col in self.col_wds[1:]:
+                p.moveTo(col['start_x']-5, ht-y1)
+                p.lineTo(col['start_x']-5, ht-y2)
+            c.drawPath(p, stroke=1, fill=0)
+
+
+        y1 = y1 + c._fontsize + 10  # reset y1 to bottom of header row
+
+        ul = col_head.get('ul', '0')
+        if ul != '0':
+            c.setLineWidth(float(ul))
+            c.line(x1, ht-y1, x2, ht-y1)
+
+        align_centre = col_head.get('align') == 'centre'  # if yes, apply to all headings
+        text_obj = c.beginText()
+        row_pos = y1 - 5 - (c._fontsize/4.3)  # adjust for bottom margin and baseline
+        text_obj.setTextOrigin(x1+5, ht-row_pos)
+        for pos, col in enumerate(self.col_wds):
+            start_x = col['start_x']
+            value = col['col_head']
+            col_wd = col['end_x'] - col['start_x']
+            data_wd = c.stringWidth(value)
+            shift = 0
+            if align_centre:  # centre all headings
+                shift = (col_wd - data_wd) // 2
+            else:  # align according to column alignment
+                if col['align'] == 'right':
+                    shift = col_wd - data_wd
+                elif col['align'] == 'centre':
+                    shift = (col_wd - data_wd) // 2
+            if shift:
+                text_obj.moveCursor(shift, 0)
+                start_x += shift
+            text_obj.textOut(value)
+            if pos < (len(self.report_cols) - 1):
+                text_obj.moveCursor(self.col_wds[pos+1]['start_x'] - start_x, 0)
+        c.drawText(text_obj)
+
+        if font is not None:
+            c.setFont(*self.font)  # reset
+
+        return y1  # return new y1 - bottom of header row = new top of grid
+
+    async def gen_pdf(self, c):
+        x1, y1, _, y2 = self.coords
+        ht = c._pagesize[1]
+        col_head = self.element.find('col_head')
+        if col_head is not None:
+            y1 = self.gen_col_head(c, col_head)
+
+        if self.vert != '0':
+            c.setLineWidth(float(self.vert))
+            p = c.beginPath()
+            for col in self.col_wds[1:]:
+                p.moveTo(col['start_x']-5, ht-y1)
+                p.lineTo(col['start_x']-5, ht-y2)
+            c.drawPath(p, stroke=1, fill=0)
+
+        text_obj = c.beginText()
+        row_ht = c._fontsize + 5  # leave gap of 5 between each row
+        max_row = int((y2 - y1 - 5) // row_ht)  # subtract 5 for bottom margin
+        row_pos = y1 + row_ht - (c._fontsize/4.3)  # adjust for baseline
+        trunc_row = ['']*len(self.report_cols)
+        grid_row = 0
+        first_row = self.element.get('first_row')  # else None
+        last_row = self.element.get('last_row')  # else None
+        while True:  # for each row, set up report_row for printing
+            if first_row is not None:
+                first_row = loads(first_row)
+                report_row = []
+                for value in first_row:
+                    if value is None:
+                        value = ''
+                    elif value.startswith("'"):
+                        value = value[1:-1]
                     else:
-                        cursor = db.cursor.DbCursor(db_obj)
-                    col_names = []
-                    data_cols = []  # for each col, store fld
-                    report_cols = []  # store data_col pos if wd != 0
-                    col_wds = []  # store wd if wd != 0
-                    scale_xref = {}  # if col has a scale_ptr, use scale column to store scale
-                    scale_ptr_dict = {}  # for each scale ptr, create scale column {scale_ptr: scale_col_pos}
-
-                    cols = element.find('cur_cols')
-                    for i, col in enumerate(cols):
-                        col_name = col.get('col_name')
-                        col_names.append(col_name)
-                        fld = await db_obj.getfld(col_name)
-                        data_cols.append(fld)
-
-                        wd = int(col.get('wd'))
-                        if wd:  # 0 means do not include column in report
-                            report_cols.append(i)  # to xref report col to data col
-                            col_wd = {}
-                            col_wd['wd'] = wd  # column width - calculate x1, x2 below
-                            col_wd['align'] = col.get('align')
-                            col_wd['col_head'] = fld.col_defn.col_head
-                            col_wds.append(col_wd)
-
-                        if fld.col_defn.scale_ptr is not None:
-                            scale_ptr = fld.col_defn.scale_ptr
-                            if scale_ptr not in scale_ptr_dict:
-                                scale_ptr_dict[scale_ptr] = len(cols)
-                                # create column for scale_ptr
-                                scale_ptr_col = etree.Element('col', attrib={'col_name': scale_ptr, 'wd': '0'})
-                                cols.append(scale_ptr_col)
-                            scale_xref[i] = scale_ptr_dict[scale_ptr]
-
-                    cursor_filter = []
-                    cur_filter = element.find('cur_filter')
-                    if cur_filter is not None:
-                        for cur_fil in cur_filter.iter('cur_fil'):
-                            fil = [
-                                cur_fil.get('test'),
-                                cur_fil.get('lbr'),
-                                cur_fil.get('col_name'),
-                                cur_fil.get('op'),
-                                cur_fil.get('expr').replace('$company', self.company),
-                                cur_fil.get('rbr')]
-                            cursor_filter.append(fil)
-                    if not db_obj.mem_obj and not db_obj.view_obj:
-                        test = 'AND' if cursor_filter else 'WHERE'
-                        cursor_filter.append((test, '', 'deleted_id', '=', 0, ''))
-                    cursor_sequence = []
-                    cur_sequence = element.find('cur_sequence')
-                    if cur_sequence is not None:
-                        for cur_seq in cur_sequence.iter('cur_seq'):
-                            seq = [
-                                cur_seq.get('col_name'),
-                                cur_seq.get('desc') == 'true']
-                            cursor_sequence.append(seq)
-
-                    await cursor.start_cursor(col_names, cursor_filter, cursor_sequence)
-
-                    x1, y1, x2, y2 = coords[-1]
-
-                    # for each col_wd, calculate start_x and end_x, with l/r margin of 5
-                    expand_col = None  # if col_wd = -1, expand to fill grid_wd
-                    shift = x1  # displacement from x1
-                    for pos, col_wd in enumerate(col_wds):
-                        wd = col_wd['wd']
-                        start_x = shift + 5  # left margin
-                        if wd == -1:  # store start_x, calculate end_x below
-                            col_wd['start_x'] = start_x
-                            expand_col = pos
-                            break
-                        else:
-                            end_x = shift + wd - 5  # right margin
-                            col_wd['start_x'] = start_x
-                            col_wd['end_x'] = end_x
-                            shift += wd
-
-                    if expand_col is not None:
-                        shift = x2  # displacement from x2
-                        for pos, col_wd in enumerate(reversed(col_wds)):
-                            wd = col_wd['wd']
-                            end_x = shift - 5  # right margin
-                            if expand_col == len(col_wds) - pos - 1:
-                                col_wd['end_x'] = end_x
-                                break
-                            else:
-                                start_x = shift - wd + 5  # left margin
-                                col_wd['start_x'] = start_x
-                                col_wd['end_x'] = end_x
-                                shift -= wd
-
-                    vert = cols.get('vert', '0')
-                    if vert != '0':
-                        c.setLineWidth(float(vert))
-                        p = c.beginPath()
-                        for col in col_wds[1:]:
-                            p.moveTo(col['start_x']-5, ht-y1)
-                            p.lineTo(col['start_x']-5, ht-y2)
-                        c.drawPath(p, stroke=1, fill=0)
-
-                    col_head = element.find('col_head')
-                    if col_head is not None:
-                        font = col_head.get('font')
-                        if font is not None:
-                            save_font = (c._fontname, c._fontsize)
-                            fontname, fontsize = font.split()
-                            c.setFont(fontname, int(fontsize))
-                        y1 += c._fontsize + 10  # reset y1 to bottom of header - fontsize + top/bot margin
-                        ul = col_head.get('ul', '0')
-                        if ul != '0':
-                            c.setLineWidth(float(ul))
-                            c.line(x1, ht-y1, x2, ht-y1)
-                        align_centre = col_head.get('align') == 'centre'  # if yes, apply to all headings
-                        text_obj = c.beginText()
-                        row_pos = y1 - 5 - (c._fontsize/4.3)  # adjust for bottom margin and baseline
-                        text_obj.setTextOrigin(x1+5, ht-row_pos)
-                        for pos, col in enumerate(col_wds):
-                            start_x = col['start_x']
-                            value = col['col_head']
-                            col_wd = col['end_x'] - col['start_x']
-                            data_wd = c.stringWidth(value)
-                            shift = 0
-                            if align_centre:  # centre all headings
-                                shift = (col_wd - data_wd) // 2
-                            else:  # align according to column alignment
-                                if col['align'] == 'right':
-                                    shift = col_wd - data_wd
-                                elif col['align'] == 'centre':
-                                    shift = (col_wd - data_wd) // 2
-                            if shift:
-                                text_obj.moveCursor(shift, 0)
-                                start_x += shift
-                            text_obj.textOut(value)
-                            if pos < (len(report_cols) - 1):
-                                text_obj.moveCursor(col_wds[pos+1]['start_x'] - start_x, 0)
-                        c.drawText(text_obj)
-                        if font is not None:
-                            c.setFont(*save_font)
-
-                    row_ht = c._fontsize + 5  # leave gap of 5 between each row
-                    max_row = (y2 - y1 - 10) // row_ht  # subtract 10 for top/bottom margin
-                    first_row = 0
-                    rows_to_fetch = cursor.num_rows
-                    if rows_to_fetch > max_row:
-                        rows_to_fetch = max_row
-                    last_row = first_row + rows_to_fetch
-
-                    text_obj = c.beginText()
-                    row_pos = y1 + row_ht - (c._fontsize/4.3)  # adjust for baseline
-                    trunc_row = ['']*len(report_cols)
-                    fetch_rows = cursor.fetch_rows(first_row, last_row)  # async generator
-                    while True:
-                        if any (col for col in trunc_row):
-                            report_row = trunc_row
-                            trunc_row = ['']*len(report_cols)
-                        else:
-                            try:
-                                data_row = await fetch_rows.__anext__()
-                                report_row = []
-                                for pos, fld in enumerate(data_cols):
-                                    if pos in report_cols:
-                                        value = await fld.get_val_from_sql(data_row[pos])
-                                        if pos in scale_xref:
-                                            scale = data_row[scale_xref[pos]]
-                                            value = await fld.val_to_str(value, scale=scale)
-                                        else:
-                                            value = await fld.val_to_str(value)
-                                        report_row.append(value)
-                            except StopAsyncIteration:
-                                break
-
-                        text_obj.setTextOrigin(x1+5, ht-row_pos)
-                        for pos, value in enumerate(report_row):
-                            col = col_wds[pos]
-                            col_wd = col['end_x'] - col['start_x']
-                            if c.stringWidth(value) > col_wd:
-                                trunc = ''
-                                while c.stringWidth(value) > col_wd:
-                                    trunc = value[-1] + trunc
-                                    value = value[:-1]
-                                trunc_row[i] = trunc
-                            last_x = col['start_x']
-                            if col['align'] == 'right':
-                                data_wd = c.stringWidth(value)
-                                shift = col_wd - data_wd
-                                text_obj.moveCursor(shift, 0)
-                                last_x += shift
-                            elif col['align'] == 'centre':
-                                data_wd = c.stringWidth(value)
-                                shift = (col_wd - data_wd) // 2
-                                text_obj.moveCursor(shift, 0)
-                                last_x += shift
-                            text_obj.textOut(value)
-                            if pos < (len(report_cols) - 1):
-                                text_obj.moveCursor(col_wds[pos+1]['start_x'] - last_x, 0)
-                        row_pos += row_ht
-                    c.drawText(text_obj)
-
-                elif element.tag in ('string', 'field'):
-                    if element.tag == 'string':
-                        value = element.get('value')
-                    else:
-                        obj_name, col_name = element.get('name').split('.')
-                        db_obj = self.data_objects[obj_name]
+                        obj_name, col_name = value.split('.')
+                        db_obj = self.report.data_objects[obj_name]
                         fld = await db_obj.getfld(col_name)
                         value = await fld.val_to_str()
-                    x = element.get('x')
-                    if x == 'c':  # 'centre' - only allowed in strings
-                        x1, _, x2, _ = coords[-1]
-                        x = x1 + ((x2 - x1) / 2)
-                    else:
-                        x = get_x(x)
-                    y = get_y(element.get('y'))
-                    c.setFillGray(0, 1)  # black, alpha=1
-                    font = element.get('font')
-                    if font is not None:
-                        save_font = (c._fontname, c._fontsize)
-                        fontname, fontsize = font.split()
-                        c.setFont(fontname, int(fontsize))
-                    y += (c._fontsize / 4.3)  # offset to get baseline for font
-                    if element.get('align') == 'centre':
-                        c.drawCentredString(x, y, value)
-                    elif element.get('align') == 'right':
-                        c.drawRightString(x, y, value)
-                    else:
-                        c.drawString(x, y, value)
-                    if font is not None:
-                        c.setFont(*save_font)
+                    report_row.append(value)
+                first_row = None
+            elif any (col for col in trunc_row):  # print any overflow from truncated columns
+                report_row = trunc_row
+                trunc_row = ['']*len(self.report_cols)
+            elif grid_row == max_row:  # no more space
+                c.drawText(text_obj)  # output contents of grid
+                c.complete = False  # tell reportlab to call showPage(), then start next page
+                break
+            elif self.current_row == self.num_rows:  # last cursor row has been output
+                if last_row is not None:
+                    last_row = loads(last_row)
+                    report_row = []
+                    for value in last_row:
+                        if value is None:
+                            value = ''
+                        elif value.startswith("'"):
+                            value = value[1:-1]
+                        else:
+                            obj_name, col_name = value.split('.')
+                            db_obj = self.report.data_objects[obj_name]
+                            fld = await db_obj.getfld(col_name)
+                            value = await fld.val_to_str()
+                        report_row.append(value)
+                    last_row = None
+                else:  # end of report
+                    c.drawText(text_obj)  # output contents of grid
+                    await self.db_obj.close_cursor()
+                    break
+            else:  # get next row from cursor
+                data_row = await self.get_next_row()
+                report_row = []
+                for pos, fld in enumerate(self.data_cols):
+                    if pos in self.report_cols:
+                        value = await fld.get_val_from_sql(data_row[pos])
+                        if pos in self.scale_xref:
+                            scale = data_row[self.scale_xref[pos]]
+                            value = await fld.val_to_str(value, scale=scale)
+                        else:
+                            value = await fld.val_to_str(value)
+                        report_row.append(value)
 
-        await build_block(c, page)
+            # prepare row for printing
+            text_obj.setTextOrigin(x1+5, ht-row_pos)
+            for pos, value in enumerate(report_row):
+                col = self.col_wds[pos]
+                col_wd = col['end_x'] - col['start_x']
+                if c.stringWidth(value) > col_wd:
+                    trunc = ''
+                    while c.stringWidth(value) > col_wd:
+                        trunc = value[-1] + trunc
+                        value = value[:-1]
+                    trunc_row[pos] = trunc
+                start_x = col['start_x']
+                if col['align'] == 'right':
+                    data_wd = c.stringWidth(value)
+                    shift = col_wd - data_wd
+                    text_obj.moveCursor(shift, 0)
+                    start_x += shift
+                elif col['align'] == 'centre':
+                    data_wd = c.stringWidth(value)
+                    shift = (col_wd - data_wd) // 2
+                    text_obj.moveCursor(shift, 0)
+                    start_x += shift
+                text_obj.textOut(value)
+                if pos < (len(self.report_cols) - 1):
+                    text_obj.moveCursor(self.col_wds[pos+1]['start_x'] - start_x, 0)
+            grid_row += 1
+            row_pos += row_ht
 
-        c.showPage()
-        c.save()
+class Block:
+    async def _ainit_(self, report, element, coords, font):
+        old_x1, old_y1, old_x2, old_y2 = coords
+        new_x1 = float(element.get('x1'))
+        new_y1 = float(element.get('y1'))
+        new_x2 = float(element.get('x2'))
+        new_y2 = float(element.get('y2'))
+        self.coords = [
+            new_x1 + old_x1,
+            new_y1 + old_y1,
+            new_x2 + (old_x2 if new_x2 < 0 else old_x1),
+            new_y2 + (old_y2 if new_y2 < 0 else old_y1),
+            ]
+        if element.get('font') is None:
+            self.font = font  # inherit from parent
+        else:
+            font = element.get('font')
+            fontname, fontsize = font.split()
+            self.font = (fontname, int(fontsize))
+        self.border = (element.get('border'), element.get('stroke'), element.get('bkg'))
+        self.children = []
+        for child_elem in element:
+            if child_elem.tag == 'block':
+                child = Block()
+                await child._ainit_(report, child_elem, self.coords, self.font)
+            elif child_elem.tag == 'panel':
+                child = Panel()
+                await child._ainit_(report, child_elem, self.coords, self.font)
+            elif child_elem.tag == 'grid':
+                child = Grid()
+                await child._ainit_(report, child_elem, self.coords, self.font)
+            self.children.append(child)
 
-        self.context.db_session.close()  # close in_memory db connections
+    async def gen_pdf(self, c):
+        border, stroke, bkg = self.border
+        if border is not None:
+            if bkg is None:
+                fill = 0
+            else:
+                fill = 1
+                c.setFillColor(getattr(colors, bkg))
+            if border == '0':
+                stroke = 0
+            else:
+                c.setLineWidth(float(border))
+                if stroke is None:
+                    c.setStrokeGray(0.5)
+                else:
+                    c.setStrokeColor(getattr(colors, stroke))
+                stroke = 1
+            x1, y1, x2, y2 = self.coords
+            ht = c._pagesize[1]
+            c.rect(x1, ht-y1, x2-x1, y1-y2, stroke=stroke, fill=fill)
+        c.setFont(*self.font)
+        for child in self.children:
+            await child.gen_pdf(c)
