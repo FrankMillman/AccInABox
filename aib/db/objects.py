@@ -166,11 +166,11 @@ async def get_mem_table(context, company, table_name, table_defn=None):
 async def get_clone_object(context, company, table_name, clone_from, parent=None):
     # get a copy of an in-memory table cloned from a database table
     table_key = (id(context), table_name.lower())
-    if table_key not in tables_open:
+    if table_key not in context.mem_tables_open:
         cloned_table = ClonedTable()
         await cloned_table._ainit_(context, company, table_name, clone_from)
-        tables_open[table_key] = cloned_table
-    mem_table = tables_open[table_key]
+        context.mem_tables_open[table_key] = cloned_table
+    mem_table = context.mem_tables_open[table_key]
     context.company = company
     mem_obj = MemObject()
     await mem_obj._ainit_(context, mem_table, parent)
