@@ -740,9 +740,7 @@ async def handle_client(client_reader, client_writer):
         response.send_headers()
         path = urllib.parse.unquote(path)
         pdf_key = path[1:]  # strip leading '/'
-        # cannot use next line due to Chrome bug - GET received twice!
-        # pdf_handler = pdf_dict.pop(pdf_key)
-        pdf_handler = pdf_dict[pdf_key]
+        pdf_handler = pdf_dict.pop(pdf_key)
         await pdf_handler(client_writer)  # generate pdf, write to socket
         response.writer.write(b'\r\n')
         response.write_eof()
