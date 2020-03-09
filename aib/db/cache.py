@@ -40,11 +40,12 @@ class Context:
         self._del = delwatcher(self)
 
     async def close(self):  # called from various places when context completed
-        if self.mem_id is not None:
+        self._data_objects.clear()
+        if self._mem_id is not None:
             # close mem_db connections - this blocks, so use run_in_executor()
             loop = asyncio.get_running_loop()
             await loop.run_in_executor(None,
-                db.connection._close_mem_connections, self.mem_id)
+                db.connection._close_mem_connections, self._mem_id)
 
     # set attributes to read-only - users can add own attributes at will
     @property
