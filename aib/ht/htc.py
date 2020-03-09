@@ -15,7 +15,6 @@ import email.utils
 from json import loads, dumps
 import itertools
 import random
-import io
 
 import logging
 logger = logging.getLogger(__name__)
@@ -29,7 +28,7 @@ from common import AibError
 from common import log, debug
 
 sessions = {}  # key=session_id, value=session instance
-pdf_dict = {}  # key=pdf_name, value=function to generate pdf
+pdf_dict = {}  # key=pdf_name, value=reference to pdf_fd generated
 
 #----------------------------------------------------------------------------
 
@@ -735,14 +734,13 @@ async def handle_client(client_reader, client_writer):
         else:  # put it in the session queue to be handled next
             await session.request_queue.put((client_writer, messages))
     elif path.endswith('.pdf'):
+        path = urllib.parse.unquote(path)
+        pdf_key = path[1:]  # strip leading '/'
+        pdf_fd = pdf_dict.pop(pdf_key)  # pointer to created pdf - BytesIO object
         response = Response(client_writer, 200)
         response.add_header('Content-type', 'application/pdf')
         response.send_headers()
-        path = urllib.parse.unquote(path)
-        pdf_key = path[1:]  # strip leading '/'
-        pdf_handler = pdf_dict.pop(pdf_key)
-        await pdf_handler(client_writer)  # generate pdf, write to socket
-        response.writer.write(b'\r\n')
+        response.write_file(pdf_fd)  # closes pdf_fd when complete
         response.write_eof()
     elif path.startswith('/dev'):
         path = path[4:]

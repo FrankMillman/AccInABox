@@ -612,9 +612,7 @@ async def run_report(caller, xml):
 
     report_name = xml.get('name')
     report = rep.report.Report(caller.company, report_name, data_inputs=data_inputs)
-    context = db.cache.get_new_context(caller.context.user_row_id,
-        caller.context.sys_admin, id(report), caller.context.mod_ledg_id)
-    await report.start_report(caller.session, context)
+    await report.start_report(caller.session, caller.context)
 
     # set up pdf name, replace {...} with actual values
     pdf_name = report.pdf_name
@@ -623,13 +621,15 @@ async def run_report(caller, xml):
         pos_2 = pdf_name.find('}')
         expr = pdf_name[pos_1+1: pos_2]
         table_name, col_name = expr.split('.')
-        db_obj = context.data_objects[table_name]
+        db_obj = caller.context.data_objects[table_name]
         fld = await db_obj.getfld(col_name)
         pdf_name = pdf_name[:pos_1] + await fld.val_to_str() + pdf_name[pos_2+1:]
     pdf_name = f'{pdf_name}.pdf'
 
-    ht.htc.pdf_dict[pdf_name] = report.run_report  # function to generate pdf
-    caller.session.responder.send_pdf(pdf_name)  # browser 'opens' pdf, ht.htc invokes function
+    pdf_fd = await report.create_report()  # call report creator, returns BytesIO object
+
+    ht.htc.pdf_dict[pdf_name] = pdf_fd  # pointer to pdf created
+    caller.session.responder.send_pdf(pdf_name)  # browser 'opens' pdf, ht.htc writes pdf
 
 async def find_row(caller, xml):
     grid_ref, row = caller.btn_args
