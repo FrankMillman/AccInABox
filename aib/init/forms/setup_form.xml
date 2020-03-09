@@ -44,7 +44,7 @@
       <mem_col col_name="outputs_xml" data_type="SXML" short_descr="Output params xml" long_descr="Output params xml" allow_amend="true"/>
       <mem_col col_name="before_start_form" data_type="SXML" short_descr="Action before start form" long_descr="Action before start form" allow_null="true" allow_amend="true"/>
       <mem_col col_name="after_start_form" data_type="SXML" short_descr="Action after start form" long_descr="Action after start form" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="on_end_form" data_type="SXML" short_descr="Action on end form" long_descr="Action on end form" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="on_close_form" data_type="SXML" short_descr="Action on close form" long_descr="Action on close form" allow_null="true" allow_amend="true"/>
     </mem_obj>
     <mem_obj name="frame_vars" descr="Variables used in frame" parent="form">
       <mem_col col_name="main_object" data_type="TEXT" short_descr="Main object" long_descr="Main object" allow_null="true" allow_amend="true"/>
@@ -254,9 +254,9 @@
         <input obj_name="form_vars" col_name="after_start_form"/>
         <row/>
         <col/>
-        <label value="Action on end form:"/>
+        <label value="Action on close form:"/>
         <col/>
-        <input obj_name="form_vars" col_name="on_end_form"/>
+        <input obj_name="form_vars" col_name="on_close_form"/>
       </body>
       <button_row template="Setup_Form"/>
       <frame_methods template="Setup_Form"/>

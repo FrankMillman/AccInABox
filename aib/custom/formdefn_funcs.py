@@ -64,8 +64,8 @@ async def load_form_xml(caller, xml):
         'before_start_form', form_xml.get('before_start_form'))
     init_vals['after_start_form'] = await form_vars.get_val_from_xml(
         'after_start_form', form_xml.get('after_start_form'))
-    init_vals['on_end_form'] = await form_vars.get_val_from_xml(
-        'on_end_form', form_xml.get('on_end_form'))
+    init_vals['on_close_form'] = await form_vars.get_val_from_xml(
+        'on_close_form', form_xml.get('on_close_form'))
     await form_vars.init(init_vals=init_vals)
 
     obj_names = caller.data_objects['obj_names']
@@ -159,7 +159,7 @@ async def dump_form_xml(caller, xml):
 
     await set_if_not_none(form_xml, form_vars, 'before_start_form')
     await set_if_not_none(form_xml, form_vars, 'after_start_form')
-    await set_if_not_none(form_xml, form_vars, 'on_end_form')
+    await set_if_not_none(form_xml, form_vars, 'on_close_form')
 
     form_xml.append(await form_vars.getval('dbobj_xml'))
     form_xml.append(await form_vars.getval('memobj_xml'))

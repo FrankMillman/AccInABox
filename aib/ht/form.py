@@ -329,6 +329,7 @@ class Form:
             obj_name = obj_xml.get('name')
 
             # there can be a hierarchy of forms - root > form_1 > form_2
+            # it can recurse - root > form_1 > form_2 > form_3 > form_2 > form_3
             # if a lower form uses the same mem_obj name as a higher form,
             #   it over-rides the higher mem_obj
             # if it does not use the same mem_obj name, references to the
@@ -507,11 +508,6 @@ class Form:
                     value = None
                 return_params[name] = value
 
-        on_end_form = self.form_defn.get('on_end_form')
-        if on_end_form is not None:
-            action = etree.fromstring(on_end_form, parser=parser)
-            await ht.form_xml.exec_xml(self, action)
-
         session = self.session  # store it now - inaccessible after close_form()
 
         # remove any obj_to_redisplay relating to this form
@@ -525,14 +521,11 @@ class Form:
 
         if self.callback is not None:
             if self.parent_form is not None:  # closing a sub-form
-                # log.write(f'RETURN {state} {return_params} {self.callback}\n\n')
-                # await self.callback[0](self.callback[1], state, return_params, *self.callback[2:])
                 callback, caller, *args = self.callback
                 await callback(caller, state, return_params, *args)
             else:  # return to calling process(?)
                 callback, *args = self.callback
                 await callback(session, state, return_params, *args)
-                # self.callback = None  # remove circular reference
 
     async def close_form(self):
         if self.closed:
