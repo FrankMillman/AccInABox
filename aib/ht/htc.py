@@ -48,10 +48,10 @@ db_session = db.api.start_db_session()  # used to select menus from db
 menu_lock = asyncio.Lock()  # to prevent 2 users selecting menus simultaneously
 
 class Session:
-    def __init__(self, session_id, user_row_id):
+    def __init__(self, session_id):
         logger.info(f'{session_id} connected')
         self.session_id = session_id
-        self.user_row_id = user_row_id
+        self.user_row_id = -1  # place-holder pending successful login
         self.save_user = None  # to store current user on change_user
         # during the login process, the only database activity available is
         #   to allow the user to change his own password
@@ -59,6 +59,7 @@ class Session:
         # once logged in, on_login() is called, which sets
         #   sys_admin to the user's own value
         self.sys_admin = True
+        self.dir_user = None  # populated in on_login_ok()
 
         self.active_roots = {}  # active roots for this session
         self.root_id = itertools.count()  # seq id for roots created in this session
@@ -82,10 +83,10 @@ class Session:
         return root_id
 
     def get_obj(self, ref):
-        root_ref, form_ref, obj_ref = ref.split('_')
-        root = self.active_roots[int(root_ref)]
-        form = root.form_list[int(form_ref)]
-        return form.obj_dict[int(obj_ref)]
+        root_ref, form_ref, obj_ref = (int(_) for _ in ref.split('_'))
+        root = self.active_roots[root_ref]
+        form = root.form_list[form_ref]
+        return form.obj_dict[obj_ref]
 
     async def await_requests(self):
         # this is a background task (1 per session) to execute requests sequentially
@@ -118,8 +119,8 @@ class Session:
         # callback from login_form - see get_login() below
         if state != 'completed':
             self.responder.send_close_program()
-            # await self.close()
-            asyncio.ensure_future(self.close())  # wait for current request to complete
+            del self.dir_user
+            asyncio.create_task(self.close())  # terminate session
             return
 
         # [TODO] get active tasks for this user from human_task_manager
@@ -262,7 +263,7 @@ class ResponseHandler:
             response.add_header('Content-type', 'application/json; charset=utf-8')
             response.add_header('Transfer-Encoding', 'chunked')
             response.send_headers()
-            response.write(reply)
+            await response.write(reply)
             response.write_eof()
         elif self.reply is not None:  # if None do not reply - set by on_answer()
             response = Response(self.writer, 200)
@@ -326,7 +327,7 @@ class ResponseHandler:
         response.add_header('Content-type', 'application/json; charset=utf-8')
         response.add_header('Transfer-Encoding', 'chunked')
         response.send_headers()
-        response.write(reply)
+        await response.write(reply)
         response.write_eof()
 
     def send_cell_set_focus(self, grid_ref, row, col_ref, dflt_val=None, err_flag=False):
@@ -563,12 +564,10 @@ async def on_login_ok(caller, xml):
     dir_user = session.dir_user = caller.data_objects['dir_user']
     session.user_row_id = await dir_user.getval('row_id')
     session.sys_admin = await dir_user.getval('sys_admin')
-    session.active_roots[0].user_row_id = session.user_row_id
 
 #----------------------------------------------------------------------------
 
-dummy_id_counter = itertools.count(1)
-def send_js(srv, path, dev):
+async def send_js(srv, path, dev):
 
     response = Response(srv, 200)
     if path == '':
@@ -582,11 +581,8 @@ def send_js(srv, path, dev):
         session_id = str(random.SystemRandom().random())
         response.add_header('Set-Cookie', f'session_id={session_id};')
 
-        # provide dummy user id until logged on
-        user_row_id = -next(dummy_id_counter)  # negative id indicates dummy id
-
         # start new session to manage interaction with client
-        session = Session(session_id, user_row_id)
+        session = Session(session_id)
         sessions[session_id] = session
 
     else:
@@ -608,9 +604,9 @@ def send_js(srv, path, dev):
     dname = os.path.join(os.path.dirname(__main__.__file__), 'html')
     try:
         with open(os.path.join(dname, fname), 'rb') as fd:
-            response.write_file(fd)
+            await response.write_file(fd)
     except OSError:
-        response.write(f'Cannot open {fname}')
+        await response.write(f'Cannot open {fname}')
 
     response.write_eof()
 
@@ -635,24 +631,27 @@ class Response:
             write(f'{key}: {val}\r\n'.encode())
         write('\r\n'.encode())
 
-    def write(self, data):
+    async def write(self, data):
         CRLF = b'\r\n'
         write = self.writer.write
         for start in range(0, len(data), CHUNK):
             chunk = data[start:start+CHUNK]
             write(hex(len(chunk))[2:].encode() + CRLF)
             write(chunk.encode() + CRLF)
+            await self.writer.drain()
         write(b'0\r\n\r\n')
 
-    def write_file(self, fd):
+    async def write_file(self, fd):
         CRLF = b'\r\n'
         write = self.writer.write
         chunk = fd.read(CHUNK)
         while chunk:
             write(hex(len(chunk))[2:].encode() + CRLF)
             write(chunk + CRLF)
+            await self.writer.drain()
             chunk = fd.read(CHUNK)
         write(b'0\r\n\r\n')
+        fd.close()
 
     def write_eof(self):
         self.writer.close()
@@ -708,7 +707,7 @@ async def handle_client(client_reader, client_writer):
             response.add_header('Content-type', 'text/html')
             response.add_header('Transfer-Encoding', 'chunked')
             response.send_headers()
-            response.write(reply)
+            await response.write(reply)
             response.write_eof()
             return
 
@@ -725,7 +724,7 @@ async def handle_client(client_reader, client_writer):
                 response.add_header('Transfer-Encoding', 'chunked')
                 response.send_headers()
                 reply = [('append_tasks', task_list)]
-                response.write(dumps(reply))
+                await response.write(dumps(reply))
                 session.last_activetasks_version = activetasks_version
             response.write_eof()
         elif session.questions:  # reply to question - handle it straight away
@@ -740,29 +739,25 @@ async def handle_client(client_reader, client_writer):
         response = Response(client_writer, 200)
         response.add_header('Content-type', 'application/pdf')
         response.send_headers()
-        response.write_file(pdf_fd)  # closes pdf_fd when complete
+        await response.write_file(pdf_fd)  # closes pdf_fd when complete
         response.write_eof()
     elif path.startswith('/dev'):
         path = path[4:]
-        send_js(client_writer, path, dev=True)
+        await send_js(client_writer, path, dev=True)
     else:
         path = path[1:]  # strip leading '/'
-        send_js(client_writer, path, dev=False)
+        await send_js(client_writer, path, dev=False)
 
 async def check_sessions():
     """ background task to check for abandoned sessions """
     try:
         while True:
             now = time.time()
-            sessions_to_close = []  # cannot alter dict while iterating
-            for session in sessions.values():
+            for session in list(sessions.values()):
                 if now - session.tick > 15:  # no tick recd in last 15 seconds
-                    sessions_to_close.append(session)  # assume connection is lost
-            for session in sessions_to_close:
-                print('CLOSING', session.session_id)
-                await session.close()
+                    print('CLOSING', session.session_id)
+                    await session.close()
             session = None  # to enable garbage collection
-            sessions_to_close = None  # to enable garbage collection
             await asyncio.sleep(15)  # check every 15 seconds
     except asyncio.CancelledError:  # respond to cancel() in shutdown() below
         pass  # could run any cleanup here
