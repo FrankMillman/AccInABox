@@ -40,7 +40,6 @@ class Context:
         self._del = delwatcher(self)
 
     async def close(self):  # called from various places when context completed
-        self._data_objects.clear()
         if self._mem_id is not None:
             # close mem_db connections - this blocks, so use run_in_executor()
             loop = asyncio.get_running_loop()
@@ -720,7 +719,7 @@ async def get_next(db_obj, key):
 # fkeys per table for each company
 fkeys = {}
 fkey_lock = asyncio.Lock()
-async def get_fkeys(company, table_name):
+async def get_fkeys(context, company, table_name):
     with await fkey_lock:
         if company not in fkeys:
 
@@ -738,7 +737,7 @@ async def get_fkeys(company, table_name):
                 "AND a.fkey IS NOT NULL"
                 )
 
-            async with db_session.get_connection() as db_mem_conn:
+            async with context.db_session.get_connection() as db_mem_conn:
                 conn = db_mem_conn.db
                 cur = await conn.exec_sql(sql)
 

@@ -2748,9 +2748,8 @@ class DbTable:
 
         self.sub_trans = sub_trans  # delay evaluation until requested - see get_sub_trans()
 
-        # cannot call this from init_db() or init_company() - db_columns not yet set up
-        if not hasattr(context, 'from_init'):
-            self.src_fkeys, self.tgt_fkeys = await db.cache.get_fkeys(defn_company, table_name)
+        self.src_fkeys, self.tgt_fkeys = await db.cache.get_fkeys(
+            context, defn_company, table_name)
 
         """
         # set up any 'conditions' - i.e. db changes that trigger BPMN2.0 events

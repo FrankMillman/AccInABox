@@ -295,9 +295,9 @@ async def load_fkeys(caller, xml):
     target_keys = caller.data_objects['target_keys']
     await target_keys.delete_all()
 
-    src_fkeys, tgt_fkeys = await db.cache.get_fkeys(caller.company, table_name)
+    src_fkeys, tgt_fkeys = await db.cache.get_fkeys(
+        caller.context, caller.company, table_name)
 
-#   for src_col, tgt_tbl, tgt_col, alt_src, alt_tgt, test in src_fkeys:
     for src_fkey in src_fkeys:
         init_vals = {
             'src_col': src_fkey.src_col, 'tgt_tbl': src_fkey.tgt_tbl, 'tgt_col': src_fkey.tgt_col,
@@ -306,7 +306,6 @@ async def load_fkeys(caller, xml):
         await source_keys.init(init_vals=init_vals)
         await source_keys.save()
 
-#   for src_tbl, src_col, tgt_col, is_child, test in tgt_fkeys:
     for tgt_fkey in tgt_fkeys:
         init_vals = {
             'src_tbl': tgt_fkey.src_tbl, 'src_col': tgt_fkey.src_col,
