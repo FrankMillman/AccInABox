@@ -100,12 +100,6 @@ class Session:
             await responder.handle_response(self, request)
             request_queue.task_done()
 
-        # import gc
-        # gc.collect()
-        # for _ in delwatcher_set:
-        #     print(_)
-        # print('-'*40)
-
     async def close(self):
         for root in list(self.active_roots.values()):
             for form in reversed(root.form_list):
@@ -130,12 +124,6 @@ class Session:
         #   set up user menu
         # send initial screen to client -
         #   menu, active tasks, favourites
-
-        # dir_user = self.context.data_objects['dir_user']
-        # self.sys_admin = await dir_user.getval('sys_admin')
-        # self.user_row_id = await dir_user.getval('row_id')
-        # self.active_roots[0].user_row_id = self.user_row_id
-        # del self.context
 
         dir_user = self.dir_user  # set up in on_get_login()
         del self.dir_user
@@ -262,14 +250,14 @@ class ResponseHandler:
             response = Response(self.writer, 200)
             response.add_header('Content-type', 'application/json; charset=utf-8')
             response.add_header('Transfer-Encoding', 'chunked')
-            response.send_headers()
+            await response.send_headers()
             await response.write(reply)
-            response.write_eof()
+            await response.write_eof()
         elif self.reply is not None:  # if None do not reply - set by on_answer()
             response = Response(self.writer, 200)
             response.add_header('Content-type', 'text/html')
-            response.send_headers()
-            response.write_eof()
+            await response.send_headers()
+            await response.write_eof()
 
     #----------------------------
     # actions to return to client
@@ -326,9 +314,9 @@ class ResponseHandler:
         response = Response(self.writer, 200)
         response.add_header('Content-type', 'application/json; charset=utf-8')
         response.add_header('Transfer-Encoding', 'chunked')
-        response.send_headers()
+        await response.send_headers()
         await response.write(reply)
-        response.write_eof()
+        await response.write_eof()
 
     def send_cell_set_focus(self, grid_ref, row, col_ref, dflt_val=None, err_flag=False):
         self.reply.append(('cell_set_focus', (grid_ref, row, col_ref, dflt_val, err_flag)))
@@ -599,7 +587,7 @@ async def send_js(srv, path, dev):
             response.add_header('Content-type', 'text/html')
 
     response.add_header('Transfer-Encoding', 'chunked')
-    response.send_headers()
+    await response.send_headers()
 
     dname = os.path.join(os.path.dirname(__main__.__file__), 'html')
     try:
@@ -608,7 +596,7 @@ async def send_js(srv, path, dev):
     except OSError:
         await response.write(f'Cannot open {fname}')
 
-    response.write_eof()
+    await response.write_eof()
 
 CHUNK = 8192
 class Response:
@@ -624,12 +612,13 @@ class Response:
     def add_header(self, key, val):
         self.headers.append((key, val))
 
-    def send_headers(self):
+    async def send_headers(self):
         write = self.writer.write
         write(self.status.encode())
         for key, val in self.headers:
             write(f'{key}: {val}\r\n'.encode())
         write('\r\n'.encode())
+        await self.writer.drain()
 
     async def write(self, data):
         CRLF = b'\r\n'
@@ -653,8 +642,9 @@ class Response:
         write(b'0\r\n\r\n')
         fd.close()
 
-    def write_eof(self):
+    async def write_eof(self):
         self.writer.close()
+        await self.writer.wait_closed()
 
 def accept_client(client_reader, client_writer):
     task = asyncio.Task(handle_client(client_reader, client_writer))
@@ -706,9 +696,9 @@ async def handle_client(client_reader, client_writer):
             response = Response(client_writer, 200)
             response.add_header('Content-type', 'text/html')
             response.add_header('Transfer-Encoding', 'chunked')
-            response.send_headers()
+            await response.send_headers()
             await response.write(reply)
-            response.write_eof()
+            await response.write_eof()
             return
 
         session = sessions[session_id]
@@ -718,15 +708,15 @@ async def handle_client(client_reader, client_writer):
             task_list, activetasks_version = ht.htm.get_task_list(
                 session.user_row_id, session.last_activetasks_version)
             if task_list is None:
-                response.send_headers()
+                await response.send_headers()
             else:
                 response.add_header('Content-type', 'application/json; charset=utf-8')
                 response.add_header('Transfer-Encoding', 'chunked')
-                response.send_headers()
+                await response.send_headers()
                 reply = [('append_tasks', task_list)]
                 await response.write(dumps(reply))
                 session.last_activetasks_version = activetasks_version
-            response.write_eof()
+            await response.write_eof()
         elif session.questions:  # reply to question - handle it straight away
             responder = ResponseHandler()
             await responder.handle_response(session, (client_writer, messages))
@@ -738,9 +728,9 @@ async def handle_client(client_reader, client_writer):
         pdf_fd = pdf_dict.pop(pdf_key)  # pointer to created pdf - BytesIO object
         response = Response(client_writer, 200)
         response.add_header('Content-type', 'application/pdf')
-        response.send_headers()
+        await response.send_headers()
         await response.write_file(pdf_fd)  # closes pdf_fd when complete
-        response.write_eof()
+        await response.write_eof()
     elif path.startswith('/dev'):
         path = path[4:]
         await send_js(client_writer, path, dev=True)
