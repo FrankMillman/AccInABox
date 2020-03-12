@@ -419,6 +419,7 @@ class Conn:
             self.save_tablenames.append(self.tablenames)
 
         if debug:
+            col_names = list(col_names)  # preserve gen expr
             print('BUILD', db_table.table_name, col_names, where, order)
 
         self.grouping = False
@@ -715,7 +716,6 @@ class Conn:
             if trail in self.joins:
                 alias = self.joins[trail]
             else:
-                # alias = chr(122-len(self.joins))  # z, y, x ...
                 alias = self.calc_next_alias()
                 self.tablenames += (
                     f' LEFT JOIN {db_table.data_company}.adm_params {alias} ON {alias}.row_id = 1')
@@ -928,7 +928,6 @@ class Conn:
         if trail in self.joins:
             tgt_alias = self.joins[trail]
         else:
-            # tgt_alias = chr(122-len(self.joins))  # z, y, x ...
             tgt_alias = self.calc_next_alias()
             self.joins[trail] = tgt_alias
             tgt_table = tgt_col.table_name

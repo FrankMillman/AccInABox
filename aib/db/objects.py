@@ -824,7 +824,7 @@ class DbObject:
         if log_db:
             db_log.write(f'{id(conn)}: START many\n')
 
-        col_names = [fld.col_name for fld in self.select_cols]
+        col_names = (fld.col_name for fld in self.select_cols)
         cur = await conn.full_select(self, col_names, where, order, debug=debug)
 
         # the thinking behind select_many is that it does not *yield* each
@@ -870,7 +870,7 @@ class DbObject:
                 conn = db_mem_conn.mem
             else:
                 conn = db_mem_conn.db
-            col_names = [fld.col_name for fld in self.select_cols]
+            col_names = (fld.col_name for fld in self.select_cols)
             cur = await conn.full_select(self, col_names, where, debug=debug)
             try:
                 row = await anext(cur)
@@ -2190,7 +2190,7 @@ class DbObject:
                 appending = True  # must get new_seq as 'select max' + 1
             else:
                 new_seq = self.cursor_row  # using gui_grid - can just use cursor_row
-                await seq.setval(new_seq)
+                await seq.setval(new_seq)  # calls select_row() if table_keys - not ideal!
                 if new_seq == self.cursor.num_rows:  # row appended - no checking required
                     return parent_changed
 

@@ -610,13 +610,12 @@ class Field:
             # check for choices
             if col_defn.choices is not None:
                 if value is not None and value not in col_defn.choices:
+                    errmsg = f'{value!r} invalid for {self.table_name}.{col_name}'
                     if col_defn.choices:
-                        errmsg = (
-                            f'{self.table_name}.{col_name} - '
-                            f'value must be one of {", ".join(repr(_) for _ in col_defn.choices)}'
-                            )
+                        choices = ', '.join(repr(_) for _ in col_defn.choices)
+                        errmsg += f' - must be one of {choices}'
                     else:
-                        errmsg = f'No choices set up for {self.table_name}.{col_name}'
+                        errmsg += f' - no choices set up'
                     raise AibError(head=col_defn.short_descr, body=errmsg)
             # check for col_checks
             for descr, errmsg, col_chk in col_defn.col_checks:
