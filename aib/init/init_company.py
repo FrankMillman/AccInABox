@@ -16,14 +16,9 @@ next_table_id = count(1)  # generate sequential numbers, starting from 1
 async def init_company(company, company_name):
 
     context = db.cache.get_new_context(1, True)  # user_row_id, sys_admin
-    context.from_init = True  # used in db.objects to prevent calling get_fkeys()
-
     async with context.db_session.get_connection() as db_mem_conn:
-
         conn = db_mem_conn.db
-
         await conn.create_company(company)
-
         await setup_db_tables(context, conn, company, company_name)  # tables to store database metadata
         await setup_dir_tables(context, conn, company)  # directory tables defined in _sys
         await setup_sys_tables(context, conn, company)  # common table defintions defined in _sys
@@ -33,6 +28,7 @@ async def init_company(company, company_name):
         await setup_reports(context, conn, company)
         await setup_processes(context, conn, company)
         await setup_menus(context, conn, company, company_name)
+        # 'commit' happens here
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db

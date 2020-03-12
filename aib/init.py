@@ -83,8 +83,6 @@ async def setup_db(cfg):
     db.api.config_connection(cfg['DbParams'])
 
     context = db.cache.get_new_context(1, True)  # user_row_id, sys_admin
-    context.from_init = True  # used in db.objects to prevent calling get_fkeys()
-
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         await init.init_db.init_database(context, conn)
