@@ -55,6 +55,9 @@ async def create_view(context, conn, company_id, view_name):
                 sql += ' {}'.format(' '.join(fil))
         selects.append(sql)
 
+    conn.tablenames = None
+    conn.joins = {}
+
     sql = 'CREATE VIEW {}.{} AS {}'.format(
         company_id, view_defn[VIEW_NAME], ' UNION ALL '.join(selects))
 
