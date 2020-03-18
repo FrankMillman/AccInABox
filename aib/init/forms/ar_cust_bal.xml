@@ -6,10 +6,10 @@
   <</action>>
   ">
   <db_objects>
-    <db_obj name="cust" table_name="ar_customers" is_formview_obj="true"/>
+    <db_obj name="ar_cust" table_name="ar_customers" is_formview_obj="true"/>
     <db_obj name="ar_items" table_name="ar_openitems"/>
-    <db_obj name="party" table_name="org_parties" fkey="cust.party_row_id"/>
-    <db_obj name="currency" table_name="adm_currencies" fkey="cust.currency_id"/>
+    <db_obj name="party" table_name="org_parties" fkey="ar_cust.party_row_id"/>
+    <db_obj name="currency" table_name="adm_currencies" fkey="ar_cust.currency_id"/>
     <db_obj name="ar_trans" table_name="ar_trans" view="true"/>
   </db_objects>
   <mem_objects>
@@ -52,7 +52,7 @@
   </mem_objects>
   <input_params/>
   <output_params/>
-  <frame main_object="cust">
+  <frame main_object="ar_cust">
     <toolbar template="Query_Form"/>
     <body>
       <block/>
@@ -62,7 +62,7 @@
       <col/>
       <label value="Customer Id:"/>
       <col/>
-      <input obj_name="cust" col_name="cust_id" lng="80" readonly="true" skip="true"/>
+      <input obj_name="ar_cust" col_name="cust_id" lng="80" readonly="true" skip="true"/>
       <display obj_name="party" col_name="display_name" lng="160"/>
 
       <block/>
@@ -79,7 +79,7 @@
       <input obj_name="balance_date_vars" col_name="balance_date" lng="84" readonly="true" skip="true"/>
       <col/>
       <display obj_name="currency" col_name="symbol" lng="10"/>
-      <display obj_name="cust" col_name="bal_total" lng="80"/>
+      <display obj_name="ar_cust" col_name="bal_total" lng="80"/>
       <col/>
       <button btn_id="change_date" btn_label="Change" help_msg = "Change date"
         btn_enabled="true" btn_validate="true" action="
@@ -127,17 +127,17 @@
       <col/>
       <text value="Balance: "/>
       <col/>
-      <input obj_name="cust" col_name="bal_120" lng="80" readonly="true" skip="true"/>
+      <input obj_name="ar_cust" col_name="bal_120" lng="80" readonly="true" skip="true"/>
       <col/>
-      <input obj_name="cust" col_name="bal_90" lng="80" readonly="true" skip="true"/>
+      <input obj_name="ar_cust" col_name="bal_90" lng="80" readonly="true" skip="true"/>
       <col/>
-      <input obj_name="cust" col_name="bal_60" lng="80" readonly="true" skip="true"/>
+      <input obj_name="ar_cust" col_name="bal_60" lng="80" readonly="true" skip="true"/>
       <col/>
-      <input obj_name="cust" col_name="bal_30" lng="80" readonly="true" skip="true"/>
+      <input obj_name="ar_cust" col_name="bal_30" lng="80" readonly="true" skip="true"/>
       <col/>
-      <input obj_name="cust" col_name="bal_curr" lng="80" readonly="true" skip="true"/>
+      <input obj_name="ar_cust" col_name="bal_curr" lng="80" readonly="true" skip="true"/>
       <col/>
-      <input obj_name="cust" col_name="bal_total" lng="80" readonly="true" skip="true"/>
+      <input obj_name="ar_cust" col_name="bal_total" lng="80" readonly="true" skip="true"/>
 
       <row/>
       <col/>
@@ -198,7 +198,7 @@
         </cur_columns>
         <cur_filter>
           <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
-            op="=" expr="cust.row_id" rbr=""/>
+            op="=" expr="ar_cust.row_id" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
             op=">>" expr="_ctx.first_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
@@ -256,7 +256,6 @@
           <<action>>
             <<run_report name=`ar_statement`>>
               <<call_params>>
-                <<call_param name=`cust` type=`data_obj` source=`cust`/>>
                 <<call_param name=`start_date` type=`data_attr` source=`date_range_vars.start_date`/>>
                 <<call_param name=`end_date` type=`data_attr` source=`date_range_vars.end_date`/>>
               <</call_params>>
@@ -286,7 +285,7 @@
         </cur_columns>
         <cur_filter>
           <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
-            op="=" expr="cust.row_id" rbr=""/>
+            op="=" expr="ar_cust.row_id" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
             op=">>=" expr="date_range_vars.start_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
@@ -300,12 +299,11 @@
         <grid_methods template="Grid">
           <method name="on_start_grid" action="
             <<action>>
-              <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
-              <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
-              <<assign src=`cust.row_id` tgt=`_ctx.cust_row_id`/>>
-              <<get_op_cl_bal args=`['op_bal_cust', 'cl_bal_cust', 'tot_cust']`/>>
-              <<assign src=`ar_trans.op_bal_cust` tgt=`tran_vars.op_bal`/>>
-              <<assign src=`ar_trans.cl_bal_cust` tgt=`tran_vars.cl_bal`/>>
+              <<assign src=`date_range_vars.start_date` tgt=`ar_cust.tran_start_date`/>>
+              <<assign src=`date_range_vars.end_date` tgt=`ar_cust.tran_end_date`/>>
+              <<get_op_cl_bal args=`ar_cust, op_bal_cust, cl_bal_cust, tot_cust`/>>
+              <<assign src=`ar_cust.op_bal_cust` tgt=`tran_vars.op_bal`/>>
+              <<assign src=`ar_cust.cl_bal_cust` tgt=`tran_vars.cl_bal`/>>
             <</action>>
             "/>
         </grid_methods>
@@ -322,7 +320,7 @@
           <<assign src=`var.settings` tgt=`balance_date_vars.settings`/>>
           <<assign src=`_ctx.bal_date_cust` tgt=`balance_date_vars.balance_date`/>>
           <<assign src=`_ctx.bal_date_cust` tgt=`_ctx.as_at_date`/>>
-          <<assign src=`cust.row_id` tgt=`_ctx.cust_row_id`/>>
+          <<assign src=`ar_cust.row_id` tgt=`_ctx.cust_row_id`/>>
           <<pyfunc name=`custom.arcust_funcs.get_aged_bal`/>>
           <<restart_grid obj_name=`ar_items`/>>
           <<skip_input num=`6`/>>

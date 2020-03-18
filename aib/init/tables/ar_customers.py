@@ -505,6 +505,92 @@ virt.append ({
     'scale_ptr'  : 'currency_id>scale',
     'sql'        : "'0'",
     })
+virt.append ({
+    'col_name'   : 'op_bal_cust',
+    'data_type'  : 'DEC',
+    'short_descr': 'Opening bal - cust currency',
+    'long_descr' : 'Opening balance - customer currency',
+    'col_head'   : 'Op bal cust',
+    'scale_ptr'  : 'currency_id>scale',
+    'sql'        : (
+        "SELECT "
+          "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL]\" "
+            "FROM {company}.ar_cust_totals b "
+            "WHERE b.cust_row_id = a.row_id "
+            "AND b.tran_date < a.tran_start_date "
+            "AND b.deleted_id = 0 "
+            "ORDER BY b.tran_date DESC "
+            "LIMIT 1), 0)"
+        )
+    })
+virt.append ({
+    'col_name'   : 'op_bal_local',
+    'data_type'  : 'DEC',
+    'short_descr': 'Opening bal - local currency',
+    'long_descr' : 'Opening balance - local currency',
+    'col_head'   : 'Op bal loc',
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : (
+        "SELECT "
+          "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL]\" "
+            "FROM {company}.ar_cust_totals b "
+            "WHERE b.cust_row_id = a.row_id "
+            "AND b.tran_date < a.tran_start_date "
+            "AND b.deleted_id = 0 "
+            "ORDER BY b.tran_date DESC "
+            "LIMIT 1), 0)"
+        )
+    })
+virt.append ({
+    'col_name'   : 'cl_bal_cust',
+    'data_type'  : 'DEC',
+    'short_descr': 'Closing bal - cust currency',
+    'long_descr' : 'Closing balance - customer currency',
+    'col_head'   : 'Cl bal cust',
+    'scale_ptr'  : 'currency_id>scale',
+    'sql'        : (
+        "SELECT "
+          "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL]\" "
+            "FROM {company}.ar_cust_totals b "
+            "WHERE b.cust_row_id = a.row_id "
+            "AND b.tran_date <= a.tran_end_date "
+            "AND b.deleted_id = 0 "
+            "ORDER BY b.tran_date DESC "
+            "LIMIT 1), 0)"
+        )
+    })
+virt.append ({
+    'col_name'   : 'tot_cust',
+    'data_type'  : 'DEC',
+    'short_descr': 'Tran total - cust currency',
+    'long_descr' : 'Transaction total - customer currency',
+    'col_head'   : 'Total cust',
+    'scale_ptr'  : 'currency_id>scale',
+    'sql'        : (
+        "SELECT "
+          "COALESCE((SELECT SUM(b.amount_cust) AS \"x [REAL]\" "
+            "FROM {company}.ar_trans b "
+            "WHERE b.cust_row_id = a.row_id "
+            "AND b.tran_date BETWEEN a.tran_start_date AND a.tran_end_date)"
+            ", 0)"
+        )
+    })
+virt.append ({
+    'col_name'   : 'tran_start_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Tran start date',
+    'long_descr' : 'Tran start date',
+    'col_head'   : 'Start date',
+    'sql'        : "''",
+    })
+virt.append ({
+    'col_name'   : 'tran_end_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Tran end date',
+    'long_descr' : 'Tran end date',
+    'col_head'   : 'End date',
+    'sql'        : "''",
+    })
 
 # cursor definitions
 cursors = []
