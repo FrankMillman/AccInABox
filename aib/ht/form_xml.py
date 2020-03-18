@@ -587,7 +587,7 @@ async def start_process(caller, xml):
     await process.start_process(context)
 
 async def run_report(caller, xml):
-    data_inputs = {}  # input parameters to be passed to process
+    data_inputs = {}  # input parameters to be passed to report
     for call_param in xml.find('call_params'):
         param_name = call_param.get('name')
         param_type = call_param.get('type')
@@ -616,21 +616,26 @@ async def run_report(caller, xml):
     report = rep.report.Report(caller.company, report_name, data_inputs=data_inputs)
     await report.start_report(caller.session, caller.context)
 
-    # set up pdf name, replace {...} with actual values
-    pdf_name = report.pdf_name
-    while '{' in pdf_name:
-        pos_1 = pdf_name.find('{')
-        pos_2 = pdf_name.find('}')
-        expr = pdf_name[pos_1+1: pos_2]
+    # set up pdf title, replace {...} with actual values
+    title = report.pdf_name
+    while '{' in title:
+        pos_1 = title.find('{')
+        pos_2 = title.find('}')
+        expr = title[pos_1+1: pos_2]
         table_name, col_name = expr.split('.')
         db_obj = caller.context.data_objects[table_name]
         fld = await db_obj.getfld(col_name)
-        pdf_name = pdf_name[:pos_1] + await fld.val_to_str() + pdf_name[pos_2+1:]
-    pdf_name = f'{pdf_name}.pdf'
+        title = title[:pos_1] + await fld.val_to_str() + title[pos_2+1:]
+    pdf_name = f'{title}.pdf'
 
-    pdf_fd = await report.create_report()  # call report creator, returns BytesIO object
+    if pdf_name in caller.form.pdf_dict:
+        caller.form.pdf_dict[pdf_name].close()  # remove BytesIO object from memory
 
-    ht.htc.pdf_dict[pdf_name] = pdf_fd  # pointer to pdf created
+    pdf_fd = await report.create_report(title)  # call report creator, returns BytesIO object
+    caller.form.pdf_dict[pdf_name] = pdf_fd
+
+    # ht.htc.pdf_dict[pdf_name] = pdf_fd  # pointer to pdf created
+    ht.htc.pdf_dict[pdf_name] = (caller.form.pdf_dict, pdf_name)
     caller.session.responder.send_pdf(pdf_name)  # browser 'opens' pdf, ht.htc writes pdf
 
 async def find_row(caller, xml):

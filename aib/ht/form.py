@@ -154,6 +154,7 @@ class Form:
         self.obj_dict = {}  # dict of objects for this form
         self.obj_id = itertools.count()  # seq id for objects for this form
         self.mem_tables = {}  # keep reference to restore when sub-form is closed
+        self.pdf_dict = {}  # keep reference to pdf's generated - close when form is closed
 
         if self.inline is not None:  # form defn is passed in as parameter
             form_defn = self.form_defn = self.inline
@@ -584,6 +585,10 @@ class Form:
 
                 # del frame.grids  # remove circular reference
 
+            for pdf_name in self.pdf_dict:
+                del ht.htc.pdf_dict[pdf_name]
+                self.pdf_dict[pdf_name].close()  # remove BytesIO object from memory
+                self.pdf_dict[pdf_name] = None  # force garbage collection
 
             # self.obj_dict = None
             # self.first_input = None

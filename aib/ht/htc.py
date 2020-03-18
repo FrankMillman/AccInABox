@@ -680,13 +680,9 @@ async def handle_client(client_reader, client_writer):
         key, val = (_.strip() for _ in header.rstrip().decode().lower().split(':', 1))
         headers[key] = val
 
-    if method == 'POST':
-        # print(f'method = {method!r}; path = {path!r}; version = {version!r}')
+    if path.startswith('/send_req'):  # sent using 'POST'
         lng = int(headers['content-length'])
-        args = await asyncio.wait_for(
-            client_reader.read(lng), timeout=10.0)
-
-    if path.startswith('/send_req'):
+        args = await asyncio.wait_for(client_reader.read(lng), timeout=10.0)
         args = loads(urllib.parse.unquote(args.decode()))
         session_id, messages = args
 
@@ -724,12 +720,32 @@ async def handle_client(client_reader, client_writer):
     elif path.endswith('.pdf'):
         path = urllib.parse.unquote(path)
         pdf_key = path[1:]  # strip leading '/'
-        pdf_fd = pdf_dict.pop(pdf_key)  # pointer to created pdf - BytesIO object
-        response = Response(client_writer, 200)
-        response.add_header('Content-type', 'application/pdf')
-        await response.send_headers()
-        await response.write_file(pdf_fd)  # closes pdf_fd when complete
-        await response.write_eof()
+        # try:
+        #     pdf_fd = pdf_dict.pop(pdf_key)  # pointer to created pdf - BytesIO object
+        #     response = Response(client_writer, 200)
+        #     response.add_header('Content-type', 'application/pdf')
+        #     await response.send_headers()
+        #     await response.write_file(pdf_fd)
+        #     pdf_fd.close()
+        # except KeyError:  # user tried to reload - fails because BytesIO object closed
+        #     response = Response(client_writer, 200)
+        #     response.add_header('Content-type', 'text/html')
+        #     await response.send_headers()
+        #     # await response.write('')
+        try:
+            form_pdf_dict, pdf_name = pdf_dict[pdf_key]
+            pdf_fd = form_pdf_dict[pdf_name]  # pointer to created pdf - BytesIO object
+            response = Response(client_writer, 200)
+            response.add_header('Content-type', 'application/pdf')
+            await response.send_headers()
+            await response.write_file(pdf_fd)
+            await response.write_eof()
+            pdf_fd.seek(0)  # in case user reloads
+        except KeyError:  # user closed form, then tried to reload pdf (!)
+            response = Response(client_writer, 200)
+            response.add_header('Content-type', 'text/html')
+            await response.send_headers()
+            await response.write_eof()
     elif path.startswith('/dev'):
         path = path[4:]
         await send_js(client_writer, path, dev=True)
