@@ -1,7 +1,8 @@
 <report name="ar_statement" descr="Ar statement" pdf_name="Statement {ar_cust.cust_id} {var.end_date}">
 
   <db_objects>
-    <db_obj name="ar_trans" table_name="ar_trans" parent="ar_cust" view="true"/>
+    <db_obj name="ar_cust" table_name="ar_customers"/>
+    <db_obj name="ar_trans" table_name="ar_trans" view="true"/>
     <db_obj name="org_party" table_name="org_parties" fkey="ar_cust.party_row_id"/>
     <db_obj name="org_addr" table_name="org_addresses" parent="org_party"/>
     <db_obj name="currency" table_name="adm_currencies" fkey="ar_cust.currency_id"/>
@@ -22,7 +23,6 @@
   </mem_objects>
 
   <input_params>
-    <input_param name="cust" type="data_obj" target="ar_cust" required="true"/>
     <input_param name="start_date" type="data_attr" target="var.start_date" required="true"/>
     <input_param name="end_date" type="data_attr" target="var.end_date" required="true"/>
   </input_params>
@@ -87,12 +87,11 @@
             <method name="on_start_grid" action="
               <<action>>
                 <<assign src=`'post'` tgt=`org_addr.address_type`/>>
-                <<assign src=`var.start_date` tgt=`_ctx.start_date`/>>
-                <<assign src=`var.end_date` tgt=`_ctx.end_date`/>>
-                <<assign src=`ar_cust.row_id` tgt=`_ctx.cust_row_id`/>>
-                <<get_op_cl_bal args=`['op_bal_cust', 'cl_bal_cust', 'tot_cust']`/>>
-                <<assign src=`ar_trans.op_bal_cust` tgt=`var.op_bal`/>>
-                <<assign src=`ar_trans.cl_bal_cust` tgt=`var.cl_bal`/>>
+                <<assign src=`var.start_date` tgt=`ar_cust.tran_start_date`/>>
+                <<assign src=`var.end_date` tgt=`ar_cust.tran_end_date`/>>
+                <<get_op_cl_bal args=`ar_cust, op_bal_cust, cl_bal_cust, tot_cust`/>>
+                <<assign src=`ar_cust.op_bal_cust` tgt=`var.op_bal`/>>
+                <<assign src=`ar_cust.cl_bal_cust` tgt=`var.cl_bal`/>>
               <</action>>
               "/>
           </grid_methods>

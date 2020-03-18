@@ -1,6 +1,7 @@
 import __main__
 import os
 import gzip
+import io
 from lxml import etree
 parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
 from json import loads
@@ -56,13 +57,13 @@ class Report:
         # self._del = delwatcher(self)
 
         self.data_inputs = data_inputs
-        self.report = self
 
     @log_func
     async def start_report(self, session, context):
 
         self.context = context
         self.data_objects = context.data_objects
+        self.mem_tables = {}  # keep reference to restore when report is closed
 
         # read report_defn from 'sys_report_defns'
         if '.' in self.report_name:
@@ -90,10 +91,11 @@ class Report:
             if param_type != 'data_obj':
                 continue
             obj_name = input_param.get('name')
-            if obj_name in self.data_objects:
+            target = input_param.get('target')
+            if target in self.data_objects:
                 continue
 
-            target = input_param.get('target')
+            # target = input_param.get('target')
             required = input_param.get('required') == 'true'
             try:
                 self.data_objects[target] = self.data_inputs[obj_name]
@@ -106,6 +108,13 @@ class Report:
     async def setup_db_objects(self, db_objects):
         for obj_xml in db_objects:
             obj_name = obj_xml.get('name')
+
+            if obj_name in self.data_objects:  # already opened in form_defn
+                if obj_xml.get('table_name') != self.data_objects[obj_name].table_name:
+                    raise AibError(head=f'Report {self.report_name}',
+                        body=f'Data object with name {obj_name} already exists')
+                continue
+
             db_parent = obj_xml.get('parent')
             if db_parent is not None:
                 db_parent = self.data_objects[db_parent]
@@ -129,8 +138,16 @@ class Report:
     async def setup_mem_objects(self, mem_objects):
         for obj_xml in mem_objects:
             obj_name = obj_xml.get('name')
-            if obj_name in self.data_objects:  # workaround for chrome bug
+
+            full_name = f'r___{self.report_name}__{obj_name}'  # 'r' for 'report' in case form with same name
+            if full_name in self.data_objects:
+                # report with mem_obj created, then closed,
+                #   then re-opened - safe to re-use mem_obj
+                if obj_name in self.data_objects:  # save object before over-writing
+                    self.mem_tables[obj_name] = self.data_objects[obj_name]
+                self.data_objects[obj_name] = self.data_objects[full_name]
                 continue
+
             db_parent = obj_xml.get('parent')
             if db_parent is not None:
                 db_parent = self.data_objects[db_parent]
@@ -138,15 +155,18 @@ class Report:
             if clone_from is not None:
                 clone_from = self.data_objects[clone_from]
                 db_obj = await db.objects.get_clone_object(self.context,
-                    self.company, obj_name, clone_from, parent=db_parent)
+                    self.company, full_name, clone_from, parent=db_parent)
             else:
                 db_obj = await db.objects.get_mem_object(self.context,
-                    self.company, obj_name, parent=db_parent, table_defn=obj_xml)
+                    self.company, full_name, parent=db_parent, table_defn=obj_xml)
             module_id = obj_xml.get('module_id')
             if module_id is not None:
                 db_obj.db_table.module_row_id = await db.cache.get_mod_id(
                     self.company, module_id)
 
+            self.data_objects[full_name] = db_obj
+            if obj_name in self.data_objects:  # save object before over-writing
+                self.mem_tables[obj_name] = self.data_objects[obj_name]
             self.data_objects[obj_name] = db_obj
 
     async def setup_input_attr(self, input_params):
@@ -171,7 +191,7 @@ class Report:
                     body = f"Required parameter '{name}' not supplied"
                     raise AibError(head=head, body=body)
 
-    async def run_report(self, pdf_fd):
+    async def create_report(self, title):
         report_defn = self.report_defn
 
         page = report_defn.find('page')
@@ -183,26 +203,39 @@ class Report:
         fontname, fontsize = font.split()
         font = (fontname, int(fontsize))
 
-        # set up report definition
-        blocks = []
-        for block_xml in page.findall('block'):
-            block = Block()
-            await block._ainit_(self, block_xml, coords, font)
-            blocks.append(block)
+        pdf_fd = io.BytesIO()
 
-        # run report
-        c = canvas.Canvas(pdf_fd, pagesize=(wd, ht))
-        c.setFont(*font)
+        try:
+            # set up report definition
+            blocks = []
+            for block_xml in page.findall('block'):
+                block = Block()
+                await block._ainit_(self, block_xml, coords, font)
+                blocks.append(block)
 
-        c.complete = False  # set to True when last page printed
-        while not c.complete:
-            c.complete = True  # can be reset to False by grid if more rows to print
-            for block in blocks:
-                await block.gen_pdf(c)
-            c.showPage()
-        c.save()
+            # generate report
+            c = canvas.Canvas(pdf_fd, pagesize=(wd, ht))
+            c.setFont(*font)
+            c.setTitle(title)
+            c.complete = False  # set to True when last page printed
+            while not c.complete:
+                c.complete = True  # can be reset to False by grid if more rows to print
+                for block in blocks:
+                    await block.gen_pdf(c)
+                c.showPage()
 
-        await self.context.close()  # close in_memory db connections
+            # finalise
+            c.save()
+            pdf_fd.seek(0)  # rewind
+            return pdf_fd
+
+        except AibError:
+            pdf_fd.close()
+            raise
+
+        finally:  # always do this
+            for mem_tablename in self.mem_tables:  # restore over-written references
+                self.data_objects[mem_tablename] = self.mem_tables[mem_tablename]
 
 #----------------------------------------------------------------------------
 
@@ -212,6 +245,7 @@ class Panel:
         self.element = element
         self.coords = coords
         self.font = font
+        self.context = report.context
 
     async def gen_pdf(self, c):
         for element in self.element:
@@ -263,6 +297,7 @@ class Grid:
         self.element = element
         self.coords = coords
         self.font = font
+        self.context = report.context
 
         db_obj = self.report.data_objects[element.get('data_object')]
         if db_obj.mem_obj:
