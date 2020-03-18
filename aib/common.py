@@ -26,23 +26,19 @@ debug = False
 db_log = sys.stderr
 log_db = False
 
-# find position of n'th occurrence of substring in string, else -1
 def find_occurrence(string, substring, occurrence):
+    """Find position of n'th occurrence of substring in string, else -1."""
+
     # string - a string to be searched
     # substring - a substring to search for
     # occurrence - the occurrence to search for, starting from 0
     # if not present, return -1
-    found = 0
-    return_value = -1
+
+    found = -1
     start_pos = 0
-    pos = string.find(substring)
-    while pos > -1:
-        return_value = pos + start_pos
+    while (pos := string.find(substring, start_pos)) > -1:
+        found += 1
         if found == occurrence:
             break
-        found += 1
-        start_pos += (pos + 1)
-        pos = string[start_pos:].find(substring)
-        if pos == -1:
-            return_value = -1
-    return return_value
+        start_pos = pos + 1
+    return pos

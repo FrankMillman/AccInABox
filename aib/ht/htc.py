@@ -629,18 +629,17 @@ class Response:
             write(chunk.encode() + CRLF)
             await self.writer.drain()
         write(b'0\r\n\r\n')
+        await self.writer.drain()
 
     async def write_file(self, fd):
         CRLF = b'\r\n'
         write = self.writer.write
-        chunk = fd.read(CHUNK)
-        while chunk:
+        while chunk := fd.read(CHUNK):
             write(hex(len(chunk))[2:].encode() + CRLF)
             write(chunk + CRLF)
             await self.writer.drain()
-            chunk = fd.read(CHUNK)
         write(b'0\r\n\r\n')
-        fd.close()
+        await self.writer.drain()
 
     async def write_eof(self):
         self.writer.close()
