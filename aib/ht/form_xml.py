@@ -386,9 +386,11 @@ async def assign(caller, xml):
             assert target_fld.col_defn.data_type == 'JSON'
             target_dict = await target_fld.getval()
             target_dict[target_key] = value_to_assign
-            await target_fld.setval(target_dict)
+            await target_fld.setval(target_dict, validate=False)
         else:
-            await target_obj.setval(target_colname, value_to_assign)
+            target_fld = await target_obj.getfld(target_colname)
+            validate = (target_fld.col_defn.col_type != 'virt')
+            await target_fld.setval(value_to_assign, validate=validate)
 
 async def btn_set_focus(caller, xml):
     button = caller.btn_dict[xml.get('btn_id')]

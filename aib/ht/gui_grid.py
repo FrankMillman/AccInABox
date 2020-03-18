@@ -461,6 +461,8 @@ class GuiGrid:
         if 'listview_vars' in self.data_objects:
             start_col = await self.data_objects['listview_vars'].getval('start_col')
             start_val = await self.data_objects['listview_vars'].getval('start_val')
+            await self.data_objects['listview_vars'].setval('start_col', None)
+            await self.data_objects['listview_vars'].setval('start_val', None)
         elif self.start_col is not None:
             start_col =  self.start_col
             start_fld = await self.db_obj.getfld(self.start_val)
@@ -578,10 +580,6 @@ class GuiGrid:
 
         if self.auto_startrow or self.formview_frame or self.grid_frame:
             await self.start_row(focus_row, display=True)
-
-        if 'listview_vars' in self.data_objects:
-            await self.data_objects['listview_vars'].setval('start_col', None)
-            await self.data_objects['listview_vars'].setval('start_val', None)
 
     async def on_req_rows(self, first_row, last_row):
         gui_rows = []
