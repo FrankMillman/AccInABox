@@ -605,9 +605,11 @@ class Response:
         self.headers = []
         if status == 200:
             self.status = 'HTTP/1.1 200 OK\r\n'
-        self.headers.append(('CONNECTION', 'keep-alive'))
-        self.headers.append(('DATE', email.utils.formatdate(usegmt=True)))
-        self.headers.append(('SERVER', f'Python {sys.version.split()[0]} asyncio aib'))
+        # self.headers.append(('CONNECTION', 'keep-alive'))
+        # [TODO] implement keep-alive [2020-03-25]
+        self.headers.append(('Connection', 'close'))
+        self.headers.append(('Date', email.utils.formatdate(usegmt=True)))
+        self.headers.append(('Server', f'Python {sys.version.split()[0]} asyncio aib'))
 
     def add_header(self, key, val):
         self.headers.append((key, val))
