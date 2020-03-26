@@ -5,8 +5,8 @@
   <mem_objects>
 
     <mem_obj name="obj_names" descr="Object names used for lookup"
-      sequence="[`seq`, [], null]" cursor="
-      [[[`name`, 160], [`descr`, 240]], [], [[`seq`, false]]]">
+        sequence="[`seq`, [], null]" cursor="
+        [[[`name`, 160], [`descr`, 240]], [], [[`seq`, false]]]">
       <mem_col col_name="name" data_type="TEXT" short_descr="Name"
         long_descr="Name" col_head="Name" key_field="A"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
@@ -16,8 +16,8 @@
     </mem_obj>
 
     <mem_obj name="col_names" descr="Object names used for lookup" parent="obj_names"
-      sequence="[`seq`, [`obj_id`], null]" cursor="
-      [[[`name`, 160], [`descr`, 240]], [], [[`seq`, false]]]">
+        sequence="[`seq`, [`obj_id`], null]" cursor="
+        [[[`name`, 160], [`descr`, 240]], [], [[`seq`, false]]]">
       <mem_col col_name="obj_id" data_type="INT" short_descr="Object id"
         long_descr="Object id" col_head="Id" key_field="A"
         fkey="[`{mem}.obj_names`, `row_id`, null, null, true, null]"/>

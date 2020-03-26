@@ -9,17 +9,15 @@
         sub_types="[
         [`select_method`, null,
           [
-            [`P`, `Select period`, [`year_no`, `period_no`], []],
+            [`P`, `Select period`, [`period_no`], []],
             [`D`, `Select date`, [`balance_date`], []]
             ]
           ]
         ]">
       <mem_col col_name="select_method" data_type="TEXT" short_descr="Select method"
         long_descr="Select dates by financial period?" allow_amend="true"/>
-      <mem_col col_name="year_no" data_type="INT" short_descr="Financial year"
-        long_descr="Financial year" allow_amend="true" choices="[]"/>
       <mem_col col_name="period_no" data_type="INT" short_descr="Period no"
-        long_descr="Period no" allow_amend="true" choices="[]"/>
+        long_descr="Period no" allow_amend="true" choices = "[]"/>
       <mem_col col_name="balance_date" data_type="DTE" short_descr="Balance date"
         long_descr="Balance date" allow_amend="true" dflt_val="today"/>
       <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
@@ -50,15 +48,7 @@
           <panel/>
           <row/>
           <col/>
-          <label value="Year:"/>
-          <col/>
-          <input obj_name="var" col_name="year_no" lng="120" after="
-            <<action>>
-              <<pyfunc name=`custom.date_funcs.after_bal_year`/>>
-            <</action>>
-            "/>
-          <col/>
-          <label value="Period:"/>
+          <label value="Period no: "/>
           <col/>
           <input obj_name="var" col_name="period_no" lng="120"/>
         </subtype_body>

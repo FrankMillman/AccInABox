@@ -32,6 +32,17 @@ database date functions -
         SELECT to_char(closing_date, 'dd') as day
 """
 
+async def setup_date_choices(caller):
+    fin_periods = await db.cache.get_adm_periods(caller.company)
+
+    caller.context.op_dt_choices = {fin_per.period_no:
+        f'{fin_per.year_per_no:\xa0>2}: {fin_per.opening_date:%d/%m/%Y}'
+            for fin_per in fin_periods[1:]}
+
+    caller.context.cl_dt_choices = {fin_per.period_no:
+        f'{fin_per.year_per_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
+            for fin_per in fin_periods[1:]}
+
 async def setup_balance_date(caller, xml):
     # called from ar_balances before_start_form
     fin_periods = await db.cache.get_adm_periods(caller.company)
@@ -55,61 +66,20 @@ async def setup_balance_date(caller, xml):
         current_period,  # period_no
         balance_date,
         ])
-    
+
 async def load_bal_settings(caller, xml):
     # called from select_balance_date before_start_form
     var = caller.data_objects['var']
-
     select_method, period_no, balance_date = await var.getval('settings')
-
     await var.setval('select_method', select_method)
     await var.setval('balance_date', balance_date)
 
-    fin_periods = await db.cache.get_adm_periods(caller.company)
-
-    # set up dictionary of all fin_years - exclude first 'dummy' period
-    # for each fin_year, store all period_nos for that fin_year
-    yearends = {}
-    for year_per_id, periods in groupby(fin_periods[1:], attrgetter('year_per_id')):
-        yearends[year_per_id] = list(periods)
-
-    year_choices = {}
-    for ye in yearends:
-        year_choices[ye] = f'Y/E {fin_periods[ye].closing_date:%d/%m/%Y}'
-        if ye == fin_periods[period_no].year_per_id:
-            year_choice = ye
-            year_periods = yearends[ye]
-
-    fld = await var.getfld('year_no')
-    fld.col_defn.choices = year_choices
-    await fld.setval(year_choice)
-
-    per_choices = {per.period_no:
-        f'{per.year_per_no:<2}: {per.closing_date:%d/%m/%Y}'
-            for per in year_periods}
+    if 'cl_dt_choices' not in vars(caller.context):
+        await setup_date_choices(caller)
 
     fld = await var.getfld('period_no')
-    fld.col_defn.choices = per_choices
+    fld.col_defn.choices = caller.context.cl_dt_choices
     await fld.setval(period_no)
-
-async def after_bal_year(caller, xml):
-    var = caller.data_objects['var']
-    fld = await var.getfld('year_no')
-    year = await fld.getval()
-    if year == fld.val_before_input:
-        return  # no change
-
-    fin_periods = await db.cache.get_adm_periods(caller.company)
-    year_periods = [per for per in fin_periods if per.year_per_id == year]
-    per_choices = {per.period_no:
-        f'{per.year_per_no:<2}: {per.closing_date:%d/%m/%Y}'
-            for per in year_periods}
-
-    fld = await var.getfld('period_no')
-    fld.col_defn.choices = per_choices
-    await fld.setval(year_periods[0].period_no)  # default to first period
-    for obj in fld.gui_obj:  # should only be one
-        caller.session.responder.setup_choices(obj.ref, fld.col_defn.choices)
 
 async def save_bal_settings(caller, xml):
     var = caller.data_objects['var']
@@ -135,7 +105,7 @@ async def setup_date_range(caller, xml):
         #   the same period as the inital value for date_range
         date_vars = caller.data_objects['balance_date_vars']
         select_method, period_no, balance_date = await date_vars.getval('settings')
-        if select_method == 'N':
+        if select_method == 'P':
             start_period = period_no
 
     if start_period is None:
@@ -151,7 +121,7 @@ async def setup_date_range(caller, xml):
     await var.setval('start_date', start_date)
     await var.setval('end_date', end_date)
     await var.setval('settings', [
-        'P',  # select_method?
+        'P',  # select_method
         start_period,
         start_period,
         start_date,
@@ -168,200 +138,16 @@ async def load_range_settings(caller, xml):
     await var.setval('start_date', start_date)
     await var.setval('end_date', end_date)
 
-    if select_method == 'Y':
-        return
-
-    fin_periods = await db.cache.get_adm_periods(caller.company)
-
-    # set up dictionary of all fin_years - exclude first 'dummy' period
-    # for each fin_year, store all period_nos for that fin_year
-    yearends = {}
-    for year_per_id, periods in groupby(fin_periods[1:], attrgetter('year_per_id')):
-        yearends[year_per_id] = list(periods)
-
-    # set up choices for start_fin_year
-    # if fin_year = the fin_year of 'start_period' -
-    #   set current value of start_fin_year to fin_year
-    #   save list of periods of fin_year for setting up choices for start_period below
-    year_choices = {}
-    for ye in yearends:
-        year_choices[ye] = f'Y/E {fin_periods[ye].closing_date:%d/%m/%Y}'
-        if ye == fin_periods[start_period].year_per_id:
-            year_choice = ye
-            year_periods = yearends[ye]
-
-    fld = await var.getfld('start_fin_year')
-    fld.col_defn.choices = year_choices
-    await fld.setval(year_choice)
-
-    # set up choices for start_period from list of periods for start_fin_year
-    per_choices = {per.period_no:
-        f'{per.year_per_no:<2}: {per.opening_date:%d/%m/%Y}'
-            for per in year_periods}
+    if 'op_dt_choices' not in vars(caller.context):
+        await setup_date_choices(caller)
 
     fld = await var.getfld('start_period')
-    fld.col_defn.choices = per_choices
+    fld.col_defn.choices = caller.context.op_dt_choices
     await fld.setval(start_period)
 
-    # set up dictionary of all fin_years starting with fin_year of start_period
-    # for each fin_year, store all period_nos for that fin_year
-    yearends = {}
-    for year_per_id, periods in groupby(fin_periods[start_period:], attrgetter('year_per_id')):
-        yearends[year_per_id] = list(periods)
-
-    # set up choices for end_fin_year
-    # if fin_year = the fin_year of 'end_period' -
-    #   set current value of start_fin_year to fin_year
-    #   save list of periods of fin_year for setting up choices for start_period below
-    year_choices = {}
-    for ye in yearends:
-        year_choices[ye] = f'Y/E {fin_periods[ye].closing_date:%d/%m/%Y}'
-        if ye == fin_periods[end_period].year_per_id:
-            year_choice = ye
-            year_periods = yearends[ye]
-
-    fld = await var.getfld('end_fin_year')
-    fld.col_defn.choices = year_choices
-    await fld.setval(year_choice)
-
-    # set up choices for end_period from list of periods for end_fin_year
-    per_choices = {per.period_no:
-        f'{per.year_per_no:<2}: {per.closing_date:%d/%m/%Y}'
-            for per in year_periods}
-
     fld = await var.getfld('end_period')
-    fld.col_defn.choices = per_choices
+    fld.col_defn.choices = caller.context.cl_dt_choices
     await fld.setval(end_period)
-
-async def after_start_year(caller, xml):
-    var = caller.data_objects['var']
-    fld = await var.getfld('start_fin_year')
-    year = await fld.getval()
-    if year == fld.val_before_input:
-        return  # no change
-
-    fin_periods = await db.cache.get_adm_periods(caller.company)
-    year_periods = [per for per in fin_periods if per.year_per_id == year]
-    per_choices = {per.period_no:
-        f'{per.year_per_no:<2}: {per.opening_date:%d/%m/%Y}'
-            for per in year_periods}
-    first_period = year_periods[0].period_no
-
-    # set up choices for start_period from list of periods for start_fin_year
-    fld = await var.getfld('start_period')
-    fld.col_defn.choices = per_choices
-    await fld.setval(first_period)  # default to first period
-    for obj in fld.gui_obj:  # should only be one
-        caller.session.responder.setup_choices(obj.ref, fld.col_defn.choices)
-
-    # set up dictionary of all fin_years starting with fin_year of first_period
-    # for each fin_year, store all period_nos for that fin_year
-    yearends = {}
-    for year_per_id, periods in groupby(fin_periods[first_period:], attrgetter('year_per_id')):
-        yearends[year_per_id] = list(periods)
-
-    # set up choices for end_fin_year
-    # if fin_year = the fin_year of first_period -
-    #   set current value of start_fin_year to fin_year
-    #   save list of periods of fin_year for setting up choices for start_period below
-    year_choices = {}
-    for ye in yearends:
-        year_choices[ye] = f'Y/E {fin_periods[ye].closing_date:%d/%m/%Y}'
-        if ye == fin_periods[first_period].year_per_id:
-            year_choice = ye
-            year_periods = yearends[ye]
-
-    fld = await var.getfld('end_fin_year')
-    fld.col_defn.choices = year_choices
-    await fld.setval(year_choice)
-    for obj in fld.gui_obj:  # should only be one
-        caller.session.responder.setup_choices(obj.ref, fld.col_defn.choices)
-
-    # set up choices for end_period from list of periods for end_fin_year
-    per_choices = {per.period_no:
-        f'{per.year_per_no:<2}: {per.closing_date:%d/%m/%Y}'
-            for per in year_periods}
-
-    fld = await var.getfld('end_period')
-    fld.col_defn.choices = per_choices
-    await fld.setval(first_period)
-    for obj in fld.gui_obj:  # should only be one
-        caller.session.responder.setup_choices(obj.ref, fld.col_defn.choices)
-
-async def after_start_period(caller, xml):
-    var = caller.data_objects['var']
-    fld = await var.getfld('start_period')
-    start_period = await fld.getval()
-    if start_period == fld.val_before_input:
-        return  # no change
-
-    fld = await var.getfld('end_period')
-    end_period = await fld.getval()
-    if end_period >= start_period:
-        return
-
-    # ensure end_period cannot be less than start_period
-    await fld.setval(start_period)
-
-    fin_periods = await db.cache.get_adm_periods(caller.company)
-
-    # set up dictionary of all fin_years starting with fin_year of startt_period
-    # for each fin_year, store all period_nos for that fin_year
-    yearends = {}
-    for year_per_id, periods in groupby(fin_periods[start_period:], attrgetter('year_per_id')):
-        yearends[year_per_id] = list(periods)
-
-    # set up choices for end_fin_year
-    # if fin_year = the fin_year of first_period -
-    #   set current value of start_fin_year to fin_year
-    #   save list of periods of fin_year for setting up choices for start_period below
-    year_choices = {}
-    for ye in yearends:
-        year_choices[ye] = f'Y/E {fin_periods[ye].closing_date:%d/%m/%Y}'
-        if ye == fin_periods[start_period].year_per_id:
-            year_choice = ye
-            year_periods = yearends[ye]
-
-    fld = await var.getfld('end_fin_year')
-    fld.col_defn.choices = year_choices
-    await fld.setval(year_choice)
-    for obj in fld.gui_obj:  # should only be one
-        caller.session.responder.setup_choices(obj.ref, fld.col_defn.choices)
-
-    # set up choices for end_period from list of periods for end_fin_year
-    per_choices = {per.period_no:
-        f'{per.year_per_no:<2}: {per.closing_date:%d/%m/%Y}'
-            for per in year_periods if per.period_no >= start_period}
-
-    fld = await var.getfld('end_period')
-    fld.col_defn.choices = per_choices
-    await fld.setval(start_period)
-    for obj in fld.gui_obj:  # should only be one
-        caller.session.responder.setup_choices(obj.ref, fld.col_defn.choices)
-
-async def after_end_year(caller, xml):
-    var = caller.data_objects['var']
-    fld = await var.getfld('end_fin_year')
-    year = await fld.getval()
-    if year == fld.val_before_input:
-        return  # no change
-
-    fin_periods = await db.cache.get_adm_periods(caller.company)
-    year_periods = [per for per in fin_periods if per.year_per_id == year]
-    first_period = year_periods[0].period_no
-    start_period = await var.getval('start_period')
-    if first_period < start_period:
-        first_period = start_period
-    per_choices = {per.period_no:
-        f'{per.year_per_no:<2}: {per.closing_date:%d/%m/%Y}'
-            for per in year_periods if per.period_no >= first_period}
-
-    # set up choices for end_period from list of periods for end_fin_year
-    fld = await var.getfld('end_period')
-    fld.col_defn.choices = per_choices
-    await fld.setval(first_period)  # default to first period
-    for obj in fld.gui_obj:  # should only be one
-        caller.session.responder.setup_choices(obj.ref, fld.col_defn.choices)
 
 async def save_range_settings(caller, xml):
     var = caller.data_objects['var']

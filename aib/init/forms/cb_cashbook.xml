@@ -108,7 +108,7 @@
               <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
               <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
               <<assign src=`cb_trans.ledger_row_id` tgt=`_ctx.ledger_row_id`/>>
-              <<get_op_cl_bal args=`['op_bal_cb', 'cl_bal_cb', 'tot_cb']`/>>
+              <<get_op_cl_bal args=`cb_trans, op_bal_cb, cl_bal_cb, tot_cb`/>>
               <<assign src=`cb_trans.op_bal_cb` tgt=`tran_vars.op_bal`/>>
               <<assign src=`cb_trans.cl_bal_cb` tgt=`tran_vars.cl_bal`/>>
             <</action>>

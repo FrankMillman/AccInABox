@@ -302,7 +302,7 @@ class GuiTextCtrl(GuiCtrl):
             self.readonly = True
 
 class GuiNumCtrl(GuiCtrl):
-    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, fkey,
+    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
             pwd, lng, height, label, gui, grid=False):
         await GuiCtrl._ainit_(self, parent, fld, readonly)
         if lng != 0:
@@ -329,7 +329,7 @@ class GuiNumCtrl(GuiCtrl):
             self.readonly = True
 
 class GuiDateCtrl(GuiCtrl):
-    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, fkey,
+    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
             pwd, lng, height, label, gui, grid=False):
         await GuiCtrl._ainit_(self, parent, fld, readonly)
         if lng != 0:
@@ -345,7 +345,7 @@ class GuiDateCtrl(GuiCtrl):
             self.readonly = True
 
 class GuiBoolCtrl(GuiCtrl):
-    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, fkey,
+    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
             pwd, lng, height, label, gui, grid=False):
         await GuiCtrl._ainit_(self, parent, fld, readonly)
         if lng != 0:
@@ -360,7 +360,7 @@ class GuiBoolCtrl(GuiCtrl):
             self.readonly = True
 
 class GuiSxmlCtrl(GuiCtrl):
-    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, fkey,
+    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
             pwd, lng, height, label, gui, grid=False):
         await GuiCtrl._ainit_(self, parent, fld, readonly)
         if lng != 0:
