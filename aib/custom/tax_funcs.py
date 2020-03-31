@@ -200,32 +200,19 @@ async def calc_tax(db_obj, conn, return_vals):
         tax_amt_fld = await split_obj.getfld('tax_amt')  # use for rounding
         if tax_incl:
             tax_amt = await tax_amt_fld.check_val(inv_amt * tax_rate / (100 + tax_rate))
-            net_amt = inv_amt - tax_amt
-            tot_amt = inv_amt
         else:
             tax_amt = await tax_amt_fld.check_val(inv_amt * tax_rate / 100)
-            net_amt = inv_amt
-            tot_amt = inv_amt + tax_amt
-        await tax_amt_fld.setval(tax_amt)
         return_vals[1] += tax_amt
 
-        tax_amt_fld = await split_obj.getfld('tax_amt_party')  # use for rounding
-        tot_amt_party = await tax_amt_fld.check_val(tot_amt / exch_rate_tran * exch_rate_party)
-        net_amt_party = await tax_amt_fld.check_val(net_amt / exch_rate_tran * exch_rate_party)
-        tax_amt_party = tot_amt_party - net_amt_party
-        await tax_amt_fld.setval(tax_amt_party)
+        tax_amt_party = await tax_amt_fld.check_val(tax_amt / exch_rate_tran * exch_rate_party)
         return_vals[2] += tax_amt_party
 
-        tax_amt_fld = await split_obj.getfld('tax_amt_local')  # use for rounding
-        tot_amt_local = await tax_amt_fld.check_val(tot_amt / exch_rate_tran)
-        net_amt_local = await tax_amt_fld.check_val(net_amt / exch_rate_tran)
-        tax_amt_local = tot_amt_local - net_amt_local
-        await tax_amt_fld.setval(tax_amt_local)
+        tax_amt_local = await tax_amt_fld.check_val(tax_amt / exch_rate_tran)
         return_vals[3] += tax_amt_local
 
         yield (tax_code_id, tax_rate, tax_amt)
 
-    if tax_incl:
+    if tax_incl:  # return_vals[0] is inv_net_amt
         return_vals[0] = inv_amt - return_vals[1]
     else:
         return_vals[0] = inv_amt
