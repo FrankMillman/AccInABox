@@ -44,6 +44,7 @@ def customise(constants, DbConn, db_params):
     DbConn.create_foreign_key = create_foreign_key
     DbConn.create_alt_index = create_alt_index
     DbConn.create_index = create_index
+    DbConn.get_lower_colname = get_lower_colname
     DbConn.setup_start_date = setup_start_date
     DbConn.tree_select = tree_select
     DbConn.get_view_names = get_view_names
@@ -531,16 +532,18 @@ def create_foreign_key(self, company_id, fkeys):
     return foreign_key
 
 def create_alt_index(self, company_id, table_name, ndx_cols, a_or_b):
-    # ndx_cols = ', '.join(ndx_cols)
+    ndx_cols = [f"{'LOWER(' + col_name + ')' if col_type == 'TEXT' else col_name}"
+        for col_name, col_type in ndx_cols]
+    ndx_cols = ', '.join(ndx_cols)
     if a_or_b == 'a':
         ndx_name = f'{company_id}._{table_name}'
     else:  # must be 'b'
-        ndx_name = f'{company_id}._{table_name}_2'
+        ndx_name = f'{company_id}._{table_name}_b'
     filter = 'WHERE deleted_id = 0'
-    return (
+    return ([
         f'CREATE UNIQUE INDEX {ndx_name} '
         f'ON {table_name} ({ndx_cols}) {filter}'
-        )
+        ])
 
 def create_index(self, company_id, table_name, index):
     ndx_name, ndx_cols, filter, unique = index
@@ -554,6 +557,9 @@ def create_index(self, company_id, table_name, index):
         f'CREATE {unique}INDEX {company_id}.{ndx_name} '
         f'ON {table_name} ({ndx_cols}) {filter}'
         )
+
+def get_lower_colname(self, col_name, alias):
+    return f'LOWER({alias}.{col_name})'
 
 async def setup_start_date(self, company, user_row_id, start_date):
     # adm_periods - first row_id must be 0, not 1

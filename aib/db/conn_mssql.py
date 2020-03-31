@@ -33,6 +33,7 @@ def customise(constants, DbConn, db_params):
     DbConn.create_foreign_key = create_foreign_key
     DbConn.create_alt_index = create_alt_index
     DbConn.create_index = create_index
+    DbConn.get_lower_colname = get_lower_colname
     DbConn.setup_start_date = setup_start_date
     DbConn.tree_select = tree_select
     DbConn.get_view_names = get_view_names
@@ -520,21 +521,21 @@ def create_foreign_key(self, company_id, fkeys):
     return foreign_key
 
 def create_alt_index(self, company_id, table_name, ndx_cols, a_or_b):
-    # either create CLUSTERED index including 'deleted_id'
-    # or create NON-CLUSTERED index 'WHERE deleted_id = 0'
-    # debatable which one is better [2018-07-14]
-    # ndx_cols = ', '.join(ndx_cols)
-    ndx_cols += ', deleted_id'
+    sql_list = []
+    cols_to_index = []
+    for col_name, data_type in ndx_cols:
+        if data_type == 'TEXT':
+            sql_list.append(
+                f'ALTER TABLE {company_id}.{table_name} ADD _{col_name} AS LOWER({col_name})')
+            cols_to_index.append(f'_{col_name}')
+        else:
+            cols_to_index.append(col_name)
     if a_or_b == 'a':
         ndx_name = f'_{table_name}'
-        unique = 'UNIQUE CLUSTERED'
     else:  # must be 'b'
-        ndx_name = f'_{table_name}_2'
-        unique = ''
-    return (
-        f'CREATE {unique} INDEX {ndx_name} '
-        f'ON {company_id}.{table_name} ({ndx_cols})'
-        )
+        ndx_name = f'_{table_name}_b'
+    sql_list.append(f"CREATE INDEX {ndx_name} ON {company_id}.{table_name} ({', '.join(cols_to_index)})")
+    return sql_list
 
 def create_index(self, company_id, table_name, index):
     ndx_name, ndx_cols, filter, unique = index
@@ -548,6 +549,9 @@ def create_index(self, company_id, table_name, index):
         f'CREATE {unique}INDEX {ndx_name} '
         f'ON {company_id}.{table_name} ({ndx_cols}) {filter}'
         )
+
+def get_lower_colname(self, col_name, alias):
+    return f'{alias}._{col_name}'
 
 async def setup_start_date(self, company, user_row_id, start_date):
     # adm_periods - first row_id must be 0, not 1

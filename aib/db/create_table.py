@@ -52,9 +52,9 @@ async def _create_table(conn, company_id, table_defn, db_columns, return_sql=Fal
         if (column[KEY_FIELD] == 'Y' and column[DATA_TYPE] != 'AUTO'):
             pkeys.append(column[COL_NAME])
         if column[KEY_FIELD] == 'A':
-            alt_keys.append(column[COL_NAME])
+            alt_keys.append((column[COL_NAME], column[DATA_TYPE]))
         elif column[KEY_FIELD] == 'B':
-            alt_keys_2.append(column[COL_NAME])
+            alt_keys_2.append((column[COL_NAME], column[DATA_TYPE]))
         if column[FKEY] is not None:
             fkey = loads(column[FKEY])
             if fkey[FK_CHILD]:
@@ -99,12 +99,14 @@ async def _create_table(conn, company_id, table_defn, db_columns, return_sql=Fal
     await conn.exec_cmd(sql)
 
     if alt_keys:
-        sql = conn.create_alt_index(company_id, table_defn[TABLE_NAME], ', '.join(alt_keys), 'a')
-        await conn.exec_cmd(sql)
+        sql_list = conn.create_alt_index(company_id, table_defn[TABLE_NAME], alt_keys, 'a')
+        for sql in sql_list:
+            await conn.exec_cmd(sql)
 
     if alt_keys_2:
-        sql = conn.create_alt_index(company_id, table_defn[TABLE_NAME], ', '.join(alt_keys_2), 'b')
-        await conn.exec_cmd(sql)
+        sql_list = conn.create_alt_index(company_id, table_defn[TABLE_NAME], alt_keys_2, 'b')
+        for sql in sql_list:
+            await conn.exec_cmd(sql)
 
     if table_defn[INDEXES] is not None:
         indexes = loads(table_defn[INDEXES])
