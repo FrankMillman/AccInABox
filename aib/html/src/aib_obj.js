@@ -1268,7 +1268,12 @@ AibChoice.prototype.create_dropdown = function(choice) {
   else if (document.addEventListener)
     document.addEventListener('click', dropdown.onclick, false);
 
-  for (var i=0; i<10; i++) {
+  if (choice.data.length > 15)
+    var max_rows = 15
+  else
+    var max_rows = choice.data.length;
+
+  for (var i=0; i<max_rows; i++) {
     var row = document.createElement('div');
     row.pos = i;
     row.style.paddingLeft = '10px';;
@@ -1295,7 +1300,7 @@ AibChoice.prototype.create_dropdown = function(choice) {
     };
   
   dropdown.draw_window = function() {
-    for (i=0; i<10; i++) {
+    for (i=0; i<max_rows; i++) {
       var row = dropdown.childNodes[i];
       row.innerHTML = html_esc(choice.values[i + dropdown.top_row]);
       if (i + dropdown.top_row === dropdown.option_highlighted) {
@@ -1310,9 +1315,8 @@ AibChoice.prototype.create_dropdown = function(choice) {
     dropdown.top_row = choice.ndx - 3
   else
     dropdown.top_row = 0;
-  if (choice.data.length > 10)
-    if (choice.data.length - dropdown.top_row < 10)
-      dropdown.top_row = choice.data.length - 10;
+  if (choice.data.length - dropdown.top_row < max_rows)
+    dropdown.top_row = choice.data.length - max_rows;
   dropdown.draw_window();
 
   var choice_pos = find_pos(choice.parentNode);
@@ -1346,14 +1350,14 @@ AibChoice.prototype.create_dropdown = function(choice) {
         this.childNodes[row].style.color = 'white';
         }
       else if (this.option_highlighted > 0) {
-        this.top_row -= 1;
         this.option_highlighted -= 1;
+        this.top_row -= 1;
         this.draw_window();
         };
       }
     else if (e.keyCode === 39 || e.keyCode === 40) {  // right|down
       var row = this.option_highlighted - this.top_row;
-      if (row < 9) {
+      if (row < (max_rows-1)) {
         this.childNodes[row].style.background = 'white';
         this.childNodes[row].style.color = 'black';
         row += 1;
@@ -1362,11 +1366,11 @@ AibChoice.prototype.create_dropdown = function(choice) {
         this.childNodes[row].style.color = 'white';
         }
       else if (this.option_highlighted < (choice.data.length-1)) {
-        this.top_row += 1;
         this.option_highlighted += 1;
+        this.top_row += 1;
         this.draw_window();
         };
-      }
+      };
     e.cancelBubble = true;  // prevent bubbling up to 'choice'
     return false;
     };
