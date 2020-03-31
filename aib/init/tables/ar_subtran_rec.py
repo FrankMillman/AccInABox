@@ -515,11 +515,11 @@ virt.append ({
     'sql'        : (
         "a.arec_cust "
         "- "
-        "COALESCE(ROUND(("
+        "COALESCE(("
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_subtran_rec_alloc b "
             "WHERE b.tran_row_id = a.row_id AND b.deleted_id = 0"
-            "), 2), 0)"
+            "), 0)"
         ),
     })
 

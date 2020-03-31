@@ -511,10 +511,11 @@ virt.append ({
     'short_descr': 'Opening bal - cust currency',
     'long_descr' : 'Opening balance - customer currency',
     'col_head'   : 'Op bal cust',
+    'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
     'sql'        : (
         "SELECT "
-          "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL]\" "
+          "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL2]\" "
             "FROM {company}.ar_cust_totals b "
             "WHERE b.cust_row_id = a.row_id "
             "AND b.tran_date < a.tran_start_date "
@@ -529,10 +530,11 @@ virt.append ({
     'short_descr': 'Opening bal - local currency',
     'long_descr' : 'Opening balance - local currency',
     'col_head'   : 'Op bal loc',
+    'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
     'sql'        : (
         "SELECT "
-          "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL]\" "
+          "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL2]\" "
             "FROM {company}.ar_cust_totals b "
             "WHERE b.cust_row_id = a.row_id "
             "AND b.tran_date < a.tran_start_date "
@@ -547,10 +549,11 @@ virt.append ({
     'short_descr': 'Closing bal - cust currency',
     'long_descr' : 'Closing balance - customer currency',
     'col_head'   : 'Cl bal cust',
+    'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
     'sql'        : (
         "SELECT "
-          "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL]\" "
+          "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL2]\" "
             "FROM {company}.ar_cust_totals b "
             "WHERE b.cust_row_id = a.row_id "
             "AND b.tran_date <= a.tran_end_date "
@@ -565,10 +568,11 @@ virt.append ({
     'short_descr': 'Tran total - cust currency',
     'long_descr' : 'Transaction total - customer currency',
     'col_head'   : 'Total cust',
+    'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
     'sql'        : (
         "SELECT "
-          "COALESCE((SELECT SUM(b.amount_cust) AS \"x [REAL]\" "
+          "COALESCE((SELECT SUM(b.amount_cust) AS \"x [REAL2]\" "
             "FROM {company}.ar_trans b "
             "WHERE b.cust_row_id = a.row_id "
             "AND b.tran_date BETWEEN a.tran_start_date AND a.tran_end_date)"

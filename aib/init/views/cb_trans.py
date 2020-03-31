@@ -178,7 +178,7 @@ virt.append ({
     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
     'sql'        : (
         "SELECT "
-            "COALESCE((SELECT `a.{company}.cb_totals.balance_cb` AS \"x [REAL]\" "
+            "COALESCE((SELECT `a.{company}.cb_totals.balance_cb` AS \"x [REAL2]\" "
             "FROM {company}.cb_totals a "
             "WHERE a.ledger_row_id = {ledger_row_id} "
             "AND a.tran_date < {start_date} "
@@ -196,7 +196,7 @@ virt.append ({
     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
     'sql'        : (
         "SELECT "
-            "COALESCE((SELECT `a.{company}.cb_totals.balance_cb` AS \"x [REAL]\" "
+            "COALESCE((SELECT `a.{company}.cb_totals.balance_cb` AS \"x [REAL2]\" "
             "FROM {company}.cb_totals a "
             "WHERE a.ledger_row_id = {ledger_row_id} "
             "AND a.tran_date <= {end_date} "
@@ -214,7 +214,7 @@ virt.append ({
     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
     'sql'        : (
         "SELECT "
-            "COALESCE((SELECT SUM(a.amount_cb) AS \"x [REAL]\" "
+            "COALESCE((SELECT SUM(a.amount_cb) AS \"x [REAL2]\" "
             "FROM {company}.cb_trans a "
             "WHERE a.ledger_row_id = {ledger_row_id} "
             "AND a.tran_date BETWEEN {start_date} AND {end_date}), 0)"

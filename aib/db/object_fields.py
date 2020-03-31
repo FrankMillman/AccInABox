@@ -5,7 +5,7 @@ schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
 from copy import deepcopy
 from lxml import etree
 import gzip
-from decimal import Decimal as D, ROUND_HALF_UP, Context, DecimalException, Inexact
+from decimal import Decimal as D, Context, DecimalException, Inexact
 from datetime import date as dt, datetime as dtm, timedelta as td
 import weakref
 from weakref import WeakKeyDictionary as WKD
@@ -1381,7 +1381,7 @@ class Decimal(Field):
             return dflt_val
         scale = await self.get_scale()
         quant = D(str(10**-scale))
-        return dflt_val.quantize(quant, rounding=ROUND_HALF_UP)
+        return dflt_val.quantize(quant)
 
     async def check_val(self, value):
         if value is None:
@@ -1398,7 +1398,7 @@ class Decimal(Field):
         # If value is D(-1.56319401867222e-13), rounding returns D('-0.00')
         # This messes up formatting on the client
         # Adding 'or D(0)' forces it to return zero
-        return value.quantize(quant, rounding=ROUND_HALF_UP) or D(0)
+        return value.quantize(quant) or D(0)
 
     async def str_to_val(self, value):
         if value in (None, ''):
@@ -1458,7 +1458,7 @@ class Decimal(Field):
         value = D(value)  # could be integer
         scale = await self.get_scale()
         quant = D(str(10**-scale))
-        return value.quantize(quant, rounding=ROUND_HALF_UP)
+        return value.quantize(quant)
 
     async def get_scale(self):
         col_defn = self.col_defn

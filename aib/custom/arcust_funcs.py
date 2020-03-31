@@ -148,17 +148,17 @@ async def get_aged_bal(caller, xml):
             FROM {company}.ar_cust_totals b
             WHERE b.cust_row_id = q.cust_row_id AND b.tran_date <= '{as_at_date}'
             ORDER BY b.tran_date DESC LIMIT 1)
-            AS "balance_tot AS [REAL]",
+            AS "balance_tot AS [REAL2]",
         SUM(CASE WHEN q.tran_date > '{dates[1]}' THEN q.balance ELSE 0 END
-            ) AS "balance_curr AS [REAL]",
+            ) AS "balance_curr AS [REAL2]",
         SUM(CASE WHEN q.tran_date BETWEEN '{dates[2] + td(1)}' AND '{dates[1]}' THEN q.balance ELSE 0 END
-            ) AS "balance_30 AS [REAL]",
+            ) AS "balance_30 AS [REAL2]",
         SUM(CASE WHEN q.tran_date BETWEEN '{dates[3] + td(1)}' AND '{dates[2]}' THEN q.balance ELSE 0 END
-            ) AS "balance_60 AS [REAL]",
+            ) AS "balance_60 AS [REAL2]",
         SUM(CASE WHEN q.tran_date BETWEEN '{dates[4] + td(1)}' AND '{dates[3]}' THEN q.balance ELSE 0 END
-            ) AS "balance_90 AS [REAL]",
+            ) AS "balance_90 AS [REAL2]",
         SUM(CASE WHEN q.tran_date <= '{dates[4]}' THEN q.balance ELSE 0 END
-            ) AS "balance_120 AS [REAL]"
+            ) AS "balance_120 AS [REAL2]"
         FROM
         (SELECT
             b.cust_row_id, b.tran_date, `a.{company}.ar_openitems.balance_cust_as_at` as balance
@@ -301,7 +301,7 @@ async def get_data(caller, node_id, node_total):
                 "COALESCE((SELECT inv_net_tot + crn_net_tot FROM {0}.ar_totals "
                 "WHERE tran_date < {1} "
                 "ORDER BY tran_date DESC LIMIT 1), 0) "
-                "AS \"[REAL]\" "
+                "AS \"[REAL2]\" "
             .format(caller.company, invdet.db_table.constants.param_style)
             )
         params = (end_date, start_date)

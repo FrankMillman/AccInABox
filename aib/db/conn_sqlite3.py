@@ -103,11 +103,14 @@ def zfill(string, lng):
 def date_add(date_string, days):
     return str(date(*map(int, date_string.split('-'))) + timedelta(days))
 
+#################################################
+# no longer required [2020-03-30]
+# worth keeping for the notes below
 # replace sqlite3 'round' function - it uses floating point, so rounding errors
-def round_(number, factor):
-    if number is None:
-        return None
-    return (number * 10**factor + 0.5) // 1 / 10**factor
+# def round_(number, factor):
+#     if number is None:
+#         return None
+#     return (number * 10**factor + 0.5) // 1 / 10**factor
 
     # this also returns a float - what is the difference?? [2018-12-16]
     # why not just use python's round() function?
@@ -139,6 +142,19 @@ def round_(number, factor):
     # $$ language plpgsql immutable strict;
 
     # Sql Server -
+
+    # Create Function BankersRound
+    #     (@Val Decimal(32,16), @Digits Int) Returns Decimal(32,16) AS
+    # Begin
+    # Return Case
+    #     When Abs(@Val - Round(@Val, @Digits, 1)) * Power(10, @Digits+1) = 5 
+    #         Then Round(@Val, @Digits, Case
+    #             When Convert(int, Round(abs(@Val) * power(10,@Digits), 0, 1)) % 2 = 1
+    #                 Then 0
+    #             Else 1 End)
+    #     Else Round(@Val, @Digits) End
+    # End
+
     # create FUNCTION RoundBanker
     # ( @Amt numeric(38,16)
     # , @RoundToDecimal tinyint
@@ -165,11 +181,16 @@ def round_(number, factor):
     # END
     # RETURN ( @RoundedAmt + @WholeAmt )
     # END
+#################################################
 
 # Decimal adapter (store Decimal in database as str - ensure decimal point)
 sqlite3.register_adapter(D, lambda d:str(d) + ('' if '.' in str(d) else '.'))
 # Decimal converter (convert back to Decimal on return)
-sqlite3.register_converter('REAL', lambda s: D(s.decode('utf-8')))
+# sqlite3.register_converter('REAL', lambda s: D(s.decode()))
+sqlite3.register_converter('REAL2', lambda s: D(s.decode()).quantize(D('-0.01')))
+sqlite3.register_converter('REAL4', lambda s: D(s.decode()).quantize(D('-0.0001')))
+sqlite3.register_converter('REAL6', lambda s: D(s.decode()).quantize(D('-0.000001')))
+sqlite3.register_converter('REAL8', lambda s: D(s.decode()).quantize(D('-0.00000001')))
 
 # Boolean adapter (store bool in database as '1'/'0')
 sqlite3.register_adapter(bool, lambda b: str(int(b)))
@@ -193,7 +214,7 @@ def init(self, pos, mem_id=None):
     conn.create_function('repeat', 2, repeat)
     conn.create_function('zfill', 2, zfill)
     conn.create_function('date_add', 2, date_add)
-    conn.create_function('round', 2, round_)
+    # conn.create_function('round', 2, round_)
 
     self.conn = conn
     self.exception = (sqlite3.Error, sqlite3.IntegrityError, sqlite3.OperationalError)
@@ -470,7 +491,8 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('PWD', 'TEXT')
         .replace('DTE', 'DATE')
         .replace('DTM', 'TIMESTAMP')
-        .replace('DEC', 'REAL')  # forces sqlite3 to store decimals as text
+        # .replace('DEC', 'REAL')  # forces sqlite3 to store decimals as text
+        .replace('DEC', f'REAL{db_scale}')  # to allow correct rounding when reading back
         .replace('AUTO', 'INTEGER PRIMARY KEY')
         .replace('JSON', 'TEXT')
         .replace('FXML', 'BLOB')

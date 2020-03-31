@@ -447,9 +447,10 @@ class Conn:
             #   chained name (if 'fld1>fld2>fld3', take 'fld3') and prefix it with 'tmp.'
             col_names2 = []
             for col_name in col_names:
-                # not the correct test for adding "[REAL]" - leave for now [2016-03-16]
+                # not the correct test for adding "[REALn]" - leave for now [2016-03-16]
                 if col_name.lower().startswith('sum('):
-                    col_names2.append(f'SUM(tmp.{col_name[4:-1].split(">")[-1]}) AS "[REAL]"')
+                    scale = db_table.col_dict[col_name].db_scale
+                    col_names2.append(f'SUM(tmp.{col_name[4:-1].split(">")[-1]}) AS "[REAL{scale}]"')
                 else:
                     col_names2.append(f'tmp.{col_name.split(">")[-1]}')
             group2 = []
@@ -520,7 +521,11 @@ class Conn:
                         as_clause = f"CAST({as_clause} AS {self.convert_string('BOOL')})"
                     col_text = as_clause
                 elif col.data_type == 'TEXT':
-                    col_text = f'LOWER({alias}.{col.col_name})'
+                    # col_text = f'LOWER({alias}.{col.col_name})'
+                    if col.key_field in ('A', 'B'):  # index has been created
+                        col_text = self.get_lower_colname(col.col_name, alias)
+                    else:
+                        col_text = f'LOWER({alias}.{col.col_name})'
                 else:
                     col_text = f'{alias}.{col.col_name}'
 
@@ -679,7 +684,7 @@ class Conn:
         elif as_clause is not None:
             if col.data_type == 'DEC' and not self.grouping:
                 # force sqlite3 to return Decimal type
-                col_name = f'"{col.col_name} AS [REAL]"'
+                col_name = f'"{col.col_name} AS [REAL{col.db_scale}]"'
             elif col.data_type == 'BOOL' and not self.grouping:
                 # force sqlite3 to return Bool type
                 col_name = f'"{col.col_name} AS [BOOLTEXT]"'
@@ -694,7 +699,7 @@ class Conn:
                 col_text = f'{as_clause} as {col_name}'
         elif build_sum:
             if col.data_type == 'DEC' and not self.grouping:
-                col_text = f'SUM({alias}.{col.col_name}) AS "{col.col_name} [REAL]"'
+                col_text = f'SUM({alias}.{col.col_name}) AS "{col.col_name} [REAL{col.db_scale}]"'
             else:
                 col_text = f'SUM({alias}.{col.col_name})'
         else:

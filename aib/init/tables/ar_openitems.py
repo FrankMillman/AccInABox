@@ -374,11 +374,11 @@ virt.append ({
     'sql'        : (
         "a.amount_cust "
         "- "
-        "COALESCE(ROUND(("
+        "COALESCE(("
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_tran_alloc_det b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
-            "), 2), 0)"
+            "), 0)"
         ),
     })
 virt.append ({
@@ -392,13 +392,13 @@ virt.append ({
     'sql'        : (
         "a.amount_cust "
         "- "
-        "COALESCE(ROUND(("
+        "COALESCE(("
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_tran_alloc_det b "
             "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
                 "c.tran_date <= {as_at_date} "
-            "), 2), 0)"
+            "), 0)"
         ),
     })
 virt.append ({
@@ -412,11 +412,11 @@ virt.append ({
     'sql'        : (
         "a.amount_local "
         "- "
-        "COALESCE(ROUND(("
+        "COALESCE(("
             "SELECT SUM(b.alloc_local) "
             "FROM {company}.ar_tran_alloc_det b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
-            "), 2), 0)"
+            "), 0)"
         )
     })
 virt.append ({
@@ -430,13 +430,13 @@ virt.append ({
     'sql'        : (
         "a.amount_local "
         "- "
-        "COALESCE(ROUND(("
+        "COALESCE(("
             "SELECT SUM(b.alloc_local) "
             "FROM {company}.ar_tran_alloc_det b "
             "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
                 "c.tran_date <= {as_at_date} "
-            "), 2), 0)"
+            "), 0)"
         )
     })
 virt.append ({
@@ -469,27 +469,20 @@ virt.append ({
     'sql'        : (
         "a.amount_cust "
         "- "
-        "COALESCE(ROUND(("
+        "COALESCE(("
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_tran_alloc_det b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-            "), 2), 0) "
+            "), 0) "
         "- "
         "CASE "
             "WHEN a.discount_date IS NULL THEN 0 "
             "WHEN {as_at_date} > a.discount_date THEN 0 "
-            # "WHEN a.amount_cust - "
-            #     "COALESCE(ROUND(("
-            #         "SELECT SUM(b.alloc_cust) "
-            #         "FROM {company}.ar_tran_alloc_det b "
-            #         "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-            #         "), 2), 0) "
-            #     "= 0 THEN 0 "
-            "ELSE a.discount_cust - COALESCE(ROUND(("
+            "ELSE a.discount_cust - COALESCE(("
                 "SELECT SUM(b.discount_cust) "
                 "FROM {company}.ar_tran_alloc_det b "
                 "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-                "), 2), 0) "
+                "), 0) "
             "END"
         ),
     })
@@ -505,24 +498,24 @@ virt.append ({
     'sql'        : (
         "a.amount_cust "
         "- "
-        "COALESCE(ROUND(("
+        "COALESCE(("
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_tran_alloc_det b "
             "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
             "AND c.posted = '1' "
-            "), 2), 0) "
+            "), 0) "
         "- "
         "CASE "
             "WHEN a.discount_date IS NULL THEN 0 "
             "WHEN {as_at_date} > a.discount_date THEN 0 "
-            "ELSE a.discount_cust - COALESCE(ROUND(("
+            "ELSE a.discount_cust - COALESCE(("
                 "SELECT SUM(b.discount_cust) "
                 "FROM {company}.ar_tran_alloc_det b "
                 "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
                 "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
                 "AND c.posted = '1' "
-                "), 2), 0) "
+                "), 0) "
             "END"
         ),
     })
@@ -568,12 +561,12 @@ virt.append ({
     'sql'        : (
         "a.amount_cust "
         "- "
-        "COALESCE(ROUND(("
+        "COALESCE(("
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_tran_alloc_det b "
             "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND c.posted = '1'"
-            "), 2), 0)"
+            "), 0)"
         ),
     })
 virt.append ({
@@ -595,19 +588,19 @@ virt.append ({
     'sql'        : (
         "a.amount_cust "
         "- "
-        "COALESCE(ROUND(("
+        "COALESCE(("
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_tran_alloc_det b "
             "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND c.posted = '1'"
-            "), 2), 0)"
+            "), 0)"
         "+ "
-        "COALESCE(ROUND(("
+        "COALESCE(("
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_tran_alloc_det b "
             "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE c.item_row_id = a.row_id AND b.deleted_id = 0 AND c.posted = '0'"
-            "), 2), 0)"
+            "), 0)"
         ),
     })
 

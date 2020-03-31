@@ -260,10 +260,10 @@ virt.append ({
     'sql'        : (
         "a.item_row_id>amount_cust "
         "+ "
-        "COALESCE(ROUND(("
+        "COALESCE(("
             "SELECT b.alloc_cust FROM {company}.ar_tran_alloc_det b "
             "WHERE b.tran_row_id = a.row_id AND b.deleted_id = 0"
-        "), 2), 0)"
+        "), 0)"
         ),
     })
 
