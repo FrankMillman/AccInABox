@@ -258,8 +258,6 @@ async def form_sql(self, columns, tablenames, where_clause='',
     return sql
 
 async def attach_company(self, company):
-    if company is None:  # ':memory:' table
-        return
     with await attach_lock:
         if company not in self.companies:
             await self.exec_cmd(f"attach '{self.database}/{company}' as {company}", raw=True)
@@ -267,14 +265,10 @@ async def attach_company(self, company):
             self.companies.add(company)
 
 async def convert_sql(self, sql, params=None):
-    for word in sql.split():
-        if '.' in word:
-            company = word.split('.')[0]
-            if company in self.companies:
-                continue  # already attached
-            if company not in db.cache.companies:
-                continue  # not a company name
-            await self.attach_company(company)
+    if self.database != ':memory:':
+        for company in db.cache.companies:
+            if company not in self.companies:
+                await self.attach_company(company)
     return sql, params
 
 async def insert_row(self, db_obj, cols, vals, generated_flds, from_upd_on_save):
