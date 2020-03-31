@@ -891,6 +891,7 @@ async def check_allocations(db_obj, xml):
     if not ar_rec_alloc:
         return  # no ar_rec allocations
     ar_rec_alloc = ar_rec_alloc[0]
+    await det_obj.init()
 
     all_det = det_obj.select_many(where=[], order=[])
     async for _ in all_det:

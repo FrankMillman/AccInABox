@@ -535,36 +535,6 @@ actions.append([
     'before_update', '<pyfunc name="custom.artrans_funcs.check_unique" type="arec" mode="upd"/>'
     ])
 actions.append([
-    'upd_on_save', [
-        [
-            'ar_openitems',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['tran_type', "'ar_rec'"],  # tgt_col, src_col
-                ['tran_row_id', 'row_id'],
-                ['split_no', '0'],
-                ],
-            [],  # aggregation
-            [  # on insert
-                ['item_type', '=', "'rec'"],  # tgt_col, op, src_col
-                ['due_date', '=', 'tran_date'],
-                ['cust_row_id', '=', 'cust_row_id'],
-                ['tran_date', '=', 'tran_date'],
-                ['amount_cust', '-', 'arec_cust'],
-                ['amount_local', '-', 'arec_local'],
-                ],
-            [  # on update
-                ['amount_cust', '=', '0'],  # tgt_col, op, src_col
-                ['amount_cust', '-', 'arec_cust'],
-                ['amount_local', '=', '0'],
-                ['amount_local', '-', 'arec_local'],
-                ],
-            [],  # on delete
-            ],
-        ],
-    ])
-actions.append([
     'upd_on_post', [
         [
             'ar_openitems',  # table name
@@ -577,6 +547,12 @@ actions.append([
                 ],
             [],  # aggregation
             [  # on post
+                ['item_type', '=', "'rec'"],  # tgt_col, op, src_col
+                ['due_date', '=', 'tran_date'],
+                ['cust_row_id', '=', 'cust_row_id'],
+                ['tran_date', '=', 'tran_date'],
+                ['amount_cust', '-', 'arec_cust'],
+                ['amount_local', '-', 'arec_local'],
                 ['posted', '=', True],  # tgt_col, op, src_col
                 ],
             [],  # on unpost

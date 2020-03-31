@@ -550,31 +550,6 @@ cursors = []
 # actions
 actions = []
 actions.append([
-    'upd_on_save', [
-        [
-            'ar_openitems',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['tran_type', "'ar_disc'"],  # tgt_col, src_col
-                ['tran_row_id', 'row_id'],
-                ['split_no', '0'],
-                ],
-            [],  # aggregation
-            [  # on insert
-                ['item_type', '=', "'disc'"],  # tgt_col, op, src_col
-                ['due_date', '=', 'tran_date'],
-                ['cust_row_id', '=', 'cust_row_id'],
-                ['tran_date', '=', 'tran_date'],
-                ['amount_cust', '-', 'discount_cust'],
-                ['amount_local', '-', 'discount_local'],
-                ],
-            [],  # on update
-            [],  # on delete
-            ],
-        ],
-    ])
-actions.append([
     'upd_on_post', [
         [
             'ar_openitems',  # table name
@@ -587,6 +562,12 @@ actions.append([
                 ],
             [],  # aggregation
             [  # on post
+                ['item_type', '=', "'disc'"],  # tgt_col, op, src_col
+                ['due_date', '=', 'tran_date'],
+                ['cust_row_id', '=', 'cust_row_id'],
+                ['tran_date', '=', 'tran_date'],
+                ['amount_cust', '-', 'disc_tot_cust'],
+                ['amount_local', '-', 'disc_tot_local'],
                 ['posted', '=', True],  # tgt_col, op, src_col
                 ],
             [],  # on unpost
