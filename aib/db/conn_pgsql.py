@@ -23,6 +23,7 @@ def customise(constants, DbConn, db_params):
     constants.func_prefix = ''
     constants.concat = '||'
     constants.repeat = 'repeat'
+    constants.date_cast = 'DATE'
     constants.table_created = (
         "SELECT CASE WHEN EXISTS (SELECT * FROM pg_tables "
         "WHERE schemaname = '{company}' and tablename = a.table_name) "

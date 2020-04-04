@@ -7,6 +7,7 @@ def customise(constants, DbConn, db_params):
     constants.func_prefix = 'dbo.'
     constants.concat = '+'
     constants.repeat = 'replicate'
+    constants.date_cast = 'DATE'
     constants.table_created = (
         "SELECT CASE WHEN EXISTS (SELECT * FROM information_schema.tables "
         "WHERE table_schema = '{company}' and table_name = a.table_name) "

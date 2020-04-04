@@ -16,6 +16,7 @@ def customise(constants, DbConn, db_params):
     constants.func_prefix = ''
     constants.concat = '||'
     constants.repeat = 'repeat'
+    constants.date_cast = 'TEXT'
     constants.table_created = (
         "SELECT CASE WHEN EXISTS (SELECT * FROM {company}.sqlite_master "
         "WHERE type = 'table' AND name = a.table_name) "
