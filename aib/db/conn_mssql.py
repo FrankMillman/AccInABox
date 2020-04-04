@@ -369,7 +369,7 @@ async def convert_sql(self, sql, params=None):
                 sql = f'{sql[:pos+6]} TOP {num} {sql[pos+7:]}'
                 break
     start = sql.find('WITH RECURSIVE ')
-    if start > 0:  # -1 = absent; 0 = at beginning; >0 - move WITH clause to beginning
+    if start > -1:  # -1 = absent; 0 = at beginning; >0 - move WITH clause to beginning
         end = sql[start:].find(') ')
         sql = 'WITH ' + sql[start+15:start+end+2] + sql[:start] + sql[start+end+2:]
     return sql, params
