@@ -2376,7 +2376,7 @@ if (grid.header_row.length) {
         case 'btn':
           var label = tool.label;
           var text = '';  // convert '&' to underline
-          for (var j=0, l=label.length; j<l; j++) {
+          for (var j=0, m=label.length; j<m; j++) {
             if (label[j] === '&') {
               if (label[j+1] === '&')
                 text += '&';
