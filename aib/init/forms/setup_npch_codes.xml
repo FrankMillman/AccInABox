@@ -1,7 +1,5 @@
 <form name="setup_npch_codes" title="Setup expense codes" before_start_form="
-  <<action>>
-    <<pyfunc name=`custom.tax_funcs.before_start_form`/>>
-  <</action>>
+  <<pyfunc name=`custom.tax_funcs.before_start_form`/>>
   ">
 
   <db_objects>
@@ -107,16 +105,12 @@
         <button_row template="Tree_Frame"/>
         <frame_methods template="Tree_Frame">
           <method name="on_start_frame" action="
-            <<action>>
-              <<pyfunc name=`custom.tax_funcs.on_start_frame`
-                master_obj=`npch_code` taxcode_obj=`tax_code`/>>
-            <</action>>
+            <<pyfunc name=`custom.tax_funcs.on_start_frame`
+              master_obj=`npch_code` taxcode_obj=`tax_code`/>>
           "/>
           <method name="after_save" action="
-            <<action>>
-              <<pyfunc name=`custom.tax_funcs.save_tax_codes`
-                master_obj=`npch_code` taxcode_obj=`tax_code` master_id=`npch_row_id`/>>
-            <</action>>
+            <<pyfunc name=`custom.tax_funcs.save_tax_codes`
+              master_obj=`npch_code` taxcode_obj=`tax_code` master_id=`npch_row_id`/>>
           "/>
         </frame_methods>
       </tree_frame>
@@ -124,14 +118,10 @@
     <button_row/>
     <frame_methods>
       <method name="on_req_close" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
+        <<end_form state=`cancelled`/>>
       "/>
       <method name="on_req_cancel" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
+        <<end_form state=`cancelled`/>>
       "/>
     </frame_methods>
   </frame>

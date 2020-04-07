@@ -1,7 +1,5 @@
 <form name="gl_params" title="Set up general ledger parameters" before_start_form="
-  <<action>>
-    <<assign src=`1` tgt=`params.row_id`/>>
-  <</action>>
+  <<assign src=`1` tgt=`params.row_id`/>>
   ">
   <db_objects>
     <db_obj name="params" table_name="gl_params"/>
@@ -48,26 +46,22 @@
       <col/>
       <button lng="150" btn_id="op_per" btn_label="Select opening period"
         btn_enabled="true" btn_validate="true" action="
-          <<action>>
-            <<inline_form name=`op_period`>>
-              <<on_return>>
-                <<return state=`cancelled`/>>
-                <<return state=`completed`/>>
-              <</on_return>>
-            <</inline_form>>
-          <</action>>
+          <<inline_form name=`op_period`>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`/>>
+            <</on_return>>
+          <</inline_form>>
         " validation="
-        <<validations>>
-          <<validation>>
-            <<case>>
-              <<obj_exists obj_name=`adm_period`>>
-              <</obj_exists>>
-              <<default>>
-                <<error head=`Opening period` body=`Please select opening period`/>>
-              <</default>>
-            <</case>>
-          <</validation>>
-        <</validations>>
+        <<validation>>
+          <<case>>
+            <<obj_exists obj_name=`adm_period`>>
+            <</obj_exists>>
+            <<default>>
+              <<error head=`Opening period` body=`Please select opening period`/>>
+            <</default>>
+          <</case>>
+        <</validation>>
         "/>
       <end_if/>
 
@@ -75,15 +69,13 @@
     <button_row template="Setup_Form_Single"/>
     <frame_methods template="Setup_Form_Single">
       <method name="after_save" action="
-        <<action>>
-          <<case>>
-            <<compare src=`params.gl_per_setup` op=`is` tgt=`$False`>>
-              <<assign src=`adm_period.period_row_id` tgt=`ledg_per.period_row_id`/>>
-              <<assign src=`'current'` tgt=`ledg_per.state`/>>
-              <<save_obj obj_name=`ledg_per`/>>
-            <</compare>>
-          <</case>>
-        <</action>>
+        <<case>>
+          <<compare src=`params.gl_per_setup` op=`is` tgt=`$False`>>
+            <<assign src=`adm_period.period_row_id` tgt=`ledg_per.period_row_id`/>>
+            <<assign src=`'current'` tgt=`ledg_per.state`/>>
+            <<save_obj obj_name=`ledg_per`/>>
+          <</compare>>
+        <</case>>
         "/>
     </frame_methods>
   </frame>
@@ -102,9 +94,7 @@
           <toolbar>
             <tool type="img" name="selected" tip="Item selected (Enter)"
               shortcut="normal,13" action="
-                <<action>>
-                  <<row_selected/>>
-                <</action>>
+                <<row_selected/>>
               "/>
             <tool type="nav"/>
           </toolbar>
@@ -114,14 +104,10 @@
       <button_row/>
       <frame_methods>
         <method name="on_req_cancel" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
         <method name="on_req_close" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
       </frame_methods>
     </frame>

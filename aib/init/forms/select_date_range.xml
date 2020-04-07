@@ -1,7 +1,5 @@
 <form name="select_date_range" title="Select date range" before_start_form="
-  <<action>>
-    <<pyfunc name=`custom.date_funcs.load_range_settings`/>>
-  <</action>>
+  <<pyfunc name=`custom.date_funcs.load_range_settings`/>>
   ">
   <db_objects/>
   <mem_objects>
@@ -59,13 +57,11 @@
           <text value="From period:"/>
           <col/>
           <input obj_name="var" col_name="start_period" lng="120" after="
-            <<action>>
-              <<case>>
-                <<compare src=`var.start_period` op=`gt` tgt=`var.end_period`>>
-                  <<assign src=`var.start_period` tgt=`var.end_period`/>>
-                <</compare>>
-              <</case>>
-            <</action>>
+            <<case>>
+              <<compare src=`var.start_period` op=`gt` tgt=`var.end_period`>>
+                <<assign src=`var.start_period` tgt=`var.end_period`/>>
+              <</compare>>
+            <</case>>
             "/>
           <col/>
           <text value="To period:"/>
@@ -94,28 +90,20 @@
     <button_row>
       <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
         btn_validate="true" btn_default="true" action="
-          <<action>>
-            <<pyfunc name=`custom.date_funcs.save_range_settings`/>>
-            <<end_form state=`completed`/>>
-          <</action>>
+          <<pyfunc name=`custom.date_funcs.save_range_settings`/>>
+          <<end_form state=`completed`/>>
         "/>
       <button btn_id="btn_can" btn_label="Cancel" lng="60" btn_enabled="true"
         btn_validate="false" btn_default="false" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
     </button_row>
     <frame_methods>
       <method name="on_req_cancel" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
+        <<end_form state=`cancelled`/>>
       "/>
       <method name="on_req_close" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
+        <<end_form state=`cancelled`/>>
       "/>
     </frame_methods>
   </frame>

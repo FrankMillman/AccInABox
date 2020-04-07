@@ -2393,8 +2393,6 @@ if (grid.header_row.length) {
             }
           var btn = document.createElement('div');
           btn.style[cssFloat] = 'left';
-          //btn.pos = frame.obj_list.length;
-          //frame.obj_list.push(btn);
           frame.form.obj_dict[tool.ref] = btn;
           btn.tabIndex = -1  // remove from tab order
           btn.ref = tool.ref;
@@ -2409,6 +2407,7 @@ if (grid.header_row.length) {
           btn.innerHTML = text;
 
           btn.title = tool.tip;
+          btn.onmouseover = function() {btn.style.cursor = 'default'};
           btn.onclick = function(e) {
             var grid = this.parentNode.grid;
             if (grid.frame.form.disable_count) return false;

@@ -1,9 +1,7 @@
 <form name="ar_cust_bal" title="Customer query" before_start_form="
-  <<action>>
-    <<assign src=`var.settings` tgt=`balance_date_vars.settings`/>>
-    <<assign src=`var.balance_date` tgt=`balance_date_vars.balance_date`/>>
-    <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
-  <</action>>
+  <<assign src=`var.settings` tgt=`balance_date_vars.settings`/>>
+  <<assign src=`var.balance_date` tgt=`balance_date_vars.balance_date`/>>
+  <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
   ">
   <db_objects>
     <db_obj name="ar_cust" table_name="ar_customers" is_formview_obj="true"/>
@@ -83,26 +81,24 @@
       <col/>
       <button btn_id="change_date" btn_label="Change" help_msg = "Change date"
         btn_enabled="true" btn_validate="true" action="
-          <<action>>
-            <<sub_form name=`_sys.select_balance_date`>>
-              <<call_params>>
-                <<call_param name=`settings` type=`data_attr` source=`balance_date_vars.settings`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`settings` type=`data_attr` target=`balance_date_vars.settings`/>>
-                <<return_param name=`balance_date` type=`data_attr`
-                  target=`balance_date_vars.balance_date`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`cancelled`/>>
-                <<return state=`completed`>>
-                  <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.as_at_date`/>>
-                  <<pyfunc name=`custom.arcust_funcs.get_aged_bal`/>>
-                  <<restart_grid obj_name=`ar_items`/>>
-                <</return>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
+          <<sub_form name=`_sys.select_balance_date`>>
+            <<call_params>>
+              <<call_param name=`settings` type=`data_attr` source=`balance_date_vars.settings`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`settings` type=`data_attr` target=`balance_date_vars.settings`/>>
+              <<return_param name=`balance_date` type=`data_attr`
+                target=`balance_date_vars.balance_date`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`>>
+                <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.as_at_date`/>>
+                <<pyfunc name=`custom.arcust_funcs.get_aged_bal`/>>
+                <<restart_grid obj_name=`ar_items`/>>
+              <</return>>
+            <</on_return>>
+          <</sub_form>>
         "/>
 
       <block/>
@@ -144,45 +140,33 @@
       <text value="Show: "/>
       <col/>
       <input obj_name="bal_vars" col_name="show_120" after="
-        <<after>>
-          <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`4`/>>
-          <<restart_grid obj_name=`ar_items`/>>
-        <</after>>
+        <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`4`/>>
+        <<restart_grid obj_name=`ar_items`/>>
         "/>
       <col/>
       <input obj_name="bal_vars" col_name="show_90" after="
-        <<after>>
-          <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`3`/>>
-          <<restart_grid obj_name=`ar_items`/>>
-        <</after>>
+        <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`3`/>>
+        <<restart_grid obj_name=`ar_items`/>>
         "/>
       <col/>
       <input obj_name="bal_vars" col_name="show_60" after="
-        <<after>>
-          <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`2`/>>
-          <<restart_grid obj_name=`ar_items`/>>
-        <</after>>
+        <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`2`/>>
+        <<restart_grid obj_name=`ar_items`/>>
         "/>
       <col/>
       <input obj_name="bal_vars" col_name="show_30" after="
-        <<after>>
-          <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`1`/>>
-          <<restart_grid obj_name=`ar_items`/>>
-        <</after>>
+        <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`1`/>>
+        <<restart_grid obj_name=`ar_items`/>>
         "/>
       <col/>
       <input obj_name="bal_vars" col_name="show_curr" after="
-        <<after>>
-          <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`0`/>>
-          <<restart_grid obj_name=`ar_items`/>>
-        <</after>>
+        <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`0`/>>
+        <<restart_grid obj_name=`ar_items`/>>
         "/>
       <col/>
       <input obj_name="bal_vars" col_name="show_tot" after="
-        <<after>>
-          <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`-1`/>>
-          <<restart_grid obj_name=`ar_items`/>>
-        <</after>>
+        <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`-1`/>>
+        <<restart_grid obj_name=`ar_items`/>>
         "/>
 
       <block/>
@@ -231,36 +215,32 @@
       <col/>
       <button btn_id="change_dates" btn_label="Change" help_msg = "Change dates"
         btn_enabled="true" btn_validate="true" action="
-          <<action>>
-            <<sub_form name=`_sys.select_date_range`>>
-              <<call_params>>
-                <<call_param name=`settings` type=`data_attr` source=`date_range_vars.settings`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`settings` type=`data_attr` target=`date_range_vars.settings`/>>
-                <<return_param name=`start_date` type=`data_attr` target=`date_range_vars.start_date`/>>
-                <<return_param name=`end_date` type=`data_attr` target=`date_range_vars.end_date`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`cancelled`/>>
-                <<return state=`completed`>>
-                  <<restart_grid obj_name=`ar_trans`/>>
-                <</return>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
+          <<sub_form name=`_sys.select_date_range`>>
+            <<call_params>>
+              <<call_param name=`settings` type=`data_attr` source=`date_range_vars.settings`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`settings` type=`data_attr` target=`date_range_vars.settings`/>>
+              <<return_param name=`start_date` type=`data_attr` target=`date_range_vars.start_date`/>>
+              <<return_param name=`end_date` type=`data_attr` target=`date_range_vars.end_date`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`>>
+                <<restart_grid obj_name=`ar_trans`/>>
+              <</return>>
+            <</on_return>>
+          <</sub_form>>
         "/>
       <col/>
       <button btn_id="ar_stat" btn_label="Statement" help_msg = "Show statement"
         btn_enabled="true" btn_validate="true" action="
-          <<action>>
-            <<run_report name=`ar_statement`>>
-              <<call_params>>
-                <<call_param name=`start_date` type=`data_attr` source=`date_range_vars.start_date`/>>
-                <<call_param name=`end_date` type=`data_attr` source=`date_range_vars.end_date`/>>
-              <</call_params>>
-            <</run_report>>
-          <</action>>
+          <<run_report name=`ar_statement`>>
+            <<call_params>>
+              <<call_param name=`start_date` type=`data_attr` source=`date_range_vars.start_date`/>>
+              <<call_param name=`end_date` type=`data_attr` source=`date_range_vars.end_date`/>>
+            <</call_params>>
+          <</run_report>>
         "/>
 
       <block/>
@@ -270,9 +250,7 @@
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,13" action="
-              <<action>>
-                <<select_from_view/>>
-              <</action>>
+              <<select_from_view/>>
             "/>
           <tool type="nav"/>
         </toolbar>
@@ -298,13 +276,11 @@
         </cur_sequence>
         <grid_methods template="Grid">
           <method name="on_start_grid" action="
-            <<action>>
-              <<assign src=`date_range_vars.start_date` tgt=`ar_cust.tran_start_date`/>>
-              <<assign src=`date_range_vars.end_date` tgt=`ar_cust.tran_end_date`/>>
-              <<get_op_cl_bal args=`ar_cust, op_bal_cust, cl_bal_cust, tot_cust`/>>
-              <<assign src=`ar_cust.op_bal_cust` tgt=`tran_vars.op_bal`/>>
-              <<assign src=`ar_cust.cl_bal_cust` tgt=`tran_vars.cl_bal`/>>
-            <</action>>
+            <<assign src=`date_range_vars.start_date` tgt=`ar_cust.tran_start_date`/>>
+            <<assign src=`date_range_vars.end_date` tgt=`ar_cust.tran_end_date`/>>
+            <<get_op_cl_bal args=`ar_cust, op_bal_cust, cl_bal_cust, tot_cust`/>>
+            <<assign src=`ar_cust.op_bal_cust` tgt=`tran_vars.op_bal`/>>
+            <<assign src=`ar_cust.cl_bal_cust` tgt=`tran_vars.cl_bal`/>>
             "/>
         </grid_methods>
       </grid>
@@ -315,16 +291,14 @@
     <button_row template="Query_Form"/>
     <frame_methods template="Query_Form">
       <method name="on_start_frame" action="
-        <<action>>
-          <<init_obj obj_name=`bal_vars`/>>
-          <<assign src=`var.settings` tgt=`balance_date_vars.settings`/>>
-          <<assign src=`_ctx.bal_date_cust` tgt=`balance_date_vars.balance_date`/>>
-          <<assign src=`_ctx.bal_date_cust` tgt=`_ctx.as_at_date`/>>
-          <<assign src=`ar_cust.row_id` tgt=`_ctx.cust_row_id`/>>
-          <<pyfunc name=`custom.arcust_funcs.get_aged_bal`/>>
-          <<restart_grid obj_name=`ar_items`/>>
-          <<skip_input num=`6`/>>
-        <</action>>
+        <<init_obj obj_name=`bal_vars`/>>
+        <<assign src=`var.settings` tgt=`balance_date_vars.settings`/>>
+        <<assign src=`_ctx.bal_date_cust` tgt=`balance_date_vars.balance_date`/>>
+        <<assign src=`_ctx.bal_date_cust` tgt=`_ctx.as_at_date`/>>
+        <<assign src=`ar_cust.row_id` tgt=`_ctx.cust_row_id`/>>
+        <<pyfunc name=`custom.arcust_funcs.get_aged_bal`/>>
+        <<restart_grid obj_name=`ar_items`/>>
+        <<skip_input num=`6`/>>
         "/>
     </frame_methods>
   </frame>

@@ -88,14 +88,10 @@
     <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
-        <<action>>
-          <<pyfunc name=`custom.foreign_key.load_fkey`/>>
-        <</action>>
+        <<pyfunc name=`custom.foreign_key.load_fkey`/>>
       "/>
       <method name="before_save" action="
-        <<action>>
-          <<pyfunc name=`custom.foreign_key.dump_fkey`/>>
-        <</action>>
+        <<pyfunc name=`custom.foreign_key.dump_fkey`/>>
       "/>
     </frame_methods>
   </frame>

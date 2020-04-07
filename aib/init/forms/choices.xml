@@ -68,20 +68,14 @@
     <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
-        <<action>>
-          <<pyfunc name=`custom.choices.load_choices`/>>
-        <</action>>
+        <<pyfunc name=`custom.choices.load_choices`/>>
       "/>
       <method name="before_save" action="
-        <<action>>
-          <<pyfunc name=`custom.choices.dump_choices`/>>
-        <</action>>
+        <<pyfunc name=`custom.choices.dump_choices`/>>
       "/>
       <method name="do_restore" action="
-        <<action>>
-          <<pyfunc name=`custom.choices.restore_choices`/>>
-          <<restore_obj obj_name=`var`/>>
-        <</action>>
+        <<pyfunc name=`custom.choices.restore_choices`/>>
+        <<restore_obj obj_name=`var`/>>
       "/>
     </frame_methods>
   </frame>

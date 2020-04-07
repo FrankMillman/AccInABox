@@ -208,153 +208,131 @@
               <button btn_id="pre_save" btn_label="Save header"
                 help_msg = "Save header before proceeding"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<req_save/>>
-                    <<change_button>>
-                      <<btn_dflt btn_id=`btn_close`/>>
-                    <</change_button>>
-                    <<change_button>>
-                      <<btn_show btn_id=`pre_save` state=`false`/>>
-                    <</change_button>>
-                    <<pyfunc name=`custom.table_setup.setup_audit_cols`/>>
-                  <</action>>
+                  <<req_save/>>
+                  <<change_button>>
+                    <<btn_dflt btn_id=`btn_close`/>>
+                  <</change_button>>
+                  <<change_button>>
+                    <<btn_show btn_id=`pre_save` state=`false`/>>
+                  <</change_button>>
+                  <<pyfunc name=`custom.table_setup.setup_audit_cols`/>>
                 " validation="
-                  <<validations>>
-                    <<validation>>
-                      <<case>>
-                        <<obj_exists obj_name=`db_table`/>>
-                        <<default>>
-                          <<error head=`Error` body=`Header not saved`/>>
-                        <</default>>
-                      <</case>>
-                    <</validation>>
-                  <</validations>>
+                  <<validation>>
+                    <<case>>
+                      <<obj_exists obj_name=`db_table`/>>
+                      <<default>>
+                        <<error head=`Error` body=`Header not saved`/>>
+                      <</default>>
+                    <</case>>
+                  <</validation>>
                 "/>
               <row/>
               <col colspan="3"/>
               <button lng="150" btn_id="db_col" btn_label="Columns"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<sub_form name=`_sys.setup_table_dbcols`>>
-                      <<call_params>>
-                        <<call_param name=`db_table` type=`data_obj` source=`db_table`/>>
-                      <</call_params>>
-                      <<return_params/>>
-                      <<on_return>>
-                        <<return state=`cancelled`/>>
-                        <<return state=`completed`/>>
-                      <</on_return>>
-                    <</sub_form>>
-                  <</action>>
+                  <<sub_form name=`_sys.setup_table_dbcols`>>
+                    <<call_params>>
+                      <<call_param name=`db_table` type=`data_obj` source=`db_table`/>>
+                    <</call_params>>
+                    <<return_params/>>
+                    <<on_return>>
+                      <<return state=`cancelled`/>>
+                      <<return state=`completed`/>>
+                    <</on_return>>
+                  <</sub_form>>
                 "/>
               <button lng="150" btn_id="db_cur" btn_label="Cursors"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<inline_form name=`cursors`>>
-                      <<on_return>>
-                        <<return state=`cancelled`/>>
-                        <<return state=`completed`/>>
-                      <</on_return>>
-                    <</inline_form>>
-                  <</action>>
+                  <<inline_form name=`cursors`>>
+                    <<on_return>>
+                      <<return state=`cancelled`/>>
+                      <<return state=`completed`/>>
+                    <</on_return>>
+                  <</inline_form>>
                 "/>
               <button lng="150" btn_id="actions" btn_label="Actions"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<sub_form name=`_sys.actions`>>
-                      <<call_params>>
-                        <<call_param name=`db_table` type=`data_obj` source=`db_table`/>>
-                      <</call_params>>
-                      <<return_params/>>
-                      <<on_return>>
-                        <<return state=`completed`/>>
-                        <<return state=`cancelled`/>>
-                      <</on_return>>
-                    <</sub_form>>
-                  <</action>>
+                  <<sub_form name=`_sys.actions`>>
+                    <<call_params>>
+                      <<call_param name=`db_table` type=`data_obj` source=`db_table`/>>
+                    <</call_params>>
+                    <<return_params/>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</sub_form>>
                 "/>
               <row/>
               <col colspan="3"/>
               <button lng="150" btn_id="sequence" btn_label="Sequence"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<pyfunc name=`custom.table_setup.load_sequence` tbl_name=`db_table`/>>
-                    <<inline_form name=`sequence`>>
-                      <<on_return>>
-                        <<return state=`cancelled`/>>
-                        <<return state=`completed`>>
-                          <<pyfunc name=`custom.table_setup.dump_sequence` tbl_name=`db_table`/>>
-                        <</return>>
-                      <</on_return>>
-                    <</inline_form>>
-                  <</action>>
+                  <<pyfunc name=`custom.table_setup.load_sequence` tbl_name=`db_table`/>>
+                  <<inline_form name=`sequence`>>
+                    <<on_return>>
+                      <<return state=`cancelled`/>>
+                      <<return state=`completed`>>
+                        <<pyfunc name=`custom.table_setup.dump_sequence` tbl_name=`db_table`/>>
+                      <</return>>
+                    <</on_return>>
+                  <</inline_form>>
                 "/>
               <button lng="150" btn_id="tree_params" btn_label="Tree parameters"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<pyfunc name=`custom.table_setup.load_tree_params`/>>
-                    <<inline_form name=`tree_params`>>
-                      <<on_return>>
-                        <<return state=`cancelled`/>>
-                        <<return state=`completed`>>
-                          <<pyfunc name=`custom.table_setup.dump_tree_params`/>>
-                        <</return>>
-                      <</on_return>>
-                    <</inline_form>>
-                  <</action>>
+                  <<pyfunc name=`custom.table_setup.load_tree_params`/>>
+                  <<inline_form name=`tree_params`>>
+                    <<on_return>>
+                      <<return state=`cancelled`/>>
+                      <<return state=`completed`>>
+                        <<pyfunc name=`custom.table_setup.dump_tree_params`/>>
+                      <</return>>
+                    <</on_return>>
+                  <</inline_form>>
                 "/>
               <button lng="150" btn_id="roll_params" btn_label="Roll parameters"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<pyfunc name=`custom.table_setup.load_roll_params`/>>
-                    <<inline_form name=`roll_params`>>
-                      <<on_return>>
-                        <<return state=`cancelled`/>>
-                        <<return state=`completed`>>
-                          <<pyfunc name=`custom.table_setup.dump_roll_params`/>>
-                        <</return>>
-                      <</on_return>>
-                    <</inline_form>>
-                  <</action>>
+                  <<pyfunc name=`custom.table_setup.load_roll_params`/>>
+                  <<inline_form name=`roll_params`>>
+                    <<on_return>>
+                      <<return state=`cancelled`/>>
+                      <<return state=`completed`>>
+                        <<pyfunc name=`custom.table_setup.dump_roll_params`/>>
+                      <</return>>
+                    <</on_return>>
+                  <</inline_form>>
                 "/>
               <row/>
               <col colspan="3"/>
               <button lng="150" btn_id="sub_types" btn_label="Sub types"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<pyfunc name=`custom.table_setup.load_sub_types`/>>
-                    <<inline_form name=`sub_types`>>
-                      <<on_return>>
-                        <<return state=`cancelled`/>>
-                        <<return state=`completed`>>
-                          <<pyfunc name=`custom.table_setup.dump_sub_types`/>>
-                        <</return>>
-                      <</on_return>>
-                    <</inline_form>>
-                  <</action>>
+                  <<pyfunc name=`custom.table_setup.load_sub_types`/>>
+                  <<inline_form name=`sub_types`>>
+                    <<on_return>>
+                      <<return state=`cancelled`/>>
+                      <<return state=`completed`>>
+                        <<pyfunc name=`custom.table_setup.dump_sub_types`/>>
+                      <</return>>
+                    <</on_return>>
+                  <</inline_form>>
                 "/>
               <button lng="150" btn_id="fkeys" btn_label="Foreign keys"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<pyfunc name=`custom.table_setup.load_fkeys`/>>
-                    <<inline_form name=`fkeys`>>
-                      <<on_return>>
-                        <<return state=`completed`/>>
-                        <<return state=`cancelled`/>>
-                      <</on_return>>
-                    <</inline_form>>
-                  <</action>>
+                  <<pyfunc name=`custom.table_setup.load_fkeys`/>>
+                  <<inline_form name=`fkeys`>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</inline_form>>
                 "/>
               <button lng="150" btn_id="other" btn_label="Other"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<inline_form name=`other`>>
-                      <<on_return>>
-                        <<return state=`completed`/>>
-                        <<return state=`cancelled`/>>
-                      <</on_return>>
-                    <</inline_form>>
-                  <</action>>
+                  <<inline_form name=`other`>>
+                    <<on_return>>
+                      <<return state=`completed`/>>
+                      <<return state=`cancelled`/>>
+                    <</on_return>>
+                  <</inline_form>>
                 "/>
             </subtype_body>
 
@@ -366,26 +344,22 @@
               <label value="Definition company:"/>
               <col/>
               <input obj_name="db_table" col_name="defn_company" lng="120" validation="
-                <<validations>>
-                  <<validation>>
-                    <<case>>
-                      <<compare src=`$value` op=`is` tgt=`$None`>>
-                        <<error head=`Company name` body=`A value is required`/>>
-                      <</compare>>
-                    <</case>>
-                  <</validation>>
-                <</validations>>
+                <<validation>>
+                  <<case>>
+                    <<compare src=`$value` op=`is` tgt=`$None`>>
+                      <<error head=`Company name` body=`A value is required`/>>
+                    <</compare>>
+                  <</case>>
+                <</validation>>
                 "/>
               <row/>
               <col/>
               <label value="Table name:"/>
               <col/>
               <input obj_name="db_table" col_name="table_name" lng="150" validation="
-                <<validations>>
-                  <<validation>>
-                    <<pyfunc name=`custom.table_setup.chk_table_name`/>>
-                  <</validation>>
-                <</validations>>
+                <<validation>>
+                  <<pyfunc name=`custom.table_setup.chk_table_name`/>>
+                <</validation>>
                 "/>
               <row/>
               <col/>
@@ -395,37 +369,33 @@
               <row/>
               <col colspan="2"/>
               <input obj_name="var" col_name="own_data" radio="true" after="
-                <<action>>
-                  <<case>>
-                    <<compare src=`var.own_data` op=`=` tgt=`'Y'`>>
-                      <<set_readonly target=`db_table.data_company` state=`true`/>>
-                      <<set_readonly target=`db_table.read_only` state=`true`/>>
-                    <</compare>>
-                    <<default>>
-                      <<set_readonly target=`db_table.data_company` state=`false`/>>
-                      <<set_readonly target=`db_table.read_only` state=`false`/>>
-                    <</default>>
-                  <</case>>
-                <</action>>
+                <<case>>
+                  <<compare src=`var.own_data` op=`=` tgt=`'Y'`>>
+                    <<set_readonly target=`db_table.data_company` state=`true`/>>
+                    <<set_readonly target=`db_table.read_only` state=`true`/>>
+                  <</compare>>
+                  <<default>>
+                    <<set_readonly target=`db_table.data_company` state=`false`/>>
+                    <<set_readonly target=`db_table.read_only` state=`false`/>>
+                  <</default>>
+                <</case>>
               "/>
               <row/>
               <col/>
               <label value="Data company:"/>
               <col/>
               <input obj_name="db_table" col_name="data_company" lng="120" validation="
-                <<validations>>
-                  <<validation>>
-                    <<case>>
-                      <<compare src=`var.own_data` op=`=` tgt=`'N'`>>
-                        <<case>>
-                          <<compare src=`$value` op=`is` tgt=`$None`>>
-                            <<error head=`Company name` body=`A value is required`/>>
-                          <</compare>>
-                        <</case>>
-                      <</compare>>
-                    <</case>>
-                  <</validation>>
-                <</validations>>
+                <<validation>>
+                  <<case>>
+                    <<compare src=`var.own_data` op=`=` tgt=`'N'`>>
+                      <<case>>
+                        <<compare src=`$value` op=`is` tgt=`$None`>>
+                          <<error head=`Company name` body=`A value is required`/>>
+                        <</compare>>
+                      <</case>>
+                    <</compare>>
+                  <</case>>
+                <</validation>>
                 "/>
               <label value="Read only?"/>
               <input obj_name="db_table" col_name="read_only"/>
@@ -436,68 +406,64 @@
         <button_row template="Tree_Frame">
           <button btn_id="create_table" btn_label="Create table" btn_enabled="true"
             btn_validate="true" btn_default="false" action="
-              <<action>>
-                <<pyfunc name=`custom.table_setup.create_table`/>>
-                <<assign src=`$True` tgt=`var.table_created`/>>
-                <<save_obj obj_name=`db_table`/>>
-                <<change_button>>
-                  <<btn_enabled btn_id=`create_table` state=`false`/>>
-                <</change_button>>
-              <</action>>
+              <<pyfunc name=`custom.table_setup.create_table`/>>
+              <<assign src=`$True` tgt=`var.table_created`/>>
+              <<save_obj obj_name=`db_table`/>>
+              <<change_button>>
+                <<btn_enabled btn_id=`create_table` state=`false`/>>
+              <</change_button>>
             " help_msg="Set up table in database"/>
         </button_row>
         <frame_methods template="Tree_Frame">
           <method name="on_start_frame" action="
-            <<action>>
-              <<assign src=`$False` tgt=`var.table_created`/>>
-              <<case>>
-                <<obj_exists obj_name=`db_table`>>
-                  <<pyfunc name=`custom.table_setup.chk_table_created`/>>
-                  <<!--change_button>>
-                    <<btn_dflt btn_id=`btn_rgt`/>>
-                  <</change_button-->>
-                  <<change_button>>
-                    <<btn_show btn_id=`pre_save` state=`false`/>>
-                  <</change_button>>
-                  <<case>>
-                    <<compare src=`db_table.defn_company` op=`is` tgt=`$None`>>
-                      <<assign src=`'Y'` tgt=`var.own_defn`/>>
-                    <</compare>>
-                    <<default>>
-                      <<assign src=`'N'` tgt=`var.own_defn`/>>
-                    <</default>>
-                  <</case>>
-                <</obj_exists>>
-                <<default>>
-                  <<init_obj obj_name=`var`/>>
-                  <<change_button>>
-                    <<btn_show btn_id=`pre_save` state=`true`/>>
-                  <</change_button>>
-                <</default>>
-              <</case>>
-              <<case>>
-                <<compare src=`var.table_created` op=`is` tgt=`$True`>>
-                  <<change_button>>
-                    <<btn_enabled btn_id=`create_table` state=`false`/>>
-                  <</change_button>>
-                <</compare>>
-                <<default>>
-                  <<change_button>>
-                    <<btn_enabled btn_id=`create_table` state=`true`/>>
-                  <</change_button>>
-                <</default>>
-              <</case>>
-              <<case>>
-                <<compare src=`var.own_data` op=`=` tgt=`'Y'`>>
-                  <<set_readonly target=`db_table.data_company` state=`true`/>>
-                  <<set_readonly target=`db_table.read_only` state=`true`/>>
-                <</compare>>
-                <<default>>
-                  <<set_readonly target=`db_table.data_company` state=`false`/>>
-                  <<set_readonly target=`db_table.read_only` state=`false`/>>
-                <</default>>
-              <</case>>
-            <</action>>
+            <<assign src=`$False` tgt=`var.table_created`/>>
+            <<case>>
+              <<obj_exists obj_name=`db_table`>>
+                <<pyfunc name=`custom.table_setup.chk_table_created`/>>
+                <<!--change_button>>
+                  <<btn_dflt btn_id=`btn_rgt`/>>
+                <</change_button-->>
+                <<change_button>>
+                  <<btn_show btn_id=`pre_save` state=`false`/>>
+                <</change_button>>
+                <<case>>
+                  <<compare src=`db_table.defn_company` op=`is` tgt=`$None`>>
+                    <<assign src=`'Y'` tgt=`var.own_defn`/>>
+                  <</compare>>
+                  <<default>>
+                    <<assign src=`'N'` tgt=`var.own_defn`/>>
+                  <</default>>
+                <</case>>
+              <</obj_exists>>
+              <<default>>
+                <<init_obj obj_name=`var`/>>
+                <<change_button>>
+                  <<btn_show btn_id=`pre_save` state=`true`/>>
+                <</change_button>>
+              <</default>>
+            <</case>>
+            <<case>>
+              <<compare src=`var.table_created` op=`is` tgt=`$True`>>
+                <<change_button>>
+                  <<btn_enabled btn_id=`create_table` state=`false`/>>
+                <</change_button>>
+              <</compare>>
+              <<default>>
+                <<change_button>>
+                  <<btn_enabled btn_id=`create_table` state=`true`/>>
+                <</change_button>>
+              <</default>>
+            <</case>>
+            <<case>>
+              <<compare src=`var.own_data` op=`=` tgt=`'Y'`>>
+                <<set_readonly target=`db_table.data_company` state=`true`/>>
+                <<set_readonly target=`db_table.read_only` state=`true`/>>
+              <</compare>>
+              <<default>>
+                <<set_readonly target=`db_table.data_company` state=`false`/>>
+                <<set_readonly target=`db_table.read_only` state=`false`/>>
+              <</default>>
+            <</case>>
           "/>
         </frame_methods>
       </tree_frame>
@@ -637,14 +603,12 @@
           <body>
             <block/>
             <dummy after="
-              <<action>>
-                <<case>>
-                  <<obj_exists obj_name=`sub_types`/>>
-                  <<default>>
-                    <<call method=`do_save`/>>
-                  <</default>>
-                <</case>>
-              <</action>>
+              <<case>>
+                <<obj_exists obj_name=`sub_types`/>>
+                <<default>>
+                  <<call method=`do_save`/>>
+                <</default>>
+              <</case>>
               "/>
             <grid data_object="subtype_vals" growable="true" num_grid_rows="3">
               <toolbar template="Grid" title="Values:"/>
@@ -664,14 +628,12 @@
               <body>
                 <block/>
                 <dummy after="
-                  <<action>>
-                    <<case>>
-                      <<obj_exists obj_name=`subtype_vals`/>>
-                      <<default>>
-                        <<call method=`do_save`/>>
-                      <</default>>
-                    <</case>>
-                  <</action>>
+                  <<case>>
+                    <<obj_exists obj_name=`subtype_vals`/>>
+                    <<default>>
+                      <<call method=`do_save`/>>
+                    <</default>>
+                  <</case>>
                   "/>
                 <grid data_object="subtype_cols" growable="true" num_grid_rows="3">
                   <toolbar template="Grid" title="Columns:"/>
@@ -707,9 +669,7 @@
       <button_row>
         <button lng="60" btn_id="dflt_ok" btn_label="Ok"
           btn_enabled="true" btn_validate="true" action="
-            <<action>>
-              <<end_form state=`completed`/>>
-            <</action>>
+            <<end_form state=`completed`/>>
           "/>
       </button_row>
       <frame_methods/>
@@ -754,9 +714,7 @@
       <button_row>
         <button lng="60" btn_id="dflt_ok" btn_label="Ok"
           btn_enabled="true" btn_validate="true" action="
-            <<action>>
-              <<end_form state=`completed`/>>
-            <</action>>
+            <<end_form state=`completed`/>>
           "/>
       </button_row>
       <frame_methods/>
@@ -777,9 +735,7 @@
       <button_row>
         <button lng="60" btn_id="dflt_ok" btn_label="Ok"
           btn_enabled="true" btn_validate="true" action="
-            <<action>>
-              <<end_form state=`completed`/>>
-            <</action>>
+            <<end_form state=`completed`/>>
           "/>
       </button_row>
       <frame_methods/>
@@ -815,27 +771,25 @@
             <col/>
             <button btn_id="db_cur" btn_label="Cursor"
               btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form name=`_sys.setup_cursor`>>
-                    <<call_params>>
-                      <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
-                      <<call_param name=`cursor_name` type=`data_attr` source=`db_cur.cursor_name`/>>
-                      <<call_param name=`data_type` type=`data_attr` source=`'json'`/>>
-                      <<call_param name=`cur_columns_json` type=`data_attr` source=`db_cur.columns`/>>
-                      <<call_param name=`cur_filter_json` type=`data_attr` source=`db_cur.filter`/>>
-                      <<call_param name=`cur_sequence_json` type=`data_attr` source=`db_cur.sequence`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`cur_columns_json` type=`data_attr` target=`db_cur.columns`/>>
-                      <<return_param name=`cur_filter_json` type=`data_attr` target=`db_cur.filter`/>>
-                      <<return_param name=`cur_sequence_json` type=`data_attr` target=`db_cur.sequence`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`cancelled`/>>
-                      <<return state=`completed`/>>
-                    <</on_return>>
-                 <</sub_form>>
-                <</action>>
+                <<sub_form name=`_sys.setup_cursor`>>
+                  <<call_params>>
+                    <<call_param name=`table_name` type=`data_attr` source=`db_table.table_name`/>>
+                    <<call_param name=`cursor_name` type=`data_attr` source=`db_cur.cursor_name`/>>
+                    <<call_param name=`data_type` type=`data_attr` source=`'json'`/>>
+                    <<call_param name=`cur_columns_json` type=`data_attr` source=`db_cur.columns`/>>
+                    <<call_param name=`cur_filter_json` type=`data_attr` source=`db_cur.filter`/>>
+                    <<call_param name=`cur_sequence_json` type=`data_attr` source=`db_cur.sequence`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`cur_columns_json` type=`data_attr` target=`db_cur.columns`/>>
+                    <<return_param name=`cur_filter_json` type=`data_attr` target=`db_cur.filter`/>>
+                    <<return_param name=`cur_sequence_json` type=`data_attr` target=`db_cur.sequence`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`cancelled`/>>
+                    <<return state=`completed`/>>
+                  <</on_return>>
+               <</sub_form>>
               "/>
             <row/>
             <col/>
@@ -850,9 +804,7 @@
       <button_row>
         <button lng="60" btn_id="dflt_ok" btn_label="Ok"
           btn_enabled="true" btn_validate="true" action="
-            <<action>>
-              <<end_form state=`completed`/>>
-            <</action>>
+            <<end_form state=`completed`/>>
           "/>
       </button_row>
       <frame_methods/>

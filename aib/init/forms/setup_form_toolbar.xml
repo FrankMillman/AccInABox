@@ -1,7 +1,5 @@
 <form name="setup_form_toolbar" title="Setup toolbar" before_start_form="
-  <<action>>
-    <<pyfunc name=`custom.formdefn_funcs.before_start_toolbar`/>>
-  <</action>>
+  <<pyfunc name=`custom.formdefn_funcs.before_start_toolbar`/>>
   ">
 
   <db_objects/>
@@ -151,14 +149,10 @@
     <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
-        <<action>>
-          <<pyfunc name=`custom.formdefn_funcs.load_toolbar`/>>
-        <</action>>
+        <<pyfunc name=`custom.formdefn_funcs.load_toolbar`/>>
       "/>
       <method name="before_save" action="
-        <<action>>
-          <<pyfunc name=`custom.formdefn_funcs.dump_toolbar`/>>
-        <</action>>
+        <<pyfunc name=`custom.formdefn_funcs.dump_toolbar`/>>
       "/>
     </frame_methods>
   </frame>

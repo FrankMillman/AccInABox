@@ -1,11 +1,7 @@
 <form name="cb_receipt" title="Cash book receipt" before_start_form="
-  <<action>>
-    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_rec` action=`lock`/>>
-  <</action>>
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_rec` action=`lock`/>>
   " on_close_form="
-  <<action>>
-    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_rec` action=`unlock`/>>
-  <</action>>
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_rec` action=`unlock`/>>
   ">
   <db_objects>
     <db_obj name="cb_rec" table_name="cb_tran_rec" is_formview_obj="true"/>
@@ -76,9 +72,7 @@
           <row/>
           <col/>
           <input obj_name="cb_det" col_name="line_type" radio="false" form_dflt="
-            <<form_dflt>>
-              <<prev_value/>>
-            <</form_dflt>>
+            <<prev_value/>>
             "/>
           <subtran_frame subtran_obj="cb_det" subtran_col="line_type">
             <subtran_body subtran_id="isls"/>
@@ -117,9 +111,7 @@
         <label value="Date:"/>
         <col/>
         <input obj_name="cb_rec" col_name="tran_date" lng="84" form_dflt="
-          <<form_dflt>>
-            <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
-          <</form_dflt>>
+          <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
           "/>
 
         <row/>

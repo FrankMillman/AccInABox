@@ -1,7 +1,5 @@
 <form name="select_dates" title="Select range of dates" after_start_form="
-  <<action>>
-    <<pyfunc name=`custom.date_funcs.setup_dates`/>>
-  <</action>>
+  <<pyfunc name=`custom.date_funcs.setup_dates`/>>
   ">
   <db_objects/>
   <mem_objects>
@@ -78,26 +76,18 @@
         <label value="Select financial year:"/>
         <col/>
         <input obj_name="var" col_name="fin_year" lng="150" form_dflt="
-          <<action>>
-            <<pyfunc name=`custom.arcust_funcs.setup_finyrs`/>>
-          <</action>>
+          <<pyfunc name=`custom.arcust_funcs.setup_finyrs`/>>
           " after="
-          <<action>>
-            <<pyfunc name=`custom.arcust_funcs.after_finyrs`/>>
-          <</action>>
+          <<pyfunc name=`custom.arcust_funcs.after_finyrs`/>>
           "/>
         <row/>
         <col/>
         <label value="Select period:"/>
         <col/>
         <input obj_name="var" col_name="period_no" lng="150" form_dflt="
-          <<action>>
-            <<pyfunc name=`custom.arcust_funcs.setup_finpers`/>>
-          <</action>>
+          <<pyfunc name=`custom.arcust_funcs.setup_finpers`/>>
           " after="
-          <<action>>
-            <<pyfunc name=`custom.arcust_funcs.after_finpers`/>>
-          <</action>>
+          <<pyfunc name=`custom.arcust_funcs.after_finpers`/>>
           "/>
       </subtype_body>
 

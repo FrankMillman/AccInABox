@@ -49,9 +49,7 @@
         <button_row>
           <button btn_id="btn_close" btn_label="Return" btn_enabled="true"
               btn_validate="false" btn_default="true" lng="60" action="
-            <<action>>
-              <<return_to_grid/>>
-            <</action>>
+            <<return_to_grid/>>
           "/>
         </button_row>
         <frame_methods template="Grid_Frame"/>
@@ -60,14 +58,10 @@
     <button_row/>
     <frame_methods>
       <method name="on_req_close" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
+        <<end_form state=`cancelled`/>>
       "/>
       <method name="on_req_cancel" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
+        <<end_form state=`cancelled`/>>
       "/>
     </frame_methods>
   </frame>

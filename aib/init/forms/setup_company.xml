@@ -14,24 +14,22 @@
         <cur_columns>
           <cur_col col_name="company_id" lng="100"/>
           <cur_col col_name="company_name" lng="260" expand="true" validation="
-            <<validations>>
-              <<validation>>
-                <<case>>
-                  <<obj_exists obj_name=`db_comp`>>
-                  <</obj_exists>>
-                  <<default>>
-                    <<ask title=`New company` enter=`No` escape=`No`
-                        question=`This will create a new company in the database&amp;#10;&amp;#10;Ok to proceed?`>>
-                      <<response ans=`No`>>
-                        <<error head=`` body=``/>>
-                      <</response>
-                      <<response ans=`Yes`>>
-                      <</response>>
-                    <</ask>>
-                  <</default>>
-                <</case>>
-              <</validation>>
-            <</validations>>
+            <<validation>>
+              <<case>>
+                <<obj_exists obj_name=`db_comp`>>
+                <</obj_exists>>
+                <<default>>
+                  <<ask title=`New company` enter=`No` escape=`No`
+                      question=`This will create a new company in the database&amp;#10;&amp;#10;Ok to proceed?`>>
+                    <<response ans=`No`>>
+                      <<error head=`` body=``/>>
+                    <</response>
+                    <<response ans=`Yes`>>
+                    <</response>>
+                  <</ask>>
+                <</default>>
+              <</case>>
+            <</validation>>
           "/>
         </cur_columns>
         <cur_filter/>

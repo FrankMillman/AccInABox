@@ -106,14 +106,10 @@
     <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
-        <<action>>
-          <<pyfunc name=`custom.procdefn_funcs.load_ioparms`/>>
-        <</action>>
+        <<pyfunc name=`custom.procdefn_funcs.load_ioparms`/>>
       "/>
       <method name="before_save" action="
-        <<action>>
-          <<pyfunc name=`custom.procdefn_funcs.dump_ioparms`/>>
-        <</action>>
+        <<pyfunc name=`custom.procdefn_funcs.dump_ioparms`/>>
       "/>
     </frame_methods>
   </frame>

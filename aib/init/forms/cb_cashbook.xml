@@ -1,7 +1,5 @@
 <form name="cb_cashbook" title="Cashbook" before_start_form="
-  <<action>>
-    <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
-  <</action>>
+  <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
   ">
   <db_objects>
     <db_obj name="cb_trans" table_name="cb_trans" view="true"/>
@@ -49,24 +47,22 @@
       <col/>
       <button btn_id="change_dates" btn_label="Change" help_msg = "Change dates"
         btn_enabled="true" btn_validate="true" action="
-          <<action>>
-            <<sub_form name=`_sys.select_date_range`>>
-              <<call_params>>
-                <<call_param name=`settings` type=`data_attr` source=`date_range_vars.settings`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`settings` type=`data_attr` target=`date_range_vars.settings`/>>
-                <<return_param name=`start_date` type=`data_attr` target=`date_range_vars.start_date`/>>
-                <<return_param name=`end_date` type=`data_attr` target=`date_range_vars.end_date`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`cancelled`/>>
-                <<return state=`completed`>>
-                  <<restart_grid obj_name=`cb_trans`/>>
-                <</return>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
+          <<sub_form name=`_sys.select_date_range`>>
+            <<call_params>>
+              <<call_param name=`settings` type=`data_attr` source=`date_range_vars.settings`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`settings` type=`data_attr` target=`date_range_vars.settings`/>>
+              <<return_param name=`start_date` type=`data_attr` target=`date_range_vars.start_date`/>>
+              <<return_param name=`end_date` type=`data_attr` target=`date_range_vars.end_date`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`>>
+                <<restart_grid obj_name=`cb_trans`/>>
+              <</return>>
+            <</on_return>>
+          <</sub_form>>
         "/>
 
       <block/>
@@ -76,9 +72,7 @@
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,13" action="
-              <<action>>
-                <<select_from_view/>>
-              <</action>>
+              <<select_from_view/>>
             "/>
           <tool type="nav"/>
         </toolbar>
@@ -104,14 +98,12 @@
         </cur_sequence>
         <grid_methods template="Grid">
           <method name="on_start_grid" action="
-            <<action>>
-              <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
-              <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
-              <<assign src=`cb_trans.ledger_row_id` tgt=`_ctx.ledger_row_id`/>>
-              <<get_op_cl_bal args=`cb_trans, op_bal_cb, cl_bal_cb, tot_cb`/>>
-              <<assign src=`cb_trans.op_bal_cb` tgt=`tran_vars.op_bal`/>>
-              <<assign src=`cb_trans.cl_bal_cb` tgt=`tran_vars.cl_bal`/>>
-            <</action>>
+            <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
+            <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
+            <<assign src=`cb_trans.ledger_row_id` tgt=`_ctx.ledger_row_id`/>>
+            <<get_op_cl_bal args=`cb_trans, op_bal_cb, cl_bal_cb, tot_cb`/>>
+            <<assign src=`cb_trans.op_bal_cb` tgt=`tran_vars.op_bal`/>>
+            <<assign src=`cb_trans.cl_bal_cb` tgt=`tran_vars.cl_bal`/>>
             "/>
         </grid_methods>
       </grid>

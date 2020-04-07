@@ -230,17 +230,19 @@ class GuiGrid:
                     lng, height, label, gui_cols, grid=True)
 
                 if form_dflt is not None:
-                    form_dflt = etree.fromstring(form_dflt, parser=parser)
+                    form_dflt = etree.fromstring(
+                        f'<_>{form_dflt}</_>', parser=parser)
                 gui_obj.form_dflt = form_dflt
 
                 if validation is not None:
-                    validations = etree.fromstring(validation, parser=parser)
+                    validations = etree.fromstring(
+                        f'<_>{validation}</_>', parser=parser)
                     for vld in validations.iter('validation'):
                         gui_obj.form_vlds.append((self, vld))
 
                 if after is not None:
                     gui_obj.after_input = etree.fromstring(
-                        after, parser=parser)
+                        f'<_>{after}</_>', parser=parser)
 
                 gui_obj.grid = self  # used in ht.htc - look for '.grid.'
 
@@ -256,7 +258,8 @@ class GuiGrid:
                 must_validate = True
                 default = False
                 help_msg = ''
-                action = etree.fromstring(action, parser=parser)
+                action = etree.fromstring(
+                    f'<_>{action}</_>', parser=parser)
                 button = ht.gui_objects.GuiButton(self, gui_cols, btn_label,
                     lng, enabled, must_validate, default, help_msg, action)
                 self.btn_dict[btn_id] = button
@@ -362,7 +365,8 @@ class GuiGrid:
         for method_name in method_dict:
             method = method_dict[method_name]
             obj_name = method.get('obj_name')  #, self.obj_name)
-            method = etree.fromstring(method.get('action'), parser=parser)
+            method = etree.fromstring(
+                f'<_>{method.get("action")}</_>', parser=parser)
 
             self.methods[method_name] = method
             if method_name == 'on_start_grid':
@@ -409,7 +413,7 @@ class GuiGrid:
                     'lng': tool.get('lng')}
             elif tool_type in ('btn', 'img'):
                 action = etree.fromstring(
-                    tool.get('action'), parser=parser)
+                    f'<_>{tool.get("action")}</_>', parser=parser)
                 tb_btn = ht.gui_objects.GuiTbButton(self, action)
                 tool_attr = {'type': tool_type, 'ref':  tb_btn.ref,
                     'tip': tool.get('tip'), 'name': tool.get('name'),

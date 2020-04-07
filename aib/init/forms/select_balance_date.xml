@@ -1,7 +1,5 @@
 <form name="select_balance_date" title="Select balance date" before_start_form="
-  <<action>>
-    <<pyfunc name=`custom.date_funcs.load_bal_settings`/>>
-  <</action>>
+  <<pyfunc name=`custom.date_funcs.load_bal_settings`/>>
   ">
   <db_objects/>
   <mem_objects>
@@ -70,28 +68,20 @@
     <button_row>
       <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
         btn_validate="true" btn_default="true" action="
-          <<action>>
-            <<pyfunc name=`custom.date_funcs.save_bal_settings`/>>
-            <<end_form state=`completed`/>>
-          <</action>>
+          <<pyfunc name=`custom.date_funcs.save_bal_settings`/>>
+          <<end_form state=`completed`/>>
         "/>
       <button btn_id="btn_can" btn_label="Cancel" lng="60" btn_enabled="true"
         btn_validate="false" btn_default="false" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
     </button_row>
     <frame_methods>
       <method name="on_req_cancel" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
+        <<end_form state=`cancelled`/>>
       "/>
       <method name="on_req_close" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
+        <<end_form state=`cancelled`/>>
       "/>
     </frame_methods>
   </frame>

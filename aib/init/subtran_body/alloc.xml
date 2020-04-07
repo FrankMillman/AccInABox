@@ -77,111 +77,75 @@
   <text value="Show/Alloc: "/>
   <col/>
   <input obj_name="bal_vars" col_name="show_120" after="
-    <<after>>
-      <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`4`/>>
-      <<restart_grid obj_name=`ar_items`/>>
-    <</after>>
+    <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`4`/>>
+    <<restart_grid obj_name=`ar_items`/>>
     "/>
   <input obj_name="bal_vars" col_name="alloc_120" validation="
-      <<validations>>
-        <<validation>>
-          <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`4`/>>
-        <</validation>>
-      <</validations>>
+      <<validation>>
+        <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`4`/>>
+      <</validation>>
     " after="
-    <<after>>
-      <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`4`/>>
-    <</after>>
+    <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`4`/>>
     "/>
   <col/>
   <input obj_name="bal_vars" col_name="show_90" after="
-    <<after>>
-      <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`3`/>>
-      <<restart_grid obj_name=`ar_items`/>>
-    <</after>>
+    <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`3`/>>
+    <<restart_grid obj_name=`ar_items`/>>
     "/>
   <input obj_name="bal_vars" col_name="alloc_90" validation="
-      <<validations>>
-        <<validation>>
-          <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`3`/>>
-        <</validation>>
-      <</validations>>
+      <<validation>>
+        <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`3`/>>
+      <</validation>>
     " after="
-    <<after>>
-      <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`3`/>>
-    <</after>>
+    <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`3`/>>
     "/>
   <col/>
   <input obj_name="bal_vars" col_name="show_60" after="
-    <<after>>
-      <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`2`/>>
-      <<restart_grid obj_name=`ar_items`/>>
-    <</after>>
+    <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`2`/>>
+    <<restart_grid obj_name=`ar_items`/>>
     "/>
   <input obj_name="bal_vars" col_name="alloc_60" validation="
-      <<validations>>
-        <<validation>>
-          <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`2`/>>
-        <</validation>>
-      <</validations>>
+      <<validation>>
+        <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`2`/>>
+      <</validation>>
     " after="
-    <<after>>
-      <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`2`/>>
-    <</after>>
+    <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`2`/>>
     "/>
   <col/>
   <input obj_name="bal_vars" col_name="show_30" after="
-    <<after>>
-      <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`1`/>>
-      <<restart_grid obj_name=`ar_items`/>>
-    <</after>>
+    <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`1`/>>
+    <<restart_grid obj_name=`ar_items`/>>
     "/>
   <input obj_name="bal_vars" col_name="alloc_30" validation="
-      <<validations>>
-        <<validation>>
-          <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`1`/>>
-        <</validation>>
-      <</validations>>
+      <<validation>>
+        <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`1`/>>
+      <</validation>>
     " after="
-    <<after>>
-      <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`1`/>>
-    <</after>>
+    <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`1`/>>
     "/>
   <col/>
   <input obj_name="bal_vars" col_name="show_curr" after="
-    <<after>>
-      <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`0`/>>
-      <<restart_grid obj_name=`ar_items`/>>
-    <</after>>
+    <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`0`/>>
+    <<restart_grid obj_name=`ar_items`/>>
     "/>
   <input obj_name="bal_vars" col_name="alloc_curr" validation="
-      <<validations>>
-        <<validation>>
-          <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`0`/>>
-        <</validation>>
-      <</validations>>
+      <<validation>>
+        <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`0`/>>
+      <</validation>>
     " after="
-    <<after>>
-      <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`0`/>>
-    <</after>>
+    <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`0`/>>
     "/>
   <col/>
   <input obj_name="bal_vars" col_name="show_tot" after="
-    <<after>>
-      <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`-1`/>>
-      <<restart_grid obj_name=`ar_items`/>>
-    <</after>>
+    <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`-1`/>>
+    <<restart_grid obj_name=`ar_items`/>>
     "/>
   <input obj_name="bal_vars" col_name="alloc_tot" validation="
-      <<validations>>
-        <<validation>>
-          <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`-1`/>>
-        <</validation>>
-      <</validations>>
+      <<validation>>
+        <<pyfunc name=`custom.artrans_funcs.confirm_alloc` age=`-1`/>>
+      <</validation>>
     " after="
-    <<after>>
-      <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`-1`/>>
-    <</after>>
+    <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`-1`/>>
     "/>
 
   <block/>
@@ -214,9 +178,7 @@
     </cur_sequence>
     <grid_methods template="Grid">
       <method name="after_save" action="
-        <<action>>
-          <<pyfunc name=`custom.artrans_funcs.after_save_alloc`/>>
-        <</action>>
+        <<pyfunc name=`custom.artrans_funcs.after_save_alloc`/>>
         "/>
     </grid_methods>
   </grid>

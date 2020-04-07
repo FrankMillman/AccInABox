@@ -7,36 +7,28 @@ tool_nav = (
 tool_insert = (
     '<tool type="img" name="insert" tip="Insert row (Ctrl+Insert)" '
         'shortcut="ctrl,45" action="'
-      '&lt;action&gt;'
         '&lt;req_insert_row/&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 tool_delete = (
     '<tool type="img" name="delete" tip="Delete row (Ctrl+Delete)" '
         'shortcut="ctrl,46" action="'
-      '&lt;action&gt;'
         '&lt;req_delete_row/&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 tool_formview = (
     '<tool type="img" name="formview" tip="Form view (Ctrl+Enter)" '
         'shortcut="ctrl,13" action="'
-      '&lt;action&gt;'
         '&lt;req_formview/&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 tool_selected = (
     '<tool type="img" name="selected" tip="Item selected (Enter)" '
         'shortcut="normal,13" action="'
-      '&lt;action&gt;'
         '&lt;row_selected/&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
@@ -45,27 +37,21 @@ tool_selected = (
 btn_ok = (
     '<button btn_id="btn_ok" btn_label="Ok" btn_enabled="true" '
         'btn_validate="true" btn_default="true" lng="60" action="'
-      '&lt;action&gt;'
         '&lt;end_form state=&quot;completed&quot;/&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 btn_can = (
     '<button btn_id="btn_can" btn_label="Cancel" btn_enabled="true" '
         'btn_validate="false" btn_default="false" lng="60" action="'
-      '&lt;action&gt;'
         '&lt;end_form state=&quot;cancelled&quot;/&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 btn_save = (
     '<button btn_id="btn_save" btn_label="Save" btn_enabled="false" '
         'btn_validate="true" btn_default="false" lng="60" action="'
-      '&lt;action&gt;'
         '&lt;req_save/&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 # btn_validate changed to "true" [2019-07-03]
@@ -81,7 +67,6 @@ btn_save = (
 btn_close = (
     '<button btn_id="btn_close" btn_label="{close_text}" btn_enabled="true" '
         'btn_validate="false" btn_default="true" lng="60" action="'
-      '&lt;action&gt;'
         '&lt;case&gt;'
           '&lt;has_temp_data&gt;'  # user changed field and pressed Enter
             '&lt;req_save/&gt;'
@@ -93,14 +78,12 @@ btn_close = (
             '&lt;call method=&quot;on_req_cancel&quot;/&gt;'
           '&lt;/default&gt;'
         '&lt;/case&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 btn_save_multi = (
     '<button btn_id="btn_save" btn_label="New" btn_enabled="true" '
         'btn_validate="true" btn_default="true" lng="60" action="'
-      '&lt;action&gt;'
         '&lt;case&gt;'
           '&lt;btn_has_label btn_id=&quot;btn_save&quot; label=&quot;New&quot;&gt;'
             '&lt;do_navigate nav_type=&quot;last&quot;/&gt;'
@@ -115,14 +98,12 @@ btn_save_multi = (
             '&lt;req_save/&gt;'
           '&lt;/default&gt;'
         '&lt;/case&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 btn_close_multi = (
     '<button btn_id="btn_close" btn_label="{close_text}" btn_enabled="true" '
         'btn_validate="false" btn_default="false" lng="60" action="'
-      '&lt;action&gt;'
         '&lt;case&gt;'
           '&lt;has_temp_data&gt;'  # user changed field and pressed Enter
             '&lt;req_save/&gt;'
@@ -134,7 +115,6 @@ btn_close_multi = (
             '&lt;call method=&quot;on_req_cancel&quot;/&gt;'
           '&lt;/default&gt;'
         '&lt;/case&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
@@ -142,7 +122,6 @@ btn_close_multi = (
 
 on_clean = (
     '<method name="on_clean" obj_name="[obj_name]" action="'
-      '&lt;action&gt;'
         '&lt;change_button&gt;'
           '&lt;btn_label btn_id=&quot;btn_close&quot; value=&quot;{close_text}&quot;/&gt;'
         '&lt;/change_button&gt;'
@@ -153,13 +132,11 @@ on_clean = (
           '&lt;btn_enabled btn_id=&quot;btn_save&quot; state=&quot;false&quot;/&gt;'
         '&lt;/change_button&gt;'
         '&lt;notify_obj_clean obj_name=&quot;[obj_name]&quot;/&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 on_clean_multi = (  # change 'Save' to 'New'
     '<method name="on_clean" obj_name="[obj_name]" action="'
-      '&lt;action&gt;'
 
         '&lt;case&gt;'
           '&lt;obj_exists obj_name=&quot;[obj_name]&quot;&gt;'
@@ -198,13 +175,11 @@ on_clean_multi = (  # change 'Save' to 'New'
         '&lt;/case&gt;'
 
         '&lt;notify_obj_clean obj_name=&quot;[obj_name]&quot;/&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 on_amend = (
     '<method name="on_amend" obj_name="[obj_name]" action="'
-      '&lt;action&gt;'
         '&lt;change_button&gt;'
           '&lt;btn_label btn_id=&quot;btn_save&quot; value=&quot;Save&quot;/&gt;'
         '&lt;/change_button&gt;'
@@ -218,13 +193,11 @@ on_amend = (
           '&lt;btn_label btn_id=&quot;btn_close&quot; value=&quot;Cancel&quot;/&gt;'
         '&lt;/change_button&gt;'
         '&lt;notify_obj_dirty obj_name=&quot;[obj_name]&quot;/&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 on_navigate = (
     '<method name="on_navigate" action="'  # user clicked in navigation bar
-      '&lt;action&gt;'
         '&lt;case&gt;'
           '&lt;data_changed&gt;'
             '&lt;ask title=&quot;Save changes?&quot; enter=&quot;No&quot; escape=&quot;Cancel&quot; '
@@ -248,13 +221,11 @@ on_navigate = (
             '&lt;call method=&quot;on_clean&quot;/&gt;'
           '&lt;/default&gt;'
         '&lt;/case&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 on_req_cancel = (
     '<method name="on_req_cancel" action="'  # press Esc or click 'Cancel'
-      '&lt;action&gt;'
         '&lt;case&gt;'
           '&lt;data_changed&gt;'
             '&lt;ask title=&quot;Cancel?&quot; enter=&quot;No&quot; escape=&quot;No&quot; '
@@ -272,13 +243,11 @@ on_req_cancel = (
             '{close_action}'
           '&lt;/default&gt;'
         '&lt;/case&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 on_req_close = (
     '<method name="on_req_close" action="'  # click [X] or press Shift+F4
-      '&lt;action&gt;'
         '&lt;case&gt;'
           '&lt;data_changed&gt;'
             '&lt;ask title=&quot;Save changes?&quot; enter=&quot;No&quot; escape=&quot;Cancel&quot; '
@@ -299,23 +268,18 @@ on_req_close = (
             '&lt;parent_req_close/&gt;'
           '&lt;/default&gt;'
         '&lt;/case&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 do_save = (
     '<method name="do_save" action="'  # separate method so it can be over-ridden
-      '&lt;action&gt;'
         '&lt;save_obj obj_name=&quot;[obj_name]&quot;/&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
 do_restore = (
     '<method name="do_restore" action="'  # separate method so it can be over-ridden
-      '&lt;action&gt;'
         '&lt;restore_obj obj_name=&quot;[obj_name]&quot;/&gt;'
-      '&lt;/action&gt;'
     '"/>'
     )
 
@@ -333,15 +297,11 @@ class Form:  # template for standard forms
         '<frame_methods>'
 # this is the default, so not required
 #         '<method name="on_req_cancel" action="'  # press Esc or click 'Cancel'
-#           '&lt;action&gt;'
 #             '&lt;parent_req_cancel/&gt;'
-#           '&lt;/action&gt;'
 #           '"/>'
           '<method name="on_req_close" action="'  # click [X] or press Shift+F4
-            '&lt;action&gt;'
               '&lt;parent_req_cancel/&gt;'  # why not req_close (and so not required) ?
                                             # maybe to distinguish 'Ok' from Shift_F4 ??
-            '&lt;/action&gt;'
             '"/>'
         '</frame_methods>'
         )
@@ -401,7 +361,6 @@ class Setup_Form:  # template for setup-type forms
     frame_methods = (
         '<frame_methods>'
         '<method name="reset_buttons" action="'
-          '&lt;action&gt;'
             '&lt;case&gt;'
               '&lt;obj_exists obj_name=&quot;[obj_name]&quot;&gt;'
                 '&lt;change_button&gt;'
@@ -420,7 +379,6 @@ class Setup_Form:  # template for setup-type forms
                 '&lt;/change_button&gt;'
               '&lt;/default&gt;'
             '&lt;/case&gt;'
-          '&lt;/action&gt;'
           '"/>'
         f'{on_clean_multi.format(close_text="Close")}'
         f'{on_amend}'
@@ -445,9 +403,7 @@ class Query_Form:  # template for query-type forms
         '<button_row>'
           '<button btn_id="btn_ok" btn_label="Ok" btn_enabled="true" '
               'btn_validate="true" btn_default="true" lng="60" action="'
-            '&lt;action&gt;'
               '&lt;parent_req_cancel/&gt;'
-            '&lt;/action&gt;'
             '"/>'
         '</button_row>'
         )
@@ -476,19 +432,13 @@ class Grid:  # template for grids
     grid_methods = (
         '<grid_methods>'
           '<method name="on_read" obj_name="[obj_name]" action="'
-            '&lt;action&gt;'
               '&lt;repos_row/&gt;'
-            '&lt;/action&gt;'
           '"/>'
           '<method name="on_clean" obj_name="[obj_name]" action="'
-            '&lt;action&gt;'
               '&lt;notify_obj_clean obj_name=&quot;[obj_name]&quot;/&gt;'
-           '&lt;/action&gt;'
           '"/>'
           '<method name="on_amend" obj_name="[obj_name]" action="'
-            '&lt;action&gt;'
               '&lt;notify_obj_dirty obj_name=&quot;[obj_name]&quot;/&gt;'
-           '&lt;/action&gt;'
           '"/>'
           f'{on_req_close}'
           f'{on_req_cancel.format(**on_req_cancel_args)}'
@@ -591,10 +541,8 @@ class Grid_Frame_With_Grid:  # template for a grid_frame containing a grid - mus
         '<button_row>'
           '<button btn_id="btn_close" btn_label="Return" btn_enabled="true" '
               'btn_validate="false" btn_default="true" lng="60" action="'
-            '&lt;action&gt;'
               '&lt;req_save/&gt;'
               '&lt;return_to_grid/&gt;'
-            '&lt;/action&gt;'
           '"/>'
         '</button_row>'
         )
@@ -627,7 +575,6 @@ class Tree_Frame:  # template for a tree_frame
     frame_methods = (
         '<frame_methods>'
           '<method name="on_read" obj_name="[obj_name]" action="'
-            '&lt;action&gt;'
               '&lt;case&gt;'
 
                   '&lt;node_inserted&gt;'
@@ -635,13 +582,11 @@ class Tree_Frame:  # template for a tree_frame
                   '&lt;/node_inserted&gt;'
 
               '&lt;/case&gt;'
-            '&lt;/action&gt;'
           '"/>'
           f'{on_clean.format(close_text="Return")}'
           f'{on_amend}'
           f'{on_req_cancel.format(**on_req_cancel_args)}'
           '<method name="on_req_return" action="'  # click 'Return'
-            '&lt;action&gt;'
               '&lt;case&gt;'
                 '&lt;data_changed&gt;'
                   '&lt;ask title=&quot;Save changes?&quot; enter=&quot;No&quot; escape=&quot;Cancel&quot; '
@@ -662,7 +607,6 @@ class Tree_Frame:  # template for a tree_frame
                   '&lt;return_to_tree/&gt;'
                 '&lt;/default&gt;'
               '&lt;/case&gt;'
-            '&lt;/action&gt;'
           '"/>'
           f'{on_req_close}'
           f'{do_save}'
@@ -673,26 +617,15 @@ class Tree_Frame:  # template for a tree_frame
 #----------------------------------------------------------------------------
 
 class Transaction:  # template for capturing transactions
-    toolbar = '<toolbar/>'
-#   toolbar = (
-#       '<toolbar>'
-#         f'{tool_nav}'
-#         f'{tool_delete}'
-#       '</toolbar>'
-#       )
-
     button_row = (
         '<button_row>'
           '<button btn_id="btn_close" btn_label="Close" btn_enabled="true" '
               'btn_validate="true" btn_default="false" lng="60" action="'
-            '&lt;action&gt;'
               '&lt;case&gt;'
                 '&lt;has_ctrl_grid&gt;'  # if ctrl grid, restart grid
                   '&lt;call method=&quot;on_req_cancel&quot;/&gt;'
                 '&lt;/has_ctrl_grid&gt;'
                 '&lt;default&gt;'
-                  # '&lt;init_obj obj_name=&quot;[obj_name]&quot;/&gt;'
-                  # '&lt;restart_frame/&gt;'
 
                   '&lt;ask title=&quot;Saved&quot; enter=&quot;Yes&quot; escape=&quot;No&quot; '
                       'question=&quot;Capture another?&quot;&gt;'
@@ -707,11 +640,9 @@ class Transaction:  # template for capturing transactions
 
                 '&lt;/default&gt;'
               '&lt;/case&gt;'
-            '&lt;/action&gt;'
             '"/>'
           '<button btn_id="btn_post" btn_label="Post" btn_enabled="true" '
               'btn_validate="true" btn_default="true" lng="60" action="'
-            '&lt;action&gt;'
               '&lt;req_save/&gt;'
               '&lt;call method=&quot;do_post&quot;/&gt;'
               '&lt;case&gt;'
@@ -748,7 +679,6 @@ class Transaction:  # template for capturing transactions
 
                 '&lt;/compare&gt;'
               '&lt;/case&gt;'
-            '&lt;/action&gt;'
             '"/>'
         '</button_row>'
         )
@@ -757,7 +687,6 @@ class Transaction:  # template for capturing transactions
         '<frame_methods>'
 
           '<method name="on_start_transaction" action="'
-            '&lt;action&gt;'
               '&lt;case&gt;'
                 '&lt;obj_exists obj_name=&quot;[obj_name]&quot;/&gt;'
                 '&lt;default&gt;'
@@ -793,27 +722,20 @@ class Transaction:  # template for capturing transactions
                   '&lt;/inline_form&gt;'
                 '&lt;/default&gt;'
               '&lt;/case&gt;'
-            '&lt;/action&gt;'
             '"/>'
 
           '<method name="on_req_cancel" action="'  # press Esc or click 'Cancel'
-            '&lt;action&gt;'
               '&lt;parent_req_cancel/&gt;'
-            '&lt;/action&gt;'
           '"/>'
 
           '<method name="on_req_close" action="'  # click [X] or press Shift+F4
-            '&lt;action&gt;'
               '&lt;parent_req_cancel/&gt;'
-            '&lt;/action&gt;'
           '"/>'
 
           f'{do_save}'
 
           '<method name="do_post" action="'  # separate method so it can be over-ridden
-            '&lt;action&gt;'
               '&lt;post_obj obj_name=&quot;[obj_name]&quot;/&gt;'
-            '&lt;/action&gt;'
           '"/>'
         '</frame_methods>'
         )
@@ -826,19 +748,16 @@ class Transaction_Header:  # template for transaction header
         # f'{btn_save}'
         '<button btn_id="btn_save" btn_label="Save" btn_enabled="false" '
           'btn_validate="true" btn_default="false" lng="60" action="'
-            '&lt;action&gt;'
               '&lt;req_save/&gt;'
               '&lt;case&gt;'
                 '&lt;obj_exists obj_name=&quot;[obj_name]&quot;&gt;'
                   '&lt;parent_req_close/&gt;'
                 '&lt;/obj_exists&gt;'
               '&lt;/case&gt;'
-            '&lt;/action&gt;'
           '"/>'
         # f'{btn_close.format(close_text="Ok", close_action="parent_req_close")}'
         '<button btn_id="btn_close" btn_label="Close" btn_enabled="true" '
           'btn_validate="false" btn_default="true" lng="60" action="'
-            '&lt;action&gt;'
               '&lt;case&gt;'
 
                 '&lt;has_temp_data&gt;'  # user changed field and pressed Enter
@@ -858,7 +777,6 @@ class Transaction_Header:  # template for transaction header
                   '&lt;call method=&quot;on_req_cancel&quot;/&gt;'
                 '&lt;/default&gt;'
               '&lt;/case&gt;'
-            '&lt;/action&gt;'
           '"/>'
         '</button_row>'
         )

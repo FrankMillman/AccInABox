@@ -1,11 +1,7 @@
 <form name="ar_receipt" title="Ar receipt" before_start_form="
-  <<action>>
-    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_rec` action=`lock`/>>
-  <</action>>
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_rec` action=`lock`/>>
   " on_close_form="
-  <<action>>
-    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_rec` action=`unlock`/>>
-  <</action>>
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_rec` action=`unlock`/>>
   ">
   <db_objects>
     <db_obj name="ar_rct" table_name="ar_tran_rct" is_formview_obj="true"/>
@@ -94,9 +90,7 @@
         <label value="Receipt date:"/>
         <col/>
         <input obj_name="ar_rct" col_name="tran_date" lng="84" form_dflt="
-          <<form_dflt>>
-            <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
-          <</form_dflt>>
+          <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
           "/>
 
         <if_ src="_ledger.currency_id" op="is_" tgt="$None"/>
@@ -105,9 +99,7 @@
         <label value="Currency:"/>
         <col/>
         <input obj_name="ar_rct" col_name="currency" lng="60" form_dflt="
-          <<form_dflt>>
-            <<fld_val name=`_param.local_currency`/>>
-          <</form_dflt>>
+          <<fld_val name=`_param.local_currency`/>>
           "/>
         <display obj_name="ar_rct" col_name="currency_id>descr" lng="140"/>
         <end_if/>
@@ -122,23 +114,21 @@
       <button_row template="Transaction_Header"/>
       <frame_methods template="Transaction_Header">
         <method name="do_save" action="
-          <<action>>
-            <<case>>
-              <<compare src=`ar_rct.amount` op=`=` tgt=`0`>>
-                <<ask title=`Receipt` enter=`No` escape=`No`
-                    question=`No value entered - sure you want to save?`>>
-                  <<response ans=`No`>>
-                  <</response>>
-                  <<response ans=`Yes`>>
-                    <<save_obj obj_name=`ar_rct`/>>
-                  <</response>>
-                <</ask>>
-              <</compare>>
-              <<default>>
-                <<save_obj obj_name=`ar_rct`/>>
-              <</default>>
-            <</case>>
-          <</action>>
+          <<case>>
+            <<compare src=`ar_rct.amount` op=`=` tgt=`0`>>
+              <<ask title=`Receipt` enter=`No` escape=`No`
+                  question=`No value entered - sure you want to save?`>>
+                <<response ans=`No`>>
+                <</response>>
+                <<response ans=`Yes`>>
+                  <<save_obj obj_name=`ar_rct`/>>
+                <</response>>
+              <</ask>>
+            <</compare>>
+            <<default>>
+              <<save_obj obj_name=`ar_rct`/>>
+            <</default>>
+          <</case>>
           "/>
         </frame_methods>
     </frame>

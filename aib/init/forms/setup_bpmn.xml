@@ -159,17 +159,13 @@
     <toolbar/>
     <body>
       <bpmn action="
-        <<action>>
-          <<pyfunc name=`ht.gui_bpmn.on_selected`/>>
-        <</action>>
+        <<pyfunc name=`ht.gui_bpmn.on_selected`/>>
         "/>
     </body>
     <button_row template="Setup_Form_Single"/>
     <frame_methods template="Setup_Form_Single">
       <method name="after_restore" action="
-        <<action>>
-          <<pyfunc name=`ht.gui_bpmn.refresh_bpmn`/>>
-        <</action>>
+        <<pyfunc name=`ht.gui_bpmn.refresh_bpmn`/>>
         "/>
     </frame_methods>
   </frame>

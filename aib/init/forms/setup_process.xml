@@ -52,15 +52,13 @@
       <label value="Process id:"/>
       <col/>
       <input obj_name="proc" col_name="process_id" lng="160" after="
-        <<action>>
-          <<case>>
-            <<obj_exists obj_name=`proc`>>
-            <</obj_exists>>
-            <<default>>
-              <<pyfunc name=`custom.procdefn_funcs.init_xml`/>>
-            <</default>>
-          <</case>>
-        <</action>>
+        <<case>>
+          <<obj_exists obj_name=`proc`>>
+          <</obj_exists>>
+          <<default>>
+            <<pyfunc name=`custom.procdefn_funcs.init_xml`/>>
+          <</default>>
+        <</case>>
         "/>
       <row/>
       <col/>
@@ -78,99 +76,87 @@
       <col/>
       <button lng="150" btn_id="dbobj" btn_label="Db objects" btn_enabled="true"
         btn_validate="true" action="
-          <<action>>
-            <<sub_form name=`_sys.setup_proc_dbobj`>>
-              <<call_params>>
-                <<call_param name=`process_id` type=`data_attr` source=`proc.process_id`/>>
-                <<call_param name=`descr` type=`data_attr` source=`proc.descr`/>>
-                <<call_param name=`dbobj_xml` type=`data_attr` source=`proc_vars.dbobj_xml`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`dbobj_xml` type=`data_attr` target=`proc_vars.dbobj_xml`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`completed`/>>
-                <<return state=`cancelled`/>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
+          <<sub_form name=`_sys.setup_proc_dbobj`>>
+            <<call_params>>
+              <<call_param name=`process_id` type=`data_attr` source=`proc.process_id`/>>
+              <<call_param name=`descr` type=`data_attr` source=`proc.descr`/>>
+              <<call_param name=`dbobj_xml` type=`data_attr` source=`proc_vars.dbobj_xml`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`dbobj_xml` type=`data_attr` target=`proc_vars.dbobj_xml`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</sub_form>>
           "/>
       <row/>
       <col/>
       <button lng="150" btn_id="memobj" btn_label="Memory objects" btn_enabled="true"
         btn_validate="true" action="
-          <<action>>
-            <<sub_form name=`_sys.setup_proc_memobj`>>
-              <<call_params>>
-                <<call_param name=`process_id` type=`data_attr` source=`proc.process_id`/>>
-                <<call_param name=`descr` type=`data_attr` source=`proc.descr`/>>
-                <<call_param name=`memobj_xml` type=`data_attr` source=`proc_vars.memobj_xml`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`memobj_xml` type=`data_attr` target=`proc_vars.memobj_xml`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`completed`/>>
-                <<return state=`cancelled`/>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
+          <<sub_form name=`_sys.setup_proc_memobj`>>
+            <<call_params>>
+              <<call_param name=`process_id` type=`data_attr` source=`proc.process_id`/>>
+              <<call_param name=`descr` type=`data_attr` source=`proc.descr`/>>
+              <<call_param name=`memobj_xml` type=`data_attr` source=`proc_vars.memobj_xml`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`memobj_xml` type=`data_attr` target=`proc_vars.memobj_xml`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</sub_form>>
           "/>
       <row/>
       <col/>
       <button lng="150" btn_id="ioparams" btn_label="I/O parameters" btn_enabled="true"
         btn_validate="true" action="
-          <<action>>
-            <<sub_form name=`_sys.setup_proc_ioparams`>>
-              <<call_params>>
-                <<call_param name=`process_id` type=`data_attr` source=`proc.process_id`/>>
-                <<call_param name=`descr` type=`data_attr` source=`proc.descr`/>>
-                <<call_param name=`inputs_xml` type=`data_attr` source=`proc_vars.inputs_xml`/>>
-                <<call_param name=`outputs_xml` type=`data_attr` source=`proc_vars.outputs_xml`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`inputs_xml` type=`data_attr` target=`proc_vars.inputs_xml`/>>
-                <<return_param name=`outputs_xml` type=`data_attr` target=`proc_vars.outputs_xml`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`completed`/>>
-                <<return state=`cancelled`/>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
+          <<sub_form name=`_sys.setup_proc_ioparams`>>
+            <<call_params>>
+              <<call_param name=`process_id` type=`data_attr` source=`proc.process_id`/>>
+              <<call_param name=`descr` type=`data_attr` source=`proc.descr`/>>
+              <<call_param name=`inputs_xml` type=`data_attr` source=`proc_vars.inputs_xml`/>>
+              <<call_param name=`outputs_xml` type=`data_attr` source=`proc_vars.outputs_xml`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`inputs_xml` type=`data_attr` target=`proc_vars.inputs_xml`/>>
+              <<return_param name=`outputs_xml` type=`data_attr` target=`proc_vars.outputs_xml`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`completed`/>>
+              <<return state=`cancelled`/>>
+            <</on_return>>
+          <</sub_form>>
           "/>
       <row/>
       <col/>
       <button lng="150" btn_id="defn" btn_label="Definition" btn_enabled="true" btn_validate="true"
         action="
-          <<action>>
-            <<sub_form name=`_sys.setup_bpmn`>>
-              <<call_params>>
-                <<call_param name=`process_id` type=`data_attr` source=`proc.process_id`/>>
-                <<call_param name=`bpmn_xml` type=`data_attr` source=`proc_vars.bpmn_xml`/>>
-              <</call_params>>
-              <<return_params>>
-                <<return_param name=`bpmn_xml` type=`data_attr` target=`proc_vars.bpmn_xml`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`cancelled`/>>
-                <<return state=`completed`/>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
+          <<sub_form name=`_sys.setup_bpmn`>>
+            <<call_params>>
+              <<call_param name=`process_id` type=`data_attr` source=`proc.process_id`/>>
+              <<call_param name=`bpmn_xml` type=`data_attr` source=`proc_vars.bpmn_xml`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`bpmn_xml` type=`data_attr` target=`proc_vars.bpmn_xml`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`/>>
+            <</on_return>>
+          <</sub_form>>
           "/>
     </body>
     <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
-        <<action>>
-          <<pyfunc name=`custom.procdefn_funcs.load_proc_xml`/>>
-        <</action>>
+        <<pyfunc name=`custom.procdefn_funcs.load_proc_xml`/>>
         "/>
       <method name="before_save" action="
-        <<action>>
-          <<pyfunc name=`custom.procdefn_funcs.dump_proc_xml`/>>
-         <</action>>
+        <<pyfunc name=`custom.procdefn_funcs.dump_proc_xml`/>>
          "/>
     </frame_methods>
   </frame>

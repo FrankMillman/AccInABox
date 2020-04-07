@@ -1,11 +1,7 @@
 <form name="cb_payment" title="Cash book payment" before_start_form="
-  <<action>>
-    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_pmt` action=`lock`/>>
-  <</action>>
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_pmt` action=`lock`/>>
   " on_close_form="
-  <<action>>
-    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_pmt` action=`unlock`/>>
-  <</action>>
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_pmt` action=`unlock`/>>
   ">
   <db_objects>
     <db_obj name="cb_pmt" table_name="cb_tran_pmt" is_formview_obj="true"/>
@@ -192,55 +188,51 @@
     <button_row template="Transaction"/>
     <frame_methods template="Transaction">
       <method name="on_start_frame" action="
-        <<action>>
-          <<case>>
-            <<obj_exists obj_name=`cb_pmt`>>
-            <</obj_exists>>
-            <<default>>
-              <<change_button>>
-                <<btn_enabled btn_id=`btn_post` state=`false`/>>
-              <</change_button>>
-              <<change_button>>
-                <<btn_enabled btn_id=`btn_close` state=`false`/>>
-              <</change_button>>
-              <<inline_form name=`pmt_header`>>
-                <<on_return>>
-                  <<return state=`cancelled`>>
-                    <<end_form state=`cancelled`/>>
-                  <</return>>
-                  <<return state=`completed`>>
-                    <<change_button>>
-                      <<btn_enabled btn_id=`btn_post` state=`true`/>>
-                    <</change_button>>
-                    <<change_button>>
-                      <<btn_enabled btn_id=`btn_close` state=`true`/>>
-                    <</change_button>>
-                    <<restart_frame/>>
-                  <</return>>
-                <</on_return>>
-              <</inline_form>>
-            <</default>>
-          <</case>>
-        <</action>>
+        <<case>>
+          <<obj_exists obj_name=`cb_pmt`>>
+          <</obj_exists>>
+          <<default>>
+            <<change_button>>
+              <<btn_enabled btn_id=`btn_post` state=`false`/>>
+            <</change_button>>
+            <<change_button>>
+              <<btn_enabled btn_id=`btn_close` state=`false`/>>
+            <</change_button>>
+            <<inline_form name=`pmt_header`>>
+              <<on_return>>
+                <<return state=`cancelled`>>
+                  <<end_form state=`cancelled`/>>
+                <</return>>
+                <<return state=`completed`>>
+                  <<change_button>>
+                    <<btn_enabled btn_id=`btn_post` state=`true`/>>
+                  <</change_button>>
+                  <<change_button>>
+                    <<btn_enabled btn_id=`btn_close` state=`true`/>>
+                  <</change_button>>
+                  <<restart_frame/>>
+                <</return>>
+              <</on_return>>
+            <</inline_form>>
+          <</default>>
+        <</case>>
         "/>
       <method name="do_post" action="
-        <<action>>
-          <<case>>
-            <<compare src=`cb_pmt.pmt_tot_amt` op=`=` tgt=`0`>>
-              <<ask title=`Invoice` enter=`No` escape=`No`
-                  question=`No detail lines - sure you want to post?`>>
-                <<response ans=`No`>>
-                <</response>>
-                <<response ans=`Yes`>>
-                  <<post_obj obj_name=`cb_pmt`/>>
-                <</response>>
-              <</ask>>
-            <</compare>>
-            <<default>>
-              <<post_obj obj_name=`cb_pmt`/>>
-            <</default>>
-          <</case>>
-        <</action>>
+        <<case>>
+          <<compare src=`cb_pmt.pmt_tot_amt` op=`=` tgt=`0`>>
+            <<ask title=`Invoice` enter=`No` escape=`No`
+                question=`No detail lines - sure you want to post?`>>
+              <<response ans=`No`>>
+              <</response>>
+              <<response ans=`Yes`>>
+                <<post_obj obj_name=`cb_pmt`/>>
+              <</response>>
+            <</ask>>
+          <</compare>>
+          <<default>>
+            <<post_obj obj_name=`cb_pmt`/>>
+          <</default>>
+        <</case>>
         "/>
     </frame_methods>
   </frame>

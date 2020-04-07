@@ -1,14 +1,12 @@
 <form name="ap_ledg_periods" title="Ap ledger periods" before_start_form="
-  <<action>>
-    <<case>>
-      <<compare src=`_ledger.separate_pmt_close` op=`is` tgt=`$True`>>
-        <<assign src=`'ap_per_pmt'` tgt=`_ctx.cursor_name`/>>
-      <</compare>>
-      <<default>>
-        <<assign src=`'ap_per'` tgt=`_ctx.cursor_name`/>>
-      <</default>>
-    <</case>>
-  <</action>>
+  <<case>>
+    <<compare src=`_ledger.separate_pmt_close` op=`is` tgt=`$True`>>
+      <<assign src=`'ap_per_pmt'` tgt=`_ctx.cursor_name`/>>
+    <</compare>>
+    <<default>>
+      <<assign src=`'ap_per'` tgt=`_ctx.cursor_name`/>>
+    <</default>>
+  <</case>>
   ">
 
   <db_objects>
@@ -81,9 +79,7 @@
         </toolbar>
         <grid_methods template="Grid">
           <method name="on_start_row" action="
-            <<action>>
-              <<pyfunc name=`custom.aptrans_funcs.check_ledg_per`/>>
-            <</action>>
+            <<pyfunc name=`custom.aptrans_funcs.check_ledg_per`/>>
           "/>
         </grid_methods>
       </grid>
@@ -114,16 +110,14 @@
               <button btn_id="close_pmt" btn_label="Close for payments"
                 help_msg = "Start 'payment close' process"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<inline_form name=`period_close`>>
-                      <<on_return>>
-                        <<return state=`cancelled`>>
-                        <</return>>
-                        <<return state=`completed`>>
-                        <</return>>
-                      <</on_return>>
-                    <</inline_form>>
-                  <</action>>
+                  <<inline_form name=`period_close`>>
+                    <<on_return>>
+                      <<return state=`cancelled`>>
+                      <</return>>
+                      <<return state=`completed`>>
+                      <</return>>
+                    <</on_return>>
+                  <</inline_form>>
                 "/>
             </subtype_body>
 
@@ -138,16 +132,14 @@
               <button btn_id="close_period" btn_label="Close period"
                 help_msg = "Start 'period close' process"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<inline_form name=`period_close`>>
-                      <<on_return>>
-                        <<return state=`cancelled`>>
-                        <</return>>
-                        <<return state=`completed`>>
-                        <</return>>
-                      <</on_return>>
-                    <</inline_form>>
-                  <</action>>
+                  <<inline_form name=`period_close`>>
+                    <<on_return>>
+                      <<return state=`cancelled`>>
+                      <</return>>
+                      <<return state=`completed`>>
+                      <</return>>
+                    <</on_return>>
+                  <</inline_form>>
                 "/>
             </subtype_body>
 
@@ -162,9 +154,7 @@
               <button btn_id="reopen_period" btn_label="Reopen period"
                 help_msg = "Reopen period if permitted"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<pyfunc name=`custom.artrans_funcs.reopen_period`/>>
-                  <</action>>
+                  <<pyfunc name=`custom.artrans_funcs.reopen_period`/>>
                 "/>
             </subtype_body>
           </subtype_frame>
@@ -173,9 +163,7 @@
         <button_row>
           <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
             btn_validate="true" btn_default="true" lng="60" action="
-              <<action>>
-                <<end_form state=`completed`/>>
-              <</action>>
+              <<end_form state=`completed`/>>
             "/>
         </button_row>
         <frame_methods/>
@@ -227,33 +215,27 @@
         <col/>
         <button btn_id="start_period_close" btn_label="Start"
           btn_enabled="true" btn_validate="true" action="
-            <<action>>
-              <<pyfunc name=`custom.aptrans_funcs.setup_close_params`/>>
-              <<start_process name=`ap_per_close`>>
-                <<call_params>>
-                  <<call_param name=`close_params` type=`data_attr` source=`var.close_params`/>>
-                <</call_params>>
-                <<return_params>>
-                <</return_params>>
-                <<on_return>>
-                  <<return state=`cancelled`/>>
-                  <<return state=`completed`/>>
-                <</on_return>>
-              <</start_process>>
-            <</action>>
+            <<pyfunc name=`custom.aptrans_funcs.setup_close_params`/>>
+            <<start_process name=`ap_per_close`>>
+              <<call_params>>
+                <<call_param name=`close_params` type=`data_attr` source=`var.close_params`/>>
+              <</call_params>>
+              <<return_params>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`/>>
+              <</on_return>>
+            <</start_process>>
           "/>
       </body>
       <button_row/>
       <frame_methods>
         <method name="on_req_cancel" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
         <method name="on_req_close" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
       </frame_methods>
     </frame>

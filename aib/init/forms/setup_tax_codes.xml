@@ -22,14 +22,12 @@
         <body>
           <block/>
           <dummy after="
-            <<action>>
-              <<case>>
-                <<obj_exists obj_name=`tax_cats`/>>
-                <<default>>
-                  <<call method=`do_save`/>>
-                <</default>>
-              <</case>>
-            <</action>>
+            <<case>>
+              <<obj_exists obj_name=`tax_cats`/>>
+              <<default>>
+                <<call method=`do_save`/>>
+              <</default>>
+            <</case>>
             "/>
           <grid data_object="tax_codes" growable="true" num_grid_rows="6">
             <toolbar template="Grid" title="Codes:"/>
@@ -50,14 +48,12 @@
             <body>
               <block/>
               <dummy after="
-                <<action>>
-                  <<case>>
-                    <<obj_exists obj_name=`tax_codes`/>>
-                    <<default>>
-                      <<call method=`do_save`/>>
-                    <</default>>
-                  <</case>>
-                <</action>>
+                <<case>>
+                  <<obj_exists obj_name=`tax_codes`/>>
+                  <<default>>
+                    <<call method=`do_save`/>>
+                  <</default>>
+                <</case>>
                 "/>
               <grid data_object="tax_rates" growable="true" num_grid_rows="6" cursor_name="tax_rates">
                 <toolbar template="Grid" title="Rates:"/>
@@ -77,9 +73,7 @@
     <button_row>
       <button btn_id="btn_rgt" btn_label="Close" btn_enabled="true"
         btn_validate="false" btn_default="true" lng="60" action="
-          <<action>>
-             <<end_form state=`cancelled`/>>
-          <</action>>
+           <<end_form state=`cancelled`/>>
         "/>
     </button_row>
     <frame_methods/>

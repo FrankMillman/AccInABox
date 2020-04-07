@@ -36,14 +36,10 @@
     <button_row/>
     <frame_methods>
       <method name="on_req_close" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
+        <<end_form state=`cancelled`/>>
       "/>
       <method name="on_req_cancel" action="
-        <<action>>
-          <<end_form state=`cancelled`/>>
-        <</action>>
+        <<end_form state=`cancelled`/>>
       "/>
     </frame_methods>
   </frame>

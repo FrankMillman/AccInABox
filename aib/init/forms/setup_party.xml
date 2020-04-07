@@ -1,7 +1,5 @@
 <form name="setup_party" title="Set up parties" before_start_form="
-  <<action>>
-    <<pyfunc name=`custom.party_setup.before_start_form`/>>
-  <</action>>
+  <<pyfunc name=`custom.party_setup.before_start_form`/>>
   ">
   <db_objects>
     <db_obj name="party" table_name="org_parties" is_formview_obj="true"/>
@@ -71,9 +69,7 @@
       <label value="Party Id:"/>
       <col/>
       <input obj_name="var" col_name="party_id" lng="60" after="
-        <<action>>
-          <<pyfunc name=`custom.party_setup.after_party_id`/>>
-        <</action>>
+        <<pyfunc name=`custom.party_setup.after_party_id`/>>
         "/>
       <display obj_name="party" col_name="display_name" lng="160"/>
       <row/>
@@ -99,9 +95,7 @@
         <cur_sequence/>
         <grid_methods template="Grid">
           <method name="on_start_row" action="
-            <<action>>
-              <<pyfunc name=`custom.party_setup.on_start_addr`/>>
-            <</action>>
+            <<pyfunc name=`custom.party_setup.on_start_addr`/>>
           "/>
         </grid_methods>
       </grid>
@@ -113,9 +107,7 @@
         <button_row template="Grid_Frame_Grid_RO"/>
         <frame_methods template="Grid_Frame_Grid_RO">
           <method name="after_save" action="
-            <<action>>
-              <<pyfunc name=`custom.party_setup.save_mem_addr`/>>
-            <</action>>
+            <<pyfunc name=`custom.party_setup.save_mem_addr`/>>
           "/>
         </frame_methods>
       </grid_frame>
@@ -167,14 +159,10 @@
     <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
-        <<action>>
-          <<pyfunc name=`custom.party_setup.on_start_frame`/>>
-        <</action>>
+        <<pyfunc name=`custom.party_setup.on_start_frame`/>>
       "/>
       <method name="after_save" action="
-        <<action>>
-          <<pyfunc name=`custom.party_setup.after_save_party`/>>
-        <</action>>
+        <<pyfunc name=`custom.party_setup.after_save_party`/>>
       "/>
     </frame_methods>
   </frame>

@@ -162,22 +162,18 @@
           <col/>
           <button btn_id="sequence" btn_label="Seq"
             btn_enabled="true" btn_validate="true" action="
-              <<action>>
-                <<pyfunc name=`custom.table_setup.load_sequence` tbl_name=`memobj`/>>
-                <<inline_form name=`sequence`>>
-                  <<on_return>>
-                    <<return state=`cancelled`/>>
-                    <<return state=`completed`>>
-                      <<pyfunc name=`custom.table_setup.dump_sequence` tbl_name=`memobj`/>>
-                    <</return>>
-                  <</on_return>>
-                <</inline_form>>
-              <</action>>
+              <<pyfunc name=`custom.table_setup.load_sequence` tbl_name=`memobj`/>>
+              <<inline_form name=`sequence`>>
+                <<on_return>>
+                  <<return state=`cancelled`/>>
+                  <<return state=`completed`>>
+                    <<pyfunc name=`custom.table_setup.dump_sequence` tbl_name=`memobj`/>>
+                  <</return>>
+                <</on_return>>
+              <</inline_form>>
             "/>
           <dummy after="
-            <<action>>
-              <<call method=`do_save`/>>
-            <</action>>
+            <<call method=`do_save`/>>
             "/>
           <block/>
           <grid data_object="memcol" growable="true" num_grid_rows="6" form_name="_sys.dbcols_setup">
@@ -201,14 +197,10 @@
     <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
-        <<action>>
-          <<pyfunc name=`custom.formdefn_funcs.load_mem_obj`/>>
-        <</action>>
+        <<pyfunc name=`custom.formdefn_funcs.load_mem_obj`/>>
       "/>
       <method name="before_save" action="
-        <<action>>
-          <<pyfunc name=`custom.formdefn_funcs.dump_mem_obj`/>>
-        <</action>>
+        <<pyfunc name=`custom.formdefn_funcs.dump_mem_obj`/>>
       "/>
     </frame_methods>
   </frame>

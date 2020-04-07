@@ -1,15 +1,13 @@
 <form name="ar_ledg_per" title="Ar ledger periods" before_start_form="
-  <<action>>
-    <<case>>
-      <<compare src=`_ledger.separate_stat_close` op=`is` tgt=`$True`>>
-        <<assign src=`'ar_per_stat'` tgt=`_ctx.cursor_name`/>>
-      <</compare>>
-      <<default>>
-        <<assign src=`'ar_per'` tgt=`_ctx.cursor_name`/>>
-      <</default>>
-    <</case>>
-    <<assign src=`_ctx.current_period` tgt=`var.current_period`/>>
-  <</action>>
+  <<case>>
+    <<compare src=`_ledger.separate_stat_close` op=`is` tgt=`$True`>>
+      <<assign src=`'ar_per_stat'` tgt=`_ctx.cursor_name`/>>
+    <</compare>>
+    <<default>>
+      <<assign src=`'ar_per'` tgt=`_ctx.cursor_name`/>>
+    <</default>>
+  <</case>>
+  <<assign src=`_ctx.current_period` tgt=`var.current_period`/>>
   ">
 
   <db_objects>
@@ -82,9 +80,7 @@
         </toolbar>
         <grid_methods template="Grid">
           <method name="on_start_row" action="
-            <<action>>
-              <<pyfunc name=`custom.artrans_funcs.check_ledg_per`/>>
-            <</action>>
+            <<pyfunc name=`custom.artrans_funcs.check_ledg_per`/>>
           "/>
         </grid_methods>
       </grid>
@@ -132,22 +128,20 @@
               <label value="Enable process?"/>
               <col/>
               <input obj_name="var" col_name="enable_stat_close" after="
-                <<action>>
-                  <<case>>
-                    <<compare src=`var.enable_stat_close` op=`is` tgt=`$True`>>
-                      <<change_button>>
-                        <<btn_enabled btn_id=`close_stat` state=`true`/>>
-                      <</change_button>>
-                      <<set_readonly target=`var.next_stat_date` state=`false`/>>
-                    <</compare>>
-                    <<default>>
-                      <<change_button>>
-                        <<btn_enabled btn_id=`close_stat` state=`false`/>>
-                      <</change_button>>
-                      <<set_readonly target=`var.next_stat_date` state=`true`/>>
-                    <</default>>
-                  <</case>>
-                <</action>>
+                <<case>>
+                  <<compare src=`var.enable_stat_close` op=`is` tgt=`$True`>>
+                    <<change_button>>
+                      <<btn_enabled btn_id=`close_stat` state=`true`/>>
+                    <</change_button>>
+                    <<set_readonly target=`var.next_stat_date` state=`false`/>>
+                  <</compare>>
+                  <<default>>
+                    <<change_button>>
+                      <<btn_enabled btn_id=`close_stat` state=`false`/>>
+                    <</change_button>>
+                    <<set_readonly target=`var.next_stat_date` state=`true`/>>
+                  <</default>>
+                <</case>>
                 "/>
               <block/>
               <panel/>
@@ -156,24 +150,22 @@
               <button btn_id="close_stat" btn_label="Start 'statement close' process"
                 help_msg = "Start 'statement close' process"
                 btn_enabled="false" btn_validate="true" action="
-                  <<action>>
-                    <<start_process name=`ar_stat_close`>>
-                      <<call_params>>
-                        <<call_param name=`current_period` type=`data_attr` source=`var.current_period`/>>
-                        <<call_param name=`separate_stat_cust` type=`data_attr` source=`_ledger.separate_stat_cust`/>>
-                        <<call_param name=`check_date` type=`data_attr` source=`ar_ledg_per.statement_date`/>>
-                        <<call_param name=`next_stat_date` type=`data_attr` source=`var.next_stat_date`/>>
-                      <</call_params>>
-                    <</start_process>>
-                    <<ask title=`Started` enter=`Ok` escape=`Ok`
-                        question=`Statement close procedure started`>>
-                      <<response ans=`Ok`>>
-                        <<!-- assign src=`'{}'` tgt=`var.action_cache`/>>
-                        <<restart_grid obj_name=`ar_ledg_per`/ -->>
-                        <<end_form state=`completed`/>>
-                      <</response>>
-                    <</ask>>
-                  <</action>>
+                  <<start_process name=`ar_stat_close`>>
+                    <<call_params>>
+                      <<call_param name=`current_period` type=`data_attr` source=`var.current_period`/>>
+                      <<call_param name=`separate_stat_cust` type=`data_attr` source=`_ledger.separate_stat_cust`/>>
+                      <<call_param name=`check_date` type=`data_attr` source=`ar_ledg_per.statement_date`/>>
+                      <<call_param name=`next_stat_date` type=`data_attr` source=`var.next_stat_date`/>>
+                    <</call_params>>
+                  <</start_process>>
+                  <<ask title=`Started` enter=`Ok` escape=`Ok`
+                      question=`Statement close procedure started`>>
+                    <<response ans=`Ok`>>
+                      <<!-- assign src=`'{}'` tgt=`var.action_cache`/>>
+                      <<restart_grid obj_name=`ar_ledg_per`/ -->>
+                      <<end_form state=`completed`/>>
+                    <</response>>
+                  <</ask>>
                 "/>
             </subtype_body>
 
@@ -203,14 +195,12 @@
               <button btn_id="show_det" btn_label="Show process details"
                 help_msg = "Show process details"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<inline_form name=`bpm_det`>>
-                      <<on_return>>
-                        <<return state=`cancelled`/>>
-                        <<return state=`completed`/>>
-                      <</on_return>>
-                    <</inline_form>>
-                  <</action>>
+                  <<inline_form name=`bpm_det`>>
+                    <<on_return>>
+                      <<return state=`cancelled`/>>
+                      <<return state=`completed`/>>
+                    <</on_return>>
+                  <</inline_form>>
                 "/>
             </subtype_body>
 
@@ -228,20 +218,18 @@
               <label value="Enable process?"/>
               <col/>
               <input obj_name="var" col_name="enable_per_close" after="
-                <<action>>
-                  <<case>>
-                    <<compare src=`var.enable_per_close` op=`is` tgt=`$True`>>
-                      <<change_button>>
-                        <<btn_enabled btn_id=`close_per` state=`true`/>>
-                      <</change_button>>
-                    <</compare>>
-                    <<default>>
-                      <<change_button>>
-                        <<btn_enabled btn_id=`close_per` state=`false`/>>
-                      <</change_button>>
-                    <</default>>
-                  <</case>>
-                <</action>>
+                <<case>>
+                  <<compare src=`var.enable_per_close` op=`is` tgt=`$True`>>
+                    <<change_button>>
+                      <<btn_enabled btn_id=`close_per` state=`true`/>>
+                    <</change_button>>
+                  <</compare>>
+                  <<default>>
+                    <<change_button>>
+                      <<btn_enabled btn_id=`close_per` state=`false`/>>
+                    <</change_button>>
+                  <</default>>
+                <</case>>
                 "/>
               <block/>
               <panel/>
@@ -250,23 +238,21 @@
               <button btn_id="close_per" btn_label="Start 'period close' process"
                 help_msg = "Start 'period close' process"
                 btn_enabled="false" btn_validate="true" action="
-                  <<action>>
-                    <<start_process name=`ar_per_close`>>
-                      <<call_params>>
-                        <<call_param name=`period_to_close` type=`data_attr` source=`ar_ledg_per.row_id`/>>
-                        <<call_param name=`current_period` type=`data_attr` source=`var.current_period`/>>
-                        <<call_param name=`check_date` type=`data_attr` source=`ar_ledg_per.closing_date`/>>
-                      <</call_params>>
-                    <</start_process>>
-                    <<ask title=`Started` enter=`Ok` escape=`Ok`
-                        question=`Period close procedure started`>>
-                      <<response ans=`Ok`>>
-                        <<!-- assign src=`'{}'` tgt=`var.action_cache`/>>
-                        <<restart_grid obj_name=`ar_ledg_per`/ -->>
-                        <<end_form state=`completed`/>>
-                      <</response>>
-                    <</ask>>
-                  <</action>>
+                  <<start_process name=`ar_per_close`>>
+                    <<call_params>>
+                      <<call_param name=`period_to_close` type=`data_attr` source=`ar_ledg_per.row_id`/>>
+                      <<call_param name=`current_period` type=`data_attr` source=`var.current_period`/>>
+                      <<call_param name=`check_date` type=`data_attr` source=`ar_ledg_per.closing_date`/>>
+                    <</call_params>>
+                  <</start_process>>
+                  <<ask title=`Started` enter=`Ok` escape=`Ok`
+                      question=`Period close procedure started`>>
+                    <<response ans=`Ok`>>
+                      <<!-- assign src=`'{}'` tgt=`var.action_cache`/>>
+                      <<restart_grid obj_name=`ar_ledg_per`/ -->>
+                      <<end_form state=`completed`/>>
+                    <</response>>
+                  <</ask>>
                 "/>
             </subtype_body>
 
@@ -281,9 +267,7 @@
               <button btn_id="reopen_period" btn_label="Reopen period"
                 help_msg = "Reopen period if permitted"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<pyfunc name=`custom.artrans_funcs.reopen_period`/>>
-                  <</action>>
+                  <<pyfunc name=`custom.artrans_funcs.reopen_period`/>>
                 "/>
             </subtype_body>
           </subtype_frame>
@@ -292,9 +276,7 @@
         <button_row>
           <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
             btn_validate="true" btn_default="true" lng="60" action="
-              <<action>>
-                <<end_form state=`completed`/>>
-              <</action>>
+              <<end_form state=`completed`/>>
             "/>
         </button_row>
         <frame_methods/>

@@ -1,7 +1,5 @@
 <form name="setup_user" title="Setup users" before_start_form="
-  <<action>>
-    <<pyfunc name=`custom.user_companies.before_start_form`/>>
-  <</action>>
+  <<pyfunc name=`custom.user_companies.before_start_form`/>>
   ">
   <db_objects>
     <db_obj name="user" table_name="dir_users" is_formview_obj="true"/>
@@ -61,29 +59,26 @@
       <col/>
       <button btn_id="btn_pwd" btn_label=" Change " btn_enabled="true"
           btn_validate="true" btn_default="false" action="
-        <<action>>
-          <<sub_form name=`_sys.chg_pwd_form`>>
-            <<call_params/>>
-            <<return_params>>
-              <<return_param name=`password` type=`data_attr` target=`user.password`/>>
-            <</return_params>>
-            <<on_return>>
-              <<return state=`completed`/>>
-              <<return state=`cancelled`/>>
-            <</on_return>>
-          <</sub_form>>
-        <</action>>"
-        validation="
-          <<validations>>
-            <<validation>>
-              <<case>>
-                <<compare src=`user.password` op=`is not` tgt=`$None`/>>
-                <<default>>
-                  <<error head=`Password` body=`You must enter a password`/>>
-                <</default>>
-              <</case>>
-            <</validation>>
-          <</validations>>
+        <<sub_form name=`_sys.chg_pwd_form`>>
+          <<call_params/>>
+          <<return_params>>
+            <<return_param name=`password` type=`data_attr` target=`user.password`/>>
+          <</return_params>>
+          <<on_return>>
+            <<return state=`completed`/>>
+            <<return state=`cancelled`/>>
+          <</on_return>>
+        <</sub_form>>
+      <<!-- /action -->>"
+      validation="
+          <<validation>>
+            <<case>>
+              <<compare src=`user.password` op=`is not` tgt=`$None`/>>
+              <<default>>
+                <<error head=`Password` body=`You must enter a password`/>>
+              <</default>>
+            <</case>>
+          <</validation>>
         "/>
       <subtype_frame subtype_obj="user" subtype_col="user_type"/>
       <block/>
@@ -92,27 +87,23 @@
           <cur_col col_name="company_id" lng="120" readonly="true"/>
           <cur_col col_name="company_name" lng="160" readonly="true"/>
           <cur_col col_name="access_allowed" lng="60" after="
-            <<action>>
-              <<case>>
-                <<fld_changed name=`user_comp_view.access_allowed`>>
-                  <<case>>
-                    <<compare src=`user_comp_view.access_allowed` op=`is` tgt=`$False`>>
-                      <<assign src=`$False` tgt=`user_comp_view.comp_admin`/>>
-                    <</compare>>
-                  <</case>>
-                  <<req_save/>>
-                <</fld_changed>>
-              <</case>>
-            <</action>>
+            <<case>>
+              <<fld_changed name=`user_comp_view.access_allowed`>>
+                <<case>>
+                  <<compare src=`user_comp_view.access_allowed` op=`is` tgt=`$False`>>
+                    <<assign src=`$False` tgt=`user_comp_view.comp_admin`/>>
+                  <</compare>>
+                <</case>>
+                <<req_save/>>
+              <</fld_changed>>
+            <</case>>
           "/>
           <cur_col col_name="comp_admin" lng="60" after="
-            <<action>>
-              <<case>>
-                <<fld_changed name=`user_comp_view.comp_admin`>>
-                  <<req_save/>>
-                <</fld_changed>>
-              <</case>>
-            <</action>>
+            <<case>>
+              <<fld_changed name=`user_comp_view.comp_admin`>>
+                <<req_save/>>
+              <</fld_changed>>
+            <</case>>
           "/>
         </cur_columns>
         <cur_filter/>
@@ -124,14 +115,10 @@
     </button_row>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
-        <<action>>
-          <<pyfunc name=`custom.user_companies.load_user_comps`/>>
-        <</action>>
+        <<pyfunc name=`custom.user_companies.load_user_comps`/>>
       "/>
       <method name="after_save" action="
-        <<action>>
-          <<pyfunc name=`custom.user_companies.dump_user_comps`/>>
-        <</action>>
+        <<pyfunc name=`custom.user_companies.dump_user_comps`/>>
       "/>
     </frame_methods>
   </frame>

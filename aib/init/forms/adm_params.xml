@@ -1,7 +1,5 @@
 <form name="adm_params" title="Set up company parameters" before_start_form="
-  <<action>>
-    <<assign src=`1` tgt=`params.row_id`/>>
-  <</action>>
+  <<assign src=`1` tgt=`params.row_id`/>>
   ">
   <db_objects>
     <db_obj name="params" table_name="adm_params"/>

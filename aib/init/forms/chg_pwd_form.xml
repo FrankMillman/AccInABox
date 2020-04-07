@@ -32,40 +32,36 @@
       <col/>
       <input obj_name="pwd_var" col_name="pwd2" lng="160" pwd="true"
         validation="
-          <<validations>>
-            <<validation>>
-              <<case>>
-                <<compare src=`$value` op=`=` tgt=`pwd_var.pwd1`/>>
-                <<default>>
-                  <<error head=`Error` body=`Passwords do not match`/>>
-                <</default>>
-              <</case>>
-            <</validation>>
-          <</validations>>
+          <<validation>>
+            <<case>>
+              <<compare src=`$value` op=`=` tgt=`pwd_var.pwd1`/>>
+              <<default>>
+                <<error head=`Error` body=`Passwords do not match`/>>
+              <</default>>
+            <</case>>
+          <</validation>>
         "/>
     </body>
     <button_row template="Form">
       <button btn_id="btn_ok" btn_label="Ok" lng="60"
         btn_enabled="true" btn_validate="true" btn_default="true"
         action="
-          <<action>>
-            <<case>>
-              <<compare src=`pwd_var.pwd1` op=`is` tgt=`$None`>>
-                <<ask title=`Password` enter=`No` escape=`No`
-                    question=`Are you sure you want a blank password?`>>
-                  <<response ans=`Yes`>>
-                    <<end_form state=`completed`/>>
-                  <</response>>
-                  <<response ans=`No`>>
-                    <<restart_frame/>>
-                  <</response>>
-                <</ask>>
-              <</compare>>
-              <<default>>
-                <<end_form state=`completed`/>>
-              <</default>>
-            <</case>>
-          <</action>>
+          <<case>>
+            <<compare src=`pwd_var.pwd1` op=`is` tgt=`$None`>>
+              <<ask title=`Password` enter=`No` escape=`No`
+                  question=`Are you sure you want a blank password?`>>
+                <<response ans=`Yes`>>
+                  <<end_form state=`completed`/>>
+                <</response>>
+                <<response ans=`No`>>
+                  <<restart_frame/>>
+                <</response>>
+              <</ask>>
+            <</compare>>
+            <<default>>
+              <<end_form state=`completed`/>>
+            <</default>>
+          <</case>>
         "/>
     </button_row>
     <frame_methods template="Form"/>

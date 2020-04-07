@@ -27,7 +27,6 @@
         long_descr="Bool" allow_null="true" allow_amend="true"/>
       <mem_col col_name="action" data_type="SXML" short_descr="Action"
         long_descr="Action" allow_null="true" allow_amend="true"/>
-<!--        dflt_val="<<action>>&amp;#10;  <<case>>&amp;#10;  <</case>>&amp;#10;<</action>>" -->
       <mem_col col_name="long_descr" data_type="TEXT" short_descr="Description"
         long_descr="Long description" allow_null="true" allow_amend="true"/>
     </mem_obj>
@@ -56,65 +55,6 @@
       <col/>
       <input obj_name="var" col_name="user" lng="60"/>
       <display obj_name="var" col_name="display_name" lng="160"/>
-<!--
-      <row/>
-      <col/>
-      <label value="Amount:"/>
-      <col/>
-      <input obj_name="var" col_name="amount" lng="120" readonly="true" form_dflt="
-        <<form_dflt>>
-          <<literal value=`123.45`/>>
-        <</form_dflt>>
-        "/>
-
-      <row/>
-      <col/>
-      <label value="Date:"/>
-      <col/>
-      <input obj_name="var" col_name="date" lng="100" form_dflt="
-        <<form_dflt>>
-          <<literal value=`2014-12-25`/>>
-        <</form_dflt>>
-        "/>
-
-      <row/>
-      <col/>
-      <label value="Choice:"/>
-      <col/>
-      <input obj_name="var" col_name="choice" lng="120"/>
-
-      <row/>
-      <col/>
-      <label value="Action:"/>
-      <col/>
-      <input obj_name="var" col_name="action"/>
-
-      <row/>
-      <col/>
-      <label value="Long descr:"/>
-      <col/>
-      <input obj_name="var" col_name="long_descr" lng="200" height="5"/>
-
-      <row/>
-      <col/>
-      <label value="Bool:"/>
-      <col/>
-      <input obj_name="var" col_name="bool" form_dflt="
-        <<form_dflt>>
-          <<literal value=`$True`/>>
-        <</form_dflt>>
-        " validation="
-          <<validations>>
-            <<validation>>
-              <<case>>
-                <<compare src=`$value` op=`=` tgt=`$True`>>
-                  <<error head=`Bool` body=`Must be untrue`/>>
-                <</compare>>
-              <</case>>
-            <</validation>>
-          <</validations>>
-        "/>
--->
 
       <row/>
       <col/>
@@ -122,41 +62,37 @@
       <col/>
       <input obj_name="var" col_name="pwd" lng="120" pwd="true"
         validation="
-          <<validations>>
-            <<validation>>
-              <<select_row obj_name=`dir_user` key=`user_id` value=`var.user`/>>
-              <<case>>
-                <<obj_exists obj_name=`dir_user`/>>
-                <<default>>
-                  <<error head=`Login` body=`Invalid login`/>>
-                <</default>>
-              <</case>>
-            <</validation>>
-            <<validation>>
-              <<case>>
-                <<chk_password src=`$value` tgt=`dir_user.password`/>>
-                <<default>>
-                  <<error head=`Login` body=`Invalid login`/>>
-                <</default>>
-              <</case>>
-            <</validation>>
-          <</validations>>
+          <<validation>>
+            <<select_row obj_name=`dir_user` key=`user_id` value=`var.user`/>>
+            <<case>>
+              <<obj_exists obj_name=`dir_user`/>>
+              <<default>>
+                <<error head=`Login` body=`Invalid login`/>>
+              <</default>>
+            <</case>>
+          <</validation>>
+          <<validation>>
+            <<case>>
+              <<chk_password src=`$value` tgt=`dir_user.password`/>>
+              <<default>>
+                <<error head=`Login` body=`Invalid login`/>>
+              <</default>>
+            <</case>>
+          <</validation>>
           "
 
         after="
-          <<action>>
-            <<!-- if we get here, validations are passed, block amendments -->>
-            <<!-- redisplay user with correct case (if different) -->>
-            <<assign src=`dir_user.user_id` tgt=`var.user`/>>
-            <<!-- display full user name -->>
-            <<assign src=`dir_user.display_name` tgt=`var.display_name`/>>
-            <<change_button>>
-              <<btn_enabled btn_id=`btn_pwd` state=`true`/>>
-            <</change_button>>
-            <<set_readonly target=`var.user` state=`true`/>>
-            <<set_readonly target=`var.pwd` state=`true`/>>
-            <<pyfunc name=`ht.htc.on_login_ok`/>>
-          <</action>>
+          <<!-- if we get here, validations are passed, block amendments -->>
+          <<!-- redisplay user with correct case (if different) -->>
+          <<assign src=`dir_user.user_id` tgt=`var.user`/>>
+          <<!-- display full user name -->>
+          <<assign src=`dir_user.display_name` tgt=`var.display_name`/>>
+          <<change_button>>
+            <<btn_enabled btn_id=`btn_pwd` state=`true`/>>
+          <</change_button>>
+          <<set_readonly target=`var.user` state=`true`/>>
+          <<set_readonly target=`var.pwd` state=`true`/>>
+          <<pyfunc name=`ht.htc.on_login_ok`/>>
         "
       />
 
@@ -172,21 +108,19 @@
     <button_row template="Form">
       <button btn_id="btn_pwd" btn_label="Change password"
           btn_enabled="false" btn_validate="false" btn_default="false" action="
-          <<action>>
-            <<sub_form name=`_sys.chg_pwd_form`>>
-              <<call_params/>>
-              <<return_params>>
-                <<return_param name=`password` type=`data_attr` target=`dir_user.password`/>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`cancelled`/>>
-                <<return state=`completed`>>
-                  <<save_obj obj_name=`dir_user`/>>
-                  <<btn_set_focus btn_id=`btn_ok`/>>
-                <</return>>
-              <</on_return>>
-            <</sub_form>>
-          <</action>>
+          <<sub_form name=`_sys.chg_pwd_form`>>
+            <<call_params/>>
+            <<return_params>>
+              <<return_param name=`password` type=`data_attr` target=`dir_user.password`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`>>
+                <<save_obj obj_name=`dir_user`/>>
+                <<btn_set_focus btn_id=`btn_ok`/>>
+              <</return>>
+            <</on_return>>
+          <</sub_form>>
         "/>
     </button_row>
     <frame_methods template="Form"/>

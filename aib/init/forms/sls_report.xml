@@ -1,25 +1,21 @@
 <form name="sls_report" title="Sales report" before_start_form="
-  <<action>>
-    <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
-    <<assign src=`date_range_vars.start_date` tgt=`var.start_date`/>>
-    <<assign src=`date_range_vars.end_date` tgt=`var.end_date`/>>
-  <</action>>
+  <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
+  <<assign src=`date_range_vars.start_date` tgt=`var.start_date`/>>
+  <<assign src=`date_range_vars.end_date` tgt=`var.end_date`/>>
   " after_start_form="
-  <<action>>
-    <<pyfunc name=`custom.arcust_funcs.setup_groups`/>>
-    <<!-- pyfunc name=`custom.date_funcs.setup_choices`/ -->>
-    <<inline_form name=`select_dates`>>
-      <<on_return>>
-        <<return state=`cancelled`>>
-          <<end_form state=`cancelled`/>>
-        <</return>>
-        <<return state=`completed`>>
-          <<pyfunc name=`custom.arcust_funcs.after_setup`/>>
-          <<continue_form/>>
-        <</return>>
-      <</on_return>>
-    <</inline_form>>
-  <</action>>
+  <<pyfunc name=`custom.arcust_funcs.setup_groups`/>>
+  <<!-- pyfunc name=`custom.date_funcs.setup_choices`/ -->>
+  <<inline_form name=`select_dates`>>
+    <<on_return>>
+      <<return state=`cancelled`>>
+        <<end_form state=`cancelled`/>>
+      <</return>>
+      <<return state=`completed`>>
+        <<pyfunc name=`custom.arcust_funcs.after_setup`/>>
+        <<continue_form/>>
+      <</return>>
+    <</on_return>>
+  <</inline_form>>
   ">
   <db_objects>
     <db_obj name="ar_cust" table_name="ar_customers"/>
@@ -132,9 +128,7 @@
     <button_row/>
     <frame_methods template="Grid">
       <method name="on_start_frame" action="
-        <<action>>
-          <<!-- pyfunc name=`custom.date_funcs.setup_choices`/ -->>
-        <</action>>
+        <<!-- pyfunc name=`custom.date_funcs.setup_choices`/ -->>
         "/>
     </frame_methods>
   </frame>
@@ -159,82 +153,24 @@
         <button btn_id="change_dates" btn_label="Change"
           help_msg = "Change dates"
           btn_enabled="true" btn_validate="true" action="
-            <<action>>
-              <<sub_form name=`_sys.select_date_range`>>
-                <<call_params>>
-                  <<call_param name=`settings` type=`data_attr` source=`date_range_vars.settings`/>>
-                <</call_params>>
-                <<return_params>>
-                  <<return_param name=`settings` type=`data_attr` target=`date_range_vars.settings`/>>
-                  <<return_param name=`start_date` type=`data_attr` target=`date_range_vars.start_date`/>>
-                  <<return_param name=`end_date` type=`data_attr` target=`date_range_vars.end_date`/>>
-                <</return_params>>
-                <<on_return>>
-                  <<return state=`cancelled`/>>
-                  <<return state=`completed`>>
-                    <<assign src=`date_range_vars.start_date` tgt=`var.start_date`/>>
-                    <<assign src=`date_range_vars.end_date` tgt=`var.end_date`/>>
-                  <</return>>
-                <</on_return>>
-              <</sub_form>>
-            <</action>>
+            <<sub_form name=`_sys.select_date_range`>>
+              <<call_params>>
+                <<call_param name=`settings` type=`data_attr` source=`date_range_vars.settings`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`settings` type=`data_attr` target=`date_range_vars.settings`/>>
+                <<return_param name=`start_date` type=`data_attr` target=`date_range_vars.start_date`/>>
+                <<return_param name=`end_date` type=`data_attr` target=`date_range_vars.end_date`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<assign src=`date_range_vars.start_date` tgt=`var.start_date`/>>
+                  <<assign src=`date_range_vars.end_date` tgt=`var.end_date`/>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
           "/>
-
-<!--
-        <row/>
-        <col/>
-        <input obj_name="var" col_name="own_dates" radio="true"/>
-
-        <subtype_frame subtype_obj="var" subtype_col="own_dates">
-
-          <subtype_body subtype_id="N">
-            <block/>
-            <panel/>
-            <row/>
-            <col/>
-            <label value="Select financial year:"/>
-            <col/>
-            <input obj_name="var" col_name="fin_year" lng="150" form_dflt="
-              <<action>>
-                <<pyfunc name=`custom.date_funcs.setup_finyrs`/>>
-              <</action>>
-              " after="
-              <<action>>
-                <<pyfunc name=`custom.date_funcs.after_finyrs`/>>
-              <</action>>
-              "/>
-            <row/>
-            <col/>
-            <label value="Select period:"/>
-            <col/>
-            <input obj_name="var" col_name="period_no" lng="150" form_dflt="
-              <<action>>
-                <<pyfunc name=`custom.date_funcs.setup_finpers`/>>
-              <</action>>
-              " after="
-              <<action>>
-                <<pyfunc name=`custom.date_funcs.after_finpers`/>>
-              <</action>>
-              "/>
-          </subtype_body>
-
-          <subtype_body subtype_id="Y">
-            <block/>
-            <panel/>
-            <row/>
-            <col/>
-            <label value="Start date:"/>
-            <col/>
-            <input obj_name="var" col_name="start_date" lng="150"/>
-            <row/>
-            <col/>
-            <label value="End date:"/>
-            <col/>
-            <input obj_name="var" col_name="end_date" lng="150"/>
-          </subtype_body>
-
-        </subtype_frame>
--->
 
         <block/>
         <grid data_object="groups" growable="false" num_grid_rows="4">
@@ -250,9 +186,7 @@
           </cur_sequence>
           <grid_methods template="Grid">
             <method name="after_save" action="
-              <<action>>
-                <<restart_grid obj_name=`groups`/>>
-              <</action>>
+              <<restart_grid obj_name=`groups`/>>
               "/>
           </grid_methods>
         </grid>
@@ -262,27 +196,19 @@
       <button_row>
         <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
           btn_validate="true" btn_default="true" action="
-            <<action>>
-              <<end_form state=`completed`/>>
-            <</action>>
+            <<end_form state=`completed`/>>
           "/>
         <button btn_id="btn_can" btn_label="Cancel" lng="60" btn_enabled="true"
           btn_validate="false" btn_default="false" action="
-            <<action>>
-              <<end_form state=`cancelled`/>>
-            <</action>>
+            <<end_form state=`cancelled`/>>
           "/>
       </button_row>
       <frame_methods>
         <method name="on_req_cancel" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
         <method name="on_req_close" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
       </frame_methods>
     </frame>

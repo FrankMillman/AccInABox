@@ -106,14 +106,10 @@
         <button_row template="Grid_Frame"/>
         <frame_methods template="Grid_Frame">
           <method name="on_start_frame" action="
-            <<action>>
-              <<pyfunc name=`custom.checks.load_steps`/>>
-            <</action>>
+            <<pyfunc name=`custom.checks.load_steps`/>>
           "/>
           <method name="do_save" action="
-            <<action>>
-              <<pyfunc name=`custom.checks.dump_steps`/>>
-            <</action>>
+            <<pyfunc name=`custom.checks.dump_steps`/>>
           "/>
         </frame_methods>
       </grid_frame>
@@ -121,14 +117,10 @@
     <button_row template="Setup_Form_Single"/>
     <frame_methods template="Setup_Form_Single">
       <method name="on_start_frame" action="
-        <<action>>
-          <<pyfunc name=`custom.checks.load_checks`/>>
-        <</action>>
+        <<pyfunc name=`custom.checks.load_checks`/>>
       "/>
       <method name="before_save" action="
-        <<action>>
-          <<pyfunc name=`custom.checks.dump_checks`/>>
-        <</action>>
+        <<pyfunc name=`custom.checks.dump_checks`/>>
       "/>
     </frame_methods>
   </frame>

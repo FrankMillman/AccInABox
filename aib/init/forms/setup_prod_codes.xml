@@ -1,7 +1,5 @@
 <form name="setup_prod_codes" title="Set up product codes" before_start_form="
-  <<action>>
-    <<pyfunc name=`custom.tax_funcs.before_start_form`/>>
-  <</action>>
+  <<pyfunc name=`custom.tax_funcs.before_start_form`/>>
   ">
 
   <db_objects>
@@ -89,16 +87,12 @@
         <button_row template="Tree_Frame"/>
         <frame_methods template="Tree_Frame">
           <method name="on_start_frame" action="
-            <<action>>
-              <<pyfunc name=`custom.tax_funcs.on_start_frame`
-                master_obj=`prod_code` taxcode_obj=`prod_tax_code`/>>
-            <</action>>
+            <<pyfunc name=`custom.tax_funcs.on_start_frame`
+              master_obj=`prod_code` taxcode_obj=`prod_tax_code`/>>
           "/>
           <method name="after_save" action="
-            <<action>>
-              <<pyfunc name=`custom.tax_funcs.save_tax_codes`
-                master_obj=`prod_code` taxcode_obj=`prod_tax_code` master_id=`prod_row_id`/>>
-            <</action>>
+            <<pyfunc name=`custom.tax_funcs.save_tax_codes`
+              master_obj=`prod_code` taxcode_obj=`prod_tax_code` master_id=`prod_row_id`/>>
           "/>
         </frame_methods>
       </tree_frame>

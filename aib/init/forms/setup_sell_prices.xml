@@ -20,33 +20,24 @@
         <body>
           <block/>
           <dummy after="
-            <<action>>
-              <<case>>
-                <<obj_exists obj_name=`prod_codes`/>>
-                <<default>>
-                  <<call method=`do_save`/>>
-                <</default>>
-              <</case>>
-            <</action>>
+            <<case>>
+              <<obj_exists obj_name=`prod_codes`/>>
+              <<default>>
+                <<call method=`do_save`/>>
+              <</default>>
+            <</case>>
             "/>
           <grid data_object="prices" growable="true" num_grid_rows="8" cursor_name="sell_prices">
             <toolbar template="Grid"/>
             <grid_methods template="Grid">
-              <!-- method name="on_start_row" action="
-                <<action>>
-                  <<save_obj obj_name=`prod_codes`/>>
-                <</action>>
-                "/ -->
             </grid_methods>
           </grid>
         </body>
         <button_row>
           <button btn_id="btn_rgt" btn_label="Return" btn_enabled="true"
             btn_validate="false" btn_default="true" lng="60" action="
-              <<action>>
-                <<req_save/>>
-                <<return_to_grid/>>
-              <</action>>
+              <<req_save/>>
+              <<return_to_grid/>>
             "/>
         </button_row>
         <frame_methods>
@@ -54,9 +45,7 @@
             <<action/>>
           "/>
           <method name="on_req_close" action="
-            <<action>>
-              <<parent_req_close/>>
-            <</action>>
+            <<parent_req_close/>>
           "/>
         </frame_methods>
       </grid_frame>
@@ -65,16 +54,12 @@
     <button_row>
       <button btn_id="btn_rgt" btn_label="Close" btn_enabled="true"
         btn_validate="false" btn_default="true" lng="60" action="
-          <<action>>
-             <<call method=`on_req_close`/>>
-          <</action>>
+           <<call method=`on_req_close`/>>
         "/>
     </button_row>
     <frame_methods>
       <method name="on_req_close" action="
-        <<action>>
-          <<parent_req_close/>>
-        <</action>>
+        <<parent_req_close/>>
       "/>
     </frame_methods>
   </frame>

@@ -1,7 +1,5 @@
 <form name="setup_form_body" title="Setup frame body definition" before_start_form="
-  <<action>>
-    <<pyfunc name=`custom.formdefn_funcs.before_start_body`/>>
-  <</action>>
+  <<pyfunc name=`custom.formdefn_funcs.before_start_body`/>>
   ">
 
   <db_objects/>
@@ -443,42 +441,38 @@
               <col/>
               <button btn_id="grid_toolbar" btn_label="Toolbar"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form name=`_sys.setup_form_toolbar`>>
-                    <<call_params>>
-                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
-                      <<call_param name=`title` type=`data_attr` source=`body.data_object`/>>
-                      <<call_param name=`toolbar_xml` type=`data_attr` source=`grid_vars.toolbar_xml`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`toolbar_xml` type=`data_attr` target=`grid_vars.toolbar_xml`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
+                <<sub_form name=`_sys.setup_form_toolbar`>>
+                  <<call_params>>
+                    <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                    <<call_param name=`title` type=`data_attr` source=`body.data_object`/>>
+                    <<call_param name=`toolbar_xml` type=`data_attr` source=`grid_vars.toolbar_xml`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`toolbar_xml` type=`data_attr` target=`grid_vars.toolbar_xml`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</sub_form>>
               "/>
               <col/>
               <button btn_id="grid_meth" btn_label="Grid methods"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form name=`_sys.setup_form_methods`>>
-                    <<call_params>>
-                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
-                      <<call_param name=`title` type=`data_attr` source=`body.data_object`/>>
-                      <<call_param name=`methods_xml` type=`data_attr` source=`grid_vars.methods_xml`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`methods_xml` type=`data_attr` target=`grid_vars.methods_xml`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
+                <<sub_form name=`_sys.setup_form_methods`>>
+                  <<call_params>>
+                    <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                    <<call_param name=`title` type=`data_attr` source=`body.data_object`/>>
+                    <<call_param name=`methods_xml` type=`data_attr` source=`grid_vars.methods_xml`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`methods_xml` type=`data_attr` target=`grid_vars.methods_xml`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</sub_form>>
               "/>
               <row/>
               <col/>
@@ -488,33 +482,31 @@
               <label value="or"/>
               <button btn_id="grid_cur" btn_label="Cursor"
                 btn_enabled="true" btn_validate="true" action="
-                  <<action>>
-                    <<sub_form name=`_sys.setup_cursor`>>
-                      <<call_params>>
-                        <<call_param name=`table_name` type=`data_attr` source=`form_vars.form_name`/>>
-                        <<call_param name=`cursor_name` type=`data_attr` source=`body.data_object`/>>
-                        <<call_param name=`data_type` type=`data_attr` source=`'xml'`/>>
-                        <<call_param name=`cur_columns_xml` type=`data_attr`
-                            source=`grid_vars.columns_xml`/>>
-                        <<call_param name=`cur_filter_xml` type=`data_attr`
-                            source=`grid_vars.filter_xml`/>>
-                        <<call_param name=`cur_sequence_xml` type=`data_attr`
-                            source=`grid_vars.sequence_xml`/>>
-                      <</call_params>>
-                      <<return_params>>
-                        <<return_param name=`cur_columns_xml` type=`data_attr`
-                            target=`grid_vars.columns_xml`/>>
-                        <<return_param name=`cur_filter_xml` type=`data_attr`
-                            target=`grid_vars.filter_xml`/>>
-                        <<return_param name=`cur_sequence_xml` type=`data_attr`
-                            target=`grid_vars.sequence_xml`/>>
-                      <</return_params>>
-                      <<on_return>>
-                        <<return state=`cancelled`/>>
-                        <<return state=`completed`/>>
-                      <</on_return>>
-                   <</sub_form>>
-                  <</action>>
+                  <<sub_form name=`_sys.setup_cursor`>>
+                    <<call_params>>
+                      <<call_param name=`table_name` type=`data_attr` source=`form_vars.form_name`/>>
+                      <<call_param name=`cursor_name` type=`data_attr` source=`body.data_object`/>>
+                      <<call_param name=`data_type` type=`data_attr` source=`'xml'`/>>
+                      <<call_param name=`cur_columns_xml` type=`data_attr`
+                          source=`grid_vars.columns_xml`/>>
+                      <<call_param name=`cur_filter_xml` type=`data_attr`
+                          source=`grid_vars.filter_xml`/>>
+                      <<call_param name=`cur_sequence_xml` type=`data_attr`
+                          source=`grid_vars.sequence_xml`/>>
+                    <</call_params>>
+                    <<return_params>>
+                      <<return_param name=`cur_columns_xml` type=`data_attr`
+                          target=`grid_vars.columns_xml`/>>
+                      <<return_param name=`cur_filter_xml` type=`data_attr`
+                          target=`grid_vars.filter_xml`/>>
+                      <<return_param name=`cur_sequence_xml` type=`data_attr`
+                          target=`grid_vars.sequence_xml`/>>
+                    <</return_params>>
+                    <<on_return>>
+                      <<return state=`cancelled`/>>
+                      <<return state=`completed`/>>
+                    <</on_return>>
+                 <</sub_form>>
                 "/>
             </subtype_body>
 
@@ -525,98 +517,88 @@
               <col/>
               <button lng="150" btn_id="frame_meth" btn_label="Frame methods"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form name=`_sys.setup_form_methods`>>
-                    <<call_params>>
-                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
-                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
-                      <<call_param name=`methods_xml` type=`data_attr` source=`gridframe_vars.methods_xml`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`methods_xml` type=`data_attr` target=`gridframe_vars.methods_xml`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
+                <<sub_form name=`_sys.setup_form_methods`>>
+                  <<call_params>>
+                    <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                    <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                    <<call_param name=`methods_xml` type=`data_attr` source=`gridframe_vars.methods_xml`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`methods_xml` type=`data_attr` target=`gridframe_vars.methods_xml`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</sub_form>>
               "/>
               <row/>
               <col/>
               <button lng="150" btn_id="main_obj" btn_label="Main object"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<inline_form name=`grid_frame`>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</inline_form>>
-                <</action>>
+                <<inline_form name=`grid_frame`>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</inline_form>>
               "/>
               <row/>
               <col/>
               <button lng="150" btn_id="design" btn_label="Frame design"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form name=`_sys.setup_form_body`>>
-                    <<call_params>>
-                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
-                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
-                      <<call_param name=`body_xml` type=`data_attr` source=`gridframe_vars.body_xml`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`body_xml` type=`data_attr` target=`gridframe_vars.body_xml`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
+                <<sub_form name=`_sys.setup_form_body`>>
+                  <<call_params>>
+                    <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                    <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                    <<call_param name=`body_xml` type=`data_attr` source=`gridframe_vars.body_xml`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`body_xml` type=`data_attr` target=`gridframe_vars.body_xml`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</sub_form>>
               "/>
               <row/>
               <col/>
               <button lng="150" btn_id="toolbar" btn_label="Toolbar"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form name=`_sys.setup_form_toolbar`>>
-                    <<call_params>>
-                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
-                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
-                      <<call_param name=`toolbar_xml` type=`data_attr` source=`gridframe_vars.toolbar_xml`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`toolbar_xml` type=`data_attr` target=`gridframe_vars.toolbar_xml`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
+                <<sub_form name=`_sys.setup_form_toolbar`>>
+                  <<call_params>>
+                    <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                    <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                    <<call_param name=`toolbar_xml` type=`data_attr` source=`gridframe_vars.toolbar_xml`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`toolbar_xml` type=`data_attr` target=`gridframe_vars.toolbar_xml`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</sub_form>>
               "/>
               <row/>
               <col/>
               <button lng="150" btn_id="buttonrow" btn_label="Button row"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form name=`_sys.setup_form_buttonrow`>>
-                    <<call_params>>
-                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
-                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
-                      <<call_param name=`buttonrow_xml` type=`data_attr` source=`gridframe_vars.buttonrow_xml`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`buttonrow_xml` type=`data_attr` target=`gridframe_vars.buttonrow_xml`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
+                <<sub_form name=`_sys.setup_form_buttonrow`>>
+                  <<call_params>>
+                    <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                    <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                    <<call_param name=`buttonrow_xml` type=`data_attr` source=`gridframe_vars.buttonrow_xml`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`buttonrow_xml` type=`data_attr` target=`gridframe_vars.buttonrow_xml`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</sub_form>>
               "/>
             </subtype_body>
 
@@ -627,98 +609,88 @@
               <col/>
               <button lng="150" btn_id="frame_meth" btn_label="Frame methods"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form name=`_sys.setup_form_methods`>>
-                    <<call_params>>
-                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
-                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
-                      <<call_param name=`methods_xml` type=`data_attr` source=`treeframe_vars.methods_xml`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`methods_xml` type=`data_attr` target=`treeframe_vars.methods_xml`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
+                <<sub_form name=`_sys.setup_form_methods`>>
+                  <<call_params>>
+                    <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                    <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                    <<call_param name=`methods_xml` type=`data_attr` source=`treeframe_vars.methods_xml`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`methods_xml` type=`data_attr` target=`treeframe_vars.methods_xml`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</sub_form>>
               "/>
               <row/>
               <col/>
               <button lng="150" btn_id="main_obj" btn_label="Main object"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<inline_form name=`tree_frame`>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</inline_form>>
-                <</action>>
+                <<inline_form name=`tree_frame`>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</inline_form>>
               "/>
               <row/>
               <col/>
               <button lng="150" btn_id="design" btn_label="Frame design"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form name=`_sys.setup_form_body`>>
-                    <<call_params>>
-                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
-                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
-                      <<call_param name=`body_xml` type=`data_attr` source=`treeframe_vars.body_xml`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`body_xml` type=`data_attr` target=`treeframe_vars.body_xml`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
+                <<sub_form name=`_sys.setup_form_body`>>
+                  <<call_params>>
+                    <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                    <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                    <<call_param name=`body_xml` type=`data_attr` source=`treeframe_vars.body_xml`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`body_xml` type=`data_attr` target=`treeframe_vars.body_xml`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</sub_form>>
               "/>
               <row/>
               <col/>
               <button lng="150" btn_id="toolbar" btn_label="Toolbar"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form name=`_sys.setup_form_toolbar`>>
-                    <<call_params>>
-                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
-                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
-                      <<call_param name=`toolbar_xml` type=`data_attr` source=`treeframe_vars.toolbar_xml`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`toolbar_xml` type=`data_attr` target=`treeframe_vars.toolbar_xml`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
+                <<sub_form name=`_sys.setup_form_toolbar`>>
+                  <<call_params>>
+                    <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                    <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                    <<call_param name=`toolbar_xml` type=`data_attr` source=`treeframe_vars.toolbar_xml`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`toolbar_xml` type=`data_attr` target=`treeframe_vars.toolbar_xml`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</sub_form>>
               "/>
               <row/>
               <col/>
               <button lng="150" btn_id="buttonrow" btn_label="Button row"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<sub_form name=`_sys.setup_form_buttonrow`>>
-                    <<call_params>>
-                      <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
-                      <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
-                      <<call_param name=`buttonrow_xml` type=`data_attr` source=`treeframe_vars.buttonrow_xml`/>>
-                    <</call_params>>
-                    <<return_params>>
-                      <<return_param name=`buttonrow_xml` type=`data_attr` target=`treeframe_vars.buttonrow_xml`/>>
-                    <</return_params>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</sub_form>>
-                <</action>>
+                <<sub_form name=`_sys.setup_form_buttonrow`>>
+                  <<call_params>>
+                    <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                    <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                    <<call_param name=`buttonrow_xml` type=`data_attr` source=`treeframe_vars.buttonrow_xml`/>>
+                  <</call_params>>
+                  <<return_params>>
+                    <<return_param name=`buttonrow_xml` type=`data_attr` target=`treeframe_vars.buttonrow_xml`/>>
+                  <</return_params>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</sub_form>>
               "/>
             </subtype_body>
 
@@ -744,14 +716,12 @@
               <col colspan="2"/>
               <button btn_id="subtypes" btn_label="Customised sub-type frames"
                   btn_enabled="true" btn_validate="true" action="
-                <<action>>
-                  <<inline_form name=`subtype_frames`>>
-                    <<on_return>>
-                      <<return state=`completed`/>>
-                      <<return state=`cancelled`/>>
-                    <</on_return>>
-                  <</inline_form>>
-                <</action>>
+                <<inline_form name=`subtype_frames`>>
+                  <<on_return>>
+                    <<return state=`completed`/>>
+                    <<return state=`cancelled`/>>
+                  <</on_return>>
+                <</inline_form>>
               "/>
             </subtype_body>
 
@@ -760,14 +730,10 @@
         <button_row template="Grid_Frame"/>
         <frame_methods template="Grid_Frame">
           <method name="on_start_frame" action="
-            <<action>>
-              <<pyfunc name=`custom.formdefn_funcs.load_body_elem`/>>
-            <</action>>
+            <<pyfunc name=`custom.formdefn_funcs.load_body_elem`/>>
           "/>
           <method name="before_save" action="
-            <<action>>
-              <<pyfunc name=`custom.formdefn_funcs.dump_body_elem`/>>
-            <</action>>
+            <<pyfunc name=`custom.formdefn_funcs.dump_body_elem`/>>
           "/>
         </frame_methods>
       </grid_frame>
@@ -776,14 +742,10 @@
     <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
-        <<action>>
-          <<pyfunc name=`custom.formdefn_funcs.load_body`/>>
-        <</action>>
+        <<pyfunc name=`custom.formdefn_funcs.load_body`/>>
       "/>
       <method name="before_save" action="
-        <<action>>
-          <<pyfunc name=`custom.formdefn_funcs.dump_body`/>>
-        <</action>>
+        <<pyfunc name=`custom.formdefn_funcs.dump_body`/>>
       "/>
     </frame_methods>
   </frame>
@@ -819,21 +781,15 @@
       <button_row>
         <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
           btn_validate="true" btn_default="true" action="
-            <<action>>
-              <<end_form state=`completed`/>>
-            <</action>>
+            <<end_form state=`completed`/>>
           "/>
       </button_row>
       <frame_methods>
         <method name="on_req_cancel" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
         <method name="on_req_close" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
       </frame_methods>
     </frame>
@@ -875,21 +831,15 @@
       <button_row>
         <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
           btn_validate="true" btn_default="true" action="
-            <<action>>
-              <<end_form state=`completed`/>>
-            <</action>>
+            <<end_form state=`completed`/>>
           "/>
       </button_row>
       <frame_methods>
         <method name="on_req_cancel" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
         <method name="on_req_close" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
       </frame_methods>
     </frame>
@@ -934,22 +884,20 @@
             <col/>
             <button lng="150" btn_id="design" btn_label="Frame design"
                 btn_enabled="true" btn_validate="true" action="
-              <<action>>
-                <<sub_form name=`_sys.setup_form_body`>>
-                  <<call_params>>
-                    <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
-                    <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
-                    <<call_param name=`body_xml` type=`data_attr` source=`subtypes.body_xml`/>>
-                  <</call_params>>
-                  <<return_params>>
-                    <<return_param name=`body_xml` type=`data_attr` target=`subtypes.body_xml`/>>
-                  <</return_params>>
-                  <<on_return>>
-                    <<return state=`completed`/>>
-                    <<return state=`cancelled`/>>
-                  <</on_return>>
-                <</sub_form>>
-              <</action>>
+              <<sub_form name=`_sys.setup_form_body`>>
+                <<call_params>>
+                  <<call_param name=`form_name` type=`data_attr` source=`form_vars.form_name`/>>
+                  <<call_param name=`title` type=`data_attr` source=`form_vars.title`/>>
+                  <<call_param name=`body_xml` type=`data_attr` source=`subtypes.body_xml`/>>
+                <</call_params>>
+                <<return_params>>
+                  <<return_param name=`body_xml` type=`data_attr` target=`subtypes.body_xml`/>>
+                <</return_params>>
+                <<on_return>>
+                  <<return state=`completed`/>>
+                  <<return state=`cancelled`/>>
+                <</on_return>>
+              <</sub_form>>
             "/>
           </body>
           <button_row template="Grid_Frame"/>

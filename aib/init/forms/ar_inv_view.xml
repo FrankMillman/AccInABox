@@ -98,9 +98,7 @@
           <row/>
           <col/>
           <input obj_name="ar_invdet" col_name="line_type" radio="true" form_dflt="
-            <<form_dflt>>
-              <<prev_value/>>
-            <</form_dflt>>
+            <<prev_value/>>
             "/>
 
           <subtran_frame subtran_obj="ar_invdet" subtran_col="line_type">

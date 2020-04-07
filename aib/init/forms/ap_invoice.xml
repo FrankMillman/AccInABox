@@ -1,11 +1,7 @@
 <form name="ap_invoice" title="Supplier invoice" before_start_form="
-  <<action>>
-    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_inv` action=`lock`/>>
-  <</action>>
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_inv` action=`lock`/>>
   " on_close_form="
-  <<action>>
-    <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_inv` action=`unlock`/>>
-  <</action>>
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_inv` action=`unlock`/>>
   ">
   <db_objects>
     <db_obj name="ap_inv" table_name="ap_tran_inv" is_formview_obj="true"/>
@@ -117,9 +113,7 @@
           <row/>
           <col/>
           <input obj_name="ap_invdet" col_name="line_type" radio="true" form_dflt="
-            <<form_dflt>>
-              <<prev_value/>>
-            <</form_dflt>>
+            <<prev_value/>>
             "/>
 
           <subtran_frame subtran_obj="ap_invdet" subtran_col="line_type">
@@ -206,9 +200,7 @@
         <button_row template="Grid_Frame_Grid_RO"/>
         <frame_methods template="Grid_Frame_Grid_RO">
           <method name="after_save" action="
-            <<action>>
-              <<recalc obj_name=`ap_inv` col_name=`inv_tot_amt`/>>
-            <</action>>
+            <<recalc obj_name=`ap_inv` col_name=`inv_tot_amt`/>>
             "/>
         </frame_methods>
 
@@ -218,55 +210,51 @@
     <button_row template="Transaction"/>
     <frame_methods template="Transaction">
       <method name="on_start_frame" action="
-        <<action>>
-          <<!-- case>>
-            <<obj_exists obj_name=`ap_inv`>>
-            <</obj_exists>>
-            <<default>>
-              <<change_button>>
-                <<btn_enabled btn_id=`btn_post` state=`false`/>>
-              <</change_button>>
-              <<change_button>>
-                <<btn_enabled btn_id=`btn_close` state=`false`/>>
-              <</change_button>>
-              <<inline_form name=`inv_header`>>
-                <<on_return>>
-                  <<return state=`cancelled`>>
-                    <<end_form state=`cancelled`/>>
-                  <</return>>
-                  <<return state=`completed`>>
-                    <<change_button>>
-                      <<btn_enabled btn_id=`btn_post` state=`true`/>>
-                    <</change_button>>
-                    <<change_button>>
-                      <<btn_enabled btn_id=`btn_close` state=`true`/>>
-                    <</change_button>>
-                    <<restart_frame/>>
-                  <</return>>
-                <</on_return>>
-              <</inline_form>>
-            <</default>>
-          <</case -->>
-        <</action>>
+        <<!-- case>>
+          <<obj_exists obj_name=`ap_inv`>>
+          <</obj_exists>>
+          <<default>>
+            <<change_button>>
+              <<btn_enabled btn_id=`btn_post` state=`false`/>>
+            <</change_button>>
+            <<change_button>>
+              <<btn_enabled btn_id=`btn_close` state=`false`/>>
+            <</change_button>>
+            <<inline_form name=`inv_header`>>
+              <<on_return>>
+                <<return state=`cancelled`>>
+                  <<end_form state=`cancelled`/>>
+                <</return>>
+                <<return state=`completed`>>
+                  <<change_button>>
+                    <<btn_enabled btn_id=`btn_post` state=`true`/>>
+                  <</change_button>>
+                  <<change_button>>
+                    <<btn_enabled btn_id=`btn_close` state=`true`/>>
+                  <</change_button>>
+                  <<restart_frame/>>
+                <</return>>
+              <</on_return>>
+            <</inline_form>>
+          <</default>>
+        <</case -->>
         "/>
       <method name="do_post" action="
-        <<action>>
-          <<case>>
-            <<compare src=`ap_inv.inv_tot_amt` op=`=` tgt=`0`>>
-              <<ask title=`Invoice` enter=`No` escape=`No`
-                  question=`No detail lines - sure you want to post?`>>
-                <<response ans=`No`>>
-                <</response>>
-                <<response ans=`Yes`>>
-                  <<post_obj obj_name=`ap_inv`/>>
-                <</response>>
-              <</ask>>
-            <</compare>>
-            <<default>>
-              <<post_obj obj_name=`ap_inv`/>>
-            <</default>>
-          <</case>>
-        <</action>>
+        <<case>>
+          <<compare src=`ap_inv.inv_tot_amt` op=`=` tgt=`0`>>
+            <<ask title=`Invoice` enter=`No` escape=`No`
+                question=`No detail lines - sure you want to post?`>>
+              <<response ans=`No`>>
+              <</response>>
+              <<response ans=`Yes`>>
+                <<post_obj obj_name=`ap_inv`/>>
+              <</response>>
+            <</ask>>
+          <</compare>>
+          <<default>>
+            <<post_obj obj_name=`ap_inv`/>>
+          <</default>>
+        <</case>>
         "/>
     </frame_methods>
   </frame>
@@ -295,9 +283,7 @@
         <label value="Invoice date:"/>
         <col/>
         <input obj_name="ap_inv" col_name="tran_date" lng="84" form_dflt="
-          <<form_dflt>>
-            <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
-          <</form_dflt>>
+          <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
           "/>
 
         <row/>

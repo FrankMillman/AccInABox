@@ -20,14 +20,12 @@
         <body>
           <block/>
           <dummy after="
-            <<action>>
-              <<case>>
-                <<obj_exists obj_name=`currencies`/>>
-                <<default>>
-                  <<call method=`do_save`/>>
-                <</default>>
-              <</case>>
-            <</action>>
+            <<case>>
+              <<obj_exists obj_name=`currencies`/>>
+              <<default>>
+                <<call method=`do_save`/>>
+              <</default>>
+            <</case>>
             "/>
           <grid data_object="rates" growable="true" num_grid_rows="8" cursor_name="curr_rates">
             <toolbar template="Grid"/>
@@ -36,43 +34,18 @@
         </body>
         <button_row template="Grid_Frame_With_Grid"/>
         <frame_methods template="Grid_Frame_With_Grid"/>
-<!--
-        <button_row>
-          <button btn_id="btn_rgt" btn_label="Return" btn_enabled="true"
-            btn_validate="false" btn_default="true" lng="60" action="
-              <<action>>
-                <<req_save/>>
-                <<return_to_grid/>>
-              <</action>>
-            "/>
-        </button_row>
-        <frame_methods>
-          <method name="do_save" action="
-            <<action/>>
-          "/>
-          <method name="on_req_close" action="
-            <<action>>
-              <<parent_req_close/>>
-            <</action>>
-          "/>
-        </frame_methods>
--->
       </grid_frame>
 
     </body>
     <button_row>
       <button btn_id="btn_rgt" btn_label="Close" btn_enabled="true"
         btn_validate="false" btn_default="true" lng="60" action="
-          <<action>>
-             <<call method=`on_req_close`/>>
-          <</action>>
+           <<call method=`on_req_close`/>>
         "/>
     </button_row>
     <frame_methods>
       <method name="on_req_close" action="
-        <<action>>
-          <<parent_req_close/>>
-        <</action>>
+        <<parent_req_close/>>
       "/>
     </frame_methods>
   </frame>

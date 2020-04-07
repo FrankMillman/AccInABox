@@ -1,25 +1,23 @@
 <form name="setup_periods" title="Set up financial periods" after_start_form="
-  <<action>>
-    <<pyfunc name=`custom.finperiod_funcs.get_no_periods`/>>
-    <<case>>
-      <<compare src=`_ctx.count_per` op=`=` tgt=`0`>>
-        <<inline_form name=`op_date`>>
-          <<on_return>>
-            <<return state=`cancelled`>>
-              <<end_form state=`cancelled`/>>
-            <</return>>
-            <<return state=`completed`>>
-              <<pyfunc name=`custom.finperiod_funcs.save_start_date`/>>
-              <<continue_form/>>
-            <</return>>
-          <</on_return>>
-        <</inline_form>>
-      <</compare>>
-      <<default>>
-        <<continue_form/>>
-      <</default>>
-    <</case>>
-  <</action>>
+  <<pyfunc name=`custom.finperiod_funcs.get_no_periods`/>>
+  <<case>>
+    <<compare src=`_ctx.count_per` op=`=` tgt=`0`>>
+      <<inline_form name=`op_date`>>
+        <<on_return>>
+          <<return state=`cancelled`>>
+            <<end_form state=`cancelled`/>>
+          <</return>>
+          <<return state=`completed`>>
+            <<pyfunc name=`custom.finperiod_funcs.save_start_date`/>>
+            <<continue_form/>>
+          <</return>>
+        <</on_return>>
+      <</inline_form>>
+    <</compare>>
+    <<default>>
+      <<continue_form/>>
+    <</default>>
+  <</case>>
   ">
 
   <db_objects>
@@ -71,15 +69,11 @@
   <frame main_object="fin_year">
     <toolbar>
       <tool type="img" name="prev" tip="Prev year (Ctrl+PgUp)" action="
-        <<action>>
-          <<pyfunc name=`custom.finperiod_funcs.goto_prev`/>>
-        <</action>>
+        <<pyfunc name=`custom.finperiod_funcs.goto_prev`/>>
         " shortcut="ctrl,33"/>
       <tool type="text" obj_name="var" col_name="ye_date" lng="200"/>
       <tool type="img" name="next" tip="Next year (Ctrl+PgDn)" action="
-        <<action>>
-          <<pyfunc name=`custom.finperiod_funcs.goto_next`/>>
-        <</action>>
+        <<pyfunc name=`custom.finperiod_funcs.goto_next`/>>
         " shortcut="ctrl,34"/>
     </toolbar>
     <body>
@@ -97,14 +91,10 @@
         </cur_sequence>
         <grid_methods template="Grid">
           <method name="on_start_row" action="
-            <<action>>
-              <<pyfunc name=`custom.finperiod_funcs.on_start_row`/>>
-            <</action>>
+            <<pyfunc name=`custom.finperiod_funcs.on_start_row`/>>
           "/>
           <method name="after_save" action="
-            <<action>>
-              <<pyfunc name=`custom.finperiod_funcs.after_save_row`/>>
-            <</action>>
+            <<pyfunc name=`custom.finperiod_funcs.after_save_row`/>>
           "/>
         </grid_methods>
       </grid>
@@ -112,19 +102,13 @@
     <button_row template="Setup_Form_Single"/>
     <frame_methods template="Setup_Form_Single">
       <method name="on_start_frame" action="
-        <<action>>
-          <<pyfunc name=`custom.finperiod_funcs.load_fin_periods`/>>
-        <</action>>
+        <<pyfunc name=`custom.finperiod_funcs.load_fin_periods`/>>
       "/>
       <method name="do_save" action="
-        <<action>>
-          <<pyfunc name=`custom.finperiod_funcs.save_fin_year`/>>
-        <</action>>
+        <<pyfunc name=`custom.finperiod_funcs.save_fin_year`/>>
       "/>
       <method name="do_restore" action="
-        <<action>>
-          <<pyfunc name=`custom.finperiod_funcs.restore_fin_year`/>>
-        <</action>>
+        <<pyfunc name=`custom.finperiod_funcs.restore_fin_year`/>>
       "/>
     </frame_methods>
   </frame>
@@ -151,27 +135,19 @@
       <button_row>
         <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
           btn_validate="true" btn_default="true" action="
-            <<action>>
-              <<end_form state=`completed`/>>
-            <</action>>
+            <<end_form state=`completed`/>>
           "/>
         <button btn_id="btn_can" btn_label="Cancel" lng="60" btn_enabled="true"
           btn_validate="false" btn_default="false" action="
-            <<action>>
-              <<end_form state=`cancelled`/>>
-            <</action>>
+            <<end_form state=`cancelled`/>>
           "/>
       </button_row>
       <frame_methods>
         <method name="on_req_cancel" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
         <method name="on_req_close" action="
-          <<action>>
-            <<end_form state=`cancelled`/>>
-          <</action>>
+          <<end_form state=`cancelled`/>>
         "/>
       </frame_methods>
     </frame>

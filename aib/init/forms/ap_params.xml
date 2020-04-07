@@ -1,7 +1,5 @@
 <form name="ap_params" title="Set up ap ledger parameters" before_start_form="
-  <<action>>
-    <<assign src=`_ctx.ledger_row_id` tgt=`params.row_id`/>>
-  <</action>>
+  <<assign src=`_ctx.ledger_row_id` tgt=`params.row_id`/>>
   ">
   <db_objects>
     <db_obj name="params" table_name="ap_ledger_params" is_formview_obj="true"/>

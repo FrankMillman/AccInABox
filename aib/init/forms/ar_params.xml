@@ -1,7 +1,5 @@
 <form name="ar_params" title="Set up ar ledger parameters" before_start_form="
-  <<action>>
-    <<assign src=`_ctx.ledger_row_id` tgt=`ledger.row_id`/>>
-  <</action>>
+  <<assign src=`_ctx.ledger_row_id` tgt=`ledger.row_id`/>>
   ">
   <db_objects>
     <db_obj name="ledger" table_name="ar_ledger_params"/>

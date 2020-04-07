@@ -418,7 +418,7 @@ class Form:
 
         before_start_form = form_defn.get('before_start_form')
         if before_start_form is not None:
-            action = etree.fromstring(before_start_form, parser=parser)
+            action = etree.fromstring(f'<_>{before_start_form}</_>', parser=parser)
             # try:
             #     await ht.form_xml.exec_xml(self, action)
             # except AibError:
@@ -447,7 +447,7 @@ class Form:
 
         after_start_form = form_defn.get('after_start_form')
         if after_start_form is not None:
-            action = etree.fromstring(after_start_form, parser=parser)
+            action = etree.fromstring(f'<_>{after_start_form}</_>', parser=parser)
             try:
                 await ht.form_xml.exec_xml(self, action)
             except AibError:
@@ -536,7 +536,7 @@ class Form:
 
             on_close_form = self.form_defn.get('on_close_form')
             if on_close_form is not None:
-                action = etree.fromstring(on_close_form, parser=parser)
+                action = etree.fromstring(f'<_>{on_close_form}</_>', parser=parser)
                 await ht.form_xml.exec_xml(self, action)
 
             for frame in self.obj_list:
@@ -766,8 +766,7 @@ class Frame:
                 tool_attr = {'type': tool_type, 'ref':  tb_text.ref,
                     'lng': tool.get('lng')}
             elif tool_type in ('btn', 'img'):
-                action = etree.fromstring(
-                    tool.get('action'), parser=parser)
+                action = etree.fromstring(f'<_>{tool.get("action")}</_>', parser=parser)
                 tb_btn = ht.gui_objects.GuiTbButton(self, action)
                 tool_attr = {'type': tool_type, 'ref':  tb_btn.ref,
                     'tip': tool.get('tip'), 'name': tool.get('name'),
@@ -886,23 +885,26 @@ class Frame:
 
                 before = element.get('before')
                 if before is not None:
-                    gui_obj.before_input = etree.fromstring(before, parser=parser)
+                    gui_obj.before_input = etree.fromstring(
+                        f'<_>{before}</_>', parser=parser)
 
                 form_dflt = element.get('form_dflt')
                 if form_dflt is not None:
-                    form_dflt = etree.fromstring(form_dflt, parser=parser)
+                    form_dflt = etree.fromstring(
+                        f'<_>{form_dflt}</_>', parser=parser)
                 gui_obj.form_dflt = form_dflt
 
                 validations = element.get('validation')
                 if validations is not None:
                     validations = etree.fromstring(
-                        validations, parser=parser)
+                        f'<_>{validations}</_>', parser=parser)
                     for vld in validations.iter('validation'):
                         gui_obj.form_vlds.append((self, vld))
 
                 after = element.get('after')
                 if after is not None:
-                    gui_obj.after_input = etree.fromstring(after, parser=parser)
+                    gui_obj.after_input = etree.fromstring(
+                        f'<_>{after}</_>', parser=parser)
 
                 if subtype is not None:
                     subtype_guiobj, active = subtype
@@ -948,7 +950,7 @@ class Frame:
                 default = (element.get('btn_default') == 'true')
                 help_msg = element.get('help_msg', '')
                 action = etree.fromstring(
-                    element.get('action'), parser=parser)
+                    f'<_>{element.get("action")}</_>', parser=parser)
                 button = ht.gui_objects.GuiButton(self, gui, btn_label, lng,
                     enabled, must_validate, default, help_msg, action)
                 self.btn_dict[element.get('btn_id')] = button
@@ -956,7 +958,7 @@ class Frame:
                 validation = element.get('validation')
                 if validation is not None:
                     validation = etree.fromstring(
-                        validation, parser=parser)
+                        f'<_>{validation}</_>', parser=parser)
                     for vld in validation.iter('validation'):
                         button.form_vlds.append(vld)
 
@@ -1019,7 +1021,8 @@ class Frame:
                 await self.setup_subtran(element, element.get('subtran_obj'),
                     element.get('subtran_col'), gui)
             elif element.tag == 'bpmn':
-                action = etree.fromstring(element.get('action'), parser=parser)
+                action = etree.fromstring(
+                    f'<_>{element.get("action")}</_>', parser=parser)
                 bpmn = ht.gui_bpmn.GuiBpmn()
                 await bpmn._ainit_(self, gui, element, action)
             elif element.tag == 'dummy':
@@ -1028,14 +1031,14 @@ class Frame:
                 validation = element.get('validation')
                 if validation is not None:
                     validation = etree.fromstring(
-                        validation, parser=parser)
+                        f'<_>{validation}</_>', parser=parser)
                     for vld in validation.iter('validation'):
                         gui_obj.form_vlds.append(vld)
 
                 after = element.get('after')
                 if after is not None:
                     gui_obj.after_input = etree.fromstring(
-                        after, parser=parser)
+                        f'<_>{after}</_>', parser=parser)
 
                 if subtype is not None:
                     subtype_guiobj, active = subtype
@@ -1082,7 +1085,7 @@ class Frame:
             default = (btn.get('btn_default') == 'true')
             help_msg = btn.get('help_msg', '')
             action = etree.fromstring(
-                btn.get('action'), parser=parser)
+                f'<_>{btn.get("action")}</_>', parser=parser)
             button = ht.gui_objects.GuiButton(self, button_list, btn_label,
                 lng, enabled, must_validate, default, help_msg, action)
             self.btn_dict[btn_id] = button
@@ -1108,7 +1111,8 @@ class Frame:
         for method_name in method_dict:
             method = method_dict[method_name]
             obj_name = method.get('obj_name')
-            method = etree.fromstring(method.get('action'), parser=parser)
+            method = etree.fromstring(
+                f'<_>{method.get("action")}</_>', parser=parser)
 
             self.methods[method_name] = method
             if method_name == 'on_read':  # set up callback on db_object

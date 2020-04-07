@@ -15,15 +15,13 @@
   <label value="Customer Id:"/>
   <col/>
   <input obj_name="achg" col_name="cust_id" lng="84" after="
-    <<after>>
-      <<!--  show exch_rate and chg_cust if alt_curr - enable chg_cust if override allowed -->>
-      <<!--
-      <<assign src=`achg.tran_date` tgt=`_ctx.as_at_date`/>>
-      <<assign src=`'achg'` tgt=`_ctx.tran_type`/>>
-      <<assign src=`achg.row_id` tgt=`_ctx.tran_row_id`/>>
-      <<assign src=`achg.item_row_id` tgt=`_ctx.item_row_id`/>>
-      -->>
-    <</after>>
+    <<!--  show exch_rate and chg_cust if alt_curr - enable chg_cust if override allowed -->>
+    <<!--
+    <<assign src=`achg.tran_date` tgt=`_ctx.as_at_date`/>>
+    <<assign src=`'achg'` tgt=`_ctx.tran_type`/>>
+    <<assign src=`achg.row_id` tgt=`_ctx.tran_row_id`/>>
+    <<assign src=`achg.item_row_id` tgt=`_ctx.item_row_id`/>>
+    -->>
     "/>
   <display obj_name="achg" col_name="cust_row_id>party_row_id>display_name" lng="120"/>
 

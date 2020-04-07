@@ -15,9 +15,7 @@
   <label value="Customer Id:"/>
   <col/>
   <input obj_name="ar_rec" col_name="cust_id" lng="84" after="
-    <<after>>
-      <<!--  show exch_rate and arec_cust if alt_curr - enable arec_cust if override allowed -->>
-    <</after>>
+    <<!--  show exch_rate and arec_cust if alt_curr - enable arec_cust if override allowed -->>
     "/>
   <display obj_name="ar_rec" col_name="cust_row_id>party_row_id>display_name" lng="120"/>
 
@@ -49,29 +47,27 @@
   <col/>
   <button lng="150" btn_id="alloc" btn_label="Allocate now"
     btn_enabled="true" btn_validate="true" action="
-      <<action>>
-        <<req_save/>>
-        <<sub_form name=`ar_alloc_item`>>
-          <<call_params>>
-            <<call_param name=`alloc_header` type=`data_obj` source=`ar_rec`/>>
-            <<call_param name=`alloc_detail` type=`data_obj` source=`ar_rec_alloc`/>>
-            <<call_param name=`this_item_rowid` type=`data_attr` source=`ar_rec.item_row_id`/>>
-            <<call_param name=`amount_to_alloc` type=`data_attr` source=`ar_rec.arec_cust`/>>
-            <<call_param name=`unallocated` type=`data_attr` source=`ar_rec.unallocated`/>>
-          <</call_params>>
-          <<return_params>>
-            <<return_param name=`unallocated` type=`data_attr` target=`ar_rec.unallocated`/>>
-          <</return_params>>
-          <<on_return>>
-            <<return state=`cancelled`>>
-              <<btn_set_focus btn_id=`btn_save`/>>
-            <</return>>
-            <<return state=`completed`>>
-              <<btn_set_focus btn_id=`btn_save`/>>
-            <</return>>
-          <</on_return>>
-        <</sub_form>>
-      <</action>>
+      <<req_save/>>
+      <<sub_form name=`ar_alloc_item`>>
+        <<call_params>>
+          <<call_param name=`alloc_header` type=`data_obj` source=`ar_rec`/>>
+          <<call_param name=`alloc_detail` type=`data_obj` source=`ar_rec_alloc`/>>
+          <<call_param name=`this_item_rowid` type=`data_attr` source=`ar_rec.item_row_id`/>>
+          <<call_param name=`amount_to_alloc` type=`data_attr` source=`ar_rec.arec_cust`/>>
+          <<call_param name=`unallocated` type=`data_attr` source=`ar_rec.unallocated`/>>
+        <</call_params>>
+        <<return_params>>
+          <<return_param name=`unallocated` type=`data_attr` target=`ar_rec.unallocated`/>>
+        <</return_params>>
+        <<on_return>>
+          <<return state=`cancelled`>>
+            <<btn_set_focus btn_id=`btn_save`/>>
+          <</return>>
+          <<return state=`completed`>>
+            <<btn_set_focus btn_id=`btn_save`/>>
+          <</return>>
+        <</on_return>>
+      <</sub_form>>
     "/>
 
   <end_if/>

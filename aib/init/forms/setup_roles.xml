@@ -1,7 +1,5 @@
 <form name="setup_roles" title="Role setup" before_start_form="
-  <<action>>
-    <<pyfunc name=`custom.role_setup.before_start_form`/>>
-  <</action>>
+  <<pyfunc name=`custom.role_setup.before_start_form`/>>
   ">
 
   <db_objects>
@@ -207,25 +205,21 @@
                   <row/>
                   <col/>
                   <input obj_name="tbl_view" col_name="sel_dsp" lng="40" after="
-                    <<action>>
-                      <<case>>
-                        <<fld_changed name=`tbl_view.sel_dsp`>>
-                          <<pyfunc name=`custom.role_setup.check_sel_ok`/>>
-                        <</fld_changed>>
-                      <</case>>
-                    <</action>>
+                    <<case>>
+                      <<fld_changed name=`tbl_view.sel_dsp`>>
+                        <<pyfunc name=`custom.role_setup.check_sel_ok`/>>
+                      <</fld_changed>>
+                    <</case>>
                   "/>
                   <col/>
                   <input obj_name="tbl_view" col_name="ins_dsp" lng="40"/>
                   <col/>
                   <input obj_name="tbl_view" col_name="upd_dsp" lng="40" after="
-                    <<action>>
-                      <<case>>
-                        <<fld_changed name=`tbl_view.upd_dsp`>>
-                          <<pyfunc name=`custom.role_setup.check_upd_ok`/>>
-                        <</fld_changed>>
-                      <</case>>
-                    <</action>>
+                    <<case>>
+                      <<fld_changed name=`tbl_view.upd_dsp`>>
+                        <<pyfunc name=`custom.role_setup.check_upd_ok`/>>
+                      <</fld_changed>>
+                    <</case>>
                   "/>
                   <col/>
                   <input obj_name="tbl_view" col_name="del_dsp" lng="40"/>
@@ -234,22 +228,18 @@
                     <cur_columns>
                       <cur_col col_name="col_name" lng="140" readonly="true"/>
                       <cur_col col_name="view_ok" lng="60" readonly="true" after="
-                        <<action>>
-                          <<case>>
-                            <<fld_changed name=`col_view.view_ok`>>
-                              <<req_save/>>
-                            <</fld_changed>>
-                          <</case>>
-                        <</action>>
+                        <<case>>
+                          <<fld_changed name=`col_view.view_ok`>>
+                            <<req_save/>>
+                          <</fld_changed>>
+                        <</case>>
                       "/>
                       <cur_col col_name="amend_ok" lng="60" readonly="true" after="
-                        <<action>>
-                          <<case>>
-                            <<fld_changed name=`col_view.amend_ok`>>
-                              <<req_save/>>
-                            <</fld_changed>>
-                          <</case>>
-                        <</action>>
+                        <<case>>
+                          <<fld_changed name=`col_view.amend_ok`>>
+                            <<req_save/>>
+                          <</fld_changed>>
+                        <</case>>
                       "/>
                     </cur_columns>
                     <cur_filter/>
@@ -260,14 +250,10 @@
                 <button_row template="Grid_Frame"/>
                 <frame_methods template="Grid_Frame">
                   <method name="on_start_frame" action="
-                    <<action>>
-                      <<pyfunc name=`custom.role_setup.load_col_perms`/>>
-                    <</action>>
+                    <<pyfunc name=`custom.role_setup.load_col_perms`/>>
                   "/>
                   <method name="before_save" action="
-                    <<action>>
-                      <<pyfunc name=`custom.role_setup.dump_col_perms`/>>
-                    <</action>>
+                    <<pyfunc name=`custom.role_setup.dump_col_perms`/>>
                   "/>
                 </frame_methods>
               </grid_frame>
@@ -280,175 +266,19 @@
         <button_row template="Tree_Frame"/>
         <frame_methods template="Tree_Frame">
           <method name="on_start_frame" action="
-            <<action>>
-              <<pyfunc name=`custom.role_setup.load_table_perms`/>>
-            <</action>>
+            <<pyfunc name=`custom.role_setup.load_table_perms`/>>
           "/>
           <method name="after_save" action="
-            <<action>>
-              <<pyfunc name=`custom.role_setup.dump_table_perms`/>>
-            <</action>>
+            <<pyfunc name=`custom.role_setup.dump_table_perms`/>>
           "/>
         </frame_methods>
       </tree_frame>
 
-<!--
-          <block/>
-          <panel/>
-          <row/>
-          <col/>
-          <label value="Module:"/>
-          <col/>
-          <display obj_name="db_module" col_name="module" lng="80"/>
-          <row/>
-          <col/>
-          <label value="Description:"/>
-          <col/>
-          <display obj_name="db_module" col_name="descr" lng="150"/>
-          <row/>
-          <col colspan="2"/>
-          <text value="Full permissions for this module"/>
-        </body>
-        <button_row template="Tree_Frame"/>
-        <frame_methods template="Tree_Frame"/>
-      </tree_frame>
-      <tree_frame main_object="role" combo_type="member">
-        <toolbar/>
-        <body>
-          <block/>
-          <panel/>
-          <row/>
-          <col/>
-          <label value="Role:"/>
-          <input obj_name="role" col_name="role" lng="80"/>
-          <col/>
-          <label value="Description:"/>
-          <input obj_name="role" col_name="descr" lng="150"/>
-          <col/>
-          <label value="Sub roles?"/>
-          <input obj_name="role" col_name="expandable"/>
-          <block/>
-          <grid data_object="tbl_view" growable="false" num_grid_rows="16">
-            <cur_columns>
-              <cur_col col_name="table_name" lng="140" readonly="true"/>
-              <cur_col col_name="sel_dsp" lng="20" readonly="true" skip="true"/>
-              <cur_col col_name="ins_dsp" lng="20" readonly="true" skip="true"/>
-              <cur_col col_name="upd_dsp" lng="20" readonly="true" skip="true"/>
-              <cur_col col_name="del_dsp" lng="20" readonly="true" skip="true"/>
-            </cur_columns>
-            <cur_filter/>
-            <cur_sequence/>
-            <grid_methods template="Grid"/>
-          </grid>
-          <grid_frame main_object="tbl_view">
-            <toolbar/>
-            <body>
-              <block/>
-              <panel/>
-              <row/>
-              <col colspan="2"/>
-              <input obj_name="tbl_view" col_name="table_name" lng="150" readonly="true" skip="true"/>
-              <col colspan="2"/>
-              <input obj_name="tbl_view" col_name="descr" lng="150" readonly="true" skip="true"/>
-              <row/>
-              <col/>
-              <label value="Select?"/>
-              <col/>
-              <label value="Insert?"/>
-              <col/>
-              <label value="Update?"/>
-              <col/>
-              <label value="Delete?"/>
-              <row/>
-              <col/>
-              <input obj_name="tbl_view" col_name="sel_dsp" lng="40" after="
-                <<action>>
-                  <<case>>
-                    <<fld_changed name=`tbl_view.sel_dsp`>>
-                      <<pyfunc name=`custom.role_setup.check_sel_ok`/>>
-                    <</fld_changed>>
-                  <</case>>
-                <</action>>
-              "/>
-              <col/>
-              <input obj_name="tbl_view" col_name="ins_dsp" lng="40"/>
-              <col/>
-              <input obj_name="tbl_view" col_name="upd_dsp" lng="40" after="
-                <<action>>
-                  <<case>>
-                    <<fld_changed name=`tbl_view.upd_dsp`>>
-                      <<pyfunc name=`custom.role_setup.check_upd_ok`/>>
-                    <</fld_changed>>
-                  <</case>>
-                <</action>>
-              "/>
-              <col/>
-              <input obj_name="tbl_view" col_name="del_dsp" lng="40"/>
-              <block/>
-              <grid data_object="col_view" growable="false" num_grid_rows="8">
-                <cur_columns>
-                  <cur_col col_name="col_name" lng="140" readonly="true"/>
-                  <cur_col col_name="view_ok" lng="60" readonly="true" after="
-                    <<action>>
-                      <<case>>
-                        <<fld_changed name=`col_view.view_ok`>>
-                          <<req_save/>>
-                        <</fld_changed>>
-                      <</case>>
-                    <</action>>
-                  "/>
-                  <cur_col col_name="amend_ok" lng="60" readonly="true" after="
-                    <<action>>
-                      <<case>>
-                        <<fld_changed name=`col_view.amend_ok`>>
-                          <<req_save/>>
-                        <</fld_changed>>
-                      <</case>>
-                    <</action>>
-                  "/>
-                </cur_columns>
-                <cur_filter/>
-                <cur_sequence/>
-                <grid_methods template="Grid"/>
-              </grid>
-            </body>
-            <button_row template="Grid_Frame"/>
-            <frame_methods template="Grid_Frame">
-              <method name="on_start_frame" action="
-                <<action>>
-                  <<pyfunc name=`custom.role_setup.load_col_perms`/>>
-                <</action>>
-              "/>
-              <method name="before_save" action="
-                <<action>>
-                  <<pyfunc name=`custom.role_setup.dump_col_perms`/>>
-                <</action>>
-              "/>
-            </frame_methods>
-          </grid_frame>
-        </body>
-        <button_row template="Tree_Frame"/>
-        <frame_methods template="Tree_Frame">
-          <method name="on_start_frame" action="
-            <<action>>
-              <<pyfunc name=`custom.role_setup.load_table_perms`/>>
-            <</action>>
-          "/>
-          <method name="after_save" action="
-            <<action>>
-              <<pyfunc name=`custom.role_setup.dump_table_perms`/>>
-            <</action>>
-          "/>
-        </frame_methods>
-      </tree_frame>
--->
     </body>
     <button_row/>
     <frame_methods>
       <method name="on_active" action="
-        <<action>>
-          <<pyfunc name=`custom.role_setup.on_active`/>>
-        <</action>>
+        <<pyfunc name=`custom.role_setup.on_active`/>>
       "/>
     </frame_methods>
   </frame>
