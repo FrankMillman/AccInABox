@@ -2885,6 +2885,7 @@ class DbTable:
 class MemTable(DbTable):
     async def _ainit_(self, context, company, table_name, table_defn):
         self.defn_tableid = self.table_name = table_name
+        self.data_company = company
         self.module_row_id = None  # can be over-ridden by form_defn
         self.short_descr = table_name
         self.constants = mem_constants

@@ -1467,6 +1467,8 @@ class Decimal(Field):
         else:
             scale_ptr = await self.db_obj.getfld(col_defn.scale_ptr)
             scale = await scale_ptr.getval()
+            if scale is None:
+                scale = col_defn.db_scale
         return scale
 
     def get_val_for_where(self):
