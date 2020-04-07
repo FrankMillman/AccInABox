@@ -709,26 +709,30 @@ class Conn:
 
     async def get_col_alias(self, context, db_table, params, col_name,
             current_alias='a', trail=()):
-        if '.' in col_name:  # added [2017-08-14]
-            # added 'scale_ptr' columns to gui_grid
-            # need to handle '_param.local_curr_id>scale'
+        alias = current_alias
+        if '.' in col_name:  # added [2017-08-14] to handle 'scale_ptr' columns
             obj_name, col_name = col_name.split('.')
-            if obj_name != '_param':
-                print(f'{obj_name}.{col_name}')
-                raise NotImplementedError
-            db_table = await db.objects.get_db_table(context, db_table.data_company, 'adm_params')
+            if obj_name == '_param':
+                db_table = await db.objects.get_db_table(context, db_table.data_company, 'adm_params')
+                table_name = f'{db_table.data_company}.adm_params'
+            elif context.data_objects[obj_name].mem_obj:
+                db_table = context.data_objects[obj_name].db_table
+                table_name = db_table.table_name
+            else:
+                db_table = context.data_objects[obj_name].db_table
+                table_name = f'{db_table.data_company}.{db_table.table_name}'
             trail = (id(db_table), )
             if trail in self.joins:
                 alias = self.joins[trail]
             else:
                 alias = self.calc_next_alias()
                 self.tablenames += (
-                    f' LEFT JOIN {db_table.data_company}.adm_params {alias} ON {alias}.row_id = 1')
+                    f' LEFT JOIN {table_name} {alias} ON {alias}.row_id = 1')
                 self.joins[trail] = alias
 
         if '>' in col_name:
             return await self.walk_colname(
-                context, db_table, params, col_name, current_alias, trail)
+                context, db_table, params, col_name, alias, trail)
 
         col = db_table.col_dict[col_name]
 
@@ -736,18 +740,18 @@ class Conn:
             return None, None, None
 
         if col.sql is not None:
-            return col, current_alias, await self.check_sql(
-                context, db_table, params, col, current_alias, trail)
+            return col, alias, await self.check_sql(
+                context, db_table, params, col, alias, trail)
 
         if col.col_type == 'alt':
             src_colname = col.fkey[2]
             tgt_colname = col.fkey[1]
             col_name = src_colname + '>' + tgt_colname
             return await self.walk_colname(
-                context, db_table, params, col_name, current_alias, trail)
+                context, db_table, params, col_name, alias, trail)
 
         as_clause = None
-        return col, current_alias, as_clause
+        return col, alias, as_clause
 
     async def check_sql(self, context, db_table, params, col, current_alias, trail):
         sql = col.sql
