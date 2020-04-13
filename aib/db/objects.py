@@ -2992,11 +2992,11 @@ class MemTable(DbTable):
 
         async with context.db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.mem
-            await conn.exec_cmd(conn.convert_string(
+            await conn.exec_cmd(
                 'CREATE TABLE {} ({})'.format(table_name,
-                ', '.join(['{} {}'.format(col.col_name, col.data_type)
+                ', '.join([f'{col.col_name} {conn.convert_string(col.data_type, col.db_scale)}'
                     for col in self.col_list if col.col_type != 'virt']))
-                ))
+                )
 
         # set up table_keys on last key field to force 'select' if field is changed
         if self.primary_keys:
@@ -3209,11 +3209,11 @@ class ClonedTable(MemTable):
 
         async with context.db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.mem
-            await conn.exec_cmd(conn.convert_string(
+            await conn.exec_cmd(
                 'CREATE TABLE {} ({})'.format(table_name,
-                ', '.join(['{} {}'.format(col.col_name, col.data_type)
+                ', '.join([f'{col.col_name} {conn.convert_string(col.data_type, col.db_scale)}'
                     for col in self.col_list if col.col_type != 'virt']))
-                ))
+                )
 
         # set up table_keys on last key field to force 'select' if field is changed
         if self.primary_keys:

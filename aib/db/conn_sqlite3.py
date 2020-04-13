@@ -486,7 +486,6 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('PWD', 'TEXT')
         .replace('DTE', 'DATE')
         .replace('DTM', 'TIMESTAMP')
-        # .replace('DEC', 'REAL')  # forces sqlite3 to store decimals as text
         .replace('DEC', f'REAL{db_scale}')  # to allow correct rounding when reading back
         .replace('AUTO', 'INTEGER PRIMARY KEY')
         .replace('JSON', 'TEXT')
