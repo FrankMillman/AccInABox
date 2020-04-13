@@ -396,21 +396,21 @@ class Form:
             required = input_param.get('required') == 'true'
             try:
                 value = self.data_inputs[name]
-                obj_name, col_name = target.split('.')
-                db_obj = self.data_objects[obj_name]
-                fld = await db_obj.getfld(col_name)
-                # fld._orig = fld._value = value
-                # previous line changed [2019-06-17]
-                # in setup_bpmn, if start subform, then close, then restart,
-                #   must not change _orig else concurrency check fails
-                fld._value = value
-                if not db_obj.exists:
-                    fld._orig = value
             except KeyError:
                 if required:
                     head = 'Missing parameter'
                     body = f"Required parameter '{name}' not supplied"
                     raise AibError(head=head, body=body)
+            obj_name, col_name = target.split('.')
+            db_obj = self.data_objects[obj_name]
+            fld = await db_obj.getfld(col_name)
+            # fld._orig = fld._value = value
+            # previous line changed [2019-06-17]
+            # in setup_bpmn, if start subform, then close, then restart,
+            #   must not change _orig else concurrency check fails
+            fld._value = value
+            if not db_obj.exists:
+                fld._orig = value
 
     async def setup_form(self, form_defn, title):
 
@@ -872,12 +872,16 @@ class Frame:
                         choices.append(element.get('radio') == 'true')
                 height = element.get('height')
                 label = element.get('label')
+                action = element.get('action')
+                if action is not None:
+                    action = etree.fromstring(
+                        f'<_>{action}</_>', parser=parser)
 
                 data_type = fld.col_defn.data_type
                 gui_ctrl = ht.gui_objects.gui_ctrls[data_type]
                 gui_obj = gui_ctrl()
                 await gui_obj._ainit_(self, fld, readonly, skip, reverse,
-                    choices, lkup, pwd, lng, height, label, gui)
+                    choices, lkup, pwd, lng, height, label, action, gui)
                 fld.notify_form(gui_obj)
                 # self.flds_notified.append((fld, gui_obj))
                 if not fld.col_defn.allow_amend:
@@ -1214,10 +1218,11 @@ class Frame:
                 pwd = ''
                 height = None
                 label = None
+                action = None
 
                 gui_obj = gui_ctrl()
                 await gui_obj._ainit_(self, sub_fld, readonly, skip, reverse,
-                    choices, lkup, pwd, lng, height, label, subtype_gui)
+                    choices, lkup, pwd, lng, height, label, action, subtype_gui)
                 sub_fld.notify_form(gui_obj)
                 # self.flds_notified.append((sub_fld, gui_obj))
                 gui_obj.hidden = not active
