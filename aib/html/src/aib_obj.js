@@ -906,8 +906,7 @@ AibBool.prototype.got_focus = function(bool) {
 //  got_focus(bool);
   };
 AibBool.prototype.after_got_focus = function(bool) {
-  bool.style.border = '1px solid black';
-//  if (bool.frame.form.focus_from_server)
+  // bool.style.border = '1px solid black';
   if (bool.frame.err_flag)
     bool.className = 'error_background'
   else if (!bool.amendable())
@@ -930,7 +929,7 @@ AibBool.prototype.before_lost_focus = function(bool) {
   };
 AibBool.prototype.after_lost_focus = function(bool) {
   bool.className = 'blur_background';
-  bool.style.border = '1px solid darkgrey';
+  // bool.style.border = '1px solid black';
   bool.has_focus = false;
   };
 //AibBool.prototype.set_readonly = function(bool, state) {
@@ -1110,42 +1109,22 @@ AibBool.prototype.grid_chkbox_change = function(cell, row) {
   send_request('cell_cb_checked', args);
   grid.set_amended(true);
   };
-
-if (window.SVGSVGElement === undefined) {  // no svg - use vml (IE8)
-  document.namespaces.add('v','urn:schemas-microsoft-com:vml');
-  AibBool.prototype.draw_chk = function(bool) {
-    if (bool.firstChild)
-      bool.removeChild(bool.firstChild);
-    var line = document.createElement('v:polyline');
-    bool.appendChild(line);
-    line.points =
-      '4,8 5,8 5,10 6,10 6,11 6,10 7,10 7,9 8,9 8,8 9,8 9,7 10,7 10,6 11,6 11,5';
-    line.style.behavior = 'url(#default#VML)';
-    line.style.display = 'inline-block';
-    };
-  AibBool.prototype.draw_unchk = function(bool) {
-    if (bool.firstChild)
-      bool.removeChild(bool.firstChild);
-    };
-  }
-else {  // svg available - use it (the rest)
-  AibBool.prototype.draw_chk = function(bool) {
-    var svg = bool.firstChild;
-    if (svg.firstChild)
-      svg.removeChild(svg.firstChild);
-    var NS='http://www.w3.org/2000/svg';
-    var line = document.createElementNS(NS,'polyline')
-    svg.appendChild(line);
-    line.setAttributeNS(null, 'points',
-      '4,8 5,8 5,10 6,10 6,11 6,10 7,10 7,9 8,9 8,8 9,8 9,7 10,7 10,6 11,6 11,5');
-    line.setAttributeNS(null, 'fill', 'none');
-    line.setAttributeNS(null, 'stroke', 'black');
-    };
-  AibBool.prototype.draw_unchk = function(bool) {
-    var svg = bool.firstChild;
-    if (svg.firstChild)
-      svg.removeChild(svg.firstChild);
-    };
+AibBool.prototype.draw_chk = function(bool) {
+  var svg = bool.firstChild;
+  if (svg.firstChild)
+    svg.removeChild(svg.firstChild);
+  var NS='http://www.w3.org/2000/svg';
+  var line = document.createElementNS(NS,'polyline')
+  svg.appendChild(line);
+  line.setAttributeNS(null, 'points',
+    '4,8 5,8 5,10 6,10 6,11 6,10 7,10 7,9 8,9 8,8 9,8 9,7 10,7 10,6 11,6 11,5');
+  line.setAttributeNS(null, 'fill', 'none');
+  line.setAttributeNS(null, 'stroke', 'black');
+  };
+AibBool.prototype.draw_unchk = function(bool) {
+  var svg = bool.firstChild;
+  if (svg.firstChild)
+    svg.removeChild(svg.firstChild);
   };
 
 ////////////////////

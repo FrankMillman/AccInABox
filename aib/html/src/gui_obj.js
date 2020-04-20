@@ -695,7 +695,7 @@ function setup_bool(bool, label, json_elem) {
   bool.tabIndex = 0;
   bool.style.width = '16px';
   bool.style.height = '16px';
-  bool.style.border = '1px solid darkgrey';
+  bool.style.border = '1px solid black';
   bool.style.outline = '0px solid transparent';  // disable highlight on focus
 
   bool.onmousedown = function() {bool.mouse_down = true};
