@@ -1,10 +1,10 @@
-<form name="gl_ledg_periods" title="General ledger periods" before_start_form="
-  <<assign src=`'gl_per'` tgt=`_ctx.cursor_name`/>>
+<form name="in_ledger_periods" title="In ledger periods" before_start_form="
+  <<assign src=`'in_per'` tgt=`_ctx.cursor_name`/>>
   ">
 
   <db_objects>
     <db_obj name="adm_period" table_name="adm_periods"/>
-    <db_obj name="ledg_per" table_name="gl_ledger_periods"/>
+    <db_obj name="ledg_per" table_name="in_ledger_periods"/>
   </db_objects>
   <mem_objects>
     <mem_obj name="actions" descr="Possible actions"
@@ -20,7 +20,7 @@
       <mem_col col_name="action" data_type="TEXT" short_descr="Action"
         long_descr="Action" col_head="Action" allow_null="true" allow_amend="true"/>
     </mem_obj>
-    <mem_obj name="var" descr="Form variables" module_id="gl">
+    <mem_obj name="var" descr="Form variables" module_id="in">
       <mem_col col_name="module_id" data_type="TEXT" short_descr="Module id"
         long_descr="Module id"/>
       <mem_col col_name="module_descr" data_type="TEXT" short_descr="Module descr"
