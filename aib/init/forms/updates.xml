@@ -274,6 +274,7 @@
           <label value="Split source?"/>
           <input obj_name="updates" col_name="split_src"/>
 
+          <block/>
           <subtype_frame subtype_obj="updates" subtype_col="split_src">
 
             <subtype_body subtype_id="False">

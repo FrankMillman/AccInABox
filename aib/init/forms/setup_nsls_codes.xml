@@ -35,6 +35,7 @@
           <label value="Type:"/>
           <col/>
           <input obj_name="nsls_code" col_name="code_type" radio="true"/>
+          <block/>
           <subtype_frame subtype_obj="nsls_code" subtype_col="code_type" lng="150">
 
             <subtype_body subtype_id="group">

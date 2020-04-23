@@ -9,7 +9,7 @@
         long_descr="Form name" col_head="Name"/>
       <mem_col col_name="title" data_type="TEXT" short_descr="Title"
         long_descr="Form title" col_head="Title"/>
-      <mem_col col_name="methods_xml" data_type="SXML" short_descr="Methods xml"
+      <mem_col col_name="methods_xml" data_type="XML" short_descr="Methods xml"
         long_descr="Methods xml" allow_amend="true"/>
       <mem_col col_name="method_template" data_type="TEXT" short_descr="Method template"
         long_descr="Template for frame methods" allow_null="true" allow_amend="true" max_len="120"/>
@@ -67,8 +67,8 @@
       </grid>
       <vbox_end/>
     </body>
-    <button_row template="Setup_Form"/>
-    <frame_methods template="Setup_Form">
+    <button_row template="Setup_Form_Single"/>
+    <frame_methods template="Setup_Form_Single">
       <method name="on_start_frame" action="
         <<pyfunc name=`custom.formdefn_funcs.load_methods`/>>
       "/>

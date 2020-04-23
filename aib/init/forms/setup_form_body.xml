@@ -10,7 +10,7 @@
         long_descr="Form name" col_head="Name"/>
       <mem_col col_name="title" data_type="TEXT" short_descr="Title"
         long_descr="Form title" col_head="Title"/>
-      <mem_col col_name="body_xml" data_type="SXML" short_descr="Body xml"
+      <mem_col col_name="body_xml" data_type="XML" short_descr="Body xml"
         long_descr="Body xml" col_head="Defn" allow_amend="true"/>
     </mem_obj>
 
@@ -64,7 +64,7 @@
       -->
       <mem_col col_name="descr" col_type="virt" data_type="TEXT"
         short_descr="Description" long_descr="Description" col_head="Description"/>
-      <mem_col col_name="elem" data_type="SXML" short_descr="Xml element"
+      <mem_col col_name="elem" data_type="XML" short_descr="Xml element"
         long_descr="Xml element" allow_amend="true"/>
       <mem_col col_name="type" data_type="TEXT" short_descr="Type"
         long_descr="Gui object type" col_head="Type" max_len="20"/>
@@ -168,34 +168,15 @@
     </mem_obj>
 
     <mem_obj name="grid_vars" descr="Variables used in grid setup" parent="body">
-<!--
-      <mem_col col_name="data_object" data_type="TEXT" short_descr="Data object"
-        long_descr="Data object" allow_amend="true"/>
-      <mem_col col_name="obj_descr" data_type="TEXT" short_descr="Object description"
-        long_descr="Object description" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="growable" data_type="BOOL" short_descr="Growable"
-        long_descr="Growable" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="num_grid_rows" data_type="INT" short_descr="Number of rows"
-        long_descr="Number of grid rows" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="cursor_name" data_type="TEXT" short_descr="Cursor name"
-        long_descr="Name of database cursor" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
-        long_descr="Form name for formview" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="auto_start" data_type="BOOL" short_descr="Always start row?"
-        long_descr="Set to false to *not* start row on start_frame"
-        allow_null="true" allow_amend="true" dflt_val="true"/>
-      <mem_col col_name="auto_startrow" data_type="BOOL" short_descr="Used in setup_periods?"
-        long_descr="Used in setup_periods - investigate" allow_null="true" allow_amend="true"/>
--->
-      <mem_col col_name="toolbar_xml" data_type="SXML" short_descr="Toolbar xml"
+      <mem_col col_name="toolbar_xml" data_type="XML" short_descr="Toolbar xml"
         long_descr="Toolbar xml" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="columns_xml" data_type="SXML" short_descr="Cursor columns"
+      <mem_col col_name="columns_xml" data_type="XML" short_descr="Cursor columns"
         long_descr="Cursor columns" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="filter_xml" data_type="SXML" short_descr="Cursor filter"
+      <mem_col col_name="filter_xml" data_type="XML" short_descr="Cursor filter"
         long_descr="Cursor filter" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="sequence_xml" data_type="SXML" short_descr="Cursor sequence"
+      <mem_col col_name="sequence_xml" data_type="XML" short_descr="Cursor sequence"
         long_descr="Cursor sequence" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="methods_xml" data_type="SXML" short_descr="Methods xml"
+      <mem_col col_name="methods_xml" data_type="XML" short_descr="Methods xml"
         long_descr="Methods xml" allow_null="true" allow_amend="true"/>
     </mem_obj>
 
@@ -204,13 +185,13 @@
         long_descr="Main object" allow_null="true" allow_amend="true"/>
       <mem_col col_name="obj_descr" data_type="TEXT" short_descr="Object description"
         long_descr="Object description" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="methods_xml" data_type="SXML" short_descr="Methods xml"
+      <mem_col col_name="methods_xml" data_type="XML" short_descr="Methods xml"
         long_descr="Methods xml" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="body_xml" data_type="SXML" short_descr="Body xml"
+      <mem_col col_name="body_xml" data_type="XML" short_descr="Body xml"
         long_descr="Body xml" allow_amend="true"/>
-      <mem_col col_name="toolbar_xml" data_type="SXML" short_descr="Toolbar xml"
+      <mem_col col_name="toolbar_xml" data_type="XML" short_descr="Toolbar xml"
         long_descr="Toolbar xml" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="buttonrow_xml" data_type="SXML" short_descr="Button row xml"
+      <mem_col col_name="buttonrow_xml" data_type="XML" short_descr="Button row xml"
         long_descr="Button row xml" allow_null="true" allow_amend="true"/>
     </mem_obj>
 
@@ -221,13 +202,13 @@
         long_descr="Object description" allow_null="true" allow_amend="true"/>
       <mem_col col_name="combo_type" data_type="TEXT" short_descr="Combo type"
         long_descr="Combo type - group/member" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="methods_xml" data_type="SXML" short_descr="Methods xml"
+      <mem_col col_name="methods_xml" data_type="XML" short_descr="Methods xml"
         long_descr="Methods xml" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="body_xml" data_type="SXML" short_descr="Body xml"
+      <mem_col col_name="body_xml" data_type="XML" short_descr="Body xml"
         long_descr="Body xml" allow_amend="true"/>
-      <mem_col col_name="toolbar_xml" data_type="SXML" short_descr="Toolbar xml"
+      <mem_col col_name="toolbar_xml" data_type="XML" short_descr="Toolbar xml"
         long_descr="Toolbar xml" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="buttonrow_xml" data_type="SXML" short_descr="Button row xml"
+      <mem_col col_name="buttonrow_xml" data_type="XML" short_descr="Button row xml"
         long_descr="Button row xml" allow_null="true" allow_amend="true"/>
     </mem_obj>
 
@@ -243,7 +224,7 @@
     <mem_obj name="subtypes" descr="Variables used per sub_type" parent="subtype_vars">
       <mem_col col_name="subtype_id" data_type="TEXT" short_descr="Subtype id"
         long_descr="Subtype id" col_head="Value" key_field="A"/>
-      <mem_col col_name="body_xml" data_type="SXML" short_descr="Body xml"
+      <mem_col col_name="body_xml" data_type="XML" short_descr="Body xml"
         long_descr="Body xml" col_head="Panel" allow_amend="true"/>
     </mem_obj>
 
@@ -739,8 +720,8 @@
       </grid_frame>
 
     </body>
-    <button_row template="Setup_Form"/>
-    <frame_methods template="Setup_Form">
+    <button_row template="Setup_Form_Single"/>
+    <frame_methods template="Setup_Form_Single">
       <method name="on_start_frame" action="
         <<pyfunc name=`custom.formdefn_funcs.load_body`/>>
       "/>
@@ -905,8 +886,8 @@
         </grid_frame>
 
      </body>
-      <button_row template="Setup_Form"/>
-      <frame_methods template="Setup_Form"/>
+      <button_row template="Setup_Form_Single"/>
+      <frame_methods template="Setup_Form_Single"/>
     </frame>
   </inline_form>
 </form>

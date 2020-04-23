@@ -8,7 +8,7 @@
         long_descr="Process id" col_head="Id"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
         long_descr="Description" col_head="Descr"/>
-      <mem_col col_name="dbobj_xml" data_type="SXML" short_descr="Db objects xml"
+      <mem_col col_name="dbobj_xml" data_type="XML" short_descr="Db objects xml"
         long_descr="Db objects xml" allow_amend="true"/>
     </mem_obj>
 

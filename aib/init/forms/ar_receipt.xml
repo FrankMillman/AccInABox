@@ -15,7 +15,7 @@
   <output_params/>
 
   <frame main_object="ar_rct">
-    <toolbar template="Transaction"/>
+    <toolbar/>
     <body>
       <block/>
       <panel/>

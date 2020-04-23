@@ -87,6 +87,7 @@
       <grid_frame main_object="ar_ledg_per">
         <toolbar/>
         <body>
+          <block/>
           <subtype_frame subtype_obj="actions" subtype_col="action">
 
             <subtype_body subtype_id="no_period">

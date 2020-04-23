@@ -87,6 +87,7 @@
         <toolbar/>
         <body>
 
+          <block/>
           <subtype_frame subtype_obj="actions" subtype_col="action">
 
             <subtype_body subtype_id="no_action">

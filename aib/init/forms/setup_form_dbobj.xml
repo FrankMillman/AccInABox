@@ -8,7 +8,7 @@
         long_descr="Form name" col_head="Name"/>
       <mem_col col_name="title" data_type="TEXT" short_descr="Title"
         long_descr="Form title" col_head="Title"/>
-      <mem_col col_name="dbobj_xml" data_type="SXML" short_descr="Db objects xml"
+      <mem_col col_name="dbobj_xml" data_type="XML" short_descr="Db objects xml"
         long_descr="Db objects xml" allow_amend="true"/>
     </mem_obj>
 

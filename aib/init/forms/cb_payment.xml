@@ -105,6 +105,7 @@
           <col/>
           <input obj_name="cb_pmt_det" col_name="line_type" radio="true"/>
 
+          <block/>
           <subtype_frame subtype_obj="cb_pmt_det" subtype_col="line_type">
 
             <subtype_body subtype_id="isls">

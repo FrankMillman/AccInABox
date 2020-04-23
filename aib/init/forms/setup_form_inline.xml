@@ -15,13 +15,13 @@
         long_descr="Main object" allow_null="true" allow_amend="true"/>
       <mem_col col_name="obj_descr" data_type="TEXT" short_descr="Object description"
         long_descr="Object description" allow_null="true" allow_amend="true"/>
-      <mem_col col_name="toolbar_xml" data_type="SXML" short_descr="Toolbar xml"
+      <mem_col col_name="toolbar_xml" data_type="XML" short_descr="Toolbar xml"
         long_descr="Toolbar xml"/>
-      <mem_col col_name="buttonrow_xml" data_type="SXML" short_descr="Button row xml"
+      <mem_col col_name="buttonrow_xml" data_type="XML" short_descr="Button row xml"
         long_descr="Button row xml"/>
-      <mem_col col_name="methods_xml" data_type="SXML" short_descr="Methods xml"
+      <mem_col col_name="methods_xml" data_type="XML" short_descr="Methods xml"
         long_descr="Methods xml" allow_amend="true"/>
-      <mem_col col_name="body_xml" data_type="SXML" short_descr="Body xml"
+      <mem_col col_name="body_xml" data_type="XML" short_descr="Body xml"
         long_descr="Body xml" allow_amend="true"/>
     </mem_obj>
 

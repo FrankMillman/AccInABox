@@ -23,6 +23,7 @@
           <label value="Type:"/>
           <col/>
           <input obj_name="pmt_code" col_name="code_type" radio="true"/>
+          <block/>
           <subtype_frame subtype_obj="pmt_code" subtype_col="code_type" lng="150">
 
             <subtype_body subtype_id="group">

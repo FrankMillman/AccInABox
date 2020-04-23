@@ -1672,6 +1672,7 @@ DATA_TYPES = {
     'DTM'  :DateTime,
     'BOOL' :Boolean,
     'JSON' :Json,
+    'XML'  :Xml,
     'FXML' :FormXml,
     'PXML' :ProcessXml,
     'RXML' :ReportXml,

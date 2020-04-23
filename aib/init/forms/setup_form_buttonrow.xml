@@ -9,7 +9,7 @@
         long_descr="Form name" col_head="Name"/>
       <mem_col col_name="title" data_type="TEXT" short_descr="Title"
         long_descr="Form title" col_head="Title"/>
-      <mem_col col_name="buttonrow_xml" data_type="SXML" short_descr="Button row xml"
+      <mem_col col_name="buttonrow_xml" data_type="XML" short_descr="Button row xml"
         long_descr="Button row xml" allow_amend="true"/>
      <mem_col col_name="btn_template" data_type="TEXT" short_descr="Button row template"
         long_descr="Button row template" allow_null="true" allow_amend="true"/>

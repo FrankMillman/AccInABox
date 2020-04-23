@@ -112,6 +112,7 @@
           <label value="Role type:"/>
           <col/>
           <input obj_name="role" col_name="role_type" lng="120"/>
+          <block/>
           <subtype_frame subtype_obj="role" subtype_col="role_type">
 
             <subtype_body subtype_id="0">

@@ -11,7 +11,7 @@
         long_descr="Form name" col_head="Name"/>
       <mem_col col_name="title" data_type="TEXT" short_descr="Title"
         long_descr="Form title" col_head="Title"/>
-      <mem_col col_name="toolbar_xml" data_type="SXML" short_descr="Toolbar xml"
+      <mem_col col_name="toolbar_xml" data_type="XML" short_descr="Toolbar xml"
         long_descr="Toolbar xml" allow_amend="true"/>
       <mem_col col_name="tb_template" data_type="TEXT" short_descr="Toolbar template"
         long_descr="Toolbar template" allow_null="true" allow_amend="true"/>

@@ -201,8 +201,10 @@ cols.append ({
             ['BOOL', 'True/False'],
             ['AUTO', 'Generated key'],
             ['JSON', 'Json'],
-            ['SXML', 'Xml'],
+            ['XML', 'Xml'],
+            ['SXML', 'Xml string'],
             ['FXML', 'Form definition'],
+            ['RXML', 'Report definition'],
             ['PXML', 'Process definition'],
         ],
     })

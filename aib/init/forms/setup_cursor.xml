@@ -39,9 +39,6 @@
       <mem_col col_name="skip" data_type="BOOL" short_descr="Skip?"
         long_descr="Skip field?" col_head="Skip?"
         allow_null="true" allow_amend="true" dflt_val='false'/>
-      <mem_col col_name="reverse" data_type="BOOL" short_descr="Reverse?"
-        long_descr="Reverse sign? (numeric only)" col_head="Rev?"
-        allow_null="true" allow_amend="true" dflt_val='false'/>
       <mem_col col_name="before" data_type="SXML" short_descr="Before input"
         long_descr="Action to take before input" col_head="Before"
         allow_null="true" allow_amend="true"/>
@@ -127,7 +124,6 @@
           <cur_col col_name="expand" lng="40"/>
           <cur_col col_name="readonly" lng="40"/>
           <cur_col col_name="skip" lng="40"/>
-          <!-- cur_col col_name="reverse" lng="40"/ -->
           <cur_col col_name="before" lng="100"/>
           <cur_col col_name="dflt_val" lng="100"/>
           <cur_col col_name="validation" lng="100"/>

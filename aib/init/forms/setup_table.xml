@@ -180,6 +180,7 @@
           <row/>
           <col/>
           <input obj_name="var" col_name="own_defn" radio="true"/>
+          <block/>
           <subtype_frame subtype_obj="var" subtype_col="own_defn">
 
             <subtype_body subtype_id="Y">

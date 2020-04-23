@@ -23,10 +23,10 @@
       <mem_col col_name="param" data_type="TEXT" short_descr="Parameter"
         long_descr="Parameter name" allow_amend="true"/>
       <mem_col col_name="test" data_type="TEXT" short_descr="Test"
-        long_descr="Test" allow_amend="true"
+        long_descr="Test" allow_amend="true" dflt_val="is_"
         choices="[[`is_`, `Is`], [`is_not`, `Is not`]]"/>
       <mem_col col_name="value" data_type="TEXT" short_descr="Value"
-        long_descr="Value" allow_amend="true"
+        long_descr="Value" allow_amend="true" dflt_val="True"
         choices="[[`True`, `True`], [`False`, `False`], [`None`, `None`]]"/>
     </mem_obj>
 
@@ -36,10 +36,10 @@
       <mem_col col_name="name" data_type="TEXT" short_descr="Parameter name"
         long_descr="Parameter name" allow_amend="true"/>
       <mem_col col_name="test" data_type="TEXT" short_descr="Test"
-        long_descr="Test" allow_amend="true"
+        long_descr="Test" allow_amend="true" dflt_val="is_"
         choices="[[`is_`, `Is`], [`is_not`, `Is not`]]"/>
       <mem_col col_name="value" data_type="TEXT" short_descr="Value"
-        long_descr="Value" allow_amend="true"
+        long_descr="Value" allow_amend="true" dflt_val="True"
         choices="[[`True`, `True`], [`False`, `False`], [`None`, `None`]]"/>
     </mem_obj>
 
@@ -267,6 +267,8 @@
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
         <<pyfunc name=`custom.column_setup.on_start_frame`/>>
+        <<init_obj obj_name=`amend`/>>
+        <<init_obj obj_name=`calc`/>>
         <<case>>
           <<compare src=`var.allow_amend` op=`eq` tgt=`'cond'`>>
             <<change_button>>
@@ -321,8 +323,8 @@
         <col/>
         <input obj_name="amend" col_name="value" lng="60"/>
       </body>
-      <button_row template="Setup_Form"/>
-      <frame_methods template="Setup_Form">
+      <button_row template="Setup_Form_Single"/>
+      <frame_methods template="Setup_Form_Single">
       </frame_methods>
     </frame>
   </inline_form>
@@ -354,8 +356,8 @@
         <col/>
         <input obj_name="calc" col_name="value" lng="60"/>
       </body>
-      <button_row template="Setup_Form"/>
-      <frame_methods template="Setup_Form">
+      <button_row template="Setup_Form_Single"/>
+      <frame_methods template="Setup_Form_Single">
       </frame_methods>
     </frame>
   </inline_form>

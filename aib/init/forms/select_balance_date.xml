@@ -39,6 +39,7 @@
       <col/>
       <input obj_name="var" col_name="select_method" radio="true"/>
 
+      <block/>
       <subtype_frame subtype_obj="var" subtype_col="select_method">
 
         <subtype_body subtype_id="P">

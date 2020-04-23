@@ -69,8 +69,7 @@
             <<return state=`cancelled`/>>
           <</on_return>>
         <</sub_form>>
-      <<!-- /action -->>"
-      validation="
+      " validation="
           <<validation>>
             <<case>>
               <<compare src=`user.password` op=`is not` tgt=`$None`/>>
@@ -80,6 +79,7 @@
             <</case>>
           <</validation>>
         "/>
+      <block/>
       <subtype_frame subtype_obj="user" subtype_col="user_type"/>
       <block/>
       <grid data_object="user_comp_view" growable="false" num_grid_rows="5">

@@ -9,7 +9,7 @@
     </mem_obj>
 
     <mem_obj name="bpmn_defn" descr="BPMN definition components">
-      <mem_col col_name="bpmn_xml" data_type="SXML" short_descr="Bpmn defn xml" long_descr="Bpmn definition xml"
+      <mem_col col_name="bpmn_xml" data_type="XML" short_descr="Bpmn defn xml" long_descr="Bpmn definition xml"
         allow_amend="true"/>
     </mem_obj>
 

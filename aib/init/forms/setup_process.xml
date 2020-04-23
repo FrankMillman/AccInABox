@@ -30,11 +30,16 @@
     </mem_obj>
 
     <mem_obj name="proc_vars" descr="Variables used in form" parent="proc">
-      <mem_col col_name="dbobj_xml" data_type="SXML" short_descr="Db objects xml" long_descr="Db objects xml"/>
-      <mem_col col_name="memobj_xml" data_type="SXML" short_descr="Mem objects xml" long_descr="Mem objects xml"/>
-      <mem_col col_name="inputs_xml" data_type="SXML" short_descr="Input params xml" long_descr="Input params xml" allow_amend="true"/>
-      <mem_col col_name="outputs_xml" data_type="SXML" short_descr="Output params xml" long_descr="Output params xml" allow_amend="true"/>
-      <mem_col col_name="bpmn_xml" data_type="SXML" short_descr="Bpmn defn xml" long_descr="Bpmn definition xml" allow_amend="true"/>
+      <mem_col col_name="dbobj_xml" data_type="XML" short_descr="Db objects xml"
+        long_descr="Db objects xml"/>
+      <mem_col col_name="memobj_xml" data_type="XML" short_descr="Mem objects xml"
+        long_descr="Mem objects xml"/>
+      <mem_col col_name="inputs_xml" data_type="XML" short_descr="Input params xml"
+        long_descr="Input params xml" allow_amend="true"/>
+      <mem_col col_name="outputs_xml" data_type="XML" short_descr="Output params xml"
+        long_descr="Output params xml" allow_amend="true"/>
+      <mem_col col_name="bpmn_xml" data_type="XML" short_descr="Bpmn defn xml"
+        long_descr="Bpmn definition xml" allow_amend="true"/>
     </mem_obj>
 
   </mem_objects>

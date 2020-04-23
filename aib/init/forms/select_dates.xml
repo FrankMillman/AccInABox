@@ -66,6 +66,7 @@
     <col/>
     <input obj_name="var" col_name="own_dates" lng="200"/>
 
+    <block/>
     <subtype_frame subtype_obj="var" subtype_col="own_dates">
 
       <subtype_body subtype_id="N">

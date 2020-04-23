@@ -8,7 +8,7 @@
         long_descr="Form name" col_head="Name"/>
       <mem_col col_name="title" data_type="TEXT" short_descr="Title"
         long_descr="Form title" col_head="Title"/>
-      <mem_col col_name="memobj_xml" data_type="SXML" short_descr="Mem objects xml"
+      <mem_col col_name="memobj_xml" data_type="XML" short_descr="Mem objects xml"
         long_descr="Mem objects xml" allow_amend="true"/>
     </mem_obj>
 
@@ -47,7 +47,7 @@
         choices="[[`TEXT`, `Text`], [`PWD`, `Password`], [`INT`, `Integer`], [`DEC`, `Decimal`],
         [`DCRV`, `Decimal reversible`], [`DTE`, `Date`], [`DTM`, `Date-time`],
         [`BOOL`, `True/False`], [`JSON`, `Json`], [`XML`, `Xml`], [`SXML`, `Xml string`],
-        [`FXML`, `Form definition`], [`PXML`, `Process definition`]]"/>
+        [`FXML`, `Form definition`], [`RXML`, `Report definition`], [`PXML`, `Process definition`]]"/>
       <mem_col col_name="short_descr" data_type="TEXT" short_descr="Short description"
         long_descr="Short description" col_head="Description" allow_amend="true" max_len="30"/>
       <mem_col col_name="long_descr" data_type="TEXT" short_descr="Long description"

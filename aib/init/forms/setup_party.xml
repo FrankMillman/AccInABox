@@ -81,6 +81,7 @@
       <nb_start/>
 
       <nb_page nb_label="Details"/>
+      <block/>
       <subtype_frame subtype_obj="party" subtype_col="party_type"/>
 
       <nb_page nb_label="Addresses"/>
@@ -102,6 +103,7 @@
       <grid_frame main_object="mem_addr">
         <toolbar/>
         <body>
+          <block/>
           <subtype_frame subtype_obj="mem_addr" subtype_col="address_type"/>
         </body>
         <button_row template="Grid_Frame_Grid_RO"/>

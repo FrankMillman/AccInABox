@@ -23,6 +23,7 @@
           <label value="Option type:"/>
           <col/>
           <input obj_name="menu" col_name="opt_type" lng="120"/>
+          <block/>
           <subtype_frame subtype_obj="menu" subtype_col="opt_type" lng="150"/>
         </body>
         <button_row template="Tree_Frame"/>

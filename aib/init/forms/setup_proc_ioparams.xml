@@ -9,9 +9,9 @@
         long_descr="Process id" col_head="Id"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
         long_descr="Description" col_head="Descr"/>
-      <mem_col col_name="inputs_xml" data_type="SXML" short_descr="Input params xml"
+      <mem_col col_name="inputs_xml" data_type="XML" short_descr="Input params xml"
         long_descr="Input params xml" allow_amend="true"/>
-      <mem_col col_name="outputs_xml" data_type="SXML" short_descr="Output params xml"
+      <mem_col col_name="outputs_xml" data_type="XML" short_descr="Output params xml"
         long_descr="Output params xml" allow_amend="true"/>
     </mem_obj>
 
