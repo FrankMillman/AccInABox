@@ -1187,9 +1187,10 @@ function setup_form(args) {
         save_frames.push(frame);
         save_blocks.push(block);
 
-        var subtype_div = document.createElement('div');
+        var subtype_div = document.createElement('span');
+        subtype_div.style.display = 'inline-block';
         subtype_div.style.marginTop = '10px';
-        page.appendChild(subtype_div);
+        block.appendChild(subtype_div);
 
         subtype_div.style.border = '1px solid lightgrey';
 

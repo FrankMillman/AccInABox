@@ -248,31 +248,6 @@ function zfill(n, w){
   return (pad+n).slice(-pad.length);
   };
 
-function random_string(lng) {
-  var text = '';
-  var possible = 'abcdefghijklmnopqrstuvwxyz';
-//  for (var i=0; i<lng; i++)
-  while (lng--)
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  return text;
-  };
-
-function repeat(c, n) {
-  var s = '';
-//  for (var i=0; i<n; i++)
-  while (n--)
-    s += c;
-  return s;
-  };
-
-function blank(n) {
-  var blank = '';
-//  for (var i=0; i<n; i++)
-  while (n--)
-    blank += '\xa0';
-  return blank;
-  };
-
 function html_esc(s) {
   // this works, but the other one is easier to understand
   //var pre = document.createElement('pre');
