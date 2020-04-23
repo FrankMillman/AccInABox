@@ -356,6 +356,8 @@ function create_grid_input(col_span, col_defn, cell) {
     cell.style.overflow = 'hidden';
     cell.style.textOverflow = 'ellipsis';
     cell.style.whiteSpace = 'nowrap';
+    if (col_defn.clickable)
+      cell.style.textDecoration = 'underline';
 
 //    var txt = document.createElement('span');
 //    cell.appendChild(txt);

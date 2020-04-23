@@ -285,6 +285,7 @@
       <xs:attribute name="start_val"/>
       <xs:attribute name="header_row"/>
       <xs:attribute name="footer_row"/>
+      <xs:attribute name="assert_tots"/>
       <xs:attribute name="running_balance"/>
       <xs:attribute name="auto_start" type="xs:boolean"/>
       <xs:attribute name="auto_startrow" type="xs:boolean"/>
@@ -310,11 +311,11 @@
       <xs:attribute name="expand" type="xs:boolean"/>
       <xs:attribute name="readonly" type="xs:boolean"/>
       <xs:attribute name="skip" type="xs:boolean"/>
-      <!-- xs:attribute name="reverse" type="xs:boolean"/ -->
       <xs:attribute name="before"/>
       <xs:attribute name="default"/>
       <xs:attribute name="validation"/>
       <xs:attribute name="after"/>
+      <xs:attribute name="action"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="cur_btn">
@@ -431,7 +432,7 @@
   </xs:element>
   <xs:element name="subtype_body">
     <xs:complexType>
-      <xs:group ref="body_elements" maxOccurs="unbounded"/>
+      <xs:group ref="body_elements" minOccurs="0" maxOccurs="unbounded"/>
       <xs:attribute name="subtype_id" use="required"/>
     </xs:complexType>
   </xs:element>

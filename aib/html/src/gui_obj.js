@@ -868,6 +868,7 @@ function setup_radio(radio, json_elem) {
     button.radio = radio;
 
     button.onclick = function(e) {
+      if (this.radio.frame.form.disable_count) return false;
       if (this.pos !== this.radio.ndx)
         this.radio.aib_obj.onselection(this.radio, this.pos);
       };
@@ -1219,6 +1220,7 @@ function create_button(frame, json_elem) {
   button.onmouseup = function() {button.mouse_down = false};
 
   button.onfocus = function() {
+    if (button.frame.form.disable_count) return false;
     //debug3(button.label.data + ' on focus');
     if (button.readonly)
       button.style.background = button.bg_disabled;

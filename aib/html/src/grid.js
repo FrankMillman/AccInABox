@@ -457,7 +457,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       hdr_col.style.borderRight = '1px solid darkgrey';
       if (i === 0)
         hdr_col.style.borderLeft = '1px solid darkgrey';
-      hdr_col.style.width = col_defn.lng + 'px';
+      hdr_col.style.width = (col_defn.lng + btn_lng) + 'px';
       hdr_col.style.height = '17px';
       hdr_col.style.background = 'rgb(235, 235, 235)';
       };
@@ -489,7 +489,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       ftr_col.style.borderRight = '1px solid darkgrey';
       if (i === 0)
         ftr_col.style.borderLeft = '1px solid darkgrey';
-      ftr_col.style.width = col_defn.lng + 'px';
+      ftr_col.style.width = (col_defn.lng + btn_lng) + 'px';
       ftr_col.style.height = '17px';
       ftr_col.style.background = 'rgb(235, 235, 235)';
       };
@@ -591,6 +591,14 @@ if (grid.header_row.length) {
 
       cell.onclick = function(e) {
 
+        if (this.style.textDecoration === 'underline') {
+          if (grid.frame.form.disable_count) return false;
+            var args = [this.input.ref, (this.grid_row + grid.first_grid_row)];
+            send_request('clicked', args);
+          if (this.grid_row !== grid.active_row || this.grid_col !== grid.active_col)
+            grid.req_cell_focus((grid.first_grid_row + this.grid_row), this.grid_col);
+          return;
+          };
         //debug3('click ' + grid.ref + ' ' + (grid.first_grid_row + this.grid_row)
         //  + '/' + this.grid_col);
 
@@ -611,6 +619,10 @@ if (grid.header_row.length) {
           var input = grid.obj_list[grid.active_col];
             input.end_edit(true, true);
           };
+
+        if (this.grid_row === grid.active_row)
+          if (this.grid_col === grid.active_col)
+            return;
 
         grid.req_cell_focus((grid.first_grid_row + this.grid_row), this.grid_col);
         };
@@ -1704,7 +1716,15 @@ if (grid.header_row.length) {
 
   grid.handle_enter = function() {
 
+    var cell = grid.active_cell;
     var input = grid.obj_list[grid.active_col];
+    if (cell.style.textDecoration === 'underline') {
+      if (grid.frame.form.disable_count) return false;
+      var args = [input.ref, (cell.grid_row + grid.first_grid_row)];
+      send_request('clicked', args);
+      return;
+      };
+
     if (input.can_handle_enter) {  // i.e. sxml - uses <enter> to open popup
       input.edit_cell(grid.active_cell);
       return;

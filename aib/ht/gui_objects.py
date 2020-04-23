@@ -15,7 +15,7 @@ DATE_DISPLAY = '%d-%m-%Y'
 #----------------------------------------------------------------------------
 
 class GuiCtrl:
-    async def _ainit_(self, parent, fld, readonly):
+    async def _ainit_(self, parent, fld, readonly, action):
 
         # self.frame = frame
         # self.form = frame.form
@@ -24,6 +24,7 @@ class GuiCtrl:
         # self.root_id = form.root_id
         # self.form_id = form.form_id
         self.readonly = readonly
+        self.action = action
         self.col_name = fld.col_name
         self.descr = fld.col_defn.short_descr
         self.must_validate = True
@@ -277,8 +278,8 @@ class GuiCtrl:
 
 class GuiTextCtrl(GuiCtrl):
     async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
-            pwd, lng, height, label, gui, grid=False):
-        await GuiCtrl._ainit_(self, parent, fld, readonly)
+            pwd, lng, height, label, action, gui, grid=False):
+        await GuiCtrl._ainit_(self, parent, fld, readonly, action)
         self.pwd = pwd
 
         if lng != 0:  # if 0, do not create a gui object
@@ -296,15 +297,16 @@ class GuiTextCtrl(GuiCtrl):
                 'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
                 'allow_amend': fld.col_defn.allow_amend, 'password': self.pwd,
                 'readonly': readonly, 'skip': skip, 'amend_ok': self.amend_ok,
-                'lkup': lkup, 'choices': choices, 'height': height, 'value': value}
+                'lkup': lkup, 'choices': choices, 'height': height, 'value': value,
+                'clickable': (action is not None)}
             gui.append(('input', input))
         else:
             self.readonly = True
 
 class GuiNumCtrl(GuiCtrl):
     async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
-            pwd, lng, height, label, gui, grid=False):
-        await GuiCtrl._ainit_(self, parent, fld, readonly)
+            pwd, lng, height, label, action, gui, grid=False):
+        await GuiCtrl._ainit_(self, parent, fld, readonly, action)
         if lng != 0:
             value = None if grid else await fld.val_to_str()
 
@@ -323,15 +325,16 @@ class GuiNumCtrl(GuiCtrl):
                 'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly, 'choices': choices,
                 'skip': skip, 'amend_ok': self.amend_ok, 'reverse': reverse,
                 'value': value, 'integer': (fld.col_defn.data_type == 'INT'),
-                'max_decimals': fld.col_defn.db_scale, 'neg_display': NEG_DISPLAY}
+                'max_decimals': fld.col_defn.db_scale, 'neg_display': NEG_DISPLAY,
+                'clickable': (action is not None)}
             gui.append(('input', input))
         else:
             self.readonly = True
 
 class GuiDateCtrl(GuiCtrl):
     async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
-            pwd, lng, height, label, gui, grid=False):
-        await GuiCtrl._ainit_(self, parent, fld, readonly)
+            pwd, lng, height, label, action, gui, grid=False):
+        await GuiCtrl._ainit_(self, parent, fld, readonly, action)
         if lng != 0:
             value = None if grid else await fld.val_to_str()
 
@@ -339,37 +342,38 @@ class GuiDateCtrl(GuiCtrl):
                 'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
                 'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly,
                 'skip': skip, 'amend_ok': self.amend_ok, 'value': value,
-                'input_format': DATE_INPUT, 'display_format': DATE_DISPLAY}
+                'input_format': DATE_INPUT, 'display_format': DATE_DISPLAY,
+                'clickable': (action is not None)}
             gui.append(('input', input))
         else:
             self.readonly = True
 
 class GuiBoolCtrl(GuiCtrl):
     async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
-            pwd, lng, height, label, gui, grid=False):
-        await GuiCtrl._ainit_(self, parent, fld, readonly)
+            pwd, lng, height, label, action, gui, grid=False):
+        await GuiCtrl._ainit_(self, parent, fld, readonly, action)
         if lng != 0:
             value = None if grid else await fld.val_to_str()
 
             input = {'type': 'bool', 'lng': lng, 'ref': self.ref, 'value': value,
                 'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
                 'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly,
-                'skip': skip, 'amend_ok': self.amend_ok}
+                'skip': skip, 'amend_ok': self.amend_ok, 'clickable': (action is not None)}
             gui.append(('input', input))
         else:
             self.readonly = True
 
 class GuiSxmlCtrl(GuiCtrl):
     async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
-            pwd, lng, height, label, gui, grid=False):
-        await GuiCtrl._ainit_(self, parent, fld, readonly)
+            pwd, lng, height, label, action, gui, grid=False):
+        await GuiCtrl._ainit_(self, parent, fld, readonly, action)
         if lng != 0:
             value = None if grid else await fld.val_to_str()
 
             input = {'type': 'sxml', 'lng': lng, 'ref': self.ref, 'value': value,
                 'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
                 'label': label, 'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly,
-                'skip': skip, 'amend_ok': self.amend_ok}
+                'skip': skip, 'amend_ok': self.amend_ok, 'clickable': (action is not None)}
             gui.append(('input', input))
         else:
             self.readonly = True

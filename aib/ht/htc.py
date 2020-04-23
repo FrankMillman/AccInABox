@@ -431,8 +431,8 @@ class ResponseHandler:
 
     async def on_clicked(self, args):
         ref = args.pop(0)  # remaining args (if any) are passed to on_clicked
-        button = self.session.get_obj(ref)
-        await button.parent.on_clicked(button, args)
+        obj = self.session.get_obj(ref)
+        await obj.parent.on_clicked(obj, args)
 
     async def on_navigate(self, args):
         frame_ref, nav_type = args
