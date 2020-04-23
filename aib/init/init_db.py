@@ -167,8 +167,7 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
             col['db_scale'],
             col['scale_ptr'],
             col['dflt_val'],
-            None if col['dflt_rule'] is None else etree.tostring(
-                etree.fromstring(col['dflt_rule'])),
+            col['dflt_rule'],
             None if col['col_checks'] is None else dumps(col['col_checks']),
             None if col['fkey'] is None else dumps(col['fkey']),
             None if col['choices'] is None else dumps(col['choices']),
@@ -316,8 +315,7 @@ async def setup_table(module, db_tbl, db_col, table_name):
         await db_col.setval('db_scale', col['db_scale'])
         await db_col.setval('scale_ptr', col['scale_ptr'])
         await db_col.setval('dflt_val', col['dflt_val'])
-        await db_col.setval('dflt_rule', None if col['dflt_rule'] is None else
-            from_string(col['dflt_rule']))
+        await db_col.setval('dflt_rule', col['dflt_rule'])
         await db_col.setval('col_checks', col['col_checks'])
         await db_col.setval('fkey', col['fkey'])
         await db_col.setval('choices', col['choices'])
@@ -342,21 +340,12 @@ async def setup_table(module, db_tbl, db_col, table_name):
         await db_col.setval('db_scale', virt.get('db_scale', 0))
         await db_col.setval('scale_ptr', virt.get('scale_ptr'))
         await db_col.setval('dflt_val', virt.get('dflt_val'))
-        await db_col.setval('dflt_rule', None if virt.get('dflt_rule') is None else
-            from_string(virt['dflt_rule']))
+        await db_col.setval('dflt_rule', virt.get('dflt_rule'))
         await db_col.setval('col_checks', None)
         await db_col.setval('fkey', virt.get('fkey'))
         await db_col.setval('choices', None)
         await db_col.setval('sql', virt.get('sql'))
         await db_col.save()
-
-def from_string(string):
-    lines = string.split('"')  # split on attributes
-    for pos, line in enumerate(lines):
-        if pos%2:  # every 2nd line is an attribute
-            lines[pos] = line.replace('<', '&lt;').replace('>', '&gt;')
-    string = '"'.join(lines)
-    return etree.fromstring(string)
 
 async def setup_cursor(module, db_tbl, db_cur, table_name):
     cursors = module.cursors
@@ -377,12 +366,7 @@ async def setup_actions(module, db_act, table_name):
         await db_act.init()
         await db_act.setval('table_name', table_name)
         for act, action in actions:
-            fld = await db_act.getfld(act)
-            data_type = fld.col_defn.data_type
-            if data_type == 'SXML':
-                await fld.setval(etree.fromstring('<_>{}</_>'.format(action)))
-            else:
-                await fld.setval(action)
+            await db_act.setval(act, action)
         await db_act.save()
 
 async def setup_fkeys(context, company):

@@ -31,7 +31,8 @@ async def literal(caller, obj, xml):
         value = False
 # problem with literal numeric value - this fixes it, but not fully thought through
 #   return value
-    return await obj.fld.str_to_val(value)
+    # return await obj.fld.str_to_val(value)
+    return await obj.fld.check_val(value)
 
 async def fld_val(caller, obj, xml):
     fld_name = xml.get('name')

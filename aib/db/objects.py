@@ -1065,7 +1065,8 @@ class DbObject:
                     fld._value = await fld.get_dflt(from_init=True)
                     fld._orig = fld._value
             elif col_defn.sql.startswith("'"):
-                fld._value = await fld.str_to_val(col_defn.sql[1:-1])
+                # fld._value = await fld.str_to_val(col_defn.sql[1:-1])
+                fld._value = await fld.check_val(col_defn.sql[1:-1])
                 fld._orig = fld._value
 
         for fld in self.fields.values():
@@ -1106,7 +1107,11 @@ class DbObject:
                             await ht.form_xml.exec_xml(caller, method)
             return
 
-        if not self.mem_obj and not self.exists:
+        # changed [2020-04-22] - implications?
+        # reason - e.g. in dbcols_setup inline form'calc', if 'undo changes',
+        #   tries to set all fields to orig (i.e. None), fails 'not null' validation
+        # if not self.mem_obj and not self.exists:
+        if not self.exists:
             await self.init(display=display, init_vals=self.init_vals)
             if display:
                 for caller_ref in list(self.on_clean_func.keyrefs()):
@@ -3531,7 +3536,7 @@ class Actions:
         'before_save', 'after_save', 'before_insert', 'after_insert', 'before_update',
         'after_update', 'before_delete', 'after_delete', 'before_post', 'after_commit', 'after_post')
 
-    xml = lambda x: (fromstring(x),)  # a one-element tuple
+    xml = lambda x: (fromstring(f'<_>{x}</_>'),)  # a one-element tuple
 
     iconv = (loads, loads, loads, loads, loads, loads, xml, xml, xml, xml, xml,
         xml, xml, xml, xml, xml, xml, xml, xml, xml, xml)

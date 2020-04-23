@@ -106,7 +106,8 @@ class GuiGrid:
                         cur_col.get('before'),
                         cur_col.get('dflt_val'),
                         cur_col.get('validation'),
-                        cur_col.get('after')]
+                        cur_col.get('after'),
+                        cur_col.get('action')]
                 elif cur_col.tag == 'cur_btn':
                     col = [
                         'cur_btn',
@@ -176,7 +177,7 @@ class GuiGrid:
             col_defn = columns[pos]
             if col_defn[0] == 'cur_col':
                 (col_name, lng, expand, readonly, skip, reverse, before,
-                    form_dflt, validation, after) = col_defn[1:]
+                    form_dflt, validation, after, *action) = col_defn[1:]
 
                 readonly = self.form.readonly or readonly  # form.readonly takes precedence
 
@@ -223,11 +224,19 @@ class GuiGrid:
                 height = None
                 label = None
 
+                if action == []:  # not in col_defn
+                    action = None
+                else:
+                    action = action[0]  # extract from slice - could be None
+                if action is not None:
+                    action = etree.fromstring(
+                        f'<_>{action}</_>', parser=parser)
+
                 gui_ctrl = ht.gui_objects.gui_ctrls[fld.col_defn.data_type]
                 gui_obj = gui_ctrl()
                 await gui_obj._ainit_(
                     self, fld, readonly, skip, reverse, choices, lkup, pwd,
-                    lng, height, label, gui_cols, grid=True)
+                    lng, height, label, action, gui_cols, grid=True)
 
                 if form_dflt is not None:
                     form_dflt = etree.fromstring(
@@ -283,6 +292,10 @@ class GuiGrid:
         else:
             footer_row = loads(footer_row)
 
+        self.assert_tots = element.get('assert_tots')
+        if self.assert_tots is not None:
+            self.assert_tots = loads(self.assert_tots)
+
         # defaults for header/footer columns
         readonly = True
         skip = False
@@ -293,6 +306,7 @@ class GuiGrid:
         lng = 1
         height = None
         label = None
+        action = None
 
         header_cols = []
         for header_col in header_row:
@@ -307,7 +321,7 @@ class GuiGrid:
                 gui_obj = gui_ctrl()
                 await gui_obj._ainit_(
                     self.parent, fld, readonly, skip, reverse, choices, lkup, pwd,
-                    lng, height, label, header_cols)
+                    lng, height, label, action, header_cols)
                 fld.notify_form(gui_obj)
 
         footer_cols = []
@@ -323,7 +337,7 @@ class GuiGrid:
                 gui_obj = gui_ctrl()
                 await gui_obj._ainit_(
                     self.parent, fld, readonly, skip, reverse, choices, lkup, pwd,
-                    lng, height, label, footer_cols)
+                    lng, height, label, action, footer_cols)
                 fld.notify_form(gui_obj)
 
         gui.append(('grid',
@@ -506,6 +520,23 @@ class GuiGrid:
                 parent_val = repr(parent_val)
             sub_filter.append((test, '', parent[0], '=', parent_val, ''))
             test = 'AND'  # in case there is another one
+
+        if self.assert_tots is not None:
+            srcs = [_[0] for _ in self.assert_tots]  # column names to be 'summed'
+            tgts = [_[1] for _ in self.assert_tots]  # 'total' col_names to assert against
+            conn = await db.connection._get_connection()
+            col_names = [f"SUM({src})" for src in srcs]
+            where = self.cursor_filter + sub_filter
+            order = []
+            cur = await conn.full_select(self.db_obj, col_names, where, order)
+            row = await cur.__anext__()
+            for src_val, tgt in zip(row, tgts):
+                obj_name, col_name = tgt.split('.')
+                tgt_obj = self.context.data_objects[obj_name]
+                tgt_val = await tgt_obj.getval(col_name)
+                if tgt_val != (src_val or 0):  # change None to 0 in case no rows exist
+                    raise AibError(head='Assertion Error',
+                        body=f'{tgt}: total = {tgt_val}, s/b {src_val}')
 
         await self.cursor.start_cursor(self.col_names, self.cursor_filter+sub_filter,
             self.cursor_sequence, param)

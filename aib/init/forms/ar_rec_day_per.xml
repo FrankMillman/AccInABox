@@ -1,0 +1,73 @@
+<form name="ar_rec_day_per" title="Ar rec day tots for period" before_start_form="
+  <<pyfunc name=`custom.arcust_funcs.setup_rec_day_per`/>>
+  ">
+  <db_objects/>
+  <mem_objects>
+    <mem_obj name="var" descr="Variables used in form">
+      <mem_col col_name="op_date" data_type="DTE" short_descr="Opening date"
+        long_descr="Opening date"/>
+      <mem_col col_name="cl_date" data_type="DTE" short_descr="Closing date"
+        long_descr="Closing date"/>
+      <mem_col col_name="rec_tot" data_type="DEC" short_descr="Receipt total"
+        long_descr="Invoice total passed in as param" db_scale="2" scale_ptr="scale_var.curr_scale"/>
+    </mem_obj>
+    <mem_obj name="mem_totals" descr="In-memory table to store totals">
+      <mem_col col_name="date" data_type="DTE" short_descr="Date"
+        long_descr="Date" col_head="Date"/>
+      <mem_col col_name="rec_tot" data_type="DEC" short_descr="Receipts - tot"
+        long_descr="Receipts - total amount" col_head="Receipts"
+        db_scale="2" scale_ptr="scale_var.curr_scale"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params>
+    <input_param name="op_date" type="data_attr" target="var.op_date" required="true"/>
+    <input_param name="cl_date" type="data_attr" target="var.cl_date" required="true"/>
+    <input_param name="rec_tot" type="data_attr" target="var.rec_tot" required="true"/>
+  </input_params>
+  <output_params/>
+  <frame main_object="mem_totals">
+    <toolbar/>
+    <body>
+      <block/>
+      <grid data_object="mem_totals" growable="false" num_grid_rows="15" readonly="true"
+        footer_row="[null, `var.rec_tot`]">
+        <toolbar template="Query_Form"/>
+        <cur_columns>
+          <cur_col col_name="date" lng="84" action="
+            <<start_row/>>
+            <<case>>
+              <<obj_exists obj_name=`mem_totals`>>
+                <<sub_form name=`ar_rec_day`>>
+                  <<call_params>>
+                    <<call_param name=`date` type=`data_attr` source=`mem_totals.date`/>>
+                    <<call_param name=`rec_tot` type=`data_attr` source=`0-mem_totals.rec_tot`/>>
+                  <</call_params>>
+                  <<return_params/>>
+                  <<on_return>>
+                      <<return state=`cancelled`/>>
+                      <<return state=`completed`/>>
+                  <</on_return>>
+                <</sub_form>>
+              <</obj_exists>>
+            <</case>>
+            "/>
+          <cur_col col_name="rec_tot" lng="100"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="date"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+    </body>
+
+    <button_row>
+      <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
+        btn_validate="true" btn_default="true" action="
+          <<end_form state=`completed`/>>
+        "/>
+    </button_row>
+    <frame_methods/>
+  </frame>
+</form>

@@ -522,6 +522,23 @@ virt.append ({
             "), 0)"
         ),
     })
+virt.append ({
+    'col_name'   : 'discount_allowed',
+    'data_type'  : 'DEC',
+    'short_descr': 'Discount allowed',
+    'long_descr' : 'Discount allowed - local currency',
+    'col_head'   : 'Disc',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'sql'        : (
+        "SELECT 0 - SUM(c.discount_local) "
+        "FROM {company}.ar_openitems b "
+        "JOIN {company}.ar_tran_alloc_det c ON c.item_row_id = b.row_id "
+        "WHERE b.tran_type = 'ar_rec' and b.tran_row_id = a.row_id"
+        ),
+    })
 
 # cursor definitions
 cursors = []

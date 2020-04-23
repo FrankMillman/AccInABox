@@ -867,8 +867,7 @@ class Frame:
                             choices.append(f'{obj_name}.{col_name}')  # assumes there is a subtype_frame!
                         else:
                             choices.append(None)
-                        fld_choices = fld.col_defn.choices
-                        choices.append(fld_choices)
+                        choices.append(fld.col_defn.choices)
                         choices.append(element.get('radio') == 'true')
                 height = element.get('height')
                 label = element.get('label')
@@ -1211,8 +1210,7 @@ class Frame:
                 if sub_fld.col_defn.choices is not None:
                     choices = []
                     choices.append(None)  # not 'subtype'
-                    fld_choices = sub_fld.col_defn.choices
-                    choices.append(fld_choices)
+                    choices.append(sub_fld.col_defn.choices)
                     choices.append(False)  # not 'radio'
                 lkup = None
                 pwd = ''

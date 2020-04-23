@@ -167,6 +167,30 @@ async def save_range_settings(caller, xml):
         await var.getval('end_date'),
         ])
     
+async def load_ye_per(caller, xml):
+    # called from ar_tran_summary before_start_form
+    fin_periods = await db.cache.get_adm_periods(caller.company)
+
+    ye_choices = {(fin_per := fin_periods[ye_per]).year_no: 
+        f'{fin_per.year_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
+            for ye_per in sorted(list({per.year_per_id for per in fin_periods[1:]}))}
+
+    per_choices = {fin_per.period_no:
+        f'{fin_per.year_per_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
+            for fin_per in fin_periods[1:]}
+
+    ledger_periods = await db.cache.get_ledger_periods(caller.company, 10, 1)
+
+    var = caller.data_objects['var']
+
+    fld = await var.getfld('year_no')
+    fld.col_defn.choices = ye_choices
+    await fld.setval(fin_periods[ledger_periods.current_period].year_no)
+
+    fld = await var.getfld('period_no')
+    fld.col_defn.choices = per_choices
+    await fld.setval(ledger_periods.current_period)
+
 async def setup_choices(caller, xml):
     # called from sls_report on_start_frame
     fin_periods = await db.cache.get_adm_periods(caller.company)

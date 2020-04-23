@@ -401,7 +401,7 @@ class Field:
 
         # print(f'setval {self.table_name}.{col_name}: "{self._value_}" -> "{value}"')
 
-        if from_sql:
+        if from_sql:  # don't check - would not get into db if not checked
             value = await self.get_val_from_sql(value)
         else:
             # check that value is of the correct type - do a bit of type-casting
@@ -854,6 +854,12 @@ class Field:
                     return await self.db_obj.getval(dflt_val[1:-1])
             else:
                 return dflt_val
+
+        # pros/cons to this [2020-04-22]
+        # for now, leave it that dflt_vals for choices must be set explicitly
+        # if self.col_defn.choices is not None and not self.col_defn.allow_null:
+        #     return next(iter(self.col_defn.choices.keys()))
+
         # if we get here, None is returned
 
     async def calculated(self):
@@ -1183,7 +1189,7 @@ class Xml(Text):
 
     async def get_val_from_sql(self, value):
         value = gzip.decompress(value)
-        return self.parse_xml(value)
+        return etree.fromstring(value, parser=self.parser)
 
     async def get_val_from_xml(self, value):
         if value is None:
@@ -1194,7 +1200,7 @@ class Xml(Text):
         if self._curr_val is None:
             return self._orig is None
         curr_val = gzip.decompress(self._curr_val)
-        curr_val = self.parse_xml(curr_val)
+        curr_val = etree.fromstring(curr_val, parser=self.parser)
         return self._equal(curr_val, self._orig)
 
     async def value_changed(self, value=blank):
@@ -1230,6 +1236,17 @@ class ReportXml(Xml):
 
 class StringXml(Xml):
     parser = etree.XMLParser(remove_blank_text=True)
+
+    async def check_val(self, value):
+        if value is None:
+            return None
+        if isinstance(value, etree._Element):
+            return value
+        try:
+            return self.from_string(value, from_gui=True)
+        except (etree.XMLSyntaxError, ValueError) as e:
+            raise AibError(head=self.col_defn.short_descr,
+                body=f'Xml error - {e.args[0]}')
 
     async def str_to_val(self, value):
         if value in (None, ''):
@@ -1278,26 +1295,28 @@ class StringXml(Xml):
         return self._equal(curr_val, self._orig)
 
     def from_string(self, string, from_gui=False):
-        if from_gui:
-            lines = string.split('"')  # split on attributes
-            for pos, line in enumerate(lines):
-                if pos%2:  # every 2nd line is an attribute
-                    lines[pos] = line.replace(
-                        '&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-            string = '"'.join(lines)
+        string = f'<_>{string}</_>'
+        # if from_gui:
+        #     lines = string.split('"')  # split on attributes
+        #     for pos, line in enumerate(lines):
+        #         if pos%2:  # every 2nd line is an attribute
+        #             lines[pos] = line.replace(
+        #                 '&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        #     string = '"'.join(lines)
         return etree.fromstring(string, parser=self.parser)
 
     def to_string(self, xml, for_gui=False):
-        if not for_gui:  # for storing in database
-            return etree.tostring(xml, encoding=str)
-        else:  # for gui
-            string = etree.tostring(xml, encoding=str, pretty_print=True)
-            lines = string.split('"')  # split on attributes
-            for pos, line in enumerate(lines):
-                if pos%2:  # every 2nd line is an attribute
-                    lines[pos] = line.replace(
-                        '&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
-            return '"'.join(lines)
+        # if not for_gui:  # for storing in database
+        #     return ''.join(etree.tostring(_, encoding=str) for _ in xml)
+        # else:  # for gui
+        #     string = ''.join(etree.tostring(_, encoding=str, pretty_print=True) for _ in xml)
+        #     lines = string.split('"')  # split on attributes
+        #     for pos, line in enumerate(lines):
+        #         if pos%2:  # every 2nd line is an attribute
+        #             lines[pos] = line.replace(
+        #                 '&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+        #     return '"'.join(lines)
+        return ''.join(etree.tostring(_, encoding=str, pretty_print=for_gui) for _ in xml)
 
 class Integer(Field):
     async def get_dflt(self, from_init=False):
@@ -1447,9 +1466,6 @@ class Decimal(Field):
         output = f'{{:.{scale}f}}'
         return output.format(value)
 
-    async def get_val_from_sql(self, value):
-        return await self.check_val(value)
-
     async def get_val_from_xml(self, value):
         if value is None:
             value = self.col_defn.dflt_val
@@ -1521,9 +1537,6 @@ class Date(Field):
         if self._prev is None:
             return ''
         return str(self._prev)
-
-    async def get_val_from_sql(self, value):
-        return await self.check_val(value)
 
     def get_val_for_where(self):
         return None if self._value is None else repr(str(self._value))  # "'yyyy-mm-dd'"
@@ -1598,20 +1611,15 @@ class Boolean(Field):
         raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     async def check_val(self, value):
-        if value in (0, 1):
-            return bool(value)
-        if value in (None, True, False):
-            return value
-        if value in ('0', '1'):
-            return bool(int(value))
+        if value in (True, 1, '1'):
+            return True
+        if value in (False, 0, '0', None, ''):
+            return False
         errmsg = f'{self.table_name}.{self.col_name} {value!r} - not a valid boolean value'
         raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     async def str_to_val(self, value):
-        if value in (None, ''):
-            return False  # None (any implications? 14/12/2012)
-        else:
-            return bool(int(value))
+        return await self.check_val(value)
 
     async def val_to_str(self, value=blank):
         try:

@@ -348,6 +348,18 @@ virt.append ({
         "a.rec_tot_loc + a.pmt_tot_loc"
         ),
     })
+virt.append ({
+    'col_name'   : 'op_balance_loc',
+    'data_type'  : 'DEC',
+    'short_descr': 'Opening balance',
+    'long_descr' : 'Opening balance - local currency',
+    'col_head'   : 'Op bal',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : (
+        "(a.rec_tot_loc + a.pmt_tot_loc) - (a.rec_day_loc + a.pmt_day_loc)"
+        ),
+    })
 
 # cursor definitions
 cursors = []

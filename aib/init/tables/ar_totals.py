@@ -530,6 +530,22 @@ virt.append ({
             "a.disc_net_tot + a.disc_tax_tot + a.chg_tot + a.jnl_tot "
         ),
     })
+virt.append ({
+    'col_name'   : 'op_balance',
+    'data_type'  : 'DEC',
+    'short_descr': 'Opening balance',
+    'long_descr' : 'Opening balance',
+    'col_head'   : 'Op bal',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : (
+        "(a.inv_net_tot + a.inv_tax_tot + a.crn_net_tot + a.crn_tax_tot + a.rec_tot + "
+            "a.disc_net_tot + a.disc_tax_tot + a.chg_tot + a.jnl_tot) "
+        " - "
+        "(a.inv_net_day + a.inv_tax_day + a.crn_net_day + a.crn_tax_day + a.rec_day + "
+            "a.disc_net_day + a.disc_tax_day + a.chg_day + a.jnl_day) "
+        ),
+    })
 
 # cursor definitions
 cursors = []

@@ -385,8 +385,7 @@ async def setup_table(module, company, db_tbl, db_col, table_name):
         await db_col.setval('db_scale', col['db_scale'])
         await db_col.setval('scale_ptr', col['scale_ptr'])
         await db_col.setval('dflt_val', col['dflt_val'])
-        await db_col.setval('dflt_rule', None if col['dflt_rule'] is None
-            else from_string(col['dflt_rule']))
+        await db_col.setval('dflt_rule', col['dflt_rule'])
         await db_col.setval('col_checks', col['col_checks'])
         await db_col.setval('fkey', col['fkey'])
         await db_col.setval('choices', col['choices'])
@@ -411,21 +410,12 @@ async def setup_table(module, company, db_tbl, db_col, table_name):
         await db_col.setval('db_scale', virt.get('db_scale', 0))
         await db_col.setval('scale_ptr', virt.get('scale_ptr'))
         await db_col.setval('dflt_val', virt.get('dflt_val'))
-        await db_col.setval('dflt_rule', None if virt.get('dflt_rule') is None
-            else from_string(virt['dflt_rule']))
+        await db_col.setval('dflt_rule', virt.get('dflt_rule'))
         await db_col.setval('col_checks', None)
         await db_col.setval('fkey', virt.get('fkey'))
         await db_col.setval('choices', None)
         await db_col.setval('sql', virt.get('sql'))
         await db_col.save()
-
-def from_string(string):
-    lines = string.split('"')  # split on attributes
-    for pos, line in enumerate(lines):
-        if pos%2:  # every 2nd line is an attribute
-            lines[pos] = line.replace('<', '&lt;').replace('>', '&gt;')
-    string = '"'.join(lines)
-    return etree.fromstring(string)
 
 async def setup_cursor(module, db_tbl, db_cur, table_name):
     cursors = module.cursors
@@ -446,12 +436,7 @@ async def setup_actions(module, db_act, table_name):
         await db_act.init()
         await db_act.setval('table_name', table_name)
         for act, action in actions:
-            fld = await db_act.getfld(act)
-            data_type = fld.col_defn.data_type
-            if data_type == 'SXML':
-                await fld.setval(etree.fromstring('<_>{}</_>'.format(action)))
-            else:
-                await fld.setval(action)
+            await db_act.setval(act, action)
         await db_act.save()
 
 async def setup_views(context, conn, company):
@@ -554,11 +539,11 @@ async def setup_forms(context, conn, company):
     await setup_form('in_ledger_new')
     await setup_form('cb_params')
     await setup_form('cb_ledger_new')
-    await setup_form('gl_ledg_periods')
-    await setup_form('ar_ledg_periods')
-    await setup_form('ap_ledg_periods')
-    await setup_form('cb_ledg_periods')
-    await setup_form('in_ledg_periods')
+    await setup_form('gl_ledger_periods')
+    await setup_form('ar_ledger_periods')
+    await setup_form('ap_ledger_periods')
+    await setup_form('cb_ledger_periods')
+    await setup_form('in_ledger_periods')
     await setup_form('setup_currencies')
     await setup_form('setup_tax_codes')
     await setup_form('setup_ar_terms_codes')
@@ -574,6 +559,15 @@ async def setup_forms(context, conn, company):
     await setup_form('ar_receipt')
     await setup_form('ar_alloc_item')
     await setup_form('ar_alloc')
+    await setup_form('ar_ledger_summary')
+    await setup_form('ar_inv_day_per')
+    await setup_form('ar_inv_day')
+    await setup_form('ar_chg_day_per')
+    await setup_form('ar_chg_day')
+    await setup_form('ar_rec_day_per')
+    await setup_form('ar_rec_day')
+    await setup_form('ar_disc_day_per')
+    await setup_form('ar_disc_day')
     await setup_form('setup_nsls_codes')
     await setup_form('sls_report')
     await setup_form('setup_apsupp')
@@ -583,6 +577,7 @@ async def setup_forms(context, conn, company):
     await setup_form('setup_sell_prices')
     await setup_form('cb_receipt')
     await setup_form('cb_payment')
+    await setup_form('cb_ledger_summary')
     await setup_form('setup_orec_codes')
     await setup_form('setup_opmt_codes')
     await setup_form('cb_cashbook')
@@ -693,7 +688,7 @@ async def setup_menus(context, conn, company, company_name):
                 ]],
             ['Gl reports', 'menu', 'gl', [
                 ]],
-            ['Period end procedure', 'form', 'gl_ledg_periods'],
+            ['Period end procedure', 'form', 'gl_ledger_periods'],
             ]],
         ['Cash book', 'menu', 'cb', [
             ['Setup', 'menu', 'cb', [
@@ -737,28 +732,32 @@ async def setup_menus(context, conn, company, company_name):
             ]],
         ['Cb reports', 'menu', 'cb', [
             ['Cash book report', 'form', 'cb_cashbook'],
+            ['Cash book summary', 'form', 'cb_ledger_summary'],
             ]],
-        ['Period end procedure', 'form', 'cb_ledg_periods'],
+        ['Period end procedure', 'form', 'cb_ledger_periods'],
         ]]
 
     ar_menu = ['Accounts receivable', 'menu', 'ar', [
-        ['AR setup', 'menu', 'ar', [
+        ['Ar setup', 'menu', 'ar', [
             ['Ledger parameters', 'form', 'ar_params'],
             ['Customers', 'grid', 'ar_customers', 'cust'],
             ['Terms codes', 'grid', 'ar_terms_codes', 'terms_codes'],
             ]],
-        ['AR transactions', 'menu', 'ar', [
+        ['Ar transactions', 'menu', 'ar', [
             ['Capture invoice', 'form', 'ar_invoice'],
             ['Capture receipt', 'form', 'ar_receipt'],
             ['Allocate transaction', 'grid', 'ar_openitems', 'unallocated'],
             ['Review unposted invoices', 'grid', 'ar_tran_inv', 'unposted_inv'],
             ['Review unposted receipts', 'grid', 'ar_tran_rct', 'unposted_rct'],
             ]],
-        ['AR enquiries', 'menu', 'ar', [
+        ['Ar enquiries', 'menu', 'ar', [
             ['AR balances', 'form', 'ar_balances'],
             ['Sales report', 'form', 'sls_report'],
             ]],
-        ['Period end procedure', 'form', 'ar_ledg_periods'],
+        ['Ar reports', 'menu', 'ar', [
+            ['Ledger summary', 'form', 'ar_ledger_summary'],
+            ]],
+        ['Period end procedure', 'form', 'ar_ledger_periods'],
         ]]
 
     ap_menu =['Accounts payable', 'menu', 'ap', [
@@ -773,14 +772,14 @@ async def setup_menus(context, conn, company, company_name):
             ['Review unposted invoices', 'grid', 'ap_tran_inv', 'unposted_inv'],
             ['Review unposted payments', 'grid', 'ap_tran_pmt', 'unposted_pmt'],
             ]],
-        ['Period end procedure', 'form', 'ap_ledg_periods'],
+        ['Period end procedure', 'form', 'ap_ledger_periods'],
         ]]
 
     in_menu =['Inventory', 'menu', 'in', [
         ['Warehouse setup', 'menu', 'in', [
             ['Warehouse parameters', 'form', 'in_params'],
             ]],
-        ['Period end procedure', 'form', 'in_ledg_periods'],
+        ['Period end procedure', 'form', 'in_ledger_periods'],
         ]]
 
     async def parse_menu(menu_opt, parent_id, module_id=None):

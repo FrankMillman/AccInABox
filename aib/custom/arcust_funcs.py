@@ -32,62 +32,6 @@ async def setup_groups(caller, xml):
         'group_descr': 'Date', 'by_val': False, 'seq': -1})
     await grp.save()
 
-async def setup_finyrs(caller, obj, xml):
-    var = caller.data_objects['var']
-    fin_periods = await db.cache.get_adm_periods(caller.company)
-    ye_ends = OD()
-    for year_no, periods in groupby(fin_periods, attrgetter('year_no')):
-        for period in periods:
-            pass
-        ye_ends[year_no] = 'Y/E {}'.format(period.closing_date)
-    fld = await var.getfld('fin_year')
-    dflt_val = await fld.getval()
-    if dflt_val is None:
-        dflt_val = year_no  # if unspecified, default to last one
-    fld.col_defn.choices = ye_ends
-    caller.session.responder.setup_choices(obj.ref, ye_ends)
-    return dflt_val
-
-async def after_finyrs(caller, xml):
-    var = caller.data_objects['var']
-    fld = await var.getfld('fin_year')
-    if fld.val_before_input != await fld.getval():  # fin year has been changed
-        fld = await var.getfld('period_no')  # reset period_no
-        fld.col_defn.choices = OD()  # flag to clear default val
-
-async def setup_finpers(caller, obj, xml):
-    var = caller.data_objects['var']
-    fin_year = await var.getval('fin_year')
-    fin_periods = await db.cache.get_adm_periods(caller.company)
-    periods = OD()
-    fld = await var.getfld('period_no')
-    if fld.col_defn.choices == OD():
-        dflt_val = None
-    else:
-        dflt_val = await fld.getval()
-    op_date = fin_periods[0].closing_date  # first period has no opening date
-    for per_no, period in enumerate(fin_periods):
-        if period.year_no == fin_year:
-            periods[per_no] = '{:%d/%m} - {:%d/%m/%Y}'.format(
-                op_date, period.closing_date)
-            if dflt_val is None:
-                dflt_val = per_no  # if unspecified, default to first one
-        op_date = period.closing_date + td(1)
-    fld.col_defn.choices = periods
-    caller.session.responder.setup_choices(obj.ref, periods)
-    return dflt_val
-
-async def after_finpers(caller, xml):
-    var = caller.data_objects['var']
-    period_no = await var.getval('period_no')
-    fin_periods = await db.cache.get_adm_periods(caller.company)
-    fin_period = fin_periods[period_no]
-    if period_no:
-        await var.setval('start_date', fin_periods[period_no-1].closing_date + td(1))
-    else:
-        await var.setval('start_date', fin_period.closing_date)
-    await var.setval('end_date', fin_period.closing_date)
-
 async def after_setup(caller, xml):
     var = caller.data_objects['var']
     path = []
@@ -407,7 +351,8 @@ async def get_data(caller, node_id, node_total):
             tot += amount
     await slsfld.setval(tot)  # pass 'tot' through slsfld to force rounding (sqlite3)
     tot = await slsfld.getval()
-    assert tot == await slsfld.str_to_val(node_total), 'accum_tot={}, node_tot={}'.format(tot, node_total)
+    # assert tot == await slsfld.str_to_val(node_total), 'accum_tot={}, node_tot={}'.format(tot, node_total)
+    assert tot == await slsfld.check_val(node_total), 'accum_tot={}, node_tot={}'.format(tot, node_total)
     return tree_rows
 
 async def check_cust_bal(cust_totals, xml):
@@ -423,3 +368,183 @@ async def check_cust_bal(cust_totals, xml):
     cust = (await cust_totals.getfld('cust_row_id>row_id')).db_obj
     cust_bal = await cust.getval('balance')
     # print('{}: {} -> {}'.format(await cust.getval('cust_id'), cust_bal, (cust_bal + mvmnt)))
+
+async def setup_mem_trans(caller, xml):
+    company = caller.company
+    module_row_id, ledger_row_id = caller.context.mod_ledg_id
+    var = caller.context.data_objects['var']
+    mem_totals = caller.context.data_objects['mem_totals']
+    await mem_totals.delete_all()
+    async with caller.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        if await var.getval('select_method') == 'Y':
+            year_no = await var.getval('year_no')
+            sql = (f"""
+                WITH RECURSIVE dates AS
+                    (SELECT a.closing_date as cl_date,
+                        {conn.constants.func_prefix}date_add(b.closing_date, 1) as op_date, (
+                        SELECT c.row_id FROM {company}.ar_totals c
+                        WHERE c.ledger_row_id = {ledger_row_id} AND c.tran_date <= a.closing_date
+                        ORDER BY c.tran_date DESC LIMIT 1
+                    ) AS cl_row_id, (
+                        SELECT c.row_id FROM {company}.ar_totals c
+                        WHERE c.ledger_row_id = {ledger_row_id} AND
+                            c.tran_date < {conn.constants.func_prefix}date_add(b.closing_date, 1)
+                        ORDER BY c.tran_date DESC LIMIT 1
+                    ) AS op_row_id
+                    FROM {company}.adm_periods a
+                    JOIN {company}.adm_periods b ON b.row_id = a.row_id - 1
+                    WHERE
+                        (SELECT c.row_id FROM {company}.adm_yearends c
+                        WHERE c.period_row_id >= a.row_id ORDER BY c.row_id LIMIT 1)
+                        = {year_no}
+                    )
+                SELECT 
+                    a.op_date AS "[DATE]", a.cl_date AS "[DATE]"
+                    , COALESCE(`b.{company}.ar_totals.balance`, 0) AS "[REAL2]"
+                    , COALESCE(c.inv_net_tot+c.inv_tax_tot, 0) - COALESCE(b.inv_net_tot+b.inv_tax_tot, 0) AS "[REAL2]"
+                    , COALESCE(c.crn_net_tot+c.crn_tax_tot, 0) - COALESCE(b.crn_net_tot+b.crn_tax_tot, 0) AS "[REAL2]"
+                    , COALESCE(c.chg_tot, 0) - COALESCE(b.chg_tot, 0) AS "[REAL2]"
+                    , COALESCE(c.jnl_tot, 0) - COALESCE(b.jnl_tot, 0) AS "[REAL2]"
+                    , COALESCE(c.rec_tot, 0) - COALESCE(b.rec_tot, 0) AS "[REAL2]"
+                    , COALESCE(c.disc_net_tot+c.disc_tax_tot, 0) - COALESCE(b.disc_net_tot+b.disc_tax_tot, 0) AS "[REAL2]"
+                    , COALESCE(`c.{company}.ar_totals.balance`, 0) AS "[REAL2]"
+                 FROM 
+                    (SELECT dates.op_date, dates.cl_date, (
+                        SELECT c.row_id FROM {company}.ar_totals c 
+                        WHERE c.ledger_row_id = {ledger_row_id} AND c.tran_date < dates.op_date 
+                        ORDER BY c.tran_date DESC LIMIT 1
+                    ) AS op_row_id, (
+                        SELECT c.row_id FROM {company}.ar_totals c 
+                        WHERE c.ledger_row_id = {ledger_row_id} AND c.tran_date <= dates.cl_date 
+                        ORDER BY c.tran_date DESC LIMIT 1
+                    ) AS cl_row_id 
+                    FROM dates 
+                    ) AS a 
+                LEFT JOIN {company}.ar_totals b on b.row_id = a.op_row_id 
+                LEFT JOIN {company}.ar_totals c on c.row_id = a.cl_row_id 
+                """)
+        else:
+            per_no = await var.getval('period_no')
+            fin_periods = await db.cache.get_adm_periods(caller.company)
+            period = fin_periods[per_no]
+            start_date = str(period.opening_date)
+            end_date = str(period.closing_date)
+            sql = (f"""
+                WITH RECURSIVE dates AS 
+                    (SELECT CAST('{start_date}' AS {conn.constants.date_cast}) AS date 
+                    UNION ALL SELECT {conn.constants.func_prefix}date_add(date, 1) AS date 
+                    FROM dates WHERE date < '{end_date}') 
+                SELECT 
+                    a.op_date AS "[DATE]", a.cl_date AS "[DATE]"
+                    , COALESCE(`b.{company}.ar_totals.op_balance`, 0) AS "[REAL2]"
+                    , COALESCE(b.inv_net_day+b.inv_tax_day, 0) AS "[REAL2]"
+                    , COALESCE(b.crn_net_day+b.crn_tax_day, 0) AS "[REAL2]"
+                    , COALESCE(b.chg_day, 0) AS "[REAL2]"
+                    , COALESCE(b.jnl_day, 0) AS "[REAL2]"
+                    , COALESCE(b.rec_day, 0) AS "[REAL2]"
+                    , COALESCE(b.disc_net_day+b.disc_tax_day, 0) AS "[REAL2]"
+                    , COALESCE(`b.{company}.ar_totals.balance`, 0) AS "[REAL2]"
+                FROM 
+                    (SELECT dates.date as op_date, dates.date as cl_date, (
+                        SELECT c.row_id FROM {company}.ar_totals c 
+                        WHERE c.ledger_row_id = {ledger_row_id} AND c.tran_date <= dates.date 
+                        ORDER BY c.tran_date DESC LIMIT 1
+                        ) AS op_row_id 
+                    FROM dates 
+                    ) AS a 
+                LEFT JOIN {company}.ar_totals b on b.row_id = a.op_row_id 
+                """)
+
+        cur = await conn.exec_sql(sql)
+        async for op_date, cl_date, op_bal, inv, crn, chg, jnl, rec, disc, cl_bal in cur:
+            await mem_totals.init()
+            await mem_totals.setval('date', cl_date)
+            await mem_totals.setval('op_date', op_date)
+            await mem_totals.setval('cl_date', cl_date)
+            await mem_totals.setval('op_bal', op_bal)
+            await mem_totals.setval('inv', inv)
+            await mem_totals.setval('crn', crn)
+            await mem_totals.setval('chg', chg)
+            await mem_totals.setval('jnl', jnl)
+            await mem_totals.setval('rec', rec)
+            await mem_totals.setval('disc', disc)
+            await mem_totals.setval('cl_bal', cl_bal)
+            await mem_totals.save()
+
+async def setup_tran_day_per(caller, cols, mem_cols, asserts, cols_to_upd):
+    company = caller.company
+    module_row_id, ledger_row_id = caller.context.mod_ledg_id
+    var = caller.context.data_objects['var']
+    start_date = await var.getval('op_date')
+    if start_date is None:
+        return
+    end_date = await var.getval('cl_date')
+    mem_totals = caller.context.data_objects['mem_totals']
+    await mem_totals.delete_all()
+    async with caller.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        sql = (f"""
+            WITH RECURSIVE dates AS 
+                (SELECT CAST('{start_date}' AS {conn.constants.date_cast}) AS date 
+                UNION ALL SELECT {conn.constants.func_prefix}date_add(date, 1) AS date 
+                FROM dates WHERE date < '{end_date}') 
+            SELECT 
+                a.date AS "[DATE]",
+                {', '.join('COALESCE(' + col + ', 0) AS "[REAL2]"' for col in cols)}
+            FROM 
+                (SELECT dates.date, (
+                    SELECT c.row_id FROM {company}.ar_totals c 
+                    WHERE c.ledger_row_id = {ledger_row_id} AND c.tran_date = dates.date 
+                ) AS op_row_id 
+                FROM dates 
+                ) AS a 
+            LEFT JOIN {company}.ar_totals b on b.row_id = a.op_row_id 
+            """)
+
+        tots = [0] * len(mem_cols)
+        cur = await conn.exec_sql(sql)
+        async for date, *db_tots in cur:
+            await mem_totals.init()
+            await mem_totals.setval('date', date)
+            for pos, mem_col in enumerate(mem_cols):
+                await mem_totals.setval(mem_col, db_tots[pos])
+                tots[pos] += db_tots[pos]
+            await mem_totals.save()
+
+        for pos, assert_ in enumerate(asserts):
+            if assert_ is not None:  # value passed in as input parameter
+                assert await var.getval(assert_) == tots[pos], (
+                    f'{assert_}={await var.getval(assert_)} total={tots[pos]}')
+
+        for pos, col_to_upd in enumerate(cols_to_upd):
+            if col_to_upd is not None:
+                await var.setval(col_to_upd, tots[pos])
+
+async def setup_inv_day_per(caller, xml):
+    cols = ['b.inv_net_day', 'b.inv_tax_day', 'b.inv_net_day+b.inv_tax_day']
+    mem_cols = ['inv_net', 'inv_tax', 'inv_tot']
+    asserts = [None, None, 'inv_tot']
+    cols_to_upd = ['net_tot', 'tax_tot', 'tot_tot']
+    await setup_tran_day_per(caller, cols, mem_cols, asserts, cols_to_upd)
+
+async def setup_chg_day_per(caller, xml):
+    cols = ['b.chg_day']
+    mem_cols = ['chg_tot']
+    asserts = ['chg_tot']
+    cols_to_upd = [None]
+    await setup_tran_day_per(caller, cols, mem_cols, asserts, cols_to_upd)
+
+async def setup_rec_day_per(caller, xml):
+    cols = ['b.rec_day']
+    mem_cols = ['rec_tot']
+    asserts = ['rec_tot']
+    cols_to_upd = [None]
+    await setup_tran_day_per(caller, cols, mem_cols, asserts, cols_to_upd)
+
+async def setup_disc_day_per(caller, xml):
+    cols = ['b.disc_net_day', 'b.disc_tax_day', 'b.disc_net_day+b.disc_tax_day']
+    mem_cols = ['disc_net', 'disc_tax', 'disc_tot']
+    asserts = [None, None, 'disc_tot']
+    cols_to_upd = ['net_tot', 'tax_tot', 'tot_tot']
+    await setup_tran_day_per(caller, cols, mem_cols, asserts, cols_to_upd)

@@ -1,0 +1,52 @@
+<form name="ar_chg_day" title="Ar chargess for day">
+  <db_objects>
+    <db_obj name="ar_subtran_chg" table_name="ar_subtran_chg"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="var" descr="Variables used in form">
+      <mem_col col_name="date" data_type="DTE" short_descr="Date"
+        long_descr="Date"/>
+      <mem_col col_name="chg_tot" data_type="DEC" short_descr="Charges total"
+        long_descr="Charges total passed in as param" db_scale="2" scale_ptr="scale_var.curr_scale"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params>
+    <input_param name="date" type="data_attr" target="var.date" required="true"/>
+    <input_param name="chg_tot" type="data_attr" target="var.chg_tot" required="true"/>
+  </input_params>
+  <output_params/>
+  <frame main_object="ar_subtran_chg">
+    <toolbar/>
+    <body>
+      <block/>
+      <grid data_object="ar_subtran_chg" growable="false" num_grid_rows="15" readonly="true"
+        footer_row="[null, null, null, `var.chg_tot`, null]"
+        assert_tots="[[`chg_local`, `var.chg_tot`]]">
+        <toolbar template="Query_Form"/>
+        <cur_columns>
+          <cur_col col_name="tran_date" lng="84"/>
+          <cur_col col_name="tran_number" lng="100"/>
+          <cur_col col_name="cust_id" lng="100"/>
+          <cur_col col_name="chg_local" lng="100"/>
+        </cur_columns>
+        <cur_filter>
+          <cur_fil test="WHERE" lbr="" col_name="tran_date" op="=" expr="var.date" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="posted" op="=" expr="'1'" rbr=""/>
+        </cur_filter>
+        <cur_sequence>
+          <cur_seq col_name="tran_number"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+    </body>
+
+    <button_row>
+      <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
+        btn_validate="true" btn_default="true" action="
+          <<end_form state=`completed`/>>
+        "/>
+    </button_row>
+    <frame_methods/>
+  </frame>
+</form>
