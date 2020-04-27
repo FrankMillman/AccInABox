@@ -159,6 +159,25 @@ class Form:
         if self.inline is not None:  # form defn is passed in as parameter
             form_defn = self.form_defn = self.inline
             title = form_defn.get('title')
+        elif self.form_name.startswith('#'):  # userTask from bp.bpm
+            _, title, form_type, *form_body = self.form_name.split(';')
+            if form_type == 'msg':
+                btn_template = 'Query_Form'
+            elif form_type == 'dlg':
+                btn_template = 'Form'
+            form_defn = []
+            form_defn.append('<form><db_objects/><mem_objects/><input_params/><output_params/>')
+            form_defn.append('<frame><toolbar/><body><block/><panel/>')
+            for row_body in form_body:
+                row_type, row_data = row_body.split('=')
+                if row_type == 'text':
+                    form_defn.append(f'<row/><col/><text value="{row_data}"/>')
+                elif row_type == 'input':
+                    label, obj_name, col_name, lng = row_data.split(',')
+                    form_defn.append(f'<row/><col/><label value="{label}"/><col/>')
+                    form_defn.append(f'<input obj_name="{obj_name}" col_name="{col_name}" lng="{lng}"/>')
+            form_defn.append(f'</body><button_row template="{btn_template}"/><frame_methods/></frame></form>')
+            form_defn = self.form_defn = etree.fromstring(''.join(form_defn))
         else:  # read form_defn from 'sys_form_defns'
             if '.' in self.form_name:
                 formdefn_company, self.form_name = self.form_name.split('.')
