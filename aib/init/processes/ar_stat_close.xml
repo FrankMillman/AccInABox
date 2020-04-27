@@ -86,7 +86,7 @@
       </semantic:scriptTask>
       <semantic:scriptTask id="ar_stat_close_13" name="Set 'closed' flag">
         <semantic:incoming>ar_stat_close_25</semantic:incoming>
-        <semantic:outgoing>ar_stat_close_27</semantic:outgoing>
+        <semantic:outgoing>ar_stat_close_83</semantic:outgoing>
         <semantic:dataInputAssociation>
           <semantic:sourceRef>var.separate_stat_cust</semantic:sourceRef>
           <semantic:targetRef>separate_stat_cust</semantic:targetRef>
@@ -102,7 +102,7 @@
         <semantic:script>custom.artrans_funcs.set_stat_closed_flag</semantic:script>
       </semantic:scriptTask>
       <semantic:endEvent id="ar_stat_close_15" name="Done">
-        <semantic:incoming>ar_stat_close_27</semantic:incoming>
+        <semantic:incoming>ar_stat_close_85</semantic:incoming>
       </semantic:endEvent>
       <semantic:boundaryEvent id="ar_stat_close_71" name="Timeout check" cancelActivity="false" attachedToRef="ar_stat_close_61">
         <semantic:outgoing>ar_stat_close_77</semantic:outgoing>
@@ -110,25 +110,27 @@
           <semantic:timeCycle>R/PT10S</semantic:timeCycle>
         </semantic:timerEventDefinition>
       </semantic:boundaryEvent>
-      <semantic:scriptTask id="ar_stat_close_73" name="Notify manager">
+      <semantic:userTask id="ar_stat_close_73" name="Notify process waiting" implementation="#;Process waiting;msg;text=Some transactons are unposted;text=Cannot continue with process">
         <semantic:incoming>ar_stat_close_77</semantic:incoming>
         <semantic:outgoing>ar_stat_close_79</semantic:outgoing>
-        <semantic:dataInputAssociation>
-          <semantic:sourceRef>ctx.user_row_id</semantic:sourceRef>
-          <semantic:targetRef>user_row_id</semantic:targetRef>
-        </semantic:dataInputAssociation>
-        <semantic:script>custom.artrans_funcs.notify_manager</semantic:script>
-      </semantic:scriptTask>
+        <semantic:performer name="_user"/>
+      </semantic:userTask>
       <semantic:endEvent id="ar_stat_close_75" name="Manager notified">
         <semantic:incoming>ar_stat_close_79</semantic:incoming>
       </semantic:endEvent>
+      <semantic:userTask id="ar_stat_close_81" name="Notify process completed" implementation="#;Process completed;msg;text=Statement close process;text=has been completed">
+        <semantic:incoming>ar_stat_close_83</semantic:incoming>
+        <semantic:outgoing>ar_stat_close_85</semantic:outgoing>
+        <semantic:performer name="_user"/>
+      </semantic:userTask>
       <semantic:sequenceFlow sourceRef="ar_stat_close_3" targetRef="ar_stat_close_5" name="" id="ar_stat_close_17"/>
       <semantic:sequenceFlow sourceRef="ar_stat_close_5" targetRef="ar_stat_close_61" name="" id="ar_stat_close_19"/>
       <semantic:sequenceFlow sourceRef="ar_stat_close_61" targetRef="ar_stat_close_11" name="" id="ar_stat_close_23"/>
       <semantic:sequenceFlow sourceRef="ar_stat_close_11" targetRef="ar_stat_close_13" name="" id="ar_stat_close_25"/>
-      <semantic:sequenceFlow sourceRef="ar_stat_close_13" targetRef="ar_stat_close_15" name="" id="ar_stat_close_27"/>
       <semantic:sequenceFlow sourceRef="ar_stat_close_71" targetRef="ar_stat_close_73" name="" id="ar_stat_close_77"/>
       <semantic:sequenceFlow sourceRef="ar_stat_close_73" targetRef="ar_stat_close_75" name="" id="ar_stat_close_79"/>
+      <semantic:sequenceFlow sourceRef="ar_stat_close_13" targetRef="ar_stat_close_81" name="" id="ar_stat_close_83"/>
+      <semantic:sequenceFlow sourceRef="ar_stat_close_81" targetRef="ar_stat_close_15" name="" id="ar_stat_close_85"/>
     </semantic:process>
     <bpmndi:BPMNDiagram id="ar_stat_close_2">
       <bpmndi:BPMNPlane bpmnElement="ar_stat_close_1">
@@ -161,7 +163,7 @@
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNShape>
         <bpmndi:BPMNShape bpmnElement="ar_stat_close_15" id="ar_stat_close_16">
-          <dc:Bounds width="32" height="32" x="993.0" y="231"/>
+          <dc:Bounds width="32" height="32" x="1064" y="231"/>
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNShape>
         <bpmndi:BPMNShape bpmnElement="ar_stat_close_55" id="ar_stat_close_56">
@@ -191,11 +193,6 @@
         <bpmndi:BPMNEdge bpmnElement="ar_stat_close_25" id="ar_stat_close_26">
           <di:waypoint x="785.0" y="247"/>
           <di:waypoint x="852.0" y="247"/>
-          <bpmndi:BPMNLabel/>
-        </bpmndi:BPMNEdge>
-        <bpmndi:BPMNEdge bpmnElement="ar_stat_close_27" id="ar_stat_close_28">
-          <di:waypoint x="942.0" y="247"/>
-          <di:waypoint x="993.0" y="247"/>
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNEdge>
         <bpmndi:BPMNEdge bpmnElement="ar_stat_close_57" id="ar_stat_close_58">
@@ -249,6 +246,20 @@
         <bpmndi:BPMNEdge bpmnElement="ar_stat_close_79" id="ar_stat_close_80">
           <di:waypoint x="833" y="416"/>
           <di:waypoint x="923" y="416"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="ar_stat_close_81" id="ar_stat_close_82">
+          <dc:Bounds x="952" y="212" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="ar_stat_close_83" id="ar_stat_close_84">
+          <di:waypoint x="942" y="247"/>
+          <di:waypoint x="952" y="247"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="ar_stat_close_85" id="ar_stat_close_86">
+          <di:waypoint x="1042" y="247"/>
+          <di:waypoint x="1064" y="247"/>
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNEdge>
       </bpmndi:BPMNPlane>

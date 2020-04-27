@@ -572,8 +572,7 @@ class Conn:
                             col, alias, as_clause = await self.get_col_alias(
                                 context, db_table, where_params, expr)
                         except Exception:
-                            import pdb
-                            pdb.set_trace()
+                            breakpoint()
                         if as_clause is not None:
                             expr = as_clause
                         elif col.data_type == 'TEXT':

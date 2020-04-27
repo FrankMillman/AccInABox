@@ -798,13 +798,6 @@ async def set_per_closed_flag(caller, params):
         await ledg_per.setval('state', 'current')
         await ledg_per.save()
 
-async def notify_manager(caller, params):
-    print('notify_manager')
-    user_row_id = params['user_row_id']
-
-    await asyncio.sleep(1)
-    return
-
 async def setup_stat_proc(caller, xml):
     # called from ar_stat_proc.xml before_start_form
     var = caller.context.data_objects['var']

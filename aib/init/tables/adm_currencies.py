@@ -159,7 +159,7 @@ cols.append ({
     'data_type'  : 'TEXT',
     'short_descr': 'Symbol',
     'long_descr' : 'Currency symbol',
-    'col_head'   : 'Cur',
+    'col_head'   : 'Sym',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,

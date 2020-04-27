@@ -202,11 +202,11 @@ async def after_new_task(caller, state, output_params, xml, args):
     performer = await task_vars.getval('performer')
     if performer is not None:
         perf_elem = etree.SubElement(task_elem, f"{{{bpmn_xml.nsmap['semantic']}}}performer")
-        perf_elem.text = performer
+        perf_elem.set('name', performer)
 
     if elem_type == 'userTask':
-        form_name = await task_vars.getval('form_name')
-        task_elem.set('implementation', form_name)
+        form_defn = await task_vars.getval('form_defn')
+        task_elem.set('implementation', form_defn)
 
     if elem_type == 'scriptTask':
         path_to_script = await task_vars.getval('path_to_script')
@@ -563,10 +563,10 @@ async def edit_task(caller, xml, elem_id, args, bpmn_xml, task_elem):
         }
     performer = task_elem.find('semantic:performer', bpmn_xml.nsmap)
     if performer is not None:
-        init_vals['performer'] = performer.text
-    form_name = task_elem.get('implementation')
-    if form_name is not None:
-        init_vals['form_name'] = form_name
+        init_vals['performer'] = performer.get('name')
+    form_defn = task_elem.get('implementation')
+    if form_defn is not None:
+        init_vals['form_defn'] = form_defn
     script = task_elem.find('semantic:script', bpmn_xml.nsmap)
     if script is not None:
         init_vals['path_to_script'] = script.text
@@ -640,11 +640,11 @@ async def after_edit_task(caller, state, output_params, xml):
     performer = await task_vars.getval('performer')
     if performer is not None:
         perf_elem = etree.SubElement(task_elem, f"{{{bpmn_xml.nsmap['semantic']}}}performer")
-        perf_elem.text = performer
+        perf_elem.set('name', performer)
 
     if elem_type == 'userTask':
-        form_name = await task_vars.getval('form_name')
-        task_elem.set('implementation', form_name)
+        form_defn = await task_vars.getval('form_defn')
+        task_elem.set('implementation', form_defn)
 
     if elem_type == 'scriptTask':
         path_to_script = await task_vars.getval('path_to_script')

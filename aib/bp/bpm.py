@@ -163,6 +163,8 @@ class ProcessRoot:
         # to create a list from list-a and list-b on-the-fly: list-a + list-b
         # to create a dict from dict-a and dict-b on-the-fly: {**dict-a, **dict-b}
         # to create a set  from set-a  and set-b  on-the-fly: set-a | set-b
+        # from Python 3.9 -
+        # to create a dict from dict-a and dict-b on-the-fly: dict-a | dict-b
 
         def find_cycle(node, path, visited):
             # print(node.elem_id, [x.elem_id for x in path])
@@ -376,7 +378,6 @@ class process:
         self.data_objects = {}
 
     def setup_elements(self, process_elem):
-        # self.elem_name = process_elem.get('name')  # already set up in __init__()
         for elem in process_elem:
             elem_id = elem.get('id')
             elem_tag = elem.tag[len(S):]
@@ -418,6 +419,10 @@ class process:
     def background_task_completed(self, future):
         try:
             future.result()  # don't need return value, but do need to catch any exception
+        except AibError as err:
+            # [TODO] pass err.head, err.body to be included in final bpm_detail
+            asyncio.create_task(self.root.process.r_process.terminate_process())
+            print(f"ERR: head='{err.head}' body='{err.body}'")
         except Exception:
             asyncio.create_task(self.root.process.r_process.terminate_process())
             raise
@@ -1430,9 +1435,16 @@ class rTask:
 
 class userTask(task):
     def __init__(self, process, elem):
-        # [TODO] create column on bpm_details for 'performer', get it from ht.htm and save it
         task.__init__(self, process, elem, rUserTask)
         self.form_name = elem.get('implementation')
+        self.performer = elem.find(S+'performer')
+        if self.performer is not None:
+            self.performer = self.performer.get('name')
+        self.potential_owners = elem.find(S+'potentialOwner')
+        if self.potential_owners is not None:
+            self.potential_owners = self.potential_owners.get('name')
+            if self.potential_owners is not None:
+                self.potential_owners = [_.strip() for _ in self.potential_owners.split(',')]
 
 class rUserTask(rTask):
 
@@ -1463,8 +1475,8 @@ class rUserTask(rTask):
 
         self.rep = rep
         self.callback = callback
+        self.htm_task = None
 
-        # performer, potential_owner = self.get_performer(element)
         data_inputs = {}
         for source, target in manager.defn.input_params:
             if '.' in source:
@@ -1477,8 +1489,6 @@ class rUserTask(rTask):
                 data_inputs[target] = input_val
             else:
                 data_inputs[target] = manager.process.data_objects[source]
-            
-        performer = potential_owner = None
 
         bpm_detail = manager.process.root.bpm_detail
         with await manager.process.root.db_lock:
@@ -1494,20 +1504,29 @@ class rUserTask(rTask):
             await bpm_detail.save()
             self.det_row_id = await bpm_detail.getval('row_id')
 
+        performer = self.manager.defn.performer
+        if performer is not None:
+            if performer == '_user':
+                performer = manager.process.root.context.user_row_id
+            else:
+                performer = await db.cache.get_user(performer)
+                if performer is None:
+                    head = 'User task'
+                    body = f"User '{self.manager.defn.performer}' does not exist"
+                    raise AibError(head=head, body=body)
+
+
         self.htm_task = await ht.htm.init_task(manager.process,
-            self.company, manager.defn.form_name, performer, potential_owner,
-            data_inputs, callback=(self.on_task_completed, rep, self.det_row_id))
+            self.company, manager.defn.form_name, performer,
+            self.manager.defn.potential_owners, data_inputs,
+            callback=(self.on_task_completed, rep, self.det_row_id))
 
         if debug:
             print(f'user task "{manager.defn.elem_id}" iter={manager.iteration} rep={rep} waiting')
 
-    async def on_task_claimed(self, timestamp, performer):
-        pass
-
-    async def on_task_cancelled(self, timestamp):
-        pass
-
     async def on_task_completed(self, session, return_params, *args):
+
+        # [TODO] retrieve actual performer from htm.task and update bpm_detail
 
         manager = self.manager
 
@@ -1538,22 +1557,22 @@ class rUserTask(rTask):
         callback, *args = self.callback
         await callback(*args)
 
-    def get_performer(self, element):
-        # if element 'performer' exists, evaluate and pass task to the result
-        # if element 'potentialOwner' exists, evaluate and offer task to results
-        #
-        # could add a 'on_task_claimed' callback, to update state and actual performer
-        # if so, must add a 'on_task_cancelled' callback to record cancellation
-        performer = element.find(S+'performer')
-        if performer is None:
-            potential_owner = element.find(S+'potentialOwner')
-        else:
-            # expr = performer.find('.//{}'.format(S+'formalExpression'))
-            expr = performer.find(f'.//{S}formalExpression')
-            performer = etree.ETXPath(expr.text)(performer)
-            performer = int(performer)  # XPath returns a float
-            potential_owner = None
-        return performer, potential_owner
+    # def get_performer(self, element):
+    #     # if element 'performer' exists, evaluate and pass task to the result
+    #     # if element 'potentialOwner' exists, evaluate and offer task to results
+    #     #
+    #     # could add a 'on_task_claimed' callback, to update state and actual performer
+    #     # if so, must add a 'on_task_cancelled' callback to record cancellation
+    #     performer = element.find(S+'performer')
+    #     if performer is None:
+    #         potential_owner = element.find(S+'potentialOwner')
+    #     else:
+    #         # expr = performer.find('.//{}'.format(S+'formalExpression'))
+    #         expr = performer.find(f'.//{S}formalExpression')
+    #         performer = etree.ETXPath(expr.text)(performer)
+    #         performer = int(performer)  # XPath returns a float
+    #         potential_owner = None
+    #     return performer, potential_owner
 
     # async def terminate_task(self, htm_task, rep, det_row_id):
     async def terminate_task(self):
@@ -1562,7 +1581,8 @@ class rUserTask(rTask):
                 f'user task "{self.manager.defn.elem_id}" iter={self.manager.iteration} rep={self.rep} terminated'
                 )
 
-        await self.htm_task.cancel_task()
+        if self.htm_task is not None:  # task has been started
+            await self.htm_task.cancel_task()
         print(f'task {self.manager.defn.elem_id} terminated')
 
         bpm_detail = self.manager.process.root.bpm_detail

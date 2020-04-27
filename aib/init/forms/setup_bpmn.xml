@@ -13,20 +13,28 @@
         allow_amend="true"/>
     </mem_obj>
 
-    <mem_obj name="task_vars" descr="Variables to maintain 'task'">
+    <mem_obj name="task_vars" descr="Variables to maintain 'task'" sub_types="[
+        [`task_type`, null,
+          [
+            [`task`, `Unspecified`, [], []],
+            [`userTask`, `User task`, [`performer`, `form_defn`], []],
+            [`scriptTask`, `Script task`, [`path_to_script`], []]
+            ]
+          ]
+        ]">
       <mem_col col_name="task_type" data_type="TEXT" short_descr="Task type" long_descr="Task type"
-          choices="[[`task`, `Unspecified`], [`userTask`, `User task`], [`scriptTask`, `Script task`]]"
           dflt_val="task"/>
       <mem_col col_name="elem_id" data_type="TEXT" short_descr="Element id" long_descr="Element id"
           allow_null="true"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description" long_descr="Description"
         allow_amend="true"/>
-      <mem_col col_name="performer" data_type="TEXT" short_descr="Performer" long_descr="Performer"
-        allow_null="true" allow_amend="true"/>
+      <mem_col col_name="performer" data_type="TEXT" short_descr="Performer"
+        long_descr="Id of user to assign this task to, or '_user' for the current user"
+        allow_amend="true"/>
       <mem_col col_name="path_to_script" data_type="TEXT" short_descr="Path to script" long_descr="Path to script"
-        allow_null="true" allow_amend="true"/>
-      <mem_col col_name="form_name" data_type="TEXT" short_descr="Form name"
-        long_descr="Form name for user task" allow_null="true" allow_amend="true"/>
+        allow_amend="true"/>
+      <mem_col col_name="form_defn" data_type="TEXT" short_descr="Form definition"
+        long_descr="Form definition for user task" allow_amend="true"/>
       <mem_col col_name="multi_instance" data_type="BOOL" short_descr="Multi instance?"
         long_descr="Multi instance? - If Y, specify expression or data driven" allow_amend="true"/>
       <mem_col col_name="multi_inst_seq" data_type="BOOL" short_descr="Multi instance sequential?"
@@ -186,27 +194,15 @@
         <label value="Description:"/>
         <col/>
         <input obj_name="task_vars" col_name="descr" lng="200" height="3"/>
-        <row/>
-        <col/>
-        <label value="Performer:"/>
-        <col/>
-        <input obj_name="task_vars" col_name="performer" lng="200"/>
-        <row/>
-        <col/>
-        <label value="Form name:"/>
-        <col/>
-        <input obj_name="task_vars" col_name="form_name" lng="200"/>
-        <row/>
-        <col/>
-        <label value="Path to script:"/>
-        <col/>
-        <input obj_name="task_vars" col_name="path_to_script" lng="200"/>
+        <block/>
+        <subtype_frame subtype_obj="task_vars" subtype_col="task_type" lng="200"/>
+        <block/>
+        <panel/>
         <row/>
         <col/>
         <label value="Multi instance?"/>
         <col/>
         <input obj_name="task_vars" col_name="multi_instance"/>
-        <row/>
         <col/>
         <label value="Multi instance sequential?"/>
         <col/>
@@ -216,11 +212,10 @@
         <label value="Multi instance expression:"/>
         <col/>
         <input obj_name="task_vars" col_name="multi_inst_expr" lng="30"/>
-        <row/>
         <col/>
         <label value="Multi instance data input"/>
         <col/>
-        <input obj_name="task_vars" col_name="multi_inst_data" lng="200"/>
+        <input obj_name="task_vars" col_name="multi_inst_data" lng="160"/>
         <block/>
         <grid data_object="input_params" growable="true" num_grid_rows="3">
             <toolbar template="Grid" title="Call params:"/>

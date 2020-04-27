@@ -399,11 +399,13 @@ class Query_Form:  # template for query-type forms
         '</toolbar>'
         )
 
+    # changed parent_req_cancel to parent_req_close [2020-04-25] - implications?
+    # reason - if called from bp.bpm.userTask, process waits until task 'completed'
     button_row = (
         '<button_row>'
           '<button btn_id="btn_ok" btn_label="Ok" btn_enabled="true" '
               'btn_validate="true" btn_default="true" lng="60" action="'
-              '&lt;parent_req_cancel/&gt;'
+              '&lt;parent_req_close/&gt;'
             '"/>'
         '</button_row>'
         )

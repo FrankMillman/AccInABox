@@ -562,27 +562,6 @@ async def get_form_defns(company):
         form_defns[company] = db_obj
     return form_defns[company]
 
-# called from ht.htm.init_task - get form title to display to user
-title_lock = asyncio.Lock()
-async def get_form_title(company, form_name):
-    with await title_lock:
-        if '.' in form_name:
-            company, form_name = form_name.split('.')
-        async with db_session.get_connection() as db_mem_conn:
-            conn = db_mem_conn.db
-            sql = (
-                f"SELECT title FROM {company}.sys_form_defns "
-                f"WHERE form_name = {conn.constants.param_style}"
-                )
-            params = (form_name,)
-            cur = await conn.exec_sql(sql, params)
-            try:
-                title, = await cur.__anext__()
-            except StopAsyncIteration:  # no rows selected
-                raise AibError(head='Error',
-                    body=f'Form {company}.{form_name} does not exist')
-        return title
-
 #----------------------------------------------------------------------------
 
 # cache to store report_defns data object for each company
@@ -896,18 +875,21 @@ async def get_user_perms(user_row_id, company):
 
 #----------------------------------------------------------------------------
 
-# get user name from dir_users
-users = None
+# get user_id/name from dir_users
+users = None  # cannot 'await' outside function
 user_lock = asyncio.Lock()
-async def get_user_name(user_row_id):
-    global users
-    if users is None:
-        users = await db.objects.get_db_object(cache_context, '_sys', 'dir_users')
-        await users.add_virtual('display_name')
+async def get_user(user_id):
     with await user_lock:
-        # await users.init(init_vals={'row_id': user_row_id})
-        await users.select_row({'row_id': user_row_id})
-        return await users.getval('display_name')
+        global users
+        if users is None:
+            users = await db.objects.get_db_object(cache_context, '_sys', 'dir_users')
+            await users.add_virtual('display_name')
+        if isinstance(user_id, int):  # receive user_row_id, return display_name
+            await users.select_row({'row_id': user_id})
+            return await users.getval('display_name')
+        else:  # receive user_id, return user_row_id
+            await users.select_row({'user_id': user_id})
+            return await users.getval('row_id')
 
 #----------------------------------------------------------------------------
 
@@ -934,7 +916,7 @@ async def set_tran_lock(caller, xml):
         with await tran_lock:
             if key in tran_locks:
                 locking_caller = tran_locks[key]
-                locking_user = await get_user_name(
+                locking_user = await get_user(
                     locking_caller.context.user_row_id)
                 raise AibError(
                     head='Transaction locked',

@@ -58,18 +58,17 @@ def get_task_list(user_row_id, last_version):
     task_list = []
     for task_id in active_tasks:
         task, claimed_by = active_tasks[task_id]
-        if claimed_by is None:
-            task_list.append((task_id, task.title))
+        if task.performer == user_row_id:
+            if claimed_by is None:
+                task_list.append((task_id, task.title))
     return task_list, version
 
 #----------------------------------------------------------------------------
 
 async def init_task(process, company, form_name, performer,
         potential_owners, data_inputs, callback):
-    title = await db.cache.get_form_title(company, form_name)
-    performer = 1
-    task = HumanTask(company, form_name, title, data_inputs,
-        callback, performer, potential_owners)
+    task = HumanTask(company, form_name, performer, potential_owners,
+        data_inputs, callback)
     add_task(task)
     return task
 
@@ -129,25 +128,27 @@ def restart_active_tasks():
 
 class HumanTask:
 
-    def __init__(self, company, form_name, title, data_inputs,
-            callback, performer, potential_owners):
+    def __init__(self, company, form_name, performer, potential_owners,
+            data_inputs, callback):
         self.company = company
         self.form_name = form_name
-        self.title = title
+        self.title = form_name.split(';')[1]
+        self.performer = performer  # either a user_row_id
+        self.potential_owners = potential_owners  # or a list of 'roles'
         self.data_inputs = data_inputs
         self.callback = callback
 
-#       if performer is not None:
-#           assignees = [performer]
-#       else:
-#           assignees = self.get_performers(company, potential_owners)
-#       for assignee in assignees:
-#           for session_id, session in ht.htc.sessions.items():
-#               if session.user_row_id == assignee:
-#                   session.assign_task(self.task_id, self.title)
-# needs more thought [2017-12-20]
-# maybe dictionary of active tasks keyed on acc_role, so that session
-#   can easily check its user's roles to find its active tasks
+        # if performer is not None:
+        #     assignees = [performer]
+        # else:
+        #     assignees = self.get_performers(company, potential_owners)
+        # for assignee in assignees:
+        #     for session_id, session in ht.htc.sessions.items():
+        #         if session.user_row_id == assignee:
+        #             session.assign_task(self.task_id, self.title)
+        # needs more thought [2017-12-20]
+        # maybe dictionary of active tasks keyed on acc_role, so that session
+        # can easily check its user's roles to find its active tasks
 
     async def start_task(self, session):
         form = ht.form.Form(
