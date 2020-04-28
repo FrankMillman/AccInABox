@@ -43,14 +43,19 @@ async def create_orig_table(conn, company_id, table_defn, db_columns):
 async def _create_table(conn, company_id, table_defn, db_columns, return_sql=False):
     cols = []
     pkeys = []
+    pkey_type = None
     alt_keys = []
     alt_keys_2 = []
     fkeys = []
     for column in db_columns:
         col = setup_column(conn, column)
         cols.append(col)
-        if (column[KEY_FIELD] == 'Y' and column[DATA_TYPE] != 'AUTO'):
-            pkeys.append(column[COL_NAME])
+        if column[KEY_FIELD] == 'Y':
+            if column[DATA_TYPE] in ('AUTO', 'AUT0'):
+                pkey_type = column[DATA_TYPE]
+            else:
+                # not used at present, but retain code in case [2020-04-28]
+                pkeys.append(column[COL_NAME])
         if column[KEY_FIELD] == 'A':
             alt_keys.append((column[COL_NAME], column[DATA_TYPE]))
         elif column[KEY_FIELD] == 'B':
@@ -90,8 +95,8 @@ async def _create_table(conn, company_id, table_defn, db_columns, return_sql=Fal
     else:
         foreign_key = ''
 
-    create = 'CREATE TABLE {}.{}'.format(company_id, table_defn[TABLE_NAME])
-    sql = '{} ({}{}{})'.format(create, cols, primary_key, foreign_key)
+    create = f'CREATE TABLE {company_id}.{table_defn[TABLE_NAME]}'
+    sql = f'{create} ({cols}{primary_key}{foreign_key})'
 
     if return_sql:
         return sql
@@ -114,23 +119,20 @@ async def _create_table(conn, company_id, table_defn, db_columns, return_sql=Fal
             sql = conn.create_index(company_id, table_defn[TABLE_NAME], index)
             await conn.exec_cmd(sql)
 
-    create = 'CREATE TABLE {}.{}_audit'.format(company_id, table_defn[TABLE_NAME])
-    sql = '{} ({}{});'.format(
-        create,
-        cols,  # we don't use NOT NULL
-        primary_key)
+    create = f'CREATE TABLE {company_id}.{table_defn[TABLE_NAME]}_audit'
+    sql = f'{create} ({cols}{primary_key})'
     await conn.exec_cmd(sql)
 
-    sql = 'CREATE TABLE {}.{}_audit_xref'.format(company_id, table_defn[TABLE_NAME])
+    create = f'CREATE TABLE {company_id}.{table_defn[TABLE_NAME]}_audit_xref'
     cols = []
-    cols.append('row_id {}'.format(conn.convert_string('AUTO')))
+    cols.append(f'row_id {conn.convert_string(pkey_type)}')
     cols.append('data_row_id INT')  # NOT NULL')
     cols.append('audit_row_id INT')  # NULL for ins/del, NOT NULL for chg
     cols.append('user_row_id INT')  # NOT NULL')
-    cols.append('date_time {}'.format(conn.convert_string('DTM')))
+    cols.append(f'date_time {conn.convert_string("DTM")}')
     cols.append("type CHAR(6) CHECK (LOWER(type) IN ('add', 'chg', 'del', 'post', 'unpost'))")
 
-    sql = '{} ({});'.format(sql, ', '.join(cols))
+    sql = f'{create} ({", ".join(cols)})'
     await conn.exec_cmd(sql)
 
 def setup_column(conn, column):

@@ -1290,7 +1290,7 @@ class DbObject:
 
     async def setup_defaults(self):  # generate defaults for blank fields
         for fld in self.get_flds_to_update():  # core + active_subtype fields
-            if fld.col_defn.data_type != 'AUTO':
+            if fld.col_defn.data_type not in ('AUTO', 'AUT0'):
                 # must check calculated first, else getval() will re-calculate if True!
                 calculated = await fld.calculated()
                 if calculated or await fld.getval() is None:
@@ -1307,7 +1307,7 @@ class DbObject:
         generated_flds = []
 
         for fld in self.get_flds_to_update():  # core + active_subtype fields
-            if fld.col_defn.data_type == 'AUTO':
+            if fld.col_defn.data_type in ('AUTO', 'AUT0'):
                 generated_flds.append(fld)
             else:
                 cols.append(fld.col_name)
@@ -1335,7 +1335,7 @@ class DbObject:
         vals_to_update = []
         for fld in self.get_flds_to_update():  # core + active_subtype fields
             if await fld.value_changed():
-                if fld.col_defn.data_type != 'AUTO':  # can happen if insert, then dirty, then update
+                if fld.col_defn.data_type not in ('AUTO', 'AUT0'):  # can happen if insert, then dirty, then update
                     cols_to_update.append(fld.col_name)
                     vals_to_update.append(await fld.get_val_for_sql())
 

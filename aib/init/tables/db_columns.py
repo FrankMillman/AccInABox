@@ -183,6 +183,7 @@ cols.append ({
             ['DTM', 'Date-time'],
             ['BOOL', 'True/False'],
             ['AUTO', 'Generated key'],
+            ['AUT0', 'Gen key start from 0'],
             ['JSON', 'Json'],
             ['XML', 'Xml'],
             ['SXML', 'Xml string'],

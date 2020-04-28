@@ -46,7 +46,6 @@ def customise(constants, DbConn, db_params):
     DbConn.create_alt_index = create_alt_index
     DbConn.create_index = create_index
     DbConn.get_lower_colname = get_lower_colname
-    DbConn.setup_start_date = setup_start_date
     DbConn.tree_select = tree_select
     DbConn.get_view_names = get_view_names
     DbConn.escape_string = escape_string
@@ -279,13 +278,28 @@ async def insert_row(self, db_obj, cols, vals, generated_flds, from_upd_on_save)
         company = db_obj.company
         table_name = '{}.{}'.format(company, table_name)
 
+    for gen_fld in generated_flds:
+        if gen_fld.col_defn.data_type == 'AUT0':
+            sql = f"SELECT EXISTS(SELECT * FROM {table_name})"
+            cur = await self.exec_sql(sql)
+            exists, = await cur.__anext__()
+            if not exists:  # if first row, insert row_id with value of 0
+                cols.insert(0, gen_fld.col_name)
+                vals.insert(0, 0)
+                data_row_id = 0
+                gen_fld._value = data_row_id
+                for child in gen_fld.children:
+                    child._value = data_row_id
+                generated_flds.remove(gen_fld)
+            break
+
     sql = ('INSERT INTO {} ({}) VALUES ({})'.format(table_name,
         ', '.join(cols), ', '.join([self.constants.param_style]*len(cols))))
 
     await self.exec_cmd(sql, vals)
 
     for gen_fld in generated_flds:
-        if gen_fld.col_defn.data_type == 'AUTO':
+        if gen_fld.col_defn.data_type in ('AUTO', 'AUT0'):
             data_row_id = self.lastrowid  # automatically returned by sqlite3
             gen_fld._value = data_row_id
             for child in gen_fld.children:
@@ -305,8 +319,8 @@ async def insert_row(self, db_obj, cols, vals, generated_flds, from_upd_on_save)
         sql = 'SELECT {} FROM {} WHERE {}'.format(
             ', '.join([fld.col_name for fld in generated_flds]),
             table_name, where)
-        cur = self.exec_sql(sql, key_vals)
-        vals_generated = next(cur)
+        cur = await self.exec_sql(sql, key_vals)
+        vals_generated = await cur.__anext__()
         for fld, val in zip(generated_flds, vals_generated):
             for child in fld.children:
                 child._value = val
@@ -318,12 +332,19 @@ async def insert_row(self, db_obj, cols, vals, generated_flds, from_upd_on_save)
     # these can be deleted on the fly and recreated, leaving dangling audit trail entries
     if not db_obj.mem_obj and not from_upd_on_save:
         # if True, assume that data_row_id was populated above
-        cols = 'data_row_id, user_row_id, date_time, type'
 
-        sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
-                "({2}, {2}, {2}, 'add')".format(
-            table_name, cols, self.constants.param_style))
-        params = (data_row_id, db_obj.context.user_row_id, self.timestamp)
+        if data_row_id == 0:  # data_type 'AUT0', insert row_id with value of 0
+            cols = 'row_id, data_row_id, user_row_id, date_time, type'
+            sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
+                    "({2}, {2}, {2}, {2}, 'add')".format(
+                table_name, cols, self.constants.param_style))
+            params = (0, data_row_id, db_obj.context.user_row_id, self.timestamp)
+        else:
+            cols = 'data_row_id, user_row_id, date_time, type'
+            sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
+                    "({2}, {2}, {2}, 'add')".format(
+                table_name, cols, self.constants.param_style))
+            params = (data_row_id, db_obj.context.user_row_id, self.timestamp)
 
         await self.exec_cmd(sql, params)
         xref_row_id = self.lastrowid
@@ -488,6 +509,7 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('DTM', 'TIMESTAMP')
         .replace('DEC', f'REAL{db_scale}')  # to allow correct rounding when reading back
         .replace('AUTO', 'INTEGER PRIMARY KEY')
+        .replace('AUT0', 'INTEGER PRIMARY KEY')
         .replace('JSON', 'TEXT')
         .replace('FXML', 'BLOB')
         .replace('RXML', 'BLOB')
@@ -495,7 +517,6 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('SXML', 'TEXT')
         .replace('BOOL', 'BOOLTEXT')
         .replace('NOW()', "(DATETIME('NOW'))")
-        .replace('PKEY', 'PRIMARY KEY')
         )
 
 def convert_dflt(self, string, data_type):
@@ -536,7 +557,7 @@ async def create_company(self, company_id):
         await self.attach_company('_sys')
 
 def create_primary_key(self, pkeys):
-    return ', PRIMARY KEY ({})'.format(', '.join(pkeys))
+    return f', PRIMARY KEY ({', '.join(pkeys)})'
 
 def create_foreign_key(self, company_id, fkeys):
     foreign_key = ''
@@ -576,33 +597,6 @@ def create_index(self, company_id, table_name, index):
 
 def get_lower_colname(self, col_name, alias):
     return f'LOWER({alias}.{col_name})'
-
-async def setup_start_date(self, company, user_row_id, start_date):
-    # adm_periods - first row_id must be 0, not 1
-
-    cols = 'row_id, closing_date'
-    sql = "INSERT INTO {}.adm_periods ({}) VALUES ({})".format(
-        company, cols, ', '.join([self.constants.param_style]*2))
-    params = (0, start_date)
-    await self.exec_cmd(sql, params)
-
-    cols = 'row_id, data_row_id, user_row_id, date_time, type'
-    sql = "INSERT INTO {}.adm_periods_audit_xref ({}) VALUES ({})".format(
-        company, cols, ', '.join([self.constants.param_style]*5))
-    params = (0, 0, user_row_id, self.timestamp, 'add')
-    await self.exec_cmd(sql, params)
-
-    cols = 'row_id, period_row_id'
-    sql = "INSERT INTO {}.adm_yearends ({}) VALUES ({})".format(
-        company, cols, ', '.join([self.constants.param_style]*2))
-    params = (0, 0)
-    await self.exec_cmd(sql, params)
-
-    cols = 'row_id, data_row_id, user_row_id, date_time, type'
-    sql = "INSERT INTO {}.adm_yearends_audit_xref ({}) VALUES ({})".format(
-        company, cols, ', '.join([self.constants.param_style]*5))
-    params = (0, 0, user_row_id, self.timestamp, 'add')
-    await self.exec_cmd(sql, params)
 
 async def tree_select_old(self, company_id, table_name, start_col, start_value,
         filter=None, sort=False, up=False, group=0):

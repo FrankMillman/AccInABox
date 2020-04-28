@@ -35,7 +35,6 @@ def customise(constants, DbConn, db_params):
     DbConn.create_alt_index = create_alt_index
     DbConn.create_index = create_index
     DbConn.get_lower_colname = get_lower_colname
-    DbConn.setup_start_date = setup_start_date
     DbConn.tree_select = tree_select
     DbConn.get_view_names = get_view_names
     DbConn.escape_string = escape_string
@@ -386,6 +385,7 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('DTM', 'DATETIME2')
         .replace('DEC', f'DEC (21,{db_scale})')
         .replace('AUTO', 'INT IDENTITY PRIMARY KEY NONCLUSTERED')
+        .replace('AUT0', 'INT IDENTITY(0,1) PRIMARY KEY NONCLUSTERED')
         .replace('BOOL', 'BIT')
         .replace('JSON', 'NVARCHAR(MAX)')
         .replace('FXML', 'VARBINARY(MAX)')
@@ -393,7 +393,6 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('PXML', 'VARBINARY(MAX)')
         .replace('SXML', 'NVARCHAR(MAX)')
         .replace('NOW()', 'GETDATE()')
-        .replace('PKEY', 'PRIMARY KEY NONCLUSTERED')
         )
 
 def convert_dflt(self, string, data_type):
@@ -507,7 +506,7 @@ async def create_company(self, company_id):
     await self.exec_cmd('CREATE SCHEMA {}'.format(company_id))
 
 def create_primary_key(self, pkeys):
-    return ', PRIMARY KEY NONCLUSTERED ({})'.format(', '.join(pkeys))
+    return f', PRIMARY KEY NONCLUSTERED ({', '.join(pkeys)})'
 
 def create_foreign_key(self, company_id, fkeys):
     foreign_key = ''
@@ -553,58 +552,6 @@ def create_index(self, company_id, table_name, index):
 
 def get_lower_colname(self, col_name, alias):
     return f'{alias}._{col_name}'
-
-async def setup_start_date(self, company, user_row_id, start_date):
-    # adm_periods - first row_id must be 0, not 1
-
-    # allow manual specification of row_id
-    await self.exec_cmd(
-        "SET IDENTITY_INSERT {}.adm_periods ON".format(company))
-
-    cols = 'row_id, closing_date'
-    sql = "INSERT INTO {}.adm_periods ({}) VALUES ({})".format(
-        company, cols, ', '.join([self.constants.param_style]*2))
-    params = (0, start_date)
-    await self.exec_cmd(sql, params)
-
-    await self.exec_cmd(
-        "SET IDENTITY_INSERT {}.adm_periods OFF".format(company))
-
-    await self.exec_cmd(
-        "SET IDENTITY_INSERT {}.adm_periods_audit_xref ON".format(company))
-
-    cols = 'row_id, data_row_id, user_row_id, date_time, type'
-    sql = "INSERT INTO {}.adm_periods_audit_xref ({}) VALUES ({})".format(
-        company, cols, ', '.join([self.constants.param_style]*5))
-    params = (0, 0, user_row_id, self.timestamp, 'add')
-    await self.exec_cmd(sql, params)
-
-    await self.exec_cmd(
-        "SET IDENTITY_INSERT {}.adm_periods_audit_xref OFF".format(company))
-
-    await self.exec_cmd(
-        "SET IDENTITY_INSERT {}.adm_yearends ON".format(company))
-
-    cols = 'row_id, period_row_id'
-    sql = "INSERT INTO {}.adm_yearends ({}) VALUES ({})".format(
-        company, cols, ', '.join([self.constants.param_style]*2))
-    params = (0, 0)
-    await self.exec_cmd(sql, params)
-
-    await self.exec_cmd(
-        "SET IDENTITY_INSERT {}.adm_yearends OFF".format(company))
-
-    await self.exec_cmd(
-        "SET IDENTITY_INSERT {}.adm_yearends_audit_xref ON".format(company))
-
-    cols = 'row_id, data_row_id, user_row_id, date_time, type'
-    sql = "INSERT INTO {}.adm_yearends_audit_xref ({}) VALUES ({})".format(
-        company, cols, ', '.join([self.constants.param_style]*5))
-    params = (0, 0, user_row_id, self.timestamp, 'add')
-    await self.exec_cmd(sql, params)
-
-    await self.exec_cmd(
-        "SET IDENTITY_INSERT {}.adm_yearends_audit_xref OFF".format(company))
 
 def tree_select(self, company_id, table_name, link_col, start_col, start_value,
         filter=None, sort=False, up=False, group=0):

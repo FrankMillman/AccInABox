@@ -36,7 +36,7 @@ table = {
 cols = []
 cols.append ({
     'col_name'   : 'row_id',
-    'data_type'  : 'AUTO',
+    'data_type'  : 'AUT0',
     'short_descr': 'Row id',
     'long_descr' : 'Row id - starts from 0, so equal to period_row_id',
     'col_head'   : 'Row',

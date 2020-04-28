@@ -33,11 +33,15 @@ async def save_start_date(caller, xml):
     var = caller.data_objects['var']
     start_date = await var.getval('start_date')  # entered in inline form
 
-    async with db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
-        # setup_start_date saves the opening date in adm_periods with a row_id of 0
-        await conn.setup_start_date(caller.company, caller.context.user_row_id,
-            start_date - timedelta(1))
+    adm_period = caller.data_objects['adm_period']
+    await adm_period.init()
+    await adm_period.setval('closing_date', start_date - timedelta(1))
+    await adm_period.save()
+
+    adm_yend = caller.data_objects['adm_yend']
+    await adm_yend.init()
+    await adm_yend.setval('period_row_id', await adm_period.getval('row_id'))
+    await adm_yend.save()
 
     caller.context.curr_year = 1
     caller.context.end_year = 0

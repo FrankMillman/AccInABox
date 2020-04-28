@@ -1686,4 +1686,5 @@ DATA_TYPES = {
     'RXML' :ReportXml,
     'SXML' :StringXml,
     'AUTO' :Integer,
+    'AUT0' :Integer,
     }

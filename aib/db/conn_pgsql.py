@@ -51,7 +51,6 @@ def customise(constants, DbConn, db_params):
     DbConn.create_alt_index = create_alt_index
     DbConn.create_index = create_index
     DbConn.get_lower_colname = get_lower_colname
-    DbConn.setup_start_date = setup_start_date
     DbConn.tree_select = tree_select
     DbConn.get_view_names = get_view_names
     DbConn.escape_string = escape_string
@@ -353,13 +352,13 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('DTM', 'TIMESTAMP')
         .replace('DEC', f'DEC (21,{db_scale})')
         .replace('AUTO', 'SERIAL PRIMARY KEY')
+        .replace('AUT0', 'INT GENERATED ALWAYS AS IDENTITY (minvalue 0) PRIMARY KEY')
         .replace('JSON', 'VARCHAR')
         .replace('FXML', 'BYTEA')
         .replace('RXML', 'BYTEA')
         .replace('PXML', 'BYTEA')
         .replace('SXML', 'VARCHAR')
         .replace('NOW()', 'CURRENT_TIMESTAMP')
-        .replace('PKEY', 'PRIMARY KEY')
         )
 
 def convert_dflt(self, string, data_type):
@@ -496,41 +495,6 @@ def create_index(self, company_id, table_name, index):
 
 def get_lower_colname(self, col_name, alias):
     return f'LOWER({alias}.{col_name})'
-
-async def setup_start_date(self, company, user_row_id, start_date):
-    # adm_periods - first row_id must be 0, not 1
-
-    cols = 'row_id, closing_date'
-    vals = (0, start_date)
-    sql = (
-        f"INSERT INTO {company}.adm_periods ({cols}) "
-        f"VALUES ({', '.join([self.constants.param_style]*2)})"
-        )
-    await self.exec_cmd(sql, vals)
-
-    cols = 'row_id, data_row_id, user_row_id, date_time, type'
-    vals = (0, 0, user_row_id, self.timestamp, 'add')
-    sql = (
-        f"INSERT INTO {company}.adm_periods_audit_xref ({cols}) "
-        f"VALUES ({', '.join([self.constants.param_style]*5)})"
-        )
-    await self.exec_cmd(sql, vals)
-
-    cols = 'row_id, period_row_id'
-    vals = (0, 0)
-    sql = (
-        f"INSERT INTO {company}.adm_yearends ({cols}) "
-        f"VALUES ({', '.join([self.constants.param_style]*2)})"
-        )
-    await self.exec_cmd(sql, vals)
-
-    cols = 'row_id, data_row_id, user_row_id, date_time, type'
-    vals = (0, 0, user_row_id, self.timestamp, 'add')
-    sql = (
-        f"INSERT INTO {company}.adm_yearends_audit_xref ({cols}) "
-        f"VALUES ({', '.join([self.constants.param_style]*5)})"
-        )
-    await self.exec_cmd(sql, vals)
 
 def tree_select(self, company_id, table_name, link_col, start_col, start_value,
         filter=None, sort=False, up=False, group=0):
