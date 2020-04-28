@@ -506,7 +506,7 @@ async def create_company(self, company_id):
     await self.exec_cmd('CREATE SCHEMA {}'.format(company_id))
 
 def create_primary_key(self, pkeys):
-    return f', PRIMARY KEY NONCLUSTERED ({', '.join(pkeys)})'
+    return f", PRIMARY KEY NONCLUSTERED ({', '.join(pkeys)})"
 
 def create_foreign_key(self, company_id, fkeys):
     foreign_key = ''

@@ -557,7 +557,7 @@ async def create_company(self, company_id):
         await self.attach_company('_sys')
 
 def create_primary_key(self, pkeys):
-    return f', PRIMARY KEY ({', '.join(pkeys)})'
+    return f", PRIMARY KEY ({', '.join(pkeys)})"
 
 def create_foreign_key(self, company_id, fkeys):
     foreign_key = ''
