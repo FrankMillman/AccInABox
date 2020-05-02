@@ -140,10 +140,8 @@ cols.append ({
             'only_one_root',
             'Must have a parent id',
             [
-                ['check', '(', 'first_row', 'is', '$True', ''],
-                ['and', '', '$value', 'is', '$None', ')'],
-                ['or', '(', 'first_row', 'is', '$False', ''],
-                ['and', '', '$value', 'is not', '$None', ')'],
+                ['check', '', 'first_row', 'is', '$True', ''],
+                ['or', '', '$value', 'is not', '$None', ''],
                 ],
             ],
         ],
