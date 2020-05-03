@@ -114,22 +114,30 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'location_id',
+    'col_name'   : 'location_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Location id',
-    'long_descr' : 'Location id',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
     'col_head'   : 'Loc',
-    'key_field'  : 'N',
-    'calculated' : ['_ledger.location_id', 'is_not', None],
-    'allow_null' : False,
+    'key_field'  : 'A',
+    'calculated' : ['_ledger.location_row_id>parent_id', 'is_not', None],
+    'allow_null' : True,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{_ledger.location_id}',
+    'dflt_val'   : '{_ledger.location_row_id}',
     'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : ['adm_locations', 'row_id', 'location', 'location', False, 'locs'],
+    'col_checks' : [
+        [
+            'root_or_loc',
+            'Not a valid location code',
+            [
+                ['check', '', 'location_row_id>location_type', '!=', "'group'", ''],
+                ],
+            ],
+        ],
+    'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
     'choices'    : None,
     })
 cols.append ({

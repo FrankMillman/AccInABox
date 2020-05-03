@@ -140,22 +140,22 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'location_id',
+    'col_name'   : 'location_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Location id',
-    'long_descr' : 'Location id',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
     'col_head'   : 'Loc',
     'key_field'  : 'N',
-    'calculated' : ['_param.location_id', 'is_not', None],
+    'calculated' : ['_param.location_row_id', 'is_not', None],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{_param.location_id}',
+    'dflt_val'   : '{_param.location_row_id}',
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['adm_locations', 'row_id', 'location', 'location', False, 'locs'],
+    'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
     'choices'    : None,
     })
 cols.append ({

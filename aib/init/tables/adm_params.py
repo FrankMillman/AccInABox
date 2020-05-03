@@ -234,10 +234,10 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'division_id',
+    'col_name'   : 'division_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Division',
-    'long_descr' : 'Return division id if there is only one, else None',
+    'long_descr' : 'Return division row id if there is only one, else None',
     'col_head'   : 'Div',
     'sql'        : (
         "CASE "
@@ -248,10 +248,10 @@ virt.append ({
         ),
     })
 virt.append ({
-    'col_name'   : 'location_id',
+    'col_name'   : 'location_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Location',
-    'long_descr' : 'Return location id if there is only one, else None',
+    'long_descr' : 'Return location row id if there is only one, else None',
     'col_head'   : 'Loc',
     'sql'        : (
         "CASE "

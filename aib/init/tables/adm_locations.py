@@ -4,10 +4,19 @@ table = {
     'module_id'     : 'adm',
     'short_descr'   : 'Locations',
     'long_descr'    : 'Physical locations',
-    'sub_types'     : None,
+    'sub_types'     : [
+        ['location_type', None, [
+            ['root', 'Root',
+                ['location_id', 'descr'], []],
+            ['group', 'Group code',
+                ['location_id', 'descr'], []],
+            ['location', 'Location code',
+                ['location_id', 'descr'], []],
+            ]],
+        ],
     'sub_trans'     : None,
     'sequence'      : ['seq', ['parent_id'], None],
-    'tree_params'   : [None, ['location', 'descr', 'seq', 'parent_id'], []],
+    'tree_params'   : [None, ['location_id', 'descr', 'seq', 'parent_id'], []],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -76,7 +85,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'location',
+    'col_name'   : 'location_id',
     'data_type'  : 'TEXT',
     'short_descr': 'Location id',
     'long_descr' : 'Location id',
@@ -138,7 +147,7 @@ cols.append ({
                 ],
             ],
         ],
-    'fkey'       : ['adm_locations', 'row_id', 'parent', 'location', False, None],
+    'fkey'       : ['adm_locations', 'row_id', 'parent', 'location_id', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -155,6 +164,25 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'location_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Type of location code',
+    'long_descr' : 'Type of location code',
+    'col_head'   : 'Type',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 10,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'location',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -188,7 +216,7 @@ virt.append ({
     'long_descr' : 'Is this node expandable?',
     'col_head'   : '',
     'dflt_val'   : 'true',
-    'sql'        : "'1'",
+    'sql'        : "CASE WHEN a.location_type = 'code' THEN 0 ELSE 1 END",
     })
 
 # cursor definitions
@@ -198,11 +226,11 @@ cursors.append({
     'cursor_name': 'locs',
     'title': 'Maintain locations',
     'columns': [
-        ['location', 100, False, False, False, False, None, None, None, None],
+        ['location_id', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, True, False, False, None, None, None, None],
         ],
     'filter': [],
-    'sequence': [['location', False]],
+    'sequence': [['location_id', False]],
     })
 
 # actions

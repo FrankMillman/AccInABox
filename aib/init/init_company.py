@@ -816,13 +816,15 @@ async def setup_init_data(context, conn, company, company_name):
     await adm_params.save()
 
     adm_loc = await db.objects.get_db_object(context, company, 'adm_locations')
-    await adm_loc.setval('location', company)
+    await adm_loc.setval('location_id', company)
     await adm_loc.setval('descr', company_name)
+    await adm_loc.setval('location_type', 'root')
     await adm_loc.save()
 
     adm_div = await db.objects.get_db_object(context, company, 'adm_divisions')
-    await adm_div.setval('division', company)
+    await adm_div.setval('division_id', company)
     await adm_div.setval('descr', company_name)
+    await adm_div.setval('division_type', 'root')
     await adm_div.save()
 
     prod_class = await db.objects.get_db_object(context, company, 'in_prod_classes')

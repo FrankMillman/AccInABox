@@ -4,10 +4,19 @@ table = {
     'module_id'     : 'adm',
     'short_descr'   : 'Divisions',
     'long_descr'    : 'Divisional breakdwon of the organisation',
-    'sub_types'     : None,
+    'sub_types'     : [
+        ['division_type', None, [
+            ['root', 'Root',
+                ['division_id', 'descr'], []],
+            ['group', 'Group code',
+                ['division_id', 'descr'], []],
+            ['division', 'Division code',
+                ['division_id', 'descr'], []],
+            ]],
+        ],
     'sub_trans'     : None,
     'sequence'      : ['seq', ['parent_id'], None],
-    'tree_params'   : [None, ['division', 'descr', 'seq', 'parent_id'], []],
+    'tree_params'   : [None, ['division_id', 'descr', 'seq', 'parent_id'], []],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -76,7 +85,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'division',
+    'col_name'   : 'division_id',
     'data_type'  : 'TEXT',
     'short_descr': 'Division id',
     'long_descr' : 'Division id',
@@ -138,7 +147,7 @@ cols.append ({
                 ],
             ],
         ],
-    'fkey'       : ['adm_divisions', 'row_id', 'parent', 'division', False, None],
+    'fkey'       : ['adm_divisions', 'row_id', 'parent', 'division_id', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -155,6 +164,25 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'division_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Type of division code',
+    'long_descr' : 'Type of division code',
+    'col_head'   : 'Type',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 10,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'division',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -188,7 +216,7 @@ virt.append ({
     'long_descr' : 'Is this node expandable?',
     'col_head'   : '',
     'dflt_val'   : 'true',
-    'sql'        : "'1'",
+    'sql'        : "CASE WHEN a.division_type = 'code' THEN 0 ELSE 1 END",
     })
 
 # cursor definitions
@@ -197,11 +225,11 @@ cursors.append({
     'cursor_name': 'divisions',
     'title': 'Maintain divisions',
     'columns': [
-        ['division', 100, False, False, False, False, None, None, None, None],
+        ['division_id', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, True, False, False, None, None, None, None],
         ],
     'filter': [],
-    'sequence': [['division', False]],
+    'sequence': [['division_id', False]],
     })
 
 # actions
