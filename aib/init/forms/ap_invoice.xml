@@ -116,6 +116,7 @@
             <<prev_value/>>
             "/>
 
+          <block/>
           <subtran_frame subtran_obj="ap_invdet" subtran_col="line_type">
             <subtran_body subtran_id="ipch"/>
             <subtran_body subtran_id="npch"/>

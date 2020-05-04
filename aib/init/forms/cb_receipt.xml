@@ -74,6 +74,7 @@
           <input obj_name="cb_det" col_name="line_type" radio="false" form_dflt="
             <<prev_value/>>
             "/>
+          <block/>
           <subtran_frame subtran_obj="cb_det" subtran_col="line_type">
             <subtran_body subtran_id="isls"/>
             <subtran_body subtran_id="nsls"/>

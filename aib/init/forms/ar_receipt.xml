@@ -56,6 +56,7 @@
         <toolbar/>
         <body>
 
+          <block/>
           <subtran_frame subtran_obj="ar_det" subtran_col="line_type">
             <subtran_body subtran_id="arec"/>
           </subtran_frame>

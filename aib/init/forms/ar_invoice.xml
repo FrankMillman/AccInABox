@@ -89,6 +89,7 @@
             <<prev_value/>>
             "/>
 
+          <block/>
           <subtran_frame subtran_obj="ar_invdet" subtran_col="line_type">
             <subtran_body subtran_id="isls"/>
             <subtran_body subtran_id="nsls"/>
