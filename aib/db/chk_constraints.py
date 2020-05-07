@@ -99,7 +99,7 @@ async def eval_elem_old(elem, db_obj, fld, value):  # replaced 2019-07-08
     if elem == '$orig':
         return await fld.get_orig(), fld
     if '$exists' in elem:
-        obj_name = elem.split('$')[0]
+        obj_name = elem.split('$')[0].strip()
         if obj_name:
             test_obj = db_obj.context.data_objects[obj_name]
         else:
@@ -348,7 +348,7 @@ CHKS = {
             True if tgt_val is None else
             src_val >= tgt_val),
     'is': (lambda src_val, tgt_val: src_val is tgt_val),
-    'is not': (lambda src_val, tgt_val: src_val is not tgt_val),
+    'is_not': (lambda src_val, tgt_val: src_val is not tgt_val),
     'in': (lambda src_val, tgt_val: src_val in tgt_val),
     'not in': (lambda src_val, tgt_val: src_val not in tgt_val),
     'matches': (lambda src_val, tgt_val:

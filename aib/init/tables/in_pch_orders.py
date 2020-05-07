@@ -82,7 +82,7 @@ cols.append ({
     'long_descr' : 'Purchase order number',
     'col_head'   : 'Pch ord',
     'key_field'  : 'A',
-    'calculated' : ['_param.auto_pchord_no', 'is_not', None],
+    'calculated' : [['where', '', '_param.auto_pchord_no', 'is_not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

@@ -165,7 +165,7 @@ cols.append ({
     'long_descr' : 'Currency used to enter transaction',
     'col_head'   : 'Currency',
     'key_field'  : 'N',
-    'calculated' : ['_ledger.alt_curr', 'is_', False],
+    'calculated' : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

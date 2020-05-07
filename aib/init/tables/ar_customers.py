@@ -82,7 +82,7 @@ cols.append ({
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger',
     'key_field'  : 'A',
-    'calculated' : ['_param.ar_ledger_id', 'is_not', None],
+    'calculated' : [['where', '', '_param.ar_ledger_id', 'is_not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -147,7 +147,7 @@ cols.append ({
     'long_descr' : 'Currency',
     'col_head'   : 'Currency',
     'key_field'  : 'N',
-    'calculated' : ['_ledger.currency_id', 'is_not', None],
+    'calculated' : [['where', '', '_ledger.currency_id', 'is_not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -259,13 +259,29 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'dflt_loc_id',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Return default location',
+    'long_descr' : 'Return default location if it exists, else None',
+    'col_head'   : 'Dflt loc',
+    'sql'        : (
+        "SELECT CASE WHEN "
+            "(SELECT COUNT(*) FROM {company}.ar_customers b "
+            "WHERE b.ledger_row_id = a.ledger_row_id AND "
+                "b.party_row_id = a.party_row_id AND b.deleted_id = 0) "
+            "= 1 THEN "
+                "(SELECT b.location_row_id FROM {company}.ar_customers b "
+                "WHERE b.ledger_row_id = a.ledger_row_id AND "
+                    "b.party_row_id = a.party_row_id AND b.deleted_id = 0) "
+            "END"
+        )
+    })
+virt.append ({
     'col_name'   : 'current_stat_date',
     'data_type'  : 'DTE',
     'short_descr': 'Current statement date',
     'long_descr' : 'Current statement date',
     'col_head'   : 'Stat date',
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
     'sql'        : (
         "SELECT b.statement_date FROM {company}.ar_stat_dates b "
         "WHERE b.cust_row_id = a.row_id AND b.period_row_id = "

@@ -159,7 +159,7 @@ cols.append ({
     'long_descr' : 'Currency id - if specified, all suppliers will share this currency',
     'col_head'   : 'Curr',
     'key_field'  : 'N',
-    'calculated' : ['_param.currency_id', 'is_not', None],
+    'calculated' : [['where', '', '_param.currency_id', 'is_not', '$None', '']],
     'allow_null' : True,  # null means suppliers can have any currency
     'allow_amend': False,
     'max_len'    : 0,

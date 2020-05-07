@@ -189,7 +189,7 @@ cols.append ({
     'long_descr' : 'Effective date',
     'col_head'   : 'Eff date',
     'key_field'  : 'N',
-    'calculated' : ['_param.eff_date_npch', 'is_', False],
+    'calculated' : [['where', '', '_param.eff_date_npch', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

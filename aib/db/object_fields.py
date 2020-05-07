@@ -863,47 +863,8 @@ class Field:
         # if we get here, None is returned
 
     async def calculated(self):
-
         if self._calculated is None:  # first time
-            # don't understand the reason for the following lines [2018-07-16]
-            # remove for now, explain properly if it turns out that they are needed
-            # allow_amend = self.col_defn.allow_amend
-            # if allow_amend not in (False, True):
-            #     allow_amend = await eval_expr(deepcopy(allow_amend), self.db_obj, self)
-            # if self.db_obj.exists and not allow_amend:
-            #     self._calculated = False
-            # else:
-                src_obj, op, tgt_val = self.col_defn.calculated
-                if '.' in src_obj:
-                    obj_name, col_name = src_obj.split('.')
-                    if obj_name == '_param':
-                        db_obj = await db.cache.get_adm_params(self.db_obj.company)
-                    elif obj_name == '_ledger':
-                        module_row_id = self.db_obj.db_table.module_row_id
-                        ctx_mod_id, ctx_ledg_id = getattr(
-                            self.db_obj.context, 'mod_ledg_id', (None, None))
-                        if ctx_mod_id == module_row_id:  # get ledger_row_id from 'context'
-                            ledger_row_id = ctx_ledg_id
-                        else:  # get ledger_row_id from db_table.ledger_col - could be None
-                            ledger_col = self.db_obj.db_table.ledger_col
-                            if ledger_col is None:
-                                raise AibError(
-                                    head='Checking calculated',
-                                    body=f'No ledger col defined for {self.db_obj.table_name}'
-                                    )
-                            ledger_row_id = await self.db_obj.getval(ledger_col)
-                        db_obj = await db.cache.get_ledger_params(
-                            self.db_obj.company, module_row_id, ledger_row_id)
-                    elif obj_name in self.db_obj.context.data_objects:
-                        db_obj = self.db_obj.context.data_objects[obj_name]
-                    else:
-                        db_obj = await db.objects.get_db_object(
-                            self.db_obj.context, self.db_obj.company, obj_name)
-                    src_val = await db_obj.getval(col_name)
-                else:
-                    col_name = src_obj
-                    src_val = await self.db_obj.getval(col_name)
-                self._calculated = getattr(operator, op)(src_val, tgt_val)
+            self._calculated = await eval_expr(self.col_defn.calculated, self.db_obj, self)
         return self._calculated
 
     async def value_changed(self, value=blank):

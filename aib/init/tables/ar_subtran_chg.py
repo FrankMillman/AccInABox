@@ -226,7 +226,7 @@ cols.append ({
     'long_descr' : 'Exchange rate from customer currency to local currency',
     'col_head'   : 'Rate cust',
     'key_field'  : 'N',
-    'calculated' : ['_ledger.alt_rec_override', 'is_', False],
+    'calculated' : [['where', '', '_ledger.alt_rec_override', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

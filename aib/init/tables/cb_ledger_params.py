@@ -146,7 +146,7 @@ cols.append ({
     'long_descr' : 'Currency id',
     'col_head'   : 'Curr',
     'key_field'  : 'N',
-    'calculated' : ['_param.currency_id', 'is_not', None],
+    'calculated' : [['where', '', '_param.currency_id', 'is_not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

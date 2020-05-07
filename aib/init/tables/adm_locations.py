@@ -143,7 +143,7 @@ cols.append ({
             'Must have a parent id',
             [
                 ['check', '', 'first_row', 'is', '$True', ''],
-                ['or', '', '$value', 'is not', '$None', ''],
+                ['or', '', '$value', 'is_not', '$None', ''],
                 ],
             ],
         ],

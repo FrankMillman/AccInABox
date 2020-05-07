@@ -159,7 +159,7 @@ cols.append ({
     'long_descr' : 'Currency id - if specified, all customers will share this currency',
     'col_head'   : 'Curr',
     'key_field'  : 'N',
-    'calculated' : ['_param.currency_id', 'is_not', None],
+    'calculated' : [['where', '', '_param.currency_id', 'is_not', '$None', '']],
     'allow_null' : True,  # null means customers can have any currency
     'allow_amend': True,  # if change from null to not-null, must check existing data
     'max_len'    : 0,
@@ -465,7 +465,7 @@ actions.append([
             'Must set up auto discount number',
             [
                 ['check', '', 'discount_code_id', 'is', '$None', ''],
-                ['or', '', 'auto_disc_no', 'is not', '$None', ''],
+                ['or', '', 'auto_disc_no', 'is_not', '$None', ''],
                 ],
             ],
         ],

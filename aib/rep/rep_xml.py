@@ -164,7 +164,7 @@ OPS = {
     '-': lambda src_val, tgt_val: bool(src_val - tgt_val),
     'sub': lambda src_val, tgt_val: bool(src_val - tgt_val),
     'is': lambda src_val, tgt_val: src_val is tgt_val,
-    'is not': lambda src_val, tgt_val: src_val is not tgt_val,
+    'is_not': lambda src_val, tgt_val: src_val is not tgt_val,
     'in': lambda src_val, tgt_val: src_val in tgt_val,
     'not in': lambda src_val, tgt_val: src_val not in tgt_val,
     'matches': lambda src_val, tgt_val: bool(re.match(tgt_val+'$', src_val or '')),

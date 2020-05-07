@@ -87,7 +87,7 @@ cols.append ({
     'long_descr' : 'Warehouse row id',
     'col_head'   : 'Warehouse',
     'key_field'  : 'A',
-    'calculated' : ['_param.in_ledger_id', 'is_not', None],
+    'calculated' : [['where', '', '_param.in_ledger_id', 'is_not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

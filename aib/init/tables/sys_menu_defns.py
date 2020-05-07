@@ -127,7 +127,7 @@ cols.append ({
     #             ['check', '(', 'first_row', 'is', '$True', ''],
     #             ['and', '', '$value', 'is', '$None', ')'],
     #             ['or', '(', 'first_row', 'is', '$False', ''],
-    #             ['and', '', '$value', 'is not', '$None', ')'],
+    #             ['and', '', '$value', 'is_not', '$None', ')'],
     #             ],
     #         ],
     #     ],
