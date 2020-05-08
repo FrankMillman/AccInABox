@@ -152,8 +152,9 @@ async def eval_elem(elem, db_obj, fld, value):
     if elem.startswith("'"):
         return elem[1:-1]
     if elem.isdigit():
-        # return int(elem)
         return D(elem)  # use D() to guard against malicious string expansion like ' '*(10**200)
+    if elem[0] == '-' and elem[1:].isdigit():
+        return D(elem)
     if elem.startswith('('):
         return await eval_infix(elem[1:-1], db_obj, fld, value)
     if elem == '$orig':

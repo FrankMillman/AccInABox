@@ -541,6 +541,9 @@ class Conn:
                 elif expr.isdigit():  # integer
                     where_params.append(int(expr))
                     expr = self.constants.param_style
+                elif expr[0] == '-' and expr[1:].isdigit():  # negative integer
+                    where_params.append(int(expr))
+                    expr = self.constants.param_style
                 elif expr.startswith("'"):  # literal string
                     where_params.append(expr[1:-1])
                     if col.data_type == 'TEXT':

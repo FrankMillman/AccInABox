@@ -1572,6 +1572,8 @@ class DbObject:
             src_val = src_col[1:-1]  # literal value
         elif src_col.isdigit():
             src_val = int(src_col)
+        elif src_col[0] == '-' and src_col[1:].isdigit():
+            src_val = int(src_col)
         # pyfunc not used at present, but retain for future use [2019-01-22]
         # elif src_col.startswith('pyfunc:'):
         #     func_name = src_col.split(':')[1]
@@ -1612,6 +1614,8 @@ class DbObject:
 
             # 'tgt' could be an integer, a string, or a column name
             if tgt.isdigit():
+                tgt_val = int(tgt)
+            elif tgt[0] == '-' and tgt[1:].isdigit():
                 tgt_val = int(tgt)
             elif tgt.startswith("'"):
                 tgt_val = tgt[1:-1]
@@ -3338,6 +3342,8 @@ async def get_dependencies(col):
                         pass
                     elif lft.isdigit():
                         pass
+                    elif lft[0] == '-' and lft[1:].isdigit():
+                        pass
                     elif lft.startswith('$'):
                         pass
                     elif lft.startswith('_param'):
@@ -3350,6 +3356,8 @@ async def get_dependencies(col):
                         pass
                     elif rgt.isdigit():
                         pass
+                    elif rgt[0] == '-' and rgt[1:].isdigit():
+                        pass
                     elif rgt.startswith('$'):
                         pass
                     elif rgt.startswith('_param'):
@@ -3361,6 +3369,8 @@ async def get_dependencies(col):
                 elif source.startswith("'"):  # literal
                     pass
                 elif source.isdigit():
+                    pass
+                elif source[0] == '-' and source[1:].isdigit():
                     pass
                 elif source.startswith('$'):
                     pass
@@ -3380,6 +3390,8 @@ async def get_dependencies(col):
                         pass
                     elif lft.isdigit():
                         pass
+                    elif lft[0] == '-' and lft[1:].isdigit():
+                        pass
                     elif lft.startswith('$'):
                         pass
                     elif lft.startswith('_param'):
@@ -3392,6 +3404,8 @@ async def get_dependencies(col):
                         pass
                     elif rgt.isdigit():
                         pass
+                    elif rgt[0] == '-' and rgt[1:].isdigit():
+                        pass
                     elif rgt.startswith('$'):
                         pass
                     elif rgt.startswith('_param'):
@@ -3403,6 +3417,8 @@ async def get_dependencies(col):
                 elif target.startswith("'"):  # literal
                     pass
                 elif target.isdigit():
+                    pass
+                elif target[0] == '-' and target[1:].isdigit():
                     pass
                 elif target.startswith('$'):
                     pass
