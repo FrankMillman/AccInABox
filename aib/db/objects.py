@@ -479,10 +479,6 @@ class DbObject:
                 field.constant = col_const[field.col_name]
                 field._orig = field._value = field.constant
 
-            field.table_keys = [
-                self.fields[col.col_name]
-                    for col in col_defn.table_keys]
-
             if col_defn.col_name == fkey_colname:  # fkey to parent field
                 field.fkey_parent = fkey_parent
                 fkey_parent.children.append(field)
@@ -498,6 +494,13 @@ class DbObject:
         self.primary_keys = [
             self.fields[col_defn.col_name]
                 for col_defn in db_table.primary_keys]
+
+        # convert col.alt_keys (column instances)
+        #   to field.alt_keys (field instances)
+        for col_name, field in self.fields.items():
+            field.table_keys = [
+                self.fields[col.col_name]
+                    for col in field.col_defn.table_keys]
 
         if db_table.sequence is not None:
             seq_col = db_table.sequence[0]
@@ -690,7 +693,6 @@ class DbObject:
                 subcol_name, subcol_val = obj_name[8:].split('=')
                 db_obj = self.sub_trans[subcol_name][subcol_val][0]
             else:
-                print(f'DO WE GET HERE? db.objects.getfld {obj_name}.{col_name}')
                 db_obj = await get_db_object(self.context, self.company, obj_name)
                 self.context.data_objects[obj_name] = db_obj
         else:
@@ -2701,6 +2703,13 @@ class DbTable:
             self.primary_keys[-1].table_keys = self.primary_keys
         if alt_keys:
             alt_keys[-1].table_keys = alt_keys
+            # if col has a dflt_rule, allow previous col to attempt a select_row()
+            pos = len(alt_keys) - 1
+            while pos:
+                if alt_keys[pos].dflt_rule is None:
+                    break
+                alt_keys[pos-1].table_keys = alt_keys
+                pos -= 1
         if alt_keys_2:
             alt_keys_2[-1].table_keys = alt_keys_2
 

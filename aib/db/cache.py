@@ -477,7 +477,7 @@ the value for each company is a dictionary -
              if module_id == 'ar' -
                   statement_date=statement_date
               )
-    'current_period' is also stored as an attribute of the dictionary
+    'current_period' is also stored as an attribute of the dictionary - can only do this with OD(), not {} !
 """
 
 ledger_periods = {}

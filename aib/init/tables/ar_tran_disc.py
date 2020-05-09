@@ -94,7 +94,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['ar_customers', 'row_id', 'ledger_row_id, cust_id', 'ledger_row_id, cust_id', False, None],
+    'fkey'       : ['ar_customers', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({

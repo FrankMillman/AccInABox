@@ -587,25 +587,40 @@ virt.append ({
     'dflt_rule'  : (
         '<expr>'
           '<fld_val name="sls_inv_acc_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="sls_crn_acc_tot"/>'
           '<op type="-"/>'
           '<fld_val name="sls_iea_acc_tot"/>'
+          '<op type="+"/>'
+          '<fld_val name="sls_crn_acc_tot"/>'
           '<op type="-"/>'
           '<fld_val name="sls_cea_acc_tot"/>'
           '<op type="+"/>'
           '<fld_val name="sls_inv_csh_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="sls_crn_csh_tot"/>'
           '<op type="-"/>'
           '<fld_val name="sls_iea_csh_tot"/>'
+          '<op type="+"/>'
+          '<fld_val name="sls_crn_csh_tot"/>'
           '<op type="-"/>'
           '<fld_val name="sls_cea_csh_tot"/>'
         '</expr>'
         ),
     'sql'        : (
-        "a.sls_inv_acc_tot + a.sls_crn_acc_tot - a.sls_iea_acc_tot - a.sls_cea_acc_tot + "
-        "a.sls_inv_csh_tot + a.sls_crn_csh_tot - a.sls_iea_csh_tot - a.sls_cea_csh_tot"
+        "a.sls_inv_acc_tot - a.sls_iea_acc_tot + a.sls_crn_acc_tot - a.sls_cea_acc_tot + "
+        "a.sls_inv_csh_tot - a.sls_iea_csh_tot + a.sls_crn_csh_tot - a.sls_cea_csh_tot"
+        )
+    })
+virt.append ({
+    'col_name'   : 'sls_uea_bf',
+    'data_type'  : 'DEC',
+    'short_descr': 'Unearned b/f - accum total',
+    'long_descr' : 'Unearned b/f - accumulated total',
+    'col_head'   : 'Unearned b/f',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : (
+        "(a.sls_inv_acc_tot - a.sls_iea_acc_tot + a.sls_crn_acc_tot - a.sls_cea_acc_tot + "
+        "a.sls_inv_csh_tot - a.sls_iea_csh_tot + a.sls_crn_csh_tot - a.sls_cea_csh_tot) - "
+        "(a.sls_inv_acc_day - a.sls_iea_acc_day + a.sls_crn_acc_day - a.sls_cea_acc_day + "
+        "a.sls_inv_csh_day - a.sls_iea_csh_day + a.sls_crn_csh_day - a.sls_cea_csh_day)"
         )
     })
 

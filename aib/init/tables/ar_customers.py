@@ -120,20 +120,51 @@ cols.append ({
     'long_descr' : 'Location row id',
     'col_head'   : 'Loc',
     'key_field'  : 'A',
-    'calculated' : ['_ledger.location_row_id>parent_id', 'is_not', None],
+    'calculated' : [
+        ['where', '',  '_ledger.use_location', 'is', '$False', ''],
+        ['or', '', '_ledger.common_location', 'is', '$True', ''],
+        ],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{_ledger.location_row_id}',
-    'dflt_rule'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="_ledger.use_location" op="is" tgt="$False">'
+            '<fld_val name="adm_locations.root_row_id"/>'
+          '</compare>'
+          '<compare src="_ledger.common_location" op="is" tgt="$True">'
+            '<fld_val name="_ledger.location_row_id"/>'
+          '</compare>'
+          '<compare src="_ledger.multiple_locations" op="is" tgt="$False">'
+            '<case>'
+                '<compare src="loc_id_if_exists" op="=" tgt="-1">'
+                  '<literal value="$None"/>'
+                '</compare>'
+                '<default>'
+                  '<fld_val name="loc_id_if_exists"/>'
+                '</default>'
+            '</case>'
+          '</compare>'
+        '</case>'
+        ),
     'col_checks' : [
         [
             'root_or_loc',
             'Not a valid location code',
             [
                 ['check', '', 'location_row_id>location_type', '!=', "'group'", ''],
+                ],
+            ],
+        [
+            'multi_loc',
+            'Account with a different location exists',
+            [
+                ['check', '', 'loc_id_if_exists', '=', '-1', ''],
+                ['or', '', '$value', '=', 'loc_id_if_exists', ''],
+                ['or', '', '_ledger.multiple_locations', 'is', '$True', ''],
                 ],
             ],
         ],
@@ -259,15 +290,19 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'dflt_loc_id',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Return default location',
-    'long_descr' : 'Return default location if it exists, else None',
-    'col_head'   : 'Dflt loc',
+    'col_name'   : 'loc_id_if_exists',
+    'data_type'  : 'INT',
+    'short_descr': 'Return location if exists',
+    'long_descr' : 'Return location row id if one exists, -1 if none exist, else None',
+    'col_head'   : 'Loc',
     'sql'        : (
-        "SELECT CASE WHEN "
-            "(SELECT COUNT(*) FROM {company}.ar_customers b "
-            "WHERE b.ledger_row_id = a.ledger_row_id AND "
+        "SELECT CASE "
+            "WHEN (SELECT COUNT(*) FROM {company}.ar_customers b "
+                "WHERE b.ledger_row_id = a.ledger_row_id AND "
+                "b.party_row_id = a.party_row_id AND b.deleted_id = 0) "
+            "= 0 THEN -1 "
+            "WHEN (SELECT COUNT(*) FROM {company}.ar_customers b "
+                "WHERE b.ledger_row_id = a.ledger_row_id AND "
                 "b.party_row_id = a.party_row_id AND b.deleted_id = 0) "
             "= 1 THEN "
                 "(SELECT b.location_row_id FROM {company}.ar_customers b "
@@ -628,6 +663,7 @@ cursors.append({
     'columns': [
         ['cust_id', 100, False, False, False, False, None, None, None, None],
         ['party_row_id>display_name', 260, True, True, False, False, None, None, None, None],
+        ['location_row_id>location_id', 60, False, False, False, False, None, None, None, None],
         ],
     'filter': [],
     'sequence': [['cust_id', False]],

@@ -144,7 +144,10 @@ cols.append ({
             ['or', '', '_ledger.alt_curr', 'is', '$True', '']
             ]],
         ],
-    'fkey'       : ['ar_customers', 'row_id', 'ledger_id, cust_id', 'ledger_id, cust_id', False, 'cust_bal_2'],
+    'fkey'       : [
+        'ar_customers', 'row_id', 'ledger_id, cust_id, location_id',
+        'ledger_id, cust_id, location_id', False, 'cust_bal_2'
+        ],
     'choices'    : None,
     })
 cols.append ({

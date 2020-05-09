@@ -192,7 +192,7 @@ cols.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<case>'
-            '<compare src="$exists" op="is_" tgt="$True">'
+            '<compare src="$exists" op="is" tgt="$True">'
                 '<fld_val name="discount_cust"/>'
             '</compare>'
             '<compare src="item_row_id" op="eq" tgt="tran_row_id>item_row_id">'
@@ -201,7 +201,7 @@ cols.append ({
             '<compare src="tran_row_id>item_row_id>tran_type" op="eq" tgt="\'ar_disc\'">'
                 '<literal value="0"/>'
             '</compare>'
-            '<compare src="item_row_id>discount_date" op="is_" tgt="$None">'
+            '<compare src="item_row_id>discount_date" op="is" tgt="$None">'
                 '<literal value="0"/>'
             '</compare>'
             '<compare src="tran_date" op=">" tgt="item_row_id>discount_date">'
@@ -259,7 +259,7 @@ cols.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<case>'
-            '<compare src="$exists" op="is_" tgt="$True">'
+            '<compare src="$exists" op="is" tgt="$True">'
                 '<fld_val name="alloc_local"/>'
             '</compare>'
             '<compare src="item_row_id" op="eq" tgt="tran_row_id>item_row_id">'
@@ -294,7 +294,7 @@ cols.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<case>'
-            '<compare src="$exists" op="is_" tgt="$True">'
+            '<compare src="$exists" op="is" tgt="$True">'
                 '<fld_val name="discount_local"/>'
             '</compare>'
             '<compare src="item_row_id" op="eq" tgt="tran_row_id>item_row_id">'

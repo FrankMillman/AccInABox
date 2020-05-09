@@ -133,25 +133,117 @@ cols.append ({
     'fkey'       : ['gl_codes', 'row_id', 'ctrl_acc', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
+
 cols.append ({
-    'col_name'   : 'location_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Location row id',
-    'long_descr' : 'Location row id - if specified, all customers will share this location',
-    'col_head'   : 'Loc',
+    'col_name'   : 'use_location',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Add location id to customers?',
+    'long_descr' : 'Add location id to customers? If not, use location root',
+    'col_head'   : 'Use location?',
     'key_field'  : 'N',
-    'calculated' : ['_param.location_row_id', 'is_not', None],
-    'allow_null' : False,  # 'root' means customers can have any location
-    'allow_amend': True,  # if change from root to not-root, must check existing data
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 1,
+    'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
+    'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'common_location',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Common loc for all customers?',
+    'long_descr' : 'Use common location for all customers?',
+    'col_head'   : 'Common location?',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,  # if change from False to True, update existing data
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'col_checks' : [
+        [
+            'use_location',
+            'Location code not required',
+            [
+                ['check', '', 'use_location', 'is', '$True', ''],
+                ['or', '', '$value', 'is', '$False', ''],
+                ],
+            ],
+        ],
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Common location row id',
+    'long_descr' : 'Common location row id - all customers will share this location',
+    'col_head'   : 'Common',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : True,
+    'allow_amend': True,  # if changed, update existing data
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : [
+        [
+            'common_loc',
+            'Location code required if common location specified',
+            [
+                ['check', '(', 'common_location', 'is', '$False', ''],
+                ['and', '', '$value', 'is', '$None', ')'],
+                ['or', '(', 'common_location', 'is', '$True', ''],
+                ['and', '', '$value', 'is_not', '$None', ''],
+                ['and', '', 'location_row_id>location_type', '=', "'location'", ')'],
+                ],
+            ],
+        ],
+   'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'multiple_locations',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Multiple locs for customers?',
+    'long_descr' : 'Allow multiple locations for customers?',
+    'col_head'   : 'Multiple locations?',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,  # if change from True to False, check existing data
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'col_checks' : [
+        [
+            'multiple_location',
+            'Multiple locations not allowed',
+            [
+                ['check', '', '$value', 'is', '$False', ''],
+                ['or', '(', 'use_location', 'is', '$True', ''],
+                ['and', '', 'common_location', 'is', '$False', ')'],
+                ],
+            ],
+        ],
+    'fkey'       : None,
+    'choices'    : None,
+    })
+
 cols.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
@@ -466,6 +558,17 @@ actions.append([
             [
                 ['check', '', 'discount_code_id', 'is', '$None', ''],
                 ['or', '', 'auto_disc_no', 'is_not', '$None', ''],
+                ],
+            ],
+        [
+            'location_id',
+            'Location code required if common location specified',
+            [
+                ['check', '(', 'common_location', 'is', '$False', ''],
+                ['and', '', 'location_row_id', 'is', '$None', ')'],
+                ['or', '(', 'common_location', 'is', '$True', ''],
+                ['and', '', 'location_row_id', 'is_not', '$None', ''],
+                ['and', '', 'location_row_id>location_type', '=', "'location'", ')'],
                 ],
             ],
         ],

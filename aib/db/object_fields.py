@@ -177,17 +177,11 @@ class Field:
 
         if is_alt:
             true_src = self.db_obj.fields[altsrc_name]
-            # if true_src.foreign_key == {}:
-            #     await true_src.setup_foreign_key()
-
             true_foreign_key = await self.db_obj.get_foreign_key(true_src)
-
-            # tgt_obj = true_src.foreign_key['tgt_field'].db_obj
             tgt_obj = true_foreign_key['tgt_field'].db_obj
 
             tgt_val = await true_src.getval()
             if tgt_val is not None:
-                # true_tgt = true_src.foreign_key['tgt_field']
                 true_tgt = true_foreign_key['tgt_field']
                 await true_tgt.setval(tgt_val, validate=False)
 
@@ -195,7 +189,6 @@ class Field:
             foreign_key['tgt_field'] = tgt_field
             foreign_key['true_src'] = true_src
             foreign_key['alt_src'] = []  # only used if this *has* an alt
-            # true_src.foreign_key['alt_src'].append(self)
             true_foreign_key['alt_src'].append(self)
             self._value = await tgt_field.getval()
             return foreign_key
@@ -268,8 +261,6 @@ class Field:
         return foreign_key
 
     async def get_fk_object(self):
-        if self.foreign_key == {}:  # not yet set up
-            await self.setup_foreign_key()
         foreign_key = await self.db_obj.get_foreign_key(self)
         tgt_fld = foreign_key['tgt_field']
         value = await self.getval()
@@ -342,6 +333,8 @@ class Field:
 
         if self.col_defn.data_type == 'BOOL':
             sql += ' AS "x [BOOLTEXT]"'
+        elif self.col_defn.data_type == 'DEC':
+            sql += f' AS "x [REAL{self.col_defn.db_scale}]"'
 
         if sql[:7].upper() != 'SELECT ':
             sql = 'SELECT ' + sql
@@ -387,6 +380,8 @@ class Field:
         for fld in self.table_keys:
             if fld is self:
                 val = value
+            elif fld._value is None:  # added [2020-05-05] - see notes in setval()
+                val = await fld.get_dflt()
             else:
                 val = fld._value
             cols_vals[fld.col_name] = val
@@ -409,8 +404,7 @@ class Field:
 
         if not from_init and (value is None or value == ''):
             if not col_defn.allow_null:
-                # if from_sql, check if fld in flds_to_update - ignore if not active subtype
-                if not from_sql or self in db_obj.get_flds_to_update():
+                if self in db_obj.get_flds_to_update():  # ignore if not active subtype
                     errmsg = f'{self.table_name}.{col_name} - a value is required'
                     raise AibError(head=col_defn.short_descr, body=errmsg)
 
@@ -476,14 +470,21 @@ class Field:
                 errmsg = f'{self.table_name}.{col_name}: amendment not allowed {self._value} -> {value}'
                 raise AibError(head=self.table_name, body=errmsg)
 
-        if self.table_keys and value is not None and not from_sql and not db_obj.exists:
+        if (self.table_keys and value is not None and not from_sql
+                and not db_obj.exists and self.table_keys[-1] is self):
             # 1. if value is None, do not trigger read_row
             # 2. if from_sql, we have just selected the row and are
             #      populating the fields - do not trigger another read_row!
             # 3. if db_obj.exists, assume that we are changing an alt_key
             #      e.g. on posting transaction, change temp tran_number to
             #      actual tran_number - IMPLICATIONS??
-            # 4. must read row before other validations, because
+            # 4. added [2020-05-05]
+            #    if self is not the last table_key, it is a prior key where
+            #      the following key has a dflt_rule, so we can attempt a
+            #      read_row(). But we cannot attempt from here, as the dflt_rule
+            #      may depend on the value of this field, which has not been set yet.
+            #      Therefore we run this check again below, after the value has been set.
+            # 5. must read row before other validations, because
             #      other validations may use contents of db_obj
             await self.read_row(value, display)
             if db_obj.exists:
@@ -513,21 +514,18 @@ class Field:
                 true_src = foreign_key['true_src']
                 alt_src = foreign_key['alt_src']
                 if true_src:  # this is an alt_src
-                    alt_srcnames = [
+                    altsrc_names = [
                         s.strip() for s in true_src.col_defn.fkey[FK_ALT_SOURCE].split(',')
                         ]
                 if value is None:
                     if self._value is not None:  # added 2018-03-15
                         await tgt_field.db_obj.init()
                 elif value == tgt_field._value:
-                    assert not tgt_field.db_obj.dirty,  (
-                        f'{self.table_name}.{col_name} > '
-                        f'{tgt_field.table_name}.{tgt_field.col_name} is dirty!'
-                        )
-                    # main reason - we have read in the foreign object using an alt_src,
+                    # we have read in the foreign object using an alt_src,
                     #   now we are checking the true_src - same object
+                    # or, we have performed a lookup, now applying the result - object exists
                     if true_src:  # don't re-read, but if true_src, set value
-                        if col_name == alt_srcnames[-1]:  # if multi-part key, all parts are present
+                        if col_name == altsrc_names[-1]:  # if multi-part key, all parts are present
                             true_foreign_key = await db_obj.get_foreign_key(true_src)
                             # must validate true_src - db_obj might exist because we have
                             #   performed a lookup, but true_src might have col_checks
@@ -547,22 +545,21 @@ class Field:
                     pass  # e.g. ap_tran_inv_tax.tran_det_row_id -> ap_tran_inv_det.row_id
                 else:
                     if true_src:  # this is an alt_src
-                        alt_src_pos = alt_srcnames.index(col_name)
+                        altsrc_pos = altsrc_names.index(col_name)
                         if (
-                            alt_src_pos == 0  # this is the first alt_src
+                            altsrc_pos == 0  # this is the first alt_src
                             or
                             # if all prior alt_src._value is None, assume their tgt_fields have dflt_vals
                             # if this fails, it is a programming error - must supply values for alt flds in seq
-                            all(db_obj.fields[_]._value is None for _ in alt_srcnames[:alt_src_pos])
+                            all(db_obj.fields[_]._value is None for _ in altsrc_names[:altsrc_pos])
                             ):
                                 await tgt_field.db_obj.init()
                         await tgt_field.setval(value, display, validate=False)
-                        if col_name == alt_srcnames[-1]:  # if multi-part key, all parts are present
+                        if col_name == altsrc_names[-1]:  # if multi-part key, all parts are present
                             if not tgt_field.db_obj.exists:
-                                await tgt_field.db_obj.init()
-                                if len(alt_srcnames) > 1:  # build meaningful error message
+                                if len(altsrc_names) > 1:  # build meaningful error message
                                     where = []
-                                    for altsrc_name in alt_srcnames:
+                                    for altsrc_name in altsrc_names:
                                         if altsrc_name == col_name:
                                             altsrc_val = value
                                         else:
@@ -586,6 +583,12 @@ class Field:
                             #   ar_customers must have been successfully read in
                             # in this case, we must set 'changed' to False, otherwise lower
                             #   down 'dirty' is set to True, which is not correct
+                            if true_src.table_keys and db_obj.exists:
+                                changed = False
+                        elif tgt_field.db_obj.exists:  # assume missing fields had dflt vals
+                            value = tgt_field._value  # to change (eg) 'a001' to 'A001'
+                            true_foreign_key = await db_obj.get_foreign_key(true_src)
+                            await true_src.setval(true_foreign_key['tgt_field']._value, display=display)
                             if true_src.table_keys and db_obj.exists:
                                 changed = False
                     else:
@@ -628,9 +631,6 @@ class Field:
         # if we get here, all validations have passed
 
         if not changed:
-            # if self.must_be_evaluated:
-            #     # do we get here? if not, no need to reset
-            #     print(f'{self.table_name}.{col_name} {value} no change but must be evaluated??')
             self.must_be_evaluated = False  # reset in case it was True
             return
 
@@ -650,6 +650,22 @@ class Field:
             if value is not None:  # could be if from_init
                 if child.table_keys:
                     await child.read_row(value, display)
+
+        if (self.table_keys and value is not None and not from_sql
+                and not db_obj.exists and self.table_keys[-1] is not self):
+            # 1. if value is None, do not trigger read_row
+            # 2. if from_sql, we have just selected the row and are
+            #      populating the fields - do not trigger another read_row!
+            # 3. if db_obj.exists, assume that we are changing an alt_key
+            #      e.g. on posting transaction, change temp tran_number to
+            #      actual tran_number
+            # 4. added [2020-05-05]
+            #    if self is not the last table_key, it is a prior key where
+            #      the following key has a dflt_rule, so we can attempt a
+            #      read_row(). We could not attempt above, as the dflt_rule may
+            #      depend on the value of this field, which had not been set yet.
+            #      Therefore we run this check again here, after the value has been set.
+            await self.read_row(value, display)
 
         # if foreign key has changed, re-read foreign object
         if self.foreign_key:
@@ -854,12 +870,6 @@ class Field:
                     return await self.db_obj.getval(dflt_val[1:-1])
             else:
                 return dflt_val
-
-        # pros/cons to this [2020-04-22]
-        # for now, leave it that dflt_vals for choices must be set explicitly
-        # if self.col_defn.choices is not None and not self.col_defn.allow_null:
-        #     return next(iter(self.col_defn.choices.keys()))
-
         # if we get here, None is returned
 
     async def calculated(self):
@@ -1572,9 +1582,9 @@ class Boolean(Field):
         raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     async def check_val(self, value):
-        if value in (True, 1, '1'):
+        if value in (True, 1, '1', 'True', 'true', 't'):
             return True
-        if value in (False, 0, '0', None, ''):
+        if value in (False, 0, '0', None, '', 'False', 'false', 'f'):
             return False
         errmsg = f'{self.table_name}.{self.col_name} {value!r} - not a valid boolean value'
         raise AibError(head=self.col_defn.short_descr, body=errmsg)

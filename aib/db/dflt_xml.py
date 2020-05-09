@@ -298,7 +298,7 @@ async def compare(fld, xml, debug):
 
     op = getattr(operator,
         {'+': 'add', '-': 'sub', '*': 'mul', '/': 'truediv', '=': 'eq',
-            '>': 'gt', '<': 'lt', '>=': 'ge', '<=': 'le'}.get(
+            '>': 'gt', '<': 'lt', '>=': 'ge', '<=': 'le', 'is': 'is_'}.get(
             xml.get('op'), xml.get('op')))
 
     if debug:

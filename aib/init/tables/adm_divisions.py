@@ -89,7 +89,7 @@ cols.append ({
     'data_type'  : 'TEXT',
     'short_descr': 'Division id',
     'long_descr' : 'Division id',
-    'col_head'   : 'Division',
+    'col_head'   : 'Div',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -192,6 +192,14 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'root_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Row id of root element',
+    'long_descr' : 'Row id of root element - should always be 1, but this is safer',
+    'col_head'   : '',
+    'sql'        : "SELECT b.row_id FROM {company}.adm_divisions b WHERE b.parent_id IS NULL",
+    })
+virt.append ({
     'col_name'   : 'first_row',
     'data_type'  : 'BOOL',
     'short_descr': 'First row?',
@@ -228,7 +236,7 @@ cursors.append({
         ['division_id', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, True, False, False, None, None, None, None],
         ],
-    'filter': [],
+    'filter': [['WHERE', '', 'division_type', '=', "'division'", '']],
     'sequence': [['division_id', False]],
     })
 

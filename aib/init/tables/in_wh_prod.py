@@ -172,7 +172,10 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['ap_suppliers', 'row_id', 'supp_id', 'supp_id', False, 'supp'],
+    'fkey'       : [
+        'ap_suppliers', 'row_id', 'ap_ledger_id, supp_id, location_id',
+        'ledger_id, supp_id, location_id', False, 'supp'
+        ],
     'choices'    : None,
     })
 
