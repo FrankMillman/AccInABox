@@ -169,7 +169,9 @@ async def auto_gen(fld, xml, debug):
         prefix = prefix[1:-1]
     else:  # column name
         prefix_fld = await db_obj.getfld(prefix)
-        prefix = (await prefix_fld.getval())[:prefix_lng].upper()
+        prefix_val = await prefix_fld.getval()
+        prefix_val = ''.join(_ for _ in prefix_val if not _.isspace())  # remove any whitespace
+        prefix = prefix_val[:prefix_lng].upper()
     if key.endswith('_'):
         key += prefix
     suffix = await db.cache.get_next(db_obj, key)

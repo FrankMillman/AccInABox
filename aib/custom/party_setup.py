@@ -49,6 +49,7 @@ async def on_start_frame(caller, xml):
     # called from setup_party on_start_frame
     party = caller.data_objects['party']
     var = caller.data_objects['var']
+    await var.init()
     var_id = await var.getfld('party_id')
 
     if party.exists:
