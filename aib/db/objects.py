@@ -29,6 +29,7 @@ import db.hooks_xml
 import db.dflt_xml
 from db.connection import db_constants, mem_constants
 from db.chk_constraints import chk_constraint
+from db.chk_constraints import chk_constraint, eval_expr
 import db.cache
 import ht
 from common import AibError, AibDenied
@@ -1602,57 +1603,11 @@ class DbObject:
             src_val = await self.getval(src_col)
         return src_val
 
-    async def check_condition(self, condition):
-        do_update = []
-
-        for test, lbr, src, op, tgt, rbr in condition:
-            if test.lower() in ('and', 'or'):  # else must be 'where'
-                do_update.append(test.lower())
-            if lbr == '(':
-                do_update.append(lbr)
-
-            # assume 'src' is a column name
-            src_val = await self.getval(src)
-
-            # 'tgt' could be an integer, a string, or a column name
-            if tgt.isdigit():
-                tgt_val = int(tgt)
-            elif tgt[0] == '-' and tgt[1:].isdigit():
-                tgt_val = int(tgt)
-            elif tgt.startswith("'"):
-                tgt_val = tgt[1:-1]
-            elif tgt == '$True':
-                tgt_val = True
-            elif tgt == '$False':
-                tgt_val = False
-            else:
-                tgt_val = await self.getval(tgt)
-
-            if op == '=':
-                result = (src_val == tgt_val)
-            elif op == '!=':
-                result = (src_val != tgt_val)
-            elif op == '<':
-                result = False if tgt_val is None else (src_val < tgt_val)
-            elif op == '>':
-                result = True if tgt_val is None else (src_val > tgt_val)
-            elif op == '<=':
-                result = False if tgt_val is None else (src_val <= tgt_val)
-            elif op == '>=':
-                result = True if tgt_val is None else (src_val >= tgt_val)
-
-            do_update.append(str(result))  # literal 'True' or 'False'
-
-            if rbr == ')':
-                do_update.append(rbr)
-
-        return eval(' '.join(do_update))
-
     async def upd_on_save(self, upd_on_save, conn, upd_type):
         tbl_name, condition, split_src, *upd_on_save = upd_on_save
 
         if condition:
-            if not await self.check_condition(condition):
+            if not await eval_expr(condition, self, None):
                 return
 
         if split_src:
@@ -2019,7 +1974,7 @@ class DbObject:
         tbl_name, condition, split_src, *upd_on_post = upd_on_post
 
         if condition:
-            if not await self.check_condition(condition):
+            if not await eval_expr(condition, self, None):
                 return
 
         if split_src:
