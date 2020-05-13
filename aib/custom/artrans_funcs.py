@@ -13,16 +13,15 @@ async def split_nsls(db_obj, conn, return_vals):
     # called as split_src func from sls_nsls_subinv.upd_on_save()
     eff_date = await db_obj.getval('eff_date')
     tran_date = await db_obj.getval('tran_det_row_id>tran_row_id>tran_date')
-    nsls_code = await db_obj.getval('nsls_code_id')
     amount_pty = await db_obj.getval('net_party')
     amount_loc = await db_obj.getval('net_local')
 
     # at the moment this achieves nothing! [2019-08-09]
     # but it will be used when there are multiple effective dates
     if eff_date == tran_date:
-        yield (nsls_code, tran_date, amount_pty, amount_loc)
+        yield (tran_date, amount_pty, amount_loc)
     else:
-        yield (nsls_code, eff_date, amount_pty, amount_loc)
+        yield (eff_date, amount_pty, amount_loc)
 
 async def setup_openitems(db_obj, conn, return_vals):
     # called as split_src func from ar_tran_inv.upd_on_post()
@@ -59,7 +58,6 @@ async def setup_openitems(db_obj, conn, return_vals):
             await db_obj.getval('inv_tot_local'),
             discount_date,
             discount_cust,
-            True,  # posted
             )
 
 async def setup_inv_alloc(db_obj, conn, return_vals):

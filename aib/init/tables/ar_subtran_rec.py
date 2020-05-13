@@ -573,7 +573,6 @@ actions.append([
                 ['tran_date', '=', 'tran_date'],
                 ['amount_cust', '-', 'arec_cust'],
                 ['amount_local', '-', 'arec_local'],
-                ['posted', '=', True],  # tgt_col, op, src_col
                 ],
             [],  # on unpost
             ],

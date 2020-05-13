@@ -603,7 +603,7 @@ actions.append([
                 ],
 
             ['split_no', 'item_type', 'due_date', 'amount_cust', 'amount_local',
-                'discount_date', 'discount_cust', 'posted'],  # fields to be updated
+                'discount_date', 'discount_cust'],  # fields to be updated
 
             [],  # return values
 

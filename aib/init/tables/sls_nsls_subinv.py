@@ -460,7 +460,7 @@ actions.append([
                 ['subinv_row_id', 'row_id'],  # tgt_col, src_col
                 ],
 
-            ['nsls_code_id', 'eff_date', 'nsls_earned_pty', 'nsls_earned_loc'],  # fields to be updated
+            ['eff_date', 'nsls_earned_pty', 'nsls_earned_loc'],  # fields to be updated
 
             [],  # return values
 

@@ -114,25 +114,6 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'nsls_code_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Nsls code id',
-    'long_descr' : 'Non-inventory sales code id',
-    'col_head'   : 'Nsls code',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : ['sls_nsls_codes', 'row_id', 'nsls_code', 'nsls_code', False, 'nsls_codes'],
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'eff_date',
     'data_type'  : 'DTE',
     'short_descr': 'Effective date',
@@ -216,7 +197,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
+                ['nsls_code_id', 'subinv_row_id>nsls_code_id'],  # tgt_col, src_col
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
@@ -232,7 +213,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
+                ['nsls_code_id', 'subinv_row_id>nsls_code_id'],  # tgt_col, src_col
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
@@ -249,7 +230,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
+                ['nsls_code_id', 'subinv_row_id>nsls_code_id'],  # tgt_col, src_col
                 ['cust_row_id', 'subinv_row_id>tran_det_row_id>tran_row_id>cust_row_id'],
                 ['tran_date', 'eff_date'],
                 ],
