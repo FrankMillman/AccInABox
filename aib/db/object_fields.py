@@ -384,6 +384,8 @@ class Field:
                 val = await fld.get_dflt()
             else:
                 val = fld._value
+                if val is None:
+                    return  # no dflt - select cannot succeed
             cols_vals[fld.col_name] = val
         await self.db_obj.select_row(cols_vals, display, debug=debug)
 
@@ -488,7 +490,7 @@ class Field:
             #      other validations may use contents of db_obj
             await self.read_row(value, display)
             if db_obj.exists:
-                value = self._value  # to change (eg) 'a001' to 'A001'
+                value = await self.getval()  # to change (eg) 'a001' to 'A001'
                 changed = False
                 if display:  # on_read checks for 'repos' - don't if not 'display'
                     for caller_ref in list(db_obj.on_read_func.keyrefs()):
@@ -525,7 +527,8 @@ class Field:
                     #   now we are checking the true_src - same object
                     # or, we have performed a lookup, now applying the result - object exists
                     if true_src:  # don't re-read, but if true_src, set value
-                        if col_name == altsrc_names[-1]:  # if multi-part key, all parts are present
+                        # if col_name == altsrc_names[-1]:  # if multi-part key, all parts are present
+                        if true_src.foreign_key['tgt_field'].db_obj.exists:
                             true_foreign_key = await db_obj.get_foreign_key(true_src)
                             # must validate true_src - db_obj might exist because we have
                             #   performed a lookup, but true_src might have col_checks
@@ -569,7 +572,7 @@ class Field:
                                 else:
                                     errmsg = f'{value} not found on {tgt_field.table_name}'
                                 raise AibError(head=col_defn.short_descr, body=errmsg)
-                            value = tgt_field._value  # to change (eg) 'a001' to 'A001'
+                            value = await tgt_field.getval()  # to change (eg) 'a001' to 'A001'
                             # must call setval, in case validation required
                             # i.e. there could be a col_check on the true_src, but not on the alt_src
                             true_foreign_key = await db_obj.get_foreign_key(true_src)
@@ -586,7 +589,7 @@ class Field:
                             if true_src.table_keys and db_obj.exists:
                                 changed = False
                         elif tgt_field.db_obj.exists:  # assume missing fields had dflt vals
-                            value = tgt_field._value  # to change (eg) 'a001' to 'A001'
+                            value = await tgt_field.getval()  # to change (eg) 'a001' to 'A001'
                             true_foreign_key = await db_obj.get_foreign_key(true_src)
                             await true_src.setval(true_foreign_key['tgt_field']._value, display=display)
                             if true_src.table_keys and db_obj.exists:
@@ -597,7 +600,7 @@ class Field:
                             await tgt_field.db_obj.init()
                             errmsg = f'{value} not found on {tgt_field.table_name}'
                             raise AibError(head=col_defn.short_descr, body=errmsg)
-                        value = tgt_field._value  # to change (eg) 'a001' to 'A001'
+                        value = await tgt_field.getval()  # to change (eg) 'a001' to 'A001'
 
         if validate:
             # check for constant
@@ -773,18 +776,29 @@ class Field:
         return self._value
 
     async def _getval_fkey(self):
-        # await self.setup_foreign_key()
-        # return await self._getval()
+        # # await self.setup_foreign_key()
+        # # return await self._getval()
 
-        foreign_key = await self.db_obj.get_foreign_key(self)
+        # foreign_key = await self.db_obj.get_foreign_key(self)
 
-        # if self.foreign_key == {}:
-        #     await self.setup_foreign_key()
-        # true_src = self.foreign_key['true_src']
-        true_src = foreign_key['true_src']
-        await true_src.get_fk_object()  # what does this do?
-        # return await self.foreign_key['tgt_field'].getval()
-        return await foreign_key['tgt_field'].getval()
+        # # if self.foreign_key == {}:
+        # #     await self.setup_foreign_key()
+        # # true_src = self.foreign_key['true_src']
+        # true_src = foreign_key['true_src']
+        # await true_src.get_fk_object()  # what does this do?
+        # # return await self.foreign_key['tgt_field'].getval()
+        # return await foreign_key['tgt_field'].getval()
+
+        # if the next lines work, replace the above [2020-05-05]
+        # this is only called if this field has an alt_key that has not yet been set up
+        # it assumes that the system will reliably maintain the field's _value from this point,
+        #   covering all eventualities such as init(), read_row(), setval(), restore(), etc
+        # monitor carefully before committing!
+
+        await self.db_obj.get_foreign_key(self)
+        self.getval = self._getval  # replace function definition
+        # print(f'{self.table_name}.{self.col_name} {await self._getval()}')
+        return await self._getval()
 
     async def get_orig(self):
         return self._orig
