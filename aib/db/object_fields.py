@@ -380,7 +380,7 @@ class Field:
         for fld in self.table_keys:
             if fld is self:
                 val = value
-            elif fld._value is None:  # added [2020-05-05] - see notes in setval()
+            elif await fld.getval() is None:  # added [2020-05-05] - see notes in setval()
                 val = await fld.get_dflt()
             else:
                 val = fld._value

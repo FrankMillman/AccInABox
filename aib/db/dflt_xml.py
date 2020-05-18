@@ -170,7 +170,11 @@ async def auto_gen(fld, xml, debug):
     else:  # column name
         prefix_fld = await db_obj.getfld(prefix)
         prefix_val = await prefix_fld.getval()
+        if prefix_val.lower().startswith('the '):
+            prefix_val = prefix_val[4:]
         prefix_val = ''.join(_ for _ in prefix_val if not _.isspace())  # remove any whitespace
+        if len(prefix_val) < prefix_lng:
+            prefix_val = f'{prefix_val:.<prefix_lng}'  # 'dot' fill
         prefix = prefix_val[:prefix_lng].upper()
     if key.endswith('_'):
         key += prefix
@@ -351,5 +355,5 @@ async def get_val(fld, value):
     if value[0] == '-' and value[1:].isdigit():
         return int(value)
     if value.startswith('_ctx.'):
-        return getattr(fld.db_obj.context, value[5:])
+        return getattr(fld.db_obj.context, value[5:], None)
     return await fld.db_obj.getval(value)

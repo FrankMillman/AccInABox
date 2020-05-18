@@ -862,7 +862,7 @@ class DbObject:
             if not self.dirty:
                 if where == self.where:
                     for fld in self.fields.values():
-                        fld._orig = fld._value  # in case set to None before select
+                        fld._orig = await fld.getval()  # in case set to None before select
                     return  # row not changed since last select
         self.where = where
 

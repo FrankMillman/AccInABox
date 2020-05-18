@@ -172,6 +172,8 @@ async def eval_elem(elem, db_obj, fld, value):
         fld2 = await db_obj.getfld(elem[7:-1])
         await fld2.recalc()
         return await fld2.getval()
+    if elem.startswith('_ctx.'):
+        return getattr(db_obj.context, elem[5:], None)
     fld2 = await db_obj.getfld(elem)
     return await fld2.getval()
 
