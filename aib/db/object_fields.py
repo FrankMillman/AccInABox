@@ -452,18 +452,18 @@ class Field:
                     ):
                 raise AibError(head=f'Amend {self.table_name}.{col_name}',
                     body='Transaction posted - no amendments allowed')
-            elif allow_amend:
-                pass  # note - all virtual fields have allow_amend=True
-            elif col_name in db_obj.sub_trans and self._value is not None and value != self._value:
-                # added 2019-09-21 - I think it is appropriate for *all* sub_trans
-                raise AibError(head=f'Amend {self.table_name}.{col_name}',
-                    body='Cannot amend sub_trans - cancel current sub_trans first')
             elif await self.calculated():
                 errmsg = (
                     f'{self.table_name}.{col_name}: Calculated field - '
                     f'amendment not allowed {self._value_} -> {value}'
                     )
                 raise AibError(head=self.table_name, body=errmsg)
+            elif allow_amend:
+                pass  # note - all virtual fields have allow_amend=True
+            elif col_name in db_obj.sub_trans and self._value is not None and value != self._value:
+                # added 2019-09-21 - I think it is appropriate for *all* sub_trans
+                raise AibError(head=f'Amend {self.table_name}.{col_name}',
+                    body='Cannot amend sub_trans - cancel current sub_trans first')
             elif not db_obj.exists:
                 pass  # does not apply to new objects
             elif self._value is None:
