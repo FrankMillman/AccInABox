@@ -95,8 +95,8 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : [
-        'ap_suppliers', 'row_id', 'ledger_id, supp_id, location_id',
-        'ledger_id, supp_id, location_id', False, None
+        'ap_suppliers', 'row_id', 'ledger_id, supp_id, location_id, function_id',
+        'ledger_id, supp_id, location_id, function_id', False, None
         ],
     'choices'    : None,
     })

@@ -1,33 +1,33 @@
-<form name="setup_divisions"  title="Set up divisions">
+<form name="setup_functions"  title="Set up functions">
 
   <db_objects>
-    <db_obj name="division" table_name="adm_divisions"/>
+    <db_obj name="function" table_name="adm_functions"/>
   </db_objects>
   <mem_objects/>
 
   <input_params/>
   <output_params/>
 
-  <frame main_object="division">
+  <frame main_object="function">
     <toolbar/>
     <body>
       <block/>
-      <tree data_object="division" lng="250" height="350" toolbar="true"/>
-      <tree_frame main_object="division">
+      <tree data_object="function" lng="250" height="350" toolbar="true"/>
+      <tree_frame main_object="function">
         <toolbar/>
         <body>
           <block/>
           <panel/>
           <row/>
           <col/>
-          <label value="Division id:"/>
+          <label value="Function id:"/>
           <col/>
-          <input obj_name="division" col_name="division" lng="120"/>
+          <input obj_name="function" col_name="function_id" lng="120"/>
           <row/>
           <col/>
           <label value="Full name:"/>
           <col/>
-          <input obj_name="division" col_name="descr" lng="240"/>
+          <input obj_name="function" col_name="descr" lng="240"/>
         </body>
         <button_row template="Tree_Frame"/>
         <frame_methods template="Tree_Frame"/>

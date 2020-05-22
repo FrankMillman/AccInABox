@@ -133,6 +133,82 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'use_locations',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Allow use of locations?',
+    'long_descr' : 'Allow use of locations?',
+    'col_head'   : 'Use locations?',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'false',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'loc_levels',
+    'data_type'  : 'JSON',
+    'short_descr': 'Fixed levels for locations',
+    'long_descr' : 'Fixed levels for locations. List of (code, descr, allow_split). If blank, free format.',
+    'col_head'   : 'Loc levels',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', 'use_locations', 'is', '$False', '']],
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'use_functions',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Allow use of functions?',
+    'long_descr' : 'Allow use of functions?',
+    'col_head'   : 'Use functions?',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'false',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'fun_levels',
+    'data_type'  : 'JSON',
+    'short_descr': 'Fixed levels for functions',
+    'long_descr' : 'Fixed levels for functions. List of (code, descr, allow_split). If blank, free format.',
+    'col_head'   : 'Fun levels',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', 'use_functions', 'is', '$False', '']],
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'auto_party_id',
     'data_type'  : 'JSON',
     'short_descr': 'Auto-generate party id?',
@@ -234,20 +310,6 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'division_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Division',
-    'long_descr' : 'Return division row id if there is only one, else None',
-    'col_head'   : 'Div',
-    'sql'        : (
-        "CASE "
-            "WHEN (SELECT COUNT(*) FROM {company}.adm_divisions "
-                "WHERE deleted_id = 0) = 1 THEN "
-                "(SELECT row_id FROM {company}.adm_divisions WHERE deleted_id = 0) "
-        "END"
-        ),
-    })
-virt.append ({
     'col_name'   : 'location_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Location',
@@ -259,6 +321,42 @@ virt.append ({
                 "WHERE deleted_id = 0) = 1 THEN "
                 "(SELECT row_id FROM {company}.adm_locations WHERE deleted_id = 0) "
         "END"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'loc_root_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Row id of loc root element',
+    'long_descr' : 'Row id of root element for adm_locations',
+    'col_head'   : '',
+    'sql'        : (
+        "SELECT row_id FROM {company}.adm_locations "
+        "WHERE parent_id IS NULL AND deleted_id = 0"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function',
+    'long_descr' : 'Return function row id if there is only one, else None',
+    'col_head'   : 'Fun',
+    'sql'        : (
+        "CASE "
+            "WHEN (SELECT COUNT(*) FROM {company}.adm_functions "
+                "WHERE deleted_id = 0) = 1 THEN "
+                "(SELECT row_id FROM {company}.adm_functions WHERE deleted_id = 0) "
+        "END"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'fun_root_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Row id of fun root element',
+    'long_descr' : 'Row id of root element for adm_functions',
+    'col_head'   : '',
+    'sql'        : (
+        "SELECT row_id FROM {company}.adm_functions "
+        "WHERE parent_id IS NULL AND deleted_id = 0"
         ),
     })
 virt.append ({

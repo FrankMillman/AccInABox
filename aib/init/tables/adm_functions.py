@@ -1,22 +1,22 @@
 # table definition
 table = {
-    'table_name'    : 'adm_divisions',
+    'table_name'    : 'adm_functions',
     'module_id'     : 'adm',
-    'short_descr'   : 'Divisions',
-    'long_descr'    : 'Divisional breakdwon of the organisation',
+    'short_descr'   : 'Functions',
+    'long_descr'    : 'Functional breakdwon of the organisation',
     'sub_types'     : [
-        ['division_type', None, [
+        ['function_type', None, [
             ['root', 'Root',
-                ['division_id', 'descr'], []],
+                ['function_id', 'descr'], []],
             ['group', 'Group code',
-                ['division_id', 'descr'], []],
-            ['division', 'Division code',
-                ['division_id', 'descr'], []],
+                ['function_id', 'descr'], []],
+            ['function', 'Function code',
+                ['function_id', 'descr'], []],
             ]],
         ],
     'sub_trans'     : None,
     'sequence'      : ['seq', ['parent_id'], None],
-    'tree_params'   : [None, ['division_id', 'descr', 'seq', 'parent_id'], []],
+    'tree_params'   : [None, ['function_id', 'descr', 'seq', 'parent_id'], []],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -85,11 +85,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'division_id',
+    'col_name'   : 'function_id',
     'data_type'  : 'TEXT',
-    'short_descr': 'Division id',
-    'long_descr' : 'Division id',
-    'col_head'   : 'Div',
+    'short_descr': 'Function id',
+    'long_descr' : 'Function id',
+    'col_head'   : 'Fun',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -107,7 +107,7 @@ cols.append ({
     'col_name'   : 'descr',
     'data_type'  : 'TEXT',
     'short_descr': 'Description',
-    'long_descr' : 'Division description',
+    'long_descr' : 'Function description',
     'col_head'   : 'Description',
     'key_field'  : 'N',
     'calculated' : False,
@@ -147,7 +147,7 @@ cols.append ({
                 ],
             ],
         ],
-    'fkey'       : ['adm_divisions', 'row_id', 'parent', 'division_id', False, None],
+    'fkey'       : ['adm_functions', 'row_id', 'parent', 'function_id', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -170,10 +170,10 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'division_type',
+    'col_name'   : 'function_type',
     'data_type'  : 'TEXT',
-    'short_descr': 'Type of division code',
-    'long_descr' : 'Type of division code',
+    'short_descr': 'Type of function code',
+    'long_descr' : 'Type of function code',
     'col_head'   : 'Type',
     'key_field'  : 'N',
     'calculated' : False,
@@ -182,7 +182,7 @@ cols.append ({
     'max_len'    : 10,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'division',
+    'dflt_val'   : 'function',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -192,20 +192,12 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'root_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Row id of root element',
-    'long_descr' : 'Row id of root element - should always be 1, but this is safer',
-    'col_head'   : '',
-    'sql'        : "SELECT b.row_id FROM {company}.adm_divisions b WHERE b.parent_id IS NULL",
-    })
-virt.append ({
     'col_name'   : 'first_row',
     'data_type'  : 'BOOL',
     'short_descr': 'First row?',
     'long_descr' : 'If table is empty, this is the first row',
     'col_head'   : '',
-    'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.adm_divisions b) "
+    'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.adm_functions b) "
                    "THEN 0 ELSE 1 END",
     })
 virt.append ({
@@ -214,7 +206,7 @@ virt.append ({
     'short_descr': 'Children',
     'long_descr' : 'Number of children',
     'col_head'   : '',
-    'sql'        : "SELECT count(*) FROM {company}.adm_divisions b "
+    'sql'        : "SELECT count(*) FROM {company}.adm_functions b "
                    "WHERE b.parent_id = a.row_id",
     })
 virt.append ({
@@ -224,21 +216,60 @@ virt.append ({
     'long_descr' : 'Is this node expandable?',
     'col_head'   : '',
     'dflt_val'   : 'true',
-    'sql'        : "CASE WHEN a.division_type = 'code' THEN 0 ELSE 1 END",
+    'sql'        : "CASE WHEN a.function_type = 'code' THEN 0 ELSE 1 END",
+    })
+virt.append ({
+    'col_name'   : 'level',
+    'data_type'  : 'INT',
+    'short_descr': 'Level',
+    'long_descr' : 'Level in hierarchy',
+    'col_head'   : '',
+    'sql'        : (
+        "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
+        "FROM {company}.adm_functions b WHERE b.parent_id IS NULL "
+        "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
+        "FROM {company}.adm_functions c, tree d WHERE d.row_id = c.parent_id) "
+        "SELECT level FROM tree WHERE a.row_id = tree.row_id)"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'parent_level',
+    'data_type'  : 'INT',
+    'short_descr': 'Parent level',
+    'long_descr' : 'Level of parent in hierarchy',
+    'col_head'   : '',
+    'sql'        : (
+        "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
+        "FROM {company}.adm_functions b WHERE b.parent_id IS NULL "
+        "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
+        "FROM {company}.adm_functions c, tree d WHERE d.row_id = c.parent_id) "
+        "SELECT level FROM tree WHERE a.parent_id = tree.row_id)"
+        ),
     })
 
 # cursor definitions
 cursors = []
 cursors.append({
-    'cursor_name': 'divisions',
-    'title': 'Maintain divisions',
+    'cursor_name': 'functions',
+    'title': 'Maintain functions',
     'columns': [
-        ['division_id', 100, False, False, False, False, None, None, None, None],
+        ['function_id', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, True, False, False, None, None, None, None],
         ],
-    'filter': [['WHERE', '', 'division_type', '=', "'division'", '']],
-    'sequence': [['division_id', False]],
+    'filter': [['WHERE', '', 'function_type', '=', "'function'", '']],
+    'sequence': [['function_id', False]],
     })
 
 # actions
 actions = []
+actions.append([
+    'upd_checks', [
+        [
+            'check_levels',
+            'Not in compliance with adm_params fun_levels',
+            [
+                ['check', '', 'function_id', 'pyfunc', 'custom.adm_funcs.check_fun_level', ''],
+                ],
+            ],
+        ],
+    ])

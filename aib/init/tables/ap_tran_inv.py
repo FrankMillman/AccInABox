@@ -12,6 +12,7 @@ table = {
     'indexes'       : [
         # ['apinv_tran_num', 'supp_row_id, tran_number', None, True],  # do we need this?
         ['apinv_supp_date', 'supp_row_id, tran_date', None, False],
+        ['apinv_unposted', 'tran_date', "WHERE posted = '0'", False],
         ],
     'ledger_col'    : 'supp_row_id>ledger_row_id',
     'defn_company'  : None,
@@ -95,8 +96,8 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : [
-        'ap_suppliers', 'row_id', 'ledger_id, supp_id, location_id',
-        'ledger_id, supp_id, location_id', False, None
+        'ap_suppliers', 'row_id', 'ledger_id, supp_id, location_id, function_id',
+        'ledger_id, supp_id, location_id, function_id', False, None
         ],
     'choices'    : None,
     })

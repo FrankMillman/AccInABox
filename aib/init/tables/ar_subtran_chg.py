@@ -143,8 +143,8 @@ cols.append ({
             ]],
         ],
     'fkey'       : [
-        'ar_customers', 'row_id', 'ledger_id, cust_id, location_id',
-        'ledger_id, cust_id, location_id', False, 'cust_bal_2'
+        'ar_customers', 'row_id', 'ledger_id, cust_id, location_id, function_id',
+        'ledger_id, cust_id, location_id, function_id', False, 'cust_bal_2'
         ],
     'choices'    : None,
     })
