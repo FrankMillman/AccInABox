@@ -598,6 +598,8 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'supp_row_id>ledger_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'supp_row_id>location_row_id'],
+                ['function_row_id', 'supp_row_id>function_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation

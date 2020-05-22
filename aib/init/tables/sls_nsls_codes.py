@@ -259,6 +259,164 @@ cols.append ({
     'fkey'       : ['gl_codes', 'row_id', 'unearned_gl_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'use_locations',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Use location id for this code?',
+    'long_descr' : 'Use location id for this code? If not, use location root',
+    'col_head'   : 'Use location?',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'false',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'common_location',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Use common loc for this code?',
+    'long_descr' : 'Use common location for this code?',
+    'col_head'   : 'Common location?',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,  # if change from False to True, update existing data
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'false',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'col_checks' : [
+        [
+            'use_location',
+            'Location code not required',
+            [
+                ['check', '', 'use_locations', 'is', '$True', ''],
+                ['or', '', '$value', 'is', '$False', ''],
+                ],
+            ],
+        ],
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Common location row id',
+    'long_descr' : 'Common location row id - this code will always use this location',
+    'col_head'   : 'Common',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : True,
+    'allow_amend': True,  # if changed, update existing data
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : [
+        [
+            'common_loc',
+            'Location code required if common location specified',
+            [
+                ['check', '(', 'common_location', 'is', '$False', ''],
+                ['and', '', '$value', 'is', '$None', ')'],
+                ['or', '(', 'common_location', 'is', '$True', ''],
+                ['and', '', '$value', 'is_not', '$None', ''],
+                ['and', '', 'location_row_id>location_type', '=', "'location'", ')'],
+                ],
+            ],
+        ],
+   'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'use_functions',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Use function id for this code?',
+    'long_descr' : 'Use function id for this code? If not, use function root',
+    'col_head'   : 'Use function?',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'false',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'common_function',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Use common fun for this code?',
+    'long_descr' : 'Use common function for this code?',
+    'col_head'   : 'Common function?',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,  # if change from False to True, update existing data
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'false',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'col_checks' : [
+        [
+            'use_function',
+            'Function code not required',
+            [
+                ['check', '', 'use_functions', 'is', '$True', ''],
+                ['or', '', '$value', 'is', '$False', ''],
+                ],
+            ],
+        ],
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Common function row id',
+    'long_descr' : 'Common function row id - this code will always use this function',
+    'col_head'   : 'Common',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : True,
+    'allow_amend': True,  # if changed, update existing data
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : [
+        [
+            'common_fun',
+            'Function code required if common function specified',
+            [
+                ['check', '(', 'common_function', 'is', '$False', ''],
+                ['and', '', '$value', 'is', '$None', ')'],
+                ['or', '(', 'common_function', 'is', '$True', ''],
+                ['and', '', '$value', 'is_not', '$None', ''],
+                ['and', '', 'function_row_id>function_type', '=', "'function'", ')'],
+                ],
+            ],
+        ],
+   'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []

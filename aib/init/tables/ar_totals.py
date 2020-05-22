@@ -95,7 +95,63 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['ar_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, None],
+    'fkey'       : ['ar_ledger_params', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="_ledger.use_locations" op="is" tgt="$False">'
+            '<fld_val name="_param.loc_root_row_id"/>'
+          '</compare>'
+          '<compare src="_ledger.common_location" op="is" tgt="$True">'
+            '<fld_val name="_ledger.location_row_id"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : ['adm_locations', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="_ledger.use_functions" op="is" tgt="$False">'
+            '<fld_val name="_param.fun_root_row_id"/>'
+          '</compare>'
+          '<compare src="_ledger.common_function" op="is" tgt="$True">'
+            '<fld_val name="_ledger.function_row_id"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : ['adm_functions', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({

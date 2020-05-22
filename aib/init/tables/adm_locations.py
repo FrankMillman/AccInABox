@@ -192,14 +192,6 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'root_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Row id of root element',
-    'long_descr' : 'Row id of root element - should always be 1, but this is safer',
-    'col_head'   : '',
-    'sql'        : "SELECT b.row_id FROM {company}.adm_locations b WHERE b.parent_id IS NULL",
-    })
-virt.append ({
     'col_name'   : 'first_row',
     'data_type'  : 'BOOL',
     'short_descr': 'First row?',
@@ -226,6 +218,34 @@ virt.append ({
     'dflt_val'   : 'true',
     'sql'        : "CASE WHEN a.location_type = 'code' THEN 0 ELSE 1 END",
     })
+virt.append ({
+    'col_name'   : 'level',
+    'data_type'  : 'INT',
+    'short_descr': 'Level',
+    'long_descr' : 'Level in hierarchy',
+    'col_head'   : '',
+    'sql'        : (
+        "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
+        "FROM {company}.adm_locations b WHERE b.parent_id IS NULL "
+        "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
+        "FROM {company}.adm_locations c, tree d WHERE d.row_id = c.parent_id) "
+        "SELECT level FROM tree WHERE a.row_id = tree.row_id)"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'parent_level',
+    'data_type'  : 'INT',
+    'short_descr': 'Parent level',
+    'long_descr' : 'Level of parent in hierarchy',
+    'col_head'   : '',
+    'sql'        : (
+        "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
+        "FROM {company}.adm_functions b WHERE b.parent_id IS NULL "
+        "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
+        "FROM {company}.adm_functions c, tree d WHERE d.row_id = c.parent_id) "
+        "SELECT level FROM tree WHERE a.parent_id = tree.row_id)"
+        ),
+    })
 
 # cursor definitions
 cursors = []
@@ -243,3 +263,14 @@ cursors.append({
 
 # actions
 actions = []
+actions.append([
+    'upd_checks', [
+        [
+            'check_levels',
+            'Not in compliance with adm_params loc_levels',
+            [
+                ['check', '', 'location_id', 'pyfunc', 'custom.adm_funcs.check_loc_level', ''],
+                ],
+            ],
+        ],
+    ])

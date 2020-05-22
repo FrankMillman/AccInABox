@@ -143,6 +143,90 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Loc',
+    'key_field'  : 'A',
+   'calculated'  : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="location_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="location_row_id"/>'
+          '</compare>'
+          '<compare src="npch_code_id>use_locations" op="is" tgt="$False">'
+            '<fld_val name="_param.loc_root_row_id"/>'
+          '</compare>'
+          '<compare src="npch_code_id>common_location" op="is" tgt="$True">'
+            '<fld_val name="npch_code_id>location_row_id"/>'
+          '</compare>'
+          '<compare src="tran_det_row_id>pch_type" op="=" tgt="\'acc\'">'
+            '<fld_val name="tran_det_row_id>tran_row_id>supp_row_id>location_row_id"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : [
+        [
+            'root_or_loc',
+            'Not a valid location code',
+            [
+                ['check', '', 'location_row_id>location_type', '!=', "'group'", ''],
+                ],
+            ],
+        ],
+    'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Fun',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="function_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="function_row_id"/>'
+          '</compare>'
+          '<compare src="npch_code_id>use_functions" op="is" tgt="$False">'
+            '<fld_val name="_param.fun_root_row_id"/>'
+          '</compare>'
+          '<compare src="npch_code_id>common_function" op="is" tgt="$True">'
+            '<fld_val name="npch_code_id>function_row_id"/>'
+          '</compare>'
+          '<compare src="tran_det_row_id>pch_type" op="=" tgt="\'acc\'">'
+            '<fld_val name="tran_det_row_id>tran_row_id>supp_row_id>function_row_id"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : [
+        [
+            'root_or_fun',
+            'Not a valid function code',
+            [
+                ['check', '', 'function_row_id>function_type', '!=', "'group'", ''],
+                ],
+            ],
+        ],
+    'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'npch_descr',
     'data_type'  : 'TEXT',
     'short_descr': 'Description',
@@ -438,6 +522,8 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
                 ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -455,6 +541,8 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
                 ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -472,6 +560,8 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
                 ['supp_row_id', 'tran_det_row_id>tran_row_id>supp_row_id'],
                 ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
                 ],

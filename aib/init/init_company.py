@@ -228,7 +228,7 @@ async def setup_other_tables(context, conn, company):
         'adm_tax_codes',
         'adm_tax_rates',
         'adm_locations',
-        'adm_divisions',
+        'adm_functions',
         'adm_params',
         'org_msg_types',
         'org_parties',
@@ -549,7 +549,7 @@ async def setup_forms(context, conn, company):
     await setup_form('setup_ar_terms_codes')
     await setup_form('setup_ap_terms_codes')
     await setup_form('setup_locations')
-    await setup_form('setup_divisions')
+    await setup_form('setup_functions')
     await setup_form('setup_party')
     await setup_form('setup_arcust')
     await setup_form('ar_cust_bal')
@@ -672,7 +672,7 @@ async def setup_menus(context, conn, company, company_name):
             ['Maintain company parameters', 'form', 'adm_params'],
             ['Maintain financial periods', 'form', 'setup_periods'],
             ['Maintain locations', 'form', 'setup_locations'],
-            ['Maintain divisions', 'form', 'setup_divisions'],
+            ['Maintain functions', 'form', 'setup_functions'],
             ['Maintain currency codes', 'form', 'setup_currencies'],
             ['Maintain tax codes', 'form', 'setup_tax_codes'],
             ]],
@@ -815,17 +815,17 @@ async def setup_init_data(context, conn, company, company_name):
     await adm_params.setval('company_name', company_name)
     await adm_params.save()
 
+    adm_fun = await db.objects.get_db_object(context, company, 'adm_functions')
+    await adm_fun.setval('function_id', 'all')
+    await adm_fun.setval('descr', 'All Functions')
+    await adm_fun.setval('function_type', 'root')
+    await adm_fun.save()
+
     adm_loc = await db.objects.get_db_object(context, company, 'adm_locations')
-    await adm_loc.setval('location_id', company)
-    await adm_loc.setval('descr', company_name)
+    await adm_loc.setval('location_id', 'all')
+    await adm_loc.setval('descr', 'All locations')
     await adm_loc.setval('location_type', 'root')
     await adm_loc.save()
-
-    adm_div = await db.objects.get_db_object(context, company, 'adm_divisions')
-    await adm_div.setval('division_id', company)
-    await adm_div.setval('descr', company_name)
-    await adm_div.setval('division_type', 'root')
-    await adm_div.save()
 
     prod_class = await db.objects.get_db_object(context, company, 'in_prod_classes')
     await prod_class.setval('class', 'all')

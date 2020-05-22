@@ -1,3 +1,4 @@
+
 # table definition
 table = {
     'table_name'    : 'sls_nsls_subcrn_ear',
@@ -217,6 +218,8 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'subcrn_row_id>nsls_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subcrn_row_id>location_row_id'],
+                ['function_row_id', 'subcrn_row_id>function_row_id'],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
@@ -234,6 +237,8 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'subcrn_row_id>nsls_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subcrn_row_id>location_row_id'],
+                ['function_row_id', 'subcrn_row_id>function_row_id'],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
@@ -251,6 +256,8 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'subcrn_row_id>nsls_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subcrn_row_id>location_row_id'],
+                ['function_row_id', 'subcrn_row_id>function_row_id'],
                 ['cust_row_id', 'subcrn_row_id>tran_det_row_id>tran_row_id>cust_row_id'],
                 ['tran_date', 'eff_date'],
                 ],

@@ -22,7 +22,7 @@
           <col/>
           <label value="Location id:"/>
           <col/>
-          <input obj_name="location" col_name="location" lng="120"/>
+          <input obj_name="location" col_name="location_id" lng="120"/>
           <row/>
           <col/>
           <label value="Full name:"/>

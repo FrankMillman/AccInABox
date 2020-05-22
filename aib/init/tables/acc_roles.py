@@ -256,18 +256,18 @@ virt.append ({
     # two methods for calculating the 'level' of a particular node
     # in both cases, can use a sub-tree by changing WHERE parent_id is NULL
     #   to WHERE row_id = [row_id of sub-root]
-    # [1] select level for every row in the table
-        "WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
+    # [1] walk 'down' the tree - select level for every row in the table
+        "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
         "FROM {company}.acc_roles b WHERE b.parent_id IS NULL "
         "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
         "FROM {company}.acc_roles c, tree d WHERE d.row_id = c.parent_id) "
-        "SELECT level FROM tree WHERE a.row_id = tree.row_id"
-    # [2] select level for single row - should be quicker
-      # "WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
+        "SELECT level FROM tree WHERE a.row_id = tree.row_id)"
+    # [2] walk 'up' the tree - select level for single row - should be quicker
+      # "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
       # "FROM {company}.acc_roles b WHERE b.row_id = a.row_id "
       # "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
       # "FROM {company}.acc_roles c, tree d WHERE c.row_id = d.parent_id) "
-      # "SELECT level FROM tree WHERE tree.parent_id IS NULL"
+      # "SELECT level FROM tree WHERE tree.parent_id IS NULL)"
     # unfortunately [2] does not work with SQL Server :-(
     # we have to move the entire WITH clause to the beginning of the query,
     #   and at that point a.row_id does not exist, so the query fails
