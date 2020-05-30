@@ -529,6 +529,14 @@ class Conn:
                 else:
                     col_text = f'{alias}.{col.col_name}'
 
+                # next block added [2020-05-30]
+                # psycopg2 and sqlite3 do this automatically, pyodbc does not :-(
+                if expr is not None:
+                    if op.lower() == 'is':
+                        op = '='
+                    elif op.lower() == 'is not':
+                        op = '!='
+
                 if expr is None:
                     expr = 'NULL'
                     if op == '=':
@@ -714,6 +722,13 @@ class Conn:
         alias = current_alias
         if '.' in col_name:  # added [2017-08-14] to handle 'scale_ptr' columns
             obj_name, col_name = col_name.split('.')
+            if obj_name != '_param':
+                # do we get here? - need to check this [2020-05-22]
+                # 1. cannot mix db_obj and mem_obj in sql - does this occur?
+                # 2. if not _param, how to we know to 'join' on 'row_id = 1'?
+                # 3. may need to check for '_ledger' as well, but then need to build correct join
+                print('get_col_alias', obj_name, col_name)
+                input()
             if obj_name == '_param':
                 db_table = await db.objects.get_db_table(context, db_table.data_company, 'adm_params')
                 table_name = f'{db_table.data_company}.adm_params'
@@ -811,8 +826,9 @@ class Conn:
 
             start += pos2
 
-        if col.data_type == 'DEC' and '/' in sql:
-            sql = f'ROUND({sql}, {col.db_scale})'
+        # # is this still necessary - sqlite3 rounding has been sorted with REAL2/4/6/8
+        # if col.data_type == 'DEC' and '/' in sql:
+        #     sql = f'ROUND({sql}, {col.db_scale})'
 
         if sql.startswith('SELECT '):
             sql = '(' + sql + ')'
