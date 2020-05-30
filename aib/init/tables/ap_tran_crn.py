@@ -10,8 +10,8 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : [
-        # ['apcrn_tran_num', 'supp_row_id, tran_number', None, True],  # do we need this?
-        ['apcrn_supp_date', 'supp_row_id, tran_date', None, False],
+        # ['apcrn_tran_num', [['supp_row_id', False], ['tran_number', False]], None, True],  # do we need this?
+        ['apcrn_supp_date', [['supp_row_id', False], ['tran_date', False]], None, False],
         ],
     'ledger_col'    : 'supp_row_id>ledger_row_id',
     'defn_company'  : None,

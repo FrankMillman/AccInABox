@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : [
-        ['ar_sub_cust', 'cust_row_id', None, False],
+        ['ar_subrec_cust', [['cust_row_id', False]], None, False],
         ],
     'ledger_col'    : 'cust_row_id>ledger_row_id',
     'defn_company'  : None,

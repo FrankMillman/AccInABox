@@ -10,7 +10,7 @@ table = {
     'tree_params'   : ['class_row_id', ['prod_code', 'descr', 'seq', None], ['prod_code']],
     'roll_params'   : None,
     'indexes'       : [
-        ['prod_class_ndx', 'class_row_id, prod_code', None, False]
+        ['prod_class_ndx', [['class_row_id', False], ['prod_code', False]], None, False]
         ],
     'ledger_col'    : None,
     'defn_company'  : None,

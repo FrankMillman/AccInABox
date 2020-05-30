@@ -482,7 +482,9 @@ def create_alt_index(self, company_id, table_name, ndx_cols, a_or_b):
 
 def create_index(self, company_id, table_name, index):
     ndx_name, ndx_cols, filter, unique = index
-    ndx_cols = ', '.join((f'{col.strip()} NULLS FIRST' for col in ndx_cols.split(',')))
+    ndx_cols = ', '.join(
+        f'{col_name}{"" if sort_desc is False else " DESC"} NULLS {"FIRST" if sort_desc is False else "LAST"}'
+        for col_name, sort_desc in ndx_cols)
     if filter is None:
         filter = 'WHERE deleted_id = 0'
     else:

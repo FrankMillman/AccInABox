@@ -10,9 +10,9 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : [
-        # ['apinv_tran_num', 'supp_row_id, tran_number', None, True],  # do we need this?
-        ['apinv_supp_date', 'supp_row_id, tran_date', None, False],
-        ['apinv_unposted', 'tran_date', "WHERE posted = '0'", False],
+        # ['apinv_tran_num', [['supp_row_id', False], ['tran_number', False]], None, True],  # do we need this?
+        ['apinv_supp_date', [['supp_row_id', False], ['tran_date', False]], None, False],
+        ['apinv_unposted', [['tran_date', False]], "WHERE posted = '0'", False],
         ],
     'ledger_col'    : 'supp_row_id>ledger_row_id',
     'defn_company'  : None,

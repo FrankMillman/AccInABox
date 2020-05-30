@@ -543,7 +543,7 @@ def create_index(self, company_id, table_name, index):
         filter = 'WHERE deleted_id = 0'
     else:
         filter += ' AND deleted_id = 0'
-    # ndx_cols = ', '.join(ndx_cols)
+    ndx_cols = ', '.join(f'{col_name}{"" if sort_desc is False else " DESC"}' for col_name, sort_desc in ndx_cols)
     unique = 'UNIQUE ' if unique else ''
     return (
         f'CREATE {unique}INDEX {ndx_name} '

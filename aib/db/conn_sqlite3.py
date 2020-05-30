@@ -187,10 +187,10 @@ def date_add(date_string, days):
 sqlite3.register_adapter(D, lambda d:str(d) + ('' if '.' in str(d) else '.'))
 # Decimal converter (convert back to Decimal on return)
 # sqlite3.register_converter('REAL', lambda s: D(s.decode()))
-sqlite3.register_converter('REAL2', lambda s: D(s.decode()).quantize(D('-0.01')))
-sqlite3.register_converter('REAL4', lambda s: D(s.decode()).quantize(D('-0.0001')))
-sqlite3.register_converter('REAL6', lambda s: D(s.decode()).quantize(D('-0.000001')))
-sqlite3.register_converter('REAL8', lambda s: D(s.decode()).quantize(D('-0.00000001')))
+sqlite3.register_converter('REAL2', lambda s: D(s.decode()).quantize(D('-0.01')) or D('0.00'))
+sqlite3.register_converter('REAL4', lambda s: D(s.decode()).quantize(D('-0.0001')) or D('0.0000'))
+sqlite3.register_converter('REAL6', lambda s: D(s.decode()).quantize(D('-0.000001')) or D('0.000000'))
+sqlite3.register_converter('REAL8', lambda s: D(s.decode()).quantize(D('-0.00000001')) or D('0.00000000'))
 
 # Boolean adapter (store bool in database as '1'/'0')
 sqlite3.register_adapter(bool, lambda b: str(int(b)))
@@ -584,7 +584,7 @@ def create_alt_index(self, company_id, table_name, ndx_cols, a_or_b):
 
 def create_index(self, company_id, table_name, index):
     ndx_name, ndx_cols, filter, unique = index
-    # ndx_cols = ', '.join(ndx_cols)
+    ndx_cols = ', '.join(f'{col_name}{"" if sort_desc is False else " DESC"}' for col_name, sort_desc in ndx_cols)
     if filter is None:
         filter = 'WHERE deleted_id = 0'
     else:

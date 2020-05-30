@@ -10,8 +10,8 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : [
-        # ['cbpmt_tran_num', 'tran_number', None, False],
-        ['cbpmt_cb_date', 'ledger_row_id, tran_date', None, False],
+        # ['cbpmt_tran_num', [['tran_number', False]], None, False],
+        ['cbpmt_cb_date', [['ledger_row_id', False], ['tran_date', False]], None, False],
         ],
     'ledger_col'    : 'ledger_row_id',
     'defn_company'  : None,

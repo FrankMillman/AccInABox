@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : [
-        ['ar_alloc_items', 'item_row_id', None, False]
+        ['ar_alloc_items', [['item_row_id', False]], None, False]
         ],
     'ledger_col'    : None,
     'defn_company'  : None,

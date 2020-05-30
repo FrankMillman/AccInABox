@@ -28,7 +28,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : [
-        ['bpm_det_ndx', 'header_row_id, row_id', None, False]
+        ['bpm_det_ndx', [['header_row_id', False], ['row_id', False]], None, False]
         ],
     'ledger_col'    : None,
     'defn_company'  : None,
