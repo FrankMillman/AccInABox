@@ -4,17 +4,10 @@ table = {
     'module_id'     : 'sls',
     'short_descr'   : 'Sales codes - non-inventory',
     'long_descr'    : 'Sales codes - non-inventory',
-    'sub_types'     : [
-        ['code_type', None, [
-            ['group', 'Group code',
-                ['nsls_code', 'descr'], []],
-            ['code', 'Sales code',
-                ['nsls_code', 'descr', 'gl_code_id', 'chg_eff_date', 'unearned_gl_code_id'], []],
-            ]],
-        ],
+    'sub_types'     : None,
     'sub_trans'     : None,
-    'sequence'      : ['seq', ['parent_id'], None],
-    'tree_params'   : [None, ['nsls_code', 'descr', 'seq', 'parent_id'], []],
+    'sequence'      : ['seq', ['group_id'], None],
+    'tree_params'   : ['group_id', ['nsls_code', 'descr', None, 'seq'], None],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -121,31 +114,22 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'parent_id',
+    'col_name'   : 'group_id',
     'data_type'  : 'INT',
-    'short_descr': 'Parent id',
-    'long_descr' : 'Parent id',
-    'col_head'   : 'Parent',
+    'short_descr': 'Group row id',
+    'long_descr' : 'Group row id',
+    'col_head'   : 'Group',
     'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : True,
+    'calculated' : [['where', '', '_param.nsls_group_row_id', 'is_not', '$None', '']],
+    'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
+    'dflt_val'   : '{_param.nsls_group_row_id}',
     'dflt_rule'  : None,
-    'col_checks' : [
-        [
-            'only_one_root',
-            'Must have a parent id',
-            [
-                ['check', '', 'first_row', 'is', '$True', ''],
-                ['or', '', '$value', 'is_not', '$None', ''],
-                ],
-            ],
-        ],
-    'fkey'       : ['sls_nsls_codes', 'row_id', 'parent', 'nsls_code', False, None],
+    'col_checks' : None,
+    'fkey'       : ['sls_nsls_groups', 'row_id', 'group', 'nsls_group', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -168,32 +152,14 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'code_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Type of nsls code',
-    'long_descr' : 'Type of nsls code',
-    'col_head'   : 'Type',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 10,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : 'code',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'gl_code_id',
     'data_type'  : 'INT',
     'short_descr': 'Gl account code',
     'long_descr' : 'Gl account code',
     'col_head'   : 'Gl acc',
     'key_field'  : 'N',
-    'calculated' : False,
+    # 'calculated' : False,
+    'calculated' : [['where', '', '_param.gl_integration', 'is', '$False', '']],
     'allow_null' : True,  # null means 'not integrated to g/l'
 #   'allow_amend': True,  # can change from null to not-null to start integration
     'allow_amend': [['where', '', '$value', 'is', '$None', '']],
@@ -202,7 +168,19 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
+    # 'col_checks' : None,
+    'col_checks' : [
+        [
+            'gl_code',
+            'G/l code required if gl integration specified',
+            [
+                ['check', '(', '_param.gl_integration', 'is', '$False', ''],
+                ['and', '', '$value', 'is', '$None', ')'],
+                ['or', '(', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', '$value', 'is_not', '$None', ')'],
+                ],
+            ],
+        ],
     'fkey'       : ['gl_codes', 'row_id', 'gl_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
@@ -221,7 +199,17 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '0',
     'dflt_rule'  : None,
-    'col_checks' : None,
+    # 'col_checks' : None,
+    'col_checks' : [
+        [
+            'denied',
+            'Cannot change effective date',
+            [
+                ['check', '', '$value', '=', '0', ''],
+                ['or', '', '_param.eff_date_nsls', 'is', '$True', ''],
+                ],
+            ],
+        ],
     'fkey'       : None,
     'choices'    : [
             ['0', 'Not allowed'],
@@ -231,13 +219,16 @@ cols.append ({
         ],
     })
 cols.append ({
-    'col_name'   : 'unearned_gl_code_id',
+    'col_name'   : 'uea_gl_code_id',
     'data_type'  : 'INT',
     'short_descr': 'Unearned GL account code',
     'long_descr' : 'Unearned GL account code - only if integrated to g/l',
     'col_head'   : 'Unearned gl',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.eff_date_nsls', 'is', '$False', '']],
+    'calculated' : [
+        ['where', '', '_param.eff_date_nsls', 'is', '$False', ''],
+        ['or', '', '_param.gl_integration', 'is', '$False', ''],
+        ],
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
@@ -250,13 +241,17 @@ cols.append ({
             'unearned',
             'Unearned code required',
             [
-                ['check', '(', 'chg_eff_date', '=', '0', ''],
-                ['and', '', '$value', 'is', '$None', ')'],
-                ['or', '', 'chg_eff_date', '!=', '0', ''],
+                ['check', '(', '$value', 'is', '$None', ''],
+                ['and', '', 'chg_eff_date', '=', "'0'", ')'],
+                ['or', '(', '$value', 'is', '$None', ''],
+                ['and', '', '_param.gl_integration', 'is', '$False', ')'],
+                ['or', '(', '$value', 'is_not', '$None', ''],
+                ['and', '', 'chg_eff_date', '!=', "'0'", ''],
+                ['and', '', '_param.gl_integration', 'is', '$True', ')'],
                 ],
             ],
         ],
-    'fkey'       : ['gl_codes', 'row_id', 'unearned_gl_code', 'gl_code', False, 'gl_codes'],
+    'fkey'       : ['gl_codes', 'row_id', 'uea_gl_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
 cols.append ({
@@ -331,7 +326,7 @@ cols.append ({
                 ['and', '', '$value', 'is', '$None', ')'],
                 ['or', '(', 'common_location', 'is', '$True', ''],
                 ['and', '', '$value', 'is_not', '$None', ''],
-                ['and', '', 'location_row_id>location_type', '=', "'location'", ')'],
+                ['and', '', 'location_row_id>location_type', '!=', "'root'", ')'],
                 ],
             ],
         ],
@@ -410,7 +405,7 @@ cols.append ({
                 ['and', '', '$value', 'is', '$None', ')'],
                 ['or', '(', 'common_function', 'is', '$True', ''],
                 ['and', '', '$value', 'is_not', '$None', ''],
-                ['and', '', 'function_row_id>function_type', '=', "'function'", ')'],
+                ['and', '', 'function_row_id>function_type', '!=', "'root'", ')'],
                 ],
             ],
         ],
@@ -420,32 +415,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'first_row',
-    'data_type'  : 'BOOL',
-    'short_descr': 'First row?',
-    'long_descr' : 'If table is empty, this is the first row',
-    'col_head'   : '',
-    'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.sls_nsls_codes b) "
-                   "THEN 0 ELSE 1 END",
-    })
-virt.append ({
-    'col_name'   : 'children',
-    'data_type'  : 'INT',
-    'short_descr': 'Children',
-    'long_descr' : 'Number of children',
-    'col_head'   : '',
-    'sql'        : "SELECT count(*) FROM {company}.sls_nsls_codes b "
-                   "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
-    })
-virt.append ({
-    'col_name'   : 'expandable',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Expandable?',
-    'long_descr' : 'Expandable?',
-    'col_head'   : '',
-    'sql'        : "CASE WHEN a.code_type = 'code' THEN 0 ELSE 1 END",
-    })
 virt.append ({
     'col_name'   : 'sls_uea_bf',
     'data_type'  : 'DEC',
@@ -499,7 +468,7 @@ virt.append ({
 virt.append ({
     'col_name'   : 'sls_ear_per',
     'data_type'  : 'DEC',
-    'short_descr': 'Salesahs earned for period',
+    'short_descr': 'Sales earned for period',
     'long_descr' : 'Sales earned for period between specified dates',
     'col_head'   : 'Sales earned per',
     'db_scale'   : 2,
@@ -525,7 +494,7 @@ cursors.append({
     'columns': [
         ['nsls_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],
-        ['code_type', 60, False, False, False, False, None, None, None, None],
+        # ['code_type', 60, False, False, False, False, None, None, None, None],
         ],
     'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],
@@ -538,7 +507,7 @@ cursors.append({
         ['descr', 260, True, False, False, False, None, None, None, None],
         ],
     'filter': [
-        ['where', '', 'code_type', '=', "'code'", ''],
+        # ['where', '', 'code_type', '=', "'code'", ''],
         ],
     'sequence': [['parent_id', False], ['seq', False]],
     'formview_name': 'setup_nsls_codes',

@@ -34,7 +34,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.upd_checks` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.upd_checks` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`upd_chk` value=`bold`/>>
                     <</change_button>>
@@ -65,7 +65,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.del_checks` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.del_checks` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`del_chk` value=`bold`/>>
                     <</change_button>>
@@ -97,7 +97,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.post_checks` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.post_checks` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`post_chk` value=`bold`/>>
                     <</change_button>>
@@ -128,7 +128,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.unpost_checks` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.unpost_checks` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`unpost_chk` value=`bold`/>>
                     <</change_button>>
@@ -160,7 +160,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.upd_on_save` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.upd_on_save` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`upd_save` value=`bold`/>>
                     <</change_button>>
@@ -191,7 +191,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.upd_on_post` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.upd_on_post` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`upd_post` value=`bold`/>>
                     <</change_button>>
@@ -223,7 +223,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.on_setup` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.on_setup` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`on_setup` value=`bold`/>>
                     <</change_button>>
@@ -254,7 +254,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.after_read` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.after_read` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`after_read` value=`bold`/>>
                     <</change_button>>
@@ -286,7 +286,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.after_init` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.after_init` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`after_init` value=`bold`/>>
                     <</change_button>>
@@ -317,7 +317,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.after_restore` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.after_restore` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`after_restore` value=`bold`/>>
                     <</change_button>>
@@ -349,7 +349,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.before_save` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.before_save` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`before_save` value=`bold`/>>
                     <</change_button>>
@@ -380,7 +380,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.after_save` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.after_save` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`after_save` value=`bold`/>>
                     <</change_button>>
@@ -412,7 +412,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.before_insert` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.before_insert` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`before_insert` value=`bold`/>>
                     <</change_button>>
@@ -443,7 +443,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.after_insert` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.after_insert` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`after_insert` value=`bold`/>>
                     <</change_button>>
@@ -475,7 +475,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.before_update` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.before_update` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`before_update` value=`bold`/>>
                     <</change_button>>
@@ -506,7 +506,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.adter_update` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.adter_update` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`after_update` value=`bold`/>>
                     <</change_button>>
@@ -540,7 +540,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.before_delete` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.before_delete` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`before_delete` value=`bold`/>>
                     <</change_button>>
@@ -571,7 +571,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.after_delete` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.after_delete` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`after_delete` value=`bold`/>>
                     <</change_button>>
@@ -603,7 +603,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.before_post` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.before_post` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`before_post` value=`bold`/>>
                     <</change_button>>
@@ -634,7 +634,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.after_commit` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.after_commit` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`after_commit` value=`bold`/>>
                     <</change_button>>
@@ -666,7 +666,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`db_actions.after_post` op=`is not` tgt=`$None`>>
+                  <<compare src=`db_actions.after_post` op=`is_not` tgt=`$None`>>
                     <<change_button>>
                       <<font_weight btn_id=`after_post` value=`bold`/>>
                     <</change_button>>
@@ -686,147 +686,147 @@
     <frame_methods template="Setup_Form_Single">
       <method name="on_start_frame" action="
         <<case>>
-          <<compare src=`db_actions.upd_checks` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.upd_checks` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`upd_chk` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.del_checks` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.del_checks` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`del_chk` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.post_checks` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.post_checks` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`post_chk` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.unpost_checks` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.unpost_checks` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`unpost_chk` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.upd_on_save` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.upd_on_save` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`upd_save` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.upd_on_post` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.upd_on_post` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`upd_post` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.on_setup` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.on_setup` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`on_setup` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.after_read` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.after_read` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`after_read` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.after_init` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.after_init` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`after_init` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.after_restore` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.after_restore` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`after_restore` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.before_save` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.before_save` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`before_save` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.after_save` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.after_save` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`after_save` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.before_insert` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.before_insert` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`before_insert` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.after_insert` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.after_insert` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`after_insert` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.before_update` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.before_update` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`before_update` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.after_update` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.after_update` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`after_update` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.before_delete` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.before_delete` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`before_delete` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.after_delete` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.after_delete` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`after_delete` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.before_post` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.before_post` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`before_post` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.after_commit` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.after_commit` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`after_commit` value=`bold`/>>
             <</change_button>>
           <</compare>>
         <</case>>
         <<case>>
-          <<compare src=`db_actions.after_post` op=`is not` tgt=`$None`>>
+          <<compare src=`db_actions.after_post` op=`is_not` tgt=`$None`>>
             <<change_button>>
               <<font_weight btn_id=`after_post` value=`bold`/>>
             <</change_button>>

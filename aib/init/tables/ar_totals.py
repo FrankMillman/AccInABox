@@ -13,7 +13,15 @@ table = {
         ['inv_net_tot', 'inv_tax_tot', 'crn_net_tot', 'crn_tax_tot', 'rec_tot',
             'disc_net_tot', 'disc_tax_tot', 'chg_tot', 'jnl_tot']  # fields to roll
         ],
-    'indexes'       : None,
+    # 'indexes'       : None,
+    'indexes'       : [
+        ['ar_tots', [
+            ['ledger_row_id', False],
+            ['location_row_id', False],
+            ['function_row_id', False],
+            ['tran_date', True],
+            ], None, False],
+        ],
     'ledger_col'    : 'ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,

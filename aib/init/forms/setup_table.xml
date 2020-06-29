@@ -24,7 +24,7 @@
         long_descr="Use own table definition?" allow_amend="true" max_len="1" dflt_val="Y"
         col_checks="[[`check_value`, `Cannot change back to Other`,
           [[`check`, ``, `db_table$exists`, `is`, `$False`, ``],
-          [`or`, ``, `db_table.defn_company`, `is not`, `$None`, ``],
+          [`or`, ``, `db_table.defn_company`, `is_not`, `$None`, ``],
           [`or`, ``, `$value`, `=`, `'Y'`, ``]]]]"/>
       <mem_col col_name="own_data" data_type="TEXT" short_descr="Use own table data?"
         long_descr="Use own table data?" allow_amend="true" max_len="1" dflt_val="Y"/>

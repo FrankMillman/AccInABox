@@ -189,8 +189,6 @@
             op="<<=" expr="_ctx.last_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="balance_cust_as_at"
             op="!=" expr="0" rbr=""/>
-          <cur_fil test="AND" lbr="" col_name="posted"
-            op="=" expr="'1'" rbr=""/>
         </cur_filter>
         <cur_sequence>
           <cur_seq col_name="tran_date"/>

@@ -390,6 +390,12 @@ async def check_tran_date(db_obj, fld, value):
 
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
     period_row_id = bisect_left([_.closing_date for _ in adm_periods], value)
+
+    if getattr(db_obj.context, 'bf', False):
+        if period_row_id != 0:  # date is <= first period (and first period is dummy)
+            raise AibError(head='Transaction date', body='Date must be prior to start of financial calendar')
+        return True
+
     if period_row_id == 0:  # date is <= first period (and first period is dummy)
         raise AibError(head='Transaction date', body='Date prior to start of financial calendar')
     if period_row_id == len(adm_periods):  # date is > last period
@@ -442,6 +448,10 @@ async def check_tran_date(db_obj, fld, value):
 
 async def check_stat_date(db_obj, fld, value):
     # called as col_check from tran_date
+
+    if getattr(db_obj.context, 'bf', False):
+        return True
+
     module_row_id = db_obj.db_table.module_row_id
     ledger_row_id = await db_obj.getval(db_obj.db_table.ledger_col)
     ledger_params = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)

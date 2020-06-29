@@ -241,7 +241,7 @@ async def literal(fld, xml, debug):
     val = xml.get('value')
     if val.isdigit():
         return int(val)
-    if val[0] == '-' and val[1:].isdigit():
+    if val and val[0] == '-' and val[1:].isdigit():
         return int(val)
     if val == '$None':
         return None
@@ -352,7 +352,7 @@ async def get_val(fld, value):
         return fld.db_obj.exists
     if value.isdigit():
         return int(value)
-    if value[0] == '-' and value[1:].isdigit():
+    if value and value[0] == '-' and value[1:].isdigit():
         return int(value)
     if value.startswith('_ctx.'):
         return getattr(fld.db_obj.context, value[5:], None)

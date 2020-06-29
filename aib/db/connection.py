@@ -549,7 +549,7 @@ class Conn:
                 elif expr.isdigit():  # integer
                     where_params.append(int(expr))
                     expr = self.constants.param_style
-                elif expr[0] == '-' and expr[1:].isdigit():  # negative integer
+                elif expr and expr[0] == '-' and expr[1:].isdigit():  # negative integer
                     where_params.append(int(expr))
                     expr = self.constants.param_style
                 elif expr.startswith("'"):  # literal string
@@ -723,12 +723,15 @@ class Conn:
         if '.' in col_name:  # added [2017-08-14] to handle 'scale_ptr' columns
             obj_name, col_name = col_name.split('.')
             if obj_name != '_param':
-                # do we get here? - need to check this [2020-05-22]
-                # 1. cannot mix db_obj and mem_obj in sql - does this occur?
-                # 2. if not _param, how to we know to 'join' on 'row_id = 1'?
-                # 3. may need to check for '_ledger' as well, but then need to build correct join
-                print('get_col_alias', obj_name, col_name)
-                input()
+                if isinstance(db_table, db.objects.MemTable) and context.data_objects[obj_name].mem_obj:
+                    pass  # if both are mem_obj, no problem [2020-05-31]
+                else:
+                    # do we get here? - need to check this [2020-05-22]
+                    # 1. cannot mix db_obj and mem_obj in sql - does this occur?
+                    # 2. if not _param, how to we know to 'join' on 'row_id = 1'?
+                    # 3. may need to check for '_ledger' as well, but then need to build correct join
+                    print('get_col_alias', obj_name, col_name)
+                    input()
             if obj_name == '_param':
                 db_table = await db.objects.get_db_table(context, db_table.data_company, 'adm_params')
                 table_name = f'{db_table.data_company}.adm_params'

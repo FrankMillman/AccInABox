@@ -46,7 +46,7 @@ async def compare(db_obj, xml):
         target_value = None
     elif target.isdigit():
         target_value = int(target)
-    elif target[0] == '-' and target[1:].isdigit():
+    elif target and target[0] == '-' and target[1:].isdigit():
         target_value = int(target)
     else:  # field name
         if target.endswith('$orig'):

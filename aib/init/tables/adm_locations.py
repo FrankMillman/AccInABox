@@ -4,19 +4,11 @@ table = {
     'module_id'     : 'adm',
     'short_descr'   : 'Locations',
     'long_descr'    : 'Physical locations',
-    'sub_types'     : [
-        ['location_type', None, [
-            ['root', 'Root',
-                ['location_id', 'descr'], []],
-            ['group', 'Group code',
-                ['location_id', 'descr'], []],
-            ['location', 'Location code',
-                ['location_id', 'descr'], []],
-            ]],
-        ],
+    'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : ['seq', ['parent_id'], None],
-    'tree_params'   : [None, ['location_id', 'descr', 'seq', 'parent_id'], []],
+    'tree_params'   : [None, ['location_id', 'descr', 'parent_id', 'seq'],
+                          ['location_type', [['root', 'Root']], None]],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -123,6 +115,25 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'location_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Type of location code',
+    'long_descr' : 'Type of location code',
+    'col_head'   : 'Type',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 10,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'parent_id',
     'data_type'  : 'INT',
     'short_descr': 'Parent id',
@@ -137,16 +148,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : [
-        [
-            'only_one_root',
-            'Must have a parent id',
-            [
-                ['check', '', 'first_row', 'is', '$True', ''],
-                ['or', '', '$value', 'is_not', '$None', ''],
-                ],
-            ],
-        ],
+    'col_checks' : None,
     'fkey'       : ['adm_locations', 'row_id', 'parent', 'location_id', False, None],
     'choices'    : None,
     })
@@ -169,25 +171,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'location_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Type of location code',
-    'long_descr' : 'Type of location code',
-    'col_head'   : 'Type',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 10,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : 'location',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
 
 # virtual column definitions
 virt = []
@@ -197,7 +180,7 @@ virt.append ({
     'short_descr': 'First row?',
     'long_descr' : 'If table is empty, this is the first row',
     'col_head'   : '',
-    'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.adm_locations b) "
+    'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.adm_locations WHERE deleted_id = 0) "
                    "THEN 0 ELSE 1 END",
     })
 virt.append ({
@@ -207,45 +190,45 @@ virt.append ({
     'long_descr' : 'Number of children',
     'col_head'   : '',
     'sql'        : "SELECT count(*) FROM {company}.adm_locations b "
-                   "WHERE b.parent_id = a.row_id",
+                   "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
     })
-virt.append ({
-    'col_name'   : 'expandable',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Expandable?',
-    'long_descr' : 'Is this node expandable?',
-    'col_head'   : '',
-    'dflt_val'   : 'true',
-    'sql'        : "CASE WHEN a.location_type = 'code' THEN 0 ELSE 1 END",
-    })
-virt.append ({
-    'col_name'   : 'level',
-    'data_type'  : 'INT',
-    'short_descr': 'Level',
-    'long_descr' : 'Level in hierarchy',
-    'col_head'   : '',
-    'sql'        : (
-        "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
-        "FROM {company}.adm_locations b WHERE b.parent_id IS NULL "
-        "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
-        "FROM {company}.adm_locations c, tree d WHERE d.row_id = c.parent_id) "
-        "SELECT level FROM tree WHERE a.row_id = tree.row_id)"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'parent_level',
-    'data_type'  : 'INT',
-    'short_descr': 'Parent level',
-    'long_descr' : 'Level of parent in hierarchy',
-    'col_head'   : '',
-    'sql'        : (
-        "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
-        "FROM {company}.adm_functions b WHERE b.parent_id IS NULL "
-        "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
-        "FROM {company}.adm_functions c, tree d WHERE d.row_id = c.parent_id) "
-        "SELECT level FROM tree WHERE a.parent_id = tree.row_id)"
-        ),
-    })
+# virt.append ({
+#     'col_name'   : 'expandable',
+#     'data_type'  : 'BOOL',
+#     'short_descr': 'Expandable?',
+#     'long_descr' : 'Is this node expandable?',
+#     'col_head'   : '',
+#     'dflt_val'   : 'true',
+#     'sql'        : "CASE WHEN a.location_type = 'code' THEN 0 ELSE 1 END",
+#     })
+# virt.append ({
+#     'col_name'   : 'level',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Level',
+#     'long_descr' : 'Level in hierarchy',
+#     'col_head'   : '',
+#     'sql'        : (
+#         "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
+#         "FROM {company}.adm_locations b WHERE b.parent_id IS NULL "
+#         "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
+#         "FROM {company}.adm_locations c, tree d WHERE d.row_id = c.parent_id) "
+#         "SELECT level FROM tree WHERE a.row_id = tree.row_id)"
+#         ),
+#     })
+# virt.append ({
+#     'col_name'   : 'parent_level',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Parent level',
+#     'long_descr' : 'Level of parent in hierarchy',
+#     'col_head'   : '',
+#     'sql'        : (
+#         "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
+#         "FROM {company}.adm_functions b WHERE b.parent_id IS NULL "
+#         "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
+#         "FROM {company}.adm_functions c, tree d WHERE d.row_id = c.parent_id) "
+#         "SELECT level FROM tree WHERE a.parent_id = tree.row_id)"
+#         ),
+#     })
 
 # cursor definitions
 cursors = []
@@ -257,20 +240,20 @@ cursors.append({
         ['location_id', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, True, False, False, None, None, None, None],
         ],
-    'filter': [['WHERE', '', 'location_type', '=', "'location'", '']],
+    'filter': [['WHERE', '', 'location_type', '!=', "'root'", '']],
     'sequence': [['location_id', False]],
     })
 
 # actions
 actions = []
-actions.append([
-    'upd_checks', [
-        [
-            'check_levels',
-            'Not in compliance with adm_params loc_levels',
-            [
-                ['check', '', 'location_id', 'pyfunc', 'custom.adm_funcs.check_loc_level', ''],
-                ],
-            ],
-        ],
-    ])
+# actions.append([
+#     'upd_checks', [
+#         [
+#             'check_levels',
+#             'Not in compliance with adm_params loc_levels',
+#             [
+#                 ['check', '', 'location_id', 'pyfunc', 'custom.adm_funcs.check_loc_level', ''],
+#                 ],
+#             ],
+#         ],
+#     ])

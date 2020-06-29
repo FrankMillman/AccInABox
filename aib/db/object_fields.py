@@ -423,7 +423,7 @@ class Field:
 
         changed = await self.value_changed(value)
 
-        if changed and validate:  # check for allow_amend
+        if changed and validate and col_defn.col_type != 'virt':  # check for allow_amend
             try:
                 await db_obj.check_perms('amend', self, value)
             except AibDenied:
@@ -438,8 +438,9 @@ class Field:
                 raise AibError(head=f'Amend {self.table_name}.{col_name}',
                     body='Table is read only - no amendments allowed')
             elif (
-                col_defn.col_type != 'virt'  # e.g. ar_openitems.alloc_cust is ok
-                    and 'posted' in db_obj.db_table.col_dict
+                # col_defn.col_type != 'virt'  # e.g. ar_openitems.alloc_cust is ok
+                #     and 'posted' in db_obj.db_table.col_dict
+                'posted' in db_obj.db_table.col_dict
                     # next line added 2019-08-20
                     # in ar_alloc_item.xml we add the virtual column 'alloc_cust'
                     #   to the grid where db_obj is ar_openitems
@@ -459,7 +460,8 @@ class Field:
                     )
                 raise AibError(head=self.table_name, body=errmsg)
             elif allow_amend:
-                pass  # note - all virtual fields have allow_amend=True
+                # pass  # note - all virtual fields have allow_amend=True
+                pass
             elif col_name in db_obj.sub_trans and self._value is not None and value != self._value:
                 # added 2019-09-21 - I think it is appropriate for *all* sub_trans
                 raise AibError(head=f'Amend {self.table_name}.{col_name}',

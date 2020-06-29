@@ -72,7 +72,7 @@
       " validation="
           <<validation>>
             <<case>>
-              <<compare src=`user.password` op=`is not` tgt=`$None`/>>
+              <<compare src=`user.password` op=`is_not` tgt=`$None`/>>
               <<default>>
                 <<error head=`Password` body=`You must enter a password`/>>
               <</default>>

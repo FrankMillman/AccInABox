@@ -253,7 +253,7 @@ async def convert_sql(self, sql, params=None):
                 return True
         return False
     def text_end(word):  # function to check for end of text
-        for e in ("'", "')", "',"):  # any others?
+        for e in ("'", "')", "',", '\n'):  # any others?
             if word.endswith(e):
                 return True
         return False
@@ -263,7 +263,7 @@ async def convert_sql(self, sql, params=None):
     max = len(sqlist)
     while pos < max:
         word = sqlist[pos].upper()
-        pos += 1  # increment now, as there are many exit points
+        pos += 1  # increment now, as there are many continuation points
         if skip_text:
             if text_end(word):
                 skip_text = False

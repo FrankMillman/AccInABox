@@ -7,12 +7,12 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,
-#   'tree_params'   : None,
-    'tree_params'   : [
-        'prod_row_id>class_row_id',
-        ['prod_row_id>prod_code', 'prod_row_id>descr', 'prod_row_id>seq', None],
-        ['prod_row_id>prod_code']
-        ],
+    'tree_params'   : None,
+#   'tree_params'   : [
+#       'prod_row_id>class_row_id',
+#       ['prod_row_id>prod_code', 'prod_row_id>descr', None, 'prod_row_id>seq'],
+#       ['prod_row_id>prod_code']
+#       ],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : 'ledger_row_id',

@@ -1,17 +1,15 @@
 # table definition
 table = {
-    'table_name'    : 'in_prod_codes',
-    'module_id'     : 'in',
-    'short_descr'   : 'Product codes',
-    'long_descr'    : 'Product codes',
+    'table_name'    : 'cb_opmt_groups',
+    'module_id'     : 'cb',
+    'short_descr'   : 'Other payment groups',
+    'long_descr'    : 'Other payment groups',
     'sub_types'     : None,
     'sub_trans'     : None,
-    'sequence'      : ['seq', ['class_row_id'], None],
-    'tree_params'   : ['class_row_id', ['prod_code', 'descr', None, 'seq'], None],
+    'sequence'      : ['seq', ['parent_id'], None],
+    'tree_params'   : [None, ['prod_group', 'descr', 'parent_id', 'seq'], ['group_type', [['root', 'Root']], None]],
     'roll_params'   : None,
-    'indexes'       : [
-        ['prod_class_ndx', [['class_row_id', False], ['prod_code', False]], None, False]
-        ],
+    'indexes'       : None,
     'ledger_col'    : None,
     'defn_company'  : None,
     'data_company'  : None,
@@ -78,11 +76,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'prod_code',
+    'col_name'   : 'opmt_group',
     'data_type'  : 'TEXT',
-    'short_descr': 'Product code',
-    'long_descr' : 'Product code',
-    'col_head'   : 'Code',
+    'short_descr': 'Other payment group',
+    'long_descr' : 'Other payment group',
+    'col_head'   : 'Group',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -116,27 +114,41 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'class_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Product class id',
-    'long_descr' : 'Product class id',
-    'col_head'   : 'Class id',
+    'col_name'   : 'group_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Type of opmt group',
+    'long_descr' : 'Type of other payment group',
+    'col_head'   : 'Type',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
+    'max_len'    : 10,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : [],
+    })
+cols.append ({
+    'col_name'   : 'parent_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Parent id',
+    'long_descr' : 'Parent id',
+    'col_head'   : 'Parent',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : True,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    # 'col_checks' : [
-    #     ['class_type', "Must be of type 'class'", [
-    #         ['check', '', 'class_row_id>class_type', '=', "'class'", ''],
-    #         ],
-    #     ]],
-    'fkey'       : ['in_prod_classes', 'row_id', 'class', 'class', True, None],
+    'fkey'       : ['cb_opmt_groups', 'row_id', 'parent', 'opmt_group', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -158,69 +170,58 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'uom',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Unit of measure',
-    'long_descr' : 'Unit of measure',
-    'col_head'   : 'Uom',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 5,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : 'ea',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : [  # maybe uom and scale should be in a separate lookup table
-            ['ea', 'Each'],
-            ['kg', 'Kilogram'],
-            ['g', 'Gram'],
-            ['l', 'Litre'],
-            ['m', 'Metre'],
-            ['mm', 'Millimetre'],
-        ],
-    })
-cols.append ({
-    'col_name'   : 'scale',
-    'data_type'  : 'INT',
-    'short_descr': 'No of decimals',
-    'long_descr' : 'No of decimals',
-    'col_head'   : 'Dec',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : [['max_6', 'Value must be betwen 0 and 6', [
-        ['check', '', '$value', '>=', '0', ''],
-        ['and', '', '$value', '<=', '6', ''],
-        ]]],
-    'fkey'       : None,
-    'choices'    : None,
-    })
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'first_row',
+    'data_type'  : 'BOOL',
+    'short_descr': 'First row?',
+    'long_descr' : 'If table is empty, this is the first row',
+    'col_head'   : '',
+    'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.cb_opmt_groups WHERE deleted_id = 0) "
+                   "THEN 0 ELSE 1 END",
+    })
+virt.append ({
+    'col_name'   : 'children',
+    'data_type'  : 'INT',
+    'short_descr': 'Children',
+    'long_descr' : 'Number of children',
+    'col_head'   : '',
+    'sql'        : "SELECT count(*) FROM {company}.cb_opmt_groups b "
+                   "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
+    })
+# virt.append ({
+#     'col_name'   : 'expandable',
+#     'data_type'  : 'BOOL',
+#     'short_descr': 'Expandable?',
+#     'long_descr' : 'Expandable?',
+#     'col_head'   : '',
+#     'sql'        : "CASE WHEN a.class_type = 'class' THEN 0 ELSE 1 END",
+#     })
 
 # cursor definitions
 cursors = []
 cursors.append({
-    'cursor_name': 'prod_codes',
-    'title': 'Maintain product codes',
+    'cursor_name': 'all_opmt_groups',
+    'title': 'Opmt groups and groups',
     'columns': [
-        ['prod_code', 80, False, False, False, False, None, None, None, None],
-        ['descr', 200, True, False, False, False, None, None, None, None],
+        ['opmt_group', 100, False, False, False, False, None, None, None, None],
+        ['descr', 260, True, False, False, False, None, None, None, None],
+        ['group_type', 60, False, False, False, False, None, None, None, None],
         ],
     'filter': [],
-    'sequence': [['prod_code', False]],
+    'sequence': [['parent_id', False], ['seq', False]],
+    })
+cursors.append({
+    'cursor_name': 'opmt_groups',
+    'title': 'Maintain opmt groups',
+    'columns': [
+        ['opmt_group', 100, False, False, False, False, None, None, None, None],
+        ['descr', 260, True, False, False, False, None, None, None, None],
+        ],
+    'filter': [['where', '', 'group_type', '!=', "'root'", '']],
+    'sequence': [['parent_id', False], ['seq', False]],
     })
 
 # actions

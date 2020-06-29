@@ -120,7 +120,7 @@ cols.append ({
     'long_descr' : 'Location row id',
     'col_head'   : 'Loc',
     'key_field'  : 'A',
-   'calculated' : [
+    'calculated' : [
         ['where', '',  '_ledger.use_locations', 'is', '$False', ''],
         ['or', '', '_ledger.common_location', 'is', '$True', ''],
         ],

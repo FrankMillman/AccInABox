@@ -17,7 +17,7 @@ table = {
         ],
     'sub_trans'     : None,
     'sequence'      : ['seq', ['parent_id'], None],
-    'tree_params'   : [None, ['row_id', 'descr', 'seq', 'parent_id'], []],
+    'tree_params'   : [None, ['row_id', 'descr', 'parent_id', 'seq'], []],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -119,18 +119,6 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    # 'col_checks' : [
-    #     [
-    #         'only_one_root',
-    #         'Must have a parent id',
-    #         [
-    #             ['check', '(', 'first_row', 'is', '$True', ''],
-    #             ['and', '', '$value', 'is', '$None', ')'],
-    #             ['or', '(', 'first_row', 'is', '$False', ''],
-    #             ['and', '', '$value', 'is_not', '$None', ')'],
-    #             ],
-    #         ],
-    #     ],
     'col_checks' : None,
     'fkey'       : ['sys_menu_defns', 'row_id', None, None, False, None],
     'choices'    : None,
@@ -303,7 +291,7 @@ virt.append ({
     'short_descr': 'First row?',
     'long_descr' : 'If table is empty, this is the first row',
     'col_head'   : '',
-    'sql'        : "SELECT CASE WHEN EXISTS(SELECT * FROM {company}.sys_menu_defns b) "
+    'sql'        : "SELECT CASE WHEN EXISTS(SELECT * FROM {company}.sys_menu_defns WHERE deleted_id = 0) "
                    "THEN 0 ELSE 1 END",
     })
 virt.append ({
@@ -313,7 +301,7 @@ virt.append ({
     'long_descr' : 'Number of children',
     'col_head'   : '',
     'sql'        : "SELECT count(*) FROM {company}.sys_menu_defns b "
-                   "WHERE b.parent_id = a.row_id",
+                   "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
     })
 virt.append ({
     'col_name'   : 'expandable',

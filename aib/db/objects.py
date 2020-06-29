@@ -2682,6 +2682,35 @@ class DbTable:
             except StopAsyncIteration:  # no rows found
                 self.actions = Actions([None]*len(Actions.names))
 
+        if self.tree_params is not None:
+            group, col_names, levels = self.tree_params
+            if levels:
+                type_colname, level_types, sublevel_type = levels
+                type_col = self.col_dict[type_colname]
+                type_col.choices = OD(level_types)
+
+                parent_col = self.col_dict[col_names[2]]
+                parent_col.col_checks.append(
+                    [
+                        'check_parent',
+                        'Invalid parent id',
+                        [
+                            ['check', '', '$value', 'pyfunc', 'parent_id', ''],
+                            ],
+                        ]
+                    )
+            if group:
+                group_col = self.col_dict[group]
+                group_col.col_checks.append(
+                    [
+                        'check_group',
+                        'Invalid group id',
+                        [
+                            ['check', '', '$value', 'pyfunc', 'group_id', ''],
+                            ],
+                        ]
+                    )
+
         self.sub_types = OD()
         if sub_types is not None:
             sub_types = loads(sub_types)

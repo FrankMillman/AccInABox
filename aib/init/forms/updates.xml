@@ -255,7 +255,7 @@
                   <<return state=`cancelled`/>>
                   <<return state=`completed`>>
                     <<case>>
-                      <<compare src=`updates.condition` op=`is not` tgt=`$None`>>
+                      <<compare src=`updates.condition` op=`is_not` tgt=`$None`>>
                         <<change_button>>
                           <<font_weight btn_id=`upd_cond` value=`bold`/>>
                         <</change_button>>
@@ -444,7 +444,7 @@
           <method name="on_start_frame" action="
             <<pyfunc name=`custom.updates.load_details`/>>
             <<case>>
-              <<compare src=`updates.condition` op=`is not` tgt=`$None`>>
+              <<compare src=`updates.condition` op=`is_not` tgt=`$None`>>
                 <<change_button>>
                   <<font_weight btn_id=`upd_cond` value=`bold`/>>
                 <</change_button>>

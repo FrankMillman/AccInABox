@@ -25,6 +25,22 @@ async def split_nsls(db_obj, conn, return_vals):
 
 async def setup_openitems(db_obj, conn, return_vals):
     # called as split_src func from ar_tran_inv.upd_on_post()
+
+    if getattr(db_obj.context, 'bf', False):
+        due_date = await db_obj.children[0].children[0].getval('due_date')
+        discount_date = None
+        discount_cust = 0
+        yield (
+            0,
+            'inv',
+            due_date,
+            await db_obj.getval('inv_tot_cust'),
+            await db_obj.getval('inv_tot_local'),
+            discount_date,
+            discount_cust,
+            )
+        return
+
     tran_date = await db_obj.getval('tran_date')
     terms_code = await db_obj.getfld('terms_code_id')
     terms_obj = await terms_code.get_fk_object()

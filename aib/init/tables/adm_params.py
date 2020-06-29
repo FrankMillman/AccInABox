@@ -133,11 +133,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'use_locations',
+    'col_name'   : 'gl_integration',
     'data_type'  : 'BOOL',
-    'short_descr': 'Allow use of locations?',
-    'long_descr' : 'Allow use of locations?',
-    'col_head'   : 'Use locations?',
+    'short_descr': 'G/l integration?',
+    'long_descr' : 'G/l integration?',
+    'col_head'   : 'G/l integration?',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -146,63 +146,6 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : 'false',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'loc_levels',
-    'data_type'  : 'JSON',
-    'short_descr': 'Fixed levels for locations',
-    'long_descr' : 'Fixed levels for locations. List of (code, descr, allow_split). If blank, free format.',
-    'col_head'   : 'Loc levels',
-    'key_field'  : 'N',
-    'calculated' : [['where', '', 'use_locations', 'is', '$False', '']],
-    'allow_null' : True,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'use_functions',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Allow use of functions?',
-    'long_descr' : 'Allow use of functions?',
-    'col_head'   : 'Use functions?',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : 'false',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'fun_levels',
-    'data_type'  : 'JSON',
-    'short_descr': 'Fixed levels for functions',
-    'long_descr' : 'Fixed levels for functions. List of (code, descr, allow_split). If blank, free format.',
-    'col_head'   : 'Fun levels',
-    'key_field'  : 'N',
-    'calculated' : [['where', '', 'use_functions', 'is', '$False', '']],
-    'allow_null' : True,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -357,6 +300,62 @@ virt.append ({
     'sql'        : (
         "SELECT row_id FROM {company}.adm_functions "
         "WHERE parent_id IS NULL AND deleted_id = 0"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'gl_group_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Gl group',
+    'long_descr' : 'Return gl group row id if there is only one, else None',
+    'col_head'   : 'Gl grp',
+    'sql'        : (
+        "CASE "
+            "WHEN (SELECT COUNT(*) FROM {company}.gl_groups "
+                "WHERE deleted_id = 0) = 1 THEN "
+                "(SELECT row_id FROM {company}.gl_groups WHERE deleted_id = 0) "
+        "END"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'prod_group_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Prod group',
+    'long_descr' : 'Return prod group row id if there is only one, else None',
+    'col_head'   : 'Prod grp',
+    'sql'        : (
+        "CASE "
+            "WHEN (SELECT COUNT(*) FROM {company}.in_prod_groups "
+                "WHERE deleted_id = 0) = 1 THEN "
+                "(SELECT row_id FROM {company}.in_prod_groups WHERE deleted_id = 0) "
+        "END"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'nsls_group_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Nsls group',
+    'long_descr' : 'Return nsls group row id if there is only one, else None',
+    'col_head'   : 'Nsls grp',
+    'sql'        : (
+        "CASE "
+            "WHEN (SELECT COUNT(*) FROM {company}.sls_nsls_groups "
+                "WHERE deleted_id = 0) = 1 THEN "
+                "(SELECT row_id FROM {company}.sls_nsls_groups WHERE deleted_id = 0) "
+        "END"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'npch_group_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Npch group',
+    'long_descr' : 'Return npch group row id if there is only one, else None',
+    'col_head'   : 'Npch grp',
+    'sql'        : (
+        "CASE "
+            "WHEN (SELECT COUNT(*) FROM {company}.pch_npch_groups "
+                "WHERE deleted_id = 0) = 1 THEN "
+                "(SELECT row_id FROM {company}.pch_npch_groups WHERE deleted_id = 0) "
+        "END"
         ),
     })
 virt.append ({

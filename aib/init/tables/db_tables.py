@@ -9,8 +9,8 @@ table = {
     'sequence'      : ['seq', ['module_row_id'], None],
     'tree_params'   : [
         'module_row_id',  # group parent
-        ['table_name', 'short_descr', 'seq', None],  # code, descr, seq, parent_id
-        ['table'],
+        ['table_name', 'short_descr', None, 'seq'],  # code, descr, parent_id, seq
+        None,  # levels
         ],
     'roll_params'   : None,
     'indexes'       : None,

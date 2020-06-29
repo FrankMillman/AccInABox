@@ -153,7 +153,7 @@ async def eval_elem(elem, db_obj, fld, value):
         return elem[1:-1]
     if elem.isdigit():
         return D(elem)  # use D() to guard against malicious string expansion like ' '*(10**200)
-    if elem[0] == '-' and elem[1:].isdigit():
+    if elem and elem[0] == '-' and elem[1:].isdigit():
         return D(elem)
     if elem.startswith('('):
         return await eval_infix(elem[1:-1], db_obj, fld, value)
@@ -326,6 +326,77 @@ async def nexist(db_obj, fld, src_val, tgt_val):
 #     if result not in (True, False):
 #         raise AibError(head='pyfunc error', body=f'pyfunc {func_name} must return True or False')
 #     return result
+
+async def parent_id(db_obj, fld, src_val):
+    # called as col_check from various 'parent_id' fields
+    if await db_obj.getval('first_row'):
+        if src_val is not None:
+            raise AibError(head=f'{fld.table_name}.{fld.col_name}',
+                body='Root entry - no parent_id allowed')
+    else:
+        if src_val is None:
+            raise AibError(head=f'{fld.table_name}.{fld.col_name}',
+                body='Not root - parent_id is required')
+
+    tree_params = db_obj.db_table.tree_params
+    group, col_names, levels = tree_params
+    assert fld.col_name == col_names[2]
+
+    if not levels:  # no levels defined
+        return True  # no validation required
+
+    type_colname, level_types, sublevel_type = levels
+    type_one_level_up = None  # root has no parent
+    this_type = await db_obj.getval(type_colname)
+    for level_code, level_descr in level_types:
+        if this_type == level_code:
+            parent_type = await db_obj.getval(f'{fld.col_name}>{type_colname}')
+            if parent_type != type_one_level_up:
+                raise AibError(head=f'{fld.table_name}.{fld.col_name}',
+                    body=f'Parent type must be {type_one_level_up}')
+            break
+        else:
+            type_one_level_up = level_code
+    else:  # not a defined level - check if sub-level ok
+        if sublevel_type is None:
+            raise AibError(head=f'{fld.table_name}.{fld.col_name}',
+                body=f'Levels lower than {type_one_level_up} not allowed')
+        assert this_type == sublevel_type
+
+        # # are these checks necessary?
+        # if parent_type == type_one_level_up:
+        #     pass  # sub-level pointing to bottom defined level
+        # elif parent_type == sublevel_type:
+        #     pass  # sub-level pointing to another sub_level
+        # else:
+        #     raise AibError(head=f'{fld.table_name}.{fld.col_name}',
+        #         body=f'Invalid parent_id')
+
+    return True
+
+async def group_id(db_obj, fld, src_val):
+    # called as col_check from various 'group_id' fields
+    tree_params = db_obj.db_table.tree_params
+    group, col_names, levels = tree_params
+    assert fld.col_name == group
+    group_table_name = fld.col_defn.fkey[0]
+
+    group_table = await db.objects.get_db_table(db_obj.context, db_obj.company, group_table_name)
+    group_params = group_table.tree_params
+
+    group, col_names, levels = group_params
+    if not levels:  # no levels defined
+        return True  # no validation required
+
+    type_colname, level_types, sublevel_type = levels
+    valid_types = [level_types[-1][0]]  # 'code' portion of bottom level
+    if sublevel_type is not None:
+        valid_types.append(sublevel_type)
+    this_type = await fld.foreign_key['tgt_field'].db_obj.getval(type_colname)
+    if this_type not in valid_types:
+        raise AibError(head=f'{fld.table_name}.{fld.col_name}',
+            body=f"Group type must be '{', '.join(valid_types)}'")
+    return True
 
 CHKS = {
     '=': (lambda src_val, tgt_val: src_val == tgt_val),

@@ -4,17 +4,10 @@ table = {
     'module_id'     : 'cb',
     'short_descr'   : 'Cb other receipt codes',
     'long_descr'    : 'Cb other receipt codes',
-    'sub_types'     : [
-        ['code_type', None, [
-            ['group', 'Group code',
-                ['orec_code', 'descr'], []],
-            ['code', 'Receipt code',
-                ['orec_code', 'descr', 'gl_code_id'], ['gl_code_id>gl_code']],
-            ]],
-        ],
+    'sub_types'     : None,
     'sub_trans'     : None,
-    'sequence'      : ['seq', ['parent_id'], None],
-    'tree_params'   : [None, ['orec_code', 'descr', 'seq', 'parent_id'], []],
+    'sequence'      : ['seq', ['group_id'], None],
+    'tree_params'   : ['group_id', ['orec_code', 'descr', None, 'seq'], None],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -121,31 +114,22 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'parent_id',
+    'col_name'   : 'group_id',
     'data_type'  : 'INT',
-    'short_descr': 'Parent id',
-    'long_descr' : 'Parent id',
-    'col_head'   : 'Parent',
+    'short_descr': 'Group id',
+    'long_descr' : 'Group id',
+    'col_head'   : 'Group',
     'key_field'  : 'N',
     'calculated' : False,
-    'allow_null' : True,
+    'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : [
-        [
-            'only_one_root',
-            'Must have a parent id',
-            [
-                ['check', '', 'first_row', 'is', '$True', ''],
-                ['or', '', '$value', 'is_not', '$None', ''],
-                ],
-            ],
-        ],
-    'fkey'       : ['cb_orec_codes', 'row_id', 'parent', 'orec_code', False, None],
+    'col_checks' : None,
+    'fkey'       : ['cb_orec_groups', 'row_id', 'group', 'orec_group', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -193,7 +177,8 @@ cols.append ({
     'long_descr' : 'Gl account code',
     'col_head'   : 'Gl acc',
     'key_field'  : 'N',
-    'calculated' : False,
+    # 'calculated' : False,
+    'calculated' : [['where', '', '_param.gl_integration', 'is', '$False', '']],
     'allow_null' : True,  # null means 'not integrated to g/l'
 #   'allow_amend': True,  # can change from null to not-null to start integration
     'allow_amend': [['where', '', '$value', 'is', '$None', '']],
@@ -202,62 +187,37 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
+    # 'col_checks' : None,
+    'col_checks' : [
+        [
+            'gl_code',
+            'G/l code required if gl integration specified',
+            [
+                ['check', '(', '_param.gl_integration', 'is', '$False', ''],
+                ['and', '', '$value', 'is', '$None', ')'],
+                ['or', '(', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', '$value', 'is_not', '$None', ''],
+                ['and', '', 'gl_ctrl_id>code_type', '=', "'code'", ')'],
+                ],
+            ],
+        ],
     'fkey'       : ['gl_codes', 'row_id', 'gl_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'first_row',
-    'data_type'  : 'BOOL',
-    'short_descr': 'First row?',
-    'long_descr' : 'If table is empty, this is the first row',
-    'col_head'   : '',
-    'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.cb_orec_codes b) "
-                   "THEN 0 ELSE 1 END",
-    })
-virt.append ({
-    'col_name'   : 'children',
-    'data_type'  : 'INT',
-    'short_descr': 'Children',
-    'long_descr' : 'Number of children',
-    'col_head'   : '',
-    'sql'        : "SELECT count(*) FROM {company}.cb_orec_codes b "
-                   "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
-    })
-virt.append ({
-    'col_name'   : 'expandable',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Expandable?',
-    'long_descr' : 'Expandable?',
-    'col_head'   : '',
-    'sql'        : "CASE WHEN a.code_type = 'code' THEN 0 ELSE 1 END",
-    })
 
 # cursor definitions
 cursors = []
 cursors.append({
-    'cursor_name': 'all_orec_codes',
-    'title': 'All other receipt codes',
+    'cursor_name': 'orec_codes',
+    'title': 'Other receipt codes',
     'columns': [
         ['orec_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],
-        ['code_type', 60, False, False, False, False, None, None, None, None],
         ],
     'filter': [],
-    'sequence': [['parent_id', False], ['seq', False]],
-    'formview_name': 'setup_orec_codes',
-    })
-cursors.append({
-    'cursor_name': 'orec_codes',
-    'title': 'Maintain other receipt codes',
-    'columns': [
-        ['orec_code', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
-        ],
-    'filter': [['where', '', 'code_type', '=', "'code'", '']],
     'sequence': [['parent_id', False], ['seq', False]],
     })
 

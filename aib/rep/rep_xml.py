@@ -215,6 +215,6 @@ async def get_val(caller, value):
         return None
     if value.isdigit():
         return int(value)
-    if value[0] == '-' and value[1:].isdigit():
+    if value and value[0] == '-' and value[1:].isdigit():
         return int(value)
     raise AibError(head='Get value', body='Unknown value "{}"'.format(value))

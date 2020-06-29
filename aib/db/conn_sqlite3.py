@@ -209,6 +209,8 @@ def init(self, pos, mem_id=None):
         conn = sqlite3.connect('{0}/_base'.format(self.database),
             detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
             check_same_thread=False)
+        cur = conn.cursor()
+        cur.execute("pragma foreign_keys = on")  # must be enabled for each connection
     conn.create_function('substring', 3, substring)
     conn.create_function('subfield', 3, subfield)
     conn.create_function('repeat', 2, repeat)
@@ -261,7 +263,6 @@ async def attach_company(self, company):
     with await attach_lock:
         if company not in self.companies:
             await self.exec_cmd(f"attach '{self.database}/{company}' as {company}", raw=True)
-            await self.exec_cmd(f"pragma {company}.foreign_keys = on", raw=True)
             self.companies.add(company)
 
 async def convert_sql(self, sql, params=None):

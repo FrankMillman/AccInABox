@@ -2,19 +2,12 @@
 table = {
     'table_name'    : 'pch_npch_codes',
     'module_id'     : 'pch',
-    'short_descr'   : 'Purchase codes - non-inventory',
-    'long_descr'    : 'Purchase codes - non-inventory',
-    'sub_types'     : [
-        ['code_type', None, [
-            ['group', 'Group code',
-                ['npch_code', 'descr'], []],
-            ['code', 'Purchase code',
-                ['npch_code', 'descr', 'gl_code_id', 'chg_eff_date', 'unearned_gl_code_id'], []],
-            ]],
-        ],
+    'short_descr'   : 'Pch codes - non-inventory',
+    'long_descr'    : 'Pch codes - non-inventory',
+    'sub_types'     : None,
     'sub_trans'     : None,
-    'sequence'      : ['seq', ['parent_id'], None],
-    'tree_params'   : [None, ['npch_code', 'descr', 'seq', 'parent_id'], []],
+    'sequence'      : ['seq', ['group_id'], None],
+    'tree_params'   : ['group_id', ['npch_code', 'descr', None, 'seq'], None],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -121,31 +114,22 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'parent_id',
+    'col_name'   : 'group_id',
     'data_type'  : 'INT',
-    'short_descr': 'Parent id',
-    'long_descr' : 'Parent id',
-    'col_head'   : 'Parent',
+    'short_descr': 'Group row id',
+    'long_descr' : 'Group row id',
+    'col_head'   : 'Group',
     'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : True,
+    'calculated' : [['where', '', '_param.npch_group_row_id', 'is_not', '$None', '']],
+    'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
+    'dflt_val'   : '{_param.npch_group_row_id}',
     'dflt_rule'  : None,
-    'col_checks' : [
-        [
-            'only_one_root',
-            'Must have a parent id',
-            [
-                ['check', '', 'first_row', 'is', '$True', ''],
-                ['or', '', '$value', 'is_not', '$None', ''],
-                ],
-            ],
-        ],
-    'fkey'       : ['pch_npch_codes', 'row_id', 'parent', 'npch_code', False, None],
+    'col_checks' : None,
+    'fkey'       : ['pch_npch_groups', 'row_id', 'group', 'npch_group', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -168,32 +152,14 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'code_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Type of npch code',
-    'long_descr' : 'Type of npch code',
-    'col_head'   : 'Type',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 10,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : 'code',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'gl_code_id',
     'data_type'  : 'INT',
     'short_descr': 'Gl account code',
     'long_descr' : 'Gl account code',
     'col_head'   : 'Gl acc',
     'key_field'  : 'N',
-    'calculated' : False,
+    # 'calculated' : False,
+    'calculated' : [['where', '', '_param.gl_integration', 'is', '$False', '']],
     'allow_null' : True,  # null means 'not integrated to g/l'
 #   'allow_amend': True,  # can change from null to not-null to start integration
     'allow_amend': [['where', '', '$value', 'is', '$None', '']],
@@ -202,7 +168,19 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
+    # 'col_checks' : None,
+    'col_checks' : [
+        [
+            'gl_code',
+            'G/l code required if gl integration specified',
+            [
+                ['check', '(', '_param.gl_integration', 'is', '$False', ''],
+                ['and', '', '$value', 'is', '$None', ')'],
+                ['or', '(', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', '$value', 'is_not', '$None', ')'],
+                ],
+            ],
+        ],
     'fkey'       : ['gl_codes', 'row_id', 'gl_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
@@ -221,7 +199,17 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '0',
     'dflt_rule'  : None,
-    'col_checks' : None,
+    # 'col_checks' : None,
+    'col_checks' : [
+        [
+            'denied',
+            'Cannot change effective date',
+            [
+                ['check', '', '$value', '=', '0', ''],
+                ['or', '', '_param.eff_date_npch', 'is', '$True', ''],
+                ],
+            ],
+        ],
     'fkey'       : None,
     'choices'    : [
             ['0', 'Not allowed'],
@@ -231,13 +219,16 @@ cols.append ({
         ],
     })
 cols.append ({
-    'col_name'   : 'unearned_gl_code_id',
+    'col_name'   : 'uex_gl_code_id',
     'data_type'  : 'INT',
-    'short_descr': 'Unearned GL account code',
-    'long_descr' : 'Unearned GL account code',
-    'col_head'   : 'Unearned gl',
+    'short_descr': 'Unexpensed GL account code',
+    'long_descr' : 'Unexpensed GL account code - only if integrated to g/l',
+    'col_head'   : 'Unexpensed gl',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.eff_date_npch', 'is', '$False', '']],
+    'calculated' : [
+        ['where', '', '_param.eff_date_npch', 'is', '$False', ''],
+        ['or', '', '_param.gl_integration', 'is', '$False', ''],
+        ],
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
@@ -247,16 +238,20 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         [
-            'unearned',
-            'Must be an unearned code',
+            'unexpensed',
+            'Unexpensed code required',
             [
-                ['check', '(', 'chg_eff_date', '=', '0', ''],
-                ['and', '', '$value', 'is', '$None', ')'],
-                ['or', '', 'chg_eff_date', '!=', '0', ''],
+                ['check', '(', '$value', 'is', '$None', ''],
+                ['and', '', 'chg_eff_date', '=', "'0'", ')'],
+                ['or', '(', '$value', 'is', '$None', ''],
+                ['and', '', '_param.gl_integration', 'is', '$False', ')'],
+                ['or', '(', '$value', 'is_not', '$None', ''],
+                ['and', '', 'chg_eff_date', '!=', "'0'", ''],
+                ['and', '', '_param.gl_integration', 'is', '$True', ')'],
                 ],
             ],
         ],
-    'fkey'       : ['gl_codes', 'row_id', 'unearned_gl_code', 'gl_code', False, 'gl_codes'],
+    'fkey'       : ['gl_codes', 'row_id', 'uex_gl_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
 cols.append ({
@@ -331,7 +326,7 @@ cols.append ({
                 ['and', '', '$value', 'is', '$None', ')'],
                 ['or', '(', 'common_location', 'is', '$True', ''],
                 ['and', '', '$value', 'is_not', '$None', ''],
-                ['and', '', 'location_row_id>location_type', '=', "'location'", ')'],
+                ['and', '', 'location_row_id>location_type', '!=', "'root'", ')'],
                 ],
             ],
         ],
@@ -410,7 +405,7 @@ cols.append ({
                 ['and', '', '$value', 'is', '$None', ')'],
                 ['or', '(', 'common_function', 'is', '$True', ''],
                 ['and', '', '$value', 'is_not', '$None', ''],
-                ['and', '', 'function_row_id>function_type', '=', "'function'", ')'],
+                ['and', '', 'function_row_id>function_type', '!=', "'root'", ')'],
                 ],
             ],
         ],
@@ -421,30 +416,74 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'first_row',
-    'data_type'  : 'BOOL',
-    'short_descr': 'First row?',
-    'long_descr' : 'If table is empty, this is the first row',
-    'col_head'   : '',
-    'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.pch_npch_codes b) "
-                   "THEN 0 ELSE 1 END",
+    'col_name'   : 'pch_uex_bf',
+    'data_type'  : 'DEC',
+    'short_descr': 'Net pch unexpensed - b/f bal',
+    'long_descr' : 'Net sales unexpensed - b/fwd balance at specified date',
+    'col_head'   : 'Net unexpensed b/f',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : (
+        "COALESCE((SELECT `b.{company}.pch_npch_totals.pch_uex_tot` "
+        "FROM {company}.pch_npch_totals b "
+        "WHERE b.npch_code_id = a.row_id AND b.tran_date < {op_date} "
+        "ORDER BY b.tran_date DESC LIMIT 1), 0)"
+        )
     })
 virt.append ({
-    'col_name'   : 'children',
-    'data_type'  : 'INT',
-    'short_descr': 'Children',
-    'long_descr' : 'Number of children',
-    'col_head'   : '',
-    'sql'        : "SELECT count(*) FROM {company}.pch_npch_codes b "
-                   "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
+    'col_name'   : 'pch_uex_cf',
+    'data_type'  : 'DEC',
+    'short_descr': 'Net pch unexpensed - c/f bal',
+    'long_descr' : 'Net sales unexpensed - c/fwd balance at specified date',
+    'col_head'   : 'Net unexpensed c/f',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : (
+        "COALESCE((SELECT `b.{company}.pch_npch_totals.pch_uex_tot` "
+        "FROM {company}.pch_npch_totals b "
+        "WHERE b.npch_code_id = a.row_id AND b.tran_date <= {cl_date} "
+        "ORDER BY b.tran_date DESC LIMIT 1), 0)"
+        )
     })
 virt.append ({
-    'col_name'   : 'expandable',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Expandable?',
-    'long_descr' : 'Expandable?',
-    'col_head'   : '',
-    'sql'        : "CASE WHEN a.code_type = 'code' THEN 0 ELSE 1 END",
+    'col_name'   : 'pch_net_per',
+    'data_type'  : 'DEC',
+    'short_descr': 'Net sales for period',
+    'long_descr' : 'Net sales for period between specified dates',
+    'col_head'   : 'Net sales per',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : (
+        "COALESCE((SELECT `b.{company}.pch_npch_totals.pch_net_tot` "
+        "FROM {company}.pch_npch_totals b "
+        "WHERE b.npch_code_id = a.row_id AND b.tran_date <= {cl_date} "
+        "ORDER BY b.tran_date DESC LIMIT 1), 0) "
+        "- "
+        "COALESCE((SELECT `b.{company}.pch_npch_totals.pch_net_tot` "
+        "FROM {company}.pch_npch_totals b "
+        "WHERE b.npch_code_id = a.row_id AND b.tran_date < {op_date} "
+        "ORDER BY b.tran_date DESC LIMIT 1), 0)"
+        )
+    })
+virt.append ({
+    'col_name'   : 'pch_exp_per',
+    'data_type'  : 'DEC',
+    'short_descr': 'Pchs expensed for period',
+    'long_descr' : 'Purchases expensed for period between specified dates',
+    'col_head'   : 'Pchs expensed per',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : (
+        "COALESCE((SELECT `b.{company}.pch_npch_totals.pch_nea_tot` "
+        "FROM {company}.pch_npch_totals b "
+        "WHERE b.npch_code_id = a.row_id AND b.tran_date <= {cl_date} "
+        "ORDER BY b.tran_date DESC LIMIT 1), 0) "
+        "- "
+        "COALESCE((SELECT `b.{company}.pch_npch_totals.pch_nea_tot` "
+        "FROM {company}.pch_npch_totals b "
+        "WHERE b.npch_code_id = a.row_id AND b.tran_date < {op_date} "
+        "ORDER BY b.tran_date DESC LIMIT 1), 0)"
+        )
     })
 
 # cursor definitions
@@ -455,7 +494,7 @@ cursors.append({
     'columns': [
         ['npch_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],
-        ['code_type', 60, False, False, False, False, None, None, None, None],
+        # ['code_type', 60, False, False, False, False, None, None, None, None],
         ],
     'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],
@@ -467,7 +506,9 @@ cursors.append({
         ['npch_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],
         ],
-    'filter': [['where', '', 'code_type', '=', "'code'", '']],
+    'filter': [
+        # ['where', '', 'code_type', '=', "'code'", ''],
+        ],
     'sequence': [['parent_id', False], ['seq', False]],
     'formview_name': 'setup_npch_codes',
     })

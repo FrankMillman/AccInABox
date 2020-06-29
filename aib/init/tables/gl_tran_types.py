@@ -1,13 +1,13 @@
 # table definition
 table = {
-    'table_name'    : 'in_prod_classes',
-    'module_id'     : 'in',
-    'short_descr'   : 'Product classes',
-    'long_descr'    : 'Product classes',
+    'table_name'    : 'gl_tran_types',
+    'module_id'     : 'gl',
+    'short_descr'   : 'Transaction types',
+    'long_descr'    : 'Transaction types',
     'sub_types'     : None,
     'sub_trans'     : None,
-    'sequence'      : ['seq', ['group_id'], None],
-    'tree_params'   : ['group_id', ['class', 'descr', None, 'seq'], None],
+    'sequence'      : None,
+    'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -76,11 +76,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'class',
+    'col_name'   : 'tran_type',
     'data_type'  : 'TEXT',
-    'short_descr': 'Product class',
-    'long_descr' : 'Product class',
-    'col_head'   : 'Class',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Type',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -114,62 +114,40 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'group_id',
+    'col_name'   : 'cursor_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Group row id',
-    'long_descr' : 'Group row id',
-    'col_head'   : 'Group',
-    'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.prod_group_row_id', 'is_not', '$None', '']],
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : '{_param.prod_group_row_id}',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : ['in_prod_groups', 'row_id', 'group', 'prod_group', False, None],
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'seq',
-    'data_type'  : 'INT',
-    'short_descr': 'Sequence',
-    'long_descr' : 'Sequence',
-    'col_head'   : 'Seq',
+    'short_descr': 'Cursor id',
+    'long_descr' : 'Row id of cursor used to display data',
+    'col_head'   : 'Cursor',
     'key_field'  : 'N',
     'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
+    'allow_null' : True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : None,
+    'fkey'       : ['db_cursors', 'row_id', 'table_name, cursor_name', 'table_name, cursor_name', False, None],
     'choices'    : None,
     })
-# g/l code for 'sales'? type = 'class' only
-# g/l code for 'c-o-s'? type = 'class' only
-
 
 # virtual column definitions
 virt = []
 
 # cursor definitions
 cursors = []
-cursors.append({
-    'cursor_name': 'prod_classes',
-    'title': 'Product classes',
-    'columns': [
-        ['class', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
-        ],
-    'filter': [],
-    'sequence': [['parent_id', False], ['seq', False]],
-    })
+# cursors.append({
+#     'cursor_name': 'gl_codes',
+#     'title': 'Maintain gl codes',
+#     'columns': [
+#         ['gl_code', 80, False, False, False, False, None, None, None, None],
+#         ['descr', 200, True, False, False, False, None, None, None, None],
+#         ],
+#     'filter': [],
+#     'sequence': [],
+#     })
 
 # actions
 actions = []

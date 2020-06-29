@@ -14,7 +14,7 @@ table = {
         ],
     'sub_trans'     : None,
     'sequence'      : ['seq', ['parent_id'], None],
-    'tree_params'   : [None, ['role_id', 'descr', 'seq', 'parent_id'], []],
+    'tree_params'   : [None, ['role_id', 'descr', 'parent_id', 'seq'], []],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,

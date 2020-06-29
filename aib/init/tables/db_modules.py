@@ -7,7 +7,7 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : ['seq', [], None],
-    'tree_params'   : [None, ['module_id', 'descr', 'seq', None], ['module_id']],
+    'tree_params'   : [None, ['module_id', 'descr', None, 'seq'], None],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,

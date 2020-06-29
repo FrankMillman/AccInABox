@@ -21,8 +21,8 @@ async def init_company(company, company_name):
         await conn.create_company(company)
         await setup_db_tables(context, conn, company, company_name)  # tables to store database metadata
         await setup_dir_tables(context, conn, company)  # directory tables defined in _sys
-        await setup_sys_tables(context, conn, company)  # common table defintions defined in _sys
-        await setup_other_tables(context, conn, company)  # data tables for company
+        await setup_sys_tables(context, conn, company)  # common table definitions defined in _sys
+        await setup_other_tables(context, conn, company)  # database tables for company
         await setup_views(context, conn, company)  # database views for company
         await setup_forms(context, conn, company)
         await setup_reports(context, conn, company)
@@ -218,6 +218,8 @@ async def setup_other_tables(context, conn, company):
     db_act = await db.objects.get_db_object(context, company, 'db_actions')
     tables = [
         'db_genno',
+        'gl_groups',
+        'gl_codes',
         'bpm_headers',
         'bpm_details',
         'adm_periods',
@@ -238,11 +240,14 @@ async def setup_other_tables(context, conn, company):
         'org_contacts',
         'gl_params',
         'gl_ledger_periods',
-        'gl_codes',
+        'gl_tran_types',
+        'gl_totals',
+        'sls_nsls_groups',
         'sls_nsls_codes',
         'sls_nsls_tax_codes',
         'sls_sales_persons',
         'sls_comments',
+        'pch_npch_groups',
         'pch_npch_codes',
         'pch_npch_tax_codes',
         'pch_comments',
@@ -257,6 +262,7 @@ async def setup_other_tables(context, conn, company):
         'ap_suppliers',
         'in_ledger_params',
         'in_ledger_periods',
+        'in_prod_groups',
         'in_prod_classes',
         'in_prod_codes',
         'in_prod_tax_codes',
@@ -271,12 +277,13 @@ async def setup_other_tables(context, conn, company):
         'ar_subtran_chg',
         'ar_tran_disc',
         'ar_tran_inv_det',
+        'ar_tran_inv_bf',
         'ar_tran_crn_det',
         'ar_tran_disc_det',
         'ar_tran_alloc',
         'ar_tran_alloc_det',
-        'ar_cust_totals',
         'ar_totals',
+        'ar_cust_totals',
         'sls_isls_subinv',
         'sls_isls_subcrn',
         'sls_isls_invtax',
@@ -301,15 +308,16 @@ async def setup_other_tables(context, conn, company):
         'in_wh_prod_unposted',
         'in_wh_prod_fifo',
         'in_wh_prod_alloc',
+        'ap_openitems',
         'ap_tran_inv',
         'ap_tran_crn',
         'ap_tran_pmt',
         'ap_tran_inv_det',
+        'ap_tran_inv_bf',
         'ap_tran_crn_det',
-        'ap_openitems',
         'ap_allocations',
-        'ap_supp_totals',
         'ap_totals',
+        'ap_supp_totals',
         'pch_ipch_subinv',
         'pch_ipch_subcrn',
         'pch_ipch_invtax',
@@ -325,7 +333,9 @@ async def setup_other_tables(context, conn, company):
         'pch_tax_totals',
         'cb_ledger_params',
         'cb_ledger_periods',
+        'cb_orec_groups',
         'cb_orec_codes',
+        'cb_opmt_groups',
         'cb_opmt_codes',
         'cb_tran_rec',
         'cb_tran_rec_det',
@@ -815,47 +825,53 @@ async def setup_init_data(context, conn, company, company_name):
     await adm_params.setval('company_name', company_name)
     await adm_params.save()
 
-    adm_fun = await db.objects.get_db_object(context, company, 'adm_functions')
-    await adm_fun.setval('function_id', 'all')
-    await adm_fun.setval('descr', 'All Functions')
-    await adm_fun.setval('function_type', 'root')
-    await adm_fun.save()
-
     adm_loc = await db.objects.get_db_object(context, company, 'adm_locations')
     await adm_loc.setval('location_id', 'all')
     await adm_loc.setval('descr', 'All locations')
     await adm_loc.setval('location_type', 'root')
     await adm_loc.save()
 
-    prod_class = await db.objects.get_db_object(context, company, 'in_prod_classes')
-    await prod_class.setval('class', 'all')
-    await prod_class.setval('descr', 'All classes')
-    await prod_class.setval('class_type', 'group')
-    await prod_class.save()
+    adm_fun = await db.objects.get_db_object(context, company, 'adm_functions')
+    await adm_fun.setval('function_id', 'all')
+    await adm_fun.setval('descr', 'All Functions')
+    await adm_fun.setval('function_type', 'root')
+    await adm_fun.save()
 
-    sls_code = await db.objects.get_db_object(context, company, 'sls_nsls_codes')
-    await sls_code.setval('nsls_code', 'all')
-    await sls_code.setval('descr', 'All codes')
-    await sls_code.setval('code_type', 'group')
-    await sls_code.save()
+    gl_group = await db.objects.get_db_object(context, company, 'gl_groups')
+    await gl_group.setval('gl_group', 'all')
+    await gl_group.setval('descr', 'All groups')
+    await gl_group.setval('group_type', 'root')
+    await gl_group.save()
 
-    pch_code = await db.objects.get_db_object(context, company, 'pch_npch_codes')
-    await pch_code.setval('npch_code', 'all')
-    await pch_code.setval('descr', 'All codes')
-    await pch_code.setval('code_type', 'group')
-    await pch_code.save()
+    prod_group = await db.objects.get_db_object(context, company, 'in_prod_groups')
+    await prod_group.setval('prod_group', 'all')
+    await prod_group.setval('descr', 'All product groups')
+    await prod_group.setval('group_type', 'root')
+    await prod_group.save()
 
-    orec_code = await db.objects.get_db_object(context, company, 'cb_orec_codes')
-    await orec_code.setval('orec_code', 'all')
-    await orec_code.setval('descr', 'All codes')
-    await orec_code.setval('code_type', 'group')
-    await orec_code.save()
+    sls_group = await db.objects.get_db_object(context, company, 'sls_nsls_groups')
+    await sls_group.setval('nsls_group', 'all')
+    await sls_group.setval('descr', 'All sales codes')
+    await sls_group.setval('group_type', 'root')
+    await sls_group.save()
 
-    opmt_code = await db.objects.get_db_object(context, company, 'cb_opmt_codes')
-    await opmt_code.setval('opmt_code', 'all')
-    await opmt_code.setval('descr', 'All codes')
-    await opmt_code.setval('code_type', 'group')
-    await opmt_code.save()
+    pch_group = await db.objects.get_db_object(context, company, 'pch_npch_groups')
+    await pch_group.setval('npch_group', 'all')
+    await pch_group.setval('descr', 'All expense codes')
+    await pch_group.setval('group_type', 'root')
+    await pch_group.save()
+
+    orec_group = await db.objects.get_db_object(context, company, 'cb_orec_groups')
+    await orec_group.setval('orec_group', 'all')
+    await orec_group.setval('descr', 'All receipt code groups')
+    await orec_group.setval('group_type', 'root')
+    await orec_group.save()
+
+    opmt_group = await db.objects.get_db_object(context, company, 'cb_opmt_groups')
+    await opmt_group.setval('opmt_group', 'all')
+    await opmt_group.setval('descr', 'All payment code groups')
+    await opmt_group.setval('group_type', 'root')
+    await opmt_group.save()
 
     acc_role = await db.objects.get_db_object(context, company, 'acc_roles')
     await acc_role.setval('role_type', '0')
