@@ -881,17 +881,12 @@ async def setup_init_data(context, conn, company, company_name):
 
     # create 'module administrator' role for each module
     db_module = await db.objects.get_db_object(context, company, 'db_modules')
-    row_id = 1
-    while True:  # don't know how many modules there are - loop until no more
-        await db_module.init()
-        await db_module.setval('row_id', row_id)
-        if not db_module.exists:
-            break
+    all_modules = db_module.select_many(where=[], order=[('row_id', False)])
+    async for _ in all_modules:
         await acc_role.init()
         await acc_role.setval('role_type', '1')
         await acc_role.setval('role_id', await db_module.getval('module_id'))
-        await acc_role.setval('descr', '{} administrator'.format(await db_module.getval('descr')))
+        await acc_role.setval('descr', f"{await db_module.getval('descr')} administrator")
         await acc_role.setval('parent_id', 1)
-        await acc_role.setval('module_row_id', row_id)
+        await acc_role.setval('module_row_id', await db_module.getval('row_id'))
         await acc_role.save()
-        row_id += 1
