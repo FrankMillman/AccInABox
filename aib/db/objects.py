@@ -1633,7 +1633,14 @@ class DbObject:
 
             for tgt_col, src_col in key_fields:
                 src_val = await self.get_src_val(tgt_obj, src_col)
-                await tgt_obj.setval(tgt_col, src_val, validate=False)
+                # await tgt_obj.setval(tgt_col, src_val, validate=False)
+                tgt_fld = await tgt_obj.getfld(tgt_col)
+                if tgt_fld.col_defn.col_type == 'alt':
+                    await tgt_fld.setval(src_val, validate=True)
+                    tgt_col = tgt_fld.foreign_key['true_src'].col_name
+                    src_val = tgt_fld.foreign_key['true_src']._value
+                else:
+                    await tgt_fld.setval(src_val, validate=False)
                 if roll_params is not None:
                     if tgt_col in roll_keyfields:
                         # at the start, we look for 'less than'
@@ -2000,7 +2007,14 @@ class DbObject:
 
             for tgt_col, src_col in key_fields:
                 src_val = await self.get_src_val(tgt_obj, src_col)
-                await tgt_obj.setval(tgt_col, src_val, validate=False)
+                # await tgt_obj.setval(tgt_col, src_val, validate=False)
+                tgt_fld = await tgt_obj.getfld(tgt_col)
+                if tgt_fld.col_defn.col_type == 'alt':
+                    await tgt_fld.setval(src_val, validate=True)
+                    tgt_col = tgt_fld.foreign_key['true_src'].col_name
+                    src_val = tgt_fld.foreign_key['true_src']._value
+                else:
+                    await tgt_fld.setval(src_val, validate=False)
                 if roll_params is not None:
                     if tgt_col in roll_keyfields:
                         # at the start, we look for 'less than'
