@@ -26,6 +26,8 @@ async def split_nsls(db_obj, conn, return_vals):
 async def setup_openitems(db_obj, conn, return_vals):
     # called as split_src func from ar_tran_inv.upd_on_post()
 
+    # if True, we are capturing b/f balances
+    # this assumes that there will be one item for each due date
     if getattr(db_obj.context, 'bf', False):
         due_date = await db_obj.children[0].children[0].getval('due_date')
         discount_date = None

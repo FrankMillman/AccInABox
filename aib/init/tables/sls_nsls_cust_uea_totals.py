@@ -1,9 +1,9 @@
 # table definition
 table = {
-    'table_name'    : 'ar_cust_totals',
-    'module_id'     : 'ar',
-    'short_descr'   : 'Ar customer totals',
-    'long_descr'    : 'Ar customer totals',
+    'table_name'    : 'sls_nsls_cust_uea_totals',
+    'module_id'     : 'sls',
+    'short_descr'   : 'Unearned sls by cust - non-inv',
+    'long_descr'    : 'Unearned sales totals by customer - non-inventory',
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,
@@ -13,7 +13,8 @@ table = {
         ['tran_tot_cust', 'tran_tot_local']  # fields to roll
         ],
     'indexes'       : [
-        ['ar_cust_cover', [
+        ['nsls_cust_uea_cover', [
+            ['nsls_code_id', False],
             ['cust_row_id', False],
             ['location_row_id', False],
             ['function_row_id', False],
@@ -25,7 +26,7 @@ table = {
             ['tran_tot_local', False],
             ], None, False],
         ],
-    'ledger_col'    : 'cust_row_id>ledger_row_id',
+    'ledger_col'    : None,
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -91,6 +92,25 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'nsls_code_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Sales code id',
+    'long_descr' : 'Sales code id',
+    'col_head'   : 'Code',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['sls_nsls_codes', 'row_id', 'nsls_code', 'nsls_code', False, None],
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'cust_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Cust row id',
@@ -123,16 +143,7 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-          '<compare src="_ledger.use_locations" op="is" tgt="$False">'
-            '<fld_val name="_param.loc_root_row_id"/>'
-          '</compare>'
-          '<compare src="_ledger.common_location" op="is" tgt="$True">'
-            '<fld_val name="_ledger.location_row_id"/>'
-          '</compare>'
-        '</case>'
-        ),
+    'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : ['adm_locations', 'row_id', None, None, False, None],
     'choices'    : None,
@@ -151,16 +162,7 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-          '<compare src="_ledger.use_functions" op="is" tgt="$False">'
-            '<fld_val name="_param.fun_root_row_id"/>'
-          '</compare>'
-          '<compare src="_ledger.common_function" op="is" tgt="$True">'
-            '<fld_val name="_ledger.function_row_id"/>'
-          '</compare>'
-        '</case>'
-        ),
+    'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : ['adm_functions', 'row_id', None, None, False, None],
     'choices'    : None,
@@ -206,9 +208,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'tran_day_cust',
     'data_type'  : 'DEC',
-    'short_descr': 'Trans daily total - cust curr',
+    'short_descr': 'Trans daily total - cust',
     'long_descr' : 'Transaction daily total - customer currency',
-    'col_head'   : 'Tran day',
+    'col_head'   : 'Tran day cust',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -225,9 +227,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'tran_tot_cust',
     'data_type'  : 'DEC',
-    'short_descr': 'Trans total - cust curr',
-    'long_descr' : 'Transaction accumulated total - customer currency',
-    'col_head'   : 'Tran tot',
+    'short_descr': 'Trans total - cust',
+    'long_descr' : 'Transaction - accumulated total - customer currency',
+    'col_head'   : 'Tran tot cust',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -244,9 +246,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'tran_day_local',
     'data_type'  : 'DEC',
-    'short_descr': 'Trans daily total - local curr',
+    'short_descr': 'Trans daily total - local',
     'long_descr' : 'Transaction daily total - local currency',
-    'col_head'   : 'Tran day',
+    'col_head'   : 'Tran day local',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -263,9 +265,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'tran_tot_local',
     'data_type'  : 'DEC',
-    'short_descr': 'Trans total - local curr',
-    'long_descr' : 'Transaction accumulated total - local currency',
-    'col_head'   : 'Tran tot',
+    'short_descr': 'Trans total - local',
+    'long_descr' : 'Transaction - accumulated total - local currency',
+    'col_head'   : 'Tran tot local',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,

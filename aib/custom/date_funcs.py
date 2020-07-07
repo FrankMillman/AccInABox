@@ -391,6 +391,10 @@ async def check_tran_date(db_obj, fld, value):
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
     period_row_id = bisect_left([_.closing_date for _ in adm_periods], value)
 
+    # if True, we are capturing b/f balances
+    # not correct that it must be prior to start of financial calendar
+    #   - could be adding new sub-ledger to existing system
+    # needs more thought [2020-07-02]
     if getattr(db_obj.context, 'bf', False):
         if period_row_id != 0:  # date is <= first period (and first period is dummy)
             raise AibError(head='Transaction date', body='Date must be prior to start of financial calendar')

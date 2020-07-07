@@ -458,14 +458,6 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ap_pmt'",
-    })
-virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction period',
@@ -560,7 +552,7 @@ actions.append([
 actions.append([
     'upd_on_post', [
         [
-            'ap_trans_items',  # table name
+            'ap_openitems',  # table name
             None,  # condition
             False,  # split source?
             [  # key fields
@@ -638,6 +630,26 @@ actions.append([
                 ['pmt_dsc_tot_loc', '+', 'discount_local'],
 #               ['pmt_dtx_tot_loc', '+', 'pmt_dtx_local'],
                 ['pmt_exch_tot_loc', '+', 'exch_diff'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['location_row_id', 'supp_row_id>location_row_id'],
+                ['function_row_id', 'supp_row_id>function_row_id'],
+                ['source_code', "'ap_pmt'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'pmt_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'pmt_local'],
                 ],
             [],  # on post
             [],  # on unpost

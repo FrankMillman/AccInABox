@@ -155,11 +155,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : [
-        ['code_type', "Must be of type 'code'", [
-            ['check', '', 'nsls_code_id>code_type', '=', "'code'", ''],
-            ],
-        ]],
+    'col_checks' : None,
     'fkey'       : ['sls_nsls_codes', 'row_id', 'nsls_code', 'nsls_code', False, 'nsls_codes'],
     'choices'    : None,
     })
@@ -512,7 +508,9 @@ actions.append([
             ],
         [
             'sls_nsls_subcrn_ear',
-            None,  # condition
+            [  # condition
+                ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                ],
 
             True,  # split source?
 
@@ -539,17 +537,40 @@ actions.append([
             'sls_nsls_totals',  # table name
             [  # condition
                 ['where', '', 'tran_det_row_id>sale_type', '=', "'acc'", ''],
+                ['and', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
                 ],
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
+                ['source_code', "'nsls_crn'"],
                 ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['sls_crn_acc_day', '-', 'net_local'],  # tgt_col, op, src_col
-                ['sls_crn_acc_tot', '-', 'net_local'],
+                ['tran_day', '-', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'sls_nsls_uea_totals',  # table name
+            [  # condition
+                ['where', '', 'tran_det_row_id>sale_type', '=', "'acc'", ''],
+                ['and', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['source_code', "'nsls_crn'"],
+                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'net_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -558,17 +579,40 @@ actions.append([
             'sls_nsls_totals',  # table name
             [  # condition
                 ['where', '', 'tran_det_row_id>sale_type', '=', "'cash'", ''],
+                ['and', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
                 ],
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
+                ['source_code', "'nsls_pmt'"],
                 ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['sls_crn_csh_day', '-', 'net_local'],  # tgt_col, op, src_col
-                ['sls_crn_csh_tot', '-', 'net_local'],
+                ['tran_day', '-', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'sls_nsls_uea_totals',  # table name
+            [  # condition
+                ['where', '', 'tran_det_row_id>sale_type', '=', "'cash'", ''],
+                ['and', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['source_code', "'nsls_pmt'"],
+                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'net_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -577,20 +621,134 @@ actions.append([
             'sls_nsls_cust_totals',  # table name
             [  # condition
                 ['where', '', 'tran_det_row_id>sale_type', '=', "'acc'", ''],
+                ['and', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
                 ],
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
+                ['cust_row_id', 'tran_det_row_id>tran_row_id>cust_row_id'],
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['cust_row_id', 'tran_det_row_id>tran_row_id>cust_row_id'],
+                ['source_code', "'nsls_crn'"],
                 ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['sls_crn_day_cus', '-', 'net_party'],  # tgt_col, op, src_col
-                ['sls_crn_tot_cus', '-', 'net_party'],
-                ['sls_crn_day_loc', '-', 'net_local'],
-                ['sls_crn_tot_loc', '-', 'net_local'],
+                ['tran_day_cust', '-', 'net_party'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '-', 'net_party'],
+                ['tran_day_local', '-', 'net_local'],
+                ['tran_tot_local', '-', 'net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'sls_nsls_cust_uea_totals',  # table name
+            [  # condition
+                ['where', '', 'tran_det_row_id>sale_type', '=', "'acc'", ''],
+                ['and', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
+                ['cust_row_id', 'tran_det_row_id>tran_row_id>cust_row_id'],
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['source_code', "'nsls_crn'"],
+                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day_cust', '-', 'net_party'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '-', 'net_party'],
+                ['tran_day_local', '-', 'net_local'],
+                ['tran_tot_local', '-', 'net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'tran_det_row_id>sale_type', '=', "'acc'", ''],
+                ['and', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'nsls_code_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['source_code', "'nsls_crn'"],
+                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'tran_det_row_id>sale_type', '=', "'acc'", ''],
+                ['and', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'nsls_code_id>uea_gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['source_code', "'nsls_crn'"],
+                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'tran_det_row_id>sale_type', '=', "'cash'", ''],
+                ['and', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'nsls_code_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['source_code', "'nsls_pmt'"],
+                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'tran_det_row_id>sale_type', '=', "'cash'", ''],
+                ['and', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'nsls_code_id>uea_gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['source_code', "'nsls_pmt'"],
+                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'net_local'],
                 ],
             [],  # on post
             [],  # on unpost

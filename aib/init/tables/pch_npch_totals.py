@@ -2,18 +2,28 @@
 table = {
     'table_name'    : 'pch_npch_totals',
     'module_id'     : 'pch',
-    'short_descr'   : 'Pch totals - non-inventory',
-    'long_descr'    : 'Purchase totals - non-inventory',
+    'short_descr'   : 'Non-inventory sales totals',
+    'long_descr'    : 'Non-inventory sales totals',
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,
     'tree_params'   : None,
     'roll_params'   : [
-        ['tran_date'],  # key field to roll on
-        ['pch_inv_acc_tot', 'pch_iex_acc_tot', 'pch_crn_acc_tot', 'pch_cex_acc_tot',
-            'pch_inv_csh_tot', 'pch_iex_csh_tot', 'pch_crn_csh_tot', 'pch_cex_csh_tot']  # fields to roll
+        ['tran_date'],  # key fields to roll on
+        ['tran_tot']  # fields to roll
         ],
-    'indexes'       : None,
+    'indexes'       : [
+        ['npch_tots_cover', [
+            ['npch_code_id', False],
+            ['location_row_id', False],
+            ['function_row_id', False],
+            ['source_code_id', False],
+            ['tran_date', True],
+            ['tran_day', False],
+            ['tran_tot', False],
+            ],
+            None, False],
+        ],
     'ledger_col'    : None,
     'defn_company'  : None,
     'data_company'  : None,
@@ -114,7 +124,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, None],
+    'fkey'       : ['adm_locations', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -133,7 +143,26 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, None],
+    'fkey'       : ['adm_functions', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'source_code_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Source code id',
+    'long_descr' : 'Source code row id',
+    'col_head'   : 'Code id',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -156,11 +185,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'pch_inv_acc_day',
+    'col_name'   : 'tran_day',
     'data_type'  : 'DEC',
-    'short_descr': 'Pch - inv - acc - daily total',
-    'long_descr' : 'Purchases - invoices - account - daily total',
-    'col_head'   : 'Pch inv acc day',
+    'short_descr': 'Transaction daily total',
+    'long_descr' : 'Transaction daily total',
+    'col_head'   : 'Tran day',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -175,11 +204,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'pch_iex_acc_day',
+    'col_name'   : 'tran_tot',
     'data_type'  : 'DEC',
-    'short_descr': 'Exp - inv - acc - daily total',
-    'long_descr' : 'Expensed - invoices - account - daily total',
-    'col_head'   : 'Pch exp acc day',
+    'short_descr': 'Transaction total',
+    'long_descr' : 'Transaction - accumulated total',
+    'col_head'   : 'Tran tot',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -193,459 +222,9 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'pch_crn_acc_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Pch - crn - acc - daily total',
-    'long_descr' : 'Purchases - cr notes - account - daily total',
-    'col_head'   : 'Pch crn acc day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_cex_acc_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Exp - crn - acc - daily total',
-    'long_descr' : 'Expensed - cr notes - account - daily total',
-    'col_head'   : 'Pch cex acc day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_inv_csh_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Pch - inv - csh - daily total',
-    'long_descr' : 'Purchases - invoices - cash - daily total',
-    'col_head'   : 'Pch inv csh day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_iex_csh_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Exp - inv - csh - daily total',
-    'long_descr' : 'Expensed - invoices - cash - daily total',
-    'col_head'   : 'Pch exp csh day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_crn_csh_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Pch - crn - csh - daily total',
-    'long_descr' : 'Purchases - cr notes - cash - daily total',
-    'col_head'   : 'Pch crn csh day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_cex_csh_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Exp - crn - csh - daily total',
-    'long_descr' : 'Expensed - cr notes - cash - daily total',
-    'col_head'   : 'Pch cex csh day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_inv_acc_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Pch - inv - acc - accum total',
-    'long_descr' : 'Purchases - invoices - account - accumulated total',
-    'col_head'   : 'Pch inv acc tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_iex_acc_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Exp - inv - acc - accum total',
-    'long_descr' : 'Expensed - invoices - account - accumulated total',
-    'col_head'   : 'Pch exp acc tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_crn_acc_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Pch - crn - acc - accum total',
-    'long_descr' : 'Purchases - cr notes - account - accumulated total',
-    'col_head'   : 'Pch crn acc tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_cex_acc_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Exp - crn - acc - accum total',
-    'long_descr' : 'Expensed - cr notes - account - accumulated total',
-    'col_head'   : 'Pch cex acc tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_inv_csh_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Pch - inv - csh - accum total',
-    'long_descr' : 'Purchases - invoices - cash - accumulated total',
-    'col_head'   : 'Pch inv csh tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_iex_csh_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Exp - inv - csh - accum total',
-    'long_descr' : 'Expensed - invoices - cash - accumulated total',
-    'col_head'   : 'Pch exp csh tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_crn_csh_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Pch - crn - csh - accum total',
-    'long_descr' : 'Purchases - cr notes - cash - accumulated total',
-    'col_head'   : 'Pch crn csh tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_cex_csh_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Exp - crn - csh - accum total',
-    'long_descr' : 'Expensed - cr notes - cash - accumulated total',
-    'col_head'   : 'Pch cex csh tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-    
+
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'pch_net_acc_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net pchs - acc - daily total',
-    'long_descr' : 'Net purchases - account sales - daily total',
-    'col_head'   : 'Net pch acc day',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="pch_inv_acc_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_crn_acc_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.pch_inv_acc_day + a.pch_crn_acc_day"
-    })
-virt.append ({
-    'col_name'   : 'pch_net_csh_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net pchs - csh - daily total',
-    'long_descr' : 'Net purchases - cash sales - daily total',
-    'col_head'   : 'Net pch csh day',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="pch_inv_csh_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_crn_csh_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.pch_inv_csh_day + a.pch_crn_csh_day"
-    })
-virt.append ({
-    'col_name'   : 'pch_net_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net purchases - daily total',
-    'long_descr' : 'Net purchases - daily total',
-    'col_head'   : 'Net pch day',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="pch_inv_acc_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_crn_acc_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_inv_csh_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_crn_csh_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.pch_inv_acc_day + a.pch_crn_acc_day + a.pch_inv_csh_day + a.pch_crn_csh_day"
-    })
-virt.append ({
-    'col_name'   : 'pch_nex_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net pch expensed - daily total',
-    'long_descr' : 'Net purchases expensed - daily total',
-    'col_head'   : 'Net expensed day',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="pch_iex_acc_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_cex_acc_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_iex_csh_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_cex_csh_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.pch_iex_acc_day + a.pch_cex_acc_day + a.pch_iex_csh_day + a.pch_cex_csh_day"
-    })
-virt.append ({
-    'col_name'   : 'pch_net_acc_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net pchs - acc - accum total',
-    'long_descr' : 'Net purchases - account sales - accumulated total',
-    'col_head'   : 'Net pch acc tot',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="pch_inv_acc_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_crn_acc_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.pch_inv_acc_tot + a.pch_crn_acc_tot"
-    })
-virt.append ({
-    'col_name'   : 'pch_net_csh_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net pchs - csh - accum total',
-    'long_descr' : 'Net purchases - cash sales - accumulated total',
-    'col_head'   : 'Net pch csh tot',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="pch_inv_csh_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_crn_csh_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.pch_inv_csh_tot + a.pch_crn_csh_tot"
-    })
-virt.append ({
-    'col_name'   : 'pch_net_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net purchases - accum total',
-    'long_descr' : 'Net purchases - accumulated total',
-    'col_head'   : 'Net pch tot',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="pch_inv_acc_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_crn_acc_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_inv_csh_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_crn_csh_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.pch_inv_acc_tot + a.pch_crn_acc_tot + a.pch_inv_csh_tot + a.pch_crn_csh_tot"
-    })
-virt.append ({
-    'col_name'   : 'pch_nex_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net pch expensed - accum total',
-    'long_descr' : 'Net purchases expensed - accumulated total',
-    'col_head'   : 'Net expensed tot',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="pch_iex_acc_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_cex_acc_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_iex_csh_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_cex_csh_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.pch_iex_acc_tot + a.pch_cex_acc_tot + a.pch_iex_csh_tot + a.pch_cex_csh_tot"
-    })
-virt.append ({
-    'col_name'   : 'pch_uex_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net pch unexp - accum total',
-    'long_descr' : 'Net purchases unexpensed - accumulated total',
-    'col_head'   : 'Net unexpensed tot',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="pch_inv_acc_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_crn_acc_tot"/>'
-          '<op type="-"/>'
-          '<fld_val name="pch_iex_acc_tot"/>'
-          '<op type="-"/>'
-          '<fld_val name="pch_cex_acc_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_inv_csh_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_crn_csh_tot"/>'
-          '<op type="-"/>'
-          '<fld_val name="pch_iex_csh_tot"/>'
-          '<op type="-"/>'
-          '<fld_val name="pch_cex_csh_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.pch_inv_acc_tot + a.pch_crn_acc_tot - a.pch_iex_acc_tot - a.pch_cex_acc_tot "
-        "a.pch_inv_csh_tot + a.pch_crn_csh_tot - a.pch_iex_csh_tot - a.pch_cex_csh_tot"
-        )
-    })
 
 # cursor definitions
 cursors = []

@@ -31,6 +31,12 @@ table = {
                     ],
                 ['cust_row_id>party_row_id>display_name'],  # display descr
                 ],
+            ['bf', 'Balance b/f', 'ap_tran_inv_bf',
+                [  # return values
+                    ['inv_net_amt', 'amount_supp'],  # tgt_col, src_col
+                    ],
+                ['due_date'],  # display descr
+                ],
             ['com', 'Comment', 'pch_comments',
                 [],  # return values
                 ['comment_text'],  # display descr

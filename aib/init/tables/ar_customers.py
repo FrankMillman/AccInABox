@@ -734,6 +734,54 @@ virt.append ({
     'col_head'   : 'End date',
     'sql'        : "''",
     })
+virt.append ({
+    'col_name'   : 'balance_cus',
+    'data_type'  : 'DEC',
+    'short_descr': 'Running balance - cust',
+    'long_descr' : 'Running balance - cust',
+    'col_head'   : 'Balance cust',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        """
+        (SELECT SUM(c.tran_tot_cust) FROM (
+            SELECT b.tran_tot_cust, ROW_NUMBER() OVER (PARTITION BY
+                b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id
+                ORDER BY b.tran_date DESC) row_num
+            FROM {company}.ar_cust_totals b
+            WHERE b.deleted_id = 0
+            AND b.cust_row_id = a.row_id
+            ) as c
+            WHERE c.row_num = 1
+            )
+        """
+        ),
+    })
+virt.append ({
+    'col_name'   : 'balance_loc',
+    'data_type'  : 'DEC',
+    'short_descr': 'Running balance - local',
+    'long_descr' : 'Running balance - local',
+    'col_head'   : 'Balance loc',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        """
+        (SELECT SUM(c.tran_tot_local) FROM (
+            SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY
+                b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id
+                ORDER BY b.tran_date DESC) row_num
+            FROM {company}.ar_cust_totals b
+            WHERE b.deleted_id = 0
+            AND b.cust_row_id = a.row_id
+            ) as c
+            WHERE c.row_num = 1
+            )
+        """
+        ),
+    })
 
 # cursor definitions
 cursors = []

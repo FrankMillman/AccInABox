@@ -462,11 +462,12 @@ actions.append([
                 ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_chg'"],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['chg_day', '+', 'chg_local'],  # tgt_col, op, src_col
-                ['chg_tot', '+', 'chg_local'],
+                ['tran_day', '+', 'chg_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'chg_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -477,13 +478,36 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_chg'"],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['chg_day_cus', '+', 'chg_cust'],  # tgt_col, op, src_col
-                ['chg_tot_cus', '+', 'chg_cust'],
-                ['chg_day_loc', '+', 'chg_local'],
-                ['chg_tot_loc', '+', 'chg_local'],
+                ['tran_day_cust', '+', 'chg_cust'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '+', 'chg_cust'],
+                ['tran_day_local', '+', 'chg_local'],
+                ['tran_tot_local', '+', 'chg_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_chg'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'chg_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'chg_local'],
                 ],
             [],  # on post
             [],  # on unpost

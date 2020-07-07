@@ -1,9 +1,9 @@
 # table definition
 table = {
-    'table_name'    : 'gl_tran_types',
+    'table_name'    : 'gl_source_codes',
     'module_id'     : 'gl',
-    'short_descr'   : 'Transaction types',
-    'long_descr'    : 'Transaction types',
+    'short_descr'   : 'Transaction source codes',
+    'long_descr'    : 'Transaction source codes',
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,
@@ -76,11 +76,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_type',
+    'col_name'   : 'source_code',
     'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Type',
+    'short_descr': 'Source code',
+    'long_descr' : 'Source code',
+    'col_head'   : 'Code',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -138,16 +138,6 @@ virt = []
 
 # cursor definitions
 cursors = []
-# cursors.append({
-#     'cursor_name': 'gl_codes',
-#     'title': 'Maintain gl codes',
-#     'columns': [
-#         ['gl_code', 80, False, False, False, False, None, None, None, None],
-#         ['descr', 200, True, False, False, False, None, None, None, None],
-#         ],
-#     'filter': [],
-#     'sequence': [],
-#     })
 
 # actions
 actions = []

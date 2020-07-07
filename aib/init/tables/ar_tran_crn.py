@@ -466,14 +466,6 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ar_crn'",
-    })
-virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction period',
@@ -509,11 +501,6 @@ virt.append ({
     'short_descr': 'Open item tran type',
     'long_descr' : 'Open item tran type',
     'col_head'   : 'Tran type',
-    # 'sql'        : (
-    #     "SELECT b.tran_type FROM {company}.ar_openitems b "
-    #     "WHERE b.tran_type = 'ar_crn' AND b.tran_row_id = a.row_id "
-    #     "AND b.split_no = 0 AND b.deleted_id = 0"
-    #     ),
     'sql'        : "'ar_crn'",
     })
 virt.append ({
@@ -684,49 +671,6 @@ actions.append([
             'custom.artrans_funcs.setup_openitems',  # function to populate table
 
             ],
-
-#           [  # split source?
-#               'due_dates',  # in-memory object name
-#               'List of due dates',  # in-memory object description
-#
-#               '<mem_obj name="due_dates">'
-#                   '<mem_col col_name="due_date" data_type="DTE" short_descr="Due date" '
-#                     'long_descr="Due date" col_head="" key_field="N"/>'
-#                   '<mem_col col_name="item_type" data_type="TEXT" short_descr="Type" '
-#                     'long_descr="Type" col_head="" key_field="N" '
-#                     'choices="['
-#                         '[`inv`, `Invoice`],'
-#                         '[`inst`, `Instalment`],'
-#                         '[`dep`, `Deposit`],'
-#                         '[`tdn`, `Trade-in`],'
-#                         '[`rec`, `Receipt`],'
-#                         '[`crn`, `Credit note`]'
-#                         ']"/>'
-#                   '<mem_col col_name="due_cust" data_type="DEC" short_descr="Amount due - customer" '
-#                     'long_descr="Amount due - customer currency" col_head="" key_field="N" db_scale="2"/>'
-#                   '<mem_col col_name="due_local" data_type="DEC" short_descr="Amount due - local" '
-#                     'long_descr="Amount due - local currency" col_head="" key_field="N" db_scale="2"/>'
-#               '</mem_obj>'
-#               .replace('`', '&quot;'),
-#
-#               [['crn_tot_cust', 'due_cust'], ['crn_tot_local', 'due_local']],
-#
-#               'custom.artrans_funcs.setup_due_dates',  # function to populate table
-#               ],
-#
-#           [  # key fields
-#               ['tran_type', "'ar_crn'"],  # tgt_col, src_col
-#               ['tran_row_id', 'row_id'],
-#               ['item_type', 'due_dates.item_type'],
-#               ['due_date', 'due_dates.due_date'],
-#               ],
-#           [],  # aggregation
-#           [  # on post
-#               ['amount_cust', '=', 'due_dates.due_cust'],  # tgt_col, op, src_col
-#               ['amount_local', '=', 'due_dates.due_local'],
-#               ],
-#           [],  # on unpost
-#           ],
         [
             'ar_totals',  # table name
             None,  # condition
@@ -763,6 +707,26 @@ actions.append([
                 ['crn_tax_day_loc', '+', 'crn_tax_local'],
                 ['crn_net_tot_loc', '+', 'crn_net_local'],
                 ['crn_tax_tot_loc', '+', 'crn_tax_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_crn'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'crn_tot_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'crn_tot_local'],
                 ],
             [],  # on post
             [],  # on unpost

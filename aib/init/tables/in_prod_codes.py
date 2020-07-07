@@ -159,7 +159,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'uom',
+    'col_name'   : 'uom',  # or common 'uom' per prod_class?
     'data_type'  : 'TEXT',
     'short_descr': 'Unit of measure',
     'long_descr' : 'Unit of measure',

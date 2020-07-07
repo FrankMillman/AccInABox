@@ -25,7 +25,7 @@ table = {
                     ],
                 ['npch_descr'],
                 ],
-            ['com', 'Comment', 'sls_comments',
+            ['com', 'Comment', 'pch_comments',
                 [],  # return values
                 ['comment_text'],
                 ],

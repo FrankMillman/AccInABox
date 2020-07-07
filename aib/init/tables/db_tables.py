@@ -89,7 +89,7 @@ cols.append ({
     'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
-    'max_len'    : 20,
+    'max_len'    : 25,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,

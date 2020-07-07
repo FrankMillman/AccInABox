@@ -404,14 +404,6 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ar_rec'",
-    })
-virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction period',
@@ -424,49 +416,6 @@ virt.append ({
         "WHERE b.closing_date < a.tran_date"
         ),
     })
-# virt.append ({
-#     'col_name'   : 'item_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Open item row id',
-#     'long_descr' : 'Open item row id',
-#     'col_head'   : 'Item id',
-#     'sql'        : (
-#         "SELECT b.row_id FROM {company}.ar_openitems b "
-#         "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id "
-#         "AND b.split_no = 0 AND b.deleted_id = 0"
-#         ),
-#     })
-# virt.append ({
-#     'col_name'   : 'item_tran_type',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Open item tran type',
-#     'long_descr' : 'Open item tran type',
-#     'col_head'   : 'Tran type',
-#     # 'sql'        : (
-#     #     "SELECT b.tran_type FROM {company}.ar_openitems b "
-#     #     "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id "
-#     #     "AND b.split_no = 0 AND b.deleted_id = 0"
-#     #     ),
-#     'sql'        : "'ar_rec'",
-#     })
-# virt.append ({
-#     'col_name'   : 'alloc_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Allocation row id',
-#     'long_descr' : 'Allocation row id',
-#     'col_head'   : 'Alloc id',
-#     'fkey'       : ['ar_tran_alloc_det', 'row_id', None, None, False, None],
-#     'sql'        : (
-#         "SELECT b.row_id FROM {company}.ar_tran_alloc_det b "
-#         "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id "
-#         "AND b.item_row_id = ("
-#             "SELECT b.row_id FROM {company}.ar_openitems b "
-#             "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id "
-#             "AND b.split_no = 0 "
-#             "AND b.deleted_id = 0"
-#         ") "
-#         ),
-#     })
 
 # cursor definitions
 cursors = []

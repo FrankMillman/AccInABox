@@ -191,6 +191,26 @@ actions = []
 actions.append([
     'upd_on_post', [
         [
+            'sls_nsls_uea_totals',  # table name
+            [  # condition
+                ['where', '', 'subinv_row_id>tran_det_row_id>sale_type', '=', "'acc'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['nsls_code_id', 'subinv_row_id>nsls_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'nsls_iea'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'nsls_earned_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
             'sls_nsls_totals',  # table name
             [  # condition
                 ['where', '', 'subinv_row_id>tran_det_row_id>sale_type', '=', "'acc'", ''],
@@ -200,12 +220,34 @@ actions.append([
                 ['nsls_code_id', 'subinv_row_id>nsls_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'subinv_row_id>location_row_id'],
                 ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'nsls_iea'"],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['sls_iea_acc_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
-                ['sls_iea_acc_tot', '+', 'nsls_earned_loc'],
-                ],            [],  # on post
+                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'nsls_earned_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'sls_nsls_uea_totals',  # table name
+            [  # condition
+                ['where', '', 'subinv_row_id>tran_det_row_id>sale_type', '=', "'cash'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['nsls_code_id', 'subinv_row_id>nsls_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'nsls_rea'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'nsls_earned_loc'],
+                ],
+            [],  # on post
             [],  # on unpost
             ],
         [
@@ -218,11 +260,35 @@ actions.append([
                 ['nsls_code_id', 'subinv_row_id>nsls_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'subinv_row_id>location_row_id'],
                 ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'nsls_rea'"],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['sls_iea_csh_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
-                ['sls_iea_csh_tot', '+', 'nsls_earned_loc'],
+                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'nsls_earned_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'sls_nsls_cust_uea_totals',  # table name
+            [  # condition
+                ['where', '', 'subinv_row_id>tran_det_row_id>sale_type', '=', "'acc'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['nsls_code_id', 'subinv_row_id>nsls_code_id'],  # tgt_col, src_col
+                ['cust_row_id', 'subinv_row_id>tran_det_row_id>tran_row_id>cust_row_id'],
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'nsls_iea'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day_cust', '-', 'nsls_earned_pty'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '-', 'nsls_earned_pty'],
+                ['tran_day_local', '-', 'nsls_earned_loc'],
+                ['tran_tot_local', '-', 'nsls_earned_loc'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -235,16 +301,101 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'subinv_row_id>nsls_code_id'],  # tgt_col, src_col
+                ['cust_row_id', 'subinv_row_id>tran_det_row_id>tran_row_id>cust_row_id'],
                 ['location_row_id', 'subinv_row_id>location_row_id'],
                 ['function_row_id', 'subinv_row_id>function_row_id'],
-                ['cust_row_id', 'subinv_row_id>tran_det_row_id>tran_row_id>cust_row_id'],
+                ['source_code', "'nsls_iea'"],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['sls_iea_day_cus', '+', 'nsls_earned_pty'],  # tgt_col, op, src_col
-                ['sls_iea_tot_cus', '+', 'nsls_earned_pty'],
-                ['sls_iea_day_loc', '+', 'nsls_earned_loc'],
-                ['sls_iea_tot_loc', '+', 'nsls_earned_loc'],
+                ['tran_day_cust', '+', 'nsls_earned_pty'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '+', 'nsls_earned_pty'],
+                ['tran_day_local', '+', 'nsls_earned_loc'],
+                ['tran_tot_local', '+', 'nsls_earned_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'subinv_row_id>tran_det_row_id>sale_type', '=', "'acc'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'subinv_row_id>nsls_code_id>uea_gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'nsls_iea'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'nsls_earned_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'subinv_row_id>tran_det_row_id>sale_type', '=', "'acc'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'subinv_row_id>nsls_code_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'nsls_iea'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'nsls_earned_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'subinv_row_id>tran_det_row_id>sale_type', '=', "'cash'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'subinv_row_id>nsls_code_id>uea_gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'nsls_rea'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'nsls_earned_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'subinv_row_id>tran_det_row_id>sale_type', '=', "'cash'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'subinv_row_id>nsls_code_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'nsls_rea'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'nsls_earned_loc'],
                 ],
             [],  # on post
             [],  # on unpost

@@ -210,20 +210,61 @@ actions = []
 actions.append([
     'upd_on_post', [
         [
+            'pch_npch_uex_totals',  # table name
+            [  # condition
+                ['where', '', 'subinv_row_id>tran_det_row_id>pch_type', '=', "'acc'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['npch_code_id', 'subinv_row_id>npch_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'npch_iex'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'npch_expensed_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
             'pch_npch_totals',  # table name
             [  # condition
                 ['where', '', 'subinv_row_id>tran_det_row_id>pch_type', '=', "'acc'", ''],
                 ],
             False,  # split source?
             [  # key fields
-                ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
+                ['npch_code_id', 'subinv_row_id>npch_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'subinv_row_id>location_row_id'],
                 ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'npch_iex'"],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['pch_iex_acc_day', '+', 'npch_expensed_loc'],  # tgt_col, op, src_col
-                ['pch_iex_acc_tot', '+', 'npch_expensed_loc'],
+                ['tran_day', '+', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'npch_expensed_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'pch_npch_uex_totals',  # table name
+            [  # condition
+                ['where', '', 'subinv_row_id>tran_det_row_id>pch_type', '=', "'cash'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['npch_code_id', 'subinv_row_id>npch_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'npch_pex'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'npch_expensed_loc'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -235,14 +276,38 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
+                ['npch_code_id', 'subinv_row_id>npch_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'subinv_row_id>location_row_id'],
                 ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'npch_pex'"],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['pch_iex_csh_day', '+', 'npch_expensed_loc'],  # tgt_col, op, src_col
-                ['pch_iex_csh_tot', '+', 'npch_expensed_loc'],
+                ['tran_day', '+', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'npch_expensed_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'pch_npch_supp_uex_totals',  # table name
+            [  # condition
+                ['where', '', 'subinv_row_id>tran_det_row_id>pch_type', '=', "'acc'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['npch_code_id', 'subinv_row_id>npch_code_id'],  # tgt_col, src_col
+                ['supp_row_id', 'subinv_row_id>tran_det_row_id>tran_row_id>supp_row_id'],
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'npch_iex'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day_supp', '-', 'npch_expensed_pty'],  # tgt_col, op, src_col
+                ['tran_tot_supp', '-', 'npch_expensed_pty'],
+                ['tran_day_local', '-', 'npch_expensed_loc'],
+                ['tran_tot_local', '-', 'npch_expensed_loc'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -254,17 +319,102 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
+                ['npch_code_id', 'subinv_row_id>npch_code_id'],  # tgt_col, src_col
+                ['supp_row_id', 'subinv_row_id>tran_det_row_id>tran_row_id>supp_row_id'],
                 ['location_row_id', 'subinv_row_id>location_row_id'],
                 ['function_row_id', 'subinv_row_id>function_row_id'],
-                ['supp_row_id', 'subinv_row_id>tran_det_row_id>tran_row_id>supp_row_id'],
+                ['source_code', "'npch_iex'"],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['pch_iex_day_sup', '+', 'npch_expensed_pty'],  # tgt_col, op, src_col
-                ['pch_iex_tot_sup', '+', 'npch_expensed_pty'],
-                ['pch_iex_day_loc', '+', 'npch_expensed_loc'],
-                ['pch_iex_tot_loc', '+', 'npch_expensed_loc'],
+                ['tran_day_supp', '+', 'npch_expensed_pty'],  # tgt_col, op, src_col
+                ['tran_tot_supp', '+', 'npch_expensed_pty'],
+                ['tran_day_local', '+', 'npch_expensed_loc'],
+                ['tran_tot_local', '+', 'npch_expensed_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'subinv_row_id>tran_det_row_id>pch_type', '=', "'acc'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'subinv_row_id>npch_code_id>uex_gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'npch_iex'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'npch_expensed_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'subinv_row_id>tran_det_row_id>pch_type', '=', "'acc'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'subinv_row_id>npch_code_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'npch_iex'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'npch_expensed_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'subinv_row_id>tran_det_row_id>pch_type', '=', "'cash'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'subinv_row_id>npch_code_id>uex_gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'npch_pex'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'npch_expensed_loc'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'subinv_row_id>tran_det_row_id>pch_type', '=', "'cash'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'subinv_row_id>npch_code_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'subinv_row_id>location_row_id'],
+                ['function_row_id', 'subinv_row_id>function_row_id'],
+                ['source_code', "'npch_pex'"],
+                ['tran_date', 'eff_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'npch_expensed_loc'],
                 ],
             [],  # on post
             [],  # on unpost

@@ -151,8 +151,9 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# g/l code for 'sales'? type = 'class' only
-# g/l code for 'c-o-s'? type = 'class' only
+# g/l code for 'inventory'? or one ctrl acc per sub-ledger/warehouse?
+# g/l code for 'sales'?
+# g/l code for 'c-o-s'?
 
 
 # virtual column definitions

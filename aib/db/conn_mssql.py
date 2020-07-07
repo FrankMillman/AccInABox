@@ -346,27 +346,36 @@ async def convert_sql(self, sql, params=None):
             num += ch
             cnt += 1
         sql = sql[:pos] + sql[pos+cnt:]  # strip out the LIMIT clause
-        found = 0  # look for the closest SELECT
+        # found = 0  # look for the closest SELECT
+        skip = 0  # if ')' found, skip until '(' found - can be nested
         for ch in reversed(sql.upper()[:pos]):
             pos -= 1
-            if ch in (' ', '\n') and found == 0:
-                found = 1
-            elif ch == 'T' and found == 1:
-                found = 2
-            elif ch == 'C' and found == 2:
-                found = 3
-            elif ch == 'E' and found == 3:
-                found = 4
-            elif ch == 'L' and found == 4:
-                found = 5
-            elif ch == 'E' and found == 5:
-                found = 6
-            elif ch == 'S' and found == 6:
-                found = 7
-            else:
-                found = 0
-            if found == 7:  # insert the TOP clause
-                sql = f'{sql[:pos+6]} TOP {num} {sql[pos+7:]}'
+            if ch == ')':
+                skip += 1
+            if ch == '(':
+                skip -= 1
+            if skip:
+                continue
+            # if ch in (' ', '\n') and (found == 0 or found == 1):
+            #     found = 1
+            # elif ch == 'T' and found == 1:
+            #     found = 2
+            # elif ch == 'C' and found == 2:
+            #     found = 3
+            # elif ch == 'E' and found == 3:
+            #     found = 4
+            # elif ch == 'L' and found == 4:
+            #     found = 5
+            # elif ch == 'E' and found == 5:
+            #     found = 6
+            # elif ch == 'S' and found == 6:
+            #     found = 7
+            # else:
+            #     found = 0
+            # if found == 7:  # insert the TOP clause
+            #   sql = f'{sql[:pos+6]} TOP {num} {sql[pos+7:]}'
+            if sql[pos-6:pos] == 'SELECT':
+                sql = f'{sql[:pos]} TOP {num} {sql[pos+1:]}'
                 break
     start = sql.find('WITH RECURSIVE ')
     if start > -1:  # -1 = absent; 0 = at beginning; >0 - move WITH clause to beginning

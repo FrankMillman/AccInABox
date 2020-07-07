@@ -158,7 +158,12 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : 'Invoice',
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        ['bf_check', 'Not a b/f transaction', [
+            ['check', '', '$value', '!=', "'_uex_bf'", ''],
+            ['or', '', '_ctx.bf', 'is', '$True', ''],
+            ]],
+        ],
     'fkey'       : None,
     'choices'    : None,
     })
@@ -437,14 +442,6 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ap_inv'",
-    })
-virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction period',
@@ -565,7 +562,9 @@ actions.append([
     'upd_on_post', [
         [
             'ap_openitems',  # table name
-            None,  # condition
+            [  # condition
+                ['where', '', 'text', '!=', "'_uex_bf'", ''],
+                ],
             True,  # split source?
 
             'custom.aptrans_funcs.setup_openitems',  # function to populate table
@@ -587,40 +586,129 @@ actions.append([
 
         [
             'ap_totals',  # table name
-            None,  # condition
+            [  # condition
+                ['where', '', 'text', '!=', "'_uex_bf'", ''],
+                ],
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'supp_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
+                ['source_code', "'ap_inv_net'"],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['inv_net_day', '+', 'inv_net_local'],  # tgt_col, op, src_col
-                ['inv_tax_day', '+', 'inv_tax_local'],
-                ['inv_net_tot', '+', 'inv_net_local'],
-                ['inv_tax_tot', '+', 'inv_tax_local'],
+                ['tran_day', '+', 'inv_net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'inv_net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'ap_totals',  # table name
+            [  # condition
+                ['where', '', 'text', '!=', "'_uex_bf'", ''],
+                ['and', '', 'inv_tax_local', '!=', '0', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['ledger_row_id', 'supp_row_id>ledger_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'supp_row_id>location_row_id'],
+                ['function_row_id', 'supp_row_id>function_row_id'],
+                ['source_code', "'ap_inv_tax'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'inv_tax_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'inv_tax_local'],
                 ],
             [],  # on post
             [],  # on unpost
             ],
         [
             'ap_supp_totals',  # table name
-            None,  # condition
+            [  # condition
+                ['where', '', 'text', '!=', "'_uex_bf'", ''],
+                ],
             False,  # split source?
             [  # key fields
                 ['supp_row_id', 'supp_row_id'],  # tgt_col, src_col
-                ['tran_date', 'tran_date'],  # tgt_col, src_col
+                ['location_row_id', 'supp_row_id>location_row_id'],
+                ['function_row_id', 'supp_row_id>function_row_id'],
+                ['source_code', "'ap_inv_net'"],
+                ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['inv_net_day_sup', '+', 'inv_net_supp'],  # tgt_col, op, src_col
-                ['inv_tax_day_sup', '+', 'inv_tax_supp'],
-                ['inv_net_tot_sup', '+', 'inv_net_supp'],
-                ['inv_tax_tot_sup', '+', 'inv_tax_supp'],
-                ['inv_net_day_loc', '+', 'inv_net_local'],
-                ['inv_tax_day_loc', '+', 'inv_tax_local'],
-                ['inv_net_tot_loc', '+', 'inv_net_local'],
-                ['inv_tax_tot_loc', '+', 'inv_tax_local'],
+                ['tran_day_supp', '+', 'inv_net_supp'],  # tgt_col, op, src_col
+                ['tran_tot_supp', '+', 'inv_net_supp'],
+                ['tran_day_local', '+', 'inv_net_local'],
+                ['tran_tot_local', '+', 'inv_net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'ap_supp_totals',  # table name
+            [  # condition
+                ['where', '', 'text', '!=', "'_uex_bf'", ''],
+                ['and', '', 'inv_tax_local', '!=', '0', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['supp_row_id', 'supp_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'supp_row_id>location_row_id'],
+                ['function_row_id', 'supp_row_id>function_row_id'],
+                ['source_code', "'ap_inv_tax'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day_supp', '+', 'inv_tax_supp'],  # tgt_col, op, src_col
+                ['tran_tot_supp', '+', 'inv_tax_supp'],
+                ['tran_day_local', '+', 'inv_tax_local'],
+                ['tran_tot_local', '+', 'inv_tax_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'text', '!=', "'_uex_bf'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['location_row_id', 'supp_row_id>location_row_id'],
+                ['function_row_id', 'supp_row_id>function_row_id'],
+                ['source_code', "'ap_inv_net'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'inv_net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'inv_net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'text', '!=', "'_uex_bf'", ''],
+                ['and', '', 'inv_tax_local', '!=', '0', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['location_row_id', 'supp_row_id>location_row_id'],
+                ['function_row_id', 'supp_row_id>function_row_id'],
+                ['source_code', "'ap_inv_tax'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'inv_tax_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'inv_tax_local'],
                 ],
             [],  # on post
             [],  # on unpost

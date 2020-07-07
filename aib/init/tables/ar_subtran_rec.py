@@ -419,7 +419,7 @@ virt.append ({
     'short_descr': 'Open item tran type',
     'long_descr' : 'Open item tran type',
     'col_head'   : 'Tran type',
-    'sql'        : 'a.tran_type',
+    'sql'        : "'ar_rec'",
     })
 # virt.append ({
 #     'col_name'   : 'alloc_row_id',
@@ -584,11 +584,12 @@ actions.append([
                 ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_rec'"],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['rec_day', '-', 'arec_local'],  # tgt_col, op, src_col
-                ['rec_tot', '-', 'arec_local'],
+                ['tran_day', '-', 'arec_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'arec_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -599,13 +600,36 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_rec'"],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['rec_day_cus', '-', 'arec_cust'],  # tgt_col, op, src_col
-                ['rec_tot_cus', '-', 'arec_cust'],
-                ['rec_day_loc', '-', 'arec_local'],
-                ['rec_tot_loc', '-', 'arec_local'],
+                ['tran_day_cust', '-', 'arec_cust'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '-', 'arec_cust'],
+                ['tran_day_local', '-', 'arec_local'],
+                ['tran_tot_local', '-', 'arec_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_rec'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'arec_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'arec_local'],
                 ],
             [],  # on post
             [],  # on unpost

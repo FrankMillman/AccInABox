@@ -10,7 +10,11 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
+    # 'indexes'       : [
+    #     ['apitems_supp', 'supp_row_id, tran_date', None, False]
+    #     ],
     'ledger_col'    : None,
+    # 'ledger_col'    : 'supp_row_id>ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -80,7 +84,7 @@ cols.append ({
     'data_type'  : 'TEXT',
     'short_descr': 'Transaction type',
     'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
+    'col_head'   : 'Type',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,

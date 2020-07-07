@@ -414,14 +414,6 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ar_disc'",
-    })
-virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction period',
@@ -573,40 +565,129 @@ actions.append([
             ],
         [
             'ar_totals',  # table name
-            None,  # condition
+            [  # condition
+                ['where', '', 'text', '!=', "'_uea_bf'", ''],
+                ],
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_disc_net'"],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['disc_net_day', '-', 'disc_net_local'],  # tgt_col, op, src_col
-                ['disc_tax_day', '-', 'disc_tax_local'],
-                ['disc_net_tot', '-', 'disc_net_local'],
-                ['disc_tax_tot', '-', 'disc_tax_local'],
+                ['tran_day', '-', 'disc_net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'disc_net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'ar_totals',  # table name
+            [  # condition
+                ['where', '', 'text', '!=', "'_uea_bf'", ''],
+                ['and', '', 'disc_tax_local', '!=', '0', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_disc_tax'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'disc_tax_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'disc_tax_local'],
                 ],
             [],  # on post
             [],  # on unpost
             ],
         [
             'ar_cust_totals',  # table name
-            None,  # condition
+            [  # condition
+                ['where', '', 'text', '!=', "'_uea_bf'", ''],
+                ],
             False,  # split source?
             [  # key fields
                 ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
-                ['tran_date', 'tran_date'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_disc_net'"],
+                ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['disc_net_day_cus', '-', 'disc_net_cust'],  # tgt_col, op, src_col
-                ['disc_tax_day_cus', '-', 'disc_tax_cust'],
-                ['disc_net_tot_cus', '-', 'disc_net_cust'],
-                ['disc_tax_tot_cus', '-', 'disc_tax_cust'],
-                ['disc_net_day_loc', '-', 'disc_net_local'],
-                ['disc_tax_day_loc', '-', 'disc_tax_local'],
-                ['disc_net_tot_loc', '-', 'disc_net_local'],
-                ['disc_tax_tot_loc', '-', 'disc_tax_local'],
+                ['tran_day_cust', '-', 'disc_net_cust'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '-', 'disc_net_cust'],
+                ['tran_day_local', '-', 'disc_net_local'],
+                ['tran_tot_local', '-', 'disc_net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'ar_cust_totals',  # table name
+            [  # condition
+                ['where', '', 'text', '!=', "'_uea_bf'", ''],
+                ['and', '', 'disc_tax_local', '!=', '0', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_disc_tax'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day_cust', '-', 'disc_tax_cust'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '-', 'disc_tax_cust'],
+                ['tran_day_local', '-', 'disc_tax_local'],
+                ['tran_tot_local', '-', 'disc_tax_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'text', '!=', "'_uea_bf'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_disc_net'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'disc_net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'disc_net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'text', '!=', "'_uea_bf'", ''],
+                ['and', '', 'disc_tax_local', '!=', '0', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_disc_tax'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'disc_tax_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'disc_tax_local'],
                 ],
             [],  # on post
             [],  # on unpost

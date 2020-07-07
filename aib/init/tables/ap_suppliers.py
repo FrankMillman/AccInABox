@@ -352,6 +352,54 @@ virt.append ({
             "END"
         )
     })
+virt.append ({
+    'col_name'   : 'balance_sup',
+    'data_type'  : 'DEC',
+    'short_descr': 'Running balance - supp',
+    'long_descr' : 'Running balance - supp',
+    'col_head'   : 'Balance supp',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        """
+        (SELECT SUM(c.tran_tot_supp) AS "[REAL2]" FROM (
+            SELECT b.tran_tot_supp, ROW_NUMBER() OVER (PARTITION BY
+                b.supp_row_id, b.location_row_id, b.function_row_id, b.source_code_id
+                ORDER BY b.tran_date DESC) row_num
+            FROM {company}.ap_supp_totals b
+            WHERE b.deleted_id = 0
+            AND b.supp_row_id = a.row_id
+            ) as c
+            WHERE c.row_num = 1
+            )
+        """
+        ),
+    })
+virt.append ({
+    'col_name'   : 'balance_loc',
+    'data_type'  : 'DEC',
+    'short_descr': 'Running balance - local',
+    'long_descr' : 'Running balance - local',
+    'col_head'   : 'Balance loc',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        """
+        (SELECT SUM(c.tran_tot_local) AS "[REAL2]" FROM (
+            SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY
+                b.supp_row_id, b.location_row_id, b.function_row_id, b.source_code_id
+                ORDER BY b.tran_date DESC) row_num
+            FROM {company}.ap_supp_totals b
+            WHERE b.deleted_id = 0
+            AND b.supp_row_id = a.row_id
+            ) as c
+            WHERE c.row_num = 1
+            )
+        """
+        ),
+    })
 
 # cursor definitions
 cursors = []

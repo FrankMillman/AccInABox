@@ -25,6 +25,12 @@ table = {
                     ],
                 ['nsls_descr'],  # display descr
                 ],
+            ['bf', 'Balance b/f', 'ar_tran_inv_bf',
+                [  # return values
+                    ['inv_net_amt', 'amount_cust'],  # tgt_col, src_col
+                    ],
+                ['due_date'],  # display descr
+                ],
             ['com', 'Comment', 'sls_comments',
                 [],  # return values
                 ['comment_text'],  # display descr
