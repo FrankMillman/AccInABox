@@ -51,6 +51,7 @@ def init(self, pos):
     conn = pyodbc.connect(driver='ODBC Driver 17 for Sql Server', server=r'localhost\sqlexpress',
         database=self.database, trusted_connection='Yes')
     self.conn = conn
+    self.servertype = 'mssql'
     self.exception = (pyodbc.DatabaseError, pyodbc.IntegrityError)
     if not pos:  # only need to do this once per database
         self.create_functions()
@@ -495,6 +496,18 @@ def create_functions(self):
             "RETURNS DATE WITH SCHEMABINDING AS "
           "BEGIN "
             "RETURN DATEADD(day, @days, @date) "
+          "END "
+        )
+
+    try:
+        cur.execute("drop function date_diff")
+    except self.exception:
+        pass
+    cur.execute(
+        "CREATE FUNCTION date_diff (@date_from DATE, @date_to DATE) "
+            "RETURNS INT WITH SCHEMABINDING AS "
+          "BEGIN "
+            "RETURN DATEDIFF(day, @date_from, @date_to) "
           "END "
         )
 

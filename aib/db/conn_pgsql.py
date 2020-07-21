@@ -67,6 +67,7 @@ def init(self, pos):
     conn = psycopg2.connect(database=self.database, user=self.user, password=self.pwd)
     conn.set_client_encoding('UNICODE')
     self.conn = conn
+    self.servertype = 'pgsql'
     self.exception = (psycopg2.ProgrammingError, psycopg2.IntegrityError,
         psycopg2.InternalError)
     if not pos:
@@ -441,8 +442,23 @@ def create_functions(self):
     cur.execute(
         "CREATE OR REPLACE FUNCTION date_add (DATE, INT) "
             "RETURNS DATE LANGUAGE 'plpgsql' IMMUTABLE AS $$ "
+          "DECLARE "
+            "date ALIAS FOR $1;"
+            "days ALIAS FOR $2;"
           "BEGIN "
-            "RETURN $1 + $2; "
+            "RETURN date + days; "
+          "END;"
+          "$$;"
+        )
+
+    cur.execute(
+        "CREATE OR REPLACE FUNCTION date_diff (DATE, DATE) "
+            "RETURNS INT LANGUAGE 'plpgsql' IMMUTABLE AS $$ "
+          "DECLARE "
+            "date_from ALIAS FOR $1;"
+            "date_to ALIAS FOR $2;"
+          "BEGIN "
+            "RETURN date_to - date_from; "
           "END;"
           "$$;"
         )

@@ -103,6 +103,9 @@ def zfill(string, lng):
 def date_add(date_string, days):
     return str(date(*map(int, date_string.split('-'))) + timedelta(days))
 
+def date_diff(date_from, date_to):
+    return (date(*map(int, date_to.split('-'))) - date(*map(int, date_from.split('-')))).days
+
 #################################################
 # no longer required [2020-03-30]
 # worth keeping for the notes below
@@ -203,12 +206,14 @@ def init(self, pos, mem_id=None):
         conn = sqlite3.connect('file:{}?mode=memory&cache=shared'.format(mem_id),
             detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
             check_same_thread=False, uri=True)
+        self.servertype = ':memory:'
         cur = conn.cursor()
         cur.execute("pragma read_uncommitted = on")  # http://www.sqlite.org/sharedcache.html
     else:
         conn = sqlite3.connect('{0}/_base'.format(self.database),
             detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
             check_same_thread=False)
+        self.servertype = 'sqlite3'
         cur = conn.cursor()
         cur.execute("pragma foreign_keys = on")  # must be enabled for each connection
     conn.create_function('substring', 3, substring)
@@ -216,6 +221,7 @@ def init(self, pos, mem_id=None):
     conn.create_function('repeat', 2, repeat)
     conn.create_function('zfill', 2, zfill)
     conn.create_function('date_add', 2, date_add)
+    conn.create_function('date_diff', 2, date_diff)
     # conn.create_function('round', 2, round_)
 
     self.conn = conn
@@ -599,83 +605,7 @@ def create_index(self, company_id, table_name, index):
 def get_lower_colname(self, col_name, alias):
     return f'LOWER({alias}.{col_name})'
 
-async def tree_select_old(self, company_id, table_name, start_col, start_value,
-        filter=None, sort=False, up=False, group=0):
-    await self.attach_company(company_id)
-    sql = "CREATE TEMP TABLE {} ("
-    select_1 = "SELECT "
-    async for row in await self.exec_sql("pragma table_info({})".format(table_name)):
-        sql += "{} {}, ".format(row[1], row[2])
-        select_1 += "_tree1.{}, ".format(row[1])
-    sql += "_level INT"
-    if sort:
-        sql += ", _path TEXT"
-        sql += ", _key TEXT"
-    if group:
-        sql += ", _group_id INT"
-        sql += ", _group_key TEXT"
-    sql += ") "
-
-    select_2 = select_1
-    select_1 += "0 AS _level "
-    if sort:
-        select_1 += ", row_id AS _path "
-        select_1 += ", '' AS _key "
-    if group:
-        select_1 += ", row_id AS _group_id "
-        select_1 += ", '' AS _group_key "
-    select_1 += "FROM {}.{} _tree1 ".format(company_id, table_name)
-    select_1 += "WHERE _tree1.{} = {}".format(start_col, self.constants.param_style)
-
-    print(sql, '\n')
-    print(select_2, '\n')
-    print(select_1, '\n')
-    input()
-
-    try:
-        await self.exec_cmd('drop table _tree')
-        await self.exec_cmd('drop table _tree2')
-        await self.exec_cmd('drop table _tree3')
-    except: pass
-
-    await self.exec_cmd(sql.format('_tree'))
-    await self.exec_cmd(sql.format('_tree2'))
-    await self.exec_cmd(sql.format('_tree3'))
-
-    await self.exec_cmd("INSERT INTO _tree {}".format(select_1), (start_value,))
-    await self.exec_cmd("INSERT INTO _tree2 SELECT * FROM _tree")
-
-    select_2 += "_tree2._level+1 "
-    if sort:
-        select_2 += ", _tree2._path || ',' || _tree1.row_id "
-        select_2 += ", _tree2._key || zfill(_tree1.seq, 4) "
-    if group:
-        select_2 += (
-            ", CASE WHEN _tree2._level < {} THEN "
-            "_tree1.row_id ELSE _tree2._group_id END ".format(group)
-            )
-        select_2 += (
-            ", CASE WHEN _tree2._level < {} THEN "
-            "_tree2._key || zfill(_tree1.seq, 4) ELSE _tree2._group_key END ".format(group)
-            )
-    select_2 += "FROM {}.{} _tree1 ".format(company_id, table_name)
-    if up:
-        select_2 += "JOIN  _tree2 on _tree1.row_id = _tree2.parent_id"
-    else:
-        select_2 += "JOIN  _tree2 on _tree1.parent_id = _tree2.row_id"
-
-    while True:
-        await self.exec_cmd("INSERT INTO _tree3 {}".format(select_2))
-        if not self.rowcount:
-            break
-        await self.exec_cmd("INSERT INTO _tree SELECT * FROM _tree3")
-        await self.exec_cmd("DELETE FROM _tree2")
-        await self.exec_cmd("INSERT INTO _tree2 SELECT * FROM _tree3")
-        await self.exec_cmd("DELETE FROM _tree3")
-
-    return ''
-
-def tree_select_new(self, company_id, table_name, link_col, start_col, start_value,
+def tree_select(self, company_id, table_name, link_col, start_col, start_value,
         filter=None, sort=False, up=False, group=0):
     select_1 = "*, 0 as _level"
     if sort:
@@ -738,11 +668,6 @@ def tree_select_new(self, company_id, table_name, link_col, start_col, start_val
           "FROM _tree, {1}.{2} _tree2 {5}) "
         .format(select_1, company_id, table_name, where_1, select_2, where_2))
     return cte
-
-if sqlite3.sqlite_version_info < (3, 8, 6):
-    tree_select = tree_select_old  # create cte manually
-else:
-    tree_select = tree_select_new  # create cte using the new WITH statement
 
 def get_view_names(self, company_id, view_names):
     return view_names.replace(f'{company_id}.', '')
