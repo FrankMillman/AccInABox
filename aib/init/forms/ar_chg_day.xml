@@ -1,4 +1,4 @@
-<form name="ar_chg_day" title="Ar chargess for day">
+<form name="ar_chg_day" title="Ar charges for day">
   <db_objects>
     <db_obj name="ar_subtran_chg" table_name="ar_subtran_chg"/>
   </db_objects>

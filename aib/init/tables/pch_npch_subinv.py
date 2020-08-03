@@ -94,6 +94,7 @@ cols.append ({
     'fkey'       : None,
     'choices'    : [
             ['ap_inv', 'Invoice'],
+            ['ap_uex_bf', 'B/forward'],
             ['cb_pmt', 'Payment'],
         ],
     })
@@ -116,6 +117,7 @@ cols.append ({
     'fkey'       : [
         ['tran_type', [
             ['ap_inv', 'ap_tran_inv_det'],
+            ['ap_uex_bf', 'ap_tran_uex_bf_det'],
             ['cb_pmt', 'cb_tran_pmt_det'],
             ]],
         'row_id', None, None, True, None],
@@ -146,8 +148,8 @@ cols.append ({
     'short_descr': 'Location row id',
     'long_descr' : 'Location row id',
     'col_head'   : 'Loc',
-    'key_field'  : 'A',
-   'calculated'  : False,
+    'key_field'  : 'N',
+    'calculated' : [['where', '', 'npch_code_id>common_location', 'is', '$True', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -158,9 +160,6 @@ cols.append ({
         '<case>'
           '<compare src="location_row_id" op="is_not" tgt="$None">'
             '<fld_val name="location_row_id"/>'
-          '</compare>'
-          '<compare src="npch_code_id>use_locations" op="is" tgt="$False">'
-            '<fld_val name="_param.loc_root_row_id"/>'
           '</compare>'
           '<compare src="npch_code_id>common_location" op="is" tgt="$True">'
             '<fld_val name="npch_code_id>location_row_id"/>'
@@ -188,8 +187,8 @@ cols.append ({
     'short_descr': 'Functision row id',
     'long_descr' : 'Functision row id',
     'col_head'   : 'Fun',
-    'key_field'  : 'A',
-    'calculated' : False,
+    'key_field'  : 'N',
+    'calculated' : [['where', '', 'npch_code_id>common_function', 'is', '$True', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -200,9 +199,6 @@ cols.append ({
         '<case>'
           '<compare src="function_row_id" op="is_not" tgt="$None">'
             '<fld_val name="function_row_id"/>'
-          '</compare>'
-          '<compare src="npch_code_id>use_functions" op="is" tgt="$False">'
-            '<fld_val name="_param.fun_root_row_id"/>'
           '</compare>'
           '<compare src="npch_code_id>common_function" op="is" tgt="$True">'
             '<fld_val name="npch_code_id>function_row_id"/>'
@@ -510,7 +506,9 @@ actions.append([
     'upd_on_save', [
         [
             'pch_npch_invtax',
-            None,  # condition
+            [  # condition
+                ['where', '', 'tran_type', '!=', "'ap_uex_bf'", ''],
+                ],
 
             True,  # split source?
 

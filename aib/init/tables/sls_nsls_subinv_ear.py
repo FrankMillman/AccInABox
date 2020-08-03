@@ -331,8 +331,8 @@ actions.append([
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'nsls_earned_loc'],
+                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'nsls_earned_loc'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -352,8 +352,8 @@ actions.append([
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'nsls_earned_loc'],
+                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'nsls_earned_loc'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -373,8 +373,8 @@ actions.append([
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'nsls_earned_loc'],
+                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'nsls_earned_loc'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -394,8 +394,8 @@ actions.append([
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'nsls_earned_loc'],
+                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'nsls_earned_loc'],
                 ],
             [],  # on post
             [],  # on unpost

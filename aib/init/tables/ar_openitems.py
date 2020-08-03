@@ -102,6 +102,7 @@ cols.append ({
             ['ar_rec', 'Receipt'],
             ['ar_chg', 'Charge'],
             ['ar_disc', 'Discount'],
+            ['ar_bf', 'Bal b/f'],
         ],
     })
 cols.append ({
@@ -127,6 +128,7 @@ cols.append ({
             ['ar_rec', 'ar_subtran_rec'],
             ['ar_chg', 'ar_subtran_chg'],
             ['ar_disc', 'ar_tran_disc'],
+            ['ar_bf', 'ar_tran_bf_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -175,46 +177,47 @@ cols.append ({
         ['rec', 'Receipt'],
         ['crn', 'Credit note'],
         ['disc', 'Discount'],
+        ['bf', 'Bal b/f'],
         ],
     })
-# cols.append ({
-#     'col_name'   : 'cust_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Customer row id',
-#     'long_descr' : 'Customer row id',
-#     'col_head'   : 'Customer',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 0,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : '{tran_row_id>cust_row_id}',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : ['ar_customers', 'row_id', None, None, False, None],
-#     'choices'    : None,
-#     })
-# cols.append ({
-#     'col_name'   : 'tran_date',
-#     'data_type'  : 'DTE',
-#     'short_descr': 'Transaction date',
-#     'long_descr' : 'Transaction date',
-#     'col_head'   : 'Date',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 0,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : '{tran_row_id>tran_date}',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
+cols.append ({
+    'col_name'   : 'cust_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Customer row id',
+    'long_descr' : 'Customer row id',
+    'col_head'   : 'Customer',
+    'key_field'  : 'N',
+    'calculated' : True,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{tran_row_id>cust_row_id}',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['ar_customers', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Transaction date',
+    'long_descr' : 'Transaction date',
+    'col_head'   : 'Date',
+    'key_field'  : 'N',
+    'calculated' : True,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{tran_row_id>tran_date}',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 cols.append ({
     'col_name'   : 'due_date',
     'data_type'  : 'DTE',
@@ -313,23 +316,23 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'cust_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Customer row id',
-    'long_descr' : 'Customer row id',
-    'col_head'   : 'Cust id',
-    'fkey'       : ['ar_customers', 'row_id', None, None, False, None],
-    'sql'        : 'a.tran_row_id>cust_row_id',
-    })
-virt.append ({
-    'col_name'   : 'tran_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date',
-    'col_head'   : 'Tran date',
-    'sql'        : 'a.tran_row_id>tran_date',
-    })
+# virt.append ({
+#     'col_name'   : 'cust_row_id',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Customer row id',
+#     'long_descr' : 'Customer row id',
+#     'col_head'   : 'Cust id',
+#     'fkey'       : ['ar_customers', 'row_id', None, None, False, None],
+#     'sql'        : 'a.tran_row_id>cust_row_id',
+#     })
+# virt.append ({
+#     'col_name'   : 'tran_date',
+#     'data_type'  : 'DTE',
+#     'short_descr': 'Transaction date',
+#     'long_descr' : 'Transaction date',
+#     'col_head'   : 'Tran date',
+#     'sql'        : 'a.tran_row_id>tran_date',
+#     })
 virt.append ({
     'col_name'   : 'tran_number',
     'data_type'  : 'TEXT',

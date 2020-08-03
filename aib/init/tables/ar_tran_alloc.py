@@ -177,7 +177,9 @@ virt.append ({
     'short_descr': 'Allocation row id',
     'long_descr' : 'Allocation row id',
     'col_head'   : 'Alloc id',
-    'fkey'       : ['ar_tran_alloc_det', 'row_id', None, None, False, None],
+    # fkey causes recursion after additions to db.objects.setup_fkey() [2020-07-30]
+    # ar_tran_alloc_det.tran_row_id is an fkey to ar_tran_alloc
+    # 'fkey'       : ['ar_tran_alloc_det', 'row_id', None, None, False, None],
     'sql'        : (
         "SELECT b.row_id FROM {company}.ar_tran_alloc_det b "
         "WHERE b.tran_type = 'ar_alloc' AND b.tran_row_id = a.row_id "

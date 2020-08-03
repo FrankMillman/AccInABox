@@ -1,5 +1,7 @@
 <form name="ar_chg_day_per" title="Ar chg day tots for period" before_start_form="
-  <<pyfunc name=`custom.arcust_funcs.setup_chg_day_per`/>>
+  <<pyfunc name=`custom.arcust_funcs.setup_tran_day_per`
+    args=`[['ar_chg', 'chg_tot', 'chg_tot']]`
+  />>
   ">
   <db_objects/>
   <mem_objects>
@@ -9,7 +11,7 @@
       <mem_col col_name="cl_date" data_type="DTE" short_descr="Closing date"
         long_descr="Closing date"/>
       <mem_col col_name="chg_tot" data_type="DEC" short_descr="Charges total"
-        long_descr="Charges total passed in as param" db_scale="2" scale_ptr="scale_var.curr_scale"/>
+        long_descr="Charges total" db_scale="2" scale_ptr="scale_var.curr_scale" dflt_val="0"/>
     </mem_obj>
     <mem_obj name="mem_totals" descr="In-memory table to store totals">
       <mem_col col_name="date" data_type="DTE" short_descr="Date"
@@ -22,7 +24,6 @@
   <input_params>
     <input_param name="op_date" type="data_attr" target="var.op_date" required="true"/>
     <input_param name="cl_date" type="data_attr" target="var.cl_date" required="true"/>
-    <input_param name="chg_tot" type="data_attr" target="var.chg_tot" required="true"/>
   </input_params>
   <output_params/>
   <frame main_object="mem_totals">

@@ -249,6 +249,44 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'dflt_loc_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Default location id',
+    'long_descr' : 'Default location row id - if specified, all locations will use this as default',
+    'col_head'   : 'Dflt loc',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : True,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_locations', 'row_id', 'dflt_location', 'location_id', False, 'locs'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'dflt_fun_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Default function id',
+    'long_descr' : 'Default function row id - if specified, all functions will use this as default',
+    'col_head'   : 'Dflt fun',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : True,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_functions', 'row_id', 'dflt_function', 'function_id', False, 'funs'],
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []
@@ -266,17 +304,17 @@ virt.append ({
         "END"
         ),
     })
-virt.append ({
-    'col_name'   : 'loc_root_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Row id of loc root element',
-    'long_descr' : 'Row id of root element for adm_locations',
-    'col_head'   : '',
-    'sql'        : (
-        "SELECT row_id FROM {company}.adm_locations "
-        "WHERE parent_id IS NULL AND deleted_id = 0"
-        ),
-    })
+# virt.append ({
+#     'col_name'   : 'loc_root_row_id',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Row id of loc root element',
+#     'long_descr' : 'Row id of root element for adm_locations',
+#     'col_head'   : '',
+#     'sql'        : (
+#         "SELECT row_id FROM {company}.adm_locations "
+#         "WHERE parent_id IS NULL AND deleted_id = 0"
+#         ),
+#     })
 virt.append ({
     'col_name'   : 'function_row_id',
     'data_type'  : 'INT',
@@ -291,17 +329,17 @@ virt.append ({
         "END"
         ),
     })
-virt.append ({
-    'col_name'   : 'fun_root_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Row id of fun root element',
-    'long_descr' : 'Row id of root element for adm_functions',
-    'col_head'   : '',
-    'sql'        : (
-        "SELECT row_id FROM {company}.adm_functions "
-        "WHERE parent_id IS NULL AND deleted_id = 0"
-        ),
-    })
+# virt.append ({
+#     'col_name'   : 'fun_root_row_id',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Row id of fun root element',
+#     'long_descr' : 'Row id of root element for adm_functions',
+#     'col_head'   : '',
+#     'sql'        : (
+#         "SELECT row_id FROM {company}.adm_functions "
+#         "WHERE parent_id IS NULL AND deleted_id = 0"
+#         ),
+#     })
 virt.append ({
     'col_name'   : 'gl_group_row_id',
     'data_type'  : 'INT',

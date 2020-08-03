@@ -151,6 +151,62 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', '_param.location_row_id', 'is_not', '$None', '']],
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{_param.location_row_id}',
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="_param.location_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.location_row_id"/>'
+          '</compare>'
+          '<compare src="_param.dflt_loc_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.dflt_loc_row_id"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : None,
+   'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', '_param.function_row_id', 'is_not', '$None', '']],
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{_param.function_row_id}',
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="_param.function_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.function_row_id"/>'
+          '</compare>'
+          '<compare src="_param.dflt_fun_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.dflt_fun_row_id"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : None,
+   'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
+    'choices'    : None,
+    })
 # cols.append ({
 #     'col_name'   : 'category',
 #     'data_type'  : 'TEXT',
@@ -182,61 +238,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'first_row',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'First row?',
-#     'long_descr' : 'If table is empty, this is the first row',
-#     'col_head'   : '',
-#     'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.gl_codes) "
-#                    "THEN 0 ELSE 1 END",
-#     })
-# virt.append ({
-#     'col_name'   : 'children',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Children',
-#     'long_descr' : 'Number of children',
-#     'col_head'   : '',
-#     'sql'        : "SELECT count(*) FROM {company}.gl_codes b "
-#                    "WHERE b.parent_id = a.row_id",
-#     })
-# virt.append ({
-#     'col_name'   : 'expandable',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Expandable?',
-#     'long_descr' : 'Is this node expandable?',
-#     'col_head'   : '',
-#     'dflt_val'   : 'true',
-#     'sql'        : "CASE WHEN a.code_type = 'code' THEN 0 ELSE 1 END",
-#     })
-# virt.append ({
-#     'col_name'   : 'level',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Level',
-#     'long_descr' : 'Level in hierarchy',
-#     'col_head'   : '',
-#     'sql'        : (
-#         "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
-#         "FROM {company}.gl_codes b WHERE b.parent_id IS NULL "
-#         "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
-#         "FROM {company}.gl_codes c, tree d WHERE d.row_id = c.parent_id) "
-#         "SELECT level FROM tree WHERE a.row_id = tree.row_id)"
-#         ),
-#     })
-# virt.append ({
-#     'col_name'   : 'parent_level',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Parent level',
-#     'long_descr' : 'Level of parent in hierarchy',
-#     'col_head'   : '',
-#     'sql'        : (
-#         "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
-#         "FROM {company}.adm_functions b WHERE b.parent_id IS NULL "
-#         "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
-#         "FROM {company}.adm_functions c, tree d WHERE d.row_id = c.parent_id) "
-#         "SELECT level FROM tree WHERE a.parent_id = tree.row_id)"
-#         ),
-#     })
 virt.append ({
     'col_name'   : 'ctrl_acc',
     'data_type'  : 'BOOL',

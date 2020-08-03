@@ -105,7 +105,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['gl_codes', 'row_id', None, None, False, None],
+    'fkey'       : ['gl_codes', 'row_id', 'gl_code', 'gl_code', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -124,7 +124,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['adm_locations', 'row_id', None, None, False, None],
+    'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -143,7 +143,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['adm_functions', 'row_id', None, None, False, None],
+    'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, None],
     'choices'    : None,
     })
 cols.append ({

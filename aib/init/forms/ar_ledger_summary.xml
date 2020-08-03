@@ -144,7 +144,6 @@
                     <<call_params>>
                       <<call_param name=`op_date` type=`data_attr` source=`mem_totals.op_date`/>>
                       <<call_param name=`cl_date` type=`data_attr` source=`mem_totals.cl_date`/>>
-                      <<call_param name=`inv_tot` type=`data_attr` source=`mem_totals.inv`/>>
                     <</call_params>>
                     <<return_params/>>
                     <<on_return>>
@@ -164,7 +163,6 @@
                     <<call_params>>
                       <<call_param name=`op_date` type=`data_attr` source=`mem_totals.op_date`/>>
                       <<call_param name=`cl_date` type=`data_attr` source=`mem_totals.cl_date`/>>
-                      <<call_param name=`chg_tot` type=`data_attr` source=`mem_totals.chg`/>>
                     <</call_params>>
                     <<return_params/>>
                     <<on_return>>
@@ -184,7 +182,6 @@
                     <<call_params>>
                       <<call_param name=`op_date` type=`data_attr` source=`mem_totals.op_date`/>>
                       <<call_param name=`cl_date` type=`data_attr` source=`mem_totals.cl_date`/>>
-                      <<call_param name=`rec_tot` type=`data_attr` source=`mem_totals.rec`/>>
                     <</call_params>>
                     <<return_params/>>
                     <<on_return>>
@@ -203,7 +200,6 @@
                     <<call_params>>
                       <<call_param name=`op_date` type=`data_attr` source=`mem_totals.op_date`/>>
                       <<call_param name=`cl_date` type=`data_attr` source=`mem_totals.cl_date`/>>
-                      <<call_param name=`disc_tot` type=`data_attr` source=`mem_totals.disc`/>>
                     <</call_params>>
                     <<return_params/>>
                     <<on_return>>

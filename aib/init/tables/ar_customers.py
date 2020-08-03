@@ -121,7 +121,7 @@ cols.append ({
     'col_head'   : 'Loc',
     'key_field'  : 'A',
     'calculated' : [
-        ['where', '',  '_ledger.use_locations', 'is', '$False', ''],
+        ['where', '', '_param.location_row_id', 'is_not', '$None', ''],
         ['or', '', '_ledger.common_location', 'is', '$True', ''],
         ],
     'allow_null' : False,
@@ -132,8 +132,8 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_ledger.use_locations" op="is" tgt="$False">'
-            '<fld_val name="_param.loc_root_row_id"/>'
+          '<compare src="_param.location_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.location_row_id"/>'
           '</compare>'
           '<compare src="_ledger.common_location" op="is" tgt="$True">'
             '<fld_val name="_ledger.location_row_id"/>'
@@ -151,13 +151,6 @@ cols.append ({
         '</case>'
         ),
     'col_checks' : [
-        [
-            'root_or_loc',
-            'Not a valid location code',
-            [
-                ['check', '', 'location_row_id>location_type', '!=', "'group'", ''],
-                ],
-            ],
         [
             'multi_loc',
             'Account with a different location exists',
@@ -179,7 +172,7 @@ cols.append ({
     'col_head'   : 'Fun',
     'key_field'  : 'A',
     'calculated' : [
-        ['where', '',  '_ledger.use_functions', 'is', '$False', ''],
+        ['where', '',  '_param.function_row_id', 'is_not', '$None', ''],
         ['or', '', '_ledger.common_function', 'is', '$True', ''],
         ],
     'allow_null' : False,
@@ -190,8 +183,8 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_ledger.use_functions" op="is" tgt="$False">'
-            '<fld_val name="_param.fun_root_row_id"/>'
+          '<compare src="_param.function_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.function_row_id"/>'
           '</compare>'
           '<compare src="_ledger.common_function" op="is" tgt="$True">'
             '<fld_val name="_ledger.function_row_id"/>'
@@ -209,13 +202,6 @@ cols.append ({
         '</case>'
         ),
     'col_checks' : [
-        [
-            'root_or_fun',
-            'Not a valid function code',
-            [
-                ['check', '', 'function_row_id>function_type', '!=', "'group'", ''],
-                ],
-            ],
         [
             'multi_fun',
             'Account with a different function exists',
@@ -465,9 +451,11 @@ virt.append ({
                 "(SELECT SUM(d.alloc_cust + d.discount_cust) "
                 "FROM {company}.ar_tran_alloc_det d "
                 "WHERE d.item_row_id = b.row_id), 0) AS balances "
-            "FROM {company}.ar_openitems b, {company}.ar_trans c "
-            "WHERE b.tran_type = c.tran_type  AND b.tran_row_id = c.tran_row_id "
-                "AND c.tran_date <= {bal_date_cust} "
+            # "FROM {company}.ar_openitems b, {company}.ar_trans c "
+            # "WHERE b.tran_type = c.tran_type  AND b.tran_row_id = c.tran_row_id "
+            #     "AND c.tran_date <= {bal_date_cust} "
+            "FROM {company}.ar_openitems b "
+            "WHERE b.tran_date <= {bal_date_cust} "
             ") AS temp_openitems "
         "WHERE temp_openitems.cust_row_id = a.row_id "
         )
@@ -486,9 +474,11 @@ virt.append ({
                 "(SELECT SUM(d.alloc_local + d.discount_local) "
                 "FROM {company}.ar_tran_alloc_det d "
                 "WHERE d.item_row_id = b.row_id), 0) AS balances "
-            "FROM {company}.ar_openitems b, {company}.ar_trans c "
-            "WHERE b.tran_type = c.tran_type  AND b.tran_row_id = c.tran_row_id "
-                "AND c.tran_date <= {bal_date_cust} "
+            # "FROM {company}.ar_openitems b, {company}.ar_trans c "
+            # "WHERE b.tran_type = c.tran_type  AND b.tran_row_id = c.tran_row_id "
+            #     "AND c.tran_date <= {bal_date_cust} "
+            "FROM {company}.ar_openitems b "
+            "WHERE b.tran_date <= {bal_date_cust} "
             ") AS temp_openitems "
         "WHERE temp_openitems.cust_row_id = a.row_id "
         )
@@ -653,14 +643,27 @@ virt.append ({
     'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
     'sql'        : (
-        "SELECT "
-          "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL2]\" "
+        # "SELECT "
+        #   "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL2]\" "
+        #     "FROM {company}.ar_cust_totals b "
+        #     "WHERE b.cust_row_id = a.row_id "
+        #     "AND b.tran_date < a.tran_start_date "
+        #     "AND b.deleted_id = 0 "
+        #     "ORDER BY b.tran_date DESC "
+        #     "LIMIT 1), 0)"
+
+        "SELECT COALESCE("
+            "(SELECT SUM(c.tran_tot_cust) FROM ( "
+            "SELECT b.tran_tot_cust, ROW_NUMBER() OVER (PARTITION BY "
+                "b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
+                "ORDER BY b.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals b "
-            "WHERE b.cust_row_id = a.row_id "
-            "AND b.tran_date < a.tran_start_date "
-            "AND b.deleted_id = 0 "
-            "ORDER BY b.tran_date DESC "
-            "LIMIT 1), 0)"
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date < {tran_start_date} "
+            "AND b.cust_row_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            "), 0)"
         )
     })
 virt.append ({
@@ -672,14 +675,27 @@ virt.append ({
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
     'sql'        : (
-        "SELECT "
-          "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL2]\" "
+        # "SELECT "
+        #   "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL2]\" "
+        #     "FROM {company}.ar_cust_totals b "
+        #     "WHERE b.cust_row_id = a.row_id "
+        #     "AND b.tran_date < a.tran_start_date "
+        #     "AND b.deleted_id = 0 "
+        #     "ORDER BY b.tran_date DESC "
+        #     "LIMIT 1), 0)"
+
+        "SELECT COALESCE("
+            "(SELECT SUM(c.tran_tot_local) FROM ( "
+            "SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
+                "b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
+                "ORDER BY b.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals b "
-            "WHERE b.cust_row_id = a.row_id "
-            "AND b.tran_date < a.tran_start_date "
-            "AND b.deleted_id = 0 "
-            "ORDER BY b.tran_date DESC "
-            "LIMIT 1), 0)"
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date < {tran_start_date}     "
+            "AND b.cust_row_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            "), 0)"
         )
     })
 virt.append ({
@@ -691,14 +707,27 @@ virt.append ({
     'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
     'sql'        : (
-        "SELECT "
-          "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL2]\" "
+        # "SELECT "
+        #   "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL2]\" "
+        #     "FROM {company}.ar_cust_totals b "
+        #     "WHERE b.cust_row_id = a.row_id "
+        #     "AND b.tran_date <= a.tran_end_date "
+        #     "AND b.deleted_id = 0 "
+        #     "ORDER BY b.tran_date DESC "
+        #     "LIMIT 1), 0)"
+
+        "SELECT COALESCE("
+            "(SELECT SUM(c.tran_tot_cust) FROM ( "
+            "SELECT b.tran_tot_cust, ROW_NUMBER() OVER (PARTITION BY "
+                "b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
+                "ORDER BY b.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals b "
-            "WHERE b.cust_row_id = a.row_id "
-            "AND b.tran_date <= a.tran_end_date "
-            "AND b.deleted_id = 0 "
-            "ORDER BY b.tran_date DESC "
-            "LIMIT 1), 0)"
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date <= {tran_end_date} "
+            "AND b.cust_row_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            "), 0)"
         )
     })
 virt.append ({
@@ -714,25 +743,9 @@ virt.append ({
           "COALESCE((SELECT SUM(b.amount_cust) AS \"x [REAL2]\" "
             "FROM {company}.ar_trans b "
             "WHERE b.cust_row_id = a.row_id "
-            "AND b.tran_date BETWEEN a.tran_start_date AND a.tran_end_date)"
+            "AND b.tran_date BETWEEN {tran_start_date} AND {tran_end_date})"
             ", 0)"
         )
-    })
-virt.append ({
-    'col_name'   : 'tran_start_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Tran start date',
-    'long_descr' : 'Tran start date',
-    'col_head'   : 'Start date',
-    'sql'        : "''",
-    })
-virt.append ({
-    'col_name'   : 'tran_end_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Tran end date',
-    'long_descr' : 'Tran end date',
-    'col_head'   : 'End date',
-    'sql'        : "''",
     })
 virt.append ({
     'col_name'   : 'balance_cus',
@@ -741,21 +754,20 @@ virt.append ({
     'long_descr' : 'Running balance - cust',
     'col_head'   : 'Balance cust',
     'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'currency_id>scale',
     'dflt_val'   : '0',
     'sql'        : (
-        """
-        (SELECT SUM(c.tran_tot_cust) FROM (
-            SELECT b.tran_tot_cust, ROW_NUMBER() OVER (PARTITION BY
-                b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id
-                ORDER BY b.tran_date DESC) row_num
-            FROM {company}.ar_cust_totals b
-            WHERE b.deleted_id = 0
-            AND b.cust_row_id = a.row_id
-            ) as c
-            WHERE c.row_num = 1
-            )
-        """
+        "(SELECT SUM(c.tran_tot_cust) FROM ( "
+            "SELECT b.tran_tot_cust, ROW_NUMBER() OVER (PARTITION BY "
+                "b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
+                "ORDER BY b.tran_date DESC) row_num "
+            "FROM {company}.ar_cust_totals b "
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date <= {bal_date_cust} "
+            "AND b.cust_row_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            ")"
         ),
     })
 virt.append ({
@@ -768,18 +780,17 @@ virt.append ({
     'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',
     'sql'        : (
-        """
-        (SELECT SUM(c.tran_tot_local) FROM (
-            SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY
-                b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id
-                ORDER BY b.tran_date DESC) row_num
-            FROM {company}.ar_cust_totals b
-            WHERE b.deleted_id = 0
-            AND b.cust_row_id = a.row_id
-            ) as c
-            WHERE c.row_num = 1
-            )
-        """
+        "(SELECT SUM(c.tran_tot_local) FROM ( "
+            "SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
+                "b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
+                "ORDER BY b.tran_date DESC) row_num "
+            "FROM {company}.ar_cust_totals b "
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date <= {bal_date_cust} "
+            "AND b.cust_row_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            ")"
         ),
     })
 
@@ -804,9 +815,9 @@ cursors.append({
         ['cust_id', 80, False, True, False, False, None, None, None, None],
         ['party_row_id>display_name', 150, True, True, False, False, None, None, None, None],
         ['currency_id>symbol', 40, False, True, False, False, None, None, None, None],
-        ['balance_cust', 100, False, True, False, False, None, None, None, None],
+        ['balance_cus', 100, False, True, False, False, None, None, None, None],
         # ['tran_bal_cust', 100, False, False, False, False, None, None, None, None],
-        ['balance_local', 100, False, True, False, False, None, None, None, None],
+        ['balance_loc', 100, False, True, False, False, None, None, None, None],
         # ['tran_bal_local', 100, False, False, False, False, None, None, None, None],
         ],
     'filter': [],

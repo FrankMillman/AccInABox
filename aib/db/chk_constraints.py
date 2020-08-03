@@ -329,6 +329,7 @@ async def nexist(db_obj, fld, src_val, tgt_val):
 
 async def parent_id(db_obj, fld, src_val):
     # called as col_check from various 'parent_id' fields
+    # the col_check is set up dynamically in db.objects.DbTable() by parsing tree_params
     if await db_obj.getval('first_row'):
         if src_val is not None:
             raise AibError(head=f'{fld.table_name}.{fld.col_name}',
@@ -342,7 +343,7 @@ async def parent_id(db_obj, fld, src_val):
     group, col_names, levels = tree_params
     assert fld.col_name == col_names[2]
 
-    if not levels:  # no levels defined
+    if levels is None:  # no levels defined
         return True  # no validation required
 
     type_colname, level_types, sublevel_type = levels
@@ -358,10 +359,17 @@ async def parent_id(db_obj, fld, src_val):
         else:
             type_one_level_up = level_code
     else:  # not a defined level - check if sub-level ok
+        # sublevel_type indicates whether non-fixed sub-levels are allowed
+        # if it is None, they are not allowed
+        # otherwise it must be a tuple of (level_type, level_descr), and
+        #   all sub-levels below the bottom 'fixed' level will have this type
         if sublevel_type is None:
             raise AibError(head=f'{fld.table_name}.{fld.col_name}',
                 body=f'Levels lower than {type_one_level_up} not allowed')
-        assert this_type == sublevel_type
+        sublevel_type, sublevel_descr = sublevel_type
+        if this_type != sublevel_type:
+            raise AibError(head=f'{fld.table_name}.{fld.col_name}',
+                body=f'Type must be {sublevel_type}')
 
         # # are these checks necessary?
         # if parent_type == type_one_level_up:
@@ -376,9 +384,8 @@ async def parent_id(db_obj, fld, src_val):
 
 async def group_id(db_obj, fld, src_val):
     # called as col_check from various 'group_id' fields
-    tree_params = db_obj.db_table.tree_params
-    group, col_names, levels = tree_params
-    assert fld.col_name == group
+    # the col_check is set up dynamically in db.objects.setup_fkey() by parsing tree_params
+
     group_table_name = fld.col_defn.fkey[0]
 
     group_table = await db.objects.get_db_table(db_obj.context, db_obj.company, group_table_name)
@@ -391,11 +398,14 @@ async def group_id(db_obj, fld, src_val):
     type_colname, level_types, sublevel_type = levels
     valid_types = [level_types[-1][0]]  # 'code' portion of bottom level
     if sublevel_type is not None:
-        valid_types.append(sublevel_type)
+        # not elegant! - if sublevels allowed, parent type can be
+        #   either bottom fixed level or any sub-level
+        # wait for live situation to occur, then investigate thoroughly [2020-07-30]
+        valid_types.append(sublevel_type[0])
     this_type = await fld.foreign_key['tgt_field'].db_obj.getval(type_colname)
     if this_type not in valid_types:
         raise AibError(head=f'{fld.table_name}.{fld.col_name}',
-            body=f"Group type must be '{', '.join(valid_types)}'")
+            body=f"Group {type_colname} must be {' or '.join(valid_types)}")
     return True
 
 CHKS = {

@@ -1577,12 +1577,11 @@ class DbObject:
             src_val = int(src_col)
         elif src_col[0] == '-' and src_col[1:].isdigit():
             src_val = int(src_col)
-        # pyfunc not used at present, but retain for future use [2019-01-22]
-        # elif src_col.startswith('pyfunc:'):
-        #     func_name = src_col.split(':')[1]
-        #     module_name, func_name = func_name.rsplit('.', 1)
-        #     module = importlib.import_module(module_name)
-        #     src_val = await getattr(module, func_name)(self, tgt_obj)
+        elif src_col.startswith('pyfunc:'):
+            func_name = src_col.split(':')[1]
+            module_name, func_name = func_name.rsplit('.', 1)
+            module = importlib.import_module(module_name)
+            src_val = await getattr(module, func_name)(self, tgt_obj)
         elif '.' in src_col:
             src_tbl, src_col = src_col.split('.')
             if src_tbl == '_ledger':
@@ -2698,31 +2697,28 @@ class DbTable:
 
         if self.tree_params is not None:
             group, col_names, levels = self.tree_params
-            if levels:
+            if levels is not None:
                 type_colname, level_types, sublevel_type = levels
+                # if fixed_levels are defined, these are the parameters -
+                #   each level will have a 'type' code - a 'type' column must exist to store the code
+                #   a list of tuples, where each element represents a level - [0] = 'root'
+                #     each tuple consists of (code, descr)
+                #   sublevel_type - if non-fixed levels are allowed below the bottom fixed level,
+                #     this will contain a tuple of (code, descr) - all sublevels will share this code
+                #   if they are not allowed, sublevel_type must be None
+
+                # set up 'choices' on the 'type' column with all valid types
                 type_col = self.col_dict[type_colname]
                 type_col.choices = OD(level_types)
+                if sublevel_type is not None:  # must be a tuple of (code, descr)
+                    type_col.choices.update([(sublevel_type)])
 
+                # set up 'col_checks' on the 'parent_id' column to ensure level is valid
+                # see db.chk_constraints.parent_id() for validation
                 parent_col = self.col_dict[col_names[2]]
                 parent_col.col_checks.append(
-                    [
-                        'check_parent',
-                        'Invalid parent id',
-                        [
-                            ['check', '', '$value', 'pyfunc', 'parent_id', ''],
-                            ],
-                        ]
-                    )
-            if group:
-                group_col = self.col_dict[group]
-                group_col.col_checks.append(
-                    [
-                        'check_group',
-                        'Invalid group id',
-                        [
-                            ['check', '', '$value', 'pyfunc', 'group_id', ''],
-                            ],
-                        ]
+                    ['check_parent', 'Invalid parent id',
+                        [['check', '', '$value', 'pyfunc', 'parent_id', '']]]
                     )
 
         self.sub_types = OD()
@@ -3483,6 +3479,21 @@ async def setup_fkey(db_table, context, company, col):
             col.fkey[FK_TARGET_COLUMN],
             col.col_name
             ))
+
+    # if fkey points to table with tree_params, and tree_params defines fixed levels,
+    #   validate that fkey references a leaf node in the table
+    # see db.chk_constraints.group_id() for validation
+    tgt_tablename = col.fkey[FK_TARGET_TABLE]
+    if isinstance(tgt_tablename, str):  # not implemented for multi-fkeys
+        if tgt_tablename != db_table.table_name:  # if parent_id, will recurse!
+            tgt_table = await get_db_table(context, company, tgt_tablename)
+            if tgt_table.tree_params is not None:
+                group, col_names, levels = tgt_table.tree_params
+                if levels is not None:  # fixed levels defined
+                    col.col_checks.append(['check_group', 'Invalid group id', [
+                            ['check', '', '$value', 'is', '$None', ''],
+                            ['or', '', '$value', 'pyfunc', 'group_id', ''],
+                            ]])
 
     if col.fkey[FK_ALT_SOURCE] is None:
         return

@@ -191,19 +191,59 @@ cursors = []
 actions = []
 actions.append([
     'upd_on_post', [
+        # [
+        #     'pch_tax_totals',  # table name
+        #     None,  # condition
+        #     False,  # split source?
+        #     [  # key fields
+        #         ['tax_code_id', 'tax_code_id'],  # tgt_col, src_col
+        #         ['tran_date', 'ipch_row_id>tran_det_row_id>tran_row_id>tran_date'],
+        #         ],
+        #     [  # aggregation
+        #         ['ipch_inv_net_day', '+', 'ipch_row_id>net_local'],
+        #         ['ipch_inv_tax_day', '+', 'tax_local'],
+        #         ['ipch_inv_net_tot', '+', 'ipch_row_id>net_local'],
+        #         ['ipch_inv_tax_tot', '+', 'tax_local'],
+        #         ],
+        #     [],  # on post
+        #     [],  # on unpost
+        #     ],
         [
             'pch_tax_totals',  # table name
-            None,  # condition
+            [],  # condition
             False,  # split source?
             [  # key fields
                 ['tax_code_id', 'tax_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'ipch_row_id>wh_prod_row_id>ledger_row_id>location_row_id'],
+                ['function_row_id', 'ipch_row_id>wh_prod_row_id>ledger_row_id>function_row_id'],
+                ['source_code', "'ipch_inv'"],
                 ['tran_date', 'ipch_row_id>tran_det_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['ipch_inv_net_day', '+', 'ipch_row_id>net_local'],
-                ['ipch_inv_tax_day', '+', 'tax_local'],
-                ['ipch_inv_net_tot', '+', 'ipch_row_id>net_local'],
-                ['ipch_inv_tax_tot', '+', 'tax_local'],
+                ['pchs_day', '+', 'ipch_row_id>net_local'],  # tgt_col, op, src_col
+                ['pchs_tot', '+', 'ipch_row_id>net_local'],
+                ['tax_day', '+', 'tax_local'],
+                ['tax_tot', '+', 'tax_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'tax_code_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'ipch_row_id>wh_prod_row_id>ledger_row_id>location_row_id'],
+                ['function_row_id', 'ipch_row_id>wh_prod_row_id>ledger_row_id>function_row_id'],
+                ['source_code', "'ipch_inv'"],
+                ['tran_date', 'ipch_row_id>tran_det_row_id>tran_row_id>tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'tax_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'tax_local'],
                 ],
             [],  # on post
             [],  # on unpost

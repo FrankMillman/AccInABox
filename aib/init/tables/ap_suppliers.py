@@ -121,7 +121,7 @@ cols.append ({
     'col_head'   : 'Loc',
     'key_field'  : 'A',
     'calculated' : [
-        ['where', '',  '_ledger.use_locations', 'is', '$False', ''],
+        ['where', '',  '_param.location_row_id', 'is_not', '$None', ''],
         ['or', '', '_ledger.common_location', 'is', '$True', ''],
         ],
     'allow_null' : False,
@@ -132,8 +132,8 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_ledger.use_locations" op="is" tgt="$False">'
-            '<fld_val name="_param.loc_root_row_id"/>'
+          '<compare src="_param.location_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.location_row_id"/>'
           '</compare>'
           '<compare src="_ledger.common_location" op="is" tgt="$True">'
             '<fld_val name="_ledger.location_row_id"/>'
@@ -151,13 +151,6 @@ cols.append ({
         '</case>'
         ),
     'col_checks' : [
-        [
-            'root_or_loc',
-            'Not a valid location code',
-            [
-                ['check', '', 'location_row_id>location_type', '!=', "'group'", ''],
-                ],
-            ],
         [
             'multi_loc',
             'Account with a different location exists',
@@ -179,7 +172,7 @@ cols.append ({
     'col_head'   : 'Fun',
     'key_field'  : 'A',
     'calculated' : [
-        ['where', '',  '_ledger.use_functions', 'is', '$False', ''],
+        ['where', '',  '_param.function_row_id', 'is_not', '$None', ''],
         ['or', '', '_ledger.common_function', 'is', '$True', ''],
         ],
     'allow_null' : False,
@@ -190,8 +183,8 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_ledger.use_functions" op="is" tgt="$False">'
-            '<fld_val name="_param.fun_root_row_id"/>'
+          '<compare src="_param.function_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.function_row_id"/>'
           '</compare>'
           '<compare src="_ledger.common_function" op="is" tgt="$True">'
             '<fld_val name="_ledger.function_row_id"/>'
@@ -209,13 +202,6 @@ cols.append ({
         '</case>'
         ),
     'col_checks' : [
-        [
-            'root_or_fun',
-            'Not a valid function code',
-            [
-                ['check', '', 'function_row_id>function_type', '!=', "'group'", ''],
-                ],
-            ],
         [
             'multi_fun',
             'Account with a different function exists',

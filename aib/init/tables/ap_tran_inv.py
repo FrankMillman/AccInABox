@@ -158,12 +158,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : 'Invoice',
     'dflt_rule'  : None,
-    'col_checks' : [
-        ['bf_check', 'Not a b/f transaction', [
-            ['check', '', '$value', '!=', "'_uex_bf'", ''],
-            ['or', '', '_ctx.bf', 'is', '$True', ''],
-            ]],
-        ],
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -562,9 +557,7 @@ actions.append([
     'upd_on_post', [
         [
             'ap_openitems',  # table name
-            [  # condition
-                ['where', '', 'text', '!=', "'_uex_bf'", ''],
-                ],
+            [],  # condition
             True,  # split source?
 
             'custom.aptrans_funcs.setup_openitems',  # function to populate table
@@ -574,7 +567,7 @@ actions.append([
                 ['tran_row_id', 'row_id'],
                 ],
 
-            ['item_type', 'due_date', 'amount_supp', 'amount_local'],  # fields to be updated
+            ['split_no', 'item_type', 'due_date', 'amount_supp', 'amount_local'],  # fields to be updated
 
             [],  # return values
 
@@ -586,9 +579,7 @@ actions.append([
 
         [
             'ap_totals',  # table name
-            [  # condition
-                ['where', '', 'text', '!=', "'_uex_bf'", ''],
-                ],
+            [],  # condition
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'supp_row_id>ledger_row_id'],  # tgt_col, src_col
@@ -607,8 +598,7 @@ actions.append([
         [
             'ap_totals',  # table name
             [  # condition
-                ['where', '', 'text', '!=', "'_uex_bf'", ''],
-                ['and', '', 'inv_tax_local', '!=', '0', ''],
+                ['where', '', 'inv_tax_local', '!=', '0', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -627,9 +617,7 @@ actions.append([
             ],
         [
             'ap_supp_totals',  # table name
-            [  # condition
-                ['where', '', 'text', '!=', "'_uex_bf'", ''],
-                ],
+            [],  # condition
             False,  # split source?
             [  # key fields
                 ['supp_row_id', 'supp_row_id'],  # tgt_col, src_col
@@ -650,8 +638,7 @@ actions.append([
         [
             'ap_supp_totals',  # table name
             [  # condition
-                ['where', '', 'text', '!=', "'_uex_bf'", ''],
-                ['and', '', 'inv_tax_local', '!=', '0', ''],
+                ['where', '', 'inv_tax_local', '!=', '0', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -674,7 +661,6 @@ actions.append([
             'gl_totals',  # table name
             [  # condition
                 ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ['and', '', 'text', '!=', "'_uex_bf'", ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -695,7 +681,6 @@ actions.append([
             'gl_totals',  # table name
             [  # condition
                 ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ['and', '', 'text', '!=', "'_uex_bf'", ''],
                 ['and', '', 'inv_tax_local', '!=', '0', ''],
                 ],
             False,  # split source?

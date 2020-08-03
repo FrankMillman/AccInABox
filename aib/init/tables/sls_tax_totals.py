@@ -2,18 +2,30 @@
 table = {
     'table_name'    : 'sls_tax_totals',
     'module_id'     : 'sls',
-    'short_descr'   : 'Sls tax totals',
-    'long_descr'    : 'Sls tax totals',
+    'short_descr'   : 'Sales tax totals',
+    'long_descr'    : 'Sales tax totals',
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,
     'tree_params'   : None,
     'roll_params'   : [
-        ['tran_date'],  # key field to roll on
-        ['isls_inv_net_tot', 'isls_inv_tax_tot', 'isls_crn_net_tot', 'isls_crn_tax_tot',
-            'nsls_inv_net_tot', 'nsls_inv_tax_tot', 'nsls_crn_net_tot', 'nsls_crn_tax_tot']  # roll flds
+        ['tran_date'],  # key fields to roll on
+        ['sales_tot', 'tax_tot']  # fields to roll
         ],
-    'indexes'       : None,
+    'indexes'       : [
+        ['slstax_tots_cover', [
+            ['tax_code_id', False],
+            ['location_row_id', False],
+            ['function_row_id', False],
+            ['source_code_id', False],
+            ['tran_date', True],
+            ['sales_day', False],
+            ['sales_tot', False],
+            ['tax_day', False],
+            ['tax_tot', False],
+            ],
+            None, False],
+        ],
     'ledger_col'    : None,
     'defn_company'  : None,
     'data_company'  : None,
@@ -99,6 +111,63 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'source_code_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Source code id',
+    'long_descr' : 'Source code row id',
+    'col_head'   : 'Code id',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
     'short_descr': 'Date',
@@ -118,11 +187,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'isls_inv_net_day',
+    'col_name'   : 'sales_day',
     'data_type'  : 'DEC',
-    'short_descr': 'Isls inv net day',
-    'long_descr' : 'Isls inv net daily total',
-    'col_head'   : 'Isls inv net day',
+    'short_descr': 'Sales daily total',
+    'long_descr' : 'Sales daily total',
+    'col_head'   : 'Sales day',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -137,11 +206,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'isls_inv_tax_day',
+    'col_name'   : 'sales_tot',
     'data_type'  : 'DEC',
-    'short_descr': 'Isls inv tax day',
-    'long_descr' : 'Isls inv tax daily total',
-    'col_head'   : 'Isls inv net day',
+    'short_descr': 'Sales accumulated total',
+    'long_descr' : 'Sales accumulated total',
+    'col_head'   : 'Sales tot',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -156,507 +225,47 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'isls_crn_net_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Isls crn net day',
-    'long_descr' : 'Isls crn net daily total',
-    'col_head'   : 'Isls crn net day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'isls_crn_tax_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Isls crn tax day',
-    'long_descr' : 'Isls crn tax daily total',
-    'col_head'   : 'Isls crn net day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'nsls_inv_net_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Nsls inv net day',
-    'long_descr' : 'Nsls inv net daily total',
-    'col_head'   : 'Nsls inv net day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'nsls_inv_tax_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Nsls inv tax day',
-    'long_descr' : 'Nsls inv tax daily total',
-    'col_head'   : 'Nsls inv net day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'nsls_crn_net_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Nsls crn net day',
-    'long_descr' : 'Nsls crn net daily total',
-    'col_head'   : 'Nsls crn net day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'nsls_crn_tax_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Nsls crn tax day',
-    'long_descr' : 'Nsls crn tax daily total',
-    'col_head'   : 'Nsls crn net day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'isls_inv_net_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Isls inv net tot',
-    'long_descr' : 'Isls inv net running total',
-    'col_head'   : 'Isls inv net tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'isls_inv_tax_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Isls inv tax tot',
-    'long_descr' : 'Isls inv tax running total',
-    'col_head'   : 'Isls inv net tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'isls_crn_net_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Isls crn net tot',
-    'long_descr' : 'Isls crn net running total',
-    'col_head'   : 'Isls crn net tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'isls_crn_tax_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Isls crn tax tot',
-    'long_descr' : 'Isls crn tax running total',
-    'col_head'   : 'Isls crn net tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'nsls_inv_net_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Nsls inv net tot',
-    'long_descr' : 'Nsls inv net running total',
-    'col_head'   : 'Nsls inv net tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'nsls_inv_tax_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Nsls inv tax tot',
-    'long_descr' : 'Nsls inv tax running total',
-    'col_head'   : 'Nsls inv net tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'nsls_crn_net_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Nsls crn net tot',
-    'long_descr' : 'Nsls crn net running total',
-    'col_head'   : 'Nsls crn net tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'nsls_crn_tax_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Nsls crn tax tot',
-    'long_descr' : 'Nsls crn tax running total',
-    'col_head'   : 'Nsls crn net tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-    
-# virtual column definitions
-virt = []
-virt.append ({
-    'col_name'   : 'net_inv_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Daily inv net',
-    'long_descr' : 'Daily inv net',
-    'col_head'   : 'Net inv day local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="isls_inv_net_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="nsls_inv_net_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.isls_inv_net_day + a.nsls_inv_net_day",
-    })
-virt.append ({
-    'col_name'   : 'tax_inv_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Daily inv tax',
-    'long_descr' : 'Daily inv tax',
-    'col_head'   : 'Tax inv day local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<fld_val name="isls_inv_tax_day"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_inv_tax_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.isls_inv_tax_day + a.nsls_inv_tax_day",
-    })
-virt.append ({
-    'col_name'   : 'net_crn_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Daily crn net',
-    'long_descr' : 'Daily crn net',
-    'col_head'   : 'Net crn day local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<fld_val name="isls_crn_net_day"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_crn_net_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.isls_crn_net_day + a.nsls_crn_net_day",
-    })
-virt.append ({
-    'col_name'   : 'tax_crn_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Daily crn tax',
-    'long_descr' : 'Daily crn tax',
-    'col_head'   : 'Tax crn day local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<fld_val name="isls_crn_tax_day"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_crn_tax_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.isls_crn_tax_day + a.nsls_crn_tax_day",
-    })
-virt.append ({
-    'col_name'   : 'net_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Daily net',
-    'long_descr' : 'Daily net',
-    'col_head'   : 'Net day local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<fld_val name="isls_inv_net_day"/>'
-            '<op type="+"/>'
-            '<fld_val name="isls_crn_net_day"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_inv_net_day"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_crn_net_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.isls_inv_net_day + a.isls_crn_net_day + a.nsls_inv_net_day + a.nsls_crn_net_day",
-    })
-virt.append ({
     'col_name'   : 'tax_day',
     'data_type'  : 'DEC',
-    'short_descr': 'Daily tax',
-    'long_descr' : 'Daily tax',
-    'col_head'   : 'Tax day local',
+    'short_descr': 'Tax daily total',
+    'long_descr' : 'Sales tax daily total',
+    'col_head'   : 'Tax day',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<fld_val name="isls_inv_tax_day"/>'
-            '<op type="+"/>'
-            '<fld_val name="isls_crn_tax_day"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_inv_tax_day"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_crn_tax_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.isls_inv_tax_day + a.isls_crn_tax_day + a.nsls_inv_tax_day + a.nsls_crn_tax_day",
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
     })
-virt.append ({
-    'col_name'   : 'net_inv_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total inv net',
-    'long_descr' : 'Total inv net',
-    'col_head'   : 'Net inv tot local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="isls_inv_net_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="nsls_inv_net_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.isls_inv_net_tot + a.nsls_inv_net_tot",
-    })
-virt.append ({
-    'col_name'   : 'tax_inv_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total inv tax',
-    'long_descr' : 'Total inv tax',
-    'col_head'   : 'Tax inv tot local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<fld_val name="isls_inv_tax_tot"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_inv_tax_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.isls_inv_tax_tot + a.nsls_inv_tax_tot",
-    })
-virt.append ({
-    'col_name'   : 'net_crn_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total crn net',
-    'long_descr' : 'Total crn net',
-    'col_head'   : 'Net crn tot local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<fld_val name="isls_crn_net_tot"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_crn_net_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.isls_crn_net_tot + a.nsls_crn_net_tot",
-    })
-virt.append ({
-    'col_name'   : 'tax_crn_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total crn tax',
-    'long_descr' : 'Total crn tax',
-    'col_head'   : 'Tax crn tot local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<fld_val name="isls_crn_tax_tot"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_crn_tax_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.isls_crn_tax_tot + a.nsls_crn_tax_tot",
-    })
-virt.append ({
-    'col_name'   : 'net_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total net',
-    'long_descr' : 'Total net',
-    'col_head'   : 'Net tot',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<fld_val name="isls_inv_net_tot"/>'
-            '<op type="+"/>'
-            '<fld_val name="isls_crn_net_tot"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_inv_net_tot"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_crn_net_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.isls_inv_net_tot + a.isls_crn_net_tot + a.nsls_inv_net_tot + a.nsls_crn_net_tot",
-    })
-virt.append ({
+cols.append ({
     'col_name'   : 'tax_tot',
     'data_type'  : 'DEC',
-    'short_descr': 'Total tax',
-    'long_descr' : 'Total tax',
+    'short_descr': 'Tax accumulated total',
+    'long_descr' : 'Sales tax accumulated total',
     'col_head'   : 'Tax tot',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<fld_val name="isls_inv_tax_tot"/>'
-            '<op type="+"/>'
-            '<fld_val name="isls_crn_tax_tot"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_inv_tax_tot"/>'
-            '<op type="+"/>'
-            '<fld_val name="nsls_crn_tax_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.isls_inv_tax_tot + a.isls_crn_tax_tot + a.nsls_inv_tax_tot + a.nsls_crn_tax_tot",
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
     })
-                    
+
+# virtual column definitions
+virt = []
+
 # cursor definitions
 cursors = []
 

@@ -140,6 +140,62 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', '_param.location_row_id', 'is_not', '$None', '']],
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{_param.location_row_id}',
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="_param.location_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.location_row_id"/>'
+          '</compare>'
+          '<compare src="_param.dflt_loc_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.dflt_loc_row_id"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', '_param.function_row_id', 'is_not', '$None', '']],
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{_param.function_row_id}',
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="_param.function_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.function_row_id"/>'
+          '</compare>'
+          '<compare src="_param.dflt_fun_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.dflt_fun_row_id"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
     'short_descr': 'Currency id',

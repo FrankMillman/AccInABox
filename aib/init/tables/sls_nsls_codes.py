@@ -168,7 +168,6 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    # 'col_checks' : None,
     'col_checks' : [
         [
             'gl_code',
@@ -199,7 +198,6 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '0',
     'dflt_rule'  : None,
-    # 'col_checks' : None,
     'col_checks' : [
         [
             'denied',
@@ -255,236 +253,102 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'use_locations',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Use location id for this code?',
-    'long_descr' : 'Use location id for this code? If not, use location root',
-    'col_head'   : 'Use location?',
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
     'key_field'  : 'N',
-    'calculated' : False,
+    'calculated' : [['where', '', '_param.location_row_id', 'is_not', '$None', '']],
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
-    'dflt_rule'  : None,
+    'dflt_val'   : '{_param.location_row_id}',
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="_param.location_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.location_row_id"/>'
+          '</compare>'
+          '<compare src="_param.dflt_loc_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.dflt_loc_row_id"/>'
+          '</compare>'
+        '</case>'
+        ),
     'col_checks' : None,
-    'fkey'       : None,
+   'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
     'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'common_location',
     'data_type'  : 'BOOL',
-    'short_descr': 'Use common loc for this code?',
-    'long_descr' : 'Use common location for this code?',
+    'short_descr': 'Common loc for all sales?',
+    'long_descr' : 'Use common location for all sales?',
     'col_head'   : 'Common location?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'calculated' : [['where', '', '_param.location_row_id', 'is_not', '$None', '']],
     'allow_null' : False,
     'allow_amend': True,  # if change from False to True, update existing data
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
+    'dflt_val'   : 'true',
     'dflt_rule'  : None,
     'col_checks' : None,
-    'col_checks' : [
-        [
-            'use_location',
-            'Location code not required',
-            [
-                ['check', '', 'use_locations', 'is', '$True', ''],
-                ['or', '', '$value', 'is', '$False', ''],
-                ],
-            ],
-        ],
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'location_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Common location row id',
-    'long_descr' : 'Common location row id - this code will always use this location',
-    'col_head'   : 'Common',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : True,
-    'allow_amend': True,  # if changed, update existing data
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : [
-        [
-            'common_loc',
-            'Location code required if common location specified',
-            [
-                ['check', '(', 'common_location', 'is', '$False', ''],
-                ['and', '', '$value', 'is', '$None', ')'],
-                ['or', '(', 'common_location', 'is', '$True', ''],
-                ['and', '', '$value', 'is_not', '$None', ''],
-                ['and', '', 'location_row_id>location_type', '!=', "'root'", ')'],
-                ],
-            ],
-        ],
-   'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'use_functions',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Use function id for this code?',
-    'long_descr' : 'Use function id for this code? If not, use function root',
-    'col_head'   : 'Use function?',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : 'false',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'common_function',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Use common fun for this code?',
-    'long_descr' : 'Use common function for this code?',
-    'col_head'   : 'Common function?',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,  # if change from False to True, update existing data
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : 'false',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'col_checks' : [
-        [
-            'use_function',
-            'Function code not required',
-            [
-                ['check', '', 'use_functions', 'is', '$True', ''],
-                ['or', '', '$value', 'is', '$False', ''],
-                ],
-            ],
-        ],
     'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'function_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Common function row id',
-    'long_descr' : 'Common function row id - this code will always use this function',
-    'col_head'   : 'Common',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
     'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : True,
-    'allow_amend': True,  # if changed, update existing data
+    'calculated' : [['where', '', '_param.function_row_id', 'is_not', '$None', '']],
+    'allow_null' : False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : [
-        [
-            'common_fun',
-            'Function code required if common function specified',
-            [
-                ['check', '(', 'common_function', 'is', '$False', ''],
-                ['and', '', '$value', 'is', '$None', ')'],
-                ['or', '(', 'common_function', 'is', '$True', ''],
-                ['and', '', '$value', 'is_not', '$None', ''],
-                ['and', '', 'function_row_id>function_type', '!=', "'root'", ')'],
-                ],
-            ],
-        ],
+    'dflt_val'   : '{_param.function_row_id}',
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="_param.function_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.function_row_id"/>'
+          '</compare>'
+          '<compare src="_param.dflt_fun_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.dflt_fun_row_id"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : None,
    'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'common_function',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Common fun for all sales?',
+    'long_descr' : 'Use common function for all sales?',
+    'col_head'   : 'Common function?',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', '_param.function_row_id', 'is_not', '$None', '']],
+    'allow_null' : False,
+    'allow_amend': True,  # if change from False to True, update existing data
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'true',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
     'choices'    : None,
     })
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'sls_uea_bf',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net sls unearned - b/f bal',
-    'long_descr' : 'Net sales unearned - b/fwd balance at specified date',
-    'col_head'   : 'Net unearned b/f',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'sql'        : (
-        "COALESCE((SELECT `b.{company}.sls_nsls_totals.sls_uea_tot` "
-        "FROM {company}.sls_nsls_totals b "
-        "WHERE b.nsls_code_id = a.row_id AND b.tran_date < {op_date} "
-        "ORDER BY b.tran_date DESC LIMIT 1), 0)"
-        )
-    })
-virt.append ({
-    'col_name'   : 'sls_uea_cf',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net sls unearned - c/f bal',
-    'long_descr' : 'Net sales unearned - c/fwd balance at specified date',
-    'col_head'   : 'Net unearned c/f',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'sql'        : (
-        "COALESCE((SELECT `b.{company}.sls_nsls_totals.sls_uea_tot` "
-        "FROM {company}.sls_nsls_totals b "
-        "WHERE b.nsls_code_id = a.row_id AND b.tran_date <= {cl_date} "
-        "ORDER BY b.tran_date DESC LIMIT 1), 0)"
-        )
-    })
-virt.append ({
-    'col_name'   : 'sls_net_per',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net sales for period',
-    'long_descr' : 'Net sales for period between specified dates',
-    'col_head'   : 'Net sales per',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'sql'        : (
-        "COALESCE((SELECT `b.{company}.sls_nsls_totals.sls_net_tot` "
-        "FROM {company}.sls_nsls_totals b "
-        "WHERE b.nsls_code_id = a.row_id AND b.tran_date <= {cl_date} "
-        "ORDER BY b.tran_date DESC LIMIT 1), 0) "
-        "- "
-        "COALESCE((SELECT `b.{company}.sls_nsls_totals.sls_net_tot` "
-        "FROM {company}.sls_nsls_totals b "
-        "WHERE b.nsls_code_id = a.row_id AND b.tran_date < {op_date} "
-        "ORDER BY b.tran_date DESC LIMIT 1), 0)"
-        )
-    })
-virt.append ({
-    'col_name'   : 'sls_ear_per',
-    'data_type'  : 'DEC',
-    'short_descr': 'Sales earned for period',
-    'long_descr' : 'Sales earned for period between specified dates',
-    'col_head'   : 'Sales earned per',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'sql'        : (
-        "COALESCE((SELECT `b.{company}.sls_nsls_totals.sls_nea_tot` "
-        "FROM {company}.sls_nsls_totals b "
-        "WHERE b.nsls_code_id = a.row_id AND b.tran_date <= {cl_date} "
-        "ORDER BY b.tran_date DESC LIMIT 1), 0) "
-        "- "
-        "COALESCE((SELECT `b.{company}.sls_nsls_totals.sls_nea_tot` "
-        "FROM {company}.sls_nsls_totals b "
-        "WHERE b.nsls_code_id = a.row_id AND b.tran_date < {op_date} "
-        "ORDER BY b.tran_date DESC LIMIT 1), 0)"
-        )
-    })
 
 # cursor definitions
 cursors = []
@@ -494,7 +358,6 @@ cursors.append({
     'columns': [
         ['nsls_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],
-        # ['code_type', 60, False, False, False, False, None, None, None, None],
         ],
     'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],
@@ -506,9 +369,7 @@ cursors.append({
         ['nsls_code', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],
         ],
-    'filter': [
-        # ['where', '', 'code_type', '=', "'code'", ''],
-        ],
+    'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],
     'formview_name': 'setup_nsls_codes',
     })

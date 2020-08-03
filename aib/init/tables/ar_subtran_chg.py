@@ -446,7 +446,8 @@ actions.append([
             [],  # aggregation
             [  # on post
                 ['item_type', '=', "'chg'"],  # tgt_col, op, src_col
-                ['due_date', '=', 'tran_date'],
+                # ['due_date', '=', 'tran_date'],
+                ['due_date', '=', 'pyfunc:custom.arcust_funcs.get_due_date'],
                 ['cust_row_id', '=', 'cust_row_id'],
                 ['tran_date', '=', 'tran_date'],
                 ['amount_cust', '=', 'chg_cust'],

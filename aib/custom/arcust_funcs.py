@@ -1,8 +1,9 @@
 from operator import attrgetter
 from itertools import groupby
 from bisect import bisect_left
-from datetime import timedelta as td
+from datetime import date as dt, timedelta as td
 from collections import OrderedDict as OD
+from json import loads
 
 import db.objects
 import db.cache
@@ -58,6 +59,20 @@ async def after_setup(caller, xml):
     #     total, = await cur.__anext__()
     # await var.setval('total_sales', total)
 
+async def get_due_date(src_obj, tgt_obj):
+    # called from ar_subtran_chg.upd_on_post
+    tran_date = await src_obj.getval('tran_date')
+    due_rule = [1, 30, 'd']  # default to '30 days'
+    instalments, terms, term_type = due_rule
+    if instalments == 1:
+        if term_type == 'd':  # days
+            due_date = tran_date + td(terms)
+        elif term_type == 'p':  # periods
+            due_date = await db.cache.get_due_date(src_obj.company, tran_date, terms)
+        else:
+            raise NotImplementedError
+    return due_date
+
 async def get_aged_bal(caller, xml):
     # called from ar_cust_bal/ar_allocation on start_frame
 
@@ -68,17 +83,10 @@ async def get_aged_bal(caller, xml):
 
     as_at_date = caller.context.as_at_date
 
-    periods = await db.cache.get_adm_periods(caller.company)
-    # locate period containing balance date
-    period_row_id = bisect_left([_.closing_date for _ in periods], as_at_date)
-    # select as_at_date and previous 4 closing dates for ageing buckets
     dates = [as_at_date]
-    period_row_id -= 1
     for _ in range(4):
-        dates.append(periods[period_row_id].closing_date)
-        if period_row_id > 0:  # else repeat first 'dummy' period
-            period_row_id -= 1
-    dates.append(periods[0].closing_date)  # nothing can be lower!
+        dates.append(dates[-1] - td(30))
+    dates.append(dt(1900, 1, 1))  # arbitrary lowest possible date for show_ageing() below
 
     caller.context.dates = dates
     caller.context.first_date = dates[5]
@@ -88,11 +96,19 @@ async def get_aged_bal(caller, xml):
 
     sql = f"""
         SELECT
-        (SELECT `b.{company}.ar_cust_totals.balance_cus`
-            FROM {company}.ar_cust_totals b
-            WHERE b.cust_row_id = q.cust_row_id AND b.tran_date <= '{as_at_date}'
-            ORDER BY b.tran_date DESC LIMIT 1)
+        (SELECT SUM(c.tran_tot_cust) FROM ( 
+            SELECT b.tran_tot_cust, ROW_NUMBER() OVER (PARTITION BY 
+                b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id 
+                ORDER BY b.tran_date DESC) row_num 
+            FROM {company}.ar_cust_totals b 
+            WHERE b.deleted_id = 0 
+            AND b.cust_row_id = q.cust_row_id 
+            AND b.tran_date <= '{as_at_date}' 
+            ) as c 
+            WHERE c.row_num = 1 
+            )
             AS "balance_tot AS [REAL2]",
+
         SUM(CASE WHEN q.tran_date > '{dates[1]}' THEN q.balance ELSE 0 END
             ) AS "balance_curr AS [REAL2]",
         SUM(CASE WHEN q.tran_date BETWEEN '{dates[2] + td(1)}' AND '{dates[1]}' THEN q.balance ELSE 0 END
@@ -105,21 +121,12 @@ async def get_aged_bal(caller, xml):
             ) AS "balance_120 AS [REAL2]"
         FROM
         (SELECT
-            b.cust_row_id, b.tran_date, `a.{company}.ar_openitems.balance_cust_as_at` as balance
+            a.cust_row_id, a.tran_date, `a.{company}.ar_openitems.balance_cust_as_at` as balance
             FROM {company}.ar_openitems a
-            JOIN {company}.ar_trans b ON b.tran_type = a.tran_type AND b.tran_row_id = a.tran_row_id
-                 AND b.tran_date <= '{as_at_date}'
-            WHERE b.cust_row_id = {cust_row_id}
+            WHERE a.cust_row_id = {cust_row_id} AND a.tran_date <= '{as_at_date}'
         ) AS q
         GROUP BY q.cust_row_id
         """
-        # JOINs from ar_openitems to ar_trans must *not* be LEFT JOIN
-        # if transaction is not posted, it will not appear in ar_trans
-        # if we use LEFT JOIN, the row is included, but with NULLs for ar_trans
-        # if we use JOIN, the row is excluded
-        # this is what we want, as we only want to sum ar_openitems
-        #   if the underlying transaction has been posted
-
         # GROUP BY is necessary in case inner select returns no rows
         #   without it, SELECT returns a single row containing NULLs
         #   with it, SELECT returns no rows
@@ -370,93 +377,29 @@ async def check_cust_bal(cust_totals, xml):
     # print('{}: {} -> {}'.format(await cust.getval('cust_id'), cust_bal, (cust_bal + mvmnt)))
 
 async def setup_mem_trans(caller, xml):
+    # called from ar_ledger_summary.dummy after date selection
     company = caller.company
     module_row_id, ledger_row_id = caller.context.mod_ledg_id
     var = caller.context.data_objects['var']
     mem_totals = caller.context.data_objects['mem_totals']
     await mem_totals.delete_all()
+
     async with caller.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
+
         if await var.getval('select_method') == 'Y':
             year_no = await var.getval('year_no')
-            sql = (f"""
-                WITH RECURSIVE dates AS
-                    (SELECT a.closing_date as cl_date,
-                        {conn.constants.func_prefix}date_add(b.closing_date, 1) as op_date, (
-                        SELECT c.row_id FROM {company}.ar_totals c
-                        WHERE c.ledger_row_id = {ledger_row_id} AND c.tran_date <= a.closing_date
-                        ORDER BY c.tran_date DESC LIMIT 1
-                    ) AS cl_row_id, (
-                        SELECT c.row_id FROM {company}.ar_totals c
-                        WHERE c.ledger_row_id = {ledger_row_id} AND
-                            c.tran_date < {conn.constants.func_prefix}date_add(b.closing_date, 1)
-                        ORDER BY c.tran_date DESC LIMIT 1
-                    ) AS op_row_id
-                    FROM {company}.adm_periods a
-                    JOIN {company}.adm_periods b ON b.row_id = a.row_id - 1
-                    WHERE
-                        (SELECT c.row_id FROM {company}.adm_yearends c
-                        WHERE c.period_row_id >= a.row_id ORDER BY c.row_id LIMIT 1)
-                        = {year_no}
-                    )
-                SELECT 
-                    a.op_date AS "[DATE]", a.cl_date AS "[DATE]"
-                    , COALESCE(`b.{company}.ar_totals.balance`, 0) AS "[REAL2]"
-                    , COALESCE(c.inv_net_tot+c.inv_tax_tot, 0) - COALESCE(b.inv_net_tot+b.inv_tax_tot, 0) AS "[REAL2]"
-                    , COALESCE(c.crn_net_tot+c.crn_tax_tot, 0) - COALESCE(b.crn_net_tot+b.crn_tax_tot, 0) AS "[REAL2]"
-                    , COALESCE(c.chg_tot, 0) - COALESCE(b.chg_tot, 0) AS "[REAL2]"
-                    , COALESCE(c.jnl_tot, 0) - COALESCE(b.jnl_tot, 0) AS "[REAL2]"
-                    , COALESCE(c.rec_tot, 0) - COALESCE(b.rec_tot, 0) AS "[REAL2]"
-                    , COALESCE(c.disc_net_tot+c.disc_tax_tot, 0) - COALESCE(b.disc_net_tot+b.disc_tax_tot, 0) AS "[REAL2]"
-                    , COALESCE(`c.{company}.ar_totals.balance`, 0) AS "[REAL2]"
-                 FROM 
-                    (SELECT dates.op_date, dates.cl_date, (
-                        SELECT c.row_id FROM {company}.ar_totals c 
-                        WHERE c.ledger_row_id = {ledger_row_id} AND c.tran_date < dates.op_date 
-                        ORDER BY c.tran_date DESC LIMIT 1
-                    ) AS op_row_id, (
-                        SELECT c.row_id FROM {company}.ar_totals c 
-                        WHERE c.ledger_row_id = {ledger_row_id} AND c.tran_date <= dates.cl_date 
-                        ORDER BY c.tran_date DESC LIMIT 1
-                    ) AS cl_row_id 
-                    FROM dates 
-                    ) AS a 
-                LEFT JOIN {company}.ar_totals b on b.row_id = a.op_row_id 
-                LEFT JOIN {company}.ar_totals c on c.row_id = a.cl_row_id 
-                """)
+            from sql.cte_dates_from_finyr import get_cte
+            cte, params = get_cte(company, conn, year_no)
         else:
             per_no = await var.getval('period_no')
-            fin_periods = await db.cache.get_adm_periods(caller.company)
-            period = fin_periods[per_no]
-            start_date = str(period.opening_date)
-            end_date = str(period.closing_date)
-            sql = (f"""
-                WITH RECURSIVE dates AS 
-                    (SELECT CAST('{start_date}' AS {conn.constants.date_cast}) AS date 
-                    UNION ALL SELECT {conn.constants.func_prefix}date_add(date, 1) AS date 
-                    FROM dates WHERE date < '{end_date}') 
-                SELECT 
-                    a.op_date AS "[DATE]", a.cl_date AS "[DATE]"
-                    , COALESCE(`b.{company}.ar_totals.op_balance`, 0) AS "[REAL2]"
-                    , COALESCE(b.inv_net_day+b.inv_tax_day, 0) AS "[REAL2]"
-                    , COALESCE(b.crn_net_day+b.crn_tax_day, 0) AS "[REAL2]"
-                    , COALESCE(b.chg_day, 0) AS "[REAL2]"
-                    , COALESCE(b.jnl_day, 0) AS "[REAL2]"
-                    , COALESCE(b.rec_day, 0) AS "[REAL2]"
-                    , COALESCE(b.disc_net_day+b.disc_tax_day, 0) AS "[REAL2]"
-                    , COALESCE(`b.{company}.ar_totals.balance`, 0) AS "[REAL2]"
-                FROM 
-                    (SELECT dates.date as op_date, dates.date as cl_date, (
-                        SELECT c.row_id FROM {company}.ar_totals c 
-                        WHERE c.ledger_row_id = {ledger_row_id} AND c.tran_date <= dates.date 
-                        ORDER BY c.tran_date DESC LIMIT 1
-                        ) AS op_row_id 
-                    FROM dates 
-                    ) AS a 
-                LEFT JOIN {company}.ar_totals b on b.row_id = a.op_row_id 
-                """)
+            from sql.cte_dates_from_finper import get_cte
+            cte, params = get_cte(company, conn, per_no)
 
-        cur = await conn.exec_sql(sql)
+        from sql.ar_tots_by_src import get_sql
+        sql, params, fmt = get_sql(cte, params, company, conn, ledger_row_id)
+
+        cur = await conn.exec_sql(sql, params)
         async for op_date, cl_date, op_bal, inv, crn, chg, jnl, rec, disc, cl_bal in cur:
             await mem_totals.init()
             await mem_totals.setval('date', cl_date)
@@ -472,79 +415,34 @@ async def setup_mem_trans(caller, xml):
             await mem_totals.setval('cl_bal', cl_bal)
             await mem_totals.save()
 
-async def setup_tran_day_per(caller, cols, mem_cols, asserts, cols_to_upd):
+async def setup_tran_day_per(caller, xml):
+    # called from various ar_[tran]_day_per.before_start_form
     company = caller.company
     module_row_id, ledger_row_id = caller.context.mod_ledg_id
     var = caller.context.data_objects['var']
     start_date = await var.getval('op_date')
-    if start_date is None:
-        return
     end_date = await var.getval('cl_date')
     mem_totals = caller.context.data_objects['mem_totals']
     await mem_totals.delete_all()
+
+    args = loads(xml.get('args').replace("'", '"'))
+    srcs = [arg[0] for arg in args]
+    tgts = [await mem_totals.getfld(arg[1]) for arg in args]
+    tots = [await var.getfld(arg[2]) for arg in args]
+
     async with caller.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
-        sql = (f"""
-            WITH RECURSIVE dates AS 
-                (SELECT CAST('{start_date}' AS {conn.constants.date_cast}) AS date 
-                UNION ALL SELECT {conn.constants.func_prefix}date_add(date, 1) AS date 
-                FROM dates WHERE date < '{end_date}') 
-            SELECT 
-                a.date AS "[DATE]",
-                {', '.join('COALESCE(' + col + ', 0) AS "[REAL2]"' for col in cols)}
-            FROM 
-                (SELECT dates.date, (
-                    SELECT c.row_id FROM {company}.ar_totals c 
-                    WHERE c.ledger_row_id = {ledger_row_id} AND c.tran_date = dates.date 
-                ) AS op_row_id 
-                FROM dates 
-                ) AS a 
-            LEFT JOIN {company}.ar_totals b on b.row_id = a.op_row_id 
-            """)
 
-        tots = [0] * len(mem_cols)
-        cur = await conn.exec_sql(sql)
+        from sql.cte_date_list import get_cte
+        cte, params = get_cte(conn, start_date, end_date)
+        from sql.ar_tots_src_day import get_sql
+        sql, params, fmt = get_sql(cte, params, company, conn, ledger_row_id, srcs)
+
+        cur = await conn.exec_sql(sql, params)
         async for date, *db_tots in cur:
             await mem_totals.init()
             await mem_totals.setval('date', date)
-            for pos, mem_col in enumerate(mem_cols):
-                await mem_totals.setval(mem_col, db_tots[pos])
-                tots[pos] += db_tots[pos]
+            for pos, tgt in enumerate(tgts):
+                await tgt.setval(db_tots[pos])
+                await tots[pos].setval(await tots[pos].getval() + db_tots[pos])
             await mem_totals.save()
-
-        for pos, assert_ in enumerate(asserts):
-            if assert_ is not None:  # value passed in as input parameter
-                assert await var.getval(assert_) == tots[pos], (
-                    f'{assert_}={await var.getval(assert_)} total={tots[pos]}')
-
-        for pos, col_to_upd in enumerate(cols_to_upd):
-            if col_to_upd is not None:
-                await var.setval(col_to_upd, tots[pos])
-
-async def setup_inv_day_per(caller, xml):
-    cols = ['b.inv_net_day', 'b.inv_tax_day', 'b.inv_net_day+b.inv_tax_day']
-    mem_cols = ['inv_net', 'inv_tax', 'inv_tot']
-    asserts = [None, None, 'inv_tot']
-    cols_to_upd = ['net_tot', 'tax_tot', 'tot_tot']
-    await setup_tran_day_per(caller, cols, mem_cols, asserts, cols_to_upd)
-
-async def setup_chg_day_per(caller, xml):
-    cols = ['b.chg_day']
-    mem_cols = ['chg_tot']
-    asserts = ['chg_tot']
-    cols_to_upd = [None]
-    await setup_tran_day_per(caller, cols, mem_cols, asserts, cols_to_upd)
-
-async def setup_rec_day_per(caller, xml):
-    cols = ['b.rec_day']
-    mem_cols = ['rec_tot']
-    asserts = ['rec_tot']
-    cols_to_upd = [None]
-    await setup_tran_day_per(caller, cols, mem_cols, asserts, cols_to_upd)
-
-async def setup_disc_day_per(caller, xml):
-    cols = ['b.disc_net_day', 'b.disc_tax_day', 'b.disc_net_day+b.disc_tax_day']
-    mem_cols = ['disc_net', 'disc_tax', 'disc_tot']
-    asserts = [None, None, 'disc_tot']
-    cols_to_upd = ['net_tot', 'tax_tot', 'tot_tot']
-    await setup_tran_day_per(caller, cols, mem_cols, asserts, cols_to_upd)

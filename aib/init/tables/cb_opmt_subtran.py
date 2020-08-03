@@ -135,11 +135,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : [
-        ['code_type', "Must be of type 'code'", [
-            ['check', '', 'opmt_code_id>code_type', '=', "'code'", ''],
-            ],
-        ]],
+    'col_checks' : None,
     'fkey'       : ['cb_opmt_codes', 'row_id', 'opmt_code', 'opmt_code', False, 'opmt_codes'],
     'choices'    : None,
     })

@@ -94,7 +94,10 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['ar_customers', 'row_id', None, None, False, None],
+    'fkey'       : [
+        'ar_customers', 'row_id', 'ledger_id, cust_id, location_id, function_id',
+        'ledger_id, cust_id, location_id, function_id', False, None
+        ],
     'choices'    : None,
     })
 cols.append ({
@@ -565,9 +568,7 @@ actions.append([
             ],
         [
             'ar_totals',  # table name
-            [  # condition
-                ['where', '', 'text', '!=', "'_uea_bf'", ''],
-                ],
+            [],  # condition
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
@@ -586,8 +587,7 @@ actions.append([
         [
             'ar_totals',  # table name
             [  # condition
-                ['where', '', 'text', '!=', "'_uea_bf'", ''],
-                ['and', '', 'disc_tax_local', '!=', '0', ''],
+                ['where', '', 'disc_tax_local', '!=', '0', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -606,9 +606,7 @@ actions.append([
             ],
         [
             'ar_cust_totals',  # table name
-            [  # condition
-                ['where', '', 'text', '!=', "'_uea_bf'", ''],
-                ],
+            [],  # condition
             False,  # split source?
             [  # key fields
                 ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
@@ -629,8 +627,7 @@ actions.append([
         [
             'ar_cust_totals',  # table name
             [  # condition
-                ['where', '', 'text', '!=', "'_uea_bf'", ''],
-                ['and', '', 'disc_tax_local', '!=', '0', ''],
+                ['where', '', 'disc_tax_local', '!=', '0', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -653,7 +650,6 @@ actions.append([
             'gl_totals',  # table name
             [  # condition
                 ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ['and', '', 'text', '!=', "'_uea_bf'", ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -674,7 +670,6 @@ actions.append([
             'gl_totals',  # table name
             [  # condition
                 ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ['and', '', 'text', '!=', "'_uea_bf'", ''],
                 ['and', '', 'disc_tax_local', '!=', '0', ''],
                 ],
             False,  # split source?

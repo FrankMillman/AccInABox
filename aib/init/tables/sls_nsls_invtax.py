@@ -191,19 +191,59 @@ cursors = []
 actions = []
 actions.append([
     'upd_on_post', [
+        # [
+        #     'sls_tax_totals',  # table name
+        #     None,  # condition
+        #     False,  # split source?
+        #     [  # key fields
+        #         ['tax_code_id', 'tax_code_id'],  # tgt_col, src_col
+        #         ['tran_date', 'nsls_row_id>tran_det_row_id>tran_row_id>tran_date'],
+        #         ],
+        #     [  # aggregation
+        #         ['nsls_inv_net_day', '+', 'nsls_row_id>net_local'],
+        #         ['nsls_inv_tax_day', '+', 'tax_local'],
+        #         ['nsls_inv_net_tot', '+', 'nsls_row_id>net_local'],
+        #         ['nsls_inv_tax_tot', '+', 'tax_local'],
+        #         ],
+        #     [],  # on post
+        #     [],  # on unpost
+        #     ],
         [
             'sls_tax_totals',  # table name
-            None,  # condition
+            [],  # condition
             False,  # split source?
             [  # key fields
                 ['tax_code_id', 'tax_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'nsls_row_id>location_row_id'],
+                ['function_row_id', 'nsls_row_id>function_row_id'],
+                ['source_code', "'nsls_inv'"],
                 ['tran_date', 'nsls_row_id>tran_det_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['nsls_inv_net_day', '+', 'nsls_row_id>net_local'],
-                ['nsls_inv_tax_day', '+', 'tax_local'],
-                ['nsls_inv_net_tot', '+', 'nsls_row_id>net_local'],
-                ['nsls_inv_tax_tot', '+', 'tax_local'],
+                ['sales_day', '+', 'nsls_row_id>net_local'],  # tgt_col, op, src_col
+                ['sales_tot', '+', 'nsls_row_id>net_local'],
+                ['tax_day', '+', 'tax_local'],
+                ['tax_tot', '+', 'tax_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'tax_code_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'nsls_row_id>location_row_id'],
+                ['function_row_id', 'nsls_row_id>function_row_id'],
+                ['source_code', "'nsls_inv'"],
+                ['tran_date', 'nsls_row_id>tran_det_row_id>tran_row_id>tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'tax_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'tax_local'],
                 ],
             [],  # on post
             [],  # on unpost

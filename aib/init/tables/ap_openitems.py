@@ -100,6 +100,7 @@ cols.append ({
             ['ap_inv', 'Invoice'],
             ['ap_crn', 'Credit note'],
             ['ap_pmt', 'Payment'],
+            ['ap_bf', 'Bal b/f'],
         ],
     })
 cols.append ({
@@ -123,8 +124,28 @@ cols.append ({
             ['ap_inv', 'ap_tran_inv'],
             ['ap_crn', 'ap_tran_crn'],
             ['ap_pmt', 'ap_tran_pmt'],
+            ['ap_bf', 'ap_tran_bf_det'],
             ]],
         'row_id', None, None, True, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'split_no',
+    'data_type'  : 'INT',
+    'short_descr': 'Split line no',
+    'long_descr' : 'Split line no',
+    'col_head'   : 'Split',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
@@ -151,7 +172,46 @@ cols.append ({
         ['tdn', 'Trade-in'],
         ['pmt', 'Payment'],
         ['crn', 'Credit note'],
+        ['bf', 'Bal b/f'],
         ],
+    })
+cols.append ({
+    'col_name'   : 'supp_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Supplier row id',
+    'long_descr' : 'Supplier row id',
+    'col_head'   : 'Supplier',
+    'key_field'  : 'N',
+    'calculated' : True,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{tran_row_id>supp_row_id}',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Transaction date',
+    'long_descr' : 'Transaction date',
+    'col_head'   : 'Date',
+    'key_field'  : 'N',
+    'calculated' : True,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{tran_row_id>tran_date}',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'due_date',
@@ -251,28 +311,28 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'supp_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Supplier row id',
-    'long_descr' : 'Supplier row id',
-    'col_head'   : 'Supp id',
-    # 'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
-    'dflt_val'   : '{tran_row_id>supp_row_id}',
-    'sql'        : (
-        "a.tran_row_id>supp_row_id"
-        )
-    })
-virt.append ({
-    'col_name'   : 'tran_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date',
-    'col_head'   : 'Tran date',
-    'sql'        : (
-        "a.tran_row_id>tran_date"
-        )
-    })
+# virt.append ({
+#     'col_name'   : 'supp_row_id',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Supplier row id',
+#     'long_descr' : 'Supplier row id',
+#     'col_head'   : 'Supp id',
+#     # 'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
+#     'dflt_val'   : '{tran_row_id>supp_row_id}',
+#     'sql'        : (
+#         "a.tran_row_id>supp_row_id"
+#         )
+#     })
+# virt.append ({
+#     'col_name'   : 'tran_date',
+#     'data_type'  : 'DTE',
+#     'short_descr': 'Transaction date',
+#     'long_descr' : 'Transaction date',
+#     'col_head'   : 'Tran date',
+#     'sql'        : (
+#         "a.tran_row_id>tran_date"
+#         )
+#     })
 # virt.append ({
 #     'col_name'   : 'tran_number',
 #     'data_type'  : 'TEXT',

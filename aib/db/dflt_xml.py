@@ -251,7 +251,11 @@ async def literal(fld, xml, debug):
         return False
     if val.startswith('closing_date('):
         db_obj = fld.db_obj
-        period_no = await db_obj.getval(val[13:-1])
+        cl_date = val[13:-1]
+        if cl_date == '0':
+            period_no = 0
+        else:
+            period_no = await fld.db_obj.getval(cl_date)
         adm_periods = await db.cache.get_adm_periods(db_obj.company)
         return adm_periods[period_no].closing_date
     if val.startswith('td('):

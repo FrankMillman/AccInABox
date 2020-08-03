@@ -177,16 +177,19 @@
         <cur_columns>
           <cur_col col_name="tran_number" lng="80" readonly="true"/>
           <cur_col col_name="tran_date" lng="80" readonly="true"/>
+          <cur_col col_name="due_date" lng="80" readonly="true"/>
           <cur_col col_name="amount_cust" lng="80" readonly="true"/>
           <cur_col col_name="balance_cust_as_at" lng="80" readonly="true"/>
         </cur_columns>
         <cur_filter>
           <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
             op="=" expr="ar_cust.row_id" rbr=""/>
+          <!-- <cur_fil test="AND" lbr="" col_name="tran_date"
+            op=">>" expr="_ctx.first_date" rbr=""/> -->
+          <!-- <cur_fil test="AND" lbr="" col_name="tran_date"
+            op="<<=" expr="_ctx.last_date" rbr=""/> -->
           <cur_fil test="AND" lbr="" col_name="tran_date"
-            op=">>" expr="_ctx.first_date" rbr=""/>
-          <cur_fil test="AND" lbr="" col_name="tran_date"
-            op="<<=" expr="_ctx.last_date" rbr=""/>
+            op="<<=" expr="_ctx.as_at_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="balance_cust_as_at"
             op="!=" expr="0" rbr=""/>
         </cur_filter>
@@ -274,8 +277,8 @@
         </cur_sequence>
         <grid_methods template="Grid">
           <method name="on_start_grid" action="
-            <<assign src=`date_range_vars.start_date` tgt=`ar_cust.tran_start_date`/>>
-            <<assign src=`date_range_vars.end_date` tgt=`ar_cust.tran_end_date`/>>
+            <<assign src=`date_range_vars.start_date` tgt=`_ctx.tran_start_date`/>>
+            <<assign src=`date_range_vars.end_date` tgt=`_ctx.tran_end_date`/>>
             <<get_op_cl_bal args=`ar_cust, op_bal_cust, cl_bal_cust, tot_cust`/>>
             <<assign src=`ar_cust.op_bal_cust` tgt=`tran_vars.op_bal`/>>
             <<assign src=`ar_cust.cl_bal_cust` tgt=`tran_vars.cl_bal`/>>

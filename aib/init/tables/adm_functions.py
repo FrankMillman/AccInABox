@@ -193,15 +193,6 @@ virt.append ({
                    "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
     })
 # virt.append ({
-#     'col_name'   : 'expandable',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Expandable?',
-#     'long_descr' : 'Is this node expandable?',
-#     'col_head'   : '',
-#     'dflt_val'   : 'true',
-#     'sql'        : "CASE WHEN a.function_type = 'code' THEN 0 ELSE 1 END",
-#     })
-# virt.append ({
 #     'col_name'   : 'level',
 #     'data_type'  : 'INT',
 #     'short_descr': 'Level',
@@ -213,20 +204,6 @@ virt.append ({
 #         "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
 #         "FROM {company}.adm_functions c, tree d WHERE d.row_id = c.parent_id) "
 #         "SELECT level FROM tree WHERE a.row_id = tree.row_id)"
-#         ),
-#     })
-# virt.append ({
-#     'col_name'   : 'parent_level',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Parent level',
-#     'long_descr' : 'Level of parent in hierarchy',
-#     'col_head'   : '',
-#     'sql'        : (
-#         "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
-#         "FROM {company}.adm_functions b WHERE b.parent_id IS NULL "
-#         "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
-#         "FROM {company}.adm_functions c, tree d WHERE d.row_id = c.parent_id) "
-#         "SELECT level FROM tree WHERE a.parent_id = tree.row_id)"
 #         ),
 #     })
 
@@ -245,14 +222,3 @@ cursors.append({
 
 # actions
 actions = []
-# actions.append([
-#     'upd_checks', [
-#         [
-#             'check_levels',
-#             'Not in compliance with adm_params fun_levels',
-#             [
-#                 ['check', '', 'function_id', 'pyfunc', 'custom.adm_funcs.check_fun_level', ''],
-#                 ],
-#             ],
-#         ],
-#     ])

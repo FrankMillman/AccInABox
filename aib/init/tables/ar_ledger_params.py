@@ -123,14 +123,12 @@ cols.append ({
     # 'calculated' : False,
     'calculated' : [['where', '', '_param.gl_integration', 'is', '$False', '']],
     'allow_null' : True,  # null means 'not integrated to g/l'
-#   'allow_amend': True,  # can change from null to not-null to start integration
     'allow_amend': [['where', '', '$value', 'is', '$None', '']],
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    # 'col_checks' : None,
     'col_checks' : [
         [
             'gl_code',
@@ -148,29 +146,38 @@ cols.append ({
     })
 
 cols.append ({
-    'col_name'   : 'use_locations',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Add location id to customers?',
-    'long_descr' : 'Add location id to customers? If not, use location root',
-    'col_head'   : 'Use locations?',
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
     'key_field'  : 'N',
     'calculated' : [['where', '', '_param.location_row_id', 'is_not', '$None', '']],
     'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': True,  # if changed, update existing data
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
-    'dflt_rule'  : None,
+    'dflt_val'   : '{_param.location_row_id}',
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="_param.location_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.location_row_id"/>'
+          '</compare>'
+          '<compare src="_param.dflt_loc_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.dflt_loc_row_id"/>'
+          '</compare>'
+        '</case>'
+        ),
     'col_checks' : None,
-    'fkey'       : None,
+   'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
     'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'common_location',
     'data_type'  : 'BOOL',
     'short_descr': 'Common loc for all customers?',
-    'long_descr' : 'Use common location for all customers?',
+    'long_descr' : 'Use common location for all customers? - If Y, all customers will use ar location',
     'col_head'   : 'Common location?',
     'key_field'  : 'N',
     'calculated' : False,
@@ -179,57 +186,16 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
+    'dflt_val'   : 'true',
     'dflt_rule'  : None,
     'col_checks' : None,
-    'col_checks' : [
-        [
-            'use_location',
-            'Location code not required',
-            [
-                ['check', '', 'use_locations', 'is', '$True', ''],
-                ['or', '', '$value', 'is', '$False', ''],
-                ],
-            ],
-        ],
     'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'location_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Common location row id',
-    'long_descr' : 'Common location row id - all customers will share this location',
-    'col_head'   : 'Common',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : True,
-    'allow_amend': True,  # if changed, update existing data
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : [
-        [
-            'common_loc',
-            'Location code required if common location specified',
-            [
-                ['check', '(', 'common_location', 'is', '$False', ''],
-                ['and', '', '$value', 'is', '$None', ')'],
-                ['or', '(', 'common_location', 'is', '$True', ''],
-                ['and', '', '$value', 'is_not', '$None', ''],
-                ['and', '', 'location_row_id>location_type', '!=', "'root'", ')'],
-                ],
-            ],
-        ],
-   'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
     'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'multiple_locations',
     'data_type'  : 'BOOL',
-    'short_descr': 'Multiple locs for customers?',
+    'short_descr': 'Multiple locs per customer?',
     'long_descr' : 'Allow customer to have multiple accounts with different location codes?',
     'col_head'   : 'Multiple locations?',
     'key_field'  : 'N',
@@ -247,8 +213,7 @@ cols.append ({
             'Multiple locations not allowed',
             [
                 ['check', '', '$value', 'is', '$False', ''],
-                ['or', '(', 'use_locations', 'is', '$True', ''],
-                ['and', '', 'common_location', 'is', '$False', ')'],
+                ['or', '', 'common_location', 'is', '$False', ''],
                 ],
             ],
         ],
@@ -257,29 +222,38 @@ cols.append ({
     })
 
 cols.append ({
-    'col_name'   : 'use_functions',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Add function id to customers?',
-    'long_descr' : 'Add function id to customers? If not, use function root',
-    'col_head'   : 'Use functions?',
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
     'key_field'  : 'N',
     'calculated' : [['where', '', '_param.function_row_id', 'is_not', '$None', '']],
     'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': True,  # if changed, update existing data
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
-    'dflt_rule'  : None,
+    'dflt_val'   : '{_param.function_row_id}',
+    'dflt_rule'  : (
+        '<case>'
+          '<compare src="_param.function_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.function_row_id"/>'
+          '</compare>'
+          '<compare src="_param.dflt_fun_row_id" op="is_not" tgt="$None">'
+            '<fld_val name="_param.dflt_fun_row_id"/>'
+          '</compare>'
+        '</case>'
+        ),
     'col_checks' : None,
-    'fkey'       : None,
+   'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
     'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'common_function',
     'data_type'  : 'BOOL',
     'short_descr': 'Common fun for all customers?',
-    'long_descr' : 'Use common function for all customers?',
+    'long_descr' : 'Use common function for all customers? - If Y, all customers will use ar function',
     'col_head'   : 'Common function?',
     'key_field'  : 'N',
     'calculated' : False,
@@ -288,57 +262,16 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
+    'dflt_val'   : 'true',
     'dflt_rule'  : None,
     'col_checks' : None,
-    'col_checks' : [
-        [
-            'use_function',
-            'Function code not required',
-            [
-                ['check', '', 'use_functions', 'is', '$True', ''],
-                ['or', '', '$value', 'is', '$False', ''],
-                ],
-            ],
-        ],
     'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'function_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Common function row id',
-    'long_descr' : 'Common function row id - all customers will share this function',
-    'col_head'   : 'Common',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : True,
-    'allow_amend': True,  # if changed, update existing data
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : [
-        [
-            'common_fun',
-            'Function code required if common function specified',
-            [
-                ['check', '(', 'common_function', 'is', '$False', ''],
-                ['and', '', '$value', 'is', '$None', ')'],
-                ['or', '(', 'common_function', 'is', '$True', ''],
-                ['and', '', '$value', 'is_not', '$None', ''],
-                ['and', '', 'function_row_id>function_type', '!=', "'root'", ')'],
-                ],
-            ],
-        ],
-   'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
     'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'multiple_functions',
     'data_type'  : 'BOOL',
-    'short_descr': 'Multiple funs for customers?',
+    'short_descr': 'Multiple funs per customer?',
     'long_descr' : 'Allow customer to have multiple accounts with different function codes?',
     'col_head'   : 'Multiple functions?',
     'key_field'  : 'N',
@@ -356,14 +289,14 @@ cols.append ({
             'Multiple functions not allowed',
             [
                 ['check', '', '$value', 'is', '$False', ''],
-                ['or', '(', 'use_functions', 'is', '$True', ''],
-                ['and', '', 'common_function', 'is', '$False', ')'],
+                ['or', '', 'common_function', 'is', '$False', ''],
                 ],
             ],
         ],
     'fkey'       : None,
     'choices'    : None,
     })
+
 cols.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
@@ -678,28 +611,6 @@ actions.append([
             [
                 ['check', '', 'discount_code_id', 'is', '$None', ''],
                 ['or', '', 'auto_disc_no', 'is_not', '$None', ''],
-                ],
-            ],
-        [
-            'location_id',
-            'Location code required if common location specified',
-            [
-                ['check', '(', 'common_location', 'is', '$False', ''],
-                ['and', '', 'location_row_id', 'is', '$None', ')'],
-                ['or', '(', 'common_location', 'is', '$True', ''],
-                ['and', '', 'location_row_id', 'is_not', '$None', ''],
-                ['and', '', 'location_row_id>location_type', '!=', "'root'", ')'],
-                ],
-            ],
-        [
-            'function_id',
-            'Function code required if common function specified',
-            [
-                ['check', '(', 'common_function', 'is', '$False', ''],
-                ['and', '', 'function_row_id', 'is', '$None', ')'],
-                ['or', '(', 'common_function', 'is', '$True', ''],
-                ['and', '', 'function_row_id', 'is_not', '$None', ''],
-                ['and', '', 'function_row_id>function_type', '!=', "'root'", ')'],
                 ],
             ],
         ],

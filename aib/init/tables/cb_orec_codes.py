@@ -152,42 +152,20 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'code_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Type of other receipt code',
-    'long_descr' : 'Type of other receipt code',
-    'col_head'   : 'Type',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 10,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : 'code',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'gl_code_id',
     'data_type'  : 'INT',
     'short_descr': 'Gl account code',
     'long_descr' : 'Gl account code',
     'col_head'   : 'Gl acc',
     'key_field'  : 'N',
-    # 'calculated' : False,
     'calculated' : [['where', '', '_param.gl_integration', 'is', '$False', '']],
     'allow_null' : True,  # null means 'not integrated to g/l'
-#   'allow_amend': True,  # can change from null to not-null to start integration
     'allow_amend': [['where', '', '$value', 'is', '$None', '']],
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    # 'col_checks' : None,
     'col_checks' : [
         [
             'gl_code',
@@ -196,8 +174,7 @@ cols.append ({
                 ['check', '(', '_param.gl_integration', 'is', '$False', ''],
                 ['and', '', '$value', 'is', '$None', ')'],
                 ['or', '(', '_param.gl_integration', 'is', '$True', ''],
-                ['and', '', '$value', 'is_not', '$None', ''],
-                ['and', '', 'gl_ctrl_id>code_type', '=', "'code'", ')'],
+                ['and', '', '$value', 'is_not', '$None', ')'],
                 ],
             ],
         ],

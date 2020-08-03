@@ -144,8 +144,8 @@ cols.append ({
     'short_descr': 'Location row id',
     'long_descr' : 'Location row id',
     'col_head'   : 'Loc',
-    'key_field'  : 'A',
-   'calculated'  : False,
+    'key_field'  : 'N',
+    'calculated' : [['where', '', 'npch_code_id>common_location', 'is', '$True', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -157,9 +157,6 @@ cols.append ({
           '<compare src="location_row_id" op="is_not" tgt="$None">'
             '<fld_val name="location_row_id"/>'
           '</compare>'
-          '<compare src="npch_code_id>use_locations" op="is" tgt="$False">'
-            '<fld_val name="_param.loc_root_row_id"/>'
-          '</compare>'
           '<compare src="npch_code_id>common_location" op="is" tgt="$True">'
             '<fld_val name="npch_code_id>location_row_id"/>'
           '</compare>'
@@ -168,15 +165,7 @@ cols.append ({
           '</compare>'
         '</case>'
         ),
-    'col_checks' : [
-        [
-            'root_or_loc',
-            'Not a valid location code',
-            [
-                ['check', '', 'location_row_id>location_type', '!=', "'group'", ''],
-                ],
-            ],
-        ],
+    'col_checks' : None,
     'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
     'choices'    : None,
     })
@@ -186,8 +175,8 @@ cols.append ({
     'short_descr': 'Function row id',
     'long_descr' : 'Function row id',
     'col_head'   : 'Fun',
-    'key_field'  : 'A',
-    'calculated' : False,
+    'key_field'  : 'N',
+    'calculated' : [['where', '', 'npch_code_id>common_function', 'is', '$True', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -199,9 +188,6 @@ cols.append ({
           '<compare src="function_row_id" op="is_not" tgt="$None">'
             '<fld_val name="function_row_id"/>'
           '</compare>'
-          '<compare src="npch_code_id>use_functions" op="is" tgt="$False">'
-            '<fld_val name="_param.fun_root_row_id"/>'
-          '</compare>'
           '<compare src="npch_code_id>common_function" op="is" tgt="$True">'
             '<fld_val name="npch_code_id>function_row_id"/>'
           '</compare>'
@@ -210,15 +196,7 @@ cols.append ({
           '</compare>'
         '</case>'
         ),
-    'col_checks' : [
-        [
-            'root_or_fun',
-            'Not a valid function code',
-            [
-                ['check', '', 'function_row_id>function_type', '!=', "'group'", ''],
-                ],
-            ],
-        ],
+    'col_checks' : None,
     'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
     'choices'    : None,
     })

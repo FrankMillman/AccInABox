@@ -293,7 +293,11 @@ class Field:
         if self.col_defn.dflt_val is not None:
             if self.col_defn.dflt_val.startswith('{'):  # get value from another field
                 if self._value is None or await self.calculated():  # else do not
-                    dflt_value = await self.db_obj.getval(self.col_defn.dflt_val[1:-1])
+                    dflt_val = self.col_defn.dflt_val
+                    if dflt_val.startswith('{_ctx.'):
+                        dflt_value = getattr(self.db_obj.context, dflt_val[6:-1], None)
+                    else:
+                        dflt_value = await self.db_obj.getval(dflt_val[1:-1])
                     if dflt_value is not None:
                         if dflt_value != self._value:
                             await self.setval(dflt_value, display=display, validate=False)
@@ -855,6 +859,8 @@ class Field:
                 # if = '{}', empty dict, else contents of '{}' is a column name
                 if dflt_val == '{}':
                     return '{}'  # assumes data_type is JSON
+                if dflt_val.startswith('{_ctx.'):
+                    return getattr(self.db_obj.context, dflt_val[6:-1], None)
                 # reason why next line is necessary [2018-03-18] -
                 #
                 #   if '>' in dflt_val, it follows path using fkey

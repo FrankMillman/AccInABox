@@ -123,16 +123,7 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-          '<compare src="_ledger.use_locations" op="is" tgt="$False">'
-            '<fld_val name="_param.loc_root_row_id"/>'
-          '</compare>'
-          '<compare src="_ledger.common_location" op="is" tgt="$True">'
-            '<fld_val name="_ledger.location_row_id"/>'
-          '</compare>'
-        '</case>'
-        ),
+    'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : ['adm_locations', 'row_id', None, None, False, None],
     'choices'    : None,
@@ -151,16 +142,7 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-          '<compare src="_ledger.use_functions" op="is" tgt="$False">'
-            '<fld_val name="_param.fun_root_row_id"/>'
-          '</compare>'
-          '<compare src="_ledger.common_function" op="is" tgt="$True">'
-            '<fld_val name="_ledger.function_row_id"/>'
-          '</compare>'
-        '</case>'
-        ),
+    'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : ['adm_functions', 'row_id', None, None, False, None],
     'choices'    : None,

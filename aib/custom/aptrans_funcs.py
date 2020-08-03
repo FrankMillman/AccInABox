@@ -50,6 +50,7 @@ async def setup_openitems(db_obj, conn, return_vals):
         else:
             raise NotImplementedError
         yield (
+            0,
             'inv',
             due_date,
             await db_obj.getval('inv_tot_supp'),

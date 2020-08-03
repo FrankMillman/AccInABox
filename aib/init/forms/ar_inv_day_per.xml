@@ -1,5 +1,7 @@
 <form name="ar_inv_day_per" title="Ar inv day tots for period" before_start_form="
-  <<pyfunc name=`custom.arcust_funcs.setup_inv_day_per`/>>
+  <<pyfunc name=`custom.arcust_funcs.setup_tran_day_per`
+    args=`[['ar_inv_net', 'inv_net', 'net_tot'], ['ar_inv_tax', 'inv_tax', 'tax_tot']]`
+  />>
   ">
   <db_objects/>
   <mem_objects>
@@ -8,14 +10,14 @@
         long_descr="Opening date"/>
       <mem_col col_name="cl_date" data_type="DTE" short_descr="Closing date"
         long_descr="Closing date"/>
-      <mem_col col_name="inv_tot" data_type="DEC" short_descr="Invoice total"
-        long_descr="Invoice total passed in as param" db_scale="2" scale_ptr="scale_var.curr_scale"/>
       <mem_col col_name="net_tot" data_type="DEC" short_descr="Net total"
-        long_descr="Net total" db_scale="2" scale_ptr="scale_var.curr_scale"/>
+        long_descr="Net total" db_scale="2" scale_ptr="scale_var.curr_scale" dflt_val="0"/>
       <mem_col col_name="tax_tot" data_type="DEC" short_descr="Tax total"
-        long_descr="Tax total" db_scale="2" scale_ptr="scale_var.curr_scale"/>
+        long_descr="Tax total" db_scale="2" scale_ptr="scale_var.curr_scale" dflt_val="0"/>
       <mem_col col_name="tot_tot" data_type="DEC" short_descr="Tot total"
-        long_descr="Tot total" db_scale="2" scale_ptr="scale_var.curr_scale"/>
+        long_descr="Tot total" db_scale="2" scale_ptr="scale_var.curr_scale" dflt_rule="
+        <<expr>><<fld_val name=`net_tot`/>><<op type=`+`/>><<fld_val name=`tax_tot`/>><</expr>>
+        "/>
     </mem_obj>
     <mem_obj name="mem_totals" descr="In-memory table to store totals">
       <mem_col col_name="date" data_type="DTE" short_descr="Date"
@@ -28,13 +30,14 @@
         db_scale="2" scale_ptr="scale_var.curr_scale"/>
       <mem_col col_name="inv_tot" data_type="DEC" short_descr="Invoices - tot"
         long_descr="Invoices - total amount" col_head="Total"
-        db_scale="2" scale_ptr="scale_var.curr_scale"/>
+        db_scale="2" scale_ptr="scale_var.curr_scale" dflt_rule="
+        <<expr>><<fld_val name=`inv_net`/>><<op type=`+`/>><<fld_val name=`inv_tax`/>><</expr>>
+        "/>
     </mem_obj>
   </mem_objects>
   <input_params>
     <input_param name="op_date" type="data_attr" target="var.op_date" required="true"/>
     <input_param name="cl_date" type="data_attr" target="var.cl_date" required="true"/>
-    <input_param name="inv_tot" type="data_attr" target="var.inv_tot" required="true"/>
   </input_params>
   <output_params/>
   <frame main_object="mem_totals">

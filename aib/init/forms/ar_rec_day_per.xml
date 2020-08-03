@@ -1,5 +1,7 @@
 <form name="ar_rec_day_per" title="Ar rec day tots for period" before_start_form="
-  <<pyfunc name=`custom.arcust_funcs.setup_rec_day_per`/>>
+  <<pyfunc name=`custom.arcust_funcs.setup_tran_day_per`
+    args=`[['ar_rec', 'rec_tot', 'rec_tot']]`
+  />>
   ">
   <db_objects/>
   <mem_objects>
@@ -9,7 +11,7 @@
       <mem_col col_name="cl_date" data_type="DTE" short_descr="Closing date"
         long_descr="Closing date"/>
       <mem_col col_name="rec_tot" data_type="DEC" short_descr="Receipt total"
-        long_descr="Invoice total passed in as param" db_scale="2" scale_ptr="scale_var.curr_scale"/>
+        long_descr="Receipt total" db_scale="2" scale_ptr="scale_var.curr_scale" dflt_val="0"/>
     </mem_obj>
     <mem_obj name="mem_totals" descr="In-memory table to store totals">
       <mem_col col_name="date" data_type="DTE" short_descr="Date"
@@ -22,7 +24,6 @@
   <input_params>
     <input_param name="op_date" type="data_attr" target="var.op_date" required="true"/>
     <input_param name="cl_date" type="data_attr" target="var.cl_date" required="true"/>
-    <input_param name="rec_tot" type="data_attr" target="var.rec_tot" required="true"/>
   </input_params>
   <output_params/>
   <frame main_object="mem_totals">

@@ -64,7 +64,12 @@
             " shortcut="ctrl,13"/>
           <tool type="nav"/>
         </toolbar>
-        <grid_methods template="Grid"/>
+        <grid_methods template="Grid">
+          <method name="on_start_grid" action="
+            <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.tran_end_date`/>>
+            <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.tran_start_date`/>>
+            "/>
+        </grid_methods>
       </grid>
     </body>
     <button_row/>
