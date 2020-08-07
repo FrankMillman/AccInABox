@@ -417,7 +417,7 @@ class DbObject:
         elif mem_obj and not db_table.parent_params:
             # mem_obj can have a parent without having an fkey [2015-07-29]
             pass
-        else:  # parent must be an existing DbRecord, of which this is a child
+        else:  # parent must be an existing DbObject, of which this is a child
             if not db_table.parent_params:
                 raise AibError(head='Error',
                     body=f'{self.table_name} is not a child table')

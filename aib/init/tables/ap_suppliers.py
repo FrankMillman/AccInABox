@@ -244,7 +244,7 @@ cols.append ({
     'calculated' : False,
     'allow_null' : True,
     'allow_amend': False,
-    'max_len'    : 15,
+    'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,

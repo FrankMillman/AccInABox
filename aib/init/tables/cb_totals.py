@@ -9,10 +9,22 @@ table = {
     'sequence'      : None,
     'tree_params'   : None,
     'roll_params'   : [
-        ['tran_date'],  # key field to roll on
-        ['rec_tot_cb', 'pmt_tot_cb', 'rec_tot_loc', 'pmt_tot_loc']  # fields to roll
+        ['tran_date'],  # key fields to roll on
+        ['tran_tot_cb', 'tran_tot_local']  # fields to roll
         ],
-    'indexes'       : None,
+    'indexes'       : [
+        ['cb_tots_cover', [
+            ['ledger_row_id', False],
+            ['location_row_id', False],
+            ['function_row_id', False],
+            ['source_code_id', False],
+            ['tran_date', True],
+            ['tran_day_cb', False],
+            ['tran_tot_cb', False],
+            ['tran_day_local', False],
+            ['tran_tot_local', False],
+            ], None, False],
+        ],
     'ledger_col'    : 'ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
@@ -20,7 +32,6 @@ table = {
     }
 
 # column definitions
-cols = []
 cols = []
 cols.append ({
     'col_name'   : 'row_id',
@@ -95,7 +106,64 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['cb_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, None],
+    'fkey'       : ['cb_ledger_params', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_locations', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_functions', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'source_code_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Source code id',
+    'long_descr' : 'Source code row id',
+    'col_head'   : 'Code id',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -118,18 +186,18 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'rec_day_cb',
+    'col_name'   : 'tran_day_cb',
     'data_type'  : 'DEC',
-    'short_descr': 'Receipts day - cb curr',
-    'long_descr' : 'Receipts day - cb currency',
-    'col_head'   : 'Rec day cb',
+    'short_descr': 'Trans daily total - cb curr',
+    'long_descr' : 'Transaction daily total - cash book currency',
+    'col_head'   : 'Tran day',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : '_ledger.currency_id>scale',
+    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -137,18 +205,18 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'pmt_day_cb',
+    'col_name'   : 'tran_tot_cb',
     'data_type'  : 'DEC',
-    'short_descr': 'Payments day - cb curr',
-    'long_descr' : 'Payments day - cb currency',
-    'col_head'   : 'Pmt day cb',
+    'short_descr': 'Trans total - cb curr',
+    'long_descr' : 'Transaction accumulated total - cash book currency',
+    'col_head'   : 'Tran tot',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : '_ledger.currency_id>scale',
+    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -156,30 +224,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'rec_day_loc',
+    'col_name'   : 'tran_day_local',
     'data_type'  : 'DEC',
-    'short_descr': 'Receipts day - local curr',
-    'long_descr' : 'Receipts day - local currency',
-    'col_head'   : 'Rec day loc',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pmt_day_loc',
-    'data_type'  : 'DEC',
-    'short_descr': 'Payments day - local curr',
-    'long_descr' : 'Payments day - local currency',
-    'col_head'   : 'Pmt day loc',
+    'short_descr': 'Trans daily total - local curr',
+    'long_descr' : 'Transaction daily total - local currency',
+    'col_head'   : 'Tran day',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -194,68 +243,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'rec_tot_cb',
+    'col_name'   : 'tran_tot_local',
     'data_type'  : 'DEC',
-    'short_descr': 'Receipts total - cb curr',
-    'long_descr' : 'Receipts total - cb currency',
-    'col_head'   : 'Rec tot cb',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_ledger.currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pmt_tot_cb',
-    'data_type'  : 'DEC',
-    'short_descr': 'Payments total - cb curr',
-    'long_descr' : 'Payments total - cb currency',
-    'col_head'   : 'Pmt tot cb',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_ledger.currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'rec_tot_loc',
-    'data_type'  : 'DEC',
-    'short_descr': 'Receipts total - local curr',
-    'long_descr' : 'Receipts total - local currency',
-    'col_head'   : 'Rec tot loc',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pmt_tot_loc',
-    'data_type'  : 'DEC',
-    'short_descr': 'Payments total - local curr',
-    'long_descr' : 'Payments total - local currency',
-    'col_head'   : 'Pmt tot loc',
+    'short_descr': 'Trans total - local curr',
+    'long_descr' : 'Transaction accumulated total - local currency',
+    'col_head'   : 'Tran tot',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -273,91 +265,27 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'mvm_day_cb',
+    'col_name'   : 'balance',
     'data_type'  : 'DEC',
-    'short_descr': 'Daily movement - cb curr',
-    'long_descr' : 'Daily movement - cb currency',
-    'col_head'   : 'Mvm day cb',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_ledger.currency_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="rec_day_cb"/>'
-          '<op type="+"/>'
-          '<fld_val name="pmt_day_cb"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.rec_day_cb + a.pmt_day_cb"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'mvm_day_loc',
-    'data_type'  : 'DEC',
-    'short_descr': 'Daily movement - local curr',
-    'long_descr' : 'Daily movement - local currency',
-    'col_head'   : 'Mvm day loc',
+    'short_descr': 'Running balance',
+    'long_descr' : 'Running balance',
+    'col_head'   : 'Balance',
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="rec_day_loc"/>'
-          '<op type="+"/>'
-          '<fld_val name="pmt_day_loc"/>'
-        '</expr>'
-        ),
+    'dflt_val'   : '0',
     'sql'        : (
-        "a.rec_day_loc + a.pmt_day_loc"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'balance_cb',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance - cb curr',
-    'long_descr' : 'Balance - cb currency',
-    'col_head'   : 'Balance cb',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_ledger.currency_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="rec_tot_cb"/>'
-          '<op type="+"/>'
-          '<fld_val name="pmt_tot_cb"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.rec_tot_cb + a.pmt_tot_cb"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'balance_loc',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance - local curr',
-    'long_descr' : 'Balance - local currency',
-    'col_head'   : 'Balance loc',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="rec_tot_loc"/>'
-          '<op type="+"/>'
-          '<fld_val name="pmt_tot_loc"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.rec_tot_loc + a.pmt_tot_loc"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'op_balance_loc',
-    'data_type'  : 'DEC',
-    'short_descr': 'Opening balance',
-    'long_descr' : 'Opening balance - local currency',
-    'col_head'   : 'Op bal',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'sql'        : (
-        "(a.rec_tot_loc + a.pmt_tot_loc) - (a.rec_day_loc + a.pmt_day_loc)"
+        """
+                (SELECT SUM(c.tran_tot_cb) FROM (
+                    SELECT b.tran_tot_cb, ROW_NUMBER() OVER (PARTITION BY
+                        b.ledger_row_id, b.location_row_id, b.function_row_id, b.source_code_id
+                        ORDER BY b.tran_date DESC) row_num
+                    FROM {company}.cb_totals b
+                    WHERE b.deleted_id = 0
+                    AND b.ledger_row_id = a.ledger_row_id
+                    ) as c
+                    WHERE c.row_num = 1
+                    )
+        """
         ),
     })
 

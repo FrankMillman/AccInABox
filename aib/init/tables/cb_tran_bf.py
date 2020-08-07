@@ -216,17 +216,20 @@ actions.append([
     'upd_on_post', [
         [
             'cb_totals',  # table name
-            None,  # condition
+            [],  # condition
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'ledger_row_id>location_row_id'],
+                ['function_row_id', 'ledger_row_id>function_row_id'],
+                ['source_code', "'cb_bf'"],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['rec_day_cb', '+', 'amount_cb'],  # tgt_col, op, src_col
-                ['rec_tot_cb', '+', 'amount_cb'],
-                ['rec_day_loc', '+', 'amount_local'],
-                ['rec_tot_loc', '+', 'amount_local'],
+                ['tran_day_cb', '+', 'amount_cb'],  # tgt_col, op, src_col
+                ['tran_tot_cb', '+', 'amount_cb'],
+                ['tran_day_local', '+', 'amount_local'],
+                ['tran_tot_local', '+', 'amount_local'],
                 ],
             [],  # on post
             [],  # on unpost
