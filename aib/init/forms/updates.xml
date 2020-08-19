@@ -305,7 +305,7 @@
                 </cur_sequence>
                 <grid_methods template="Grid"/>
               </grid>
-              <if_ src="var.upd_type" op="eq" tgt="'upd_on_save'"/>
+              <if_ test="[[`if`, ``, `var.upd_type`, `=`, `'upd_on_save'`, ``]]"/>
               <block/>
               <grid data_object="on_insert" growable="true" num_grid_rows="3">
                 <toolbar template="Grid" title="On insert:"/>
@@ -347,7 +347,7 @@
                 <grid_methods template="Grid"/>
               </grid>
               <end_if/>
-              <if_ src="var.upd_type" op="eq" tgt="'upd_on_post'"/>
+              <if_ test="[[`if`, ``, `var.upd_type`, `=`, `'upd_on_post'`, ``]]"/>
               <block/>
               <grid data_object="on_post" growable="true" num_grid_rows="3">
                 <toolbar template="Grid" title="On post:"/>

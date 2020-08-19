@@ -78,7 +78,7 @@
         <block/>
         <panel/>
 
-        <if_ src="_ledger.auto_rec_no" op="is_" tgt="$None"/>
+        <if_ test="[[`if`, ``, `_ledger.auto_rec_no`, `is`, `$None`, ``]]"/>
         <row/>
         <col/>
         <label value="Receipt no:"/>
@@ -94,7 +94,7 @@
           <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
           "/>
 
-        <if_ src="_ledger.currency_id" op="is_" tgt="$None"/>
+        <if_ test="[[`if`, ``, `_ledger.currency_id`, `is`, `$None`, ``]]"/>
         <row/>
         <col/>
         <label value="Currency:"/>

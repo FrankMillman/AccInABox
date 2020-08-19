@@ -117,7 +117,7 @@
       <body>
 
         <block/>
-        <if_ src="var.select_method" op="eq" tgt="'Y'"/>
+        <if_ test="[[`if`, ``, `var.select_method`, `=`, `'Y'`, ``]]"/>
         <grid data_object="mem_totals" growable="false" num_grid_rows="15" readonly="true">
           <toolbar template="Query_Form"/>
           <cur_columns>
@@ -174,7 +174,7 @@
           </grid_methods>
         </grid>
         <end_if/>
-        <if_ src="var.select_method" op="eq" tgt="'P'"/>
+        <if_ test="[[`if`, ``, `var.select_method`, `=`, `'P'`, ``]]"/>
         <grid data_object="mem_totals" growable="false" num_grid_rows="15" readonly="true">
           <toolbar template="Query_Form"/>
           <cur_columns>

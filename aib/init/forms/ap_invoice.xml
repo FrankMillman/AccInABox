@@ -128,7 +128,7 @@
             <subtype_body subtype_id="ipch">
               <block/>
               <panel/>
-              <if_ src="_param.in_ledger_id" op="is_" tgt="$None"/>
+              <if_ test="[[`if`, ``, `_param.in_ledger_id`, `is`, `$None`, ``]]"/>
               <row/>
               <col/>
               <label value="Warehouse:"/>

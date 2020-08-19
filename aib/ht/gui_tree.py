@@ -107,11 +107,11 @@ class GuiTreeCommon:
         group_parent, group_col_names, group_levels = group.db_table.tree_params
         member_group_id, member_col_names, member_levels = member.db_table.tree_params
 
-        self.group_code, self.group_descr, self.group_seq, self.group_parent_id = group_col_names
-        self.group_levels = len(group_levels)  # only need number of levels
+        self.group_code, self.group_descr, self.group_parent_id, self.group_seq = group_col_names
+        self.group_levels = 1 if group_levels is None else len(group_levels[1])  # only need number of levels
         self.member_group_id = member_group_id
-        self.member_code, self.member_descr, self.member_seq, self.member_parent_id = member_col_names
-        self.member_levels = len(member_levels)
+        self.member_code, self.member_descr, self.member_parent_id, self.member_seq = member_col_names
+        self.member_levels = 1 if member_levels is None else len(member_levels[1])
 
     async def get_combo_data(self, group, member):
 
@@ -233,7 +233,6 @@ class GuiTreeCommon:
 
                 order = [(self.member_group_id, False), (self.member_seq, False)]
 
-                # sql, params = await conn.build_select(member, col_names, where, order)
                 sql, params = await conn.build_select(
                     member.context, member.db_table, col_names, where, order)
 
@@ -326,7 +325,7 @@ class GuiTreeCommon:
     async def get_tree_data(self):
         parent, col_names, levels = self.db_obj.db_table.tree_params
 
-        code, descr, seq, parent_id = col_names
+        code, descr, parent_id, seq = col_names
 
         self.levels = len(levels)
         async with self.parent.db_session.get_connection() as db_mem_conn:
@@ -388,8 +387,7 @@ class GuiTree(GuiTreeCommon):
         if self.db_obj.dirty:
 
             title = self.db_obj.table_name
-            question = 'Do you want to save the changes to {}?'.format(
-                await self.db_obj.getval('descr'))
+            question = f'Do you want to save the changes to {await self.db_obj.getval("descr")}?'
             answers = ['Yes', 'No']
             default = 'No'
             escape = 'No'
@@ -515,8 +513,7 @@ class GuiTreeCombo(GuiTreeCommon):
         if self.tree_frame.db_obj.dirty:
 
             title = self.tree_frame.db_obj.table_name
-            question = 'Do you want to save the changes to {}?'.format(
-                await self.db_obj.getval('descr'))
+            question = f'Do you want to save the changes to {await self.db_obj.getval("descr")}?'
             answers = ['Yes', 'No']
             default = 'No'
             escape = 'No'
@@ -757,7 +754,7 @@ class GuiTreeLkup(GuiTreeCommon):
             tree_data = await self.get_tree_data()
             # hide_root = False
             # changed for sales code lookup [2017-11-13]
-            # may need to make it a paremeter
+            # may need to make it a parameter
             hide_root = True
 
         # for td in tree_data:

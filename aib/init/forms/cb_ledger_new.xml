@@ -36,7 +36,7 @@
 
       <block/>
       <panel/>
-      <if_ src="_param.currency_id" op="is_" tgt="$None"/>
+      <if_ test="[[`if`, ``, `_param.currency_id`, `is`, `$None`, ``]]"/>
       <row/>
       <col/>
       <label value="Currency"/>

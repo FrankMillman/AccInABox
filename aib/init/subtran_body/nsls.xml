@@ -16,7 +16,7 @@
   <label value="Amount:"/>
   <col/>
   <input obj_name="nsls" col_name="nsls_amount" lng="80"/>
-  <if_ src="_param.eff_date_nsls" op="is_" tgt="$True"/>
+  <if_ test="[[`if`, ``, `_param.eff_date_nsls`, `is`, `$True`, ``]]"/>
   <row/>
   <col/>
   <label value="Effective date:"/>

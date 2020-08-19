@@ -797,7 +797,7 @@ class Conn:
         #     params.append(val)
         #     sql = f'{sql[:pos1]}{self.constants.param_style}{sql[pos2+1:]}'
 
-        valid_surround_chrs = ' ,()-+=|'  # any others?
+        valid_surround_chrs = ' ,()-+=|\n'  # any others?
 
         # look for column names starting with 'a.'
         # if '>' in col_name, work out 'joins'

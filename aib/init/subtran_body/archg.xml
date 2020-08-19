@@ -2,8 +2,8 @@
   <block/>
   <panel/>
 
-  <if_ src="achg.ledger_id" op="is_" tgt="$None"/>
-  <row/>
+  <if_ test="[[`if`, ``, `achg.ledger_id`, `is`, `$None`, ``]]"/>
+<row/>
   <col/>
   <label value="Ledger id:"/>
   <col/>
@@ -38,7 +38,8 @@
   <display obj_name="achg" col_name="currency_id>symbol" lng="10"/>
   <input obj_name="achg" col_name="chg_amount" lng="84"/>
 
-  <if_ src="achg.cust_row_id>ledger_row_id>alt_curr" op="is_" tgt="$True"/>
+  <!-- this does not work well - if > 1 ledger, alt_curr is $None when form is created -->
+  <if_ test="[[`if`, ``, `achg.cust_row_id>ledger_row_id>alt_curr`, `is`, `$True`, ``]]"/>
 
   <row/>
   <col/>

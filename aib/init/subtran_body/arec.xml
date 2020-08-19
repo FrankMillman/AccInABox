@@ -2,7 +2,7 @@
   <block/>
   <panel/>
 
-  <if_ src="ar_rec.ledger_id" op="is_" tgt="$None"/>
+  <if_ test="[[`if`, ``, `ar_rec.ledger_id`, `is`, `$None`, ``]]"/>
   <row/>
   <col/>
   <label value="Ledger id:"/>
@@ -27,7 +27,7 @@
   <input obj_name="ar_rec" col_name="arec_amount" lng="84"/>
 
   <!-- this does not work well - if > 1 ledger, alt_curr is $None when form is created -->
-  <if_ src="ar_rec.cust_row_id>ledger_row_id>alt_curr" op="is_" tgt="$True"/>
+  <if_ test="[[`if`, ``, `ar_rec.cust_row_id>ledger_row_id>alt_curr`, `is`, `$True`, ``]]"/>
 
   <row/>
   <col/>
@@ -40,7 +40,7 @@
 
   <end_if/>
 
-  <if_ src="_param.allow_alloc_rec" op="is_" tgt="$True"/>
+  <if_ test="[[`if`, ``, `_param.allow_alloc_rec`, `is`, `$True`, ``]]"/>
 
   <row/>
   <col/>

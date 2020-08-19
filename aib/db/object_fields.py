@@ -564,6 +564,7 @@ class Field:
                             ):
                                 await tgt_field.db_obj.init()
                         await tgt_field.setval(value, display, validate=False)
+                        value = await tgt_field.getval()  # to change (eg) 'a001' to 'A001'
                         if col_name == altsrc_names[-1]:  # if multi-part key, all parts are present
                             if not tgt_field.db_obj.exists:
                                 if len(altsrc_names) > 1:  # build meaningful error message
@@ -578,7 +579,6 @@ class Field:
                                 else:
                                     errmsg = f'{value} not found on {tgt_field.table_name}'
                                 raise AibError(head=col_defn.short_descr, body=errmsg)
-                            value = await tgt_field.getval()  # to change (eg) 'a001' to 'A001'
                             # must call setval, in case validation required
                             # i.e. there could be a col_check on the true_src, but not on the alt_src
                             true_foreign_key = await db_obj.get_foreign_key(true_src)

@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 import db.api
 import db.objects
 import db.cache
+from db.chk_constraints import eval_expr
 import ht.htc
 import ht.gui_objects
 import ht.gui_grid
@@ -804,28 +805,8 @@ class Frame:
             if skip_elem:
                 continue
             if element.tag == 'if_':
-                src = element.get('src')
-                if src.startswith('_ctx.'):
-                    src_val = getattr(self.context, src[5:])
-                else:
-                    src_val = await self.db_obj.getval(src)
-
-                op = getattr(operator, element.get('op'))
-
-                tgt = element.get('tgt')
-                if tgt == '$None':
-                    tgt_val = None
-                elif tgt == '$True':
-                    tgt_val = True
-                elif tgt == '$False':
-                    tgt_val = False
-                elif tgt.startswith("'"):
-                    tgt_val = tgt[1:-1]
-                else:
-                    tgt_fld = await self.db_obj.getfld(tgt)
-                    tgt_val = await tgt_fld.getval()
-                # skip element if returns False
-                skip_elem = not op(src_val, tgt_val)
+                test = loads(element.get('test'))
+                skip_elem = not await eval_expr(test, self.db_obj)
             elif element.tag == 'block':
                 gui.append(('block', None))
             elif element.tag == 'vbox':

@@ -202,7 +202,7 @@ async def eval_exp(src, chk, tgt, db_obj, fld, value):
         result = CHKS[chk](src_val, tgt_val)
     return result
 
-async def eval_expr(expr, db_obj, fld, value=None):
+async def eval_expr(expr, db_obj, fld=None, value=None):
     expr = [list(step) for step in expr]  # make a copy
     lbr = rbr = 0
     for exp in expr:
@@ -353,8 +353,11 @@ async def parent_id(db_obj, fld, src_val):
         if this_type == level_code:
             parent_type = await db_obj.getval(f'{fld.col_name}>{type_colname}')
             if parent_type != type_one_level_up:
-                raise AibError(head=f'{fld.table_name}.{fld.col_name}',
-                    body=f'Parent type must be {type_one_level_up}')
+                if type_one_level_up is None:
+                    errmsg = f"Only one '{level_code}' allowed"
+                else:
+                    errmsg = f"Parent type must be '{type_one_level_up}'"
+                raise AibError(head=f'{fld.table_name}.{fld.col_name}', body=errmsg)
             break
         else:
             type_one_level_up = level_code
