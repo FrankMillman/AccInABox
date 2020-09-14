@@ -82,7 +82,7 @@ cols.append ({
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_param.ap_ledger_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.ap_ledger_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -121,8 +121,8 @@ cols.append ({
     'col_head'   : 'Loc',
     'key_field'  : 'A',
     'calculated' : [
-        ['where', '',  '_param.location_row_id', 'is_not', '$None', ''],
-        ['or', '', '_ledger.common_location', 'is', '$True', ''],
+        ['where', '', '_param.location_row_id', 'is not', '$None', ''],
+        ['or', '', '_ledger.valid_loc_ids>expandable', 'is', '$False', ''],
         ],
     'allow_null' : False,
     'allow_amend': False,
@@ -132,15 +132,15 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_param.location_row_id" op="is_not" tgt="$None">'
+          '<compare test="[[`if`, ``, `_param.location_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.location_row_id"/>'
           '</compare>'
-          '<compare src="_ledger.common_location" op="is" tgt="$True">'
-            '<fld_val name="_ledger.location_row_id"/>'
+          '<compare test="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
+            '<fld_val name="_ledger.valid_loc_ids"/>'
           '</compare>'
-          '<compare src="_ledger.multiple_locations" op="is" tgt="$False">'
+          '<compare test="[[`if`, ``, `_ledger.multiple_locations`, `is`, `$False`, ``]]">'
             '<case>'
-                '<compare src="loc_id_if_exists" op="=" tgt="-1">'
+                '<compare test="[[`if`, ``, `loc_id_if_exists`, `=`, `-1`, ``]]">'
                   '<literal value="$None"/>'
                 '</compare>'
                 '<default>'
@@ -151,6 +151,13 @@ cols.append ({
         '</case>'
         ),
     'col_checks' : [
+        [
+            'location_code',
+            'Invalid location',
+            [
+                ['check', '', '$value', 'pyfunc', 'db.checks.valid_loc_id', ''],
+                ],
+            ],
         [
             'multi_loc',
             'Account with a different location exists',
@@ -172,8 +179,8 @@ cols.append ({
     'col_head'   : 'Fun',
     'key_field'  : 'A',
     'calculated' : [
-        ['where', '',  '_param.function_row_id', 'is_not', '$None', ''],
-        ['or', '', '_ledger.common_function', 'is', '$True', ''],
+        ['where', '',  '_param.function_row_id', 'is not', '$None', ''],
+        ['or', '', '_ledger.valid_fun_ids>expandable', 'is', '$False', ''],
         ],
     'allow_null' : False,
     'allow_amend': False,
@@ -183,15 +190,15 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_param.function_row_id" op="is_not" tgt="$None">'
+          '<compare test="[[`if`, ``, `_param.function_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.function_row_id"/>'
           '</compare>'
-          '<compare src="_ledger.common_function" op="is" tgt="$True">'
-            '<fld_val name="_ledger.function_row_id"/>'
+          '<compare test="[[`if`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
+            '<fld_val name="_ledger.valid_fun_ids"/>'
           '</compare>'
-          '<compare src="_ledger.multiple_functions" op="is" tgt="$False">'
+          '<compare test="[[`if`, ``, `_ledger.multiple_functions`, `is`, `$False`, ``]]">'
             '<case>'
-                '<compare src="fun_id_if_exists" op="=" tgt="-1">'
+                '<compare test="[[`if`, ``, `fun_id_if_exists`, `=`, `-1`, ``]]">'
                   '<literal value="$None"/>'
                 '</compare>'
                 '<default>'
@@ -202,6 +209,13 @@ cols.append ({
         '</case>'
         ),
     'col_checks' : [
+        [
+            'function_code',
+            'Invalid function',
+            [
+                ['check', '', '$value', 'pyfunc', 'db.checks.valid_fun_id', ''],
+                ],
+            ],
         [
             'multi_fun',
             'Account with a different function exists',
@@ -222,7 +236,7 @@ cols.append ({
     'long_descr' : 'Currency',
     'col_head'   : 'Currency',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_ledger.currency_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_ledger.currency_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -345,21 +359,20 @@ virt.append ({
     'long_descr' : 'Running balance - supp',
     'col_head'   : 'Balance supp',
     'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'scale_ptr'  : 'currency_id>scale',
     'dflt_val'   : '0',
     'sql'        : (
-        """
-        (SELECT SUM(c.tran_tot_supp) AS "[REAL2]" FROM (
-            SELECT b.tran_tot_supp, ROW_NUMBER() OVER (PARTITION BY
-                b.supp_row_id, b.location_row_id, b.function_row_id, b.source_code_id
-                ORDER BY b.tran_date DESC) row_num
-            FROM {company}.ap_supp_totals b
-            WHERE b.deleted_id = 0
-            AND b.supp_row_id = a.row_id
-            ) as c
-            WHERE c.row_num = 1
-            )
-        """
+        "(SELECT SUM(c.tran_tot_supp) FROM ( "
+            "SELECT b.tran_tot_supp, ROW_NUMBER() OVER (PARTITION BY "
+                "b.supp_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
+                "ORDER BY b.tran_date DESC) row_num "
+            "FROM {company}.ap_supp_totals b "
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date <= {bal_date_supp} "
+            "AND b.supp_row_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            ")"
         ),
     })
 virt.append ({
@@ -372,18 +385,17 @@ virt.append ({
     'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',
     'sql'        : (
-        """
-        (SELECT SUM(c.tran_tot_local) AS "[REAL2]" FROM (
-            SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY
-                b.supp_row_id, b.location_row_id, b.function_row_id, b.source_code_id
-                ORDER BY b.tran_date DESC) row_num
-            FROM {company}.ap_supp_totals b
-            WHERE b.deleted_id = 0
-            AND b.supp_row_id = a.row_id
-            ) as c
-            WHERE c.row_num = 1
-            )
-        """
+        "(SELECT SUM(c.tran_tot_local) FROM ( "
+            "SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
+                "b.supp_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
+                "ORDER BY b.tran_date DESC) row_num "
+            "FROM {company}.ap_supp_totals b "
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date <= {bal_date_supp} "
+            "AND b.supp_row_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            ")"
         ),
     })
 
@@ -400,6 +412,23 @@ cursors.append({
     'filter': [],
     'sequence': [['supp_id', False]],
     'formview_name': 'setup_apsupp',
+    })
+cursors.append({
+    'cursor_name': 'supp_bal',
+    'title': 'Supplier balances',
+    'columns': [
+        ['supp_id', 80, False, True, False, False, None, None, None, None],
+        ['party_row_id>display_name', 150, True, True, False, False, None, None, None, None],
+        ['location_id', 60, False, True, False, False, None, None, None, None],
+        ['currency_id>symbol', 40, False, True, False, False, None, None, None, None],
+        ['balance_sup', 100, False, True, False, False, None, None, None, None],
+        # ['tran_bal_cust', 100, False, False, False, False, None, None, None, None],
+        ['balance_loc', 100, False, True, False, False, None, None, None, None],
+        # ['tran_bal_local', 100, False, False, False, False, None, None, None, None],
+        ],
+    'filter': [],
+    'sequence': [['supp_id', False]],
+    'formview_name': 'ap_supp_bal',
     })
 
 # actions

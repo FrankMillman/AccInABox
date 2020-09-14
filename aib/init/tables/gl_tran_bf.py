@@ -95,6 +95,72 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', 'gl_code_id>valid_loc_ids>expandable', 'is', '$False', '']],
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `gl_code_id>valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
+            '<fld_val name="gl_code_id>valid_loc_ids"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : [
+        [
+            'location_code',
+            'Invalid location',
+            [
+                ['check', '', '$value', 'pyfunc', 'db.checks.valid_loc_id', ''],
+                ],
+            ],
+        ],
+    'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', 'gl_code_id>valid_fun_ids>expandable', 'is', '$False', '']],
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `gl_code_id>valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
+            '<fld_val name="gl_code_id>valid_fun_ids"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : [
+        [
+            'function_code',
+            'Invalid function',
+            [
+                ['check', '', '$value', 'pyfunc', 'db.checks.valid_fun_id', ''],
+                ],
+            ],
+        ],
+    'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
     'short_descr': 'Balance date',
@@ -172,8 +238,8 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['gl_code_id', 'gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'gl_code_id>location_row_id'],
-                ['function_row_id', 'gl_code_id>function_row_id'],
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
                 ['source_code', "'gl_bf'"],
                 ['tran_date', 'tran_date'],
                 ],

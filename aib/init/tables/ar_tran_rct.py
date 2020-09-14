@@ -84,7 +84,7 @@ cols.append ({
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_param.ar_ledger_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.ar_ledger_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -103,7 +103,7 @@ cols.append ({
     'long_descr' : 'Receipt number',
     'col_head'   : 'Rec no',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_ledger.auto_rec_no', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_ledger.auto_rec_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -114,7 +114,7 @@ cols.append ({
         '<case>'
           '<on_post>'
             '<case>'
-              '<compare src="_ledger.auto_temp_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_ledger.auto_rec_no"/>'
               '</compare>'
               '<default>'
@@ -124,10 +124,10 @@ cols.append ({
           '</on_post>'
           '<on_insert>'
             '<case>'
-              '<compare src="_ledger.auto_temp_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_ledger.auto_temp_no"/>'
               '</compare>'
-              '<compare src="_ledger.auto_rec_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.rec_temp_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_ledger.auto_rec_no"/>'
               '</compare>'
             '</case>'
@@ -202,37 +202,6 @@ cols.append ({
     'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'cust_exch_rate',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Cust exchange rate',
-#     'long_descr' : 'Exchange rate from customer currency to local',
-#     'col_head'   : 'Rate cust',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 8,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : None,
-#     'dflt_rule'  : (
-#         '<case>'
-#             '<compare src="cust_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
-#                 '<literal value="1"/>'
-#             '</compare>'
-#             '<default>'
-#                 '<exch_rate>'
-#                     '<fld_val name="cust_row_id>currency_id"/>'
-#                     '<fld_val name="tran_date"/>'
-#                 '</exch_rate>'
-#             '</default>'
-#         '</case>'
-#         ),
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
@@ -249,7 +218,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
@@ -348,39 +317,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'exch_diff',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Exchange rate difference',
-#     'long_descr' : 'Exchange rate difference',
-#     'col_head'   : 'Exch diff',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': True,
-#     'max_len'    : 0,
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<case>'
-#           '<compare src="(rec_cust - alloc_cust)" op="=" tgt="0">'
-#             '<expr>'
-#               '<literal value="0"/>'
-#               '<op type="-"/>'
-#               '<expr>'
-#                 '<fld_val name="rec_local"/>'
-#                 '<op type="-"/>'
-#                 '<fld_val name="alloc_local"/>'
-#               '</expr>'
-#             '</expr>'
-#           '</compare>'
-#         '</case>'
-#         ),
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
@@ -403,6 +339,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Tran type',
+    'sql'        : "'ap_rec'",
+    })
 virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',

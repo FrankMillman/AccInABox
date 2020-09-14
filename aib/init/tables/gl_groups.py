@@ -7,7 +7,7 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : ['seq', ['parent_id'], None],
-    'tree_params'   : [None, ['group', 'descr', 'parent_id', 'seq'], ['group_type', [['root', 'Root']], None]],
+    'tree_params'   : [None, ['gl_group', 'descr', 'parent_id', 'seq'], ['group_type', [['root', 'Root']], None]],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -170,18 +170,65 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'valid_loc_ids',
+    'data_type'  : 'INT',
+    'short_descr': 'Valid location ids',
+    'long_descr' : 'Valid location ids',
+    'col_head'   : 'Valid locations',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', '_param.location_row_id', 'is not', '$None', '']],
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `_param.location_row_id`, `is not`, `$None`, ``]]">'
+            '<fld_val name="_param.location_row_id"/>'
+          '</compare>'
+          '<default>'
+            '<fld_val name="parent_id>valid_loc_ids"/>'
+          '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : ['adm_locations', 'row_id', 'valid_locs', 'location_id', False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'valid_fun_ids',
+    'data_type'  : 'INT',
+    'short_descr': 'Valid function ids',
+    'long_descr' : 'Valid function ids',
+    'col_head'   : 'Valid functions',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', '_param.function_row_id', 'is not', '$None', '']],
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `_param.function_row_id`, `is not`, `$None`, ``]]">'
+            '<fld_val name="_param.function_row_id"/>'
+          '</compare>'
+          '<default>'
+            '<fld_val name="parent_id>valid_fun_ids"/>'
+          '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : ['adm_functions', 'row_id', 'valid_funs', 'function_id', False, None],
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'first_row',
-    'data_type'  : 'BOOL',
-    'short_descr': 'First row?',
-    'long_descr' : 'If table is empty, this is the first row',
-    'col_head'   : '',
-    'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.gl_groups WHERE deleted_id = 0) "
-                   "THEN 0 ELSE 1 END",
-    })
 virt.append ({
     'col_name'   : 'children',
     'data_type'  : 'INT',
@@ -191,14 +238,14 @@ virt.append ({
     'sql'        : "SELECT count(*) FROM {company}.gl_groups b "
                    "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
     })
-# virt.append ({
-#     'col_name'   : 'expandable',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Expandable?',
-#     'long_descr' : 'Expandable?',
-#     'col_head'   : '',
-#     'sql'        : "CASE WHEN a.class_type = 'class' THEN 0 ELSE 1 END",
-#     })
+virt.append ({
+    'col_name'   : 'expandable',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Expandable?',
+    'long_descr' : 'Expandable? - Can be over-ridden at run-time in db.objects if levels added',
+    'col_head'   : '',
+    'sql'        : "0",
+    })
 
 # cursor definitions
 cursors = []
@@ -226,3 +273,6 @@ cursors.append({
 
 # actions
 actions = []
+actions.append([
+    'after_commit', '<pyfunc name="db.cache.param_updated"/>'
+    ])

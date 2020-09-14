@@ -10,7 +10,6 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : [
-        # ['cbrec_tran_num', [['tran_number', False]], None, False],  # why do we need this?
         ['cbrec_cb_date', [['ledger_row_id', False], ['tran_date', False]], None, False],
         ],
     'ledger_col'    : 'ledger_row_id',
@@ -85,7 +84,7 @@ cols.append ({
     'long_descr' : 'Bank account row id',
     'col_head'   : 'Bank id',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_param.cb_ledger_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.cb_ledger_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -104,7 +103,7 @@ cols.append ({
     'long_descr' : 'Receipt number',
     'col_head'   : 'Rec no',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_ledger.auto_rec_no', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_ledger.auto_rec_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -115,9 +114,9 @@ cols.append ({
         '<case>'
           '<on_post>'
             '<case>'
-              '<compare src="_ledger.auto_temp_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
                 '<case>'
-                  '<compare src="_ledger.auto_rec_no" op="is_not" tgt="$None">'
+                  '<compare test="[[`if`, ``, `_ledger.auto_rec_no`, `is not`, `$None`, ``]]">'
                     '<auto_gen args="_ledger.auto_rec_no"/>'
                   '</compare>'
                 '</case>'
@@ -129,10 +128,10 @@ cols.append ({
           '</on_post>'
           '<on_insert>'
             '<case>'
-              '<compare src="_ledger.auto_temp_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_ledger.auto_temp_no"/>'
               '</compare>'
-              '<compare src="_ledger.auto_rec_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.auto_rec_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_ledger.auto_rec_no"/>'
               '</compare>'
             '</case>'
@@ -204,7 +203,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="ledger_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `ledger_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
@@ -317,15 +316,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'dflt_val'   : 'cb_rec',
-    'sql'        : "'cb_rec'",
-    })
+# virt.append ({
+#     'col_name'   : 'tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Transaction type',
+#     'long_descr' : 'Transaction type',
+#     'col_head'   : 'Tran type',
+#     'sql'        : "'cb_rec'",
+#     })
 virt.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
@@ -333,7 +331,6 @@ virt.append ({
     'long_descr' : 'Currency used to enter transaction',
     'col_head'   : 'Currency',
     'dflt_val'   : '{ledger_row_id>currency_id}',
-    # 'fkey'       : ['adm_currencies', 'row_id', None, None, False, None],
     'sql'        : 'a.ledger_row_id>currency_id',
     })
 virt.append ({
@@ -355,6 +352,14 @@ virt.append ({
     'short_descr': 'Cust row id',
     'long_descr' : 'Customer row id - this is only here to satisfy diag.py',
     'col_head'   : 'Cust',
+    'sql'        : "NULL",
+    })
+virt.append ({
+    'col_name'   : 'supp_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Supp row id',
+    'long_descr' : 'Supplier row id - this is only here to satisfy diag.py',
+    'col_head'   : 'Supp',
     'sql'        : "NULL",
     })
 virt.append ({
@@ -452,7 +457,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'ledger_row_id>location_row_id'],
                 ['function_row_id', 'ledger_row_id>function_row_id'],
                 ['source_code', "'cb_rec'"],

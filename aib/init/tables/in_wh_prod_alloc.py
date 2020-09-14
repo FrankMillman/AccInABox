@@ -75,34 +75,36 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+# cols.append ({
+#     'col_name'   : 'tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Transaction type',
+#     'long_descr' : 'Transaction type',
+#     'col_head'   : 'Tran type',
+#     'key_field'  : 'A',
+#     'calculated' : False,
+#     'allow_null' : False,
+#     'allow_amend': False,
+#     'max_len'    : 0,
+#     'db_scale'   : 0,
+#     'scale_ptr'  : None,
+#     'dflt_val'   : None,
+#     'dflt_rule'  : None,
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : [
+#             ['ar_inv', 'A/c sale'],
+#             ['cb_rec', 'Cash sale'],
+#             ['ar_crn', 'A/c cr note'],
+#             ['cb_pmt', 'Cash cr note'],
+#         ],
+#     })
 cols.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'key_field'  : 'A',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : [
-            ['isls', 'Sales invoice'],
-            # ['in_tfrout', 'Transfer out'],
-        ],
-    })
-cols.append ({
-    'col_name'   : 'tran_row_id',
+    'col_name'   : 'subtran_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Transaction id',
-    'long_descr' : 'Transaction row id',
-    'col_head'   : 'Tran id',
+    'short_descr': 'Subtran id',
+    'long_descr' : 'Subtran row id',
+    'col_head'   : 'Subtran id',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -113,12 +115,15 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : [
-        ['tran_type', [
-            ['isls', 'sls_isls_subinv'],
-            # ['in_tfrout', 'in_tran_tfr_det'],
-            ]],
-        'row_id', None, None, True, None],
+    # 'fkey'       : [
+    #     ['tran_type', [
+    #         ['ar_inv', 'ar_tran_inv_isls'],
+    #         ['cb_rec', 'cb_tran_rec_isls'],
+    #         ['ar_crn', 'ar_tran_crn_isls'],
+    #         ['cb_pmt', 'cb_tran_pmt_isls'],
+    #         ]],
+    #     'row_id', None, None, True, None],
+    'fkey'       : ['sls_isls_subtran', 'row_id', None, None, True, None],
     'choices'    : None,
     })
 cols.append ({
@@ -206,8 +211,8 @@ virt.append ({
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
-    'dflt_val'   : '{tran_row_id>tran_det_row_id>tran_row_id>posted}',
-    'sql'        : "a.tran_row_id>tran_det_row_id>tran_row_id>posted"
+    'dflt_val'   : '{subtran_row_id>tran_det_row_id>tran_row_id>posted}',
+    'sql'        : "a.subtran_row_id>tran_det_row_id>tran_row_id>posted"
     })
 
 # cursor definitions

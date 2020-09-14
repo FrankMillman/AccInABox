@@ -289,6 +289,8 @@ async def convert_sql(self, sql, params=None):
                 continue
             if word == ',':
                 continue
+            if word == '||':
+                continue
             skip_expr += word.count('(')  # check for expression enclosed in brackets
             skip_expr -= word.count(')')  # brackets can be spread over multiple 'words'
             if skip_expr:
@@ -308,6 +310,8 @@ async def convert_sql(self, sql, params=None):
                 sqlist[pos-1] = f'{sqlist[pos-1]} NULLS FIRST'
                 continue
             next_word = sqlist[pos].upper()
+            if next_word == '||':
+                continue
             if next_word == 'ASC':
                 sqlist[pos] = f'{sqlist[pos]} NULLS FIRST'
                 pos += 1

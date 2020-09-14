@@ -196,7 +196,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="supp_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
@@ -227,8 +227,11 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
+            '</compare>'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `supp_row_id>currency_id`, ``]]">'
+                '<fld_val name="supp_exch_rate"/>'
             '</compare>'
             '<default>'
                 '<exch_rate>'
@@ -284,7 +287,7 @@ cols.append ({
     'col_name'   : 'crn_amount',
     'data_type'  : 'DEC',
     'short_descr': 'Cr note amount',
-    'long_descr' : 'Credit note amount in supplier currency',
+    'long_descr' : 'Credit note amount in cr note currency',
     'col_head'   : 'Crn amount',
     'key_field'  : 'N',
     'calculated' : False,
@@ -321,9 +324,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'crn_net_amt',
     'data_type'  : 'DEC',
-    'short_descr': 'crnoice net amount',
-    'long_descr' : 'crnoice net amount in crnoice currency - updated from ap_tran_crn_det',
-    'col_head'   : 'crn net amt',
+    'short_descr': 'Cr note net amount',
+    'long_descr' : 'Cr note net amount in cr note currency - updated from ap_tran_crn_det',
+    'col_head'   : 'Crn net amt',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -340,9 +343,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'crn_tax_amt',
     'data_type'  : 'DEC',
-    'short_descr': 'crnoice tax amount',
-    'long_descr' : 'crnoice tax amount in crnoice currency - updated from ap_tran_crn_det',
-    'col_head'   : 'crn tax amt',
+    'short_descr': 'Cr note tax amount',
+    'long_descr' : 'Cr note tax amount in cr note currency - updated from ap_tran_crn_det',
+    'col_head'   : 'Crn tax amt',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -359,9 +362,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'crn_net_supp',
     'data_type'  : 'DEC',
-    'short_descr': 'crnoice net supp',
-    'long_descr' : 'crnoice net amount in supplier currency - updated from ap_tran_crn_det',
-    'col_head'   : 'crn net supp',
+    'short_descr': 'Cr note net supp',
+    'long_descr' : 'Cr note net amount in supplier currency - updated from ap_tran_crn_det',
+    'col_head'   : 'Crn net supp',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -378,8 +381,8 @@ cols.append ({
 cols.append ({
     'col_name'   : 'crn_tax_supp',
     'data_type'  : 'DEC',
-    'short_descr': 'crnoice tax supp',
-    'long_descr' : 'crnoice tax amount in supplier currency - updated from ap_tran_crn_det',
+    'short_descr': 'Cr note tax supp',
+    'long_descr' : 'Cr note tax amount in supplier currency - updated from ap_tran_crn_det',
     'col_head'   : 'crn tax supp',
     'key_field'  : 'N',
     'calculated' : False,
@@ -397,8 +400,8 @@ cols.append ({
 cols.append ({
     'col_name'   : 'crn_net_local',
     'data_type'  : 'DEC',
-    'short_descr': 'crnoice net local',
-    'long_descr' : 'crnoice net amount in local currency - updated from ap_tran_crn_det',
+    'short_descr': 'Cr note net local',
+    'long_descr' : 'Cr note net amount in local currency - updated from ap_tran_crn_det',
     'col_head'   : 'crn net local',
     'key_field'  : 'N',
     'calculated' : False,
@@ -416,8 +419,8 @@ cols.append ({
 cols.append ({
     'col_name'   : 'crn_tax_local',
     'data_type'  : 'DEC',
-    'short_descr': 'crnoice tax local',
-    'long_descr' : 'crnoice tax amount in local currency - updated from ap_tran_crn_det',
+    'short_descr': 'Cr note tax local',
+    'long_descr' : 'Cr note tax amount in local currency - updated from ap_tran_crn_det',
     'col_head'   : 'crn tax local',
     'key_field'  : 'N',
     'calculated' : False,
@@ -457,7 +460,7 @@ virt.append ({
     'col_name'   : 'crn_tot_amt',
     'data_type'  : 'DEC',
     'short_descr': 'Total amount',
-    'long_descr' : 'crnoice total amount in crnoice currency',
+    'long_descr' : 'Cr note total amount in cr note currency',
     'col_head'   : 'Tot amt',
     'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
@@ -719,7 +722,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
                 ['source_code', "'ap_crn_net'"],
@@ -741,7 +744,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
                 ['source_code', "'ap_crn_tax'"],

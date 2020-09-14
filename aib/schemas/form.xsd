@@ -191,9 +191,7 @@
   </xs:group>
   <xs:element name="if_">
     <xs:complexType>
-      <xs:attribute name="src" use="required"/>
-      <xs:attribute name="op" use="required"/>
-      <xs:attribute name="tgt" use="required"/>
+      <xs:attribute name="test" use="required"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="string">

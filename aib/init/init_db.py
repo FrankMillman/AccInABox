@@ -167,7 +167,8 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
             col['db_scale'],
             col['scale_ptr'],
             col['dflt_val'],
-            col['dflt_rule'],
+            None if col['dflt_rule'] is None else
+                col['dflt_rule'].replace('`', "'"),
             None if col['col_checks'] is None else dumps(col['col_checks']),
             None if col['fkey'] is None else dumps(col['fkey']),
             None if col['choices'] is None else dumps(col['choices']),
@@ -218,7 +219,8 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
                 col.get('db_scale', 0),
                 col.get('scale_ptr'),
                 col.get('dflt_val'),
-                col.get('dflt_rule'),
+                None if col.get('dflt_rule') is None else
+                    col['dflt_rule'].replace('`', "'"),
                 col.get('col_checks'),
                 col.get('fkey'),
                 col.get('choices'),
@@ -315,7 +317,8 @@ async def setup_table(module, db_tbl, db_col, table_name):
         await db_col.setval('db_scale', col['db_scale'])
         await db_col.setval('scale_ptr', col['scale_ptr'])
         await db_col.setval('dflt_val', col['dflt_val'])
-        await db_col.setval('dflt_rule', col['dflt_rule'])
+        dflt_rule = col['dflt_rule']
+        await db_col.setval('dflt_rule', None if dflt_rule is None else dflt_rule.replace('`', "'"))
         await db_col.setval('col_checks', col['col_checks'])
         await db_col.setval('fkey', col['fkey'])
         await db_col.setval('choices', col['choices'])
@@ -340,7 +343,8 @@ async def setup_table(module, db_tbl, db_col, table_name):
         await db_col.setval('db_scale', virt.get('db_scale', 0))
         await db_col.setval('scale_ptr', virt.get('scale_ptr'))
         await db_col.setval('dflt_val', virt.get('dflt_val'))
-        await db_col.setval('dflt_rule', virt.get('dflt_rule'))
+        dflt_rule = virt.get('dflt_rule')
+        await db_col.setval('dflt_rule', None if dflt_rule is None else dflt_rule.replace('`', "'"))
         await db_col.setval('col_checks', None)
         await db_col.setval('fkey', virt.get('fkey'))
         await db_col.setval('choices', None)
@@ -366,6 +370,8 @@ async def setup_actions(module, db_act, table_name):
         await db_act.init()
         await db_act.setval('table_name', table_name)
         for act, action in actions:
+            if isinstance(action, str):
+                action = action.replace('`', "'")
             await db_act.setval(act, action)
         await db_act.save()
 

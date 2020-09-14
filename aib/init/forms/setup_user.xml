@@ -72,7 +72,7 @@
       " validation="
           <<validation>>
             <<case>>
-              <<compare src=`user.password` op=`is_not` tgt=`$None`/>>
+              <<compare test=`[['if', '', 'user.password', 'is not', '$None', '']]`/>>
               <<default>>
                 <<error head=`Password` body=`You must enter a password`/>>
               <</default>>
@@ -90,7 +90,7 @@
             <<case>>
               <<fld_changed name=`user_comp_view.access_allowed`>>
                 <<case>>
-                  <<compare src=`user_comp_view.access_allowed` op=`is` tgt=`$False`>>
+                  <<compare test=`[['if', '', 'user_comp_view.access_allowed', 'is', '$False', '']]`>>
                     <<assign src=`$False` tgt=`user_comp_view.comp_admin`/>>
                   <</compare>>
                 <</case>>

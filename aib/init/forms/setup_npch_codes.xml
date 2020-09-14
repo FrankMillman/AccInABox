@@ -85,7 +85,7 @@
               <input obj_name="npch_code" col_name="unearned_gl_code" lng="80"/>
               <end_if/>
 
-              <if_ test="[[`if`, ``, `_param.tax_cat_id`, `is_not`, `$None`, ``]]"/>
+              <if_ test="[[`if`, ``, `_param.tax_cat_id`, `is not`, `$None`, ``]]"/>
               <block/>
               <grid data_object="mem_tax_codes" growable="false" num_grid_rows="3">
                 <toolbar/>

@@ -242,25 +242,29 @@ async def setup_other_tables(context, conn, company):
         'gl_ledger_periods',
         'gl_source_codes',
         'gl_tran_bf',
+        'gl_tran_jnl',
+        'gl_tran_jnl_det',
+        'gl_jnl_subtran',
         'gl_totals',
         'sls_nsls_groups',
         'sls_nsls_codes',
         'sls_nsls_tax_codes',
         'sls_sales_persons',
-        'sls_comments',
         'pch_npch_groups',
         'pch_npch_codes',
         'pch_npch_tax_codes',
-        'pch_comments',
         'ar_ledger_params',
         'ar_ledger_periods',
         'ar_terms_codes',
         'ar_customers',
+        'ar_comments',
         'ar_stat_dates',
         'ap_ledger_params',
         'ap_ledger_periods',
         'ap_terms_codes',
         'ap_suppliers',
+        'ap_comments',
+        'ap_pmt_dates',
         'in_ledger_params',
         'in_ledger_periods',
         'in_prod_groups',
@@ -284,81 +288,67 @@ async def setup_other_tables(context, conn, company):
         'ar_tran_alloc_det',
         'ar_tran_bf',
         'ar_tran_bf_det',
-        'ar_tran_uea_bf',
-        'ar_tran_uea_bf_det',
+        'ar_uea_bf',
+        'ar_uea_bf_det',
         'ar_totals',
         'ar_cust_totals',
-        'sls_isls_subinv',
-        'sls_isls_subcrn',
-        'sls_isls_invtax',
-        'sls_isls_crntax',
-        'sls_isls_totals',
-        'sls_isls_cust_totals',
-        'sls_nsls_subinv',
-        'sls_nsls_subinv_ear',
-        'sls_nsls_subcrn',
-        'sls_nsls_subcrn_ear',
-        'sls_nsls_invtax',
-        'sls_nsls_crntax',
-        'sls_nsls_totals',
-        'sls_nsls_uea_totals',
-        'sls_nsls_cust_totals',
-        'sls_nsls_cust_uea_totals',
-        'sls_tax_totals',
-        'sls_sell_prices',
-        'ap_pmt_dates',
         'in_pch_orders',
         'in_pchord_det',
         'in_wh_class_totals',
         'in_wh_prod_totals',
-        'in_wh_prod_unposted',
-        'in_wh_prod_fifo',
-        'in_wh_prod_alloc',
         'ap_openitems',
         'ap_tran_inv',
         'ap_tran_inv_det',
         'ap_tran_crn',
         'ap_tran_crn_det',
         'ap_tran_pmt',
+        # 'ap_tran_alloc',
+        # 'ap_tran_alloc_det',
         'ap_tran_bf',
         'ap_tran_bf_det',
-        'ap_tran_uex_bf',
-        'ap_tran_uex_bf_det',
-        'ap_allocations',
+        'ap_uex_bf',
+        'ap_uex_bf_det',
         'ap_totals',
         'ap_supp_totals',
-        'pch_ipch_subinv',
-        'pch_ipch_subcrn',
-        'pch_ipch_invtax',
-        'pch_ipch_crntax',
-        'pch_npch_subinv',
-        'pch_npch_subinv_exp',
-        'pch_npch_subcrn',
-        'pch_npch_subcrn_exp',
-        'pch_npch_invtax',
-        'pch_npch_crntax',
-        'pch_npch_totals',
-        'pch_npch_uex_totals',
-        'pch_npch_supp_totals',
-        'pch_npch_supp_uex_totals',
-        'pch_tax_totals',
         'cb_ledger_params',
         'cb_ledger_periods',
-        'cb_orec_groups',
-        'cb_orec_codes',
-        'cb_opmt_groups',
-        'cb_opmt_codes',
         'cb_tran_rec',
         'cb_tran_rec_det',
         'cb_tran_pmt',
         'cb_tran_pmt_det',
         'cb_tran_bf',
         'cb_totals',
-        'cb_orec_subtran',
-        'cb_opmt_subtran',
         'cb_comments',
-        'cb_orec_totals',
-        'cb_opmt_totals',
+        'pch_ipch_subtran',
+        'pch_ipch_subtran_tax',
+        'pch_ipch_totals',
+        'pch_ipch_class_totals',
+        'pch_ipch_supp_totals',
+        'pch_npch_subtran',
+        'pch_npch_subtran_tax',
+        'pch_npch_subtran_uex',
+        'pch_npch_totals',
+        'pch_npch_uex_totals',
+        'pch_npch_supp_totals',
+        'pch_npch_supp_uex_totals',
+        'pch_tax_totals',
+        'sls_isls_subtran',
+        'sls_isls_subtran_tax',
+        'sls_isls_totals',
+        'sls_isls_class_totals',
+        'sls_isls_cust_totals',
+        'sls_nsls_subtran',
+        'sls_nsls_subtran_tax',
+        'sls_nsls_subtran_uea',
+        'sls_nsls_totals',
+        'sls_nsls_uea_totals',
+        'sls_nsls_cust_totals',
+        'sls_nsls_cust_uea_totals',
+        'sls_tax_totals',
+        'sls_sell_prices',
+        'in_wh_prod_unposted',
+        'in_wh_prod_fifo',
+        'in_wh_prod_alloc',
         ]
     for table_name in tables:
         module = importlib.import_module('.tables.{}'.format(table_name), 'init')
@@ -407,7 +397,8 @@ async def setup_table(module, company, db_tbl, db_col, table_name):
         await db_col.setval('db_scale', col['db_scale'])
         await db_col.setval('scale_ptr', col['scale_ptr'])
         await db_col.setval('dflt_val', col['dflt_val'])
-        await db_col.setval('dflt_rule', col['dflt_rule'])
+        dflt_rule = col['dflt_rule']
+        await db_col.setval('dflt_rule', None if dflt_rule is None else dflt_rule.replace('`', "'"))
         await db_col.setval('col_checks', col['col_checks'])
         await db_col.setval('fkey', col['fkey'])
         await db_col.setval('choices', col['choices'])
@@ -432,7 +423,8 @@ async def setup_table(module, company, db_tbl, db_col, table_name):
         await db_col.setval('db_scale', virt.get('db_scale', 0))
         await db_col.setval('scale_ptr', virt.get('scale_ptr'))
         await db_col.setval('dflt_val', virt.get('dflt_val'))
-        await db_col.setval('dflt_rule', virt.get('dflt_rule'))
+        dflt_rule = virt.get('dflt_rule')
+        await db_col.setval('dflt_rule', None if dflt_rule is None else dflt_rule.replace('`', "'"))
         await db_col.setval('col_checks', None)
         await db_col.setval('fkey', virt.get('fkey'))
         await db_col.setval('choices', None)
@@ -458,6 +450,8 @@ async def setup_actions(module, db_act, table_name):
         await db_act.init()
         await db_act.setval('table_name', table_name)
         for act, action in actions:
+            if isinstance(action, str):
+                action = action.replace('`', "'")
             await db_act.setval(act, action)
         await db_act.save()
 
@@ -593,8 +587,11 @@ async def setup_forms(context, conn, company):
     await setup_form('setup_nsls_codes')
     await setup_form('sls_report')
     await setup_form('setup_apsupp')
+    await setup_form('ap_supp_bal')
     await setup_form('setup_npch_codes')
     await setup_form('ap_invoice')
+    await setup_form('ap_balances')
+    await setup_form('ap_ledger_summary')
     await setup_form('setup_prod_codes')
     await setup_form('setup_sell_prices')
     await setup_form('cb_receipt')
@@ -713,10 +710,6 @@ async def setup_menus(context, conn, company, company_name):
             ['Period end procedure', 'form', 'gl_ledger_periods'],
             ]],
         ['Cash book', 'menu', 'cb', [
-            ['Setup', 'menu', 'cb', [
-                ['Maintain receipt codes', 'form', 'setup_orec_codes'],
-                ['Maintain payment codes', 'form', 'setup_opmt_codes'],
-                ]],
             ['Add new cashbook', 'form', 'cb_ledger_new'],
             ]],
         ['Sales administration', 'menu', 'sls', [
@@ -794,6 +787,12 @@ async def setup_menus(context, conn, company, company_name):
             ['Review unposted invoices', 'grid', 'ap_tran_inv', 'unposted_inv'],
             ['Review unposted payments', 'grid', 'ap_tran_pmt', 'unposted_pmt'],
             ]],
+        ['Ap enquiries', 'menu', 'ap', [
+            ['AP balances', 'form', 'ap_balances'],
+            ]],
+        ['Ap reports', 'menu', 'ap', [
+            ['Ledger summary', 'form', 'ap_ledger_summary'],
+            ]],
         ['Period end procedure', 'form', 'ap_ledger_periods'],
         ]]
 
@@ -853,6 +852,8 @@ async def setup_init_data(context, conn, company, company_name):
     await gl_group.setval('gl_group', 'all')
     await gl_group.setval('descr', 'All groups')
     await gl_group.setval('group_type', 'root')
+    await gl_group.setval('valid_locs', 'all')
+    await gl_group.setval('valid_funs', 'all')
     await gl_group.save()
 
     prod_group = await db.objects.get_db_object(context, company, 'in_prod_groups')
@@ -872,18 +873,6 @@ async def setup_init_data(context, conn, company, company_name):
     await pch_group.setval('descr', 'All expense codes')
     await pch_group.setval('group_type', 'root')
     await pch_group.save()
-
-    orec_group = await db.objects.get_db_object(context, company, 'cb_orec_groups')
-    await orec_group.setval('orec_group', 'all')
-    await orec_group.setval('descr', 'All receipt code groups')
-    await orec_group.setval('group_type', 'root')
-    await orec_group.save()
-
-    opmt_group = await db.objects.get_db_object(context, company, 'cb_opmt_groups')
-    await opmt_group.setval('opmt_group', 'all')
-    await opmt_group.setval('descr', 'All payment code groups')
-    await opmt_group.setval('group_type', 'root')
-    await opmt_group.save()
 
     acc_role = await db.objects.get_db_object(context, company, 'acc_roles')
     await acc_role.setval('role_type', '0')

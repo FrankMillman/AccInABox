@@ -1,6 +1,6 @@
 <form name="ar_ledger_per" title="Ar ledger periods" before_start_form="
   <<case>>
-    <<compare src=`_ledger.separate_stat_close` op=`is` tgt=`$True`>>
+    <<compare test=`[['if', '', '_ledger.separate_stat_close', 'is', '$True', '']]`>>
       <<assign src=`'ar_per_stat'` tgt=`_ctx.cursor_name`/>>
     <</compare>>
     <<default>>
@@ -130,7 +130,7 @@
               <col/>
               <input obj_name="var" col_name="enable_stat_close" after="
                 <<case>>
-                  <<compare src=`var.enable_stat_close` op=`is` tgt=`$True`>>
+                  <<compare test=`[['if', '', 'var.enable_stat_close', 'is', '$True', '']]`>>
                     <<change_button>>
                       <<btn_enabled btn_id=`close_stat` state=`true`/>>
                     <</change_button>>
@@ -220,7 +220,7 @@
               <col/>
               <input obj_name="var" col_name="enable_per_close" after="
                 <<case>>
-                  <<compare src=`var.enable_per_close` op=`is` tgt=`$True`>>
+                  <<compare test=`[['if', '', 'var.enable_per_close', 'is', '$True', '']]`>>
                     <<change_button>>
                       <<btn_enabled btn_id=`close_per` state=`true`/>>
                     <</change_button>>

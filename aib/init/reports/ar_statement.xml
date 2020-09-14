@@ -87,8 +87,8 @@
             <method name="on_start_grid" action="
               <<action>>
                 <<assign src=`'post'` tgt=`org_addr.address_type`/>>
-                <<assign src=`var.start_date` tgt=`ar_cust.tran_start_date`/>>
-                <<assign src=`var.end_date` tgt=`ar_cust.tran_end_date`/>>
+                <<assign src=`var.start_date` tgt=`_ctx.tran_start_date`/>>
+                <<assign src=`var.end_date` tgt=`_ctx.tran_end_date`/>>
                 <<get_op_cl_bal args=`ar_cust, op_bal_cust, cl_bal_cust, tot_cust`/>>
                 <<assign src=`ar_cust.op_bal_cust` tgt=`var.op_bal`/>>
                 <<assign src=`ar_cust.cl_bal_cust` tgt=`var.cl_bal`/>>

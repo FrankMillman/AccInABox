@@ -158,9 +158,13 @@ class GuiCtrl:
             #   create lkup_filter using the value entered for the first part
             # N.B. in theory there could be > 2 parts, but this is hard-coded for 2
             true_src_fkey = self.fld.foreign_key['true_src'].col_defn.fkey
-            altsrc_name_1 = true_src_fkey[2].split(',')[0]
-            if altsrc_name_1 == self.fld.col_name:
+            # altsrc_name_1 = true_src_fkey[2].split(',')[0]
+            altsrc_names = [x.strip() for x in true_src_fkey[2].split(',')]
+            # if altsrc_name_1 == self.fld.col_name:
+            if altsrc_names[0] == self.fld.col_name:
                 pass  # alt_src is single-part, so n/a
+            elif altsrc_names[1] != self.fld.col_name:
+                pass  # only works for 2nd altsrc, not for location/function id
             else:
                 # e.g. adm_tax_rates.tax_code_id has this fkey -
                 #   ['adm_tax_codes', 'row_id', 'tax_cat, tax_code', 'tax_cat, tax_code']
@@ -169,13 +173,14 @@ class GuiCtrl:
                 # assume 'tax_cat' has been entered, and we are now entering 'tax_code'
                 # we want to do a lookup on adm_tax_codes, but only where 'tax_cat' = the entered value
 
-                alttgt_name_1 = true_src_fkey[3].split(',')[0]
+                # alttgt_name_1 = true_src_fkey[3].split(',')[0]
+                alttgt_names = [x.strip() for x in true_src_fkey[3].split(',')]
 
-                alt_src = await self.fld.db_obj.getfld(altsrc_name_1)
+                alt_src = await self.fld.db_obj.getfld(altsrc_names[0])
                 if alt_src.foreign_key == {}:
                     await alt_src.setup_foreign_key()
                 alttgt_obj = alt_src.foreign_key['tgt_field'].db_obj
-                alt_tgt = await alttgt_obj.getfld(alttgt_name_1)
+                alt_tgt = await alttgt_obj.getfld(alttgt_names[0])
                 if alt_tgt.foreign_key == {}:
                     await alt_tgt.setup_foreign_key()
                 if alt_tgt.foreign_key['true_src']:  # if an alt_scr, use the true_src
@@ -425,6 +430,7 @@ class GuiDummy:  # dummy field to force validation of last real field
         self.before_input = None
         self.after_input = None
         self.readonly = True
+        self.db_obj = parent.db_obj  # can be used in validation
         self.col_name = 'dummy'
         self.hidden = False  # for 'subtype' gui objects
         ref, pos = parent.form.add_obj(parent, self)

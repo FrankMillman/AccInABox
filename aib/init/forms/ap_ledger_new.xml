@@ -59,7 +59,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<case>>
-                  <<compare src=`ledger.separate_pmt_close` op=`is` tgt=`$True`>>
+                  <<compare test=`[['if', '', 'ledger.separate_pmt_close', 'is', '$True', '']]`>>
                     <<inline_form name=`op_pmt_date`>>
                       <<on_return>>
                         <<return state=`cancelled`/>>
@@ -82,9 +82,9 @@
         <</validation>>
         <<validation>>
           <<case>>
-            <<compare src=`ledger.separate_pmt_close` op=`is` tgt=`$True`>>
+            <<compare test=`[['if', 'ledger.separate_pmt_close', 'is', '$True', '']]`>>
               <<case>>
-                <<compare src=`var.first_pmt_date` op=`is` tgt=`$None`>>
+                <<compare test=`[['if', '', 'var.first_pmt_date', 'is', '$None', '']]`>>
                   <<error head=`Opening period` body=`Please enter first payment date`/>>
                 <</compare>>
               <</case>>
@@ -101,7 +101,7 @@
         <<assign src=`adm_period.period_row_id` tgt=`ledg_per.period_row_id`/>>
         <<assign src=`'current'` tgt=`ledg_per.state`/>>
         <<case>>
-          <<compare src=`ledger.separate_pmt_close` op=`is` tgt=`$True`>>
+          <<compare test=`[['if', '', 'ledger.separate_pmt_close', 'is', '$True', '']]`>>
             <<assign src=`var.first_pmt_date` tgt=`ledg_per.payment_date`/>>
             <<assign src=`'open'` tgt=`ledg_per.payment_state`/>>
           <</compare>>

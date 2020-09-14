@@ -76,11 +76,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'code',
+    'col_name'   : 'tran_type',
     'data_type'  : 'TEXT',
-    'short_descr': 'Comment code',
-    'long_descr' : 'Comment code',
-    'col_head'   : 'Code',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Tran type',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -92,6 +92,33 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
+    'choices'    : [
+            ['ar_inv', 'Invoice'],
+            ['ar_crn', 'Credit note'],
+        ],
+    })
+cols.append ({
+    'col_name'   : 'tran_det_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Transaction detail id',
+    'long_descr' : 'Transaction detail row id',
+    'col_head'   : 'Tran id',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : [
+        ['tran_type', [
+            ['ar_inv', 'ar_tran_inv_det'],
+            ['ar_crn', 'ar_tran_crn_det'],
+            ]],
+        'row_id', None, None, True, None],
     'choices'    : None,
     })
 cols.append ({
@@ -102,7 +129,7 @@ cols.append ({
     'col_head'   : 'Text',
     'key_field'  : 'N',
     'calculated' : False,
-    'allow_null' : True,
+    'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
@@ -124,7 +151,7 @@ cursors = []
 actions = []
 cursors.append({
     'cursor_name': 'ar_comm',
-    'descr': 'Comments',
+    'title': 'Comments',
     'columns': [
         ['code', 100, False, False, False, False, None, None, None, None],
         ['text', 260, True, True, False, False, None, None, None, None],

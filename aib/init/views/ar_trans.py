@@ -18,7 +18,7 @@ view = {
             'ar_chg':
                 ('ar_subtran_chg', 'row_id', 'tran_row_id', 'ar_chg_view'),
             'ar_disc':
-                ('ar_tran_rec', 'row_id', 'tran_row_id', 'ar_disc_view'),
+                ('ar_tran_disc', 'row_id', 'tran_row_id', 'ar_disc_view'),
             }],
 
     'filter'        : [

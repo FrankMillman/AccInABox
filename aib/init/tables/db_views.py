@@ -6,7 +6,7 @@ table = {
     'long_descr'    : 'Database views',
     'sub_types'     : None,
     'sub_trans'     : None,
-    'sequence'      : ['seq', [], None],
+    'sequence'      : ['seq', ['module_row_id'], None],
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,

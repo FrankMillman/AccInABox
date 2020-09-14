@@ -538,7 +538,7 @@ actions.append([
             'check_not_null',
             'Cannot disallow null - NULLs are present',
             [
-                ['check', '', 'allow_null', 'pyfunc', 'check_not_null', ''],
+                ['check', '', 'allow_null', 'pyfunc', 'db.checks.check_not_null', ''],
                 ],
             ],
         ],
@@ -546,7 +546,7 @@ actions.append([
 actions.append([
     'after_insert', (
         '<case>'
-            '<compare src="col_type" op="eq" tgt="\'user\'">'
+            '<compare test="[[`if`, ``, `col_type`, `=`, `~user~`, ``]]">'
                 '<add_column/>'
             '</compare>'
         '</case>'

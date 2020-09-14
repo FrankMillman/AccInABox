@@ -82,7 +82,7 @@ cols.append ({
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_param.ar_ledger_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.ar_ledger_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -121,8 +121,8 @@ cols.append ({
     'col_head'   : 'Loc',
     'key_field'  : 'A',
     'calculated' : [
-        ['where', '', '_param.location_row_id', 'is_not', '$None', ''],
-        ['or', '', '_ledger.common_location', 'is', '$True', ''],
+        ['where', '', '_param.location_row_id', 'is not', '$None', ''],
+        ['or', '', '_ledger.valid_loc_ids>expandable', 'is', '$False', ''],
         ],
     'allow_null' : False,
     'allow_amend': False,
@@ -132,15 +132,15 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_param.location_row_id" op="is_not" tgt="$None">'
+          '<compare test="[[`if`, ``, `_param.location_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.location_row_id"/>'
           '</compare>'
-          '<compare src="_ledger.common_location" op="is" tgt="$True">'
-            '<fld_val name="_ledger.location_row_id"/>'
+          '<compare test="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
+            '<fld_val name="_ledger.valid_loc_ids"/>'
           '</compare>'
-          '<compare src="_ledger.multiple_locations" op="is" tgt="$False">'
+          '<compare test="[[`if`, ``, `_ledger.multiple_locations`, `is`, `$False`, ``]]">'
             '<case>'
-                '<compare src="loc_id_if_exists" op="=" tgt="-1">'
+                '<compare test="[[`if`, ``, `loc_id_if_exists`, `=`, `-1`, ``]]">'
                   '<literal value="$None"/>'
                 '</compare>'
                 '<default>'
@@ -151,6 +151,13 @@ cols.append ({
         '</case>'
         ),
     'col_checks' : [
+        [
+            'location_code',
+            'Invalid location',
+            [
+                ['check', '', '$value', 'pyfunc', 'db.checks.valid_loc_id', ''],
+                ],
+            ],
         [
             'multi_loc',
             'Account with a different location exists',
@@ -172,8 +179,8 @@ cols.append ({
     'col_head'   : 'Fun',
     'key_field'  : 'A',
     'calculated' : [
-        ['where', '',  '_param.function_row_id', 'is_not', '$None', ''],
-        ['or', '', '_ledger.common_function', 'is', '$True', ''],
+        ['where', '',  '_param.function_row_id', 'is not', '$None', ''],
+        ['or', '', '_ledger.valid_fun_ids>expandable', 'is', '$False', ''],
         ],
     'allow_null' : False,
     'allow_amend': False,
@@ -183,15 +190,15 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_param.function_row_id" op="is_not" tgt="$None">'
+          '<compare test="[[`if`, ``, `_param.function_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.function_row_id"/>'
           '</compare>'
-          '<compare src="_ledger.common_function" op="is" tgt="$True">'
-            '<fld_val name="_ledger.function_row_id"/>'
+          '<compare test="[[`if`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
+            '<fld_val name="_ledger.valid_fun_ids"/>'
           '</compare>'
-          '<compare src="_ledger.multiple_functions" op="is" tgt="$False">'
+          '<compare test="[[`if`, ``, `_ledger.multiple_functions`, `is`, `$False`, ``]]">'
             '<case>'
-                '<compare src="fun_id_if_exists" op="=" tgt="-1">'
+                '<compare test="[[`if`, ``, `fun_id_if_exists`, `=`, `-1`, ``]]">'
                   '<literal value="$None"/>'
                 '</compare>'
                 '<default>'
@@ -202,6 +209,13 @@ cols.append ({
         '</case>'
         ),
     'col_checks' : [
+        [
+            'function_code',
+            'Invalid function',
+            [
+                ['check', '', '$value', 'pyfunc', 'db.checks.valid_fun_id', ''],
+                ],
+            ],
         [
             'multi_fun',
             'Account with a different function exists',
@@ -222,7 +236,7 @@ cols.append ({
     'long_descr' : 'Currency',
     'col_head'   : 'Currency',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_ledger.currency_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_ledger.currency_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

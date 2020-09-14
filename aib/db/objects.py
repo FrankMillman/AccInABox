@@ -28,10 +28,9 @@ import db.connection
 import db.hooks_xml
 import db.dflt_xml
 from db.connection import db_constants, mem_constants
-from db.chk_constraints import chk_constraint
-from db.chk_constraints import chk_constraint, eval_expr
 import db.cache
 import ht
+from evaluate_expr import eval_bool_expr, eval_elem
 from common import AibError, AibDenied
 from common import log_db, db_log
 from common import find_occurrence
@@ -381,8 +380,7 @@ class DbObject:
 
     # logger.warning('DbObject in db.objects')
 
-    async def _ainit_(self, context, db_table,
-            parent=None, mem_obj=False, view_obj=False):
+    async def _ainit_(self, context, db_table, parent=None, mem_obj=False, view_obj=False):
 
         # print('INIT', db_table.table_name, None if parent is None else parent.table_name)
 
@@ -477,8 +475,15 @@ class DbObject:
                 self.flds_to_update.append(field)
 
             if field.col_name in col_const:  # e.g. tran_type in ar_openitems
-                field.constant = col_const[field.col_name]
-                field._orig = field._value = field.constant
+                if col_defn.col_type == 'alt':
+                    foreign_key = await self.get_foreign_key(field)
+                    await foreign_key['tgt_field'].setval(col_const[field.col_name])
+                    true_src = foreign_key['true_src']
+                    true_src.constant = true_src.foreign_key['tgt_field']._value
+                    true_src._orig = true_src._value = true_src.constant
+                else:
+                    field.constant = col_const[field.col_name]
+                    field._orig = field._value = field.constant
 
             if col_defn.col_name == fkey_colname:  # fkey to parent field
                 field.fkey_parent = fkey_parent
@@ -691,6 +696,8 @@ class DbObject:
             elif obj_name in self.context.data_objects:
                 db_obj = self.context.data_objects[obj_name]
             elif obj_name.startswith('subtran:'):  # e.g. 'subtran:line_type=isls'
+                print('DO WE GET HERE (in db.objects.getfld)')
+                input()
                 subcol_name, subcol_val = obj_name[8:].split('=')
                 db_obj = self.sub_trans[subcol_name][subcol_val][0]
             else:
@@ -1223,7 +1230,8 @@ class DbObject:
             await self.setup_defaults()  # can raise AibError if 'required' and no dflt_val
 
             for descr, errmsg, upd_chk in self.db_table.actions.upd_checks:
-                await chk_constraint(self, upd_chk, errmsg=errmsg)  # will raise AibError on fail
+                if not await eval_bool_expr(upd_chk, self):
+                    raise AibError(head=self.db_table.short_descr, body=errmsg)
 
             if self.exists:  # update row
                 await self.update(conn, from_upd_on_save)
@@ -1422,7 +1430,8 @@ class DbObject:
                 conn = db_mem_conn.db
 
             for descr, errmsg, del_chk in self.db_table.actions.del_checks:
-                await chk_constraint(self, del_chk, errmsg=errmsg)  # will raise AibError on fail
+                if not await eval_bool_expr(del_chk, self):
+                    raise AibError(head=self.db_table.short_descr, body=errmsg)
 
             if self.sub_trans:  # delete any subtran children
                 for subtran_colname in self.sub_trans:
@@ -1547,7 +1556,7 @@ class DbObject:
         await self.init(display=False)
 
     async def get_tgt_obj(self, tbl_name):
-        tbl_key = f'{self.table_name}.{tbl_name}'
+        tbl_key = f'{id(self)}.{tbl_name}'
         if tbl_key in self.context.data_objects:  # already set up
             tgt_obj = self.context.data_objects[tbl_key]
             await tgt_obj.init()
@@ -1568,20 +1577,22 @@ class DbObject:
             self.context.data_objects[tbl_key] = tgt_obj
         return tgt_obj
 
-    async def get_src_val(self, tgt_obj, src_col):
+    async def get_src_val(self, src_col):
         if not isinstance(src_col, str):
             src_val = src_col  # return as is e.g. set posted = True
         elif src_col.startswith("'"):
             src_val = src_col[1:-1]  # literal value
         elif src_col.isdigit():
             src_val = int(src_col)
-        elif src_col[0] == '-' and src_col[1:].isdigit():
+        elif src_col.startswith('-') and src_col[1:].isdigit():
             src_val = int(src_col)
+        elif src_col.startswith('('):
+            src_val = await eval_elem(src_col, self)
         elif src_col.startswith('pyfunc:'):
             func_name = src_col.split(':')[1]
             module_name, func_name = func_name.rsplit('.', 1)
             module = importlib.import_module(module_name)
-            src_val = await getattr(module, func_name)(self, tgt_obj)
+            src_val = await getattr(module, func_name)(self)
         elif '.' in src_col:
             src_tbl, src_col = src_col.split('.')
             if src_tbl == '_ledger':
@@ -1606,7 +1617,7 @@ class DbObject:
         tbl_name, condition, split_src, *upd_on_save = upd_on_save
 
         if condition:
-            if not await eval_expr(condition, self, None):
+            if not await eval_bool_expr(condition, self, None):
                 return
 
         if split_src:
@@ -1631,7 +1642,7 @@ class DbObject:
                 params = []  # used in 'UPDATE' at end
 
             for tgt_col, src_col in key_fields:
-                src_val = await self.get_src_val(tgt_obj, src_col)
+                src_val = await self.get_src_val(src_col)
                 # await tgt_obj.setval(tgt_col, src_val, validate=False)
                 tgt_fld = await tgt_obj.getfld(tgt_col)
                 if tgt_fld.col_defn.col_type == 'alt':
@@ -1696,21 +1707,25 @@ class DbObject:
                 for tgt_col, op, src_col in aggr:
                     if tgt_col in roll_columns:
                         src_fld = await self.getfld(src_col)
-                        tgt_fld = await tgt_obj.getfld(tgt_col)
-                        tgt_scale = tgt_fld.col_defn.db_scale
                         if upd_type == 'inserted':
                             src_val = await src_fld.getval()
                         elif upd_type == 'updated':
                             src_val = await src_fld.getval() - await src_fld.get_orig()
                         elif upd_type == 'deleted':
                             src_val = 0 - await src_fld.getval()
-                        if op == '+':
-                            sql += '{0} = ROUND({0} + {1}, {1}), '.format(tgt_col, param_style)
-                        elif op == '-':
-                            sql += '{0} = ROUND({0} - {1}, {1}, '.format(tgt_col, param_style)
-                        else:
-                            raise NotImplementedError
-                        upd_params += [src_val, tgt_scale]
+                        # tgt_fld = await tgt_obj.getfld(tgt_col)
+                        # tgt_scale = tgt_fld.col_defn.db_scale
+                        # if op == '+':
+                        #     sql += '{0} = ROUND({0} + {1}, {1}), '.format(tgt_col, param_style)
+                        # elif op == '-':
+                        #     sql += '{0} = ROUND({0} - {1}, {1}, '.format(tgt_col, param_style)
+                        # else:
+                        #     raise NotImplementedError
+                        # upd_params += [src_val, tgt_scale]
+                        # sql += f'{tgt_col} = ROUND({tgt_col} {op} {param_style}, {param_style}), '
+                        # upd_params += [src_val, tgt_scale]
+                        sql += f'{tgt_col} = {tgt_col} {op} {param_style}, '
+                        upd_params += [src_val]
                 sql = sql[:-2] + where_clause
                 upd_params.extend(params)
                 await conn.exec_cmd(sql, upd_params)
@@ -1722,7 +1737,7 @@ class DbObject:
                 if on_ins:
                     save_obj = True
                 for tgt_col, op, src_col in on_ins:
-                    src_val = await self.get_src_val(tgt_obj, src_col)
+                    src_val = await self.get_src_val(src_col)
                     tgt_fld = await tgt_obj.getfld(tgt_col)
                     if op == '=':
                         await tgt_fld.setval(src_val, validate=False)
@@ -1738,7 +1753,7 @@ class DbObject:
                 if on_upd:
                     save_obj = True
                 for tgt_col, op, src_col in on_upd:
-                    src_val = await self.get_src_val(tgt_obj, src_col)
+                    src_val = await self.get_src_val(src_col)
                     tgt_fld = await tgt_obj.getfld(tgt_col)
                     if op == '=':
                         await tgt_fld.setval(src_val, validate=False)
@@ -1754,7 +1769,7 @@ class DbObject:
                 if on_del:
                     save_obj = True
                 for tgt_col, op, src_col in on_del:
-                    src_val = await self.get_src_val(tgt_obj, src_col)
+                    src_val = await self.get_src_val(src_col)
                     tgt_fld = await tgt_obj.getfld(tgt_col)
                     if op == '=':
                         await tgt_fld.setval(src_val, validate=False)
@@ -1777,7 +1792,7 @@ class DbObject:
             where = []
             test = 'WHERE'
             for tgt_col, src_col in fkeys:
-                src_val = await self.get_src_val(tgt_obj, src_col)
+                src_val = await self.get_src_val(src_col)
                 where.append((test, '', tgt_col, '=', src_val, ''))
                 test = 'AND'
             all_tgt = tgt_obj.select_many(where=where, order=[])
@@ -1799,7 +1814,16 @@ class DbObject:
         async for split_vals in splits:
             init_vals = {}
             for tgt_col, src_col in fkeys:
-                src_val = await self.get_src_val(tgt_obj, src_col)
+                src_val = await self.get_src_val(src_col)
+
+                tgt_fld = await tgt_obj.getfld(tgt_col)
+                if tgt_fld.col_defn.col_type == 'alt':
+                    foreign_key = await tgt_obj.get_foreign_key(tgt_fld)
+                    await foreign_key['tgt_field'].setval(src_val)
+                    true_src = foreign_key['true_src']
+                    src_val = true_src.foreign_key['tgt_field']._value
+                    tgt_col = true_src.col_name
+
                 init_vals[tgt_col] = src_val
             await tgt_obj.init(init_vals=init_vals)
             for tgt_col, src_val in zip(flds_to_upd, split_vals):
@@ -1837,10 +1861,12 @@ class DbObject:
         async with self.context.db_session.get_connection() as db_mem_conn:
             if post_type == 'unpost':
                 for descr, errmsg, unpost_chk in self.db_table.actions.unpost_checks:
-                    await chk_constraint(self, unpost_chk, errmsg=errmsg)  # will raise AibError on fail
+                    if not await eval_bool_expr(unpost_chk, self):
+                        raise AibError(head=self.db_table.short_descr, body=errmsg)
             else:  # must be 'post'
                 for descr, errmsg, post_chk in self.db_table.actions.post_checks:
-                    await chk_constraint(self, post_chk, errmsg=errmsg)  # will raise AibError on fail
+                    if not await eval_bool_expr(post_chk, self):
+                        raise AibError(head=self.db_table.short_descr, body=errmsg)
 
             if not posting_child:
                 if self.dirty:
@@ -1980,7 +2006,7 @@ class DbObject:
         tbl_name, condition, split_src, *upd_on_post = upd_on_post
 
         if condition:
-            if not await eval_expr(condition, self, None):
+            if not await eval_bool_expr(condition, self, None):
                 return
 
         if split_src:
@@ -2005,7 +2031,7 @@ class DbObject:
                 params = []  # used in 'UPDATE' at end
 
             for tgt_col, src_col in key_fields:
-                src_val = await self.get_src_val(tgt_obj, src_col)
+                src_val = await self.get_src_val(src_col)
                 # await tgt_obj.setval(tgt_col, src_val, validate=False)
                 tgt_fld = await tgt_obj.getfld(tgt_col)
                 if tgt_fld.col_defn.col_type == 'alt':
@@ -2047,11 +2073,14 @@ class DbObject:
                         pass
 
             for tgt_col, op, src_col in aggr:
-                src_fld = await self.getfld(src_col)
-                if upd_type == 'post':
-                    src_val = await src_fld.getval()
-                elif upd_type == 'unpost':
-                    src_val = 0 - await src_fld.getval()
+                src_val = await self.getval(src_col)
+                # src_fld = await self.getfld(src_col)
+                # if upd_type == 'post':
+                #     src_val = await src_fld.getval()
+                # elif upd_type == 'unpost':
+                #     src_val = 0 - await src_fld.getval()
+                if upd_type == 'unpost':
+                    src_val = 0 - src_val
                 tgt_fld = await tgt_obj.getfld(tgt_col)
                 tgt_val = await tgt_fld.getval()
                 if op == '+':
@@ -2064,22 +2093,35 @@ class DbObject:
             if roll_params is not None:
                 sql = 'UPDATE {0}.{1} SET '.format(tgt_obj.company, tbl_name)
                 upd_params = []
+                # for tgt_col, op, src_col in aggr:
+                #     src_fld = await self.getfld(src_col)
+                #     tgt_fld = await tgt_obj.getfld(tgt_col)
+                #     tgt_scale = tgt_fld.col_defn.db_scale
+                #     if tgt_col in roll_columns:
+                #         if upd_type == 'post':
+                #             src_val = await src_fld.getval()
+                #         elif upd_type == 'unpost':
+                #             src_val = 0 - await src_fld.getval()
+                #         if op == '+':
+                #             sql += '{0} = ROUND({0} + {1}, {1}), '.format(tgt_col, param_style)
+                #         elif op == '-':
+                #             sql += '{0} = ROUND({0} - {1}, {1}), '.format(tgt_col, param_style)
+                #         else:
+                #             raise NotImplementedError
+                #         upd_params += [src_val, tgt_scale]
+
                 for tgt_col, op, src_col in aggr:
-                    src_fld = await self.getfld(src_col)
-                    tgt_fld = await tgt_obj.getfld(tgt_col)
-                    tgt_scale = tgt_fld.col_defn.db_scale
                     if tgt_col in roll_columns:
-                        if upd_type == 'post':
-                            src_val = await src_fld.getval()
-                        elif upd_type == 'unpost':
-                            src_val = 0 - await src_fld.getval()
-                        if op == '+':
-                            sql += '{0} = ROUND({0} + {1}, {1}), '.format(tgt_col, param_style)
-                        elif op == '-':
-                            sql += '{0} = ROUND({0} - {1}, {1}), '.format(tgt_col, param_style)
-                        else:
-                            raise NotImplementedError
-                        upd_params += [src_val, tgt_scale]
+                        tgt_fld = await tgt_obj.getfld(tgt_col)
+                        tgt_scale = tgt_fld.col_defn.db_scale
+                        src_val = await self.getval(src_col)
+                        if upd_type == 'unpost':
+                            src_val = 0 - src_val
+                        # sql += f'{tgt_col} = ROUND({tgt_col} {op} {param_style}, {param_style}), '
+                        # upd_params += [src_val, tgt_scale]
+                        sql += f'{tgt_col} = {tgt_col} {op} {param_style}, '
+                        upd_params += [src_val]
+
                 sql = sql[:-2] + ' ' + where_clause
                 upd_params.extend(params)
                 await conn.exec_cmd(sql, upd_params)
@@ -2091,7 +2133,7 @@ class DbObject:
                 if on_post:
                     save_obj = True
                 for tgt_col, op, src_col in on_post:
-                    src_val = await self.get_src_val(tgt_obj, src_col)
+                    src_val = await self.get_src_val(src_col)
                     tgt_fld = await tgt_obj.getfld(tgt_col)
                     if op == '=':
                         await tgt_fld.setval(src_val, validate=False)
@@ -2107,7 +2149,7 @@ class DbObject:
                 if on_unpost:
                     save_obj = True
                 for tgt_col, op, src_col in on_unpost:
-                    src_val = await self.get_src_val(tgt_obj, src_col)
+                    src_val = await self.get_src_val(src_col)
                     tgt_fld = await tgt_obj.getfld(tgt_col)
                     if op == '=':
                         await tgt_fld.setval(src_val, validate=False)
@@ -2698,6 +2740,7 @@ class DbTable:
         if self.tree_params is not None:
             group, col_names, levels = self.tree_params
             if levels is not None:
+                code, descr, parent_id, seq = col_names
                 type_colname, level_types, sublevel_type = levels
                 # if fixed_levels are defined, these are the parameters -
                 #   each level will have a 'type' code - a 'type' column must exist to store the code
@@ -2714,12 +2757,62 @@ class DbTable:
                     type_col.choices.update([(sublevel_type)])
 
                 # set up 'col_checks' on the 'parent_id' column to ensure level is valid
-                # see db.chk_constraints.parent_id() for validation
                 parent_col = self.col_dict[col_names[2]]
                 parent_col.col_checks.append(
                     ['check_parent', 'Invalid parent id',
-                        [['check', '', '$value', 'pyfunc', 'parent_id', '']]]
+                        [['check', '', '$value', 'pyfunc', 'db.checks.check_parent_id', '']]]
                     )
+
+                # set up sql on 'expandable' column - use 'not expandable' to detect leaf node
+                exp_col = self.col_dict['expandable']
+                exp_col.sql = f"CASE WHEN a.{type_colname} = '{level_types[-1][0]}' THEN 0 ELSE 1 END"
+                await get_dependencies(exp_col)
+
+                # set up virt cols for each level
+                for pos, (level_type, level_descr) in enumerate(reversed(level_types)):
+
+                    if pos == 0:
+                        sql = f'a.row_id'
+                    elif pos == 1:
+                        sql = (
+                            f"SELECT b.row_id FROM {data_company}.{table_name} b "
+                            "WHERE b.row_id = a.parent_id"
+                            )
+                    elif pos == 2:
+                        sql = (
+                            f"SELECT c.row_id FROM {data_company}.{table_name} c, {data_company}.{table_name} b "
+                            "WHERE b.row_id = a.parent_id AND c.row_id = b.parent_id"
+                            )
+                    # elif pos == 3:  # can add sql for further levels if required
+
+                    col = Column([
+                        len(self.col_list),    # col_id
+                        self.table_name,       # table_id
+                        level_type,            # col_name
+                        'virt',                # col_type
+                        len(self.col_list),    # seq
+                        'INT',                 # data_type
+                        level_descr,           # short_descr
+                        level_descr,           # long_descr
+                        level_type,            # col_head
+                        'N',                   # key_field
+                        True,                  # calculated
+                        True,                  # allow_null
+                        True,                  # allow_amend
+                        0,                     # max len
+                        0,                     # db_scale
+                        None,                  # scale_ptr
+                        None,                  # dflt_val
+                        None,                  # dflt_rule
+                        None,                  # col_checks
+                        None,                  # fkey
+                        None,                  # choices
+                        sql,                   # sql
+                        ])
+                    self.col_list.append(col)
+                    self.col_dict[col.col_name] = col
+                    col.table_name = self.table_name
+                    await get_dependencies(col)
 
         self.sub_types = OD()
         if sub_types is not None:
@@ -2846,17 +2939,24 @@ class DbTable:
                                     conn.tablenames = conn.tablenames.replace(' a.', ' b.')
                                     conn.tablenames = conn.tablenames.replace(' a ', ' b ')
 
-                                # next line is hard-coded for now [2018-12-30]
-                                # it depends on a virtual field called tran_type returning the value
-                                # the value could be stored as a parameter in 'sub_tran' on the
-                                #   table definition if more flexibility required
-                                tran_type = self.col_dict['tran_type'].sql
+                                # # next line is hard-coded for now [2018-12-30]
+                                # # it depends on a virtual field called tran_type returning the value
+                                # # the value could be stored as a parameter in 'sub_tran' on the
+                                # #   table definition if more flexibility required
+                                # tran_type = self.col_dict['tran_type'].sql
+
+                                # display_elems = f" {self.constants.concat} ".join(sql_elem)
+                                # display_sql += (
+                                #     f"(SELECT {display_elems} FROM {conn.tablenames} "
+                                #     f"WHERE b.tran_type = {tran_type} "
+                                #     "AND b.tran_det_row_id = a.row_id "
+                                #     "AND b.deleted_id = 0)"
+                                #     )
 
                                 display_elems = f" {self.constants.concat} ".join(sql_elem)
                                 display_sql += (
                                     f"(SELECT {display_elems} FROM {conn.tablenames} "
-                                    f"WHERE b.tran_type = {tran_type} "
-                                    "AND b.tran_det_row_id = a.row_id "
+                                    "WHERE b.tran_det_row_id = a.row_id "
                                     "AND b.deleted_id = 0)"
                                     )
                                 disp_col_defn.sql_a_cols.append('row_id')
@@ -2865,7 +2965,8 @@ class DbTable:
                                 conn.tablenames = save_tablenames
                                 conn.joins = save_joins
 
-                                display_rule += f'<compare src="{col_name}" op="=" tgt="{col_val!r}">'
+                                test = f"[['if', '', '{col_name}', '=', '~{col_val}~', '']]"
+                                display_rule += f'<compare test="{test}">'
                                 display_rule += '<expr>'
                                 # this assumes that disp_col has only one element
                                 # can be expanded if necessary [2019-08-07]
@@ -3332,105 +3433,96 @@ async def get_dependencies(col):
         for child in col.dflt_rule.iter():
             if child.tag == 'fld_val':
                 fld_colname = child.get('name').split('>')[0]
-                if fld_colname != col.col_name and not fld_colname.startswith('_ctx.'):
+                if fld_colname != col.col_name and not fld_colname.startswith('_'):
                     col.dependencies.add(fld_colname)
             elif child.tag == 'compare':
-                source = child.get('src')
-                if source.startswith("("):  # expression
-                    # for now assume a simple expression -
-                    #    (lft [spc] op [spc] rgt)
-                    # e.g. (item_row_id>balance_cust + alloc_cust)
-                    lft, op, rgt = source[1:-1].split(' ')
-                    if lft.startswith("'"):  # literal
+                test = child.get('test').replace("'", '"').replace('~', "'")
+                test = loads(test)
+                for step in test:
+                    source = step[2]
+                    if source.startswith("("):  # expression
+                        # for now assume a simple expression -
+                        #    (lft [spc] op [spc] rgt)
+                        # e.g. (item_row_id>balance_cust + alloc_cust)
+                        lft, op, rgt = source[1:-1].split(' ')
+                        if lft.startswith("'"):  # literal
+                            pass
+                        elif lft.isdigit():
+                            pass
+                        elif lft.startswith('-') and lft[1:].isdigit():
+                            pass
+                        elif lft.startswith('$'):
+                            pass
+                        elif lft.startswith('_'):
+                            pass
+                        else:  # field name
+                            col.dependencies.add(lft.split('>')[0])
+                        if rgt.startswith("'"):  # literal
+                            pass
+                        elif rgt.isdigit():
+                            pass
+                        elif rgt.startswith('-') and rgt[1:].isdigit():
+                            pass
+                        elif rgt.startswith('$'):
+                            pass
+                        elif rgt.startswith('_'):
+                            pass
+                        else:  # field name
+                            col.dependencies.add(rgt.split('>')[0])
+                    elif source.startswith("'"):  # literal
                         pass
-                    elif lft.isdigit():
+                    elif source.isdigit():
                         pass
-                    elif lft[0] == '-' and lft[1:].isdigit():
+                    elif source.startswith('-') and source[1:].isdigit():
                         pass
-                    elif lft.startswith('$'):
+                    elif source.startswith('$'):
                         pass
-                    elif lft.startswith('_param'):
-                        pass
-                    elif lft.startswith('_ctx'):
-                        pass
-                    else:  # field name
-                        col.dependencies.add(lft.split('>')[0])
-                    if rgt.startswith("'"):  # literal
-                        pass
-                    elif rgt.isdigit():
-                        pass
-                    elif rgt[0] == '-' and rgt[1:].isdigit():
-                        pass
-                    elif rgt.startswith('$'):
-                        pass
-                    elif rgt.startswith('_param'):
-                        pass
-                    elif rgt.startswith('_ctx'):
-                        pass
-                    else:  # field name
-                        col.dependencies.add(rgt.split('>')[0])
-                elif source.startswith("'"):  # literal
-                    pass
-                elif source.isdigit():
-                    pass
-                elif source[0] == '-' and source[1:].isdigit():
-                    pass
-                elif source.startswith('$'):
-                    pass
-                elif source.startswith('_param'):
-                    pass
-                elif source.startswith('_ctx'):
-                    pass
-                else:  # field name
-                    col.dependencies.add(source.split('>')[0])
-                target = child.get('tgt')
-                if target.startswith("("):  # expression
-                    # for now assume a simple expression -
-                    #    (lft [spc] op [spc] rgt)
-                    # e.g. (item_row_id>balance_cust + alloc_cust)
-                    lft, op, rgt = target[1:-1].split(' ')
-                    if lft.startswith("'"):  # literal
-                        pass
-                    elif lft.isdigit():
-                        pass
-                    elif lft[0] == '-' and lft[1:].isdigit():
-                        pass
-                    elif lft.startswith('$'):
-                        pass
-                    elif lft.startswith('_param'):
-                        pass
-                    elif lft.startswith('_ctx'):
+                    elif source.startswith('_'):
                         pass
                     else:  # field name
-                        col.dependencies.add(lft.split('>')[0])
-                    if rgt.startswith("'"):  # literal
+                        col.dependencies.add(source.split('>')[0])
+                    target = step[4]
+                    if target.startswith("("):  # expression
+                        # for now assume a simple expression -
+                        #    (lft [spc] op [spc] rgt)
+                        # e.g. (item_row_id>balance_cust + alloc_cust)
+                        lft, op, rgt = target[1:-1].split(' ')
+                        if lft.startswith("'"):  # literal
+                            pass
+                        elif lft.isdigit():
+                            pass
+                        elif lft.startswith('-') and lft[1:].isdigit():
+                            pass
+                        elif lft.startswith('$'):
+                            pass
+                        elif lft.startswith('_'):
+                            pass
+                        else:  # field name
+                            col.dependencies.add(lft.split('>')[0])
+                        if rgt.startswith("'"):  # literal
+                            pass
+                        elif rgt.isdigit():
+                            pass
+                        elif rgt.startswith('-') and rgt[1:].isdigit():
+                            pass
+                        elif rgt.startswith('$'):
+                            pass
+                        elif rgt.startswith('_'):
+                            pass
+                        else:  # field name
+                            col.dependencies.add(rgt.split('>')[0])
+                    elif target.startswith("'"):  # literal
                         pass
-                    elif rgt.isdigit():
+                    elif target.isdigit():
                         pass
-                    elif rgt[0] == '-' and rgt[1:].isdigit():
+                    elif target.startswith('-') and target[1:].isdigit():
                         pass
-                    elif rgt.startswith('$'):
+                    elif target.startswith('$'):
                         pass
-                    elif rgt.startswith('_param'):
-                        pass
-                    elif rgt.startswith('_ctx'):
+                    elif target.startswith('_'):
                         pass
                     else:  # field name
-                        col.dependencies.add(rgt.split('>')[0])
-                elif target.startswith("'"):  # literal
-                    pass
-                elif target.isdigit():
-                    pass
-                elif target[0] == '-' and target[1:].isdigit():
-                    pass
-                elif target.startswith('$'):
-                    pass
-                elif target.startswith('_param'):
-                    pass
-                elif target.startswith('_ctx'):
-                    pass
-                else:  # field name
-                    col.dependencies.add(target.split('>')[0])
+                        col.dependencies.add(target.split('>')[0])
 
     if col.sql is not None:
         sql = col.sql
@@ -3482,17 +3574,21 @@ async def setup_fkey(db_table, context, company, col):
 
     # if fkey points to table with tree_params, and tree_params defines fixed levels,
     #   validate that fkey references a leaf node in the table
-    # see db.chk_constraints.group_id() for validation
     tgt_tablename = col.fkey[FK_TARGET_TABLE]
-    if isinstance(tgt_tablename, str):  # not implemented for multi-fkeys
+    if (
+            isinstance(tgt_tablename, str)  # not implemented for multi-fkeys
+            and
+            not isinstance(db_table, MemTable)  # not implemented for mem_tables
+            ):
         if tgt_tablename != db_table.table_name:  # if parent_id, will recurse!
             tgt_table = await get_db_table(context, company, tgt_tablename)
             if tgt_table.tree_params is not None:
                 group, col_names, levels = tgt_table.tree_params
                 if levels is not None:  # fixed levels defined
-                    col.col_checks.append(['check_group', 'Invalid group id', [
+                    col.col_checks.insert(0,  # make this the first check, if others exist
+                        ['check_level', 'Not a leaf node', [
                             ['check', '', '$value', 'is', '$None', ''],
-                            ['or', '', '$value', 'pyfunc', 'group_id', ''],
+                            ['or', '', '$value', 'pyfunc', 'db.checks.check_is_leaf', ''],
                             ]])
 
     if col.fkey[FK_ALT_SOURCE] is None:

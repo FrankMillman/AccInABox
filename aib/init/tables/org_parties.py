@@ -89,7 +89,7 @@ cols.append ({
     'long_descr' : 'Party id',
     'col_head'   : 'Party',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_param.auto_party_id', 'is_not','$None', '']],
+    'calculated' : [['where', '', '_param.auto_party_id', 'is not','$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -103,7 +103,7 @@ cols.append ({
           '</obj_exists>'
           '<default>'
             '<case>'
-              '<compare src="_param.auto_party_id" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_param.auto_party_id`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_param.auto_party_id"/>'
               '</compare>'
             '</case>'

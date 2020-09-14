@@ -175,15 +175,6 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'first_row',
-    'data_type'  : 'BOOL',
-    'short_descr': 'First row?',
-    'long_descr' : 'If table is empty, this is the first row',
-    'col_head'   : '',
-    'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.adm_functions WHERE deleted_id = 0) "
-                   "THEN 0 ELSE 1 END",
-    })
-virt.append ({
     'col_name'   : 'children',
     'data_type'  : 'INT',
     'short_descr': 'Children',
@@ -192,20 +183,14 @@ virt.append ({
     'sql'        : "SELECT count(*) FROM {company}.adm_functions b "
                    "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
     })
-# virt.append ({
-#     'col_name'   : 'level',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Level',
-#     'long_descr' : 'Level in hierarchy',
-#     'col_head'   : '',
-#     'sql'        : (
-#         "(WITH RECURSIVE tree AS (SELECT b.row_id, b.parent_id, 0 AS level "
-#         "FROM {company}.adm_functions b WHERE b.parent_id IS NULL "
-#         "UNION ALL SELECT c.row_id, c.parent_id, d.level+1 AS level "
-#         "FROM {company}.adm_functions c, tree d WHERE d.row_id = c.parent_id) "
-#         "SELECT level FROM tree WHERE a.row_id = tree.row_id)"
-#         ),
-#     })
+virt.append ({
+    'col_name'   : 'expandable',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Expandable?',
+    'long_descr' : 'Expandable? - Can be over-ridden at run-time in db.objects if levels added',
+    'col_head'   : '',
+    'sql'        : "0",
+    })
 
 # cursor definitions
 cursors = []
@@ -222,3 +207,6 @@ cursors.append({
 
 # actions
 actions = []
+actions.append([
+    'after_commit', '<pyfunc name="db.cache.param_updated"/>'
+    ])

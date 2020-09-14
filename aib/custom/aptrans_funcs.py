@@ -6,7 +6,7 @@ import db.cache
 from common import AibError
 
 async def split_npch(db_obj, conn, return_vals):
-    # called as split_src func from pch_npch_subinv.upd_on_save()
+    # called as split_src func from various.upd_on_save()
     eff_date = await db_obj.getval('eff_date')
     tran_date = await db_obj.getval('tran_det_row_id>tran_row_id>tran_date')
     npch_code = await db_obj.getval('npch_code_id')
@@ -16,9 +16,9 @@ async def split_npch(db_obj, conn, return_vals):
     # at the moment this achieves nothing! [2019-08-09]
     # but it will be used when there are multiple effective dates
     if eff_date == tran_date:
-        yield (npch_code, tran_date, amount_pty, amount_loc)
+        yield (tran_date, amount_pty, amount_loc)
     else:
-        yield (npch_code, eff_date, amount_pty, amount_loc)
+        yield (eff_date, amount_pty, amount_loc)
 
 # async def check_pmt_date(db_obj, fld, src_val):
 #     if 'pmt_dates' not in db_obj.context.data_objects:

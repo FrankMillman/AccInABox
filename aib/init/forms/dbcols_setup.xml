@@ -19,28 +19,42 @@
         choices="[[`false`, `N`], [`true`, `Y`], [`cond`, `?`]]"/>
     </mem_obj>
 
-    <mem_obj name="amend" descr="Variables used to maintain Allow amend">
-      <mem_col col_name="param" data_type="TEXT" short_descr="Parameter"
-        long_descr="Parameter name" allow_amend="true"/>
+    <mem_obj name="amend" descr="Steps for allow_amend" sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
       <mem_col col_name="test" data_type="TEXT" short_descr="Test"
-        long_descr="Test" allow_amend="true" dflt_val="is_"
-        choices="[[`is_`, `Is`], [`is_not`, `Is not`]]"/>
-      <mem_col col_name="value" data_type="TEXT" short_descr="Value"
-        long_descr="Value" allow_amend="true" dflt_val="True"
-        choices="[[`True`, `True`], [`False`, `False`], [`None`, `None`]]"/>
+        long_descr="check/and/or" col_head="Test" allow_amend="true"/>
+      <mem_col col_name="lbr" data_type="TEXT" short_descr="Left bracket"
+        long_descr="Left bracket (if required)" col_head="(" allow_null="true"
+        allow_amend="true" max_len="1"/>
+      <mem_col col_name="src" data_type="TEXT" short_descr="Source"
+        long_descr="Source" col_head="Source" allow_amend="true"/>
+      <mem_col col_name="chk" data_type="TEXT" short_descr="Check"
+        long_descr="Check to perform" col_head="Check" allow_amend="true"/>
+      <mem_col col_name="tgt" data_type="TEXT" short_descr="Target"
+        long_descr="Target" col_head="Target" allow_amend="true"/>
+      <mem_col col_name="rbr" data_type="TEXT" short_descr="Right bracket"
+        long_descr="Right bracket (if required)" col_head=")" allow_null="true"
+        allow_amend="true" max_len="1"/>
     </mem_obj>
 
-    <mem_obj name="calc" descr="Variables used to maintain Calculated">
-      <mem_col col_name="type" data_type="TEXT" short_descr="Parameter type"
-        long_descr="Parameter type" allow_amend="true" choices="[[`_param`, `Param`], [`_ledger`, `Ledger`]]"/>
-      <mem_col col_name="name" data_type="TEXT" short_descr="Parameter name"
-        long_descr="Parameter name" allow_amend="true"/>
+    <mem_obj name="calc" descr="Steps for calculated" sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
       <mem_col col_name="test" data_type="TEXT" short_descr="Test"
-        long_descr="Test" allow_amend="true" dflt_val="is_"
-        choices="[[`is_`, `Is`], [`is_not`, `Is not`]]"/>
-      <mem_col col_name="value" data_type="TEXT" short_descr="Value"
-        long_descr="Value" allow_amend="true" dflt_val="True"
-        choices="[[`True`, `True`], [`False`, `False`], [`None`, `None`]]"/>
+        long_descr="check/and/or" col_head="Test" allow_amend="true"/>
+      <mem_col col_name="lbr" data_type="TEXT" short_descr="Left bracket"
+        long_descr="Left bracket (if required)" col_head="(" allow_null="true"
+        allow_amend="true" max_len="1"/>
+      <mem_col col_name="src" data_type="TEXT" short_descr="Source"
+        long_descr="Source" col_head="Source" allow_amend="true"/>
+      <mem_col col_name="chk" data_type="TEXT" short_descr="Check"
+        long_descr="Check to perform" col_head="Check" allow_amend="true"/>
+      <mem_col col_name="tgt" data_type="TEXT" short_descr="Target"
+        long_descr="Target" col_head="Target" allow_amend="true"/>
+      <mem_col col_name="rbr" data_type="TEXT" short_descr="Right bracket"
+        long_descr="Right bracket (if required)" col_head=")" allow_null="true"
+        allow_amend="true" max_len="1"/>
     </mem_obj>
 
   </mem_objects>
@@ -70,7 +84,7 @@
             <<case>>
               <<obj_exists obj_name=`db_cols`>>
                 <<case>>
-                  <<compare src=`db_cols.col_type` op=`!=` tgt=`var.col_type`>>
+                  <<compare test=`[['if', '', 'db_cols.col_type', '!=', 'var.col_type', '']]`>>
                     <<error head=`Error` body=`Column type is not '{var.col_type}'`/>>
                   <</compare>>
                 <</case>>
@@ -117,7 +131,7 @@
       <col/>
       <input obj_name="var" col_name="allow_amend" radio="true" after="
         <<case>>
-          <<compare src=`var.allow_amend` op=`eq` tgt=`'cond'`>>
+          <<compare test=`[['if', '', 'var.allow_amend', '=', '~cond~', '']]`>>
             <<change_button>>
               <<btn_enabled btn_id=`amend` state=`true`/>>
             <</change_button>>
@@ -167,7 +181,7 @@
       <col/>
       <input obj_name="var" col_name="calculated" radio="true" after="
         <<case>>
-          <<compare src=`var.calculated` op=`eq` tgt=`'cond'`>>
+          <<compare test=`[['if', '', 'var.calculated', '=', '~cond~', '']]`>>
             <<change_button>>
               <<btn_enabled btn_id=`calc` state=`true`/>>
             <</change_button>>
@@ -267,10 +281,8 @@
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
         <<pyfunc name=`custom.column_setup.on_start_frame`/>>
-        <<init_obj obj_name=`amend`/>>
-        <<init_obj obj_name=`calc`/>>
         <<case>>
-          <<compare src=`var.allow_amend` op=`eq` tgt=`'cond'`>>
+          <<compare test=`[['if', '', 'var.allow_amend', '=', '~cond~', '']]`>>
             <<change_button>>
               <<btn_enabled btn_id=`amend` state=`true`/>>
             <</change_button>>
@@ -282,7 +294,7 @@
           <</default>>
         <</case>>
         <<case>>
-          <<compare src=`var.calculated` op=`eq` tgt=`'cond'`>>
+          <<compare test=`[['if', '', 'var.calculated', '=', '~cond~', '']]`>>
             <<change_button>>
               <<btn_enabled btn_id=`calc` state=`true`/>>
             <</change_button>>
@@ -306,6 +318,25 @@
       <toolbar/>
       <body>
         <block/>
+
+        <grid data_object="amend" growable="true" num_grid_rows="5">
+          <toolbar template="Grid"/>
+          <cur_columns>
+            <cur_col col_name="test" lng="80"/>
+            <cur_col col_name="lbr" lng="20"/>
+            <cur_col col_name="src" lng="200" expand="true"/>
+            <cur_col col_name="chk" lng="60"/>
+            <cur_col col_name="tgt" lng="60"/>
+            <cur_col col_name="rbr" lng="20"/>
+          </cur_columns>
+          <cur_filter/>
+          <cur_sequence>
+            <cur_seq col_name="seq"/>
+          </cur_sequence>
+          <grid_methods template="Grid"/>
+        </grid>
+
+<!--
         <panel/>
         <row/>
         <col/>
@@ -322,6 +353,8 @@
         <label value="True/False/None"/>
         <col/>
         <input obj_name="amend" col_name="value" lng="60"/>
+-->
+
       </body>
       <button_row template="Setup_Form_Single"/>
       <frame_methods template="Setup_Form_Single">
@@ -334,6 +367,25 @@
       <toolbar/>
       <body>
         <block/>
+
+        <grid data_object="calc" growable="true" num_grid_rows="5">
+          <toolbar template="Grid"/>
+          <cur_columns>
+            <cur_col col_name="test" lng="80"/>
+            <cur_col col_name="lbr" lng="20"/>
+            <cur_col col_name="src" lng="200" expand="true"/>
+            <cur_col col_name="chk" lng="60"/>
+            <cur_col col_name="tgt" lng="60"/>
+            <cur_col col_name="rbr" lng="20"/>
+          </cur_columns>
+          <cur_filter/>
+          <cur_sequence>
+            <cur_seq col_name="seq"/>
+          </cur_sequence>
+          <grid_methods template="Grid"/>
+        </grid>
+
+<!--
         <panel/>
         <row/>
         <col/>
@@ -355,6 +407,8 @@
         <label value="True/False/None"/>
         <col/>
         <input obj_name="calc" col_name="value" lng="60"/>
+-->
+
       </body>
       <button_row template="Setup_Form_Single"/>
       <frame_methods template="Setup_Form_Single">

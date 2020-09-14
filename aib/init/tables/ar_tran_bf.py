@@ -177,68 +177,6 @@ cols.append ({
 #     'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
 #     'choices'    : None,
 #     })
-# cols.append ({
-#     'col_name'   : 'cust_exch_rate',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Cust exchange rate',
-#     'long_descr' : 'Exchange rate from customer currency to local',
-#     'col_head'   : 'Rate cust',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 8,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : None,
-#     'dflt_rule'  : (
-#         '<case>'
-#             '<compare src="cust_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
-#                 '<literal value="1"/>'
-#             '</compare>'
-#             '<default>'
-#                 '<exch_rate>'
-#                     '<fld_val name="cust_row_id>currency_id"/>'
-#                     '<fld_val name="tran_date"/>'
-#                 '</exch_rate>'
-#             '</default>'
-#         '</case>'
-#         ),
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
-# cols.append ({
-#     'col_name'   : 'tran_exch_rate',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Transaction exchange rate',
-#     'long_descr' : 'Exchange rate from transaction currency to local',
-#     'col_head'   : 'Rate tran',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 8,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : None,
-#     'dflt_rule'  : (
-#         '<case>'
-#             '<compare src="currency_id" op="eq" tgt="_param.local_curr_id">'
-#                 '<literal value="1"/>'
-#             '</compare>'
-#             '<default>'
-#                 '<exch_rate>'
-#                     '<fld_val name="currency_id"/>'
-#                     '<fld_val name="tran_date"/>'
-#                 '</exch_rate>'
-#             '</default>'
-#         '</case>'
-#         ),
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'bf_bal',
     'data_type'  : 'DEC',
@@ -382,7 +320,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
                 ['source_code', "'ar_bf'"],

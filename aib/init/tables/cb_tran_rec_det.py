@@ -7,19 +7,15 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['isls', 'Sale of inventory item', 'sls_isls_subinv',
+            ['isls', 'Sale of inventory item', 'sls_isls_subtran',
                 [  # return values
                     ['rec_cb', 'tot_amt'],  # tgt_col, src_col
-                    # ['rec_cb', 'tot_party'],
-                    # ['rec_local', 'tot_local'],
                     ],
                 ['wh_prod_row_id>prod_row_id>prod_code'],  # display descr
                 ],
-            ['nsls', 'Sale of non-inventory item', 'sls_nsls_subinv',
+            ['nsls', 'Sale of non-inventory item', 'sls_nsls_subtran',
                 [  # return values
                     ['rec_cb', 'tot_amt'],  # tgt_col, src_col
-                    # ['rec_cb', 'tot_party'],
-                    # ['rec_local', 'tot_local'],
                     ],
                 ['nsls_descr'],  # display descr
                 ],
@@ -29,26 +25,21 @@ table = {
                     ],
                 ['cust_id'],  # display descr
                 ],
-            ['orec', 'Other receipt', 'cb_orec_subtran',
+            ['gl', 'Post to g/l', 'gl_jnl_subtran',
                 [  # return values
-                    ['rec_cb', 'orec_amount'],  # tgt_col, src_col
-                    # ['rec_cb', 'orec_cb'],
-                    # ['rec_local', 'orec_local'],
+                    ['rec_cb', 'gl_amount'],  # tgt_col, src_col
                     ],
-                ['orec_descr'],  # display descr
+                ['gl_code'],  # display descr
                 ],
             ['com', 'Comment', 'cb_comments',
                 [],  # return values
-                ['comment_text'],  # display descr
+                ['text'],  # display descr
                 ],
             ]],
         ],
     'sequence'      : ['line_no', ['tran_row_id'], None],
     'tree_params'   : None,
     'roll_params'   : None,
-    # 'indexes'       : [
-    #     ['cb_rec_ndx', 'tran_row_id, line_no', None, False]
-    #     ],
     'indexes'       : None,
     'ledger_col'    : None,
     'defn_company'  : None,
@@ -195,20 +186,40 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'tran_type',
+    'col_name'   : 'module_id',
     'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'cb_rec'",
+    'short_descr': 'Module id',
+    'long_descr' : 'Module id',
+    'col_head'   : 'Module',
+    'dflt_val'   : 'cb',
+    'sql'        : "'cb'",
     })
 virt.append ({
-    'col_name'   : 'sale_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Sale type',
-    'long_descr' : 'Sale type',
-    'col_head'   : 'Sale type',
-    'sql'        : "'cash'",
+    'col_name'   : 'rev_sign_sls',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - sales transactions?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_val'   : 'false',
+    'sql'        : "'0'",
+    })
+virt.append ({
+    'col_name'   : 'rev_sign_pch',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - purchase transactions?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_val'   : 'false',
+    'sql'        : "'1'",
+    })
+virt.append ({
+    'col_name'   : 'rev_sign_gl',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - gl transactions?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_val'   : 'false',
+    'sql'        : "'1'",
     })
 virt.append ({
     'col_name'   : 'display_descr',
@@ -217,15 +228,6 @@ virt.append ({
     'long_descr' : 'Description',
     'col_head'   : 'Description',
     })
-# virt.append ({
-#     'col_name'   : 'tran_number',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Transaction number',
-#     'long_descr' : 'Transaction number',
-#     'col_head'   : 'Tran number',
-#     'dflt_val'   : '{tran_row_id>tran_number}',
-#     'sql'        : "a.tran_row_id>tran_number"
-#     })
 virt.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
@@ -241,7 +243,6 @@ virt.append ({
     'short_descr': 'Party id',
     'long_descr' : 'Party id',
     'col_head'   : 'Party id',
-    # 'fkey'       : ['adm_currencies', 'row_id', None, None, False, 'curr'],
     'dflt_val'   : '{tran_row_id>ledger_row_id>currency_id}',
     'sql'        : 'a.tran_row_id>ledger_row_id>currency_id',
     })

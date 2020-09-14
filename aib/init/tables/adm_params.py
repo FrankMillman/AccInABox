@@ -253,7 +253,7 @@ cols.append ({
     'col_name'   : 'dflt_loc_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Default location id',
-    'long_descr' : 'Default location row id - if specified, all locations will use this as default',
+    'long_descr' : 'Default location row id - if no g/l integration, all locations will use this as default',
     'col_head'   : 'Dflt loc',
     'key_field'  : 'N',
     'calculated' : False,
@@ -264,7 +264,16 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'dflt_loc',
+            'Cannot use default location if gl integration specified',
+            [
+                ['check', '', '$value', 'is', '$None', ''],
+                ['or', '', 'gl_integration', 'is', '$False', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['adm_locations', 'row_id', 'dflt_location', 'location_id', False, 'locs'],
     'choices'    : None,
     })
@@ -272,7 +281,7 @@ cols.append ({
     'col_name'   : 'dflt_fun_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Default function id',
-    'long_descr' : 'Default function row id - if specified, all functions will use this as default',
+    'long_descr' : 'Default function row id - if no g/l integration, all functions will use this as default',
     'col_head'   : 'Dflt fun',
     'key_field'  : 'N',
     'calculated' : False,
@@ -283,7 +292,16 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'dflt_fun',
+            'Cannot use default function if gl integration specified',
+            [
+                ['check', '', '$value', 'is', '$None', ''],
+                ['or', '', 'gl_integration', 'is', '$False', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['adm_functions', 'row_id', 'dflt_function', 'function_id', False, 'funs'],
     'choices'    : None,
     })

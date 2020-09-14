@@ -2,17 +2,31 @@
 table = {
     'table_name'    : 'pch_ipch_supp_totals',
     'module_id'     : 'pch',
-    'short_descr'   : 'Purchase totals by supp - inv',
-    'long_descr'    : 'Purchase totals by supplier - inventory',
+    'short_descr'   : 'Inv sales totals by supp',
+    'long_descr'    : 'Inventory sales totals by supplier',
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,
     'tree_params'   : None,
     'roll_params'   : [
-        ['tran_date'],  # key field to roll on
-        ['qty_inv_tot', 'pch_inv_tot', 'qty_crn_tot', 'pch_crn_tot']  # fields to roll
+        ['tran_date'],  # key fields to roll on
+        ['qty_tot', 'pchs_tot']  # fields to roll
         ],
-    'indexes'       : None,
+    'indexes'       : [
+        ['ipch_supp_cover', [
+            ['prod_code_id', False],
+            ['supp_row_id', False],
+            ['location_row_id', False],
+            ['function_row_id', False],
+            ['source_code_id', False],
+            ['tran_date', True],
+            ['qty_day', False],
+            ['qty_tot', False],
+            ['pchs_day', False],
+            ['pchs_tot', False],
+            ],
+            None, False],
+        ],
     'ledger_col'    : None,
     'defn_company'  : None,
     'data_company'  : None,
@@ -100,9 +114,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'supp_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'supp row id',
-    'long_descr' : 'supplier row id',
-    'col_head'   : 'supp',
+    'short_descr': 'Supp row id',
+    'long_descr' : 'Supplier row id',
+    'col_head'   : 'Supp',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -113,7 +127,64 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['ap_suppliers', 'row_id', 'ledger_row_id, supp_id', 'ledger_row_id, supp_id', False, None],
+    'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_locations', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_functions', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'source_code_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Source code id',
+    'long_descr' : 'Source code row id',
+    'col_head'   : 'Code id',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -136,11 +207,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'qty_inv_day',
+    'col_name'   : 'qty_day',
     'data_type'  : 'DEC',
-    'short_descr': 'Qty pch - inv - daily total',
-    'long_descr' : 'Quantity pch - invoice - daily total',
-    'col_head'   : 'Qty inv day',
+    'short_descr': 'Purchase qty - daily total',
+    'long_descr' : 'Purchase quantity - daily total',
+    'col_head'   : 'Qty day',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -155,15 +226,34 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'pch_inv_day',
+    'col_name'   : 'qty_tot',
     'data_type'  : 'DEC',
-    'short_descr': 'Pch - inv - daily total',
-    'long_descr' : 'Inventory purchases - invoice - daily total',
-    'col_head'   : 'Pch inv day',
+    'short_descr': 'Purchase qty - accum total',
+    'long_descr' : 'Purchase quantity - accumulated total',
+    'col_head'   : 'Qty tot',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
     'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 6,
+    'scale_ptr'  : 'prod_code_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'pchs_day',
+    'data_type'  : 'DEC',
+    'short_descr': 'Purchase daily total',
+    'long_descr' : 'Purchase daily total',
+    'col_head'   : 'Purchase day',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -174,110 +264,15 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'qty_crn_day',
+    'col_name'   : 'pchs_tot',
     'data_type'  : 'DEC',
-    'short_descr': 'Qty pch - crn - daily total',
-    'long_descr' : 'Quantity pch - cr note - daily total',
-    'col_head'   : 'Qty crn day',
+    'short_descr': 'Purchase accum total',
+    'long_descr' : 'Purchase accumulated total',
+    'col_head'   : 'Purchase tot',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 6,
-    'scale_ptr'  : 'prod_code_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_crn_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Pch - crn - daily total',
-    'long_descr' : 'Inventory purchases - cr note - daily total',
-    'col_head'   : 'Pch crn day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'qty_inv_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Qty pch - inv - running total',
-    'long_descr' : 'Quantity pch - invoice - running total',
-    'col_head'   : 'Qty inv tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 6,
-    'scale_ptr'  : 'prod_code_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_inv_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Pch - inv - running total',
-    'long_descr' : 'Inventory purchases - invoice - running total',
-    'col_head'   : 'Pch inv tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'qty_crn_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Qty pch - crn - running total',
-    'long_descr' : 'Quantity pch - cr note - running total',
-    'col_head'   : 'Qty crn tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 6,
-    'scale_ptr'  : 'prod_code_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pch_crn_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Pch - crn - running total',
-    'long_descr' : 'Inventory purchases - cr note - running total',
-    'col_head'   : 'Pch crn tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -290,74 +285,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'qty_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Qty pch - daily total',
-    'long_descr' : 'Quantity pch - daily total',
-    'col_head'   : 'Qty day',
-    'db_scale'   : 6,
-    'scale_ptr'  : 'prod_code_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="qty_inv_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="qty_crn_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.qty_inv_day + a.qty_crn_day"
-    })
-virt.append ({
-    'col_name'   : 'pch_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Purchases - daily total',
-    'long_descr' : 'Purchases - daily total',
-    'col_head'   : 'Pch day',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="pch_inv_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_crn_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.pch_inv_day + a.pch_crn_day"
-    })
-virt.append ({
-    'col_name'   : 'qty_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Qty pch - running total',
-    'long_descr' : 'Quantity pch - running total',
-    'col_head'   : 'Qty tot',
-    'db_scale'   : 6,
-    'scale_ptr'  : 'prod_code_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="qty_inv_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="qty_crn_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.qty_inv_tot + a.qty_crn_tot"
-    })
-virt.append ({
-    'col_name'   : 'pch_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Purchases - running total',
-    'long_descr' : 'Purchases - running total',
-    'col_head'   : 'Pch tot',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="pch_inv_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="pch_crn_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.pch_inv_tot + a.pch_crn_tot"
-    })
 
 # cursor definitions
 cursors = []

@@ -244,8 +244,6 @@
             op="<<=" expr="_ctx.last_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="due_cust_gui"
             op="!=" expr="0" rbr=""/>
-          <cur_fil test="AND" lbr="" col_name="posted"
-            op="=" expr="'1'" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="row_id"
             op="!=" expr="vars.this_item_rowid" rbr=""/>
         </cur_filter>
@@ -265,7 +263,7 @@
       <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
         btn_validate="true" btn_default="true" lng="60" action="
           <<case>>
-            <<compare src=`vars.unallocated` op=`!=` tgt=`0`>>
+            <<compare test=`[['if', '', 'vars.unallocated', '!=', '0', '']]`>>
               <<ask title=`Unallocated` enter=`No` escape=`No`
                   question=`Not fully allocated - sure you want to return?`>>
                 <<response ans=`No`>>
@@ -291,7 +289,7 @@
         "/>
       <method name="on_req_cancel" action="
           <<case>>
-            <<compare src=`vars.unallocated` op=`!=` tgt=`0`>>
+            <<compare test=`[['if', '', 'vars.unallocated', '!=', '0', '']]`>>
               <<ask title=`Unallocated` enter=`No` escape=`No`
                   question=`Not fully allocated - sure you want to return?`>>
                 <<response ans=`No`>>

@@ -382,6 +382,7 @@ async def convert_sql(self, sql, params=None):
     if start > -1:  # -1 = absent; 0 = at beginning; >0 - move WITH clause to beginning
         end = sql[start:].find(') ')
         sql = 'WITH ' + sql[start+15:start+end+2] + sql[:start] + sql[start+end+2:]
+    sql = sql.replace(' || ', ' + ')
     return sql, params
 
 def convert_string(self, string, db_scale=None, text_key=False):

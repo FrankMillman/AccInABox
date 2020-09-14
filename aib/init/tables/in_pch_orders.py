@@ -82,7 +82,7 @@ cols.append ({
     'long_descr' : 'Purchase order number',
     'col_head'   : 'Pch ord',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_param.auto_pchord_no', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.auto_pchord_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -93,9 +93,9 @@ cols.append ({
         '<case>'
           '<on_post>'
             '<case>'
-              '<compare src="_param.auto_temp_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_param.auto_temp_no`, `is not`, `$None`, ``]]">'
                 '<case>'
-                  '<compare src="_param.auto_pchord_no" op="is_not" tgt="$None">'
+                  '<compare test="[[`if`, ``, `_param.auto_pchord_no`, `is not`, `$None`, ``]]">'
                     '<auto_gen args="_param.auto_pchord_no"/>'
                   '</compare>'
                 '</case>'
@@ -104,10 +104,10 @@ cols.append ({
           '</on_post>'
           '<on_insert>'
             '<case>'
-              '<compare src="_param.auto_temp_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_param.auto_temp_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_param.auto_temp_no"/>'
               '</compare>'
-              '<compare src="_param.auto_pchord_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_param.auto_pchord_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_param.auto_pchord_no"/>'
               '</compare>'
             '</case>'
@@ -216,33 +216,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          # '<compare src="currency_id" op="eq" tgt="ledger_row_id>currency_id">'
-          #   '<literal value="1"/>'
-          # '</compare>'
-          # '<compare src="currency_id" op="eq" tgt="_param.local_curr_id">'
-          #   '<expr>'
-          #     '<literal value="1"/>'
-          #     '<op type="/"/>'
-          #     '<exch_rate>'
-          #       '<fld_val name="ledger_row_id>currency_id"/>'
-          #       '<fld_val name="order_date"/>'
-          #     '</exch_rate>'
-          #   '</expr>'
-          # '</compare>'
-          # '<default>'
-          #   '<expr>'
-          #     '<exch_rate>'
-          #       '<fld_val name="currency_id"/>'
-          #       '<fld_val name="order_date"/>'
-          #     '</exch_rate>'
-          #     '<op type="/"/>'
-          #     '<exch_rate>'
-          #       '<fld_val name="ledger_row_id>currency_id"/>'
-          #       '<fld_val name="order_date"/>'
-          #     '</exch_rate>'
-          #   '</expr>'
-          # '</default>'
-          '<compare src="ledger_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
+          '<compare test="[[`if`, ``, `ledger_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
             '<literal value="1"/>'
           '</compare>'
           '<default>'
@@ -273,16 +247,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          # '<compare src="ledger_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
-          #   '<literal value="1"/>'
-          # '</compare>'
-          # '<default>'
-          #   '<exch_rate>'
-          #     '<fld_val name="ledger_row_id>currency_id"/>'
-          #     '<fld_val name="order_date"/>'
-          #   '</exch_rate>'
-          # '</default>'
-          '<compare src="currency_id" op="eq" tgt="_param.local_curr_id">'
+          '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
             '<literal value="1"/>'
           '</compare>'
           '<default>'

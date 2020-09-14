@@ -1,6 +1,8 @@
 import importlib
 import re
+from json import loads
 
+from evaluate_expr import eval_bool_expr
 from common import AibError
 import ht
 
@@ -121,39 +123,5 @@ async def chk_password(ctx, fld, value, xml):
     return await target_field.chk_password(source_value)
 
 async def compare(ctx, fld, value, xml):
-    """
-    <compare src="$value" op="ne" tgt="pwd_var.pwd1"/>
-    """
-    source = xml.get('src')
-    if source == '$value':
-        source_value = value
-    else:
-        source_value = await ht.form_xml.get_val(ctx, source)
-
-    target = xml.get('tgt')
-    target_value = await ht.form_xml.get_val(ctx, target)
-
-    # print('"{0}" {1} "{2}"'.format(source_value, xml.get('op'), target_value))
-
-    compare = OPS[xml.get('op')]
-    return compare(source_value, target_value)
-
-OPS = {
-    '=': lambda src_val, tgt_val: src_val == tgt_val,
-    'eq': lambda src_val, tgt_val: src_val == tgt_val,
-    '!=': lambda src_val, tgt_val: src_val != tgt_val,
-    'ne': lambda src_val, tgt_val: src_val != tgt_val,
-    '<': lambda src_val, tgt_val: (src_val or 0) < tgt_val,
-    'lt': lambda src_val, tgt_val: (src_val or 0) < tgt_val,
-    '>': lambda src_val, tgt_val: (src_val or 0) > tgt_val,
-    'gt': lambda src_val, tgt_val: (src_val or 0) > tgt_val,
-    '<=': lambda src_val, tgt_val: (src_val or 0) <= tgt_val,
-    'le': lambda src_val, tgt_val: (src_val or 0) <= tgt_val,
-    '>=': lambda src_val, tgt_val: (src_val or 0) >= tgt_val,
-    'ge': lambda src_val, tgt_val: (src_val or 0) >= tgt_val,
-    'is': lambda src_val, tgt_val: src_val is tgt_val,
-    'is_not': lambda src_val, tgt_val: src_val is not tgt_val,
-    'in': lambda src_val, tgt_val: src_val in tgt_val,
-    'not in': lambda src_val, tgt_val: src_val not in tgt_val,
-    'matches': lambda src_val, tgt_val: bool(re.match(tgt_val+'$', src_val or '')),
-    }
+    test = loads(xml.get('test').replace("'", '"').replace('~', "'"))
+    return await eval_bool_expr(test, fld.db_obj, fld, value)

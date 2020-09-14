@@ -125,34 +125,6 @@ cols.append ({
         ],
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'tran_date',
-#     'data_type'  : 'DTE',
-#     'short_descr': 'Transaction date',
-#     'long_descr' : 'Transaction date',
-#     'col_head'   : 'Date',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 0,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : None,
-#     'dflt_rule'  : (
-#         # '<case>'
-#         #     '<compare src="tran_type" op="=" tgt="\'ar_alloc\'">'
-#                 '<fld_val name="tran_row_id>item_row_id>tran_date"/>'
-#         #     '</compare>'
-#         #     '<default>'
-#         #         '<fld_val name="tran_row_id>tran_date"/>'
-#         #     '</default>'
-#         # '</case>'
-#         ),
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'alloc_cust',
     'data_type'  : 'DEC',
@@ -192,19 +164,19 @@ cols.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<case>'
-            '<compare src="$exists" op="is" tgt="$True">'
+            '<compare test="[[`if`, ``, `$exists`, `is`, `$True`, ``]]">'
                 '<fld_val name="discount_cust"/>'
             '</compare>'
-            '<compare src="item_row_id" op="eq" tgt="tran_row_id>item_row_id">'
+            '<compare test="[[`if`, ``, `item_row_id`, `=`, `tran_row_id>item_row_id`, ``]]">'
                 '<fld_val name="discount_cust"/>'
             '</compare>'
-            '<compare src="tran_row_id>item_row_id>tran_type" op="eq" tgt="\'ar_disc\'">'
+            '<compare test="[[`if`, ``, `tran_row_id>item_row_id>tran_type`, `=`, `~ar_disc~`, ``]]">'
                 '<literal value="0"/>'
             '</compare>'
-            '<compare src="item_row_id>discount_date" op="is" tgt="$None">'
+            '<compare test="[[`if`, ``, `item_row_id>discount_date`, `is`, `$None`, ``]]">'
                 '<literal value="0"/>'
             '</compare>'
-            '<compare src="tran_date" op=">" tgt="item_row_id>discount_date">'
+            '<compare test="[[`if`, ``, `tran_date`, `>`, `item_row_id>discount_date`, ``]]">'
                 '<literal value="0"/>'
             '</compare>'
             '<default>'
@@ -212,7 +184,7 @@ cols.append ({
                 '<assign src="item_row_id>os_disc_cust" tgt="_ctx.os_disc_cust"/>'
                 '<assign src="item_row_id>due_cust" tgt="_ctx.due_cust"/>'
                 '<case>'
-                    '<compare src="alloc_cust" op=">=" tgt="_ctx.due_cust">'
+                    '<compare test="[[`if`, ``, `alloc_cust`, `>=`, `_ctx.due_cust`, ``]]">'
                         '<fld_val name="_ctx.os_disc_cust"/>'
                     '</compare>'
                     '<default>'
@@ -259,10 +231,10 @@ cols.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<case>'
-            '<compare src="$exists" op="is" tgt="$True">'
+            '<compare test="[[`if`, ``, `$exists`, `is`, `$True`, ``]]">'
                 '<fld_val name="alloc_local"/>'
             '</compare>'
-            '<compare src="item_row_id" op="eq" tgt="tran_row_id>item_row_id">'
+            '<compare test="[[`if`, ``, `item_row_id`, `=`, `tran_row_id>item_row_id`, ``]]">'
                 '<fld_val name="alloc_local"/>'
             '</compare>'
             '<default>'
@@ -294,10 +266,10 @@ cols.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<case>'
-            '<compare src="$exists" op="is" tgt="$True">'
+            '<compare test="[[`if`, ``, `$exists`, `is`, `$True`, ``]]">'
                 '<fld_val name="discount_local"/>'
             '</compare>'
-            '<compare src="item_row_id" op="eq" tgt="tran_row_id>item_row_id">'
+            '<compare test="[[`if`, ``, `item_row_id`, `=`, `tran_row_id>item_row_id`, ``]]">'
                 '<fld_val name="discount_local"/>'
             '</compare>'
             '<default>'

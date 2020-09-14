@@ -1,0 +1,19 @@
+<subtype_body subtype_id="gl_jnl">
+  <block/>
+  <panel/>
+  <row/>
+  <col/>
+  <label value="Code:"/>
+  <col/>
+  <input obj_name="gl_jnl" col_name="gl_code" lng="80"/>
+  <row/>
+  <col/>
+  <label value="Description:"/>
+  <col/>
+  <input obj_name="gl_jnl" col_name="descr" lng="120"/>
+  <row/>
+  <col/>
+  <label value="Amount:"/>
+  <col/>
+  <input obj_name="gl_jnl" col_name="gl_amount" lng="80"/>
+</subtype_body>

@@ -7,7 +7,7 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['ipch', 'Inventory item', 'pch_ipch_subcrn',
+            ['ipch', 'Inventory item', 'pch_ipch_subtran',
                 [  # return values
                     ['crn_net_amt', 'net_amt'],  # tgt_col, src_col
                     ['crn_tax_amt', 'tax_amt'],
@@ -16,7 +16,7 @@ table = {
                     ],
                 ['wh_prod_row_id>prod_row_id>prod_code'],
                 ],
-            ['npch', 'Non-inventory item', 'pch_npch_subcrn',
+            ['npch', 'Non-inventory item', 'pch_npch_subtran',
                 [  # return values
                     ['crn_net_amt', 'net_amt'],  # tgt_col, src_col
                     ['crn_tax_amt', 'tax_amt'],
@@ -25,9 +25,9 @@ table = {
                     ],
                 ['npch_descr'],
                 ],
-            ['com', 'Comment', 'pch_comments',
+            ['com', 'Comment', 'ap_comments',
                 [],  # return values
-                ['comment_text'],
+                ['text'],
                 ],
             ]],
         ],
@@ -240,20 +240,22 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'tran_type',
+    'col_name'   : 'module_id',
     'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ap_crn'",
+    'short_descr': 'Module id',
+    'long_descr' : 'Module id',
+    'col_head'   : 'Module',
+    'dflt_val'   : 'ap',
+    'sql'        : "'ap'",
     })
 virt.append ({
-    'col_name'   : 'pch_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Purchase type',
-    'long_descr' : 'Purchase type',
-    'col_head'   : 'Purchase type',
-    'sql'        : "'acc'",
+    'col_name'   : 'rev_sign_pch',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - purchase transactions?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_val'   : 'false',
+    'sql'        : "'1'",
     })
 virt.append ({
     'col_name'   : 'display_descr',
@@ -277,7 +279,6 @@ virt.append ({
     'short_descr': 'Party id',
     'long_descr' : 'Party id',
     'col_head'   : 'Party id',
-    # 'fkey'       : ['adm_currencies', 'row_id', None, None, False, 'curr'],
     'dflt_val'   : '{tran_row_id>supp_row_id>currency_id}',
     'sql'        : 'a.tran_row_id>supp_row_id>currency_id',
     })

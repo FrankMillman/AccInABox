@@ -1,9 +1,9 @@
 # table definition
 table = {
-    'table_name'    : 'sls_nsls_crntax',
+    'table_name'    : 'sls_isls_subtran_tax',
     'module_id'     : 'sls',
-    'short_descr'   : 'Sls tax on non_inv crn items',
-    'long_descr'    : 'Sales tax on non-inventory credit note items',
+    'short_descr'   : 'Sales tax on inv line items',
+    'long_descr'    : 'Sales tax on inventory line items',
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,
@@ -76,11 +76,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'nsls_row_id',
+    'col_name'   : 'subtran_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Nsls row id',
-    'long_descr' : 'Nsls row id',
-    'col_head'   : 'Nsls row id',
+    'short_descr': 'Subtran row id',
+    'long_descr' : 'Subtran row id',
+    'col_head'   : 'Subtran row id',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -91,7 +91,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['sls_nsls_subcrn', 'row_id', None, None, True, None],
+    'fkey'       : ['sls_isls_subtran', 'row_id', None, None, True, None],
     'choices'    : None,
     })
 cols.append ({
@@ -144,7 +144,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'nsls_row_id>tran_det_row_id>tran_row_id>currency_id>scale',
+    'scale_ptr'  : 'subtran_row_id>tran_det_row_id>tran_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -160,8 +160,8 @@ virt.append ({
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
-    'dflt_val'   : '{nsls_row_id>tran_det_row_id>tran_row_id>posted}',
-    'sql'        : "a.nsls_row_id>tran_det_row_id>tran_row_id>posted"
+    'dflt_val'   : '{subtran_row_id>tran_det_row_id>tran_row_id>posted}',
+    'sql'        : "a.subtran_row_id>tran_det_row_id>tran_row_id>posted"
     })
 virt.append ({
     'col_name'   : 'tax_local',
@@ -176,12 +176,59 @@ virt.append ({
         '<expr>'
           '<fld_val name="tax_amt"/>'
           '<op type="/"/>'
-          '<fld_val name="nsls_row_id>tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="subtran_row_id>tran_det_row_id>tran_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
     'sql'        : (
-        "a.tax_amt / a.nsls_row_id>tran_det_row_id>tran_row_id>tran_exch_rate"
+        "a.tax_amt / a.subtran_row_id>tran_det_row_id>tran_row_id>tran_exch_rate"
         ),
+    })
+virt.append ({
+    'col_name'   : 'upd_tax',
+    'data_type'  : 'DEC',
+    'short_descr': 'Tax local',
+    'long_descr' : 'Tax amount in local currency - pos for inv, neg for crn',
+    'col_head'   : 'Tax local',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_rule'  : (
+        '<expr>'
+            '<expr>'
+            '<fld_val name="tax_amt"/>'
+            '<op type="/"/>'
+            '<fld_val name="subtran_row_id>tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+            '</expr>'
+          '<op type="*"/>'
+          '<case>'
+            '<compare test="[[`if`, ``, `subtran_row_id>tran_det_row_id>rev_sign_sls`, `is`, `$True`, ``]]">'
+              '<literal value="-1"/>'
+            '</compare>'
+            '<default>'
+              '<literal value="1"/>'
+            '</default>'
+          '</case>'
+        '</expr>'
+        ),
+    'sql'        : (
+        "(a.tax_amt / a.subtran_row_id>tran_det_row_id>tran_row_id>tran_exch_rate) "
+        "* "
+        "CASE WHEN a.subtran_row_id>tran_det_row_id>rev_sign_sls = '1' THEN -1 ELSE 1 END"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'tax_source_code',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Source code for tax',
+    'long_descr' : 'Source code for tax',
+    'col_head'   : 'Source code for tax',
+    'dflt_rule'   : (
+        '<expr>'
+          '<fld_val name="subtran_row_id>source_code"/>'
+          '<op type="+"/>'
+          '<literal value="_tax"/>'
+        '</expr>'
+        ),
+    'sql'        : "a.subtran_row_id>source_code || '_tax'"
     })
 
 # cursor definitions
@@ -191,39 +238,22 @@ cursors = []
 actions = []
 actions.append([
     'upd_on_post', [
-        # [
-        #     'sls_tax_totals',  # table name
-        #     None,  # condition
-        #     False,  # split source?
-        #     [  # key fields
-        #         ['tax_code_id', 'tax_code_id'],  # tgt_col, src_col
-        #         ['tran_date', 'nsls_row_id>tran_det_row_id>tran_row_id>tran_date'],
-        #         ],
-        #     [  # aggregation
-        #         ['nsls_crn_net_day', '-', 'nsls_row_id>net_local'],
-        #         ['nsls_crn_tax_day', '-', 'tax_local'],
-        #         ['nsls_crn_net_tot', '-', 'nsls_row_id>net_local'],
-        #         ['nsls_crn_tax_tot', '-', 'tax_local'],
-        #         ],
-        #     [],  # on post
-        #     [],  # on unpost
-        #     ],
         [
             'sls_tax_totals',  # table name
             [],  # condition
             False,  # split source?
             [  # key fields
                 ['tax_code_id', 'tax_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'nsls_row_id>location_row_id'],
-                ['function_row_id', 'nsls_row_id>function_row_id'],
-                ['source_code', "'nsls_crn'"],
-                ['tran_date', 'nsls_row_id>tran_det_row_id>tran_row_id>tran_date'],
+                ['location_row_id', 'tax_code_id>tax_cat_id>location_row_id'],
+                ['function_row_id', 'tax_code_id>tax_cat_id>function_row_id'],
+                ['source_code', 'tax_source_code'],
+                ['tran_date', 'subtran_row_id>tran_det_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['sales_day', '-', 'nsls_row_id>net_local'],  # tgt_col, op, src_col
-                ['sales_tot', '-', 'nsls_row_id>net_local'],
-                ['tax_day', '-', 'tax_local'],
-                ['tax_tot', '-', 'tax_local'],
+                ['sales_day', '+', 'subtran_row_id>upd_local'],  # tgt_col, op, src_col
+                ['sales_tot', '+', 'subtran_row_id>upd_local'],
+                ['tax_day', '+', 'upd_tax'],
+                ['tax_tot', '+', 'upd_tax'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -235,15 +265,15 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'tax_code_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'nsls_row_id>location_row_id'],
-                ['function_row_id', 'nsls_row_id>function_row_id'],
-                ['source_code', "'nsls_crn'"],
-                ['tran_date', 'nsls_row_id>tran_det_row_id>tran_row_id>tran_date'],
+                ['gl_code_id', 'tax_code_id>tax_cat_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'tax_code_id>tax_cat_id>location_row_id'],
+                ['function_row_id', 'tax_code_id>tax_cat_id>function_row_id'],
+                ['source_code', 'tax_source_code'],
+                ['tran_date', 'subtran_row_id>tran_det_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'tax_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'tax_local'],
+                ['tran_day', '+', 'upd_tax'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'upd_tax'],
                 ],
             [],  # on post
             [],  # on unpost

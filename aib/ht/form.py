@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 import db.api
 import db.objects
 import db.cache
-from db.chk_constraints import eval_expr
 import ht.htc
 import ht.gui_objects
 import ht.gui_grid
@@ -26,6 +25,7 @@ import ht.gui_bpmn
 import ht.form_xml
 import ht.templates
 from ht.default_xml import get_form_dflt
+from evaluate_expr import eval_bool_expr
 from common import AibError
 from common import log, debug
 
@@ -805,8 +805,8 @@ class Frame:
             if skip_elem:
                 continue
             if element.tag == 'if_':
-                test = loads(element.get('test'))
-                skip_elem = not await eval_expr(test, self.db_obj)
+                test = loads(element.get('test').replace('~', "'"))
+                skip_elem = not await eval_bool_expr(test, self.db_obj)
             elif element.tag == 'block':
                 gui.append(('block', None))
             elif element.tag == 'vbox':

@@ -1,16 +1,9 @@
 <subtype_body subtype_id="com">
   <block/>
   <panel/>
-<!--
-  <row/>
-  <col/>
-  <label value="Comment code:"/>
-  <col/>
-  <input obj_name="com" col_name="comment_code" lng="80"/>
--->
   <row/>
   <col/>
   <label value="Comment:"/>
   <col/>
-  <input obj_name="com" col_name="comment_text" lng="250" height="5"/>
+  <input obj_name="com" col_name="text" lng="250" height="5"/>
 </subtype_body>

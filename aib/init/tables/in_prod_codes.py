@@ -131,12 +131,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    # 'col_checks' : [
-    #     ['class_type', "Must be of type 'class'", [
-    #         ['check', '', 'class_row_id>class_type', '=', "'class'", ''],
-    #         ],
-    #     ]],
-    'fkey'       : ['in_prod_classes', 'row_id', 'class', 'class', True, None],
+    'fkey'       : ['in_prod_classes', 'row_id', 'prod_class', 'prod_class', True, None],
     'choices'    : None,
     })
 cols.append ({

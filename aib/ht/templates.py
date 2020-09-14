@@ -648,8 +648,9 @@ class Transaction:  # template for capturing transactions
               '&lt;req_save/&gt;'
               '&lt;call method=&quot;do_post&quot;/&gt;'
               '&lt;case&gt;'
-                '&lt;compare src=&quot;[obj_name].posted&quot; '
-                    'op=&quot;=&quot; tgt=&quot;$True&quot;&gt;'  # check 'post' successful
+
+                "&lt;compare test=&quot;[['if', '', '[obj_name].posted', "
+                    "'=',  '$True', '']]&quot;&gt;"  # check 'post' successful
 
                   '&lt;case&gt;'
                     '&lt;has_ctrl_grid&gt;'  # if ctrl grid, restart grid

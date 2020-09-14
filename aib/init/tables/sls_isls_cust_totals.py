@@ -2,18 +2,33 @@
 table = {
     'table_name'    : 'sls_isls_cust_totals',
     'module_id'     : 'sls',
-    'short_descr'   : 'Sales totals by cust - inv',
-    'long_descr'    : 'Sales totals by customer - inventory',
+    'short_descr'   : 'Inv sales totals by cust',
+    'long_descr'    : 'Inventory sales totals by customer',
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,
     'tree_params'   : None,
     'roll_params'   : [
-        ['tran_date'],  # key field to roll on
-        ['qty_inv_tot', 'sls_inv_tot', 'cos_inv_tot',
-            'qty_crn_tot', 'sls_crn_tot', 'cos_crn_tot']  # fields to roll
+        ['tran_date'],  # key fields to roll on
+        ['qty_tot', 'sales_tot', 'cos_tot']  # fields to roll
         ],
-    'indexes'       : None,
+    'indexes'       : [
+        ['isls_cust_cover', [
+            ['prod_code_id', False],
+            ['cust_row_id', False],
+            ['location_row_id', False],
+            ['function_row_id', False],
+            ['source_code_id', False],
+            ['tran_date', True],
+            ['qty_day', False],
+            ['qty_tot', False],
+            ['sales_day', False],
+            ['sales_tot', False],
+            ['cos_day', False],
+            ['cos_tot', False],
+            ],
+            None, False],
+        ],
     'ledger_col'    : None,
     'defn_company'  : None,
     'data_company'  : None,
@@ -118,6 +133,63 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_locations', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_functions', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'source_code_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Source code id',
+    'long_descr' : 'Source code row id',
+    'col_head'   : 'Code id',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
     'short_descr': 'Date',
@@ -137,11 +209,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'qty_inv_day',
+    'col_name'   : 'qty_day',
     'data_type'  : 'DEC',
-    'short_descr': 'Qty sold - inv - daily total',
-    'long_descr' : 'Quantity sold - invoice - daily total',
-    'col_head'   : 'Qty inv day',
+    'short_descr': 'Sales qty - daily total',
+    'long_descr' : 'Sales quantity - daily total',
+    'col_head'   : 'Qty day',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -156,49 +228,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'sls_inv_day',
+    'col_name'   : 'qty_tot',
     'data_type'  : 'DEC',
-    'short_descr': 'Sales - inv - daily total',
-    'long_descr' : 'Inventory sales - invoice - daily total',
-    'col_head'   : 'Sls inv day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'cos_inv_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cos - inv - daily total',
-    'long_descr' : 'Inventory cost of sales - invoice - daily total',
-    'col_head'   : 'Cos inv day',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'qty_crn_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Qty sold - crn - daily total',
-    'long_descr' : 'Quantity sold - cr note - daily total',
-    'col_head'   : 'Qty crn day',
+    'short_descr': 'Sales qty - accum total',
+    'long_descr' : 'Sales quantity - accumulated total',
+    'col_head'   : 'Qty tot',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -213,15 +247,15 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'sls_crn_day',
+    'col_name'   : 'sales_day',
     'data_type'  : 'DEC',
-    'short_descr': 'Sales - crn - daily total',
-    'long_descr' : 'Inventory sales - cr note - daily total',
-    'col_head'   : 'Sls crn day',
+    'short_descr': 'Sales daily total',
+    'long_descr' : 'Sales daily total',
+    'col_head'   : 'Sales day',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -232,15 +266,15 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'cos_crn_day',
+    'col_name'   : 'sales_tot',
     'data_type'  : 'DEC',
-    'short_descr': 'Cos - crn - daily total',
-    'long_descr' : 'Inventory cost of sales - cr note - daily total',
-    'col_head'   : 'Cos crn day',
+    'short_descr': 'Sales accum total',
+    'long_descr' : 'Sales accumulated total',
+    'col_head'   : 'Sales tot',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -251,34 +285,15 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'qty_inv_tot',
+    'col_name'   : 'cos_day',
     'data_type'  : 'DEC',
-    'short_descr': 'Qty sold - inv - running total',
-    'long_descr' : 'Quantity sold - invoice - running total',
-    'col_head'   : 'Qty inv tot',
+    'short_descr': 'Cost of sales daily total',
+    'long_descr' : 'Cost of sales daily total',
+    'col_head'   : 'Cost of sales day',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 6,
-    'scale_ptr'  : 'prod_code_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'sls_inv_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Sales - inv - running total',
-    'long_descr' : 'Inventory sales - invoice - running total',
-    'col_head'   : 'Sls inv tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -289,72 +304,15 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'cos_inv_tot',
+    'col_name'   : 'cos_tot',
     'data_type'  : 'DEC',
-    'short_descr': 'Cos - inv - running total',
-    'long_descr' : 'Inventory cost of sales - invoice - running total',
-    'col_head'   : 'Cos inv tot',
+    'short_descr': 'Cost of sales accum total',
+    'long_descr' : 'Cost of sales accumulated total',
+    'col_head'   : 'Cost of sales tot',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'qty_crn_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Qty sold - crn - running total',
-    'long_descr' : 'Quantity sold - cr note - running total',
-    'col_head'   : 'Qty crn tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 6,
-    'scale_ptr'  : 'prod_code_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'sls_crn_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Sales - crn - running total',
-    'long_descr' : 'Inventory sales - cr note - running total',
-    'col_head'   : 'Sls crn tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'cos_crn_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cos - crn - running total',
-    'long_descr' : 'Inventory cost of sales - cr note - running total',
-    'col_head'   : 'Cos crn tot',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -367,108 +325,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'qty_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Qty sold - daily total',
-    'long_descr' : 'Quantity sold - daily total',
-    'col_head'   : 'Qty day',
-    'db_scale'   : 6,
-    'scale_ptr'  : 'prod_code_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="qty_inv_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="qty_crn_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.qty_inv_day + a.qty_crn_day"
-    })
-virt.append ({
-    'col_name'   : 'sls_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Sales - daily total',
-    'long_descr' : 'Sales - daily total',
-    'col_head'   : 'Sls day',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="sls_inv_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="sls_crn_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.sls_inv_day + a.sls_crn_day"
-    })
-virt.append ({
-    'col_name'   : 'cos_day',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cost of sales - daily total',
-    'long_descr' : 'Cost of sales - daily total',
-    'col_head'   : 'Cos day',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="cos_inv_day"/>'
-          '<op type="+"/>'
-          '<fld_val name="cos_crn_day"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.cos_inv_day + a.cos_crn_day"
-    })
-virt.append ({
-    'col_name'   : 'qty_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Qty sold - running total',
-    'long_descr' : 'Quantity sold - running total',
-    'col_head'   : 'Qty tot',
-    'db_scale'   : 6,
-    'scale_ptr'  : 'prod_code_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="qty_inv_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="qty_crn_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.qty_inv_tot + a.qty_crn_tot"
-    })
-virt.append ({
-    'col_name'   : 'sls_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Sales - running total',
-    'long_descr' : 'Sales - running total',
-    'col_head'   : 'Sls tot',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="sls_inv_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="sls_crn_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.sls_inv_tot + a.sls_crn_tot"
-    })
-virt.append ({
-    'col_name'   : 'cos_tot',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cost of sales - running total',
-    'long_descr' : 'Cost of sales - running total',
-    'col_head'   : 'Cos tot',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="cos_inv_tot"/>'
-          '<op type="+"/>'
-          '<fld_val name="cos_crn_tot"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.cos_inv_tot + a.cos_crn_tot"
-    })
 
 # cursor definitions
 cursors = []

@@ -154,7 +154,7 @@ cols.append ({
     'short_descr': 'Item type',
     'long_descr' : 'Item type - see choices for details',
     'col_head'   : 'Type',
-    'key_field'  : 'A',
+    'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
@@ -219,7 +219,7 @@ cols.append ({
     'short_descr': 'Due date',
     'long_descr' : 'Due date',
     'col_head'   : 'Due date',
-    'key_field'  : 'A',
+    'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
@@ -274,7 +274,7 @@ cols.append ({
     'col_name'   : 'discount_date',
     'data_type'  : 'DTE',
     'short_descr': 'Discount date',
-    'long_descr' : 'Discount date',
+    'long_descr' : 'Discount is allowable if paid by this date',
     'col_head'   : 'Disc date',
     'key_field'  : 'N',
     'calculated' : False,
@@ -317,11 +317,8 @@ virt = []
 #     'short_descr': 'Supplier row id',
 #     'long_descr' : 'Supplier row id',
 #     'col_head'   : 'Supp id',
-#     # 'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
-#     'dflt_val'   : '{tran_row_id>supp_row_id}',
-#     'sql'        : (
-#         "a.tran_row_id>supp_row_id"
-#         )
+#     'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
+#     'sql'        : 'a.tran_row_id>supp_row_id'
 #     })
 # virt.append ({
 #     'col_name'   : 'tran_date',
@@ -329,21 +326,16 @@ virt = []
 #     'short_descr': 'Transaction date',
 #     'long_descr' : 'Transaction date',
 #     'col_head'   : 'Tran date',
-#     'sql'        : (
-#         "a.tran_row_id>tran_date"
-#         )
+#     'sql'        : 'a.tran_row_id>tran_date'
 #     })
-# virt.append ({
-#     'col_name'   : 'tran_number',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Transaction number',
-#     'long_descr' : 'Transaction number',
-#     'col_head'   : 'Tran no',
-#     'dflt_val'   : '{tran_row_id>tran_number}',
-#     'sql'        : (
-#         "a.tran_row_id>tran_number"
-#         )
-#     })
+virt.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction number',
+    'long_descr' : 'Transaction number',
+    'col_head'   : 'Tran no',
+    'sql'        : 'a.tran_row_id>tran_number'
+    })
 virt.append ({
     'col_name'   : 'balance_supp',
     'data_type'  : 'DEC',
@@ -355,25 +347,32 @@ virt.append ({
     'sql'        : (
         "a.amount_supp "
         "- "
-        "COALESCE("
-            "(SELECT SUM(b.alloc_supp + b.discount_supp) "
+        "COALESCE(("
+            "SELECT SUM(b.alloc_supp) "
             "FROM {company}.ap_tran_alloc_det b "
-            "JOIN {company}.ap_trans c ON c.tran_type = b.tran_type AND c.tran_row_id = b.tran_row_id "
-            "AND c.tran_date <= {balance_date} "
-            "WHERE b.item_row_id = a.row_id) "
-            ", 0)"
-        # "[LEFT JOIN (SELECT allocations.item_row_id, "
-        # "SUM(allocations.alloc_supp + allocations.discount_supp) AS sum_alloc_supp, "
-        # "SUM(allocations.alloc_local + allocations.discount_local) AS sum_alloc_local "
-        # "FROM {company}.ap_allocations allocations "
-        # "LEFT JOIN {company}.ap_trans alloc_trans "
-        #     "ON alloc_trans.tran_type = allocations.tran_type "
-        #     "AND alloc_trans.tran_row_id = allocations.tran_row_id "
-        # "WHERE alloc_trans.tran_date <= {balance_date} "
-        # "GROUP BY allocations.item_row_id "
-        # ") sum_allocations ON sum_allocations.item_row_id = a.row_id]"
-        # "a.amount_supp + COALESCE(sum_allocations.sum_alloc_supp, 0)"
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
+            "), 0)"
         )
+    })
+virt.append ({
+    'col_name'   : 'balance_supp_as_at',
+    'data_type'  : 'DEC',
+    'short_descr': 'Balance',
+    'long_descr' : 'Balance outstanding at specified date - supplier currency',
+    'col_head'   : 'Balance',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'sql'        : (
+        "a.amount_supp "
+        "- "
+        "COALESCE(("
+            "SELECT SUM(b.alloc_supp) "
+            "FROM {company}.ap_tran_alloc_det b "
+            "JOIN {company}.ap_tran_alloc c ON c.row_id = b.tran_row_id "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
+                "c.tran_date <= {as_at_date} "
+            "), 0)"
+        ),
     })
 virt.append ({
     'col_name'   : 'balance_local',
@@ -386,57 +385,31 @@ virt.append ({
     'sql'        : (
         "a.amount_local "
         "- "
-        "COALESCE("
-            "(SELECT SUM(b.alloc_local + b.discount_local) "
+        "COALESCE(("
+            "SELECT SUM(b.alloc_local) "
             "FROM {company}.ap_tran_alloc_det b "
-            "JOIN {company}.ap_trans c ON c.tran_type = b.tran_type AND c.tran_row_id = b.tran_row_id "
-            "AND c.tran_date <= {balance_date} "
-            "WHERE b.item_row_id = a.row_id) "
-            ", 0)"
-        # "[LEFT JOIN (SELECT allocations.item_row_id, "
-        # "SUM(allocations.alloc_supp + allocations.discount_supp) AS sum_alloc_supp, "
-        # "SUM(allocations.alloc_local + allocations.discount_local) AS sum_alloc_local "
-        # "FROM {company}.ap_allocations allocations "
-        # "LEFT JOIN {company}.ap_trans alloc_trans "
-        #     "ON alloc_trans.tran_type = allocations.tran_type "
-        #     "AND alloc_trans.tran_row_id = allocations.tran_row_id "
-        # "WHERE alloc_trans.tran_date <= {balance_date} "
-        # "GROUP BY allocations.item_row_id "
-        # ") sum_allocations ON sum_allocations.item_row_id = a.row_id]"
-        # "a.amount_local + COALESCE(sum_allocations.sum_alloc_local, 0)"
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
+            "), 0)"
         )
     })
 virt.append ({
-    'col_name'   : 'bal_supp_tran',
+    'col_name'   : 'balance_local_as_at',
     'data_type'  : 'DEC',
-    'short_descr': 'Balance while in transaction',
-    'long_descr' : 'Balance outstanding excluding allocation from current transaction',
+    'short_descr': 'Balance',
+    'long_descr' : 'Balance outstanding at specified date - local currency',
     'col_head'   : 'Balance',
     'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'scale_ptr'  : '_param.local_curr_id>scale',
     'sql'        : (
-        "a.amount_supp "
+        "a.amount_local "
         "- "
-        "COALESCE("
-            "(SELECT SUM(b.alloc_supp + b.discount_supp) "
+        "COALESCE(("
+            "SELECT SUM(b.alloc_local) "
             "FROM {company}.ap_tran_alloc_det b "
-            "JOIN {company}.ap_trans c ON c.tran_type = b.tran_type AND c.tran_row_id = b.tran_row_id "
-            "AND c.tran_date <= {balance_date} "
-            "WHERE b.item_row_id = a.row_id AND "
-            "(b.tran_type != {tran_type} OR b.tran_row_id != {tran_row_id})) "
-            ", 0)"
-        # "[LEFT JOIN (SELECT allocations.item_row_id, "
-        # "SUM(allocations.alloc_supp + allocations.discount_supp) AS sum_alloc_supp, "
-        # "SUM(allocations.alloc_local + allocations.discount_local) AS sum_alloc_local "
-        # "FROM {company}.ap_allocations allocations "
-        # "LEFT JOIN {company}.ap_trans alloc_trans "
-        #     "ON alloc_trans.tran_type = allocations.tran_type "
-        #     "AND alloc_trans.tran_row_id = allocations.tran_row_id "
-        # "WHERE alloc_trans.tran_date <= {balance_date} "
-        #     "AND (allocations.tran_type != {tran_type} OR allocations.tran_row_id != {tran_row_id}) "
-        # "GROUP BY allocations.item_row_id "
-        # ") sum_allocations_tran ON sum_allocations_tran.item_row_id = a.row_id]"
-        # "a.amount_supp + COALESCE(sum_allocations_tran.sum_alloc_supp, 0)"
+            "JOIN {company}.ap_tran_alloc c ON c.row_id = b.tran_row_id "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
+                "c.tran_date <= {as_at_date} "
+            "), 0)"
         )
     })
 

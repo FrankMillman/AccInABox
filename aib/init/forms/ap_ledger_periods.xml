@@ -1,6 +1,6 @@
 <form name="ap_ledger_periods" title="Ap ledger periods" before_start_form="
   <<case>>
-    <<compare src=`_ledger.separate_pmt_close` op=`is` tgt=`$True`>>
+    <<compare test=`[['if', '', '_ledger.separate_pmt_close', 'is', '$True', '']]`>>
       <<assign src=`'ap_per_pmt'` tgt=`_ctx.cursor_name`/>>
     <</compare>>
     <<default>>
@@ -188,7 +188,7 @@
         <input obj_name="var" col_name="single_supp" after="
           <<action>>
             <<case>>
-              <<compare src=`var.single_supp` op=`is` tgt=`$True`>>
+              <<compare test=`[['if', '', 'var.single_supp', 'is', '$True', '']]`>>
                 <<set_readonly target=`var.supp_id` state=`false`/>>
               <</compare>>
               <<default>>

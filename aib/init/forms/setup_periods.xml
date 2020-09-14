@@ -1,7 +1,7 @@
 <form name="setup_periods" title="Set up financial periods" after_start_form="
   <<pyfunc name=`custom.finperiod_funcs.get_no_periods`/>>
   <<case>>
-    <<compare src=`_ctx.count_per` op=`=` tgt=`0`>>
+    <<compare test=`[['if', '', '_ctx.count_per', '=', '0', '']]`>>
       <<inline_form name=`op_date`>>
         <<on_return>>
           <<return state=`cancelled`>>

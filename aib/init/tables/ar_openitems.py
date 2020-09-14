@@ -341,14 +341,6 @@ virt.append ({
     'col_head'   : 'Tran no',
     'sql'        : 'a.tran_row_id>tran_number',
     })
-# virt.append ({
-#     'col_name'   : 'posted',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Posted',
-#     'long_descr' : 'Posted',
-#     'col_head'   : 'Posted',
-#     'sql'        : 'a.tran_row_id>posted',
-#     })
 virt.append ({
     'col_name'   : 'balance_cust',
     'data_type'  : 'DEC',

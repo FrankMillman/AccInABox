@@ -87,7 +87,7 @@ cols.append ({
     'long_descr' : 'Warehouse row id',
     'col_head'   : 'Warehouse',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_param.in_ledger_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.in_ledger_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -181,32 +181,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'qty_available',
-    'data_type'  : 'DEC',
-    'short_descr': 'Quantity available',
-    'long_descr' : 'Quantity available',
-    'col_head'   : 'Qty avail',
-    'db_scale'   : 6,
-    'scale_ptr'  : 'prod_row_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : (
-        "SELECT "
-            "(SELECT b.pch_tot_qty + b.tfrin_tot_qty + b.tfrout_tot_qty "
-                "+ b.adj_tot_qty + b.sls_tot_qty "
-#               "+ b.qty_pchord_tot + b.qty_slsord_tot "
-            "FROM {company}.in_wh_prod_totals b "
-            "WHERE b.ledger_row_id = a.ledger_row_id AND b.prod_row_id = a.prod_row_id "
-#               "AND b.tran_date <= {var.date} "
-            "ORDER BY b.tran_date DESC LIMIT 1) "
-        "- "
-            "COALESCE((SELECT b.alloc_qty "
-            "FROM {company}.in_wh_prod_unposted b "
-            "WHERE b.ledger_row_id = a.ledger_row_id AND b.prod_row_id = a.prod_row_id) "
-            ", 0)"
-        ),
-    })
 
 # cursor definitions
 cursors = []

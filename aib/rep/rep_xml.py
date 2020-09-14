@@ -128,48 +128,6 @@ async def pyfunc(caller, xml):
 # the following are boolean functions called from case(), using globals()
 #------------------------------------------------------------------------
 
-async def obj_exists(caller, xml):
-    obj_name = xml.get('obj_name')
-    return caller.report.data_objects[obj_name].exists
-
-async def compare(caller, xml):
-    # <compare src="pwd_var.pwd1" op="eq" tgt="">
-
-    source = xml.get('src')
-    source_value = await get_val(caller, source)
-
-    target = xml.get('tgt')
-    target_value = await get_val(caller, target)
-
-    # print('"{}" {} "{}"'.format(source_value, xml.get('op'), target_value))
-
-    compare = OPS[xml.get('op')]
-    return compare(source_value, target_value)
-
-OPS = {
-    '=': lambda src_val, tgt_val: src_val == tgt_val,
-    'eq': lambda src_val, tgt_val: src_val == tgt_val,
-    '!=': lambda src_val, tgt_val: src_val != tgt_val,
-    'ne': lambda src_val, tgt_val: src_val != tgt_val,
-    '<': lambda src_val, tgt_val: (src_val or 0) < tgt_val,
-    'lt': lambda src_val, tgt_val: (src_val or 0) < tgt_val,
-    '>': lambda src_val, tgt_val: (src_val or 0) > tgt_val,
-    'gt': lambda src_val, tgt_val: (src_val or 0) > tgt_val,
-    '<=': lambda src_val, tgt_val: (src_val or 0) <= tgt_val,
-    'le': lambda src_val, tgt_val: (src_val or 0) <= tgt_val,
-    '>=': lambda src_val, tgt_val: (src_val or 0) >= tgt_val,
-    'ge': lambda src_val, tgt_val: (src_val or 0) >= tgt_val,
-    '+': lambda src_val, tgt_val: bool(src_val + tgt_val),
-    'add': lambda src_val, tgt_val: bool(src_val + tgt_val),
-    '-': lambda src_val, tgt_val: bool(src_val - tgt_val),
-    'sub': lambda src_val, tgt_val: bool(src_val - tgt_val),
-    'is': lambda src_val, tgt_val: src_val is tgt_val,
-    'is_not': lambda src_val, tgt_val: src_val is not tgt_val,
-    'in': lambda src_val, tgt_val: src_val in tgt_val,
-    'not in': lambda src_val, tgt_val: src_val not in tgt_val,
-    'matches': lambda src_val, tgt_val: bool(re.match(tgt_val+'$', src_val or '')),
-    }
-
 async def get_val(caller, value):
     if value.startswith('('):  # expression
         # for now assume a simple expression -
@@ -215,6 +173,6 @@ async def get_val(caller, value):
         return None
     if value.isdigit():
         return int(value)
-    if value and value[0] == '-' and value[1:].isdigit():
+    if value.startswith('-') and value[1:].isdigit():
         return int(value)
     raise AibError(head='Get value', body='Unknown value "{}"'.format(value))

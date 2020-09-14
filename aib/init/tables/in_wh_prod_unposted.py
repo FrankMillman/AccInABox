@@ -112,7 +112,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['sls_isls_subinv', 'row_id', None, None, False, None],
+    'fkey'       : ['sls_isls_subtran', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({

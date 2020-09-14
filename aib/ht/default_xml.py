@@ -1,8 +1,11 @@
 import importlib
 import operator
+from json import loads
 
 import db
 from datetime import date as dt
+
+from evaluate_expr import eval_bool_expr
 from common import AibError
 
 async def get_form_dflt(caller, obj, dflt):
@@ -81,39 +84,44 @@ async def case(caller, obj, xml):
             return value
 
 async def compare(caller, obj, xml):
-    """
-    <<compare src=`_param.auto_party_id` op=`is_` tgt=`$True`>>
-    """
-    source = xml.get('src')
-    if '.' in source:
-        source_objname, source_colname = source.split('.')
-        source_record = caller.data_objects[source_objname]
-        source_field = await source_record.getfld(source_colname)
-        source_value = await source_field.getval()
-    elif source == '$Prev':
-        source_value = await obj.fld.get_prev()
-    else:
-        source_value = source
+    test = loads(xml.get('test').replace("'", '"').replace('~', "'"))
+    return await eval_bool_expr(test, obj.fld.db_obj)
 
-    target = xml.get('tgt')
-    if '.' in target:
-        target_objname, target_colname = target.split('.')
-        target_record = caller.data_objects[target_objname]
-        target_field = await target_record.getfld(target_colname)
-        target_value = await target_field.getval()
-    elif target == '$True':
-        target_value = True
-    elif target == '$False':
-        target_value = False
-    elif target == '$None':
-        target_value = None
-    else:
-        target_value = target
+    # if xml.get('test') is not None:
+    #     test = loads(xml.get('test').replace("'", '"'))
+    #     result = await eval_bool_expr(test, obj)
+    #     return result
 
-    # print('"{0}" {1} "{2}"'.format(source_value, xml.get('op'), target_value))
+    # source = xml.get('src')
+    # if '.' in source:
+    #     source_objname, source_colname = source.split('.')
+    #     source_record = caller.data_objects[source_objname]
+    #     source_field = await source_record.getfld(source_colname)
+    #     source_value = await source_field.getval()
+    # elif source == '$Prev':
+    #     source_value = await obj.fld.get_prev()
+    # else:
+    #     source_value = source
 
-    op = getattr(operator, xml.get('op'))
-    return op(source_value, target_value)
+    # target = xml.get('tgt')
+    # if '.' in target:
+    #     target_objname, target_colname = target.split('.')
+    #     target_record = caller.data_objects[target_objname]
+    #     target_field = await target_record.getfld(target_colname)
+    #     target_value = await target_field.getval()
+    # elif target == '$True':
+    #     target_value = True
+    # elif target == '$False':
+    #     target_value = False
+    # elif target == '$None':
+    #     target_value = None
+    # else:
+    #     target_value = target
+
+    # # print('"{0}" {1} "{2}"'.format(source_value, xml.get('op'), target_value))
+
+    # op = getattr(operator, xml.get('op'))
+    # return op(source_value, target_value)
 
 async def ask(caller, obj, value, xml):
     answers = []

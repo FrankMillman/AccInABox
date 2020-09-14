@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : [
         ['tran_date'],  # key fields to roll on
-        ['tran_tot_cust', 'tran_tot_local']  # fields to roll
+        ['tran_tot']  # fields to roll
         ],
     'indexes'       : [
         ['nsls_cust_cover', [
@@ -20,10 +20,8 @@ table = {
             ['function_row_id', False],
             ['source_code_id', False],
             ['tran_date', True],
-            ['tran_day_cust', False],
-            ['tran_tot_cust', False],
-            ['tran_day_local', False],
-            ['tran_tot_local', False],
+            ['tran_day', False],
+            ['tran_tot', False],
             ],
             None, False],
         ],
@@ -207,49 +205,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_day_cust',
+    'col_name'   : 'tran_day',
     'data_type'  : 'DEC',
-    'short_descr': 'Trans daily total - cust',
-    'long_descr' : 'Transaction daily total - customer currency',
-    'col_head'   : 'Tran day cust',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tran_tot_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Trans total - cust',
-    'long_descr' : 'Transaction - accumulated total - customer currency',
-    'col_head'   : 'Tran tot cust',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tran_day_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Trans daily total - local',
-    'long_descr' : 'Transaction daily total - local currency',
-    'col_head'   : 'Tran day local',
+    'short_descr': 'Sales daily total',
+    'long_descr' : 'Sales daily total',
+    'col_head'   : 'Sales day',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -264,11 +224,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_tot_local',
+    'col_name'   : 'tran_tot',
     'data_type'  : 'DEC',
-    'short_descr': 'Trans total - local',
-    'long_descr' : 'Transaction - accumulated total - local currency',
-    'col_head'   : 'Tran tot local',
+    'short_descr': 'Sales accum total',
+    'long_descr' : 'Sales accumulated total',
+    'col_head'   : 'Sales tot',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,

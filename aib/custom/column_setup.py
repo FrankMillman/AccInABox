@@ -38,12 +38,18 @@ async def on_start_frame(caller, xml):
     else:
         init_vals['allow_amend'] = 'cond'
         amend = caller.data_objects['amend']
-        param, test, value = allow_amend
-        amend_init_vals = {}
-        amend_init_vals['param'] = param
-        amend_init_vals['test'] = test
-        amend_init_vals['value'] = str(value)  # False/True/None
-        await amend.init(init_vals=amend_init_vals)
+        # param, test, value = allow_amend
+        # amend_init_vals = {}
+        # amend_init_vals['param'] = param
+        # amend_init_vals['test'] = test
+        # amend_init_vals['value'] = str(value)  # False/True/None
+        # await amend.init(init_vals=amend_init_vals)
+        await amend.delete_all()
+        for sub_seq, (test, lbr, src, chk, tgt, rbr) in enumerate(allow_amend):
+            await amend.init(display=False, init_vals={
+                'seq': sub_seq, 'test': test, 'lbr': lbr,
+                'src': src, 'chk': chk, 'tgt': tgt, 'rbr': rbr})
+            await amend.save()
 
     calculated = await db_cols.getval('calculated')
     if calculated is None:
@@ -55,14 +61,20 @@ async def on_start_frame(caller, xml):
     else:
         init_vals['calculated'] = 'cond'
         calc = caller.data_objects['calc']
-        param, test, value = calculated
-        calc_init_vals = {}
-        param_type, param_name = param.split('.')
-        calc_init_vals['type'] = param_type
-        calc_init_vals['name'] = param_name
-        calc_init_vals['test'] = test
-        calc_init_vals['value'] = str(value)  # False/True/None
-        await calc.init(init_vals=calc_init_vals)
+        # param, test, value = calculated
+        # calc_init_vals = {}
+        # param_type, param_name = param.split('.')
+        # calc_init_vals['type'] = param_type
+        # calc_init_vals['name'] = param_name
+        # calc_init_vals['test'] = test
+        # calc_init_vals['value'] = str(value)  # False/True/None
+        # await calc.init(init_vals=calc_init_vals)
+        await calc.delete_all()
+        for sub_seq, (test, lbr, src, chk, tgt, rbr) in enumerate(calculated):
+            await calc.init(display=False, init_vals={
+                'seq': sub_seq, 'test': test, 'lbr': lbr,
+                'src': src, 'chk': chk, 'tgt': tgt, 'rbr': rbr})
+            await calc.save()
 
     await var.init(init_vals=init_vals)
 
@@ -77,12 +89,20 @@ async def dump_tristates(caller, xml):
         allow_amend = True
     else:
         amend = caller.data_objects['amend']
-        if await amend.getval('param') is None:
+        # if await amend.getval('param') is None:
+        #     raise AibError(head='Allow amend', body='Parameters required')
+        # allow_amend = [
+        #     await amend.getval('param'), await amend.getval('test'),
+        #     {'False': False, 'True': True, 'None': None}[await amend.getval('value')]
+        #     ]
+        allow_amend = []
+        all_amend = amend.select_many(where=[], order=[('seq', False)])
+        async for _ in all_amend:
+            allow_amend.append(
+                [await amend.getval(col) for col in ('test', 'lbr', 'src', 'chk', 'tgt', 'rbr')]
+                )
+        if not allow_amend:
             raise AibError(head='Allow amend', body='Parameters required')
-        allow_amend = [
-            await amend.getval('param'), await amend.getval('test'),
-            {'False': False, 'True': True, 'None': None}[await amend.getval('value')]
-            ]
     await db_cols.setval('allow_amend', allow_amend)
 
     if await var.getval('calculated') == 'false':
@@ -91,11 +111,19 @@ async def dump_tristates(caller, xml):
         calculated = True
     else:
         calc = caller.data_objects['calc']
-        if await calc.getval('name') is None:
-            raise AibError(head='Calculated', body='Parameters required')
-        calculated = [
-            f'{await calc.getval("type")}.{await calc.getval("name")}',
-            await calc.getval('test'),
-            {'False': False, 'True': True, 'None': None}[await calc.getval('value')]
-            ]
+        # if await calc.getval('name') is None:
+        #     raise AibError(head='Calculated', body='Parameters required')
+        # calculated = [
+        #     f'{await calc.getval("type")}.{await calc.getval("name")}',
+        #     await calc.getval('test'),
+        #     {'False': False, 'True': True, 'None': None}[await calc.getval('value')]
+        #     ]
+        calculated = []
+        all_calc = calc.select_many(where=[], order=[('seq', False)])
+        async for _ in all_calc:
+            calculated.append(
+                [await calc.getval(col) for col in ('test', 'lbr', 'src', 'chk', 'tgt', 'rbr')]
+                )
+        if not calculated:
+            raise AibError(head='Allow amend', body='Parameters required')
     await db_cols.setval('calculated', calculated)

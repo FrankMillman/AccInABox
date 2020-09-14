@@ -3,7 +3,7 @@ table = {
     'table_name'    : 'in_prod_tax_codes',
     'module_id'     : 'in',
     'short_descr'   : 'Product tax codes',
-    'long_descr'    : 'Product tax codes',
+    'long_descr'    : 'Product tax codes - must we distinguish between sales tax and purchase tax?',
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,

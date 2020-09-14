@@ -6,10 +6,10 @@
   <db_objects>
     <db_obj name="ap_inv" table_name="ap_tran_inv" is_formview_obj="true"/>
     <db_obj name="ap_invdet" table_name="ap_tran_inv_det" parent="ap_inv"/>
-    <db_obj name="ipch" table_name="pch_ipch_subinv" parent="ap_invdet"/>
-    <db_obj name="npch" table_name="pch_npch_subinv" parent="ap_invdet"/>
+    <db_obj name="ipch" table_name="ap_tran_inv_ipch" parent="ap_invdet"/>
+    <db_obj name="npch" table_name="ap_tran_inv_npch" parent="ap_invdet"/>
     <db_obj name="achg" table_name="ar_subtran_chg" parent="ap_invdet"/>
-    <db_obj name="com" table_name="pch_comments" parent="ap_invdet"/>
+    <db_obj name="com" table_name="ap_comments" parent="ap_invdet"/>
   </db_objects>
 
   <mem_objects/>
@@ -242,7 +242,7 @@
         "/>
       <method name="do_post" action="
         <<case>>
-          <<compare src=`ap_inv.inv_tot_amt` op=`=` tgt=`0`>>
+          <<compare test=`[['if', '', 'ap_inv.inv_tot_amt', '=', '0', '']]`>>
             <<ask title=`Invoice` enter=`No` escape=`No`
                 question=`No detail lines - sure you want to post?`>>
               <<response ans=`No`>>
@@ -273,6 +273,52 @@
         <input obj_name="ap_inv" col_name="supp_id" lng="80"/>
         <display obj_name="ap_inv" col_name="supp_row_id>party_row_id>display_name" lng="160"/>
 
+        <if_ test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``],
+          [`and`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
+
+        <row/>
+        <col/>
+        <label value="Location Id:"/>
+        <col/>
+        <input obj_name="ap_inv" col_name="location_id" lng="80" form_dflt="
+          <<case>>
+            <<compare test=`[['if', '', '_ledger.multiple_locations', 'is', '$False', '']]`>>
+              <<fld_val name=`ap_inv.supp_row_id>loc_id_if_exists>location_id`/>>
+            <</compare>>
+          <</case>>
+          "/>
+        <display obj_name="ap_inv" col_name="supp_row_id>location_id>descr" lng="160"/>
+
+        <end_if/>
+
+        <if_ test="[[`if`, ``, `_param.function_row_id`, `is`, `$None`, ``],
+          [`and`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
+
+        <row/>
+        <col/>
+        <label value="Function Id:"/>
+        <col/>
+        <input obj_name="ap_inv" col_name="function_id" lng="80" form_dflt="
+          <<case>>
+            <<compare test=`[['if', '', '_ledger.multiple_functions', 'is', '$False', '']]`>>
+              <<fld_val name=`ap_inv.supp_row_id>fun_id_if_exists>function_id`/>>
+            <</compare>>
+          <</case>>
+          "/>
+        <display obj_name="ap_inv" col_name="supp_row_id>function_id>descr" lng="160"/>
+
+        <end_if/>
+
+        <dummy validation="
+            <<validation>>
+              <<case>>
+                <<compare test=`[['if', '', 'ap_inv.supp_row_id', 'is', '$None', '']]`>>
+                  <<error head=`Supplier` body=`Supplier does not exist`/>>
+                <</compare>>
+              <</case>>
+            <</validation>>
+          "/>
+
         <row/>
         <col/>
         <label value="Invoice no:"/>
@@ -287,6 +333,7 @@
           <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
           "/>
 
+<!--
         <row/>
         <col/>
         <label value="Terms code:"/>
@@ -299,6 +346,7 @@
         <label value="Tax inclusive?"/>
         <col/>
         <input obj_name="ap_inv" col_name="tax_incl"/>
+-->
 
         <row/>
         <col/>

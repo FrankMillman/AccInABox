@@ -275,16 +275,16 @@ virt.append ({
     'dflt_val'   : '0',
     'sql'        : (
         """
-                (SELECT SUM(c.tran_tot_cb) FROM (
-                    SELECT b.tran_tot_cb, ROW_NUMBER() OVER (PARTITION BY
-                        b.ledger_row_id, b.location_row_id, b.function_row_id, b.source_code_id
-                        ORDER BY b.tran_date DESC) row_num
-                    FROM {company}.cb_totals b
-                    WHERE b.deleted_id = 0
-                    AND b.ledger_row_id = a.ledger_row_id
-                    ) as c
-                    WHERE c.row_num = 1
-                    )
+        (SELECT SUM(c.tran_tot_cb) FROM (
+            SELECT b.tran_tot_cb, ROW_NUMBER() OVER (PARTITION BY
+                b.ledger_row_id, b.location_row_id, b.function_row_id, b.source_code_id
+                ORDER BY b.tran_date DESC) row_num
+            FROM {company}.cb_totals b
+            WHERE b.deleted_id = 0
+            AND b.ledger_row_id = a.ledger_row_id
+            ) as c
+            WHERE c.row_num = 1
+            )
         """
         ),
     })

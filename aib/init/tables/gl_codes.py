@@ -120,7 +120,7 @@ cols.append ({
     'long_descr' : 'Group row id',
     'col_head'   : 'Group',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.gl_group_row_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.gl_group_row_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -152,59 +152,59 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'location_row_id',
+    'col_name'   : 'valid_loc_ids',
     'data_type'  : 'INT',
-    'short_descr': 'Location row id',
-    'long_descr' : 'Location row id',
-    'col_head'   : 'Location',
+    'short_descr': 'Valid location ids',
+    'long_descr' : 'Valid location ids - if leaf, use this one; if not must be child of this one',
+    'col_head'   : 'Valid locations',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.location_row_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.location_row_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{_param.location_row_id}',
+    'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_param.location_row_id" op="is_not" tgt="$None">'
+          '<compare test="[[`if`, ``, `_param.location_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.location_row_id"/>'
           '</compare>'
-          '<compare src="_param.dflt_loc_row_id" op="is_not" tgt="$None">'
-            '<fld_val name="_param.dflt_loc_row_id"/>'
-          '</compare>'
+          '<default>'
+            '<fld_val name="group_id>valid_loc_ids"/>'
+          '</default>'
         '</case>'
         ),
     'col_checks' : None,
-   'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
+    'fkey'       : ['adm_locations', 'row_id', 'valid_locs', 'location_id', False, None],
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'function_row_id',
+    'col_name'   : 'valid_fun_ids',
     'data_type'  : 'INT',
-    'short_descr': 'Function row id',
-    'long_descr' : 'Function row id',
-    'col_head'   : 'Function',
+    'short_descr': 'Valid function ids',
+    'long_descr' : 'Valid function ids',
+    'col_head'   : 'Valid functions',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.function_row_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.function_row_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{_param.function_row_id}',
+    'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_param.function_row_id" op="is_not" tgt="$None">'
+          '<compare test="[[`if`, ``, `_param.function_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.function_row_id"/>'
           '</compare>'
-          '<compare src="_param.dflt_fun_row_id" op="is_not" tgt="$None">'
-            '<fld_val name="_param.dflt_fun_row_id"/>'
-          '</compare>'
+          '<default>'
+            '<fld_val name="group_id>valid_fun_ids"/>'
+          '</default>'
         '</case>'
         ),
     'col_checks' : None,
-   'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
+    'fkey'       : ['adm_functions', 'row_id', 'valid_funs', 'function_id', False, None],
     'choices'    : None,
     })
 # cols.append ({
@@ -247,11 +247,11 @@ virt.append ({
     'sql'        : (
         "SELECT CASE WHEN EXISTS "
             "(SELECT * FROM ("
-                "SELECT gl_ctrl_id from {company}.ar_ledger_params "
-                "UNION SELECT gl_ctrl_id from {company}.ap_ledger_params "
-                "UNION SELECT gl_ctrl_id from {company}.cb_ledger_params "
-                "UNION SELECT gl_ctrl_id from {company}.in_ledger_params "
-            ") AS t WHERE t.gl_ctrl_id = a.row_id) "
+                "SELECT gl_code_id from {company}.ar_ledger_params "
+                "UNION SELECT gl_code_id from {company}.ap_ledger_params "
+                "UNION SELECT gl_code_id from {company}.cb_ledger_params "
+                "UNION SELECT gl_code_id from {company}.in_ledger_params "
+            ") AS t WHERE t.gl_code_id = a.row_id) "
         "THEN 1 ELSE 0 END"
         ),
     })

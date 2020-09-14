@@ -666,32 +666,44 @@ async def get_sell_prices(company):
 
 #----------------------------------------------------------------------------
 
-# genno data object for each company
-gennos = {}
-genno_lock = asyncio.Lock()
-async def get_genno(company):
-    with await genno_lock:
-        if company not in gennos:
-            genno = await db.objects.get_db_object(cache_context, company, 'db_genno')
-            # must set lock before using, to prevent clashes
-            genno.lock = asyncio.Lock()
-            gennos[company] = genno
-    return gennos[company]
+# # genno data object for each company
+# gennos = {}
+# genno_lock = asyncio.Lock()
+# async def get_genno(company):
+#     with await genno_lock:
+#         if company not in gennos:
+#             genno = await db.objects.get_db_object(cache_context, company, 'db_genno')
+#             # must set lock before using, to prevent clashes
+#             genno.lock = asyncio.Lock()
+#             gennos[company] = genno
+#     return gennos[company]
 
+# async def get_next(db_obj, key):
+#     genno = await get_genno(db_obj.company)
+#     with await genno.lock:
+#         # the next line is necessary to ensure that the update
+#         #   is performed by the currently active connection
+#         # if performed by a different connection, sqlite3 deadlocks
+#         genno.context = db_obj.context
+#         await genno.init(init_vals={'gkey': key})
+#         curr_no = await genno.getval('number')
+#         next_no = curr_no + 1
+#         await genno.setval('number', next_no)
+#         await genno.save(from_upd_on_save=True)  # suppress updating audit trail
+#         genno.context = cache_context  # break circular reference to db_obj
+#         return next_no
+
+# get next number from db_genno using specified key
+genno_lock = asyncio.Lock()
 async def get_next(db_obj, key):
-    genno = await get_genno(db_obj.company)
-    with await genno.lock:
-        # the next line is necessary to ensure that the update
-        #   is performed by the currently active connection
-        # if performed by a different connection, sqlite3 deadlocks
-        genno.context = db_obj.context
-        await genno.init(init_vals={'gkey': key})
+    with await genno_lock:
+        genno = await db.objects.get_db_object(db_obj.context, db_obj.company, 'db_genno')
+        await genno.setval('gkey', key)
         curr_no = await genno.getval('number')
         next_no = curr_no + 1
         await genno.setval('number', next_no)
         await genno.save(from_upd_on_save=True)  # suppress updating audit trail
-        genno.context = cache_context  # break circular reference to db_obj
-        return next_no
+    return next_no
 
 #----------------------------------------------------------------------------
 

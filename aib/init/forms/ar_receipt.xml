@@ -116,7 +116,7 @@
       <frame_methods template="Transaction_Header">
         <method name="do_save" action="
           <<case>>
-            <<compare src=`ar_rct.amount` op=`=` tgt=`0`>>
+            <<compare test=`[['if', '', 'ar_rct.amount', '=', '0', '']]`>>
               <<ask title=`Receipt` enter=`No` escape=`No`
                   question=`No value entered - sure you want to save?`>>
                 <<response ans=`No`>>

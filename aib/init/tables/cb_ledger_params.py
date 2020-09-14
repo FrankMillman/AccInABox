@@ -120,13 +120,14 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'gl_ctrl_id',
+    'col_name'   : 'gl_code_id',
     'data_type'  : 'INT',
     'short_descr': 'Gl control a/c',
     'long_descr' : 'Gl control a/c',
-    'col_head'   : 'Gl ctrl',
+    'col_head'   : 'Gl code',
     'key_field'  : 'N',
-    'calculated' : False,
+    # 'calculated' : False,
+    'calculated' : [['where', '', '_param.gl_integration', 'is', '$False', '']],
     'allow_null' : True,  # null means 'not integrated to g/l'
 #   'allow_amend': True,  # can change from null to not-null to start integration
     'allow_amend': [['where', '', '$value', 'is', '$None', '']],
@@ -135,8 +136,19 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : ['gl_codes', 'row_id', 'ctrl_acc', 'gl_code', False, 'gl_codes'],
+    'col_checks' : [
+        [
+            'gl_code',
+            'G/l code required if gl integration specified',
+            [
+                ['check', '(', '_param.gl_integration', 'is', '$False', ''],
+                ['and', '', '$value', 'is', '$None', ')'],
+                ['or', '(', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', '$value', 'is not', '$None', ')'],
+                ],
+            ],
+        ],
+    'fkey'       : ['gl_codes', 'row_id', 'gl_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
 cols.append ({
@@ -146,7 +158,7 @@ cols.append ({
     'long_descr' : 'Location row id',
     'col_head'   : 'Location',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.location_row_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.location_row_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -155,15 +167,27 @@ cols.append ({
     'dflt_val'   : '{_param.location_row_id}',
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_param.location_row_id" op="is_not" tgt="$None">'
+          '<compare test="[[`if`, ``, `_param.location_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.location_row_id"/>'
           '</compare>'
-          '<compare src="_param.dflt_loc_row_id" op="is_not" tgt="$None">'
-            '<fld_val name="_param.dflt_loc_row_id"/>'
+          '<compare test="[[`if`, ``, `gl_code_id>valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
+            '<fld_val name="gl_code_id>valid_loc_ids"/>'
           '</compare>'
+          '<default>'
+            '<fld_val name="_param.dflt_loc_row_id"/>'
+          '</default>'
         '</case>'
         ),
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'location_code',
+            'Invalid location',
+            [
+                ['check', '', '_param.gl_integration', 'is', '$False', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
     'choices'    : None,
     })
@@ -174,7 +198,7 @@ cols.append ({
     'long_descr' : 'Function row id',
     'col_head'   : 'Function',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.function_row_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.function_row_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -183,15 +207,27 @@ cols.append ({
     'dflt_val'   : '{_param.function_row_id}',
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_param.function_row_id" op="is_not" tgt="$None">'
+          '<compare test="[[`if`, ``, `_param.function_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.function_row_id"/>'
           '</compare>'
-          '<compare src="_param.dflt_fun_row_id" op="is_not" tgt="$None">'
-            '<fld_val name="_param.dflt_fun_row_id"/>'
+          '<compare test="[[`if`, ``, `gl_code_id>valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
+            '<fld_val name="gl_code_id>valid_fun_ids"/>'
           '</compare>'
+          '<default>'
+            '<fld_val name="_param.dflt_fun_row_id"/>'
+          '</default>'
         '</case>'
         ),
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'function_code',
+            'Invalid function',
+            [
+                ['check', '', '_param.gl_integration', 'is', '$False', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_fun_id', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
     'choices'    : None,
     })
@@ -202,7 +238,7 @@ cols.append ({
     'long_descr' : 'Currency id',
     'col_head'   : 'Curr',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.currency_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.currency_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

@@ -59,7 +59,7 @@ async def after_setup(caller, xml):
     #     total, = await cur.__anext__()
     # await var.setval('total_sales', total)
 
-async def get_due_date(src_obj, tgt_obj):
+async def get_due_date(src_obj):
     # called from ar_subtran_chg.upd_on_post
     tran_date = await src_obj.getval('tran_date')
     due_rule = [1, 30, 'd']  # default to '30 days'

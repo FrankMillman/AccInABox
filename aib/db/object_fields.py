@@ -18,12 +18,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 import db.objects
-from db.chk_constraints import chk_constraint, eval_expr
 import db.cache
 import db.dflt_xml
 import ht
 from ht.validation_xml import check_vld
 
+from evaluate_expr import eval_bool_expr
 from common import AibError, AibDenied
 
 # db_fkeys columns
@@ -435,7 +435,7 @@ class Field:
                     body='Permission denied')
             allow_amend = col_defn.allow_amend
             if allow_amend not in (False, True):
-                allow_amend = await eval_expr(allow_amend, db_obj, self)
+                allow_amend = await eval_bool_expr(allow_amend, db_obj, self)
             if not db_obj.exists and col_defn.key_field != 'N':
                 pass  # trying to select
             elif db_obj.db_table.read_only:
@@ -631,7 +631,8 @@ class Field:
                     raise AibError(head=col_defn.short_descr, body=errmsg)
             # check for col_checks
             for descr, errmsg, col_chk in col_defn.col_checks:
-                await chk_constraint(self, col_chk, value=value, errmsg=errmsg)  # can raise AibError
+                if not await eval_bool_expr(col_chk, self.db_obj, fld=self, value=value):
+                    raise AibError(head=self.db_table.short_descr, body=errmsg)
 
             # check for form_vlds
             for ctx, vld in form_vlds:
@@ -896,7 +897,7 @@ class Field:
 
     async def calculated(self):
         if self._calculated is None:  # first time
-            self._calculated = await eval_expr(self.col_defn.calculated, self.db_obj, self)
+            self._calculated = await eval_bool_expr(self.col_defn.calculated, self.db_obj, self)
         return self._calculated
 
     async def value_changed(self, value=blank):
@@ -1289,27 +1290,27 @@ class StringXml(Xml):
 
     def from_string(self, string, from_gui=False):
         string = f'<_>{string}</_>'
-        # if from_gui:
-        #     lines = string.split('"')  # split on attributes
-        #     for pos, line in enumerate(lines):
-        #         if pos%2:  # every 2nd line is an attribute
-        #             lines[pos] = line.replace(
-        #                 '&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        #     string = '"'.join(lines)
+        if from_gui:
+            lines = string.split('"')  # split on attributes
+            for pos, line in enumerate(lines):
+                if pos%2:  # every 2nd line is an attribute
+                    lines[pos] = line.replace(
+                        '&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            string = '"'.join(lines)
         return etree.fromstring(string, parser=self.parser)
 
     def to_string(self, xml, for_gui=False):
-        # if not for_gui:  # for storing in database
-        #     return ''.join(etree.tostring(_, encoding=str) for _ in xml)
-        # else:  # for gui
-        #     string = ''.join(etree.tostring(_, encoding=str, pretty_print=True) for _ in xml)
-        #     lines = string.split('"')  # split on attributes
-        #     for pos, line in enumerate(lines):
-        #         if pos%2:  # every 2nd line is an attribute
-        #             lines[pos] = line.replace(
-        #                 '&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
-        #     return '"'.join(lines)
-        return ''.join(etree.tostring(_, encoding=str, pretty_print=for_gui) for _ in xml)
+        if not for_gui:  # for storing in database
+            return ''.join(etree.tostring(_, encoding=str) for _ in xml)
+        else:  # for gui
+            string = ''.join(etree.tostring(_, encoding=str, pretty_print=True) for _ in xml)
+            lines = string.split('"')  # split on attributes
+            for pos, line in enumerate(lines):
+                if pos%2:  # every 2nd line is an attribute
+                    lines[pos] = line.replace(
+                        '&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+            return '"'.join(lines)
+        # return ''.join(etree.tostring(_, encoding=str, pretty_print=for_gui) for _ in xml)
 
 class Integer(Field):
     async def get_dflt(self, from_init=False):
@@ -1633,6 +1634,9 @@ class Boolean(Field):
         if self._prev is None:
             return ''
         return str(int(self._prev))
+
+    async def get_val_from_sql(self, value):
+        return bool(int(value))  # could be 1 or 0
 
     async def get_val_for_sql(self):
         return '1' if self._value else '0'

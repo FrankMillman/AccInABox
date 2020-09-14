@@ -82,7 +82,7 @@ cols.append ({
     'long_descr' : 'Bank account row id',
     'col_head'   : 'Bank id',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_param.cb_ledger_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.cb_ledger_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -133,7 +133,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="ledger_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `ledger_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
@@ -241,7 +241,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'ledger_row_id>location_row_id'],
                 ['function_row_id', 'ledger_row_id>function_row_id'],
                 ['source_code', "'cb_bf'"],

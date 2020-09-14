@@ -242,7 +242,9 @@ virt.append ({
     'sql'        : (
         "SELECT CASE "
             "WHEN a.role_type IN ('0', '1', '2') THEN 1 ELSE "
-            "EXISTS(SELECT * FROM {company}.acc_roles b WHERE b.parent_id = a.row_id) "
+            "CASE WHEN EXISTS "
+            "(SELECT * FROM {company}.acc_roles b WHERE b.parent_id = a.row_id) "
+            "THEN 1 ELSE 0 END "
         "END"
         ),
     })

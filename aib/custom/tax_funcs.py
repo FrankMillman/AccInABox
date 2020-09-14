@@ -155,22 +155,22 @@ async def calc_tax(db_obj, conn, return_vals):
             db_obj.company, split_name, table_defn=etree.fromstring(split_defn))
     split_obj = db_obj.context.data_objects[split_name]
 
-    if db_obj.table_name.startswith('sls_isls_sub'):  # inv or crn
+    if 'isls' in db_obj.table_name:
         tax_code_table = 'in_prod_tax_codes'
         tax_code_key = 'prod_row_id'
         tax_code_src = 'wh_prod_row_id>prod_row_id'
         inv_amt = await db_obj.getval('isls_amount')
-    elif db_obj.table_name.startswith('sls_nsls_sub'):  # inv or crn
+    elif 'nsls' in db_obj.table_name:
         tax_code_table = 'sls_nsls_tax_codes'
         tax_code_key = 'nsls_row_id'
         tax_code_src = 'nsls_code_id'
         inv_amt = await db_obj.getval('nsls_amount')
-    elif db_obj.table_name.startswith('pch_ipch_sub'):  # inv or crn
+    elif 'ipch' in db_obj.table_name:
         tax_code_table = 'in_prod_tax_codes'
         tax_code_key = 'prod_row_id'
         tax_code_src = 'wh_prod_row_id>prod_row_id'
         inv_amt = await db_obj.getval('ipch_amount')
-    elif db_obj.table_name.startswith('pch_npch_sub'):  # inv or crn
+    elif 'npch' in db_obj.table_name:
         tax_code_table = 'pch_npch_tax_codes'
         tax_code_key = 'npch_row_id'
         tax_code_src = 'npch_code_id'

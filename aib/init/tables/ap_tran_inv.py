@@ -197,7 +197,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="supp_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
@@ -228,8 +228,11 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
+            '</compare>'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `supp_row_id>currency_id`, ``]]">'
+                '<fld_val name="supp_exch_rate"/>'
             '</compare>'
             '<default>'
                 '<exch_rate>'
@@ -285,7 +288,7 @@ cols.append ({
     'col_name'   : 'inv_amount',
     'data_type'  : 'DEC',
     'short_descr': 'Invoice amount',
-    'long_descr' : 'Invoice amount in supplier currency',
+    'long_descr' : 'Invoice amount in invoice currency',
     'col_head'   : 'Inv amount',
     'key_field'  : 'N',
     'calculated' : False,
@@ -437,6 +440,14 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Tran type',
+    'sql'        : "'ap_inv'",
+    })
+virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction period',
@@ -563,7 +574,7 @@ actions.append([
             'custom.aptrans_funcs.setup_openitems',  # function to populate table
 
             [  # fkey to this table
-                ['tran_type', "'ap_inv'"],  # tgt_col, src_col
+                ['tran_type', 'tran_type'],  # tgt_col, src_col
                 ['tran_row_id', 'row_id'],
                 ],
 
@@ -664,7 +675,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
                 ['source_code', "'ap_inv_net'"],
@@ -685,7 +696,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
                 ['source_code', "'ap_inv_tax'"],

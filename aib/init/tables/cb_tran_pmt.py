@@ -10,7 +10,6 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : [
-        # ['cbpmt_tran_num', [['tran_number', False]], None, False],
         ['cbpmt_cb_date', [['ledger_row_id', False], ['tran_date', False]], None, False],
         ],
     'ledger_col'    : 'ledger_row_id',
@@ -85,7 +84,7 @@ cols.append ({
     'long_descr' : 'Bank account row id',
     'col_head'   : 'Bank id',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_param.cb_ledger_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.cb_ledger_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -104,7 +103,7 @@ cols.append ({
     'long_descr' : 'Payment number',
     'col_head'   : 'Pmt no',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_ledger.auto_pmt_no', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_ledger.auto_pmt_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -115,9 +114,9 @@ cols.append ({
         '<case>'
           '<on_post>'
             '<case>'
-              '<compare src="_ledger.auto_temp_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
                 '<case>'
-                  '<compare src="_ledger.auto_pmt_no" op="is_not" tgt="$None">'
+                  '<compare test="[[`if`, ``, `_ledger.auto_pmt_no`, `is not`, `$None`, ``]]">'
                     '<auto_gen args="_ledger.auto_pmt_no"/>'
                   '</compare>'
                 '</case>'
@@ -129,10 +128,10 @@ cols.append ({
           '</on_post>'
           '<on_insert>'
             '<case>'
-              '<compare src="_ledger.auto_temp_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_ledger.auto_temp_no"/>'
               '</compare>'
-              '<compare src="_ledger.auto_pmt_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.auto_pmt_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_ledger.auto_pmt_no"/>'
               '</compare>'
             '</case>'
@@ -204,7 +203,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="ledger_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `ledger_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
@@ -317,49 +316,21 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'cb_pmt'",
-    })
-virt.append ({
-    'col_name'   : 'supp_row_id',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Supplier row id',
-    'long_descr' : 'Supplier row id - this is only here to satisfy diag.py',
-    'col_head'   : 'Supp',
-    'sql'        : "NULL",
-    })
-virt.append ({
-    'col_name'   : 'view_cb',
-    'data_type'  : 'DEC',
-    'short_descr': 'Amount received - cb curr',
-    'long_descr' : 'Amount received in cb currency - updated from cb_tran_rec_det',
-    'col_head'   : 'Amount cb',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
-    'sql'        : "0 - a.amount_cb",
-    })
-virt.append ({
-    'col_name'   : 'view_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Amount received - local curr',
-    'long_descr' : 'Amount received in local currency',
-    'col_head'   : 'Amount local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'sql'        : "0 - a.amount_local",
-    })
+# virt.append ({
+#     'col_name'   : 'tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Transaction type',
+#     'long_descr' : 'Transaction type',
+#     'col_head'   : 'Tran type',
+#     'sql'        : "'cb_pmt'",
+#     })
 virt.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction currency',
     'long_descr' : 'Currency used to enter transaction',
     'col_head'   : 'Currency',
-    'dflt_val'   : '{_ledger.currency_id}',
+    'dflt_val'   : '{ledger_row_id>currency_id}',
     # 'fkey'       : ['adm_currencies', 'row_id', None, None, False, None],
     'sql'        : 'a.ledger_row_id>currency_id',
     })
@@ -375,6 +346,50 @@ virt.append ({
         "SELECT count(*) FROM {company}.adm_periods b "
         "WHERE b.closing_date < a.tran_date"
         ),
+    })
+virt.append ({
+    'col_name'   : 'supp_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Supp row id',
+    'long_descr' : 'Supplier row id - this is only here to satisfy diag.py',
+    'col_head'   : 'Supp',
+    'sql'        : "NULL",
+    })
+virt.append ({
+    'col_name'   : 'cust_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Cust row id',
+    'long_descr' : 'Customer row id - this is only here to satisfy diag.py',
+    'col_head'   : 'Cust',
+    'sql'        : "NULL",
+    })
+virt.append ({
+    'col_name'   : 'supp_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Supp row id',
+    'long_descr' : 'Supplier row id - this is only here to satisfy diag.py',
+    'col_head'   : 'Supp',
+    'sql'        : "NULL",
+    })
+virt.append ({
+    'col_name'   : 'view_cb',
+    'data_type'  : 'DEC',
+    'short_descr': 'Amount received - cb curr',
+    'long_descr' : 'Amount received in cb currency',
+    'col_head'   : 'Amount cb',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
+    'sql'        : "0 - a.amount_cb",
+    })
+virt.append ({
+    'col_name'   : 'view_local',
+    'data_type'  : 'DEC',
+    'short_descr': 'Amount received - local curr',
+    'long_descr' : 'Amount received in local currency',
+    'col_head'   : 'Amount local',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : "0 - a.amount_local",
     })
 
 # cursor definitions
@@ -451,10 +466,10 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'ledger_row_id>location_row_id'],
                 ['function_row_id', 'ledger_row_id>function_row_id'],
-                ['source_code', "'cb_rec'"],
+                ['source_code', "'cb_pmt'"],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation

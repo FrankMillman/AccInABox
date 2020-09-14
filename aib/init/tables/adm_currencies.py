@@ -147,7 +147,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '2',
     'dflt_rule'  : None,
-    'col_checks' : [['max_2', 'Value must be betwen 0 and 2', [
+    'col_checks' : [['max_2', 'Value must be between 0 and 2', [
         ['check', '', '$value', '>=', '0', ''],
         ['and', '', '$value', '<=', '2', ''],
         ]]],

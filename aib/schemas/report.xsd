@@ -1,0 +1,480 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="report">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="db_objects"/>
+        <xs:element ref="mem_objects"/>
+        <xs:element ref="input_params"/>
+        <xs:element ref="output_params"/>
+        <xs:element ref="page"/>
+        <!-- xs:element ref="inline_report" minOccurs="0" maxOccurs="unbounded"/ -->
+      </xs:sequence>
+      <xs:attribute name="name" use="required"/>
+      <xs:attribute name="descr" use="required"/>
+      <xs:attribute name="pdf_name" use="required"/>
+      <xs:attribute name="before_start_report"/>
+      <xs:attribute name="after_start_report"/>
+      <xs:attribute name="on_end_report"/>
+      <xs:attribute name="on_close_report"/>
+      <xs:attribute name="readonly" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="db_objects">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="db_obj" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="db_obj">
+    <xs:complexType>
+      <xs:attribute name="name" use="required"/>
+      <xs:attribute name="table_name" use="required"/>
+      <xs:attribute name="parent"/> <!-- setup_user -->
+      <xs:attribute name="view" type="xs:boolean"/>
+      <xs:attribute name="fkey"/> <!-- users_roles -->
+      <!-- xs:attribute name="cursor"/ --> <!-- users_roles -->
+      <xs:attribute name="is_reportview_obj" type="xs:boolean"/>
+      <xs:attribute name="must_exist" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="mem_objects">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="mem_obj" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="mem_obj">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="mem_col" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="name" use="required"/>
+      <xs:attribute name="descr"/>
+      <xs:attribute name="parent"/>
+      <xs:attribute name="sequence"/>
+      <xs:attribute name="sub_types"/>
+      <xs:attribute name="fkey"/>
+      <xs:attribute name="cursor"/>
+      <xs:attribute name="tree_params"/> <!-- users_roles -->
+      <xs:attribute name="actions"/> <!-- setup_roles -->
+      <xs:attribute name="clone_from"/> <!-- setup_party -->
+      <xs:attribute name="module_id"/>
+ </xs:complexType>
+  </xs:element>
+  <xs:element name="mem_col">
+    <xs:complexType>
+      <xs:attribute name="col_name" use="required"/>
+      <xs:attribute name="col_type"/>
+      <xs:attribute name="data_type"/>
+      <xs:attribute name="short_descr"/>
+      <xs:attribute name="long_descr"/>
+      <xs:attribute name="col_head"/>
+      <xs:attribute name="key_field"/>
+      <xs:attribute name="calculated"/>
+      <xs:attribute name="allow_null" type="xs:boolean"/>
+      <xs:attribute name="allow_amend"/>
+      <xs:attribute name="max_len" type="xs:integer"/>
+      <xs:attribute name="db_scale" type="xs:integer"/>
+      <xs:attribute name="scale_ptr"/>
+      <xs:attribute name="dflt_val"/>
+      <xs:attribute name="dflt_rule"/>
+      <xs:attribute name="col_checks"/>
+      <xs:attribute name="fkey"/>
+      <xs:attribute name="choices"/>
+      <xs:attribute name="sql"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="input_params">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="input_param" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="input_param">
+    <xs:complexType>
+      <xs:attribute name="name" use="required"/>
+      <xs:attribute name="type" use="required"/>
+      <xs:attribute name="target" use="required"/>
+      <xs:attribute name="required" type="xs:boolean" default="false"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="output_params">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="output_param" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="output_param">
+    <xs:complexType>
+      <xs:attribute name="name" use="required"/>
+      <xs:attribute name="type" use="required"/>
+      <xs:attribute name="source" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="page">
+    <xs:complexType>
+      <xs:sequence>
+        <!-- xs:element ref="toolbar"/ -->
+        <xs:element ref="body"/>
+        <!-- xs:element ref="button_row"/ -->
+        <!-- xs:element ref="frame_methods"/ -->
+      </xs:sequence>
+      <xs:attribute name="main_object"/>
+      <xs:attribute name="obj_descr"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="toolbar">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tool" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="template"/>
+      <xs:attribute name="title"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="tool">
+    <xs:complexType>
+      <xs:attribute name="type" use="required"/>
+      <xs:attribute name="obj_name"/>
+      <xs:attribute name="col_name"/>
+      <xs:attribute name="name"/>
+      <xs:attribute name="lng"/>
+      <xs:attribute name="label"/>
+      <xs:attribute name="tip"/>
+      <xs:attribute name="action"/>
+      <xs:attribute name="shortcut"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="body">
+    <xs:complexType>
+      <xs:choice>
+        <xs:group ref="body_elements" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="bpmn"/>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+  <xs:group name="body_elements">
+    <xs:choice>
+      <xs:element name="font"/>
+      <xs:element name="block"/>
+      <xs:element name="vbox"/>
+      <xs:element name="vbox_end"/>
+      <xs:element ref="if_"/>
+      <xs:element name="end_if"/>
+      <xs:element ref="string"/>
+      <xs:element name="panel"/>
+      <xs:element name="row"/>
+      <xs:element ref="col"/>
+      <xs:element ref="text"/>
+      <xs:element ref="label"/>
+      <xs:element ref="input"/>
+      <xs:element ref="dummy"/>
+      <xs:element ref="display"/>
+      <!-- xs:element ref="button"/ -->
+      <xs:element ref="grid"/>
+      <xs:element ref="grid_frame"/>
+      <xs:element ref="tree"/>
+      <xs:element ref="tree_lkup"/>
+      <xs:element ref="tree_combo"/>
+      <xs:element ref="tree_report"/>
+      <xs:element ref="tree_frame"/>
+      <xs:element ref="subtype_frame"/>
+      <xs:element ref="subtran_frame"/>
+      <!-- xs:element ref="button_row"/ -->
+    </xs:choice>
+  </xs:group>
+  <xs:element name="if_">
+    <xs:complexType>
+      <xs:attribute name="src" use="required"/>
+      <xs:attribute name="op" use="required"/>
+      <xs:attribute name="tgt" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="string">
+    <xs:complexType>
+      <xs:attribute name="value" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="col">
+    <xs:complexType>
+      <xs:attribute name="colspan" type="xs:integer"/>
+      <xs:attribute name="rowspan" type="xs:integer"/>
+      <xs:attribute name="align"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="text">
+    <xs:complexType>
+      <xs:attribute name="value" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="label">
+    <xs:complexType>
+      <xs:attribute name="value" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="input">
+    <xs:complexType>
+      <xs:attribute name="obj_name" use="required"/>
+      <xs:attribute name="col_name" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="height" type="xs:integer"/>
+      <xs:attribute name="pwd" type="xs:boolean"/>
+      <xs:attribute name="readonly" type="xs:boolean"/>
+      <xs:attribute name="skip" type="xs:boolean"/>
+      <xs:attribute name="choice" type="xs:boolean"/>
+      <xs:attribute name="lookup" type="xs:boolean"/>
+      <xs:attribute name="radio" type="xs:boolean"/>
+      <xs:attribute name="label"/>
+      <xs:attribute name="before"/>
+      <xs:attribute name="report_dflt"/>
+      <xs:attribute name="validation"/>
+      <xs:attribute name="after"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="dummy">
+    <xs:complexType>
+      <xs:attribute name="validation"/>
+      <xs:attribute name="after"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="display">
+    <xs:complexType>
+      <xs:attribute name="obj_name" use="required"/>
+      <xs:attribute name="col_name" use="required"/>
+      <xs:attribute name="lng" type="xs:integer" use="required"/>
+      <xs:attribute name="prev" type="xs:boolean"/>
+      <xs:attribute name="align"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="grid">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="toolbar" minOccurs="0"/>
+        <xs:element ref="cur_columns" minOccurs="0"/>
+        <xs:element ref="cur_filter" minOccurs="0"/>
+        <xs:element ref="cur_sequence" minOccurs="0"/>
+        <xs:element ref="grid_methods" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="data_object" use="required"/>
+      <xs:attribute name="obj_descr"/>
+      <xs:attribute name="growable" type="xs:boolean"/>
+      <xs:attribute name="readonly" type="xs:boolean"/>
+      <xs:attribute name="num_grid_rows" type="xs:integer"/>
+      <xs:attribute name="cursor_name"/>
+      <xs:attribute name="report_name"/>
+      <xs:attribute name="start_col"/>
+      <xs:attribute name="start_val"/>
+      <xs:attribute name="header_row"/>
+      <xs:attribute name="footer_row"/>
+      <xs:attribute name="running_balance"/>
+      <xs:attribute name="auto_start" type="xs:boolean"/>
+      <xs:attribute name="auto_startrow" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="cur_columns">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="cur_col" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="cur_btn" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="cur_col">
+    <xs:complexType>
+      <xs:attribute name="col_name" use="required"/>
+      <xs:attribute name="lng" type="xs:integer" use="required"/>
+      <xs:attribute name="expand" type="xs:boolean"/>
+      <xs:attribute name="readonly" type="xs:boolean"/>
+      <xs:attribute name="skip" type="xs:boolean"/>
+      <xs:attribute name="before"/>
+      <xs:attribute name="default"/>
+      <xs:attribute name="validation"/>
+      <xs:attribute name="after"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="cur_btn">
+    <xs:complexType>
+      <xs:attribute name="btn_label" use="required"/>
+      <xs:attribute name="btn_id" use="required"/>
+      <xs:attribute name="lng" type="xs:integer" use="required"/>
+      <xs:attribute name="action" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="cur_filter">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="cur_fil" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="cur_fil">
+    <xs:complexType>
+      <xs:attribute name="test" use="required"/>
+      <xs:attribute name="lbr" use="required"/>
+      <xs:attribute name="col_name" use="required"/>
+      <xs:attribute name="op" use="required"/>
+      <xs:attribute name="expr" use="required"/>
+      <xs:attribute name="rbr" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="cur_sequence">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="cur_seq" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="cur_seq">
+    <xs:complexType>
+      <xs:attribute name="col_name" use="required"/>
+      <xs:attribute name="desc"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="grid_methods">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="method" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="template"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="grid_frame">
+    <xs:complexType>
+      <xs:sequence>
+        <!-- xs:element ref="toolbar"/ -->
+        <xs:element ref="body"/>
+        <!-- xs:element ref="button_row"/ -->
+        <!-- xs:element ref="frame_methods"/ -->
+      </xs:sequence>
+      <xs:attribute name="main_object"/>
+      <xs:attribute name="obj_descr"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="tree">
+    <xs:complexType>
+      <xs:attribute name="data_object" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="height" type="xs:integer"/>
+      <xs:attribute name="toolbar" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="tree_lkup">
+    <xs:complexType>
+      <xs:attribute name="data_object" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="height" type="xs:integer"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="tree_combo">
+    <xs:complexType>
+      <xs:attribute name="group_name" use="required"/>
+      <xs:attribute name="member_name" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="height" type="xs:integer"/>
+      <xs:attribute name="toolbar" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="tree_report">
+    <xs:complexType>
+      <xs:attribute name="pyfunc" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="height" type="xs:integer"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="tree_frame">
+    <xs:complexType>
+      <xs:sequence>
+        <!-- xs:element ref="toolbar"/ -->
+        <xs:element ref="body"/>
+        <!-- xs:element ref="button_row"/ -->
+        <!-- xs:element ref="frame_methods"/ -->
+      </xs:sequence>
+      <xs:attribute name="main_object" use="required"/>
+      <xs:attribute name="obj_descr"/>
+      <xs:attribute name="combo_type"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="subtype_frame">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="subtype_body" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="subtype_obj" use="required"/>
+      <xs:attribute name="subtype_col" use="required"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="subtype_body">
+    <xs:complexType>
+      <xs:group ref="body_elements" maxOccurs="unbounded"/>
+      <xs:attribute name="subtype_id" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="subtran_frame">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="subtran_body" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="subtran_obj" use="required"/>
+      <xs:attribute name="subtran_col" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="subtran_body">
+    <xs:complexType>
+      <xs:attribute name="subtran_id" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <!-- xs:element name="button_row">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="button" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="template"/>
+    </xs:complexType>
+  </xs:element -->
+  <!-- xs:element name="button">
+    <xs:complexType>
+      <xs:attribute name="btn_id" use="required"/>
+      <xs:attribute name="btn_label" use="required"/>
+      <xs:attribute name="btn_default" type="xs:boolean"/>
+      <xs:attribute name="btn_enabled" type="xs:boolean"/>
+      <xs:attribute name="btn_validate" type="xs:boolean"/>
+      <xs:attribute name="lng" type="xs:integer"/>
+      <xs:attribute name="action" use="required"/>
+      <xs:attribute name="validation"/>
+      <xs:attribute name="help_msg"/>
+    </xs:complexType>
+  </xs:element -->
+  <!-- xs:element name="frame_methods">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="method" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="template"/>
+    </xs:complexType>
+  </xs:element -->
+  <xs:element name="method">
+    <xs:complexType>
+      <xs:attribute name="name" use="required"/>
+      <xs:attribute name="obj_name"/>
+      <xs:attribute name="action" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <!-- xs:element name="inline_report">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="page"/>
+      </xs:sequence>
+      <xs:attribute name="name" use="required"/>
+      <xs:attribute name="title" use="required"/>
+    </xs:complexType>
+  </xs:element -->
+
+</xs:schema>

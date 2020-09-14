@@ -7,7 +7,7 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : ['seq', ['group_id'], None],
-    'tree_params'   : ['group_id', ['class', 'descr', None, 'seq'], None],
+    'tree_params'   : ['group_id', ['prod_class', 'descr', None, 'seq'], None],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -76,7 +76,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'class',
+    'col_name'   : 'prod_class',
     'data_type'  : 'TEXT',
     'short_descr': 'Product class',
     'long_descr' : 'Product class',
@@ -120,7 +120,7 @@ cols.append ({
     'long_descr' : 'Group row id',
     'col_head'   : 'Group',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.prod_group_row_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.prod_group_row_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -151,10 +151,84 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# g/l code for 'inventory'? or one ctrl acc per sub-ledger/warehouse?
-# g/l code for 'sales'?
-# g/l code for 'c-o-s'?
-
+cols.append ({
+    'col_name'   : 'gl_sales_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Gl sales a/c',
+    'long_descr' : 'Gl sales a/c',
+    'col_head'   : 'Gl sales',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', '_param.gl_integration', 'is', '$False', '']],
+    'allow_null' : True,  # null means 'not integrated to g/l'
+    'allow_amend': [['where', '', '$value', 'is', '$None', '']],
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['gl_codes', 'row_id', 'sales_acc', 'gl_code', False, 'gl_codes'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'gl_cos_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Gl cost of sales a/c',
+    'long_descr' : 'Gl cost of sales a/c',
+    'col_head'   : 'Gl cos',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', '_param.gl_integration', 'is', '$False', '']],
+    'allow_null' : True,  # null means 'not integrated to g/l'
+    'allow_amend': [['where', '', '$value', 'is', '$None', '']],
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['gl_codes', 'row_id', 'cos_acc', 'gl_code', False, 'gl_codes'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
+    'key_field'  : 'N',
+    'calculated' : [['where', '', '_param.function_row_id', 'is not', '$None', '']],
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `_param.function_row_id`, `is not`, `$None`, ``]]">'
+            '<fld_val name="_param.function_row_id"/>'
+          '</compare>'
+          '<compare test="[[`if`, ``, `gl_sales_id>valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
+            '<fld_val name="gl_sales_id>valid_fun_ids"/>'
+          '</compare>'
+          '<default>'
+            '<fld_val name="_param.dflt_fun_row_id"/>'
+          '</default>'
+        '</case>'
+        ),
+    'col_checks' : [
+        [
+            'function_code',
+            'Invalid function',
+            [
+                ['check', '', '_param.gl_integration', 'is', '$False', ''],
+                ['or', '', '$value', 'pyfunc', 'valid_fun_id', ''],
+                ],
+            ],
+        ],
+    'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []
@@ -165,7 +239,7 @@ cursors.append({
     'cursor_name': 'prod_classes',
     'title': 'Product classes',
     'columns': [
-        ['class', 100, False, False, False, False, None, None, None, None],
+        ['prod_class', 100, False, False, False, False, None, None, None, None],
         ['descr', 260, True, False, False, False, None, None, None, None],
         ],
     'filter': [],

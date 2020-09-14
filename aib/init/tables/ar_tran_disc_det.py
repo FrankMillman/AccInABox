@@ -7,7 +7,7 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['nsls', 'Non-inventory item', 'sls_nsls_subcrn',
+            ['nsls', 'Non-inventory item', 'sls_nsls_subtran',
                 [  # return values
                     ['disc_net_amt', 'net_amt'],  # tgt_col, src_col
                     ['disc_tax_amt', 'tax_amt'],
@@ -204,21 +204,39 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+# virt.append ({
+#     'col_name'   : 'tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Transaction type',
+#     'long_descr' : 'Transaction type',
+#     'col_head'   : 'Tran type',
+#     'sql'        : "'ar_disc'",
+#     })
+# virt.append ({
+#     'col_name'   : 'sale_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Purchase type',
+#     'long_descr' : 'Purchase type',
+#     'col_head'   : 'Purchase type',
+#     'sql'        : "'acc'",
+#     })
 virt.append ({
-    'col_name'   : 'tran_type',
+    'col_name'   : 'module_id',
     'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ar_disc'",
+    'short_descr': 'Module id',
+    'long_descr' : 'Module id',
+    'col_head'   : 'Module',
+    'dflt_val'   : 'ar',
+    'sql'        : "'ar'",
     })
 virt.append ({
-    'col_name'   : 'sale_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Purchase type',
-    'long_descr' : 'Purchase type',
-    'col_head'   : 'Purchase type',
-    'sql'        : "'acc'",
+    'col_name'   : 'rev_sign_sls',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - sales transactions?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_val'   : 'false',
+    'sql'        : "'1'",
     })
 virt.append ({
     'col_name'   : 'display_descr',

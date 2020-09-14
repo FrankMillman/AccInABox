@@ -7,23 +7,13 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['ipch', 'Purchase of inventory item', 'pch_ipch_subinv',
+            ['ipch', 'Purchase of inventory item', 'pch_ipch_subtran',
                 [  # return values
                     ['pmt_cb', 'tot_amt'],  # tgt_col, src_col
-                    # ['pmt_cb', 'tot_party'],
-                    # ['pmt_local', 'tot_local'],
                     ],
                 ['wh_prod_row_id>prod_row_id>prod_code'],  # display descr
                 ],
-            # ['isls', 'Refund to customer of inventory item', 'sls_isls_subcrn',
-            #     [  # return values
-            #         ['pmt_cb', 'tot_amt'],  # tgt_col, src_col
-            #         # ['pmt_cb', 'tot_party'],
-            #         # ['pmt_local', 'tot_local'],
-            #         ],
-            #     ['wh_prod_row_id>prod_row_id>prod_code'],  # display descr
-            #     ],
-            ['npch', 'Purchase of non-inventory item', 'pch_npch_subinv',
+            ['npch', 'Purchase of non-inventory item', 'pch_npch_subtran',
                 [  # return values
                     ['pmt_cb', 'tot_amt'],  # tgt_col, src_col
                     # ['pmt_cb', 'tot_party'],
@@ -31,7 +21,7 @@ table = {
                     ],
                 ['npch_descr'],  # display descr
                 ],
-            # ['nsls', 'Refund of non-inventory item', 'sls_nsls_subcrn',
+            # ['nsls', 'Refund of non-inventory item', 'cb_nsls_crn',
             #     [  # return values
             #         ['pmt_cb', 'tot_amt'],  # tgt_col, src_col
             #         # ['pmt_cb', 'tot_party'],
@@ -45,17 +35,21 @@ table = {
                     ],
                 ['cust_row_id>party_row_id>display_name'],  # display descr
                 ],
-            ['opmt', 'Other payment', 'cb_opmt_subtran',
+            # ['apmt', 'Ap payment', 'ap_subtran_pmt',
+            #     [  # return values
+            #         ['pmt_cb', 'apmt_amount'],  # tgt_col, src_col
+            #         ],
+            #     ['cust_id'],  # display descr
+            #     ],
+            ['gl', 'Post to g/l', 'gl_jnl_subtran',
                 [  # return values
-                    ['pmt_cb', 'opmt_amount'],  # tgt_col, src_col
-                    # ['pmt_cb', 'opmt_cb'],
-                    # ['pmt_local', 'opmt_local'],
+                    ['pmt_cb', 'gl_amount'],  # tgt_col, src_col
                     ],
-                ['opmt_descr'],  # display descr
+                ['gl_code'],  # display descr
                 ],
             ['com', 'Comment', 'cb_comments',
                 [],  # return values
-                ['comment_text'],  # display descr
+                ['text'],  # display descr
                 ],
             ]],
         ],
@@ -208,20 +202,40 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'tran_type',
+    'col_name'   : 'module_id',
     'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'cb_pmt'",
+    'short_descr': 'Module id',
+    'long_descr' : 'Module id',
+    'col_head'   : 'Module',
+    'dflt_val'   : 'cb',
+    'sql'        : "'cb'",
     })
 virt.append ({
-    'col_name'   : 'pch_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Purchase type',
-    'long_descr' : 'Purchase type',
-    'col_head'   : 'Purchase type',
-    'sql'        : "'cash'",
+    'col_name'   : 'rev_sign_sls',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - sales transactions?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_val'   : 'false',
+    'sql'        : "'1'",
+    })
+virt.append ({
+    'col_name'   : 'rev_sign_pch',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - purchase transactions?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_val'   : 'false',
+    'sql'        : "'0'",
+    })
+virt.append ({
+    'col_name'   : 'rev_sign_gl',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - gl transactions?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_val'   : 'false',
+    'sql'        : "'0'",
     })
 virt.append ({
     'col_name'   : 'display_descr',
@@ -312,7 +326,6 @@ actions.append([
             [],  # key fields
             [  # aggregation
                 ['amount_cb', '+', 'pmt_cb'],  # tgt_col, op, src_col
-                # ['amount_cb', '+', 'pmt_cb'],
                 ['amount_local', '+', 'pmt_local'],
                 ],
             [],  # on insert

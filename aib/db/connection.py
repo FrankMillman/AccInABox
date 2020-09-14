@@ -549,7 +549,7 @@ class Conn:
                 elif expr.isdigit():  # integer
                     where_params.append(int(expr))
                     expr = self.constants.param_style
-                elif expr and expr[0] == '-' and expr[1:].isdigit():  # negative integer
+                elif expr.startswith('-') and expr[1:].isdigit():  # negative integer
                     where_params.append(int(expr))
                     expr = self.constants.param_style
                 elif expr.startswith("'"):  # literal string
@@ -599,7 +599,8 @@ class Conn:
                 #     elif op == '!=':
                 #         op = 'is not'
 
-                if op.lower() in ('like', 'not like'):
+                # do we still need this? [2020-09-09]
+                if False:  #op.lower() in ('like', 'not like'):
                     assert isinstance(expr, str)
                     esc = self.escape_string()
                 else:
@@ -829,9 +830,10 @@ class Conn:
 
             start += pos2
 
-        # # is this still necessary - sqlite3 rounding has been sorted with REAL2/4/6/8
-        # if col.data_type == 'DEC' and '/' in sql:
-        #     sql = f'ROUND({sql}, {col.db_scale})'
+        # is this still necessary - sqlite3 rounding has been sorted with REAL2/4/6/8
+        # it is necessary - it is used in diag.py [2020-09-09]
+        if col.data_type == 'DEC' and '/' in sql:
+            sql = f'ROUND({sql}, {col.db_scale})'
 
         if sql.startswith('SELECT '):
             sql = '(' + sql + ')'
@@ -898,6 +900,20 @@ class Conn:
             as_clause_rows.append('CASE')
 
             col_name2, vals_fkeys = tgt_tblname
+
+            if src_tbl.col_dict[col_name2].col_type == 'alt':
+                src_col2 = src_tbl.col_dict[col_name2]
+                tgt_tblname2, alt_tgt2, true_src2, true_tgt2, child, form, is_alt = src_col2.fkey
+                tgt_tbl2 = await db.objects.get_db_table(
+                    context, db_table.data_company, tgt_tblname2)
+                tgt_col2 = tgt_tbl2.col_dict[true_tgt2]
+                src_col2 = src_tbl.col_dict[true_src2]
+                src_alias, tgt_alias, trail_ = self.get_alias(src_col2, tgt_col2, current_alias, trail)
+                src_alias2 = tgt_alias
+            else:
+                src_alias2 = src_alias
+
+
             for tgt_val, tgt_tblname in vals_fkeys:
 
                 if '.' in tgt_tblname:
@@ -926,7 +942,8 @@ class Conn:
                     tgt = f'{tgt_alias}.{tgt_col.col_name}'
 
                 as_clause_rows.append(
-                    f'WHEN {src_alias}.{col_name2} = {tgt_val!r} THEN {tgt}'
+                    # f'WHEN {src_alias}.{col_name2} = {tgt_val!r} THEN {tgt}'
+                    f'WHEN {src_alias2}.{col_name2} = {tgt_val!r} THEN {tgt}'
                     )
 
             as_clause_rows.append('END')

@@ -1,9 +1,9 @@
 # table definition
 table = {
-    'table_name'    : 'pch_ipch_subcrn',
+    'table_name'    : 'pch_ipch_subtran',
     'module_id'     : 'pch',
-    'short_descr'   : 'Inventory pch cr notes',
-    'long_descr'    : 'Inventory purchase credit notes',
+    'short_descr'   : 'Inventory pch',
+    'long_descr'    : 'Inventory purchase line items',
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,
@@ -76,11 +76,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
+    'col_name'   : 'source_code_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Source code id',
+    'long_descr' : 'Source code id',
+    'col_head'   : 'Source code',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -91,10 +91,8 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : [
-            ['ap_crn', 'Credit note'],
-        ],
+    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
+    'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'tran_det_row_id',
@@ -113,8 +111,11 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : [
-        ['tran_type', [
-            ['ap_crn', 'ap_tran_crn_det'],
+        ['source_code', [
+            ['ipch_ap_inv', 'ap_tran_inv_det'],
+            ['ipch_ap_crn', 'ap_tran_crn_det'],
+            ['ipch_cb_inv', 'cb_tran_pmt_det'],
+            ['ipch_cb_crn', 'cb_tran_rec_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -223,34 +224,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            # '<compare src="tran_det_row_id>tran_row_id>currency_id" op="eq" '
-            #         'tgt="wh_prod_row_id>ledger_row_id>currency_id">'
-            #     '<literal value="1"/>'
-            # '</compare>'
-            # '<compare src="tran_det_row_id>tran_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
-            #     '<expr>'
-            #         '<literal value="1"/>'
-            #         '<op type="/"/>'
-            #         '<exch_rate>'
-            #             '<fld_val name="wh_prod_row_id>ledger_row_id>currency_id"/>'
-            #             '<fld_val name="tran_det_row_id>tran_row_id>tran_date"/>'
-            #         '</exch_rate>'
-            #     '</expr>'
-            # '</compare>'
-            # '<default>'
-            #     '<expr>'
-            #         '<exch_rate>'
-            #             '<fld_val name="tran_det_row_id>tran_row_id>currency_id"/>'
-            #             '<fld_val name="tran_det_row_id>tran_row_id>tran_date"/>'
-            #         '</exch_rate>'
-            #         '<op type="/"/>'
-            #         '<exch_rate>'
-            #             '<fld_val name="wh_prod_row_id>ledger_row_id>currency_id"/>'
-            #             '<fld_val name="tran_det_row_id>tran_row_id>tran_date"/>'
-            #         '</exch_rate>'
-            #     '</expr>'
-            # '</default>'
-            '<compare src="wh_prod_row_id>ledger_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `wh_prod_row_id>ledger_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
@@ -372,7 +346,8 @@ virt.append ({
         '</expr>'
         ),
     'sql'        : (
-        "a.net_amt / a.tran_det_row_id>tran_row_id>tran_exch_rate * a.tran_det_row_id>party_exch_rate"
+        "a.net_amt / a.tran_det_row_id>tran_row_id>tran_exch_rate * "
+        "a.tran_det_row_id>party_exch_rate"
         ),
     })
 virt.append ({
@@ -457,7 +432,7 @@ virt.append ({
         ),
     'sql'        : (
         "(a.net_amt + a.tax_amt) / a.tran_det_row_id>tran_row_id>tran_exch_rate * "
-        "a.tran_det_row_id>party_exch_rate"
+        "a.tran_det_row_id>party_exch_rate)"
         ),
     })
 virt.append ({
@@ -484,6 +459,95 @@ virt.append ({
         "(a.net_amt + a.tax_amt) / a.tran_det_row_id>tran_row_id>tran_exch_rate"
         ),
     })
+virt.append ({
+    'col_name'   : 'upd_qty',
+    'data_type'  : 'DEC',
+    'short_descr': 'Quantity',
+    'long_descr' : 'Quantity - pos for inv, neg for crn',
+    'col_head'   : 'Qty',
+    'db_scale'   : 6,
+    'scale_ptr'  : 'wh_prod_row_id>prod_row_id>scale',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="qty"/>'
+          '<op type="*"/>'
+          '<case>'
+            '<compare test="[[`if`, ``, `tran_det_row_id>rev_sign_pch`, `is`, `$True`, ``]]">'
+              '<literal value="-1"/>'
+            '</compare>'
+            '<default>'
+              '<literal value="1"/>'
+            '</default>'
+          '</case>'
+        '</expr>'
+        ),
+    'sql'        : (
+        "a.qty "
+        "* "
+        "CASE WHEN a.tran_det_row_id>rev_sign_pch = '1' THEN -1 ELSE 1 END"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'upd_whouse',
+    'data_type'  : 'DEC',
+    'short_descr': 'Cost',
+    'long_descr' : 'Cost in whouse currency - pos for inv, neg for crn',
+    'col_head'   : 'Cost',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'wh_prod_row_id>ledger_row_id>currency_id>scale',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="net_whouse"/>'
+          '<op type="*"/>'
+          '<case>'
+            '<compare test="[[`if`, ``, `tran_det_row_id>rev_sign_pch`, `is`, `$True`, ``]]">'
+              '<literal value="-1"/>'
+            '</compare>'
+            '<default>'
+              '<literal value="1"/>'
+            '</default>'
+          '</case>'
+        '</expr>'
+        ),
+    'sql'        : (
+        "a.net_whouse "
+        "* "
+        "CASE WHEN a.tran_det_row_id>rev_sign_pch = '1' THEN -1 ELSE 1 END"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'upd_local',
+    'data_type'  : 'DEC',
+    'short_descr': 'Net local',
+    'long_descr' : 'Purchase net amount in local currency - pos for inv, neg for crn',
+    'col_head'   : 'Net local',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<expr>'
+            '<fld_val name="net_amt"/>'
+            '<op type="/"/>'
+            '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '</expr>'
+          '<op type="*"/>'
+          '<case>'
+            '<compare test="[[`if`, ``, `tran_det_row_id>rev_sign_pch`, `is`, `$True`, ``]]">'
+              '<literal value="-1"/>'
+            '</compare>'
+            '<default>'
+              '<literal value="1"/>'
+            '</default>'
+          '</case>'
+        '</expr>'
+        ),
+    'sql'        : (
+        "(a.net_amt / a.tran_det_row_id>tran_row_id>tran_exch_rate) "
+        "* "
+        "CASE WHEN a.tran_det_row_id>rev_sign_pch = '1' THEN -1 ELSE 1 END"
+        ),
+    })
 
 # cursor definitions
 cursors = []
@@ -493,7 +557,7 @@ actions = []
 actions.append([
     'upd_on_save', [
         [
-            'pch_ipch_crntax',
+            'pch_ipch_subtran_tax',
             None,  # condition
 
             True,  # split source?
@@ -501,7 +565,7 @@ actions.append([
             'custom.tax_funcs.calc_tax',  # function to populate table
 
             [  # fkey to this table
-                ['ipch_row_id', 'row_id'],  # tgt_col, src_col
+                ['subtran_row_id', 'row_id'],  # tgt_col, src_col
                 ],
 
             ['tax_code_id', 'tax_rate', 'tax_amt'],  # fields to be updated
@@ -522,14 +586,13 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['wh_prod_row_id', 'wh_prod_row_id'],  # tgt_col, src_col
-                ['tran_type', "'ipch'"],
                 ['tran_row_id', 'row_id'],
                 ],
             [],  # aggregation
             [  # on post
-                ['orig_qty', '=', 'qty'],  # tgt_col, op, src_col
-                ['orig_whouse', '=', 'net_whouse'],
-                ['orig_local', '=', 'net_local'],
+                ['orig_qty', '=', 'upd_qty'],  # tgt_col, op, src_col
+                ['orig_whouse', '=', 'upd_whouse'],
+                ['orig_local', '=', 'upd_local'],
                 ],
             [],  # on unpost
             ],
@@ -538,16 +601,18 @@ actions.append([
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['wh_prod_row_id', 'wh_prod_row_id'],  # tgt_col, src_col
+                ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
+                ['prod_row_id', 'wh_prod_row_id>prod_row_id'],
+                ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['pch_day_qty', '-', 'qty'],  # tgt_col, op, src_col
-                ['pch_day_wh', '-', 'net_whouse'],
-                ['pch_day_loc', '-', 'net_local'],
-                ['pch_tot_qty', '-', 'qty'],
-                ['pch_tot_wh', '-', 'net_whouse'],
-                ['pch_tot_loc', '-', 'net_local'],
+                ['qty_day', '+', 'upd_qty'],  # tgt_col, op, src_col
+                ['tran_day_wh', '+', 'upd_whouse'],
+                ['tran_day_loc', '+', 'upd_local'],
+                ['qty_tot', '+', 'upd_qty'],
+                ['tran_tot_wh', '+', 'upd_whouse'],
+                ['tran_tot_loc', '+', 'upd_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -559,15 +624,59 @@ actions.append([
             [  # key fields
                 ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['class_row_id', 'wh_prod_row_id>prod_row_id>class_row_id'],
+                ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['pch_day_qty', '-', 'qty'],  # tgt_col, op, src_col
-                ['pch_day_wh', '-', 'net_whouse'],
-                ['pch_day_loc', '-', 'net_local'],
-                ['pch_tot_qty', '-', 'qty'],
-                ['pch_tot_wh', '-', 'net_whouse'],
-                ['pch_tot_loc', '-', 'net_local'],
+                ['qty_day', '+', 'upd_qty'],  # tgt_col, op, src_col
+                ['tran_day_wh', '+', 'upd_whouse'],
+                ['tran_day_loc', '+', 'upd_local'],
+                ['qty_tot', '+', 'upd_qty'],
+                ['tran_tot_wh', '+', 'upd_whouse'],
+                ['tran_tot_loc', '+', 'upd_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'pch_ipch_supp_totals',  # table name
+            [  # condition
+                ['where', '', 'tran_det_row_id>module_id', '=', "'ap'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['prod_code_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
+                ['supp_row_id', 'tran_det_row_id>tran_row_id>supp_row_id'],
+                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                ['source_code_id', 'source_code_id'],
+                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ],
+            [  # aggregation
+                ['qty_day', '+', 'upd_qty'],  # tgt_col, op, src_col
+                ['qty_tot', '+', 'upd_qty'],
+                ['pchs_day', '+', 'upd_local'],
+                ['pchs_tot', '+', 'upd_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'wh_prod_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                ['source_code_id', 'source_code_id'],
+                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'upd_local'],
                 ],
             [],  # on post
             [],  # on unpost

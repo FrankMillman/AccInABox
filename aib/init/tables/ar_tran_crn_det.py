@@ -7,27 +7,27 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['isls', 'Inventory item', 'sls_isls_subcrn',
+            ['isls', 'Inventory item', 'sls_isls_subtran',
                 [  # return values
                     ['crn_net_amt', 'net_amt'],  # tgt_col, src_col
                     ['crn_tax_amt', 'tax_amt'],
-                    ['crn_tax_cust', 'tax_party'],
+                    ['crn_tax_cust', 'tax_cust'],
                     ['crn_tax_local', 'tax_local'],
                     ],
                 ['wh_prod_row_id>prod_row_id>prod_code'],
                 ],
-            ['nsls', 'Non-inventory item', 'sls_nsls_subcrn',
+            ['nsls', 'Non-inventory item', 'sls_nsls_subtran',
                 [  # return values
                     ['crn_net_amt', 'net_amt'],  # tgt_col, src_col
                     ['crn_tax_amt', 'tax_amt'],
-                    ['crn_tax_cust', 'tax_party'],
+                    ['crn_tax_cust', 'tax_cust'],
                     ['crn_tax_local', 'tax_local'],
                     ],
                 ['nsls_descr'],
                 ],
-            ['com', 'Comment', 'sls_comments',
+            ['com', 'Comment', 'ar_comments',
                 [],  # return values
-                ['comment_text'],
+                ['text'],
                 ],
             ]],
         ],
@@ -240,20 +240,22 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'tran_type',
+    'col_name'   : 'module_id',
     'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ar_crn'",
+    'short_descr': 'Module id',
+    'long_descr' : 'Module id',
+    'col_head'   : 'Module',
+    'dflt_val'   : 'ar',
+    'sql'        : "'ar'",
     })
 virt.append ({
-    'col_name'   : 'sale_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Sale type',
-    'long_descr' : 'Sale type',
-    'col_head'   : 'Sale type',
-    'sql'        : "'acc'",
+    'col_name'   : 'rev_sign_sls',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - sales transactions?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_val'   : 'false',
+    'sql'        : "'1'",
     })
 virt.append ({
     'col_name'   : 'display_descr',

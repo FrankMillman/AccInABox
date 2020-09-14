@@ -10,7 +10,7 @@ import db.cache
 from common import AibError, AibDenied
 
 async def split_nsls(db_obj, conn, return_vals):
-    # called as split_src func from sls_nsls_subinv.upd_on_save()
+    # called as split_src func from various.upd_on_save()
     eff_date = await db_obj.getval('eff_date')
     tran_date = await db_obj.getval('tran_det_row_id>tran_row_id>tran_date')
     amount_pty = await db_obj.getval('net_party')
@@ -79,7 +79,7 @@ async def setup_openitems(db_obj, conn, return_vals):
             )
 
 async def setup_inv_alloc(db_obj, conn, return_vals):
-    # called as split_src func from sls_isls_subinv.upd_on_save()
+    # called as split_src func from sls_isls_inv_ar/cb.upd_on_save()
     # return values - cost_whouse, cost_local
     tot_to_allocate = await db_obj.getval('qty')
 
@@ -547,7 +547,7 @@ async def create_disc_crn2(ar_rec, xml):
             ar_rec.context, ar_rec.company, 'ar_tran_disc_det',
                 parent=data_objects['ar_disc'])
         data_objects['nsls'] = await db.objects.get_db_object(
-            ar_rec.context, ar_rec.company, 'sls_nsls_subcrn',
+            ar_rec.context, ar_rec.company, 'ar_tran_disc_nsls',
                 parent=data_objects['ar_disc_det'])
         data_objects['disc_allocations'] = await db.objects.get_db_object(
             ar_rec.context, ar_rec.company, 'ar_tran_alloc_det', parent=data_objects['ar_disc'])
@@ -980,7 +980,7 @@ async def create_disc_crn(ar_tran_alloc, xml):
             context, ar_tran_alloc.company, 'ar_tran_disc_det',
             parent=data_objects['ar_tran_disc'])
         data_objects['nsls'] = await db.objects.get_db_object(
-            context, ar_tran_alloc.company, 'sls_nsls_subcrn',
+            context, ar_tran_alloc.company, 'sls_nsls_subtran',
             parent=data_objects['ar_tran_disc_det'])
     ar_tran_disc = data_objects['ar_tran_disc']
     ar_tran_disc_det = data_objects['ar_tran_disc_det']

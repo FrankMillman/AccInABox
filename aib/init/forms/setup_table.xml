@@ -24,7 +24,7 @@
         long_descr="Use own table definition?" allow_amend="true" max_len="1" dflt_val="Y"
         col_checks="[[`check_value`, `Cannot change back to Other`,
           [[`check`, ``, `db_table$exists`, `is`, `$False`, ``],
-          [`or`, ``, `db_table.defn_company`, `is_not`, `$None`, ``],
+          [`or`, ``, `db_table.defn_company`, `is not`, `$None`, ``],
           [`or`, ``, `$value`, `=`, `'Y'`, ``]]]]"/>
       <mem_col col_name="own_data" data_type="TEXT" short_descr="Use own table data?"
         long_descr="Use own table data?" allow_amend="true" max_len="1" dflt_val="Y"/>
@@ -347,7 +347,7 @@
               <input obj_name="db_table" col_name="defn_company" lng="120" validation="
                 <<validation>>
                   <<case>>
-                    <<compare src=`$value` op=`is` tgt=`$None`>>
+                    <<compare test=`[['if', '', '$value', 'is', '$None', '']]`>>
                       <<error head=`Company name` body=`A value is required`/>>
                     <</compare>>
                   <</case>>
@@ -371,7 +371,7 @@
               <col colspan="2"/>
               <input obj_name="var" col_name="own_data" radio="true" after="
                 <<case>>
-                  <<compare src=`var.own_data` op=`=` tgt=`'Y'`>>
+                  <<compare test=`[['if', '', 'var.own_data', '=', '~Y~', '']]`>>
                     <<set_readonly target=`db_table.data_company` state=`true`/>>
                     <<set_readonly target=`db_table.read_only` state=`true`/>>
                   <</compare>>
@@ -388,9 +388,9 @@
               <input obj_name="db_table" col_name="data_company" lng="120" validation="
                 <<validation>>
                   <<case>>
-                    <<compare src=`var.own_data` op=`=` tgt=`'N'`>>
+                    <<compare test=`[['if', '', 'var.own_data', '=', '~N~', '']]`>>
                       <<case>>
-                        <<compare src=`$value` op=`is` tgt=`$None`>>
+                        <<compare test=`[['if', '', '$value', 'is', '$None', '']]`>>
                           <<error head=`Company name` body=`A value is required`/>>
                         <</compare>>
                       <</case>>
@@ -428,7 +428,7 @@
                   <<btn_show btn_id=`pre_save` state=`false`/>>
                 <</change_button>>
                 <<case>>
-                  <<compare src=`db_table.defn_company` op=`is` tgt=`$None`>>
+                  <<compare test=`[['if', '', 'db_table.defn_company', 'is', '$None', '']]`>>
                     <<assign src=`'Y'` tgt=`var.own_defn`/>>
                   <</compare>>
                   <<default>>
@@ -444,7 +444,7 @@
               <</default>>
             <</case>>
             <<case>>
-              <<compare src=`var.table_created` op=`is` tgt=`$True`>>
+              <<compare test=`[['if', '', 'var.table_created', 'is', '$True', '']]`>>
                 <<change_button>>
                   <<btn_enabled btn_id=`create_table` state=`false`/>>
                 <</change_button>>
@@ -456,7 +456,7 @@
               <</default>>
             <</case>>
             <<case>>
-              <<compare src=`var.own_data` op=`=` tgt=`'Y'`>>
+              <<compare test=`[['if', '', 'var.own_data', '=', '~Y~', '']]`>>
                 <<set_readonly target=`db_table.data_company` state=`true`/>>
                 <<set_readonly target=`db_table.read_only` state=`true`/>>
               <</compare>>

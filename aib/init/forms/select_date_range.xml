@@ -59,7 +59,7 @@
           <col/>
           <input obj_name="var" col_name="start_period" lng="120" after="
             <<case>>
-              <<compare src=`var.start_period` op=`gt` tgt=`var.end_period`>>
+              <<compare test=`[['if', '', 'var.start_period', '>', 'var.end_period', '']]`>>
                 <<assign src=`var.start_period` tgt=`var.end_period`/>>
               <</compare>>
             <</case>>

@@ -107,7 +107,7 @@ cols.append ({
     'long_descr' : 'Payment number',
     'col_head'   : 'Pmt no',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_ledger.auto_pmt_no', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_ledger.auto_pmt_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -118,7 +118,7 @@ cols.append ({
         '<case>'
           '<on_insert>'
             '<case>'
-              '<compare src="_ledger.auto_pmt_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.auto_pmt_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_ledger.auto_pmt_no"/>'
               '</compare>'
             '</case>'
@@ -209,7 +209,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="supp_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
+              '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
@@ -240,8 +240,11 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
+            '</compare>'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `supp_row_id>currency_id`, ``]]">'
+                '<fld_val name="supp_exch_rate"/>'
             '</compare>'
             '<default>'
                 '<exch_rate>'
@@ -326,115 +329,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'alloc_supp',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Allocated supp',
-#     'long_descr' : 'Amount allocated in supplier currency - updated from ap_allocations',
-#     'col_head'   : 'Alloc supp',
-#     'key_field'  : 'N',
-#     'calculated' : False,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'supp_row_id>currency_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
-# cols.append ({
-#     'col_name'   : 'discount_supp',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Discount supp',
-#     'long_descr' : 'Discount amount - updated from ap_allocations',
-#     'col_head'   : 'Disc supp',
-#     'key_field'  : 'N',
-#     'calculated' : False,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'supp_row_id>currency_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
-# cols.append ({
-#     'col_name'   : 'alloc_local',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Allocated local',
-#     'long_descr' : 'Amount allocated in local currency - updated from ap_allocations',
-#     'col_head'   : 'Alloc local',
-#     'key_field'  : 'N',
-#     'calculated' : False,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
-# cols.append ({
-#     'col_name'   : 'discount_local',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Discount local',
-#     'long_descr' : 'Discount amount - updated from ap_allocations',
-#     'col_head'   : 'Disc local',
-#     'key_field'  : 'N',
-#     'calculated' : False,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
-# cols.append ({
-#     'col_name'   : 'exch_diff',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Exchange rate difference',
-#     'long_descr' : 'Exchange rate difference',
-#     'col_head'   : 'Exch diff',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<case>'
-#           '<compare src="(pmt_supp + alloc_supp)" op="=" tgt="0">'
-#             '<expr>'
-#               '<literal val="0"/>'
-#               '<op type="-"/>'
-#               '<expr>'
-#                 '<fld name="pmt_local"/>'
-#                 '<op type="+"/>'
-#                 '<fld name="alloc_local"/>'
-#               '</expr>'
-#             '</expr>'
-#           '</compare>'
-#         '</case>'
-#         ),
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
@@ -641,7 +535,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
                 ['source_code', "'ap_pmt'"],

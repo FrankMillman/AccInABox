@@ -122,7 +122,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'comment_text',
+    'col_name'   : 'text',
     'data_type'  : 'TEXT',
     'short_descr': 'Text',
     'long_descr' : 'Line of text to add to cash book transaction',

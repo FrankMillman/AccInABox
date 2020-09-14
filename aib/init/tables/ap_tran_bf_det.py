@@ -232,7 +232,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="supp_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
@@ -260,7 +260,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 8,
     'scale_ptr'  : None,
-    'dflt_val'   : '1',
+    'dflt_val'   : '{supp_exch_rate}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,

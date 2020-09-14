@@ -675,4 +675,4 @@ def get_view_names(self, company_id, view_names):
 def escape_string(self):
     # in a LIKE clause, literals '%' and '_' must be escaped with (e.g.) '\'
     # sqlite3 requires that the escape character be specified
-    return " ESCAPE '\'"
+    return " ESCAPE '\\'"

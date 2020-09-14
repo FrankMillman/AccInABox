@@ -90,7 +90,7 @@
       <button btn_id="btn_post" btn_label="Post" btn_enabled="true"
           btn_validate="true" btn_default="true" lng="60" action="
         <<case>>
-          <<compare src=`ar_alloc.det_exists` op=`=` tgt=`0`>>
+          <<compare test=`[['if', '', 'ar_alloc.det_exists', '=', '0', '']]`>>
             <<ask title=`Allocation` enter=`Ok` escape=`Ok`
                 question=`No allocations entered`>>
               <<response ans=`Ok`>>

@@ -2,9 +2,12 @@ import importlib
 import operator
 from datetime import date as dt, timedelta as td
 from bisect import bisect_left
+from json import loads
+
 
 import db
 import db.cache
+from evaluate_expr import eval_bool_expr
 from common import AibError
 
 # next is global to avoid having to pass as argument to every method
@@ -15,7 +18,7 @@ async def get_db_dflt(fld, orig=False):
     calc_orig_value = orig
     debug = False
 
-    # debug = (fld.col_name == 'discount_cust')
+    # debug = (fld.col_name == 'eff_date')
 
     for xml in fld.col_defn.dflt_rule:
         if debug:
@@ -241,7 +244,7 @@ async def literal(fld, xml, debug):
     val = xml.get('value')
     if val.isdigit():
         return int(val)
-    if val and val[0] == '-' and val[1:].isdigit():
+    if val.startswith('-') and val[1:].isdigit():
         return int(val)
     if val == '$None':
         return None
@@ -298,24 +301,11 @@ async def on_post(fld, xml, debug):
     # return await posted.getval() and not await posted.get_orig()
 
 async def compare(fld, xml, debug):
-    # <<compare src=`_param.ar_multi_curr` op=`is_` tgt=`$True`>>
-
-    source = xml.get('src')
-    source_value = await get_val(fld, source)
-
-    target = xml.get('tgt')
-    target_value = await get_val(fld, target)
-
-    op = getattr(operator,
-        {'+': 'add', '-': 'sub', '*': 'mul', '/': 'truediv', '=': 'eq',
-            '>': 'gt', '<': 'lt', '>=': 'ge', '<=': 'le', 'is': 'is_'}.get(
-            xml.get('op'), xml.get('op')))
-
+    test = loads(xml.get('test').replace("'", '"').replace('~', "'"))
+    result = await eval_bool_expr(test, fld.db_obj, fld)
     if debug:
-        print('dbg:', '"{}" {} "{}" is {}'.format(source_value, xml.get('op'), target_value,
-            op(source_value, target_value)))
-
-    return op(source_value, target_value)
+        print(f'dbg: {test} is {result}')
+    return result
 
 async def assign(fld, xml, debug):
     source = xml.get('src')
@@ -356,7 +346,7 @@ async def get_val(fld, value):
         return fld.db_obj.exists
     if value.isdigit():
         return int(value)
-    if value and value[0] == '-' and value[1:].isdigit():
+    if value.startswith('-') and value[1:].isdigit():
         return int(value)
     if value.startswith('_ctx.'):
         return getattr(fld.db_obj.context, value[5:], None)

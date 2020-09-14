@@ -114,13 +114,12 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'gl_ctrl_id',
+    'col_name'   : 'gl_code_id',
     'data_type'  : 'INT',
     'short_descr': 'Gl control a/c',
     'long_descr' : 'Gl control a/c',
-    'col_head'   : 'Gl ctrl',
+    'col_head'   : 'Gl code',
     'key_field'  : 'N',
-    # 'calculated' : False,
     'calculated' : [['where', '', '_param.gl_integration', 'is', '$False', '']],
     'allow_null' : True,  # null means 'not integrated to g/l'
 #   'allow_amend': True,  # can change from null to not-null to start integration
@@ -139,59 +138,53 @@ cols.append ({
                 ['check', '(', '_param.gl_integration', 'is', '$False', ''],
                 ['and', '', '$value', 'is', '$None', ')'],
                 ['or', '(', '_param.gl_integration', 'is', '$True', ''],
-                ['and', '', '$value', 'is_not', '$None', ')'],
+                ['and', '', '$value', 'is not', '$None', ')'],
                 ],
             ],
         ],
-    'fkey'       : ['gl_codes', 'row_id', 'ctrl_acc', 'gl_code', False, 'gl_codes'],
+    'fkey'       : ['gl_codes', 'row_id', 'gl_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
 
 cols.append ({
-    'col_name'   : 'location_row_id',
+    'col_name'   : 'valid_loc_ids',
     'data_type'  : 'INT',
-    'short_descr': 'Location row id',
-    'long_descr' : 'Location row id',
-    'col_head'   : 'Location',
+    'short_descr': 'Valid location ids',
+    'long_descr' : 'Valid location ids - if leaf, use this one; if not must be child of this one',
+    'col_head'   : 'Valid locations',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.location_row_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.location_row_id', 'is not', '$None', '']],
     'allow_null' : False,
-    'allow_amend': True,  # if changed, update existing data
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{_param.location_row_id}',
+    'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_param.location_row_id" op="is_not" tgt="$None">'
+          '<compare test="[[`if`, ``, `_param.location_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.location_row_id"/>'
           '</compare>'
-          '<compare src="_param.dflt_loc_row_id" op="is_not" tgt="$None">'
-            '<fld_val name="_param.dflt_loc_row_id"/>'
+          '<compare test="[[`if`, ``, `gl_code_id>valid_loc_ids`, `is not`, `$None`, ``]]">'
+            '<fld_val name="gl_code_id>valid_loc_ids"/>'
           '</compare>'
+          '<default>'
+            '<fld_val name="_param.dflt_loc_row_id"/>'
+          '</default>'
         '</case>'
         ),
-    'col_checks' : None,
-   'fkey'       : ['adm_locations', 'row_id', 'location_id', 'location_id', False, 'locs'],
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'common_location',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Common loc for all suppliers?',
-    'long_descr' : 'Use common location for all suppliers? - If Y, all customers will use ap location',
-    'col_head'   : 'Common location?',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,  # if change from False to True, update existing data
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : 'true',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
+    'col_checks' : [
+        [
+            'location_code',
+            'Must be a valid gl location',
+            [
+                ['check', '', '_param.gl_integration', 'is', '$False', ''],
+                ['or', '', '$value', '=', 'gl_code_id>valid_loc_ids', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id', ''],
+                ],
+            ],
+        ],
+    'fkey'       : ['adm_locations', 'row_id', 'valid_locs', 'location_id', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -215,7 +208,7 @@ cols.append ({
             'Multiple locations not allowed',
             [
                 ['check', '', '$value', 'is', '$False', ''],
-                ['or', '', 'common_location', 'is', '$False', ''],
+                ['or', '', 'valid_loc_ids>expandable', 'is', '$True', ''],
                 ],
             ],
         ],
@@ -224,50 +217,44 @@ cols.append ({
     })
 
 cols.append ({
-    'col_name'   : 'function_row_id',
+    'col_name'   : 'valid_fun_ids',
     'data_type'  : 'INT',
-    'short_descr': 'Function row id',
-    'long_descr' : 'Function row id',
-    'col_head'   : 'Function',
+    'short_descr': 'Valid function ids',
+    'long_descr' : 'Valid function ids - if leaf, use this one; if not must be child of this one',
+    'col_head'   : 'Valid functions',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.function_row_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.function_row_id', 'is not', '$None', '']],
     'allow_null' : False,
-    'allow_amend': True,  # if changed, update existing data
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{_param.function_row_id}',
+    'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare src="_param.function_row_id" op="is_not" tgt="$None">'
+          '<compare test="[[`if`, ``, `_param.function_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.function_row_id"/>'
           '</compare>'
-          '<compare src="_param.dflt_fun_row_id" op="is_not" tgt="$None">'
-            '<fld_val name="_param.dflt_fun_row_id"/>'
+          '<compare test="[[`if`, ``, `gl_code_id>valid_fun_ids`, `is not`, `$None`, ``]]">'
+            '<fld_val name="gl_code_id>valid_fun_ids"/>'
           '</compare>'
+          '<default>'
+            '<fld_val name="_param.dflt_fun_row_id"/>'
+          '</default>'
         '</case>'
         ),
-    'col_checks' : None,
-   'fkey'       : ['adm_functions', 'row_id', 'function_id', 'function_id', False, 'funs'],
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'common_function',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Common fun for all suppliers?',
-    'long_descr' : 'Use common function for all suppliers? - If Y, all suppliers will use ap function',
-    'col_head'   : 'Common function?',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,  # if change from False to True, update existing data
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : 'true',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
+    'col_checks' : [
+        [
+            'function_code',
+            'Must be a valid gl function',
+            [
+                ['check', '', '_param.gl_integration', 'is', '$False', ''],
+                ['or', '', '$value', '=', 'gl_code_id>valid_fun_ids', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_fun_id', ''],
+                ],
+            ],
+        ],
+    'fkey'       : ['adm_functions', 'row_id', 'valid_funs', 'function_id', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -291,7 +278,7 @@ cols.append ({
             'Multiple functions not allowed',
             [
                 ['check', '', '$value', 'is', '$False', ''],
-                ['or', '', 'common_function', 'is', '$False', ''],
+                ['or', '', 'valid_fun_ids>expandable', 'is', '$True', ''],
                 ],
             ],
         ],
@@ -307,7 +294,7 @@ cols.append ({
     'long_descr' : 'Currency id - if specified, all suppliers will share this currency',
     'col_head'   : 'Curr',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.currency_id', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_param.currency_id', 'is not', '$None', '']],
     'allow_null' : True,  # null means suppliers can have any currency
     'allow_amend': True,  # if change from null to not-null, must check existing data
     'max_len'    : 0,

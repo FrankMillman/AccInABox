@@ -1,6 +1,7 @@
 import asyncio
 import importlib
 import operator
+from json import loads
 
 from init import init_company
 
@@ -8,6 +9,7 @@ import db.objects
 import db.create_table
 import db.cache
 import db.connection
+from evaluate_expr import eval_bool_expr
 
 async def table_hook(db_obj, elem):
     for xml in elem:
@@ -28,36 +30,8 @@ async def obj_exists(db_obj, xml):
     return db_obj.exists
 
 async def compare(db_obj, xml):
-    """
-    <compare src="col_type" op="eq" tgt="'user'">
-    """
-    source = xml.get('src')
-    source_field = await db_obj.getfld(source)
-    source_value = await source_field.getval()
-
-    target = xml.get('tgt')
-    if target.startswith("'"):
-        target_value = target[1:-1]
-    elif target == '$True':
-        target_value = True
-    elif target == '$False':
-        target_value = False
-    elif target == '$None':
-        target_value = None
-    elif target.isdigit():
-        target_value = int(target)
-    elif target and target[0] == '-' and target[1:].isdigit():
-        target_value = int(target)
-    else:  # field name
-        if target.endswith('$orig'):
-            target_value = await db_obj.get_orig(target[:-5])
-        else:
-            target_value = await db_obj.getval(target)
-
-    #print('"{0}" {1} "{2}"'.format(source_value, xml.get('op'), target_value))
-
-    op = getattr(operator, xml.get('op'))
-    return op(source_value, target_value)
+    test = loads(xml.get('test').replace("'", '"').replace('~', "'"))
+    return await eval_bool_expr(test, db_obj)
 
 async def pyfunc(db_obj, xml):
     func_name = xml.get('name')

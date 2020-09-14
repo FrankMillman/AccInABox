@@ -6,9 +6,9 @@
   <db_objects>
     <db_obj name="ar_inv" table_name="ar_tran_inv" is_formview_obj="true"/>
     <db_obj name="ar_invdet" table_name="ar_tran_inv_det" parent="ar_inv"/>
-    <db_obj name="isls" table_name="sls_isls_subinv" parent="ar_invdet"/>
-    <db_obj name="nsls" table_name="sls_nsls_subinv" parent="ar_invdet"/>
-    <db_obj name="com" table_name="sls_comments" parent="ar_invdet"/>
+    <db_obj name="isls" table_name="ar_tran_inv_isls" parent="ar_invdet"/>
+    <db_obj name="nsls" table_name="ar_tran_inv_nsls" parent="ar_invdet"/>
+    <db_obj name="com" table_name="ar_comments" parent="ar_invdet"/>
   </db_objects>
 
   <mem_objects/>
@@ -110,7 +110,7 @@
     <frame_methods template="Transaction">
       <method name="do_post" action="
         <<case>>
-          <<compare src=`ar_inv.inv_tot_amt` op=`=` tgt=`0`>>
+          <<compare test=`[['if', '', 'ar_inv.inv_tot_amt', '=', '0', '']]`>>
             <<ask title=`Invoice` enter=`No` escape=`No`
                 question=`No detail lines - sure you want to post?`>>
               <<response ans=`No`>>
@@ -141,6 +141,52 @@
         <input obj_name="ar_inv" col_name="cust_id" lng="80"/>
         <display obj_name="ar_inv" col_name="cust_row_id>party_row_id>display_name" lng="160"/>
 
+        <if_ test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``],
+          [`and`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
+
+        <row/>
+        <col/>
+        <label value="Location Id:"/>
+        <col/>
+        <input obj_name="ar_inv" col_name="location_id" lng="80" form_dflt="
+          <<case>>
+            <<compare test=`[['if', '', '_ledger.multiple_locations', 'is', '$False', '']]`>>
+              <<fld_val name=`cust_row_id>loc_id_if_exists`/>>
+            <</compare>>
+          <</case>>
+          "/>
+        <display obj_name="ar_inv" col_name="cust_row_id>location_id>descr" lng="160"/>
+
+        <end_if/>
+
+        <if_ test="[[`if`, ``, `_param.function_row_id`, `is`, `$None`, ``],
+          [`and`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
+
+        <row/>
+        <col/>
+        <label value="Function Id:"/>
+        <col/>
+        <input obj_name="ar_inv" col_name="function_id" lng="80" form_dflt="
+          <<case>>
+            <<compare test=`[['if', '', '_ledger.multiple_functions', 'is', '$False', '']]`>>
+              <<fld_val name=`cust_row_id>fun_id_if_exists`/>>
+            <</compare>>
+          <</case>>
+          "/>
+        <display obj_name="ar_inv" col_name="cust_row_id>function_id>descr" lng="160"/>
+
+        <end_if/>
+
+        <dummy validation="
+            <<validation>>
+              <<case>>
+                <<compare test=`[['if', '', 'ar_inv.cust_row_id', 'is', '$None', '']]`>>
+                  <<error head=`Customer` body=`Customer does not exist`/>>
+                <</compare>>
+              <</case>>
+            <</validation>>
+          "/>
+
         <row/>
         <col/>
         <label value="Invoice date:"/>
@@ -157,7 +203,7 @@
         <input obj_name="ar_inv" col_name="tran_number" lng="80"/>
         <end_if/>
 
-        <row/>
+        <!-- <row/>
         <col/>
         <label value="Terms code:"/>
         <col/>
@@ -168,7 +214,7 @@
         <col/>
         <label value="Tax inclusive?"/>
         <col/>
-        <input obj_name="ar_inv" col_name="tax_incl"/>
+        <input obj_name="ar_inv" col_name="tax_incl"/> -->
 
       </body>
 

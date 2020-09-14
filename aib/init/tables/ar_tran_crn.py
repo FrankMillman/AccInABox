@@ -107,7 +107,7 @@ cols.append ({
     'long_descr' : 'Credit note number',
     'col_head'   : 'Crn no',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_ledger.auto_crn_no', 'is_not', '$None', '']],
+    'calculated' : [['where', '', '_ledger.auto_crn_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -118,9 +118,9 @@ cols.append ({
         '<case>'
           '<on_post>'
             '<case>'
-              '<compare src="_ledger.auto_temp_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
                 '<case>'
-                  '<compare src="_ledger.auto_crn_no" op="is_not" tgt="$None">'
+                    '<compare test="[[`if`, ``, `_ledger.auto_crn_no`, `is not`, `$None`, ``]]">'
                     '<auto_gen args="_ledger.auto_crn_no"/>'
                   '</compare>'
                 '</case>'
@@ -129,10 +129,10 @@ cols.append ({
           '</on_post>'
           '<on_insert>'
             '<case>'
-              '<compare src="_ledger.auto_temp_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_ledger.auto_temp_no"/>'
               '</compare>'
-              '<compare src="_ledger.auto_crn_no" op="is_not" tgt="$None">'
+              '<compare test="[[`if`, ``, `_ledger.auto_crn_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_ledger.auto_crn_no"/>'
               '</compare>'
             '</case>'
@@ -226,7 +226,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="cust_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `cust_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
@@ -257,8 +257,11 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
+            '</compare>'
+            '<compare test="[[`if`, ``, `cust_row_id>currency_id`, `=`, `cust_row_id>currency_id`, ``]]">'
+                '<fld_val name="cust_exch_rate"/>'
             '</compare>'
             '<default>'
                 '<exch_rate>'
@@ -718,7 +721,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_ctrl_id'],  # tgt_col, src_col
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
                 ['source_code', "'ar_crn'"],

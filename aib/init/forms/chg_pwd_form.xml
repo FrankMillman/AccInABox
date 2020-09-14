@@ -16,7 +16,7 @@
     <output_param name="password" type="data_attr" source="pwd_var.pwd1"/>
   </output_params>
 
-  <frame>
+  <frame main_object="pwd_var">
     <toolbar/>
     <body>
       <block/>
@@ -34,7 +34,7 @@
         validation="
           <<validation>>
             <<case>>
-              <<compare src=`$value` op=`=` tgt=`pwd_var.pwd1`/>>
+              <<compare test=`[['if', '', '$value', '=', 'pwd_var.pwd1', '']]`/>>
               <<default>>
                 <<error head=`Error` body=`Passwords do not match`/>>
               <</default>>
@@ -47,7 +47,7 @@
         btn_enabled="true" btn_validate="true" btn_default="true"
         action="
           <<case>>
-            <<compare src=`pwd_var.pwd1` op=`is` tgt=`$None`>>
+            <<compare test=`[['if', '', 'pwd_var.pwd1', 'is', '$None', '']]`>>
               <<ask title=`Password` enter=`No` escape=`No`
                   question=`Are you sure you want a blank password?`>>
                 <<response ans=`Yes`>>

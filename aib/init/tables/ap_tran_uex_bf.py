@@ -97,25 +97,25 @@ cols.append ({
         ],
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'tran_number',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Transaction number',
-#     'long_descr' : 'Transaction number',
-#     'col_head'   : 'Tran no',
-#     'key_field'  : 'A',
-#     'calculated' : False,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 15,
-#     'db_scale'   : 0,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : None,
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
+cols.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction number',
+    'long_descr' : 'Transaction number',
+    'col_head'   : 'Tran no',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 15,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 cols.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
@@ -158,25 +158,6 @@ cols.append ({
 #     'fkey'       : None,
 #     'choices'    : None,
 #     })
-# cols.append ({
-#     'col_name'   : 'currency_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Transaction currency',
-#     'long_descr' : 'Currency used to enter transaction',
-#     'col_head'   : 'Currency',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 0,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : '{supp_row_id>currency_id}',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'supp_exch_rate',
     'data_type'  : 'DEC',
@@ -193,7 +174,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare src="supp_row_id>currency_id" op="eq" tgt="_param.local_curr_id">'
+            '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
@@ -221,64 +202,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 8,
     'scale_ptr'  : None,
-    'dflt_val'   : '1',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'bf_bal',
-    'data_type'  : 'DEC',
-    'short_descr': 'B/f unexpensed balance',
-    'long_descr' : 'B/f unexpensed balance in suppliier currency',
-    'col_head'   : 'B/f unexpensed balance',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'bf_supp',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance unexpensed upd - supp',
-    'long_descr' : 'Balance unexpensed updated from ap_tran_uex_bf_det - supplier currency',
-    'col_head'   : 'Upd uex - supp',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'bf_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance unexpensed upd - local',
-    'long_descr' : 'Balance unexpensed updated from ap_tran_bf_det - local currency',
-    'col_head'   : 'Upd uex - local',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
+    'dflt_val'   : '{supp_exch_rate}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -320,14 +244,3 @@ cursors = []
 
 # actions
 actions = []
-actions.append([
-    'post_checks', [
-        [
-            'check_totals',
-            'Total balance does not equal total of line items',
-            [
-                ['check', '', 'bf_supp', '=', 'bf_bal', ''],
-                ],
-            ],
-        ],
-    ])

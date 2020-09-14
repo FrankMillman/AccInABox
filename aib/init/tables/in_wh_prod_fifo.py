@@ -96,30 +96,30 @@ cols.append ({
         ],
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'key_field'  : 'A',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : [
-            # ['ipch', 'Purchase invoice'],
-            # # ['in_tfrin', 'Transfer in'],
-            ['ap_inv', 'Purchase invoice'],
-            ['cb_pmt', 'Purchase invoice'],
-        ],
-    })
+# cols.append ({
+#     'col_name'   : 'tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Transaction type',
+#     'long_descr' : 'Transaction type',
+#     'col_head'   : 'Tran type',
+#     'key_field'  : 'A',
+#     'calculated' : False,
+#     'allow_null' : False,
+#     'allow_amend': False,
+#     'max_len'    : 0,
+#     'db_scale'   : 0,
+#     'scale_ptr'  : None,
+#     'dflt_val'   : None,
+#     'dflt_rule'  : None,
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : [
+#             # ['ipch', 'Purchase invoice'],
+#             # # ['in_tfrin', 'Transfer in'],
+#             ['ap_inv', 'Purchase invoice'],
+#             ['cb_pmt', 'Purchase invoice'],
+#         ],
+#     })
 cols.append ({
     'col_name'   : 'tran_row_id',
     'data_type'  : 'INT',
@@ -136,15 +136,16 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : [
-        ['tran_type', [
-            # # ['ap_inv', 'ap_tran_inv_det'],
-            # ['ipch', 'pch_ipch_subinv'],
-            # # ['in_tfrin', 'in_tran_tfr_det'],
-            ['ap_inv', 'pch_ipch_subinv'],
-            ['cb_pmt', 'pch_ipch_subinv'],
-            ]],
-        'row_id', None, None, False, None],
+    # 'fkey'       : [
+    #     ['tran_type', [
+    #         # # ['ap_inv', 'ap_tran_inv_det'],
+    #         # ['ipch', 'pch_ipch_subinv'],
+    #         # # ['in_tfrin', 'in_tran_tfr_det'],
+    #         ['ap_inv', 'pch_ipch_subtran'],
+    #         ['cb_pmt', 'cb_tran_pmt_ipch'],
+    #         ]],
+    #     'row_id', None, None, False, None],
+    'fkey'       : ['pch_ipch_subtran', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({

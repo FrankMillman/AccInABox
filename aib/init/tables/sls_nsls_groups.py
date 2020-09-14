@@ -174,15 +174,6 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'first_row',
-    'data_type'  : 'BOOL',
-    'short_descr': 'First row?',
-    'long_descr' : 'If table is empty, this is the first row',
-    'col_head'   : '',
-    'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.sls_nsls_groups WHERE deleted_id = 0) "
-                   "THEN 0 ELSE 1 END",
-    })
-virt.append ({
     'col_name'   : 'children',
     'data_type'  : 'INT',
     'short_descr': 'Children',
@@ -191,14 +182,14 @@ virt.append ({
     'sql'        : "SELECT count(*) FROM {company}.sls_nsls_groups b "
                    "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
     })
-# virt.append ({
-#     'col_name'   : 'expandable',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Expandable?',
-#     'long_descr' : 'Expandable?',
-#     'col_head'   : '',
-#     'sql'        : "CASE WHEN a.class_type = 'class' THEN 0 ELSE 1 END",
-#     })
+virt.append ({
+    'col_name'   : 'expandable',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Expandable?',
+    'long_descr' : 'Expandable? - Can be over-ridden at run-time in db.objects if levels added',
+    'col_head'   : '',
+    'sql'        : "0",
+    })
 
 # cursor definitions
 cursors = []
