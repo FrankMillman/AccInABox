@@ -172,9 +172,9 @@ cursors.append({
     'cursor_name': 'tax_codes',
     'title': 'Maintain sales tax codes',
     'columns': [
-        ['tax_cat_id>tax_cat', 80, False, True, False, False, None, None, None, None],
-        ['tax_code', 80, False, False, False, False, None, None, None, None],
-        ['descr', 200, True, False, False, False, None, None, None, None],
+        ['tax_cat_id>tax_cat', 80, False, True],
+        ['tax_code', 80, False, False],
+        ['descr', 200, True, False],
         ],
     'filter': [],
     'sequence': [['tax_cat_id>seq', False], ['seq', False]],

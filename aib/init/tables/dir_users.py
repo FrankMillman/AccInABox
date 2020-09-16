@@ -272,8 +272,8 @@ cursors.append({
     'cursor_name': 'users',
     'title': 'Maintain users',
     'columns': [
-        ['user_id', 100, False, False, False, False, None, None, None, None],
-        ['display_name', 260, True, True, False, False, None, None, None, None],
+        ['user_id', 100, False, False],
+        ['display_name', 260, True, True],
         ],
     'filter': [],
     'sequence': [['user_id', False]],

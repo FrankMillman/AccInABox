@@ -280,12 +280,9 @@ cursors.append({
     'cursor_name': 'unposted_jnl',
     'title': 'Unposted gl journals',
     'columns': [
-        ['tran_number', 100,
-            False, True, False, False, None, None, None, None],
-        ['tran_date', 80,
-            False, True, False, False, None, None, None, None],
-        ['short_descr', 100,
-            False, True, False, True, None, None, None, None],
+        ['tran_number', 100, False, True],
+        ['tran_date', 80, False, True],
+        ['short_descr', 100, True, True],
         ],
     'filter': [
         ['where', '', 'posted', '=', "'0'", ''],

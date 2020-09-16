@@ -188,8 +188,8 @@ cursors.append({
     'cursor_name': 'whouse',
     'title': 'Warehouses',
     'columns': [
-        ['ledger_row_id>ledger_id', 100, False, False, False, False, None, None, None, None],
-        ['ledger_row_id>descr', 240, True, False, False, False, None, None, None, None],
+        ['ledger_row_id>ledger_id', 100, False, False],
+        ['ledger_row_id>descr', 240, True, False],
         ],
     'filter': [],
     'sequence': [['ledger_row_id>ledger_id', False]],
@@ -198,9 +198,9 @@ cursors.append({
     'cursor_name': 'prod_codes',
     'title': 'Product codes',
     'columns': [
-        ['prod_row_id>prod_code', 80, False, False, False, False, None, None, None, None],
-        ['prod_row_id>descr', 200, True, False, False, False, None, None, None, None],
-        ['prod_row_id>tax_code', 80, False, False, False, False, None, None, None, None],
+        ['prod_row_id>prod_code', 80, False, False],
+        ['prod_row_id>descr', 200, True, False],
+        ['prod_row_id>tax_code', 80, False, False],
         ],
     'filter': [],
     'sequence': [['prod_row_id>prod_code', False]],

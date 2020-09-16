@@ -143,8 +143,8 @@ cursors.append({
     'cursor_name': 'form_list',
     'title': 'Maintain form definitions',
     'columns': [
-        ['form_name', 160, False, False, False, False, None, None, None, None],
-        ['title', 300, True, False, False, False, None, None, None, None],
+        ['form_name', 160, False, False],
+        ['title', 300, True, False],
         ],
     'filter': [],
     'sequence': [['form_name', False]],

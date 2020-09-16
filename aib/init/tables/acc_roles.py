@@ -283,8 +283,8 @@ cursors.append ({
     'cursor_name': 'role_list',
     'title': 'List of roles',
     'columns': [
-        ['role', 80, False, False, False, False, None, None, None, None],
-        ['descr', 150, True, False, False, False, None, None, None, None],
+        ['role', 80, False, False],
+        ['descr', 150, True, False],
         ],
     'filter': [],
     'sequence': [['role', False]],
@@ -293,8 +293,8 @@ cursors.append ({
     'cursor_name': 'roles_no_admin',
     'title': 'List of roles excluding admin',
     'columns': [
-        ['role', 80, False, False, False, False, None, None, None, None],
-        ['descr', 150, True, False, False, False, None, None, None, None],
+        ['role', 80, False, False],
+        ['descr', 150, True, False],
         ],
     'filter': [['where', '', 'role', '!=', "'admin'", '']],
     'sequence': [['role', False]],

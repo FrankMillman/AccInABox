@@ -143,8 +143,8 @@ cursors.append({
     'cursor_name': 'tax_rates',
     'title': 'Maintain tax rates',
     'columns': [
-        ['eff_date', 60, False, False, False, False, None, None, None, None],
-        ['rate', 80, False, False, False, False, None, None, None, None],
+        ['eff_date', 60, False, False],
+        ['rate', 80, False, False],
         ],
     'filter': [],
     'sequence': [['eff_date', True]],

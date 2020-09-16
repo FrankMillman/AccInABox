@@ -198,8 +198,8 @@ cursors.append({
     'cursor_name': 'functions',
     'title': 'Maintain functions',
     'columns': [
-        ['function_id', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, True, False, False, None, None, None, None],
+        ['function_id', 100, False, False],
+        ['descr', 260, True, True],
         ],
     'filter': [['WHERE', '', 'function_type', '!=', "'root'", '']],
     'sequence': [['function_id', False]],

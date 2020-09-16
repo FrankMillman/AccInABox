@@ -487,8 +487,8 @@ cursors.append({
     'cursor_name': 'ap_ledg',
     'title': 'Maintain ap ledger params',
     'columns': [
-        ['ledger_id', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
+        ['ledger_id', 100, False, False],
+        ['descr', 260, True, False],
         ],
     'filter': [],
     'sequence': [['ledger_id', False]],

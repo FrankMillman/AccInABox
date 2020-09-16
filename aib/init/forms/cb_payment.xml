@@ -6,12 +6,12 @@
   <db_objects>
     <db_obj name="cb_pmt" table_name="cb_tran_pmt" is_formview_obj="true"/>
     <db_obj name="cb_det" table_name="cb_tran_pmt_det" parent="cb_pmt"/>
-    <db_obj name="ipch" table_name="cb_ipch_inv" parent="cb_det"/>
-    <db_obj name="npch" table_name="cb_npch_inv" parent="cb_det"/>
+    <db_obj name="ipch" table_name="pch_ipch_subtran" parent="cb_det"/>
+    <db_obj name="npch" table_name="pch_npch_subtran" parent="cb_det"/>
     <db_obj name="achg" table_name="ar_subtran_chg" parent="cb_det"/>
     <!-- <db_obj name="ar_pmt" table_name="ar_subtran_pmt" parent="cb_det"/> -->
     <!-- <db_obj name="ar_pmt_alloc" table_name="ar_subtran_pmt_alloc" parent="ar_pmt"/> -->
-    <db_obj name="gl_jnl" table_name="cbpmt_gl_jnl" parent="cb_det"/>
+    <db_obj name="gl_jnl" table_name="gl_jnl_subtran" parent="cb_det"/>
     <db_obj name="com" table_name="cb_comments" parent="cb_det"/>
   </db_objects>
 

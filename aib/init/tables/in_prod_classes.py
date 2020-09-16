@@ -239,8 +239,8 @@ cursors.append({
     'cursor_name': 'prod_classes',
     'title': 'Product classes',
     'columns': [
-        ['prod_class', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
+        ['prod_class', 100, False, False],
+        ['descr', 260, True, False],
         ],
     'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],

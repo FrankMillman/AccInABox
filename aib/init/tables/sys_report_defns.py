@@ -143,8 +143,8 @@ cursors.append({
     'cursor_name': 'report_list',
     'title': 'Maintain report definitions',
     'columns': [
-        ['report_name', 160, False, False, False, False, None, None, None, None],
-        ['descr', 300, True, False, False, False, None, None, None, None],
+        ['report_name', 160, False, False],
+        ['descr', 300, True, False],
         ],
     'filter': [],
     'sequence': [['report_name', False]],

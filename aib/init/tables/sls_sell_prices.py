@@ -142,8 +142,8 @@ cursors.append({
     'cursor_name': 'sell_prices',
     'title': 'Maintain selling prices',
     'columns': [
-        ['eff_date', 60, False, False, False, False, None, None, None, None],
-        ['sell_price', 80, False, False, False, False, None, None, None, None],
+        ['eff_date', 60, False, False],
+        ['sell_price', 80, False, False],
         ],
     'filter': [],
     'sequence': [['eff_date', True]],

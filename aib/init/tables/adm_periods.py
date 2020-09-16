@@ -220,8 +220,8 @@ cursors.append({
     'cursor_name': 'adm_per',
     'title': 'Maintain financial periods',
     'columns': [
-        ['period_row_id', 80, True, True, False, False, None, None, None, None],
-        ['closing_date', 100, False, True, False, False, None, None, None, None],
+        ['period_row_id', 80, True, True],
+        ['closing_date', 100, False, True],
         ],
     'filter': [['WHERE', '', 'row_id', '>', 0, '']],
     'sequence': [['row_id', False]],

@@ -398,12 +398,9 @@ cursors.append({
     'cursor_name': 'unposted_pmt',
     'title': 'Unposted cb payments',
     'columns': [
-        ['tran_number', 100,
-            False, True, False, False, None, None, None, None],
-        ['tran_date', 80,
-            False, True, False, False, None, None, None, None],
-        ['amount', 100,
-            False, True, False, False, None, None, None, None],
+        ['tran_number', 100, False, True],
+        ['tran_date', 80, False, True],
+        ['amount', 100, False, True],
         ],
     'filter': [
         ['where', '', 'posted', '=', "'0'", ''],

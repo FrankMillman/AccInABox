@@ -153,8 +153,8 @@ cursors.append({
     'cursor_name': 'ap_comm',
     'title': 'Comments',
     'columns': [
-        ['code', 100, False, False, False, False, None, None, None, None],
-        ['text', 260, True, True, False, False, None, None, None, None],
+        ['code', 100, False, False],
+        ['text', 260, True, True],
         ],
     'filter': [],
     'sequence': [['code', False]],

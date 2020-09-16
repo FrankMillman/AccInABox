@@ -245,8 +245,8 @@ cursors.append({
     'cursor_name': 'parties',
     'title': 'Maintain parties',
     'columns': [
-        ['party_id', 100, False, False, False, False, None, None, None, None],
-        ['display_name', 260, True, True, False, False, None, None, None, None],
+        ['party_id', 100, False, False],
+        ['display_name', 260, True, True],
         ],
     'filter': [],
     'sequence': [['party_id', False]],

@@ -842,7 +842,6 @@ class Frame:
 
                 readonly = self.form.readonly or (element.get('readonly') == 'true')
                 skip = (element.get('skip') == 'true')
-                reverse = (element.get('reverse') == 'true')
                 lng = element.get('lng')
                 if lng is not None:
                     lng = int(lng)
@@ -879,7 +878,7 @@ class Frame:
                 data_type = fld.col_defn.data_type
                 gui_ctrl = ht.gui_objects.gui_ctrls[data_type]
                 gui_obj = gui_ctrl()
-                await gui_obj._ainit_(self, fld, readonly, skip, reverse,
+                await gui_obj._ainit_(self, fld, readonly, skip,
                     choices, lkup, pwd, lng, height, label, action, gui)
                 fld.notify_form(gui_obj)
                 # self.flds_notified.append((fld, gui_obj))
@@ -1204,7 +1203,6 @@ class Frame:
 
                 readonly = False
                 skip = False
-                reverse = False
                 lng = None if data_type == 'BOOL' else dflt_lng
                 choices = None
                 if sub_fld.col_defn.choices is not None:
@@ -1219,7 +1217,7 @@ class Frame:
                 action = None
 
                 gui_obj = gui_ctrl()
-                await gui_obj._ainit_(self, sub_fld, readonly, skip, reverse,
+                await gui_obj._ainit_(self, sub_fld, readonly, skip,
                     choices, lkup, pwd, lng, height, label, action, subtype_gui)
                 sub_fld.notify_form(gui_obj)
                 # self.flds_notified.append((sub_fld, gui_obj))

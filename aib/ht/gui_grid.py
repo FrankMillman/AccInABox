@@ -102,7 +102,6 @@ class GuiGrid:
                         cur_col.get('expand') == 'true',
                         cur_col.get('readonly') == 'true',
                         cur_col.get('skip') == 'true',
-                        cur_col.get('reverse') == 'true',
                         cur_col.get('before'),
                         cur_col.get('dflt_val'),
                         cur_col.get('validation'),
@@ -176,8 +175,12 @@ class GuiGrid:
         while pos < len(columns):
             col_defn = columns[pos]
             if col_defn[0] == 'cur_col':
-                (col_name, lng, expand, readonly, skip, reverse, before,
-                    form_dflt, validation, after, *action) = col_defn[1:]
+                col_name, lng, expand, readonly, *others = col_defn[1:]
+                if others:  # from form_defn - 'others' can be defined there
+                    skip, before, form_dflt, validation, after, action = others
+                else:  # from db.cursors - 'others' not defined
+                    skip = False
+                    before = form_dflt = validation = after = action = None
 
                 readonly = self.form.readonly or readonly  # form.readonly takes precedence
 
@@ -200,12 +203,6 @@ class GuiGrid:
                             0,          # lng
                             False,      # expand
                             False,      # readonly
-                            False,      # skip
-                            False,      # reversse
-                            None,       # before
-                            None,       # form_dflt
-                            None,       # validation
-                            None,       # after
                             ]
                         columns.append(scale_ptr_col)
                     self.scale_xref[pos] = scale_ptr_dict[scale_ptr]
@@ -224,10 +221,10 @@ class GuiGrid:
                 height = None
                 label = None
 
-                if action == []:  # not in col_defn
-                    action = None
-                else:
-                    action = action[0]  # extract from slice - could be None
+                # if action == []:  # not in col_defn
+                #     action = None
+                # else:
+                #     action = action[0]  # extract from slice - could be None
                 if action is not None:
                     action = etree.fromstring(
                         f'<_>{action}</_>', parser=parser)
@@ -235,7 +232,7 @@ class GuiGrid:
                 gui_ctrl = ht.gui_objects.gui_ctrls[fld.col_defn.data_type]
                 gui_obj = gui_ctrl()
                 await gui_obj._ainit_(
-                    self, fld, readonly, skip, reverse, choices, lkup, pwd,
+                    self, fld, readonly, skip, choices, lkup, pwd,
                     lng, height, label, action, gui_cols, grid=True)
 
                 if form_dflt is not None:
@@ -299,7 +296,6 @@ class GuiGrid:
         # defaults for header/footer columns
         readonly = True
         skip = False
-        reverse = False
         choices = None
         lkup = False
         pwd = ''
@@ -320,7 +316,7 @@ class GuiGrid:
                 gui_ctrl = ht.gui_objects.gui_ctrls[fld.col_defn.data_type]
                 gui_obj = gui_ctrl()
                 await gui_obj._ainit_(
-                    self.parent, fld, readonly, skip, reverse, choices, lkup, pwd,
+                    self.parent, fld, readonly, skip, choices, lkup, pwd,
                     lng, height, label, action, header_cols)
                 fld.notify_form(gui_obj)
 
@@ -336,7 +332,7 @@ class GuiGrid:
                 gui_ctrl = ht.gui_objects.gui_ctrls[fld.col_defn.data_type]
                 gui_obj = gui_ctrl()
                 await gui_obj._ainit_(
-                    self.parent, fld, readonly, skip, reverse, choices, lkup, pwd,
+                    self.parent, fld, readonly, skip, choices, lkup, pwd,
                     lng, height, label, action, footer_cols)
                 fld.notify_form(gui_obj)
 

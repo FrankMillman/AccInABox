@@ -207,8 +207,8 @@ cursors.append({
     'cursor_name': 'terms_codes',
     'title': 'Maintain ar terms codes',
     'columns': [
-        ['terms_code', 80, False, False, False, False, None, None, None, None],
-        ['descr', 200, True, False, False, False, None, None, None, None],
+        ['terms_code', 80, False, False],
+        ['descr', 200, True, False],
         ],
     'filter': [],
     'sequence': [['seq', False]],

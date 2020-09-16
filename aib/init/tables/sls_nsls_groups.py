@@ -197,9 +197,9 @@ cursors.append({
     'cursor_name': 'all_nsls_groups',
     'title': 'Nsls groups',
     'columns': [
-        ['nsls_group', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
-        ['group_type', 60, False, False, False, False, None, None, None, None],
+        ['nsls_group', 100, False, False],
+        ['descr', 260, True, False],
+        ['group_type', 60, False, False],
         ],
     'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],
@@ -208,8 +208,8 @@ cursors.append({
     'cursor_name': 'nsls_groups',
     'title': 'Maintain nsls groups',
     'columns': [
-        ['nsls_group', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
+        ['nsls_group', 100, False, False],
+        ['descr', 260, True, False],
         ],
     'filter': [['where', '', 'group_type', '!=', "'root'", '']],
     'sequence': [['parent_id', False], ['seq', False]],

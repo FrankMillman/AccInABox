@@ -183,9 +183,9 @@ cursors.append({
     'cursor_name': 'in_per',
     'title': 'Maintain in ledger periods',
     'columns': [
-        ['period_row_id', 80, True, True, False, False, None, None, None, None],
-        ['closing_date', 100, False, True, False, False, None, None, None, None],
-        ['state', 100, False, True, False, False, None, None, None, None],
+        ['period_row_id', 80, True, True],
+        ['closing_date', 100, False, True],
+        ['state', 100, False, True],
         ],
     'filter': [],
     'sequence': [['row_id', False]],

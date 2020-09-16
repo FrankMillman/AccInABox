@@ -124,8 +124,8 @@ cursors.append({
     'cursor_name': 'msg_types',
     'title': 'Maintain message types',
     'columns': [
-        ['message_type', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
+        ['message_type', 100, False, False],
+        ['descr', 260, True, False],
         ],
     'filter': [],
     'sequence': [['message_type', False]],

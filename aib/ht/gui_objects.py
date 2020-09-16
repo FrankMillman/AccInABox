@@ -282,7 +282,7 @@ class GuiCtrl:
             # else display error message
 
 class GuiTextCtrl(GuiCtrl):
-    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
+    async def _ainit_(self, parent, fld, readonly, skip, choices, lkup,
             pwd, lng, height, label, action, gui, grid=False):
         await GuiCtrl._ainit_(self, parent, fld, readonly, action)
         self.pwd = pwd
@@ -309,14 +309,11 @@ class GuiTextCtrl(GuiCtrl):
             self.readonly = True
 
 class GuiNumCtrl(GuiCtrl):
-    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
+    async def _ainit_(self, parent, fld, readonly, skip, choices, lkup,
             pwd, lng, height, label, action, gui, grid=False):
         await GuiCtrl._ainit_(self, parent, fld, readonly, action)
         if lng != 0:
             value = None if grid else await fld.val_to_str()
-
-            reverse = False  # 'reverse' no longer used [2016-12-11]
-                             # but it 'might' be revived [2018-10-02]
 
             if choices is not None:
                 type = 'choice'
@@ -327,8 +324,8 @@ class GuiNumCtrl(GuiCtrl):
                 type = 'num'
             input = {'type': type, 'lng': lng, 'ref': self.ref,
                 'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
-                'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly, 'choices': choices,
-                'skip': skip, 'amend_ok': self.amend_ok, 'reverse': reverse,
+                'allow_amend': fld.col_defn.allow_amend, 'readonly': readonly,
+                'choices': choices, 'skip': skip, 'amend_ok': self.amend_ok,
                 'value': value, 'integer': (fld.col_defn.data_type == 'INT'),
                 'max_decimals': fld.col_defn.db_scale, 'neg_display': NEG_DISPLAY,
                 'clickable': (action is not None)}
@@ -337,7 +334,7 @@ class GuiNumCtrl(GuiCtrl):
             self.readonly = True
 
 class GuiDateCtrl(GuiCtrl):
-    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
+    async def _ainit_(self, parent, fld, readonly, skip, choices, lkup,
             pwd, lng, height, label, action, gui, grid=False):
         await GuiCtrl._ainit_(self, parent, fld, readonly, action)
         if lng != 0:
@@ -354,7 +351,7 @@ class GuiDateCtrl(GuiCtrl):
             self.readonly = True
 
 class GuiBoolCtrl(GuiCtrl):
-    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
+    async def _ainit_(self, parent, fld, readonly, skip, choices, lkup,
             pwd, lng, height, label, action, gui, grid=False):
         await GuiCtrl._ainit_(self, parent, fld, readonly, action)
         if lng != 0:
@@ -369,7 +366,7 @@ class GuiBoolCtrl(GuiCtrl):
             self.readonly = True
 
 class GuiSxmlCtrl(GuiCtrl):
-    async def _ainit_(self, parent, fld, readonly, skip, reverse, choices, lkup,
+    async def _ainit_(self, parent, fld, readonly, skip, choices, lkup,
             pwd, lng, height, label, action, gui, grid=False):
         await GuiCtrl._ainit_(self, parent, fld, readonly, action)
         if lng != 0:

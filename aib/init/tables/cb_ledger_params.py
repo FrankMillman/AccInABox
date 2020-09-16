@@ -357,8 +357,8 @@ cursors.append({
     'cursor_name': 'cb_ledg',
     'descr': 'Bank accounts',
     'columns': [
-        ['ledger_id', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, True, False, False, None, None, None, None],
+        ['ledger_id', 100, False, False],
+        ['descr', 260, True, True],
         ],
     'filter': [],
     'sequence': [['ledger_id', False]],
@@ -368,8 +368,8 @@ cursors.append ({
     'cursor_name': 'cash_books',
     'title': 'Maintain cash book params',
     'columns': [
-        ['ledger_id', 80, False, False, False, False, None, None, None, None],
-        ['descr', 160, True, False, False, False, None, None, None, None],
+        ['ledger_id', 80, False, False],
+        ['descr', 160, True, False],
         ],
     'filter': [],
     'sequence': [['ledger_id', False]],

@@ -261,8 +261,8 @@ cursors.append({
     'cursor_name': 'in_ledg',
     'descr': 'Warehouses',
     'columns': [
-        ['ledger_id', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, True, False, False, None, None, None, None],
+        ['ledger_id', 100, False, False],
+        ['descr', 260, True, True],
         ],
     'filter': [],
     'sequence': [['ledger_id', False]],
@@ -272,8 +272,8 @@ cursors.append({
     'cursor_name': 'whouse',
     'title': 'Maintain warehouse params',
     'columns': [
-        ['ledger_id', 100, False, False, False, False, None, None, None, None],
-        ['descr', 240, True, False, False, False, None, None, None, None],
+        ['ledger_id', 100, False, False],
+        ['descr', 240, True, False],
         ],
     'filter': [],
     'sequence': [['ledger_id', False]],

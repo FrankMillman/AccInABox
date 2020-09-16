@@ -197,9 +197,9 @@ cursors.append({
     'cursor_name': 'all_npch_groups',
     'title': 'Npch groups',
     'columns': [
-        ['npch_group', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
-        ['group_type', 60, False, False, False, False, None, None, None, None],
+        ['npch_group', 100, False, False],
+        ['descr', 260, True, False],
+        ['group_type', 60, False, False],
         ],
     'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],
@@ -208,8 +208,8 @@ cursors.append({
     'cursor_name': 'npch_groups',
     'title': 'Maintain npch groups',
     'columns': [
-        ['npch_group', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
+        ['npch_group', 100, False, False],
+        ['descr', 260, True, False],
         ],
     'filter': [['where', '', 'group_type', '!=', "'root'", '']],
     'sequence': [['parent_id', False], ['seq', False]],

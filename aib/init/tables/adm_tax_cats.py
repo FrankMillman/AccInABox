@@ -272,9 +272,9 @@ cursors.append({
     'cursor_name': 'tax_cats',
     'title': 'Maintain sales tax categories',
     'columns': [
-        ['tax_cat', 80, False, False, False, False, None, None, None, None],
-        ['descr', 200, True, False, False, False, None, None, None, None],
-        ['scale', 80, False, False, False, False, None, None, None, None],
+        ['tax_cat', 80, False, False],
+        ['descr', 200, True, False],
+        ['scale', 80, False, False],
         ],
     'filter': [],
     'sequence': [['seq', False]],

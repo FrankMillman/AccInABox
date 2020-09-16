@@ -199,8 +199,8 @@ cursors.append({
     'cursor_name': 'locs',
     'title': 'Maintain locations',
     'columns': [
-        ['location_id', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, True, False, False, None, None, None, None],
+        ['location_id', 100, False, False],
+        ['descr', 260, True, True],
         ],
     'filter': [['WHERE', '', 'location_type', '!=', "'root'", '']],
     'sequence': [['location_id', False]],

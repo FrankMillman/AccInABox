@@ -206,9 +206,9 @@ cursors.append({
     'cursor_name': 'all_prod_groups',
     'title': 'Product groups',
     'columns': [
-        ['prod_group', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
-        ['group_type', 60, False, False, False, False, None, None, None, None],
+        ['prod_group', 100, False, False],
+        ['descr', 260, True, False],
+        ['group_type', 60, False, False],
         ],
     'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],
@@ -217,8 +217,8 @@ cursors.append({
     'cursor_name': 'prod_groups',
     'title': 'Maintain product groups',
     'columns': [
-        ['prod_group', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
+        ['prod_group', 100, False, False],
+        ['descr', 260, True, False],
         ],
     'filter': [['where', '', 'group_type', '!=', "'group'", '']],
     'sequence': [['parent_id', False], ['seq', False]],

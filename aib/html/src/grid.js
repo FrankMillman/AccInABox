@@ -158,7 +158,6 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
       case 'num':
         var input = create_cell_input(grid);
         input.aib_obj = new AibNum();
-        input.reverse = col_defn.reverse;
         input.integer = col_defn.integer;
         input.neg_display = col_defn.neg_display;
         input.style.textAlign = 'right';

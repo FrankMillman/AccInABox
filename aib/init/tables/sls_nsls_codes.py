@@ -324,8 +324,8 @@ cursors.append({
     'cursor_name': 'all_nsls_codes',
     'title': 'All sls codes - non-inventory',
     'columns': [
-        ['nsls_code', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
+        ['nsls_code', 100, False, False],
+        ['descr', 260, True, False],
         ],
     'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],
@@ -334,8 +334,8 @@ cursors.append({
     'cursor_name': 'nsls_codes',
     'title': 'Maintain sales codes',
     'columns': [
-        ['nsls_code', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
+        ['nsls_code', 100, False, False],
+        ['descr', 260, True, False],
         ],
     'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],

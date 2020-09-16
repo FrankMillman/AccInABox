@@ -450,7 +450,6 @@ function setup_text(text, json_elem) {
 function setup_num(num, json_elem) {
   num.aib_obj = new AibNum();
 
-  num.reverse = json_elem.reverse;
   num.integer = json_elem.integer;
   num.max_decimals = json_elem.max_decimals;
   num.neg_display = json_elem.neg_display;

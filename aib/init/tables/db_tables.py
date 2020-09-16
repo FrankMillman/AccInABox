@@ -421,9 +421,9 @@ cursors.append({
     'cursor_name': 'db_tables',
     'title': 'Maintain database tables',
     'columns': [
-        ['table_name', 160, False, False, False, False, None, None, None, None],
-        ['short_descr', 250, True, False, False, False, None, None, None, None],
-        ['defn_company', 80, False, True, False, False, None, None, None, None],
+        ['table_name', 160, False, False],
+        ['short_descr', 250, True, False],
+        ['defn_company', 80, False, True],
         ],
     'filter': [],
     'sequence': [['table_name', False]],

@@ -326,8 +326,8 @@ cursors.append({
     'cursor_name': 'all_npch_codes',
     'title': 'All pch codes - non-inventory',
     'columns': [
-        ['npch_code', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
+        ['npch_code', 100, False, False],
+        ['descr', 260, True, False],
         ],
     'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],
@@ -336,8 +336,8 @@ cursors.append({
     'cursor_name': 'npch_codes',
     'title': 'Maintain purchase codes',
     'columns': [
-        ['npch_code', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
+        ['npch_code', 100, False, False],
+        ['descr', 260, True, False],
         ],
     'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],

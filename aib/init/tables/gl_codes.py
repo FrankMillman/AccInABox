@@ -262,8 +262,8 @@ cursors.append({
     'cursor_name': 'gl_codes',
     'title': 'Maintain gl codes',
     'columns': [
-        ['gl_code', 80, False, False, False, False, None, None, None, None],
-        ['descr', 200, True, False, False, False, None, None, None, None],
+        ['gl_code', 80, False, False],
+        ['descr', 200, True, False],
         ],
     'filter': [],
     'sequence': [],

@@ -207,10 +207,7 @@ AibNum.prototype.after_got_focus = function(num) {
     num.value = this.num_to_string(num, num.current_value);
     return;
     }
-  if (num.reverse)
-    num.value = this.reverse(num.current_value);
-  else
-    num.value = num.current_value;  // reset from display format to input format
+  num.value = num.current_value;  // reset from display format to input format
   setInsertionPoint(num, 0, num.value.length);
   };
 AibNum.prototype.set_dflt_val = function(num, value) {
@@ -220,17 +217,12 @@ AibNum.prototype.set_dflt_val = function(num, value) {
 AibNum.prototype.before_lost_focus = function(num) {
   if (!num.amendable())
     return true;
-  if (num.reverse)
-    num.current_value = this.reverse(num.value);
-  else
-    num.current_value = num.value;
+  num.current_value = num.value;
   return true;
   };
 AibNum.prototype.after_lost_focus = function(num) {
   num.className = 'blur_background';
   var value = num.current_value;
-  if (num.reverse)
-    value = this.reverse(value);
   num.value = this.num_to_string(num, value);
   };
 AibNum.prototype.num_to_string = function(num, value) {
@@ -300,8 +292,6 @@ AibNum.prototype.data_changed = function(num) {
 AibNum.prototype.reset_value = function(num) {
   var value = num.form_value;
   num.current_value = value;
-  if (num.reverse)
-    value = this.reverse(value);
   num.value = value;
   num.focus();
   };
@@ -315,18 +305,12 @@ AibNum.prototype.set_value_from_server = function(num, value) {
     num.current_value = value;
     if (num.frame.form.current_focus === num)
       num.value = value;
-    else {
-      if (num.reverse)
-        num.value = this.num_to_string(num, this.reverse(value));
-      else
-        num.value = this.num_to_string(num, value);
-      };
+    else
+      num.value = this.num_to_string(num, value);
     };
   num.form_value = value
   };
 AibNum.prototype.set_prev_from_server = function(num, value) {
-  if (num.reverse)
-    value = this.reverse(value);
    num.value = value;
   };
 AibNum.prototype.cell_data_changed = function(cell) {
@@ -343,47 +327,21 @@ AibNum.prototype.reset_cell_value = function(cell) {
   };
 AibNum.prototype.before_cell_lost_focus = function(num) {
   var value = num.value;
-  if (num.reverse)
-//    if (value.substring(0, 1) === '-')
-//      value = value.substring(1, value.length)
-//    else if ((value + 0) === 0)
-//      value = value
-//    else
-//      value = '-' + value;
-    value = this.reverse(value);
   num.current_value = value;
   return true;
   };
 AibNum.prototype.set_cell_value_got_focus = function(cell) {
   var value = cell.current_value;
-  if (cell.input.reverse)
-//    if (value.substring(0, 1) === '-')
-//      value = value.substring(1, value.length)
-//    else if ((value + 0) === 0)
-//      value = value
-//    else
-//      value = '-' + value;
-    value = this.reverse(value);
 //  if (!(/\S/.test(value)))  // if cannot find a non-whitespace character
 //    value = '\xa0';  // replace with &nbsp
   cell.text_node.data = value;
   };
 AibNum.prototype.set_cell_dflt_val = function(cell, value) {
-  // we should probably check for 'reverse' here
   cell.text_node.data = value;
   cell.current_value = value;
   };
 AibNum.prototype.set_cell_value_lost_focus = function(cell, value) {
   cell.current_value = value;  // save for 'got_focus' and 'edit_cell'
-  if (cell.input.reverse)
-////    value = (-value) + '';
-//    if (value.substring(0, 1) === '-')
-//      value = value.substring(1, value.length)
-//    else if ((value + 0) === 0)
-//      value = value
-//    else
-//      value = '-' + value;
-    value = this.reverse(value);
   value = this.num_to_string(cell.input, value);
   if (!(/\S/.test(value)))  // if cannot find a non-whitespace character
     value = '\xa0';  // replace with &nbsp
@@ -405,29 +363,9 @@ AibNum.prototype.start_edit = function(input, current_value, keyCode) {  // call
   setInsertionPoint(input, input.value.length);
   };
 AibNum.prototype.convert_prev_cell_value = function(cell, prev_value) {
-  if (cell.input.reverse)
-//    if (prev_value !== '')
-////      prev_value = (-prev_value) + '';
-//      if (prev_value.substring(0, 1) === '-')
-//        prev_value = prev_value.substring(1, prev_value.length)
-//      else if ((prev_value + 0) === 0)
-//        prev_value = prev_value
-//      else
-//        prev_value = '-' + prev_value;
-    prev_value = this.reverse(prev_value);
 //  if (!(/\S/.test(prev_value)))  // if cannot find a non-whitespace character
 //    prev_value = '\xa0';  // replace with &nbsp
   return prev_value;
-  };
-AibNum.prototype.reverse = function(value) {
-  if (value.substring(0, 1) === '-')
-    value = value.substring(1, value.length)
-  // else if ((value + 0) == 0)  // don't use '===' ; 0.00 == 0, 0.00 !== 0
-  else if (!(value + 0))
-    value = value
-  else
-    value = '-' + value;
-  return value;
   };
 
 ////////////////////

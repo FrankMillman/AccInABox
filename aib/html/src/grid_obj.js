@@ -25,7 +25,7 @@ function create_cell_input(grid) {
       this.aib_obj.set_cell_dflt_val(cell, value);
       }
     else {
-      cell.text_node.data = value;  // if num and reverse, must reverse first!
+      cell.text_node.data = value;
       cell.current_value = value;
       this.aib_obj.set_cell_value_lost_focus(cell, value);
       };

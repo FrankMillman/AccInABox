@@ -253,9 +253,9 @@ cursors.append({
     'cursor_name': 'all_gl_groups',
     'title': 'Gl groups',
     'columns': [
-        ['gl_group', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
-        ['group_type', 60, False, False, False, False, None, None, None, None],
+        ['gl_group', 100, False, False],
+        ['descr', 260, True, False],
+        ['group_type', 60, False, False],
         ],
     'filter': [],
     'sequence': [['parent_id', False], ['seq', False]],
@@ -264,8 +264,8 @@ cursors.append({
     'cursor_name': 'gl_groups',
     'title': 'Maintain gl groups',
     'columns': [
-        ['gl_group', 100, False, False, False, False, None, None, None, None],
-        ['descr', 260, True, False, False, False, None, None, None, None],
+        ['gl_group', 100, False, False],
+        ['descr', 260, True, False],
         ],
     'filter': [['where', '', 'group_type', '!=', "'root'", '']],
     'sequence': [['parent_id', False], ['seq', False]],
