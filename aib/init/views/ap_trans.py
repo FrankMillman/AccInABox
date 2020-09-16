@@ -136,6 +136,46 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'debit_supp',
+    'data_type'  : 'DEC',
+    'short_descr': 'Debit - supplier currency',
+    'long_descr' : 'Debit amount - supplier currency',
+    'col_head'   : 'Debit',
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'sql'        : "CASE WHEN a.amount_supp >= 0 THEN a.amount_supp ELSE NULL END",
+    })
+virt.append ({
+    'col_name'   : 'credit_supp',
+    'data_type'  : 'DEC',
+    'short_descr': 'Credit - supplier currency',
+    'long_descr' : 'Credit amount - supplier currency',
+    'col_head'   : 'Credit',
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'sql'        : "CASE WHEN a.amount_supp < 0 THEN 0 - a.amount_supp ELSE NULL END",
+    })
+virt.append ({
+    'col_name'   : 'balance_supp',
+    'data_type'  : 'DEC',
+    'short_descr': 'Balance - supplier currency',
+    'long_descr' : 'Running balance - supplier currency',
+    'col_head'   : 'Bal supp',
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'sql'        : (
+        "SUM(a.amount_supp) OVER (ORDER BY a.tran_date, a.tran_type, a.tran_row_id) + {ap_supp.op_bal_supp}"
+        )
+    })
+virt.append ({
+    'col_name'   : 'balance_local',
+    'data_type'  : 'DEC',
+    'short_descr': 'Balance - local currency',
+    'long_descr' : 'Running balance - local currency',
+    'col_head'   : 'Bal local',
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : (
+        "SUM(a.amount_local) OVER (ORDER BY a.tran_date, a.tran_type, a.tran_row_id) + {ap_supp.op_bal_local}"
+        )
+    })
 
 # cursor definitions
 cursors = []

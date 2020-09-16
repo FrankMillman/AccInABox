@@ -25,6 +25,26 @@
       <mem_col col_name="show_120" data_type="BOOL" short_descr="Show 120 day trans due"
         long_descr="Show 120 day transactions due" allow_amend="true"/>
     </mem_obj>
+    <mem_obj name="aged_bals" descr="Variables for aged balances">
+      <mem_col col_name="bal_total" data_type="DEC" short_descr="Balance - total"
+        long_descr="Balance as at date - total" col_head="Bal total"
+        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="bal_curr" data_type="DEC" short_descr="Balance - current"
+        long_descr="Balance as at date - current" col_head="Bal curr"
+        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="bal_30" data_type="DEC" short_descr="Balance - 30 days"
+        long_descr="Balance as at date - 30 days" col_head="Bal 30"
+        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="bal_60" data_type="DEC" short_descr="Balance - 60 days"
+        long_descr="Balance as at date - 60 days" col_head="Bal 60"
+        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="bal_90" data_type="DEC" short_descr="Balance - 90 days"
+        long_descr="Balance as at date - 90 days" col_head="Bal 90"
+        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
+      <mem_col col_name="bal_120" data_type="DEC" short_descr="Balance - 120+ days"
+        long_descr="Balance as at date - 120+ days" col_head="Bal 120+"
+        allow_amend="true" db_scale="2" scale_ptr="currency.scale"/>
+    </mem_obj>
     <mem_obj name="tran_vars" descr="Variables for 'Transactions' tab">
       <mem_col col_name="op_bal" data_type="DEC" short_descr="Opening balance"
         long_descr="Opening balance" col_head="B/F" allow_amend="true"
@@ -77,7 +97,7 @@
       <input obj_name="balance_date_vars" col_name="balance_date" lng="84" readonly="true" skip="true"/>
       <col/>
       <display obj_name="currency" col_name="symbol" lng="10"/>
-      <display obj_name="ar_cust" col_name="bal_total" lng="80"/>
+      <display obj_name="aged_bals" col_name="bal_total" lng="80"/>
       <col/>
       <button btn_id="change_date" btn_label="Change" help_msg = "Change date"
         btn_enabled="true" btn_validate="true" action="
@@ -123,17 +143,17 @@
       <col/>
       <text value="Balance: "/>
       <col/>
-      <input obj_name="ar_cust" col_name="bal_120" lng="80" readonly="true" skip="true"/>
+      <input obj_name="aged_bals" col_name="bal_120" lng="80" readonly="true" skip="true"/>
       <col/>
-      <input obj_name="ar_cust" col_name="bal_90" lng="80" readonly="true" skip="true"/>
+      <input obj_name="aged_bals" col_name="bal_90" lng="80" readonly="true" skip="true"/>
       <col/>
-      <input obj_name="ar_cust" col_name="bal_60" lng="80" readonly="true" skip="true"/>
+      <input obj_name="aged_bals" col_name="bal_60" lng="80" readonly="true" skip="true"/>
       <col/>
-      <input obj_name="ar_cust" col_name="bal_30" lng="80" readonly="true" skip="true"/>
+      <input obj_name="aged_bals" col_name="bal_30" lng="80" readonly="true" skip="true"/>
       <col/>
-      <input obj_name="ar_cust" col_name="bal_curr" lng="80" readonly="true" skip="true"/>
+      <input obj_name="aged_bals" col_name="bal_curr" lng="80" readonly="true" skip="true"/>
       <col/>
-      <input obj_name="ar_cust" col_name="bal_total" lng="80" readonly="true" skip="true"/>
+      <input obj_name="aged_bals" col_name="bal_total" lng="80" readonly="true" skip="true"/>
 
       <row/>
       <col/>

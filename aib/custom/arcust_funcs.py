@@ -80,6 +80,7 @@ async def get_aged_bal(caller, xml):
     if not cust.exists:
         return
     cust_row_id = await cust.getval('row_id')
+    aged_bals = caller.data_objects['aged_bals']
 
     as_at_date = caller.context.as_at_date
 
@@ -135,18 +136,18 @@ async def get_aged_bal(caller, xml):
     async with caller.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         async for row in await conn.exec_sql(sql, context=caller.context):
-            await cust.setval('bal_total', row[0], validate=False)
-            await cust.setval('bal_curr', row[1], validate=False)
-            await cust.setval('bal_30', row[2], validate=False)
-            await cust.setval('bal_60', row[3], validate=False)
-            await cust.setval('bal_90', row[4], validate=False)
-            await cust.setval('bal_120', row[5], validate=False)
-            assert await cust.getval('bal_total') == (
-                await cust.getval('bal_curr') +
-                await cust.getval('bal_30') +
-                await cust.getval('bal_60') +
-                await cust.getval('bal_90') +
-                await cust.getval('bal_120')
+            await aged_bals.setval('bal_total', row[0], validate=False)
+            await aged_bals.setval('bal_curr', row[1], validate=False)
+            await aged_bals.setval('bal_30', row[2], validate=False)
+            await aged_bals.setval('bal_60', row[3], validate=False)
+            await aged_bals.setval('bal_90', row[4], validate=False)
+            await aged_bals.setval('bal_120', row[5], validate=False)
+            assert await aged_bals.getval('bal_total') == (
+                await aged_bals.getval('bal_curr') +
+                await aged_bals.getval('bal_30') +
+                await aged_bals.getval('bal_60') +
+                await aged_bals.getval('bal_90') +
+                await aged_bals.getval('bal_120')
                 )
 
 async def show_ageing(caller, xml):

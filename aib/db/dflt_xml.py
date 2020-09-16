@@ -111,23 +111,23 @@ async def alloc_tran_date(fld, xml, debug):
     else:
         ledger_periods = await db.cache.get_ledger_periods(db_obj.company, *db_obj.context.mod_ledg_id)
     if ledger_periods == {}:
-        raise AibError(head=fld.col_defn.short_descr, body="Ledger periods not set up")
+        raise AibError(head=fld.col_defn.short_descr, body='Ledger periods not set up')
 
-    item_tran_date = await db_obj.getval("item_row_id>tran_row_id>tran_date")
+    item_tran_date = await db_obj.getval('item_row_id>tran_row_id>tran_date')
     item_per_row_id = bisect_left([_.closing_date for _ in adm_periods], item_tran_date)
 
-    if await db_obj.getval("_ledger.separate_stat_close"):
-        if ledger_periods[item_per_row_id].statement_state == "open":
+    if await db_obj.getval('_ledger.separate_stat_close'):
+        if ledger_periods[item_per_row_id].statement_state == 'open':
             return item_tran_date
         else:
-            while ledger_periods[item_per_row_id].statement_state != "open":
+            while ledger_periods[item_per_row_id].statement_state != 'open':
                 item_per_row_id += 1
             return ledger_periods[item_per_row_id - 1].statement_date + td(1)
     else:
-        if ledger_periods[item_per_row_id].state in ("current", "open"):
+        if ledger_periods[item_per_row_id].state in ('current', 'open'):
             return item_tran_date
         else:
-            while ledger_periods[item_per_row_id].state not in ("current", "open"):
+            while ledger_periods[item_per_row_id].state not in ('current', 'open'):
                 item_per_row_id += 1
             return adm_periods[item_per_row_id].opening_date
 

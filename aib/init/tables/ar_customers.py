@@ -405,53 +405,6 @@ virt.append ({
         )
     })
 virt.append ({
-    'col_name'   : 'balance',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance',
-    'long_descr' : 'Current balance - customer currency',
-    'col_head'   : 'Balance',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : (
-        "SELECT COALESCE(("
-        "SELECT `b.{company}.ar_cust_totals.balance_cus` "
-        "FROM {company}.ar_cust_totals b "
-        "WHERE b.cust_row_id = a.row_id "
-        "ORDER BY b.tran_date DESC LIMIT 1 "
-        "), 0)"
-        )
-    })
-virt.append ({
-    'col_name'   : 'balance_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance',
-    'long_descr' : 'Balance outstanding - customer currency',
-    'col_head'   : 'Cust bal',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : (
-        "SELECT COALESCE(`b.{company}.ar_cust_totals.balance_cus`, 0) "
-        "FROM {company}.ar_cust_totals b "
-        "WHERE b.cust_row_id = a.row_id AND b.tran_date <= {bal_date_cust} "
-        "ORDER BY b.tran_date DESC LIMIT 1"
-        )
-    })
-virt.append ({
-    'col_name'   : 'balance_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance',
-    'long_descr' : 'Balance outstanding - local currency',
-    'col_head'   : 'Local bal',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'sql'        : (
-        "SELECT COALESCE(`b.{company}.ar_cust_totals.balance_loc`, 0) "
-        "FROM {company}.ar_cust_totals b "
-        "WHERE b.cust_row_id = a.row_id AND b.tran_date <= {bal_date_cust} "
-        "ORDER BY b.tran_date DESC LIMIT 1"
-        )
-    })
-virt.append ({
     'col_name'   : 'tran_bal_cust',
     'data_type'  : 'DEC',
     'short_descr': 'Balance',
@@ -529,126 +482,6 @@ virt.append ({
         )
     })
 virt.append ({
-    'col_name'   : 'bal_total',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance - total',
-    'long_descr' : 'Balance as at date - total',
-    'col_head'   : 'Bal total',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : "'0'",
-    })
-virt.append ({
-    'col_name'   : 'due_total',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance due - total',
-    'long_descr' : 'Balance due at transaction date - total',
-    'col_head'   : 'Due total',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : "'0'",
-    })
-virt.append ({
-    'col_name'   : 'bal_curr',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance - current',
-    'long_descr' : 'Balance as at date - current',
-    'col_head'   : 'Bal curr',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : "'0'",
-    })
-virt.append ({
-    'col_name'   : 'due_curr',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance due - current',
-    'long_descr' : 'Balance due at transaction date - current',
-    'col_head'   : 'Due curr',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : "'0'",
-    })
-virt.append ({
-    'col_name'   : 'bal_30',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance - 30 days',
-    'long_descr' : 'Balance as at date - 30 days',
-    'col_head'   : 'Bal 30',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : "'0'",
-    })
-virt.append ({
-    'col_name'   : 'due_30',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance due - 30 days',
-    'long_descr' : 'Balance due at transaction date - 30 days',
-    'col_head'   : 'Due 30',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : "'0'",
-    })
-virt.append ({
-    'col_name'   : 'bal_60',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance - 60 days',
-    'long_descr' : 'Balance as at date - 60 days',
-    'col_head'   : 'Bal 60',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : "'0'",
-    })
-virt.append ({
-    'col_name'   : 'due_60',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance due - 60 days',
-    'long_descr' : 'Balance due at transaction date - 60 days',
-    'col_head'   : 'Due 60',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : "'0'",
-    })
-virt.append ({
-    'col_name'   : 'bal_90',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance - 90 days',
-    'long_descr' : 'Balance as at date - 90 days',
-    'col_head'   : 'Bal 90',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : "'0'",
-    })
-virt.append ({
-    'col_name'   : 'due_90',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance due - 90 days',
-    'long_descr' : 'Balance due at transaction date - 90 days',
-    'col_head'   : 'Due 90',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : "'0'",
-    })
-virt.append ({
-    'col_name'   : 'bal_120',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance - 120 days',
-    'long_descr' : 'Balance as at date - 120 days',
-    'col_head'   : 'Bal 120',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : "'0'",
-    })
-virt.append ({
-    'col_name'   : 'due_120',
-    'data_type'  : 'DEC',
-    'short_descr': 'Balance due - 120 days',
-    'long_descr' : 'Balance due at transaction date - 120 days',
-    'col_head'   : 'Due 120',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'sql'        : "'0'",
-    })
-virt.append ({
     'col_name'   : 'op_bal_cust',
     'data_type'  : 'DEC',
     'short_descr': 'Opening bal - cust currency',
@@ -657,15 +490,6 @@ virt.append ({
     'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
     'sql'        : (
-        # "SELECT "
-        #   "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL2]\" "
-        #     "FROM {company}.ar_cust_totals b "
-        #     "WHERE b.cust_row_id = a.row_id "
-        #     "AND b.tran_date < a.tran_start_date "
-        #     "AND b.deleted_id = 0 "
-        #     "ORDER BY b.tran_date DESC "
-        #     "LIMIT 1), 0)"
-
         "SELECT COALESCE("
             "(SELECT SUM(c.tran_tot_cust) FROM ( "
             "SELECT b.tran_tot_cust, ROW_NUMBER() OVER (PARTITION BY "
@@ -689,15 +513,6 @@ virt.append ({
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
     'sql'        : (
-        # "SELECT "
-        #   "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL2]\" "
-        #     "FROM {company}.ar_cust_totals b "
-        #     "WHERE b.cust_row_id = a.row_id "
-        #     "AND b.tran_date < a.tran_start_date "
-        #     "AND b.deleted_id = 0 "
-        #     "ORDER BY b.tran_date DESC "
-        #     "LIMIT 1), 0)"
-
         "SELECT COALESCE("
             "(SELECT SUM(c.tran_tot_local) FROM ( "
             "SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
@@ -721,15 +536,6 @@ virt.append ({
     'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
     'sql'        : (
-        # "SELECT "
-        #   "COALESCE((SELECT `b.{company}.ar_cust_totals.balance_cus` AS \"x [REAL2]\" "
-        #     "FROM {company}.ar_cust_totals b "
-        #     "WHERE b.cust_row_id = a.row_id "
-        #     "AND b.tran_date <= a.tran_end_date "
-        #     "AND b.deleted_id = 0 "
-        #     "ORDER BY b.tran_date DESC "
-        #     "LIMIT 1), 0)"
-
         "SELECT COALESCE("
             "(SELECT SUM(c.tran_tot_cust) FROM ( "
             "SELECT b.tran_tot_cust, ROW_NUMBER() OVER (PARTITION BY "
@@ -764,8 +570,8 @@ virt.append ({
 virt.append ({
     'col_name'   : 'balance_cus',
     'data_type'  : 'DEC',
-    'short_descr': 'Running balance - cust',
-    'long_descr' : 'Running balance - cust',
+    'short_descr': 'Balance - cust',
+    'long_descr' : 'Balance - cust',
     'col_head'   : 'Balance cust',
     'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
@@ -787,8 +593,8 @@ virt.append ({
 virt.append ({
     'col_name'   : 'balance_loc',
     'data_type'  : 'DEC',
-    'short_descr': 'Running balance - local',
-    'long_descr' : 'Running balance - local',
+    'short_descr': 'Balance - local',
+    'long_descr' : 'Balance - local',
     'col_head'   : 'Balance loc',
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -830,9 +636,7 @@ cursors.append({
         ['party_row_id>display_name', 150, True, True, False, False, None, None, None, None],
         ['currency_id>symbol', 40, False, True, False, False, None, None, None, None],
         ['balance_cus', 100, False, True, False, False, None, None, None, None],
-        # ['tran_bal_cust', 100, False, False, False, False, None, None, None, None],
         ['balance_loc', 100, False, True, False, False, None, None, None, None],
-        # ['tran_bal_local', 100, False, False, False, False, None, None, None, None],
         ],
     'filter': [],
     'sequence': [['cust_id', False]],

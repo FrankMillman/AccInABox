@@ -318,7 +318,7 @@ class Conn:
                 db_obj = context.data_objects[expr]
                 sql = sql[:pos_1] + db_obj.table_name + sql[pos_2+1:]
             else:
-                if '.' in expr:
+                if '.' in expr:  # e.g. {ar_cust.op_bal_cust} in ar_trans.balance_cust
                     table_name, col_name = expr.split('.')
                     db_obj = context.data_objects[table_name]
                     val = await db_obj.getval(col_name)
@@ -799,6 +799,18 @@ class Conn:
         #     sql = f'{sql[:pos1]}{self.constants.param_style}{sql[pos2+1:]}'
 
         valid_surround_chrs = ' ,()-+=|\n'  # any others?
+
+        # # look for column names starting with '_ctx.', replace with value from 'context'
+        # while (pos1 := sql.find('_ctx.')) > -1:
+        #     for pos2, ch in enumerate(sql[pos1+5:], start=pos1+5):
+        #         if ch in valid_surround_chrs:
+        #             break
+        #     else:  # we have reached the end
+        #         pos2 += 1
+        #     col_name = sql[pos1+5:pos2]
+        #     val = getattr(context, col_name)
+        #     params.append(val)
+        #     sql = f'{sql[:pos1]}{self.constants.param_style}{sql[pos2:]}'
 
         # look for column names starting with 'a.'
         # if '>' in col_name, work out 'joins'

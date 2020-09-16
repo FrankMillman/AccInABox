@@ -251,9 +251,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'supp_cust_code',
     'data_type'  : 'TEXT',
-    'short_descr': 'Suppliers customer code',
-    'long_descr' : 'Suppliers customer code for this company',
-    'col_head'   : 'Customer code',
+    'short_descr': 'Suppliers supplier code',
+    'long_descr' : 'Suppliers supplier code for this company',
+    'col_head'   : 'supplier code',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : True,
@@ -398,6 +398,92 @@ virt.append ({
             ")"
         ),
     })
+virt.append ({
+    'col_name'   : 'op_bal_supp',
+    'data_type'  : 'DEC',
+    'short_descr': 'Opening bal - supp currency',
+    'long_descr' : 'Opening balance - supplier currency',
+    'col_head'   : 'Op bal supp',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'currency_id>scale',
+    'sql'        : (
+        "SELECT COALESCE("
+            "(SELECT SUM(c.tran_tot_supp) FROM ( "
+            "SELECT b.tran_tot_supp, ROW_NUMBER() OVER (PARTITION BY "
+                "b.supp_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
+                "ORDER BY b.tran_date DESC) row_num "
+            "FROM {company}.ap_supp_totals b "
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date < {tran_start_date} "
+            "AND b.supp_row_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            "), 0)"
+        )
+    })
+virt.append ({
+    'col_name'   : 'op_bal_local',
+    'data_type'  : 'DEC',
+    'short_descr': 'Opening bal - local currency',
+    'long_descr' : 'Opening balance - local currency',
+    'col_head'   : 'Op bal loc',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : (
+        "SELECT COALESCE("
+            "(SELECT SUM(c.tran_tot_local) FROM ( "
+            "SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
+                "b.supp_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
+                "ORDER BY b.tran_date DESC) row_num "
+            "FROM {company}.ap_supp_totals b "
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date < {tran_start_date}     "
+            "AND b.supp_row_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            "), 0)"
+        )
+    })
+virt.append ({
+    'col_name'   : 'cl_bal_supp',
+    'data_type'  : 'DEC',
+    'short_descr': 'Closing bal - supp currency',
+    'long_descr' : 'Closing balance - supplier currency',
+    'col_head'   : 'Cl bal supp',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'currency_id>scale',
+    'sql'        : (
+        "SELECT COALESCE("
+            "(SELECT SUM(c.tran_tot_supp) FROM ( "
+            "SELECT b.tran_tot_supp, ROW_NUMBER() OVER (PARTITION BY "
+                "b.supp_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
+                "ORDER BY b.tran_date DESC) row_num "
+            "FROM {company}.ap_supp_totals b "
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date <= {tran_end_date} "
+            "AND b.supp_row_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            "), 0)"
+        )
+    })
+virt.append ({
+    'col_name'   : 'tot_supp',
+    'data_type'  : 'DEC',
+    'short_descr': 'Tran total - supp currency',
+    'long_descr' : 'Transaction total - supplier currency',
+    'col_head'   : 'Total supp',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'currency_id>scale',
+    'sql'        : (
+        "SELECT "
+          "COALESCE((SELECT SUM(b.amount_supp) AS \"x [REAL2]\" "
+            "FROM {company}.ap_trans b "
+            "WHERE b.supp_row_id = a.row_id "
+            "AND b.tran_date BETWEEN {tran_start_date} AND {tran_end_date})"
+            ", 0)"
+        )
+    })
 
 # cursor definitions
 cursors = []
@@ -422,9 +508,7 @@ cursors.append({
         ['location_id', 60, False, True, False, False, None, None, None, None],
         ['currency_id>symbol', 40, False, True, False, False, None, None, None, None],
         ['balance_sup', 100, False, True, False, False, None, None, None, None],
-        # ['tran_bal_cust', 100, False, False, False, False, None, None, None, None],
         ['balance_loc', 100, False, True, False, False, None, None, None, None],
-        # ['tran_bal_local', 100, False, False, False, False, None, None, None, None],
         ],
     'filter': [],
     'sequence': [['supp_id', False]],
