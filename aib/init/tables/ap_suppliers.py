@@ -493,7 +493,15 @@ cursors.append({
     'columns': [
         ['supp_id', 100, False, False],
         ['party_row_id>display_name', 260, True, True],
-        ['location_row_id>location_id', 60, False, False],
+        ['currency_id>symbol', 40, False, True, [
+            ['if', '', '_ledger.currency_id', 'is', '$None', '']
+            ]],
+        ['location_row_id>location_id', 60, False, True, [
+            ['if', '', '_ledger.valid_loc_ids>expandable', 'is', '$True', '']
+            ]],
+        ['function_row_id>function_id', 60, False, True, [
+            ['if', '', '_ledger.valid_fun_ids>expandable', 'is', '$True', '']
+            ]],
         ],
     'filter': [],
     'sequence': [['supp_id', False]],
@@ -505,8 +513,15 @@ cursors.append({
     'columns': [
         ['supp_id', 80, False, True],
         ['party_row_id>display_name', 150, True, True],
-        ['location_id', 60, False, True],
-        ['currency_id>symbol', 40, False, True],
+        ['currency_id>symbol', 40, False, True, [
+            ['if', '', '_ledger.currency_id', 'is', '$None', '']
+            ]],
+        ['location_row_id>location_id', 60, False, True, [
+            ['if', '', '_ledger.valid_loc_ids>expandable', 'is', '$True', '']
+            ]],
+        ['function_row_id>function_id', 60, False, True, [
+            ['if', '', '_ledger.valid_fun_ids>expandable', 'is', '$True', '']
+            ]],
         ['balance_sup', 100, False, True],
         ['balance_loc', 100, False, True],
         ],

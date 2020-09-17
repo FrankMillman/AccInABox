@@ -81,7 +81,7 @@ cols.append ({
     'data_type'  : 'TEXT',
     'short_descr': 'Location id',
     'long_descr' : 'Location id',
-    'col_head'   : 'Loc',
+    'col_head'   : 'Lcn',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,

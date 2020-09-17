@@ -623,9 +623,18 @@ class DbObject:
 
         cursor_defn = []
         columns = cursor_data['columns']
+        cur_cols = []
         for col in columns:
-            col.insert(0, 'cur_col')  # type
-        cursor_defn.append(columns)
+            # 'col' is a list of 4 or 5 elements
+            # the first 4 are col_name, lng, expand, readonly
+            # the fifth item is optional - if it exists, it is a boolean test to determine
+            #   whether to include the column in the cursor definition
+            col, include_col = col[:4], col[4:]
+            if include_col:
+                if not await eval_bool_expr(include_col[0], self):
+                    continue
+            cur_cols.append(['cur_col'] + col)
+        cursor_defn.append(cur_cols)
         filter = cursor_data['filter']
         test = 'AND' if filter else 'WHERE'
         filter.append((test, '', 'deleted_id', '=', 0, ''))

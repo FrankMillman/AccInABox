@@ -81,7 +81,7 @@ cols.append ({
     'data_type'  : 'TEXT',
     'short_descr': 'Function id',
     'long_descr' : 'Function id',
-    'col_head'   : 'Fun',
+    'col_head'   : 'Fcn',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
