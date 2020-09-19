@@ -468,13 +468,13 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
 virt.append ({
     'col_name'   : 'tran_type',
     'data_type'  : 'TEXT',
     'short_descr': 'Transaction type',
     'long_descr' : 'Transaction type',
     'col_head'   : 'Tran type',
+    'dflt_val'   : 'ar_inv',
     'sql'        : "'ar_inv'",
     })
 virt.append ({

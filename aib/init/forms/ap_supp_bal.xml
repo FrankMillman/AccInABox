@@ -82,6 +82,23 @@
       <col/>
       <input obj_name="ap_supp" col_name="supp_id" lng="80" readonly="true" skip="true"/>
       <display obj_name="party" col_name="display_name" lng="160"/>
+      <display obj_name="ap_supp" col_name="supp_cust_code" lng="160"/>
+      <if_ test="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
+      <row/>
+      <col/>
+      <label value="Location:"/>
+      <col/>
+      <input obj_name="ap_supp" col_name="location_id" lng="80" readonly="true" skip="true"/>
+      <display obj_name="ap_supp" col_name="location_id>descr" lng="120"/>
+      <end_if/>
+      <if_ test="[[`if`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
+      <row/>
+      <col/>
+      <label value="Function:"/>
+      <col/>
+      <input obj_name="ap_supp" col_name="function_id" lng="80" readonly="true" skip="true"/>
+      <display obj_name="ap_supp" col_name="function_id>descr" lng="120"/>
+      <end_if/>
 
       <block/>
       <nb_start/>

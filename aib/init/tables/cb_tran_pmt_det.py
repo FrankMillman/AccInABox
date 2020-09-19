@@ -216,7 +216,7 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - sales transactions?',
     'col_head'   : 'Reverse sign?',
-    'dflt_val'   : 'false',
+    'dflt_val'   : 'true',
     'sql'        : "'1'",
     })
 virt.append ({
@@ -281,7 +281,7 @@ virt.append ({
     'long_descr' : 'Tax inclusive',
     'col_head'   : 'Tax incl',
     'fkey'       : None,
-    'dflt_val'   : 'True',
+    'dflt_val'   : 'true',
     'sql'        : '1',
     })
 virt.append ({
@@ -343,7 +343,7 @@ actions.append([
             ],
             False,  # split source?
             [  # key fields
-                ['tran_type', "'cb_pmt'"],  # tgt_col, src_col
+                ['source_code', "'ar_chg_cb'"],  # tgt_col, src_col
                 ['tran_det_row_id', 'row_id'],
                 ],
             [],  # aggregation

@@ -504,6 +504,7 @@ virt.append ({
     'short_descr': 'Open item tran type',
     'long_descr' : 'Open item tran type',
     'col_head'   : 'Tran type',
+    'dflt_val'   : 'ar_crn',
     'sql'        : "'ar_crn'",
     })
 virt.append ({
@@ -648,7 +649,7 @@ actions.append([
             '</mem_obj>',
 
             [  # fkey to this table
-                ['tran_type', "'ar_crn'"],  # tgt_col, src_col
+                ['tran_type', 'tran_type'],  # tgt_col, src_col
                 ['tran_row_id', 'row_id'],
                 ],
 
@@ -671,40 +672,80 @@ actions.append([
             ],
         [
             'ar_totals',  # table name
-            None,  # condition
+            [],  # condition
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_crn_net'"],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['crn_net_day', '+', 'crn_net_local'],  # tgt_col, op, src_col
-                ['crn_tax_day', '+', 'crn_tax_local'],
-                ['crn_net_tot', '+', 'crn_net_local'],
-                ['crn_tax_tot', '+', 'crn_tax_local'],
+                ['tran_day', '+', 'crn_net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'crn_net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'ar_totals',  # table name
+            [  # condition
+                ['where', '', 'crn_tax_local', '!=', '0', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_crn_tax'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'crn_tax_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'crn_tax_local'],
                 ],
             [],  # on post
             [],  # on unpost
             ],
         [
             'ar_cust_totals',  # table name
-            None,  # condition
+            [],  # condition
             False,  # split source?
             [  # key fields
                 ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_crn_net'"],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['crn_net_day_cus', '+', 'crn_net_cust'],  # tgt_col, op, src_col
-                ['crn_tax_day_cus', '+', 'crn_tax_cust'],
-                ['crn_net_tot_cus', '+', 'crn_net_cust'],
-                ['crn_tax_tot_cus', '+', 'crn_tax_cust'],
-                ['crn_net_day_loc', '+', 'crn_net_local'],
-                ['crn_tax_day_loc', '+', 'crn_tax_local'],
-                ['crn_net_tot_loc', '+', 'crn_net_local'],
-                ['crn_tax_tot_loc', '+', 'crn_tax_local'],
+                ['tran_day_cust', '+', 'crn_net_cust'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '+', 'crn_net_cust'],
+                ['tran_day_local', '+', 'crn_net_local'],
+                ['tran_tot_local', '+', 'crn_net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'ar_cust_totals',  # table name
+            [  # condition
+                ['where', '', 'crn_tax_local', '!=', '0', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_crn_tax'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day_cust', '+', 'crn_tax_cust'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '+', 'crn_tax_cust'],
+                ['tran_day_local', '+', 'crn_tax_local'],
+                ['tran_tot_local', '+', 'crn_tax_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -719,12 +760,33 @@ actions.append([
                 ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code', "'ar_crn'"],
+                ['source_code', "'ar_crn_net'"],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'crn_tot_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'crn_tot_local'],
+                ['tran_day', '+', 'crn_net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'crn_net_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'crn_tax_local', '!=', '0', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_crn_tax'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'crn_tax_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'crn_tax_local'],
                 ],
             [],  # on post
             [],  # on unpost

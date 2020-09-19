@@ -570,13 +570,21 @@ class Conn:
 
                         if obj_name == '_ctx':  #'_context':
                             if col_name == 'ledger_row_id':
-                                where_params.append(getattr(context, 'mod_ledg_id')[1])
+                                expr = getattr(context, 'mod_ledg_id')[1]
                             else:
-                                where_params.append(getattr(context, col_name))
+                                expr = getattr(context, col_name)
                         else:
                             obj = context.data_objects[obj_name]
-                            where_params.append(await obj.getval(col_name))
-                        expr = self.constants.param_style
+                            expr =  await obj.getval(col_name)
+                        if expr is None:
+                            expr = 'NULL'
+                            if op == '=':
+                                op = 'IS'
+                            elif op == '!=':
+                                op = 'IS NOT'
+                        else:
+                            where_params.append(expr)
+                            expr = self.constants.param_style
 
                     else:
                         try:
@@ -590,14 +598,6 @@ class Conn:
                             expr = f'LOWER({alias}.{col.col_name})'
                         else:
                             expr = f'{alias}.{col.col_name}'
-
-                # duplicate of first test above - removed 2019-09-26
-                # if expr is None:
-                #     expr = 'null'
-                #     if op == '=':
-                #         op = 'is'
-                #     elif op == '!=':
-                #         op = 'is not'
 
                 # do we still need this? [2020-09-09]
                 if False:  #op.lower() in ('like', 'not like'):
@@ -848,7 +848,14 @@ class Conn:
             sql = f'ROUND({sql}, {col.db_scale})'
 
         if sql.startswith('SELECT '):
-            sql = '(' + sql + ')'
+            # sql = '(' + sql + ')'
+            sql = f'({sql})'
+
+        # added [2020-09-19]
+        # a literal cannot be included in an ORDER BY clause - this makes it allowable
+        if sql.startswith("'"):
+            sql = f'(SELECT {sql})'
+
         return sql
 
     async def walk_colname(self, context, db_table, params, col_name, current_alias, trail):

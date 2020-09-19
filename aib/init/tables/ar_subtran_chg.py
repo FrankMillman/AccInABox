@@ -78,11 +78,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
+    'col_name'   : 'source_code_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Source code id',
+    'long_descr' : 'Source code id',
+    'col_head'   : 'Source code',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -93,11 +93,8 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : [
-            ['ap_inv', 'Invoice'],
-            ['cb_pmt', 'Payment'],
-        ],
+    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
+    'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'tran_det_row_id',
@@ -116,9 +113,9 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : [
-        ['tran_type', [
-            ['ap_inv', 'ap_tran_inv_det'],
-            ['cb_pmt', 'cb_tran_pmt_det'],
+        ['source_code', [
+            ['ar_chg_ap', 'ap_tran_inv_det'],
+            ['ar_chg_cb', 'cb_tran_pmt_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -463,7 +460,7 @@ actions.append([
                 ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code', "'ar_chg'"],
+                ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
@@ -481,7 +478,7 @@ actions.append([
                 ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code', "'ar_chg'"],
+                ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
@@ -503,7 +500,7 @@ actions.append([
                 ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code', "'ar_chg'"],
+                ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation

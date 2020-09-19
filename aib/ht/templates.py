@@ -82,10 +82,10 @@ btn_close = (
     )
 
 btn_save_multi = (
-    '<button btn_id="btn_save" btn_label="New" btn_enabled="true" '
+    '<button btn_id="btn_save" btn_label="More?" btn_enabled="true" '
         'btn_validate="true" btn_default="true" lng="60" action="'
         '&lt;case&gt;'
-          '&lt;btn_has_label btn_id=&quot;btn_save&quot; label=&quot;New&quot;&gt;'
+          '&lt;btn_has_label btn_id=&quot;btn_save&quot; label=&quot;More?&quot;&gt;'
             '&lt;do_navigate nav_type=&quot;last&quot;/&gt;'
             '&lt;change_button&gt;'
               '&lt;btn_dflt btn_id=&quot;btn_close&quot;/&gt;'
@@ -135,14 +135,14 @@ on_clean = (
     '"/>'
     )
 
-on_clean_multi = (  # change 'Save' to 'New'
+on_clean_multi = (  # change 'Save' to 'More?'
     '<method name="on_clean" obj_name="[obj_name]" action="'
 
         '&lt;case&gt;'
           '&lt;obj_exists obj_name=&quot;[obj_name]&quot;&gt;'
 
             '&lt;change_button&gt;'
-              '&lt;btn_label btn_id=&quot;btn_save&quot; value=&quot;New&quot;/&gt;'
+              '&lt;btn_label btn_id=&quot;btn_save&quot; value=&quot;More?&quot;/&gt;'
             '&lt;/change_button&gt;'
             '&lt;change_button&gt;'
               '&lt;btn_enabled btn_id=&quot;btn_save&quot; state=&quot;true&quot;/&gt;'
@@ -165,7 +165,7 @@ on_clean_multi = (  # change 'Save' to 'New'
               '&lt;btn_dflt btn_id=&quot;btn_close&quot;/&gt;'
             '&lt;/change_button&gt;'
             '&lt;change_button&gt;'
-              '&lt;btn_label btn_id=&quot;btn_save&quot; value=&quot;New&quot;/&gt;'
+              '&lt;btn_label btn_id=&quot;btn_save&quot; value=&quot;More?&quot;/&gt;'
             '&lt;/change_button&gt;'
             '&lt;change_button&gt;'
               '&lt;btn_enabled btn_id=&quot;btn_save&quot; state=&quot;false&quot;/&gt;'

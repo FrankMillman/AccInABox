@@ -428,7 +428,7 @@ actions.append([
             ],
             False,  # split source?
             [  # key fields
-                ['tran_type', "'ap_inv'"],  # tgt_col, src_col
+                ['source_code', "'ar_chg_ap'"],  # tgt_col, src_col
                 ['tran_det_row_id', 'row_id'],
                 ],
             [],  # aggregation

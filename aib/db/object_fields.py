@@ -632,7 +632,7 @@ class Field:
             # check for col_checks
             for descr, errmsg, col_chk in col_defn.col_checks:
                 if not await eval_bool_expr(col_chk, self.db_obj, fld=self, value=value):
-                    raise AibError(head=self.db_table.short_descr, body=errmsg)
+                    raise AibError(head=col_defn.short_descr, body=errmsg)
 
             # check for form_vlds
             for ctx, vld in form_vlds:

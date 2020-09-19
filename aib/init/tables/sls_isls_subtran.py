@@ -695,7 +695,6 @@ actions.append([
             'custom.artrans_funcs.setup_inv_alloc',  # function to populate table
 
             [  # fkey to this table
-                # ['tran_type', "'ar_inv'"],  # tgt_col, src_col
                 ['subtran_row_id', 'row_id'],  # tgt_col, src_col
                 ],
 

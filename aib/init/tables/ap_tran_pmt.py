@@ -352,6 +352,15 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Tran type',
+    'dflt_val'   : 'ap_pmt',
+    'sql'        : "'ap_pmt'",
+    })
+virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction period',
@@ -445,7 +454,7 @@ actions.append([
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['tran_type', "'ap_pmt'"],  # tgt_col, src_col
+                ['tran_type', 'tran_type'],  # tgt_col, src_col
                 ['tran_row_id', 'row_id'],
                 ['item_type', "'pmt'"],
                 ['due_date', 'tran_date'],
@@ -462,7 +471,7 @@ actions.append([
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['tran_type', "'ap_pmt'"],  # tgt_col, src_col
+                ['tran_type', 'tran_type'],  # tgt_col, src_col
                 ['tran_row_id', 'row_id'],
                 ['item_row_id', 'ap_trans_items.row_id'],
                 ],

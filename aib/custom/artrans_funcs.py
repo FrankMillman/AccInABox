@@ -244,6 +244,8 @@ async def get_due_bal(caller, xml):
 
     vars = caller.data_objects['vars']
     this_item_rowid = await vars.getval('this_item_rowid')
+    # if allocation is done realtime, ar_openitems has not been updated, so item_rowid is None
+    # if allocation is done after transaction is posted, item_rowid is not None
 
     due_bal = caller.data_objects['due_bal']
     await due_bal.init()
@@ -289,7 +291,7 @@ async def get_due_bal(caller, xml):
             FROM {company}.ar_openitems a
             WHERE a.cust_row_id = {cust_row_id}
                 AND a.tran_date <= '{as_at_date}'
-                AND a.row_id != {this_item_rowid}
+                {'' if this_item_rowid is None else f'AND a.row_id != {this_item_rowid}'}
         ) AS q
         GROUP BY q.cust_row_id
         """
@@ -886,9 +888,9 @@ async def check_ledg_per(caller, xml):
         return
 
 async def check_allocations(db_obj, xml):
-    # called from cb_tran_rec/ar_tran_rct after_post
+    # called from cb_tran_rec/ar_tran_rec after_post
     # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
-    #    or create new column on cb_tran_rec/ar_tran_rct 'allocation_complete'?
+    #    or create new column on cb_tran_rec/ar_tran_rec 'allocation_complete'?
     #    any tran with 'posted' = True and 'alloction_complete' = False must be re-run
     # if ar_subtran_rec has been allocated, set up ar_tran_alloc/det
     det_obj = [_ for _ in db_obj.children if _.table_name == (db_obj.table_name + '_det')][0]

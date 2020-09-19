@@ -447,19 +447,19 @@ virt.append ({
         "AND b.split_no = 0 AND b.deleted_id = 0"
         ),
     })
-virt.append ({
-    'col_name'   : 'item_tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Open item tran type',
-    'long_descr' : 'Open item tran type',
-    'col_head'   : 'Tran type',
-    # 'sql'        : (
-    #     "SELECT b.tran_type FROM {company}.ar_openitems b "
-    #     "WHERE b.tran_type = 'ar_disc' AND b.tran_row_id = a.row_id "
-    #     "AND b.split_no = 0 AND b.deleted_id = 0"
-    #     ),
-    'sql'        : "'ar_disc'",
-    })
+# virt.append ({
+#     'col_name'   : 'item_tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Open item tran type',
+#     'long_descr' : 'Open item tran type',
+#     'col_head'   : 'Tran type',
+#     # 'sql'        : (
+#     #     "SELECT b.tran_type FROM {company}.ar_openitems b "
+#     #     "WHERE b.tran_type = 'ar_disc' AND b.tran_row_id = a.row_id "
+#     #     "AND b.split_no = 0 AND b.deleted_id = 0"
+#     #     ),
+#     'sql'        : "'ar_disc'",
+#     })
 virt.append ({
     'col_name'   : 'disc_tot_amt',
     'data_type'  : 'DEC',

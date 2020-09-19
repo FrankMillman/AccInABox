@@ -179,13 +179,13 @@ virt.append ({
     'sql'        : (
         """
         (SELECT SUM(b.tran_tot_cb) FROM (
-            SELECT a.tran_tot_cb, ROW_NUMBER() OVER (PARTITION BY
-                a.ledger_row_id, a.location_row_id, a.function_row_id, a.source_code_id
-                ORDER BY a.tran_date DESC) row_num
-            FROM {company}.cb_totals a
-            WHERE a.ledger_row_id = {ledger_row_id} 
-            AND a.tran_date < {start_date} 
-            AND a.deleted_id = 0 
+            SELECT c.tran_tot_cb, ROW_NUMBER() OVER (PARTITION BY
+                c.ledger_row_id, c.location_row_id, c.function_row_id, c.source_code_id
+                ORDER BY c.tran_date DESC) row_num
+            FROM {company}.cb_totals c
+            WHERE c.ledger_row_id = {ledger_row_id} 
+            AND c.tran_date < {start_date} 
+            AND c.deleted_id = 0 
             ) as b
             WHERE b.row_num = 1
             )
@@ -202,13 +202,13 @@ virt.append ({
     'sql'        : (
         """
         (SELECT SUM(b.tran_tot_cb) FROM (
-            SELECT a.tran_tot_cb, ROW_NUMBER() OVER (PARTITION BY
-                a.ledger_row_id, a.location_row_id, a.function_row_id, a.source_code_id
-                ORDER BY a.tran_date DESC) row_num
-            FROM {company}.cb_totals a
-            WHERE a.ledger_row_id = {ledger_row_id} 
-            AND a.tran_date <= {end_date} 
-            AND a.deleted_id = 0 
+            SELECT c.tran_tot_cb, ROW_NUMBER() OVER (PARTITION BY
+                c.ledger_row_id, c.location_row_id, c.function_row_id, c.source_code_id
+                ORDER BY c.tran_date DESC) row_num
+            FROM {company}.cb_totals c
+            WHERE c.ledger_row_id = {ledger_row_id} 
+            AND c.tran_date <= {end_date} 
+            AND c.deleted_id = 0 
             ) as b
             WHERE b.row_num = 1
             )
@@ -224,10 +224,10 @@ virt.append ({
     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
     'sql'        : (
         "SELECT "
-            "COALESCE((SELECT SUM(a.amount_cb) AS \"x [REAL2]\" "
-            "FROM {company}.cb_trans a "
-            "WHERE a.ledger_row_id = {ledger_row_id} "
-            "AND a.tran_date BETWEEN {start_date} AND {end_date}), 0)"
+            "COALESCE((SELECT SUM(c.amount_cb) AS \"x [REAL2]\" "
+            "FROM {company}.cb_trans c "
+            "WHERE c.ledger_row_id = {ledger_row_id} "
+            "AND c.tran_date BETWEEN {start_date} AND {end_date}), 0)"
         )
     })
 

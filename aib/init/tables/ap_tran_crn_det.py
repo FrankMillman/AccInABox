@@ -254,7 +254,7 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - purchase transactions?',
     'col_head'   : 'Reverse sign?',
-    'dflt_val'   : 'false',
+    'dflt_val'   : 'true',
     'sql'        : "'1'",
     })
 virt.append ({

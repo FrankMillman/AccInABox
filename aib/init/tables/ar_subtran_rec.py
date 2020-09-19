@@ -78,11 +78,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
+    'col_name'   : 'source_code_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Source code id',
+    'long_descr' : 'Source code id',
+    'col_head'   : 'Source code',
     'key_field'  : 'A',
     'calculated' : False,
     'allow_null' : False,
@@ -93,11 +93,8 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : [
-            ['ar_rct', 'Ar receipt'],
-            ['cb_rec', 'Cb receipt'],
-        ],
+    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
+    'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'tran_det_row_id',
@@ -116,9 +113,9 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : [
-        ['tran_type', [
-            ['ar_rct', 'ar_tran_rct_det'],
-            ['cb_rec', 'cb_tran_rec_det'],
+        ['source_code', [
+            ['ar_rec_ar', 'ar_tran_rec_det'],
+            ['ar_rec_cb', 'cb_tran_rec_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -363,7 +360,7 @@ cols.append ({
     'long_descr' : (
         'Has transaction been posted? '
         'Could be derived using fkey, but denormalised to speed up ar_trans view.'
-        'ar_tran_rct_det and cb_tran_rec_det update this column when they are posted - see their on_post action.'
+        'ar_tran_rec_det and cb_tran_rec_det update this column when they are posted - see their on_post action.'
         ),
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
@@ -413,14 +410,14 @@ virt.append ({
         "AND b.split_no = 0 AND b.deleted_id = 0"
         ),
     })
-virt.append ({
-    'col_name'   : 'item_tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Open item tran type',
-    'long_descr' : 'Open item tran type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ar_rec'",
-    })
+# virt.append ({
+#     'col_name'   : 'item_tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Open item tran type',
+#     'long_descr' : 'Open item tran type',
+#     'col_head'   : 'Tran type',
+#     'sql'        : "'ar_rec'",
+#     })
 # virt.append ({
 #     'col_name'   : 'alloc_row_id',
 #     'data_type'  : 'INT',
@@ -584,7 +581,7 @@ actions.append([
                 ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code', "'ar_rec'"],
+                ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
@@ -602,7 +599,7 @@ actions.append([
                 ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code', "'ar_rec'"],
+                ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
@@ -624,7 +621,7 @@ actions.append([
                 ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code', "'ar_rec'"],
+                ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation

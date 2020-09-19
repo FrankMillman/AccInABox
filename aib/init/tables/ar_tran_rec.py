@@ -1,6 +1,6 @@
 # table definition
 table = {
-    'table_name'    : 'ar_tran_rct',
+    'table_name'    : 'ar_tran_rec',
     'module_id'     : 'ar',
     'short_descr'   : 'Ar receipts',
     'long_descr'    : 'Ar receipts',
@@ -256,7 +256,7 @@ cols.append ({
     'col_name'   : 'amount_tran',
     'data_type'  : 'DEC',
     'short_descr': 'Amount received - tran curr',
-    'long_descr' : 'Amount received in transaction currency - updated from ar_tran_rct_det',
+    'long_descr' : 'Amount received in transaction currency - updated from ar_tran_rec_det',
     'col_head'   : 'Amount tran',
     'key_field'  : 'N',
     'calculated' : False,
@@ -302,7 +302,7 @@ cols.append ({
     'col_name'   : 'amount_local',
     'data_type'  : 'DEC',
     'short_descr': 'Receipt local',
-    'long_descr' : 'Receipt amount in local currency - updated when ar_tran_rct_det saved',
+    'long_descr' : 'Receipt amount in local currency - updated when ar_tran_rec_det saved',
     'col_head'   : 'Rec net local',
     'key_field'  : 'N',
     'calculated' : False,
@@ -345,7 +345,8 @@ virt.append ({
     'short_descr': 'Transaction type',
     'long_descr' : 'Transaction type',
     'col_head'   : 'Tran type',
-    'sql'        : "'ap_rec'",
+    'dflt_val'   : 'ar_rec',
+    'sql'        : "'ar_rec'",
     })
 virt.append ({
     'col_name'   : 'period_row_id',
@@ -364,7 +365,7 @@ virt.append ({
 # cursor definitions
 cursors = []
 cursors.append({
-    'cursor_name': 'unposted_rct',
+    'cursor_name': 'unposted_rec',
     'title': 'Unposted ar receipts',
     'columns': [
         ['tran_number', 100, False, True],

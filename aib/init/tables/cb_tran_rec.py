@@ -316,14 +316,15 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'tran_type',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Transaction type',
-#     'long_descr' : 'Transaction type',
-#     'col_head'   : 'Tran type',
-#     'sql'        : "'cb_rec'",
-#     })
+virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Tran type',
+    'dflt_val'   : 'cb_rec',
+    'sql'        : "'cb_rec'",
+    })
 virt.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',

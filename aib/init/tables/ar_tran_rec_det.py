@@ -1,6 +1,6 @@
 # table definition
 table = {
-    'table_name'    : 'ar_tran_rct_det',
+    'table_name'    : 'ar_tran_rec_det',
     'module_id'     : 'ar',
     'short_descr'   : 'Ar receipt line items',
     'long_descr'    : 'Ar receipt line items',
@@ -100,7 +100,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['ar_tran_rct', 'row_id', None, None, True, None],
+    'fkey'       : ['ar_tran_rec', 'row_id', None, None, True, None],
     'choices'    : None,
     })
 cols.append ({
@@ -169,7 +169,7 @@ virt = []
 #     'short_descr': 'Transaction type',
 #     'long_descr' : 'Transaction type',
 #     'col_head'   : 'Tran type',
-#     'sql'        : "'ar_rct'",
+#     'sql'        : "'ar_rec'",
 #     })
 virt.append ({
     'col_name'   : 'display_descr',
@@ -235,7 +235,7 @@ actions.append([
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['tran_type', "'ar_rct'"],  # tgt_col, src_col
+                ['source_code', "'ar_rec_ar'"],  # tgt_col, src_col
                 ['tran_det_row_id', 'row_id'],
                 ],
             [],  # aggregation

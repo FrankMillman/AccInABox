@@ -219,22 +219,22 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'module_id',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Module',
-    'long_descr' : 'Module id',
-    'col_head'   : '',
-    'sql'        : "'in'",
-    })
-virt.append ({
-    'col_name'   : 'module_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Module row id',
-    'long_descr' : 'Module row id',
-    'col_head'   : '',
-    'sql'        : "SELECT b.row_id FROM {company}.db_modules b WHERE b.module_id = 'in'",
-    })
+# virt.append ({
+#     'col_name'   : 'module_id',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Module',
+#     'long_descr' : 'Module id',
+#     'col_head'   : '',
+#     'sql'        : "'in'",
+#     })
+# virt.append ({
+#     'col_name'   : 'module_row_id',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Module row id',
+#     'long_descr' : 'Module row id',
+#     'col_head'   : '',
+#     'sql'        : "SELECT b.row_id FROM {company}.db_modules b WHERE b.module_id = 'in'",
+#     })
 """
 virt.append ({
     'col_name'   : 'wh_code',
