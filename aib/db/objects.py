@@ -478,6 +478,8 @@ class DbObject:
                 if col_defn.col_type == 'alt':
                     foreign_key = await self.get_foreign_key(field)
                     await foreign_key['tgt_field'].setval(col_const[field.col_name])
+                    field.constant = foreign_key['tgt_field']._value
+                    field._orig = field._value = field.constant
                     true_src = foreign_key['true_src']
                     true_src.constant = true_src.foreign_key['tgt_field']._value
                     true_src._orig = true_src._value = true_src.constant
@@ -852,6 +854,7 @@ class DbObject:
         # the thinking behind select_many is that it does not *yield* each
         #   row, it uses it to set up db_obj, and then yields None
         async for row in cur:
+            await self.init()  # added [2020-09-21] to force all alt_keys to be reset in case dependencies
             await self.on_row_selected(row, display=False)
             yield
 
