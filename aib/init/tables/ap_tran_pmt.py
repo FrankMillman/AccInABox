@@ -357,7 +357,6 @@ virt.append ({
     'short_descr': 'Transaction type',
     'long_descr' : 'Transaction type',
     'col_head'   : 'Tran type',
-    'dflt_val'   : 'ap_pmt',
     'sql'        : "'ap_pmt'",
     })
 virt.append ({

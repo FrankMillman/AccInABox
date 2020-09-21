@@ -207,7 +207,6 @@ virt.append ({
     'short_descr': 'Module id',
     'long_descr' : 'Module id',
     'col_head'   : 'Module',
-    'dflt_val'   : 'cb',
     'sql'        : "'cb'",
     })
 virt.append ({
@@ -216,7 +215,6 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - sales transactions?',
     'col_head'   : 'Reverse sign?',
-    'dflt_val'   : 'true',
     'sql'        : "'1'",
     })
 virt.append ({
@@ -225,7 +223,6 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - purchase transactions?',
     'col_head'   : 'Reverse sign?',
-    'dflt_val'   : 'false',
     'sql'        : "'0'",
     })
 virt.append ({
@@ -234,7 +231,6 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - gl transactions?',
     'col_head'   : 'Reverse sign?',
-    'dflt_val'   : 'false',
     'sql'        : "'0'",
     })
 virt.append ({
@@ -281,8 +277,7 @@ virt.append ({
     'long_descr' : 'Tax inclusive',
     'col_head'   : 'Tax incl',
     'fkey'       : None,
-    'dflt_val'   : 'true',
-    'sql'        : '1',
+    'sql'        : "'1'",
     })
 virt.append ({
     'col_name'   : 'posted',

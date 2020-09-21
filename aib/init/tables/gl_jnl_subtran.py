@@ -356,8 +356,8 @@ actions.append([
                 ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'gl_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'gl_local'],
+                ['tran_day', '+', 'upd_gl'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'upd_gl'],
                 ],
             [],  # on post
             [],  # on unpost

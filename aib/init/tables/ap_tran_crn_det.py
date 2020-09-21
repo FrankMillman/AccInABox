@@ -245,7 +245,6 @@ virt.append ({
     'short_descr': 'Module id',
     'long_descr' : 'Module id',
     'col_head'   : 'Module',
-    'dflt_val'   : 'ap',
     'sql'        : "'ap'",
     })
 virt.append ({
@@ -254,7 +253,14 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - purchase transactions?',
     'col_head'   : 'Reverse sign?',
-    'dflt_val'   : 'true',
+    'sql'        : "'1'",
+    })
+virt.append ({
+    'col_name'   : 'rev_sign_gl',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - gl transactions?',
+    'col_head'   : 'Reverse sign?',
     'sql'        : "'1'",
     })
 virt.append ({

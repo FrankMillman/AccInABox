@@ -315,6 +315,11 @@ class Field:
         # print(f'recalc {self.table_name}.{self.col_name}')
 
         sql = self.col_defn.sql.replace('{company}', self.db_obj.company)
+
+        if sql.startswith("'"):
+            await self.setval(sql[1:-1], display=display, validate=False)
+            return
+
         param_style = self.db_obj.db_table.constants.param_style
         param_pos = []
         params = []

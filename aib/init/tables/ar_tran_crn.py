@@ -469,6 +469,14 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Tran type',
+    'sql'        : "'ar_crn'",
+    })
+virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction period',
@@ -504,7 +512,6 @@ virt.append ({
     'short_descr': 'Open item tran type',
     'long_descr' : 'Open item tran type',
     'col_head'   : 'Tran type',
-    'dflt_val'   : 'ar_crn',
     'sql'        : "'ar_crn'",
     })
 virt.append ({

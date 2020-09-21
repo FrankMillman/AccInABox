@@ -163,13 +163,22 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+# virt.append ({
+#     'col_name'   : 'tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Transaction type',
+#     'long_descr' : 'Transaction type',
+#     'col_head'   : 'Tran type',
+#     'dflt_val'   : 'gl_jnl',
+#     'sql'        : "'gl_jnl'",
+#     })
 virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'gl_jnl'",
+    'col_name'   : 'rev_sign_gl',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - gl transactions?',
+    'col_head'   : 'Reverse sign?',
+    'sql'        : "'0'",
     })
 virt.append ({
     'col_name'   : 'display_descr',

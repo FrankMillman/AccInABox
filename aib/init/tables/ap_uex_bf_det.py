@@ -176,7 +176,6 @@ virt.append ({
     'short_descr': 'Module id',
     'long_descr' : 'Module id',
     'col_head'   : 'Module',
-    'dflt_val'   : 'ap',
     'sql'        : "'ap'",
     })
 virt.append ({
@@ -185,7 +184,6 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - purchase transactions?',
     'col_head'   : 'Reverse sign?',
-    'dflt_val'   : 'false',
     'sql'        : "'0'",
     })
 virt.append ({

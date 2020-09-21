@@ -792,13 +792,11 @@ class DbObject:
 
         if col_defn.dflt_val is not None or col_defn.dflt_rule is not None:
             field._orig = field._value = await field.get_dflt()
-            if col_defn.dependencies:
-                field.must_be_evaluated = True  # ensure it is evaluated the first time it is accessed
 
         if col_defn.sql is not None:
             self.select_cols.append(field)
-            if col_defn.dependencies or ('SELECT' in col_defn.sql) or col_defn.dflt_val is None:
-                field.must_be_evaluated = True  # ensure it is evaluated the first time it is accessed
+
+        field.must_be_evaluated = True  # ensure it is evaluated the first time it is accessed
 
     async def select_row_from_cursor(self, row, display):
         if row == -1:  # on blank row

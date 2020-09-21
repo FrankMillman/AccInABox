@@ -171,23 +171,23 @@ virt.append ({
     'col_head'   : 'Tran type',
     'sql'        : "'ap_alloc'",
     })
-virt.append ({
-    'col_name'   : 'alloc_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Allocation row id',
-    'long_descr' : 'Allocation row id',
-    'col_head'   : 'Alloc id',
-    # fkey causes recursion after additions to db.objects.setup_fkey() [2020-07-30]
-    # ap_tran_alloc_det.tran_row_id is an fkey to ap_tran_alloc
-    # 'fkey'       : ['ap_tran_alloc_det', 'row_id', None, None, False, None],
-    'sql'        : (
-        "SELECT b.row_id FROM {company}.ap_tran_alloc_det b "
-        "WHERE b.tran_type = 'ap_alloc' AND b.tran_row_id = a.row_id "
-        "AND b.item_row_id = (SELECT b.row_id FROM {company}.ap_openitems b "
-            "WHERE b.tran_type = a.item_row_id>tran_type AND b.tran_row_id = a.item_row_id>tran_row_id "
-            "AND b.split_no = 0 AND b.deleted_id = 0) "
-        ),
-    })
+# virt.append ({
+#     'col_name'   : 'alloc_row_id',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Allocation row id',
+#     'long_descr' : 'Allocation row id',
+#     'col_head'   : 'Alloc id',
+#     # fkey causes recursion after additions to db.objects.setup_fkey() [2020-07-30]
+#     # ap_tran_alloc_det.tran_row_id is an fkey to ap_tran_alloc
+#     # 'fkey'       : ['ap_tran_alloc_det', 'row_id', None, None, False, None],
+#     'sql'        : (
+#         "SELECT b.row_id FROM {company}.ap_tran_alloc_det b "
+#         "WHERE b.tran_type = 'ap_alloc' AND b.tran_row_id = a.row_id "
+#         "AND b.item_row_id = (SELECT b.row_id FROM {company}.ap_openitems b "
+#             "WHERE b.tran_type = a.item_row_id>tran_type AND b.tran_row_id = a.item_row_id>tran_row_id "
+#             "AND b.split_no = 0 AND b.deleted_id = 0) "
+#         ),
+#     })
 # virt.append ({
 #     'col_name'   : 'currency_id',
 #     'data_type'  : 'INT',

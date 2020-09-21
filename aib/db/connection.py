@@ -639,6 +639,10 @@ class Conn:
                 col, alias, as_clause = await self.get_col_alias(
                     context, db_table, order_params, col_name)
                 if as_clause is not None:
+                    if as_clause.startswith("'"):
+                        # a literal cannot be included in an ORDER BY clause
+                        if as_clause.startswith("'"):
+                            as_clause = f'(SELECT {as_clause})'
                     order_list.append(f'{as_clause}{desc}')
                 elif build_sum:
                     order_list.append(f'SUM({alias}.{col.col_name}){desc}')
@@ -850,11 +854,6 @@ class Conn:
         if sql.startswith('SELECT '):
             # sql = '(' + sql + ')'
             sql = f'({sql})'
-
-        # added [2020-09-19]
-        # a literal cannot be included in an ORDER BY clause - this makes it allowable
-        if sql.startswith("'"):
-            sql = f'(SELECT {sql})'
 
         return sql
 
