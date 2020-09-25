@@ -12,7 +12,7 @@ table = {
     'indexes'       : [
         ['ar_alloc_items', [['item_row_id', False]], None, False]
         ],
-    'ledger_col'    : None,
+    'ledger_col'    : 'tran_row_id>item_row_id>cust_row_id>ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -167,6 +167,9 @@ cols.append ({
             '<compare test="[[`if`, ``, `$exists`, `is`, `$True`, ``]]">'
                 '<fld_val name="discount_cust"/>'
             '</compare>'
+            '<compare test="[[`if`, ``, `_ledger.discount_code_id`, `is`, `$None`, ``]]">'
+                '<literal value="0"/>'
+            '</compare>'
             '<compare test="[[`if`, ``, `item_row_id`, `=`, `tran_row_id>item_row_id`, ``]]">'
                 '<fld_val name="discount_cust"/>'
             '</compare>'
@@ -268,6 +271,9 @@ cols.append ({
         '<case>'
             '<compare test="[[`if`, ``, `$exists`, `is`, `$True`, ``]]">'
                 '<fld_val name="discount_local"/>'
+            '</compare>'
+            '<compare test="[[`if`, ``, `_ledger.discount_code_id`, `is`, `$None`, ``]]">'
+                '<literal value="0"/>'
             '</compare>'
             '<compare test="[[`if`, ``, `item_row_id`, `=`, `tran_row_id>item_row_id`, ``]]">'
                 '<fld_val name="discount_local"/>'

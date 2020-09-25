@@ -890,7 +890,17 @@ class Conn:
                 src_colname = sub_sql
             src_col = src_tbl.col_dict[src_colname]
 
-        fkey = src_col.fkey
+        # some tables can have multiple parents, so we use a complex fkey
+        #   which can lead to a very complex SELECT statement
+        # in db.objects.select_row(), we check if the parent exists
+        # if it does, we can use a simpler foreign key pointing directly to the parent, 
+        #   resulting in a simpler SELECT
+        # BUT we cannot over-ride the fkey definition in col_defn, as this is
+        #   the template for all instances
+        # so db.objects.select_row() stores the simpler foreign key in 'context',
+        #   and this function tries to read it from there
+        # if it is not present, the default falls back to the col_defn fkey
+        fkey = getattr(context, f'{db_table.table_name}.{src_colname}', src_col.fkey)
         tgt_tblname = fkey[0]
         tgt_colname = fkey[1]
 

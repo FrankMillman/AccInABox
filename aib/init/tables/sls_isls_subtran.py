@@ -351,7 +351,7 @@ virt.append ({
     'dflt_rule'  : None,
     'sql'        : (
         """
-        (SELECT SUM(c.qty_tot) FROM (
+        COALESCE((SELECT SUM(c.qty_tot) FROM (
             SELECT b.qty_tot, ROW_NUMBER() OVER (PARTITION BY
                 b.ledger_row_id, b.prod_row_id, b.source_code_id
                 ORDER BY b.tran_date DESC) row_num
@@ -361,7 +361,7 @@ virt.append ({
             AND b.prod_row_id = a.wh_prod_row_id>prod_row_id
             ) as c
             WHERE c.row_num = 1
-            )
+            ), 0)
         - 
         COALESCE((SELECT SUM(b.alloc_qty) 
         FROM {company}.in_wh_prod_unposted b 

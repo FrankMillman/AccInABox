@@ -164,12 +164,22 @@ class Field:
             #       'ar_rec': {'tgt_field': ar_tran_rec.row_id, 'alt_src': None, 'true_src': None},
             #       }]
             col_name, vals_tblnames = tgt_table_name
-            self.foreign_key = ComplexFkey()
-            self.foreign_key.append(col_name)
-            fkeys = {}
-            self.foreign_key.append(fkeys)
-            for val, tbl_name in vals_tblnames:
-                fkeys[val] = {}
+
+            # if parent exists, we know which of the possible parents is the right one,
+            #   so set up the foreign key pointing to the parent
+            if self.fkey_parent is not None:
+                parent_table_name = self.fkey_parent.table_name
+                src_fld = self.db_obj.fields[col_name]
+                assert src_fld._value, parent_table_name in vals_tblnames
+                self.foreign_key = await self.setup_fkey(
+                    parent_table_name, tgt_col_name, altsrc_name, alttgt_name, is_alt)
+            else:  # otherwise set up ComplexFkey with all the possibilities
+                self.foreign_key = ComplexFkey()
+                self.foreign_key.append(col_name)
+                fkeys = {}
+                self.foreign_key.append(fkeys)
+                for val, tbl_name in vals_tblnames:
+                    fkeys[val] = {}
         # self.getval = self._getval
 
     async def setup_fkey(self, tgt_table_name, tgt_col_name, altsrc_name, alttgt_name, is_alt):
@@ -652,19 +662,21 @@ class Field:
         self._value = value
 
         # update any child fields with the same value
-        # if the child has table_keys, this means that there is a one-to-one relationship
-        #   with the parent e.g. db_tables -> db_actions, or any sub_tran table
-        # in this case, automatically read the child row to keep the two in sync
-        # slight downside - if there are sub_tran tables, only one of them can be active
-        #   at a time, but we try to read all of them
-        #     for the active one, SELECT succeeds and 'exists' is set to True
-        #     for the inactive ones, SELECT fails and 'exists' is set to False
-        #   we could get clever and achieve the latter locally if warranted
-        for child in self.children:
-            child._value = value
-            if value is not None:  # could be if from_init
-                if child.table_keys:
-                    await child.read_row(value, display)
+        # if the child has table_keys, there is a one-to-one relationship
+        #   with the parent e.g. db_tables>db_actions, or any sub_tran table
+        # if it is *not* a sub_tran table, read the child row to keep the two in sync
+        # if it *is* a sub_tran table, do not read the child row yet - there can
+        #   be more than one child, but only one can be 'active'
+        # we only know which one is active when the column containing the
+        #   identifier (usually called 'line_type') has a value
+        # therefore postpone trying to read the child until the identifier column
+        #   is populated - see 'if col_name in db_obj.sub_trans:' below
+        if not self.db_obj.sub_trans:
+            for child in self.children:
+                child._value = value
+                if value is not None:  # could be if from_init
+                    if child.table_keys:
+                        await child.read_row(value, display)
 
         if (self.table_keys and value is not None and not from_sql
                 and not db_obj.exists and self.table_keys[-1] is not self):
@@ -717,8 +729,21 @@ class Field:
             if col_name in db_obj.sub_trans:
                 if db_obj.sub_trans[col_name][value] is None:  # not set up
                     subtran_tblname = db_obj.db_table.sub_trans[col_name][value][0]
+                    # creating sub_tran object triggers populating sub_trans on parent
                     await db.objects.get_db_object(db_obj.context, db_obj.company,
                         subtran_tblname, parent=db_obj)
+                subtran_obj = db_obj.sub_trans[col_name][value][0]
+                # we have populated the sub_tran 'identifier' column
+                # now locate the subtran fkey field from row_id.children, and read the
+                #   subtran row using the value of row_id (which is the second part of a
+                #   2-part alternate key - the first part should already be present)
+                row_id = await db_obj.getfld('row_id')  # assume fkey always points to 'row_id'
+                row_id_val = await row_id.getval()
+                if row_id_val is not None:
+                    for child in row_id.children:
+                        if child.db_obj is subtran_obj:
+                            await child.read_row(row_id_val, display)
+                            break
 
         if from_init:
             return  # the rest are all gui-related - n/a if not changed or from_init
