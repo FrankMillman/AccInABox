@@ -122,6 +122,36 @@ async def setup_inv_alloc(db_obj, conn, return_vals):
     if tot_to_allocate:  # should never get here
         raise AibError(head='Error', body='Insufficient stock')
 
+async def alloc_oldest(db_obj, conn, return_vals):
+    # called as split_src func from ar_subtran_rec.upd_on_save()
+    # only called if _ledger.auto_alloc_oldest is True
+    cust_row_id = await db_obj.getval('cust_row_id')
+    tot_to_allocate = await db_obj.getval('arec_cust')
+    db_obj.context.as_at_date = await db_obj.getval('tran_date')
+
+    if 'ar_openitems' not in db_obj.context.data_objects:
+        db_obj.context.data_objects['ar_openitems'] = await db.objects.get_db_object(
+            db_obj.context, db_obj.company, 'ar_openitems')
+    ar_items = db_obj.context.data_objects['ar_openitems']
+
+    cols_to_select = ['row_id', 'due_cust']
+    where = [
+        ['WHERE', '', 'cust_row_id', '=', cust_row_id, ''],
+        ['AND', '', 'due_cust', '!=', '0', ''],
+        ]
+    order = [('tran_date', False), ('row_id', False)]
+
+    async for row_id, due_cust in await conn.full_select(
+            ar_items, cols_to_select, where=where, order=order):
+        if tot_to_allocate > due_cust:
+            amt_allocated = due_cust
+        else:
+            amt_allocated = tot_to_allocate
+        yield (row_id, amt_allocated)
+        tot_to_allocate -= amt_allocated
+        if not tot_to_allocate:
+            break # fully allocated
+
 """
 async def change_balance_sql(caller, xml):
     # called from ar_receipt before_start_form
@@ -519,81 +549,6 @@ async def check_unique(db_obj, xml):
     if suffix:
         await db_obj.setval('tran_number', tran_number+suffix)
 
-# async def check_disc_crn(db_obj, xml):
-#     det_obj = [_ for _ in db_obj.children if _.table_name == (db_obj.table_name + '_det')][0]
-#     ar_rec = [_ for _ in det_obj.children if _.table_name == 'ar_subtran_rec']
-#     if not ar_rec:
-#         return
-#     ar_rec = ar_rec[0]
-#     all_det = det_obj.select_many(where=[], order=[])
-#     async for _ in all_det:
-#         if await det_obj.getval('line_type') == 'arec':
-#             if await ar_rec.getval('alloc_row_id') is not None:
-#                 await create_disc_crn(ar_rec, xml)
-
-# async def create_disc_crn2(ar_rec, xml):
-#     # called from check_disc_crn() above or from ar_alloc - before_post
-
-#     discount_cust = await ar_rec.getval('alloc_row_id>discount_cust')
-#     if not discount_cust:
-#         return
-#     discount_local = await ar_rec.getval('alloc_row_id>discount_local')
-
-#     ar_tran_alloc_det = [_ for _ in ar_rec.children if _.table_name == 'ar_tran_alloc_det'][0]
-
-#     data_objects = ar_rec.context.data_objects
-#     if 'ar_disc' not in data_objects:
-#         data_objects['ar_disc'] = await db.objects.get_db_object(
-#             ar_rec.context, ar_rec.company, 'ar_tran_disc')
-#         data_objects['ar_disc_det'] = await db.objects.get_db_object(
-#             ar_rec.context, ar_rec.company, 'ar_tran_disc_det',
-#                 parent=data_objects['ar_disc'])
-#         data_objects['nsls'] = await db.objects.get_db_object(
-#             ar_rec.context, ar_rec.company, 'ar_tran_disc_nsls',
-#                 parent=data_objects['ar_disc_det'])
-#         data_objects['disc_allocations'] = await db.objects.get_db_object(
-#             ar_rec.context, ar_rec.company, 'ar_tran_alloc_det', parent=data_objects['ar_disc'])
-#     ar_disc = data_objects['ar_disc']
-#     ar_disc_det = data_objects['ar_disc_det']
-#     nsls = data_objects['nsls']
-#     disc_allocations = data_objects['disc_allocations']
-
-#     await ar_disc.init()
-#     await ar_disc.setval('cust_row_id', await ar_rec.getval('cust_row_id'))
-#     await ar_disc.setval('tran_date', await ar_rec.getval('tran_date'))
-#     await ar_disc.setval('currency_id', await ar_rec.getval('currency_id'))
-#     await ar_disc.setval('cust_exch_rate', await ar_rec.getval('cust_exch_rate'))
-#     await ar_disc.setval('tran_exch_rate', await ar_rec.getval('tran_exch_rate'))
-#     await ar_disc.setval('discount_cust', 0-discount_cust)
-#     await ar_disc.setval('discount_local', 0-discount_local)
-#     await ar_disc.save()
-#     ar_disc.exists = True  # usually only set after commit - needed here because ??? [2019-07-31]
-
-#     await ar_disc_det.init()
-#     await ar_disc_det.setval('line_type', 'nsls')
-#     await nsls.setval('nsls_code_id', await ar_rec.getval('cust_row_id>ledger_row_id>discount_code_id'))
-#     await nsls.setval('nsls_amount', 0-discount_cust)
-#     await ar_disc_det.save()
-
-#     if ar_rec.table_name == 'ar_subtran_rec':
-#         tran_type = 'ar_rec'
-#     elif ar_rec.table_name == 'ar_tran_alloc':
-#         tran_type = 'ar_alloc'
-
-#     where = []
-#     where.append(['WHERE', '', 'tran_type', '=', repr(tran_type), ''])
-#     where.append(['AND', '', 'tran_row_id', '=', await ar_rec.getval('row_id'), ''])
-#     where.append(['AND', '', 'item_row_id', '!=', await ar_rec.getval('item_row_id'), ''])
-#     where.append(['AND', '', 'discount_cust', '!=', '0', ''])
-#     all_disc_det = ar_tran_alloc_det.select_many(where=where, order=[('row_id', False)])
-#     async for _ in all_disc_det:
-#         await disc_allocations.init()
-#         await disc_allocations.setval('item_row_id', await ar_tran_alloc_det.getval('item_row_id'))
-#         await disc_allocations.setval('alloc_cust', await ar_tran_alloc_det.getval('discount_cust'))
-#         await disc_allocations.save()
-
-#     await ar_disc.post()
-
 async def posted_check(caller, params):
     context = caller.context
 
@@ -970,6 +925,7 @@ async def create_disc_crn(ar_tran_alloc, xml):
 
     discount_cust = await ar_tran_alloc_det.getval('discount_cust')
     if not discount_cust:
+        print('WE SHOULD NOT GET HERE')
         return
     discount_local = await ar_tran_alloc_det.getval('discount_local')
 

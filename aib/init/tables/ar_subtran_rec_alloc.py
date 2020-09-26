@@ -76,7 +76,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_row_id',
+    'col_name'   : 'subtran_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction id',
     'long_descr' : 'Transaction row id',
@@ -112,19 +112,14 @@ cols.append ({
     'col_checks' : [
         ['match_cust_id', 'Must have same customer id', [
             ['check', '', 'item_row_id>tran_row_id>cust_row_id', '=',
-                'tran_row_id>item_row_id>tran_row_id>cust_row_id', ''],
+                'subtran_row_id>item_row_id>tran_row_id>cust_row_id', ''],
             ]],
         ['alloc_allowed', 'Direct receipt allocation disallowed', [
-            ['check', '', '_param.allow_alloc_rec', 'is', '$True', '']
+            ['check', '', '_param.allow_alloc_rec', 'is', '$True', ''],
+            ['or', '', '_ledger.auto_alloc_oldest', 'is', '$True', ''],
             ]],
         ],
-    'fkey'       : [
-        'ar_openitems', 'row_id',
-            # 'item_tran_type, item_tran_row_id, ledger_id, item_cust_id, item_tran_number, item_split_no',
-            # 'tran_type, tran_row_id, ledger_id, cust_id, tran_number, split_no',
-            None, None,
-            False, None
-        ],
+    'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -139,14 +134,10 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'subtran_row_id>cust_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
-    'col_checks' : [
-        ['not_self', 'Cannot allocate against itself', [
-            ['check', '', 'item_row_id', '!=', 'tran_row_id>item_row_id', ''],
-            ]],
-        ],
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -160,7 +151,7 @@ virt.append ({
     'long_descr' : 'Outstanding discount excluding this transaction - customer currency',
     'col_head'   : 'Os disc cust',
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'subtran_row_id>cust_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'sql'        : (
         "SELECT a.item_row_id>discount_cust "

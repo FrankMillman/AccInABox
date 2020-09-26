@@ -552,6 +552,31 @@ actions.append([
     'before_update', '<pyfunc name="custom.artrans_funcs.check_unique" type="arec" mode="upd"/>'
     ])
 actions.append([
+    'upd_on_save', [
+        [
+            'ar_subtran_rec_alloc',
+            [  # condition
+                ['where', '', '_ledger.auto_alloc_oldest', 'is', '$True', ''],
+                ['and', '', 'posted', 'is', '$False', ''],
+                ],
+
+            True,  # split source?
+
+            'custom.artrans_funcs.alloc_oldest',  # function to populate table
+
+            [  # fkey to this table
+                ['subtran_row_id', 'row_id'],  # tgt_col, src_col
+                ],
+
+            ['item_row_id', 'alloc_cust'],  # fields to be updated
+
+            [],  # return values
+
+            [],  # check totals
+            ],
+        ],
+    ])
+actions.append([
     'upd_on_post', [
         [
             'ar_openitems',  # table name

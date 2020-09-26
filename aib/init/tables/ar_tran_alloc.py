@@ -142,6 +142,25 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'total_discount',
+    'data_type'  : 'DEC',
+    'short_descr': 'Total discount',
+    'long_descr' : 'Total discount allowed - updated from ar_tran_alloc_det after_save',
+    'col_head'   : 'Disc',
+    'key_field'  : 'N',
+    'calculated' : True,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'item_row_id>cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
     'short_descr': 'Posted?',
@@ -199,33 +218,14 @@ virt.append ({
 #     'dflt_val'   : '{item_row_id>tran_row_id>currency_id}',
 #     'sql'        : 'a.item_row_id>tran_row_id>currency_id',
 #     })
-virt.append ({
-    'col_name'   : 'cust_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Customer row id',
-    'long_descr' : 'Customer row id',
-    'col_head'   : 'Cust row_id',
-    'fkey'       : ['ar_customers', 'row_id', None, None, False, None],
-    'sql'        : 'a.item_row_id>tran_row_id>cust_row_id'
-    })
 # virt.append ({
-#     'col_name'   : 'cust_tran_row_id',
+#     'col_name'   : 'cust_row_id',
 #     'data_type'  : 'INT',
 #     'short_descr': 'Customer row id',
 #     'long_descr' : 'Customer row id',
 #     'col_head'   : 'Cust row_id',
-#     'sql'        : 'a.item_row_id>tran_row_id>cust_row_id'
-#     })
-# virt.append ({
-#     'col_name'   : 'cust_exch_rate',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Cust exchange rate',
-#     'long_descr' : 'Exchange rate from transaction currency to customer',
-#     'col_head'   : 'Rate cust',
-#     'db_scale'   : 8,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : '{item_row_id>tran_row_id>cust_exch_rate}',
-#     'sql'        : 'a.item_row_id>tran_row_id>cust_exch_rate',
+#     'fkey'       : ['ar_customers', 'row_id', None, None, False, None],
+#     'sql'        : 'a.item_row_id>cust_row_id'
 #     })
 virt.append ({
     'col_name'   : 'tran_exch_rate',
@@ -256,7 +256,7 @@ virt.append ({
     'long_descr' : 'Balance of transaction not allocated',
     'col_head'   : 'Unalloc',
     'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'item_row_id>cust_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'sql'        : (
@@ -275,8 +275,8 @@ cursors.append({
     'cursor_name': 'unposted_alloc',
     'title': 'Unposted ar allocations',
     'columns': [
-        ['cust_row_id>party_row_id>party_id', 80, False, True],
-        ['cust_row_id>party_row_id>display_name', 160, True, True],
+        ['item_row_id>cust_row_id>party_row_id>party_id', 80, False, True],
+        ['item_row_id>cust_row_id>party_row_id>display_name', 160, True, True],
         ['tran_date', 80, False, True],
         ['item_row_id>tran_type', 60, False, True],
         ['item_row_id>tran_number', 80, False, True],
@@ -292,5 +292,10 @@ cursors.append({
 # actions
 actions = []
 actions.append([
-    'after_post', '<pyfunc name="custom.artrans_funcs.create_disc_crn"/>'
+    'after_post',
+    '<case>'
+      '<compare test="[[`if`, ``, `total_discount`, `!=`, `0`, ``]]">'
+        '<pyfunc name="custom.artrans_funcs.create_disc_crn"/>'
+      '</compare>'
+    '</case>'
     ])

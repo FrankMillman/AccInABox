@@ -113,16 +113,11 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['match_cust_id', 'Must have same customer id', [
-            ['check', '', 'item_row_id>tran_row_id>cust_row_id', '=',
-                'tran_row_id>item_row_id>tran_row_id>cust_row_id', ''],
+            ['check', '', 'item_row_id>cust_row_id', '=',
+                'tran_row_id>item_row_id>cust_row_id', ''],
             ]],
         ],
-    'fkey'       : [
-        'ar_openitems', 'row_id',
-            # 'item_tran_type, item_tran_row_id, ledger_id, item_cust_id, item_tran_number, item_split_no',
-            # 'tran_type, tran_row_id, ledger_id, cust_id, tran_number, split_no',
-            None, None, False, None
-        ],
+    'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -137,7 +132,7 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_row_id>item_row_id>cust_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : [
@@ -160,7 +155,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_row_id>item_row_id>cust_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<case>'
@@ -312,58 +307,6 @@ virt.append ({
     'dflt_val'   : '{tran_row_id>posted}',
     'sql'        : "a.tran_row_id>posted"
     })
-# virt.append ({
-#     'col_name'   : 'cust_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Customer row id',
-#     'long_descr' : 'Customer row id',
-#     'col_head'   : 'Cust id',
-#     'dflt_val'   : '{item_row_id>tran_row_id>cust_row_id}',
-#     'fkey'       : ['ar_customers', 'row_id', None, None, False, None],
-#     'sql'        : "a.item_row_id>tran_row_id>cust_row_id"
-#     })
-# virt.append ({
-#     'col_name'   : 'due_bal_cust',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Bal of trans_items - cust curr',
-#     'long_descr' : 'Balance of open item including this transaction - cust currency',
-#     'col_head'   : 'Due bal cust',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'tran_row_id>cust_row_id>currency_id>scale',
-#     'dflt_val'   : '0',
-#     'sql'        : (
-#         "SELECT a.item_row_id>amount_cust "
-#         "- "
-#         "COALESCE("
-#             "(SELECT SUM(b.alloc_cust) FROM {company}.ar_tran_alloc_det b "
-#             "WHERE b.item_row_id = a.item_row_id AND b.row_id != a.row_id)"
-#         ", 0) "
-#         "- "
-#         "a.alloc_cust"
-#         # "a.discount_cust"
-#         ),
-#     })
-# virt.append ({
-#     'col_name'   : 'os_bal_local',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'O/s trans_items - local curr',
-#     'long_descr' : 'Balance of open item excluding this transaction - local currency',
-#     'col_head'   : 'Os bal local',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_val'   : '0',
-#     'sql'        : (
-#         "SELECT a.item_row_id>amount_local "
-#         "- "
-#         "COALESCE("
-#             "(SELECT SUM(b.alloc_local) FROM {company}.ar_tran_alloc_det b "
-#             "WHERE b.item_row_id = a.item_row_id AND b.row_id != a.row_id)"
-#         ", 0) "
-#         "- "
-#         "a.alloc_local"
-#         # "a.discount_local"
-#         ),
-#     })
 virt.append ({
     'col_name'   : 'os_disc_cust',
     'data_type'  : 'DEC',
@@ -371,7 +314,7 @@ virt.append ({
     'long_descr' : 'Outstanding discount excluding this transaction - customer currency',
     'col_head'   : 'Os disc cust',
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_row_id>item_row_id>cust_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'sql'        : (
         "SELECT a.item_row_id>discount_cust "
@@ -388,6 +331,24 @@ cursors = []
 
 # actions
 actions = []
+actions.append([
+    'upd_on_save', [
+        [
+            '_parent',
+            [  # condition - if from upd_on_post, there is no parent
+                ['where', '', 'item_row_id', '!=', 'tran_row_id>item_row_id', ''],
+                ],
+            False,  # split source?
+            [],  # key fields
+            [  # aggregation
+                ['total_discount', '+', 'discount_cust'],  # tgt_col, op, src_col
+                ],
+            [],  # on insert
+            [],  # on update
+            [],  # on delete
+            ],
+        ],
+    ])
 actions.append([
     'upd_on_post', [
         [
