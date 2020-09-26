@@ -1,7 +1,7 @@
 <subtype_body subtype_id="isls">
   <block/>
   <panel/>
-  <if_ test="[[`if`, ``, `_param.in_ledger_id`, `is`, `$None`, ``]]"/>
+  <if test="[[`if`, ``, `_param.in_ledger_id`, `is`, `$None`, ``]]"/>
   <row/>
   <col/>
   <label value="Warehouse:"/>

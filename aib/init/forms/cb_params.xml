@@ -22,7 +22,7 @@
 
       <block/>
       <panel/>
-      <if_ test="[[`if`, ``, `_param.currency_id`, `is`, `$None`, ``]]"/>
+      <if test="[[`if`, ``, `_param.currency_id`, `is`, `$None`, ``]]"/>
       <row/>
       <col/>
       <label value="Currency"/>

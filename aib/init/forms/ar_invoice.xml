@@ -141,7 +141,7 @@
         <input obj_name="ar_inv" col_name="cust_id" lng="80"/>
         <display obj_name="ar_inv" col_name="cust_row_id>party_row_id>display_name" lng="160"/>
 
-        <if_ test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``],
+        <if test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``],
           [`and`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
 
         <row/>
@@ -159,7 +159,7 @@
 
         <end_if/>
 
-        <if_ test="[[`if`, ``, `_param.function_row_id`, `is`, `$None`, ``],
+        <if test="[[`if`, ``, `_param.function_row_id`, `is`, `$None`, ``],
           [`and`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
 
         <row/>
@@ -195,7 +195,7 @@
           <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
           "/>
 
-        <if_ test="[[`if`, ``, `_ledger.auto_inv_no`, `is`, `$None`, ``]]"/>
+        <if test="[[`if`, ``, `_ledger.auto_inv_no`, `is`, `$None`, ``]]"/>
         <row/>
         <col/>
         <label value="Invoice no:"/>

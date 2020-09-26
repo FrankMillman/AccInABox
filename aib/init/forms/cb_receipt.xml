@@ -99,7 +99,7 @@
         <block/>
         <panel/>
 
-       <if_ test="[[`if`, ``, `_ledger.auto_rec_no`, `is`, `$None`, ``]]"/>
+       <if test="[[`if`, ``, `_ledger.auto_rec_no`, `is`, `$None`, ``]]"/>
         <row/>
         <col/>
         <label value="Receipt no:"/>
@@ -121,7 +121,7 @@
         <col/>
         <input obj_name="cb_rec" col_name="payer" lng="200"/>
 
-        <!-- if_ test="[[`if`, ``, `_ledger.alt_curr`, `is`, `$True`, ``]]"/>
+        <!-- if test="[[`if`, ``, `_ledger.alt_curr`, `is`, `$True`, ``]]"/>
         <row/>
         <col/>
         <label value="Currency:"/>
@@ -137,7 +137,7 @@
         <input obj_name="cb_rec" col_name="amount" lng="120"/>
         <display obj_name="cb_rec" col_name="ledger_row_id>currency_id>symbol" lng="10"/>
 
-        <!-- if_ test="[[`if`, ``, `_ledger.alt_curr`, `is`, `$True`, ``]]"/>
+        <!-- if test="[[`if`, ``, `_ledger.alt_curr`, `is`, `$True`, ``]]"/>
         <row/>
         <col/>
         <label value="Cb amount:"/>

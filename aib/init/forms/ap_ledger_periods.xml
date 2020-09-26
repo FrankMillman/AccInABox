@@ -180,7 +180,7 @@
         <block/>
         <panel/>
 <!--
-        <if_ test="[[`if`, ``, `_ledger.separate_pmt_supp`, `is`, `$True`, ``]]"/>
+        <if test="[[`if`, ``, `_ledger.separate_pmt_supp`, `is`, `$True`, ``]]"/>
         <row/>
         <col/>
         <label value="Single supplier?"/>

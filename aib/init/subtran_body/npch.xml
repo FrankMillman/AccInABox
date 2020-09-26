@@ -16,7 +16,7 @@
   <label value="Amount:"/>
   <col/>
   <input obj_name="npch" col_name="npch_amount" lng="80"/>
-  <if_ test="[[`if`, ``, `_param.eff_date_npch`, `is`, `$True`, ``]]"/>
+  <if test="[[`if`, ``, `_param.eff_date_npch`, `is`, `$True`, ``]]"/>
   <row/>
   <col/>
   <label value="Effective date:"/>

@@ -804,7 +804,7 @@ class Frame:
                 skip_elem = False
             if skip_elem:
                 continue
-            if element.tag == 'if_':
+            if element.tag == 'if':
                 test = loads(element.get('test').replace('~', "'"))
                 skip_elem = not await eval_bool_expr(test, self.db_obj)
             elif element.tag == 'block':

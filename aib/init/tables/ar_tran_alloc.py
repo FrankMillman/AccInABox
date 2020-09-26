@@ -148,7 +148,7 @@ cols.append ({
     'long_descr' : 'Total discount allowed - updated from ar_tran_alloc_det after_save',
     'col_head'   : 'Disc',
     'key_field'  : 'N',
-    'calculated' : True,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

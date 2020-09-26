@@ -19,7 +19,7 @@
       <col/>
       <input obj_name="cust" col_name="cust_id" lng="60"/>
       <display obj_name="party" col_name="display_name" lng="160"/>
-      <if_ test="[[`if`, ``, `_ledger.currency_id`, `is`, `$None`, ``]]"/>
+      <if test="[[`if`, ``, `_ledger.currency_id`, `is`, `$None`, ``]]"/>
       <row/>
       <col/>
       <label value="Currency:"/>

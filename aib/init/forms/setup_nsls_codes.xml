@@ -67,7 +67,7 @@
           <col/>
           <input obj_name="nsls_code" col_name="gl_code" lng="80"/>
 
-          <if_ test="[[`if`, ``, `_param.eff_date_nsls`, `is`, `$True`, ``]]"/>
+          <if test="[[`if`, ``, `_param.eff_date_nsls`, `is`, `$True`, ``]]"/>
           <row/>
           <col/>
           <label value="Allow change effective date?"/>
@@ -80,7 +80,7 @@
           <input obj_name="nsls_code" col_name="uea_gl_code" lng="80"/>
           <end_if/>
 
-          <if_ test="[[`if`, ``, `_param.tax_cat_id`, `is not`, `$None`, ``]]"/>
+          <if test="[[`if`, ``, `_param.tax_cat_id`, `is not`, `$None`, ``]]"/>
           <block/>
           <grid data_object="mem_tax_codes" growable="false" num_grid_rows="3">
             <toolbar/>
@@ -156,7 +156,7 @@
               <col/>
               <input obj_name="nsls_code" col_name="gl_code" lng="80"/>
 
-              <if_ test="[[`if`, ``, `_param.eff_date_nsls`, `is`, `$True`, ``]]"/>
+              <if test="[[`if`, ``, `_param.eff_date_nsls`, `is`, `$True`, ``]]"/>
               <row/>
               <col/>
               <label value="Allow change effective date?"/>
@@ -169,7 +169,7 @@
               <input obj_name="nsls_code" col_name="unearned_gl_code" lng="80"/>
               <end_if/>
 
-              <if_ test="[[`if`, ``, `_param.tax_cat_id`, `is not`, `$None`, ``]]"/>
+              <if test="[[`if`, ``, `_param.tax_cat_id`, `is not`, `$None`, ``]]"/>
               <block/>
               <grid data_object="mem_tax_codes" growable="false" num_grid_rows="3">
                 <toolbar/>

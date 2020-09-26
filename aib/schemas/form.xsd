@@ -162,7 +162,7 @@
       <xs:element name="block"/>
       <xs:element name="vbox"/>
       <xs:element name="vbox_end"/>
-      <xs:element ref="if_"/>
+      <xs:element ref="if"/>
       <xs:element name="end_if"/>
       <xs:element ref="string"/>
       <xs:element name="panel"/>
@@ -189,7 +189,7 @@
       <xs:element ref="button_row"/>
     </xs:choice>
   </xs:group>
-  <xs:element name="if_">
+  <xs:element name="if">
     <xs:complexType>
       <xs:attribute name="test" use="required"/>
     </xs:complexType>
