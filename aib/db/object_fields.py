@@ -428,6 +428,16 @@ class Field:
                 if self in db_obj.get_flds_to_update():  # ignore if not active subtype
                     errmsg = f'{self.table_name}.{col_name} - a value is required'
                     raise AibError(head=col_defn.short_descr, body=errmsg)
+                # next block added [2020-09-27]
+                # e.g. cust_id is an alt_src to cust_row_id
+                #      cust_row_id is in flds_to_update, but cust_id is not
+                #      this detects it and validates cust_id
+                if self.foreign_key:  # not None or {}
+                    if self.foreign_key['true_src']:
+                        true_src = self.foreign_key['true_src']
+                        if true_src in db_obj.get_flds_to_update():
+                            errmsg = f'{self.table_name}.{col_name} - a value is required'
+                            raise AibError(head=col_defn.short_descr, body=errmsg)
 
         if not from_init:
             if self.ledger_col:  # check subledger matches ctx.mod_ledg_id if present
