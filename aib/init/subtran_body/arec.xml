@@ -16,6 +16,14 @@
   <col/>
   <input obj_name="ar_rec" col_name="cust_id" lng="84" after="
     <<!--  show exch_rate and arec_cust if alt_curr - enable arec_cust if override allowed -->>
+    <<case>>
+      <<compare test=`[['if', '', '_param.allow_alloc_rec', 'is', '$True', ''],
+          ['and', '', 'ar_rec.cust_row_id>ledger_row_id>auto_alloc_oldest', 'is', '$False', '']]`>
+        <<change_button>>
+          <<btn_enabled btn_id=`alloc` state=`true`/>>
+        <</change_button>>
+      <</compare>>
+    <</case>>
     "/>
   <display obj_name="ar_rec" col_name="cust_row_id>party_row_id>display_name" lng="120"/>
 
@@ -40,15 +48,11 @@
 
   <end_if/>
 
-  <!-- this does not work well - if > 1 ledger, auto_alloc_oldest is $None when form is created -->
-  <if test="[[`if`, ``, `_param.allow_alloc_rec`, `is`, `$True`, ``],
-      [`and`, ``, `ar_rec.cust_row_id>ledger_row_id>auto_alloc_oldest`, `is`, `$False`, ``]]"/>
-
   <row/>
   <col/>
   <col/>
   <button lng="150" btn_id="alloc" btn_label="Allocate now"
-    btn_enabled="true" btn_validate="true" action="
+    btn_enabled="false" btn_validate="true" action="
       <<req_save/>>
       <<sub_form name=`ar_alloc_item`>>
         <<call_params>>
@@ -71,7 +75,5 @@
         <</on_return>>
       <</sub_form>>
     "/>
-
-  <end_if/>
 
 </subtype_body>

@@ -892,9 +892,8 @@ class Frame:
 
                 form_dflt = element.get('form_dflt')
                 if form_dflt is not None:
-                    form_dflt = etree.fromstring(
+                    gui_obj.form_dflt = etree.fromstring(
                         f'<_>{form_dflt}</_>', parser=parser)
-                gui_obj.form_dflt = form_dflt
 
                 validations = element.get('validation')
                 if validations is not None:
