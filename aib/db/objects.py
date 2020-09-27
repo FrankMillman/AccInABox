@@ -892,27 +892,22 @@ class DbObject:
 
         # some tables can have multiple parents, so we use a complex fkey
         #   which can lead to a very complex SELECT statement
-        # here we check if the parent exists
-        # if it does, we can use a simpler foreign key pointing directly to the parent, 
+        # here we check if the parent has been set up
+        # if it has, we can use a simpler foreign key pointing directly to the parent, 
         #   resulting in a simpler SELECT
         # BUT we cannot over-ride the fkey definition in col_defn, as this is
         #   the template for all instances
         # so we construct the simpler foreign key and store it in 'context',
         #   and db.connection.walk_colname() looks for it there
         context_fkey = None
-        if self.db_table.parent_params:
-            parent_params = self.db_table.parent_params
-            for tgt_table, tgt_col, src_col in parent_params:  # could be > 1
-                if isinstance(tgt_table, list):
-                    col_name, vals_tgts = tgt_table
-                    col_val = await self.getval(col_name)
-                    if col_val is not None:  # parent must exist
-                        for val, tgt_tbl in vals_tgts:
-                            if val == col_val:
-                                fkey = [tgt_tbl, tgt_col, None, None, True, None, False]
-                                context_fkey = f'{self.table_name}.{src_col}'
-                                setattr(self.context, context_fkey, fkey)
-                                break
+        for tgt_table, tgt_col, src_col in self.db_table.parent_params:  # could be > 1
+            if isinstance(tgt_table, list):
+                if self.parent is not None:  # parent has been set up
+                    tgt_tbl = self.parent[1].table_name
+                    fkey = [tgt_tbl, tgt_col, None, None, True, None, False]
+                    context_fkey = f'{self.table_name}.{src_col}'
+                    setattr(self.context, context_fkey, fkey)
+                    break
 
         async with self.context.db_session.get_connection() as db_mem_conn:
             if self.mem_obj:

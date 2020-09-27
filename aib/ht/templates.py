@@ -82,7 +82,7 @@ btn_close = (
     )
 
 btn_save_multi = (
-    '<button btn_id="btn_save" btn_label="More?" btn_enabled="true" '
+    '<button btn_id="btn_save" btn_label="More?" btn_enabled="false" '
         'btn_validate="true" btn_default="true" lng="60" action="'
         '&lt;case&gt;'
           '&lt;btn_has_label btn_id=&quot;btn_save&quot; label=&quot;More?&quot;&gt;'

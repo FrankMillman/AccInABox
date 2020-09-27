@@ -892,8 +892,8 @@ class Conn:
 
         # some tables can have multiple parents, so we use a complex fkey
         #   which can lead to a very complex SELECT statement
-        # in db.objects.select_row(), we check if the parent exists
-        # if it does, we can use a simpler foreign key pointing directly to the parent, 
+        # in db.objects.select_row(), we check if the parent has been set up
+        # if it has, we can use a simpler foreign key pointing directly to the parent, 
         #   resulting in a simpler SELECT
         # BUT we cannot over-ride the fkey definition in col_defn, as this is
         #   the template for all instances
