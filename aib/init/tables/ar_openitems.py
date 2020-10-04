@@ -342,6 +342,14 @@ virt.append ({
     'sql'        : 'a.tran_row_id>tran_number',
     })
 virt.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text',
+    'long_descr' : 'Line of text to appear on reports',
+    'col_head'   : 'Text',
+    'sql'        : 'a.tran_row_id>text',
+    })
+virt.append ({
     'col_name'   : 'balance_cust',
     'data_type'  : 'DEC',
     'short_descr': 'Balance',
@@ -353,8 +361,8 @@ virt.append ({
         "a.amount_cust "
         "- "
         "COALESCE(("
-            "SELECT SUM(b.alloc_cust) "
-            "FROM {company}.ar_tran_alloc_det b "
+            "SELECT SUM(b.alloc_cust + b.discount_cust) "
+            "FROM {company}.ar_allocations b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
             "), 0)"
         ),
@@ -371,11 +379,10 @@ virt.append ({
         "a.amount_cust "
         "- "
         "COALESCE(("
-            "SELECT SUM(b.alloc_cust) "
-            "FROM {company}.ar_tran_alloc_det b "
-            "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
+            "SELECT SUM(b.alloc_cust + b.discount_cust) "
+            "FROM {company}.ar_allocations b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "c.tran_date <= {as_at_date} "
+                "b.tran_date <= {as_at_date} "
             "), 0)"
         ),
     })
@@ -392,7 +399,7 @@ virt.append ({
         "- "
         "COALESCE(("
             "SELECT SUM(b.alloc_local) "
-            "FROM {company}.ar_tran_alloc_det b "
+            "FROM {company}.ar_allocations b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
             "), 0)"
         )
@@ -410,7 +417,7 @@ virt.append ({
         "- "
         "COALESCE(("
             "SELECT SUM(b.alloc_local) "
-            "FROM {company}.ar_tran_alloc_det b "
+            "FROM {company}.ar_allocations b "
             "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
                 "c.tran_date <= {as_at_date} "
@@ -430,7 +437,7 @@ virt.append ({
         "SELECT a.discount_cust "
         "- "
         "COALESCE("
-            "(SELECT SUM(b.discount_cust) FROM {company}.ar_tran_alloc_det b "
+            "(SELECT SUM(b.discount_cust) FROM {company}.ar_allocations b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0)"
         ", 0) "
         ),
@@ -448,8 +455,8 @@ virt.append ({
         "a.amount_cust "
         "- "
         "COALESCE(("
-            "SELECT SUM(b.alloc_cust) "
-            "FROM {company}.ar_tran_alloc_det b "
+            "SELECT SUM(b.alloc_cust + b.discount_cust) "
+            "FROM {company}.ar_allocations b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
             "), 0) "
         "- "
@@ -458,7 +465,7 @@ virt.append ({
             "WHEN {as_at_date} > a.discount_date THEN 0 "
             "ELSE a.discount_cust - COALESCE(("
                 "SELECT SUM(b.discount_cust) "
-                "FROM {company}.ar_tran_alloc_det b "
+                "FROM {company}.ar_allocations b "
                 "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
                 "), 0) "
             "END"
@@ -477,11 +484,12 @@ virt.append ({
         "a.amount_cust "
         "- "
         "COALESCE(("
-            "SELECT SUM(b.alloc_cust) "
-            "FROM {company}.ar_tran_alloc_det b "
-            "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
+            "SELECT SUM(b.alloc_cust + b.discount_cust) "
+            # "SELECT SUM(b.alloc_cust) "
+            "FROM {company}.ar_allocations b "
+            # "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-            "AND c.posted = '1' "
+            # "AND c.posted = '1' "
             "), 0) "
         "- "
         "CASE "
@@ -489,10 +497,10 @@ virt.append ({
             "WHEN {as_at_date} > a.discount_date THEN 0 "
             "ELSE a.discount_cust - COALESCE(("
                 "SELECT SUM(b.discount_cust) "
-                "FROM {company}.ar_tran_alloc_det b "
-                "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
+                "FROM {company}.ar_allocations b "
+                # "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
                 "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-                "AND c.posted = '1' "
+                # "AND c.posted = '1' "
                 "), 0) "
             "END"
         ),
@@ -506,7 +514,8 @@ virt.append ({
     'db_scale'   : 2,
     'scale_ptr'  : 'cust_row_id>currency_id>scale',
     'sql'        : (
-        "SELECT b.alloc_cust FROM {company}.{alloc_detail} b "
+        # "SELECT b.alloc_cust + b.discount_cust FROM {company}.ar_allocations b "
+        "SELECT b.alloc_cust FROM {company}.ar_allocations b "
         "WHERE b.item_row_id = a.row_id AND b.tran_row_id = {tran_row_id} "
         "AND b.deleted_id = 0"
         )
@@ -540,10 +549,11 @@ virt.append ({
         "a.amount_cust "
         "- "
         "COALESCE(("
-            "SELECT SUM(b.alloc_cust) "
-            "FROM {company}.ar_tran_alloc_det b "
-            "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
-            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND c.posted = '1'"
+            "SELECT SUM(b.alloc_cust + b.discount_cust) "
+            "FROM {company}.ar_allocations b "
+            # "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
+            # "AND c.posted = '1'"
             "), 0)"
         ),
     })
@@ -567,18 +577,20 @@ virt.append ({
         "a.amount_cust "
         "- "
         "COALESCE(("
-            "SELECT SUM(b.alloc_cust) "
-            "FROM {company}.ar_tran_alloc_det b "
-            "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
-            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND c.posted = '1'"
+            "SELECT SUM(b.alloc_cust + b.discount_cust) "
+            "FROM {company}.ar_allocations b "
+            # "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
+            # "AND c.posted = '1'"
             "), 0)"
-        "+ "
-        "COALESCE(("
-            "SELECT SUM(b.alloc_cust) "
-            "FROM {company}.ar_tran_alloc_det b "
-            "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
-            "WHERE c.item_row_id = a.row_id AND b.deleted_id = 0 AND c.posted = '0'"
-            "), 0)"
+        # "+ "
+        # "COALESCE(("
+        #     "SELECT SUM(b.alloc_cust + b.discount_cust) "
+        #     "FROM {company}.ar_allocations b "
+        #     # "JOIN {company}.ar_tran_alloc c ON c.row_id = b.tran_row_id "
+        #     "WHERE c.item_row_id = a.row_id AND b.deleted_id = 0 "
+        #     # "AND c.posted = '0'"
+        #     "), 0)"
         ),
     })
 
@@ -589,8 +601,8 @@ cursors.append({
     'title': 'Unallocated items',
     'columns': [
         # ['cust_id', 80,
-        ['tran_row_id>cust_row_id>party_row_id>party_id', 80, False, True],
-        ['tran_row_id>cust_row_id>party_row_id>display_name', 120, True, True],
+        ['cust_row_id>party_row_id>party_id', 80, False, True],
+        ['cust_row_id>party_row_id>display_name', 120, True, True],
         ['tran_type', 60, False, True],
         ['tran_number', 80, False, True],
         ['tran_row_id>tran_date', 80, False, True],

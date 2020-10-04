@@ -9,9 +9,8 @@ table = {
     'sequence'      : None,
     'tree_params'   : None,
     'roll_params'   : None,
-    'indexes'       : [
-        # ['arrec_cust_date', [['cust_row_id', False], ['tran_date', False]], None, False]
-        ],
+    # 'indexes'       : [['arrec_cust_date', [['cust_row_id', False], ['tran_date', False]], None, False]],
+    'indexes'       : None,
     'ledger_col'    : 'ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
@@ -339,14 +338,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ar_rec'",
-    })
+# virt.append ({
+#     'col_name'   : 'tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Transaction type',
+#     'long_descr' : 'Transaction type',
+#     'col_head'   : 'Tran type',
+#     'sql'        : "'ar_rec'",
+#     })
 virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
@@ -406,5 +405,5 @@ actions.append([
         ],
     ])
 actions.append([
-    'after_post', '<pyfunc name="custom.artrans_funcs.check_allocations"/>'
+    'after_post', '<pyfunc name="custom.artrans_funcs.check_disc_crn"/>'
     ])

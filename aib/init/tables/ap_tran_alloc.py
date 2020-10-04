@@ -142,6 +142,25 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'total_discount',
+    'data_type'  : 'DEC',
+    'short_descr': 'Total discount',
+    'long_descr' : 'Total discount allowed - updated from ap_tran_alloc_det after_save',
+    'col_head'   : 'Disc',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'item_row_id>supp_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
     'short_descr': 'Posted?',
@@ -163,14 +182,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ap_alloc'",
-    })
+# virt.append ({
+#     'col_name'   : 'tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Transaction type',
+#     'long_descr' : 'Transaction type',
+#     'col_head'   : 'Tran type',
+#     'sql'        : "'ap_alloc'",
+#     })
 # virt.append ({
 #     'col_name'   : 'alloc_row_id',
 #     'data_type'  : 'INT',
@@ -292,5 +311,5 @@ cursors.append({
 # actions
 actions = []
 actions.append([
-    'after_post', '<pyfunc name="custom.artrans_funcs.create_disc_crn"/>'
+    'after_post', '<pyfunc name="custom.aptrans_funcs.create_disc_crn"/>'
     ])

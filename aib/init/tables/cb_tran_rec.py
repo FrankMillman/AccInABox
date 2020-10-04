@@ -320,7 +320,7 @@ virt.append ({
     'col_name'   : 'tran_type',
     'data_type'  : 'TEXT',
     'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
+    'long_descr' : 'Transaction type - used in gui to ask "Post another?"',
     'col_head'   : 'Tran type',
     'sql'        : "'cb_rec'",
     })
@@ -470,5 +470,5 @@ actions.append([
         ],
     ])
 actions.append([
-    'after_post', '<pyfunc name="custom.artrans_funcs.check_allocations"/>'
+    'after_post', '<pyfunc name="custom.artrans_funcs.check_disc_crn"/>'
     ])

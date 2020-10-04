@@ -212,6 +212,7 @@
         </toolbar>
         <cur_columns>
           <cur_col col_name="tran_number" lng="80" readonly="true"/>
+          <cur_col col_name="text" lng="120" readonly="true"/>
           <cur_col col_name="tran_date" lng="80" readonly="true"/>
           <cur_col col_name="due_date" lng="80" readonly="true"/>
           <cur_col col_name="amount_cust" lng="80" readonly="true"/>
@@ -220,10 +221,10 @@
         <cur_filter>
           <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
             op="=" expr="ar_cust.row_id" rbr=""/>
-          <!-- <cur_fil test="AND" lbr="" col_name="tran_date"
-            op=">>" expr="_ctx.first_date" rbr=""/> -->
-          <!-- <cur_fil test="AND" lbr="" col_name="tran_date"
-            op="<<=" expr="_ctx.last_date" rbr=""/> -->
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op=">>" expr="_ctx.first_date" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op="<<=" expr="_ctx.last_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
             op="<<=" expr="_ctx.as_at_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="balance_cust_as_at"

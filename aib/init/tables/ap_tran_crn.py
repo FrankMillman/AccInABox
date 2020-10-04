@@ -438,14 +438,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ap_crn'",
-    })
+# virt.append ({
+#     'col_name'   : 'tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Transaction type',
+#     'long_descr' : 'Transaction type',
+#     'col_head'   : 'Tran type',
+#     'sql'        : "'ap_crn'",
+#     })
 virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
@@ -609,8 +609,7 @@ actions.append([
             '</mem_obj>',
 
             [  # fkey to this table
-                ['tran_type', 'tran_type'],  # tgt_col, src_col
-                ['tran_row_id', 'row_id'],
+                ['tran_row_id', 'row_id'],  # tgt_col, src_col
                 ],
 
             [  # fields to update

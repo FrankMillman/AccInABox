@@ -1596,7 +1596,6 @@ class DbObject:
         tbl_key = f'{id(self)}.{tbl_name}'
         if tbl_key in self.context.data_objects:  # already set up
             tgt_obj = self.context.data_objects[tbl_key]
-            await tgt_obj.init()
         else:  # first time - set up tgt_obj
             for tgt_fkey in self.db_table.tgt_fkeys:
                 if tgt_fkey.is_child:
@@ -1612,6 +1611,7 @@ class DbObject:
             else:
                 tgt_obj = await get_db_object(self.context, self.company, tbl_name)
             self.context.data_objects[tbl_key] = tgt_obj
+        await tgt_obj.init()
         return tgt_obj
 
     async def get_src_val(self, src_col):
@@ -1625,6 +1625,8 @@ class DbObject:
             src_val = int(src_col)
         elif src_col.startswith('('):
             src_val = await eval_elem(src_col, self)
+        elif src_col.startswith('_ctx.'):
+            src_val = getattr(self.context, src_col.split('.')[1])
         elif src_col.startswith('pyfunc:'):
             func_name = src_col.split(':')[1]
             module_name, func_name = func_name.rsplit('.', 1)
@@ -1643,7 +1645,7 @@ class DbObject:
                 src_db_obj = await db.cache.get_ledger_params(
                     self.company, module_row_id, ledger_row_id)
             else:
-                tbl_key = f'{self.table_name}.{src_tbl}'
+                tbl_key = f'{id(self)}.{src_tbl}'
                 src_db_obj = self.context.data_objects[tbl_key]
             src_val = await src_db_obj.getval(src_col)
         else:
@@ -1662,7 +1664,7 @@ class DbObject:
             return
 
         param_style = self.db_table.constants.param_style
-        key_fields, aggr, on_ins, on_upd, on_del = upd_on_save
+        key_fields, aggr, on_ins, on_upd, on_del, *return_vals = upd_on_save
 
         if tbl_name == '_parent':
             tgt_obj = self.parent[1].db_obj
@@ -1820,6 +1822,10 @@ class DbObject:
         elif delete_obj:
             await tgt_obj.delete(from_upd_on_save=True)
 
+        if return_vals:
+            for tgt, src in return_vals[0]:
+                await self.setval(tgt, await tgt_obj.getval(src))
+
     async def upd_split_src(self, tbl_name, upd_on_save, conn, upd_type):
         func_name, fkeys, flds_to_upd, return_cols, check_totals = upd_on_save
         tgt_obj = await self.get_tgt_obj(tbl_name)
@@ -1905,9 +1911,10 @@ class DbObject:
                     if not await eval_bool_expr(post_chk, self):
                         raise AibError(head=self.db_table.short_descr, body=errmsg)
 
+            if self.dirty:
+                await self.save()
+
             if not posting_child:
-                if self.dirty:
-                    await self.save()
                 if post_type == 'post':
                     if await self.getval('posted'):
                         raise AibError(head='Post {}'.format(self.table_name),
@@ -2051,7 +2058,7 @@ class DbObject:
             return
 
         param_style = self.db_table.constants.param_style
-        key_fields, aggr, on_post, on_unpost = upd_on_post
+        key_fields, aggr, on_post, on_unpost, *return_vals = upd_on_post
 
         if tbl_name == '_parent':  # don't think this can happen on 'post'
             tgt_obj = self.parent[1].db_obj
@@ -2199,6 +2206,10 @@ class DbObject:
             await tgt_obj.save(from_upd_on_save=True)
         elif delete_obj:
             await tgt_obj.delete(from_upd_on_save=True)
+
+        if return_vals:
+            for tgt, src in return_vals[0]:
+                await self.setval(tgt, await tgt_obj.getval(src))
 
     async def increment_seq(self, conn):  # called before save
         param_style = self.db_table.constants.param_style

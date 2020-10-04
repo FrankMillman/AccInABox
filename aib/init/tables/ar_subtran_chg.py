@@ -216,7 +216,7 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'dflt_rule'  : None,
+    'dflt_rule'  : '{tran_det_row_id>tran_row_id>text}',
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -436,8 +436,7 @@ actions.append([
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['tran_type', "'ar_chg'"],  # tgt_col, src_col
-                ['tran_row_id', 'row_id'],
+                ['tran_row_id', 'row_id'],  # tgt_col, src_col
                 ['split_no', '0'],
                 ],
             [],  # aggregation

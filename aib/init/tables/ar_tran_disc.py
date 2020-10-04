@@ -395,11 +395,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'alloc_row_id',
+    'col_name'   : 'orig_item_id',
     'data_type'  : 'INT',
-    'short_descr': 'Allocation row id',
-    'long_descr' : 'Row id of ar_tran_alloc triggering this discount',
-    'col_head'   : 'Alloc',
+    'short_descr': 'Orig item id',
+    'long_descr' : 'Item row id of item triggering this discount',
+    'col_head'   : 'Orig item id',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : True,
@@ -410,7 +410,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : None,
+    'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 
@@ -440,7 +440,7 @@ virt.append ({
     'short_descr': 'Open item row id',
     'long_descr' : 'Open item row id',
     'col_head'   : 'Item id',
-    # 'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
+    'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
     'sql'        : (
         "SELECT b.row_id FROM {company}.ar_openitems b "
         "WHERE b.tran_type = 'ar_disc' AND b.tran_row_id = a.row_id "
@@ -551,8 +551,7 @@ actions.append([
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['tran_type', "'ar_disc'"],  # tgt_col, src_col
-                ['tran_row_id', 'row_id'],
+                ['tran_row_id', 'row_id'],  # tgt_col, src_col
                 ['split_no', '0'],
                 ],
             [],  # aggregation
@@ -563,6 +562,21 @@ actions.append([
                 ['tran_date', '=', 'tran_date'],
                 ['amount_cust', '-', 'disc_tot_cust'],
                 ['amount_local', '-', 'disc_tot_local'],
+                ],
+            [],  # on unpost
+            ],
+        [
+            'ar_allocations',
+            [],  # condition
+            False,  # split source?
+            [  # key fields
+                ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
+                ['item_row_id', 'item_row_id'],
+                ],
+            [],  # aggregation
+            [  # on post
+                ['discount_cust', '-', 'discount_cust'],  # tgt_col, op, src_col
+                ['discount_local', '-', 'discount_local'],
                 ],
             [],  # on unpost
             ],
@@ -689,6 +703,6 @@ actions.append([
             ],
         ],
     ])
-actions.append([
-    'after_post', '<pyfunc name="custom.artrans_funcs.allocate_discount"/>'
-    ])
+# actions.append([
+#     'after_post', '<pyfunc name="custom.artrans_funcs.allocate_discount"/>'
+#     ])

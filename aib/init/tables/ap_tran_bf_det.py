@@ -336,8 +336,7 @@ actions.append([
             [],  # condition
             False,  # split source?
             [  # key fields
-                ['tran_type', "'ap_bf'"],  # tgt_col, src_col
-                ['tran_row_id', 'row_id'],
+                ['tran_row_id', 'row_id'],  # tgt_col, src_col
                 ['split_no', '0'],
                 ],
             [],  # aggregation

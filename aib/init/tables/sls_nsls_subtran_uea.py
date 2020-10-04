@@ -177,7 +177,7 @@ virt.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
     'short_descr': 'Posted?',
-    'long_descr' : 'Has transaction been posted?',
+    'long_descr' : 'Has transaction been posted? Only here to satisfy diag.py',
     'col_head'   : 'Posted?',
     'dflt_val'   : '{subtran_row_id>tran_det_row_id>tran_row_id>posted}',
     'sql'        : "a.subtran_row_id>tran_det_row_id>tran_row_id>posted"

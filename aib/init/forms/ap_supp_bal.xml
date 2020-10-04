@@ -221,10 +221,10 @@
         <cur_filter>
           <cur_fil test="WHERE" lbr="" col_name="supp_row_id"
             op="=" expr="ap_supp.row_id" rbr=""/>
-          <!-- <cur_fil test="AND" lbr="" col_name="tran_date"
-            op=">>" expr="_ctx.first_date" rbr=""/> -->
-          <!-- <cur_fil test="AND" lbr="" col_name="tran_date"
-            op="<<=" expr="_ctx.last_date" rbr=""/> -->
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op=">>" expr="_ctx.first_date" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op="<<=" expr="_ctx.last_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
             op="<<=" expr="_ctx.as_at_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="balance_supp_as_at"

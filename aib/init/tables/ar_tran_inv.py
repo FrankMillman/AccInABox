@@ -472,7 +472,7 @@ virt.append ({
     'col_name'   : 'tran_type',
     'data_type'  : 'TEXT',
     'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
+    'long_descr' : 'Transaction type - used in gui to ask "Post another?"',
     'col_head'   : 'Tran type',
     'sql'        : "'ar_inv'",
     })
@@ -596,8 +596,7 @@ actions.append([
             'custom.artrans_funcs.setup_openitems',  # function to populate table
 
             [  # fkey to this table
-                ['tran_type', 'tran_type'],  # tgt_col, src_col
-                ['tran_row_id', 'row_id'],
+                ['tran_row_id', 'row_id'],  # tgt_col, src_col
                 ],
 
             ['split_no', 'item_type', 'due_date', 'amount_cust', 'amount_local',

@@ -7,7 +7,7 @@
     <db_obj name="ar_rec" table_name="ar_tran_rec" is_formview_obj="true"/>
     <db_obj name="ar_det" table_name="ar_tran_rec_det" parent="ar_rec"/>
     <db_obj name="ar_rec" table_name="ar_subtran_rec" parent="ar_det"/>
-    <db_obj name="ar_rec_alloc" table_name="ar_subtran_rec_alloc" parent="ar_rec"/>
+    <db_obj name="ar_allocations" table_name="ar_allocations" parent="ar_rec"/>
   </db_objects>
   <mem_objects/>
 

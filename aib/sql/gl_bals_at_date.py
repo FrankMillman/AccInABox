@@ -51,7 +51,6 @@ def get_sql(company, conn, bal_date):
             AND tran_date <= {1}
             )
 
-
         SELECT
             0 AS order_by,
             {1} AS "[DATE]"

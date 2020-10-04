@@ -6,7 +6,7 @@
   <db_objects>
     <db_obj name="ar_this_item" table_name="ar_openitems" is_formview_obj="true"/>
     <db_obj name="ar_alloc" table_name="ar_tran_alloc"/>
-    <db_obj name="ar_alloc_det" table_name="ar_tran_alloc_det" parent="ar_alloc"/>
+    <db_obj name="ar_allocations" table_name="ar_allocations" parent="ar_alloc"/>
   </db_objects>
   <mem_objects/>
   <input_params/>
@@ -60,7 +60,6 @@
           <<sub_form name=`ar_alloc_item`>>
             <<call_params>>
               <<call_param name=`alloc_header` type=`data_obj` source=`ar_alloc`/>>
-              <<call_param name=`alloc_detail` type=`data_obj` source=`ar_alloc_det`/>>
               <<call_param name=`this_item_rowid` type=`data_attr` source=`ar_this_item.row_id`/>>
               <<call_param name=`amount_to_alloc` type=`data_attr` source=`0-ar_this_item.amount_to_alloc`/>>
               <<call_param name=`unallocated` type=`data_attr` source=`0-ar_this_item.amount_unallocated`/>>

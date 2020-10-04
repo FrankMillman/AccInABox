@@ -310,15 +310,15 @@ virt.append ({
     'dflt_val'   : '{tran_row_id>tax_incl}',
     'sql'        : 'a.tran_row_id>tax_incl',
     })
-virt.append ({
-    'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Posted?',
-    'long_descr' : 'Has transaction been posted?',
-    'col_head'   : 'Posted?',
-    'dflt_val'   : '{tran_row_id>posted}',
-    'sql'        : "a.tran_row_id>posted"
-    })
+# virt.append ({
+#     'col_name'   : 'posted',
+#     'data_type'  : 'BOOL',
+#     'short_descr': 'Posted?',
+#     'long_descr' : 'Has transaction been posted?',
+#     'col_head'   : 'Posted?',
+#     'dflt_val'   : '{tran_row_id>posted}',
+#     'sql'        : "a.tran_row_id>posted"
+#     })
 virt.append ({
     'col_name'   : 'inv_tot_amt',
     'data_type'  : 'DEC',

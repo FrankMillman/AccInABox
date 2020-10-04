@@ -260,14 +260,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'gl_jnl'",
-    })
+# virt.append ({
+#     'col_name'   : 'tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Transaction type',
+#     'long_descr' : 'Transaction type',
+#     'col_head'   : 'Tran type',
+#     'sql'        : "'gl_jnl'",
+#     })
 virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',

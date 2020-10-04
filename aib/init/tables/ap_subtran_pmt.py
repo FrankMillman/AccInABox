@@ -1,18 +1,18 @@
 # table definition
 table = {
-    'table_name'    : 'ar_subtran_rec',
-    'module_id'     : 'ar',
-    'short_descr'   : 'Ar receipt detail line',
-    'long_descr'    : 'Ar receipt detail line',
+    'table_name'    : 'ap_subtran_pmt',
+    'module_id'     : 'ap',
+    'short_descr'   : 'Ap payment detail line',
+    'long_descr'    : 'Ap payment detail line',
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : [
-        ['ar_subrec_cust', [['cust_row_id', False]], None, False],
+        ['ap_subpmt_supp', [['supp_row_id', False]], None, False],
         ],
-    'ledger_col'    : 'cust_row_id>ledger_row_id',
+    'ledger_col'    : 'supp_row_id>ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -114,18 +114,18 @@ cols.append ({
     'col_checks' : None,
     'fkey'       : [
         ['source_code', [
-            ['ar_rec_ar', 'ar_tran_rec_det'],
-            ['ar_rec_cb', 'cb_tran_rec_det'],
+            ['ap_pmt_ap', 'ap_tran_pmt_det'],
+            ['ap_pmt_cb', 'cb_tran_pmt_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'cust_row_id',
+    'col_name'   : 'supp_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Customer row id',
-    'long_descr' : 'Customer row id. In theory, should check if statement period still open. Leave for now.',
-    'col_head'   : 'Customer',
+    'short_descr': 'Supplier row id',
+    'long_descr' : 'Supplier row id. In theory, should check if statement period still open. Leave for now.',
+    'col_head'   : 'Supplier',
     'key_field'  : 'B',
     'calculated' : False,
     'allow_null' : False,
@@ -137,22 +137,22 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['alt_curr', 'Alternate currency not allowed', [
-            ['check', '', 'cust_row_id>currency_id', '=', 'tran_det_row_id>tran_row_id>currency_id', ''],
+            ['check', '', 'supp_row_id>currency_id', '=', 'tran_det_row_id>tran_row_id>currency_id', ''],
             ['or', '', '_ledger.alt_curr', 'is', '$True', '']
             ]],
         ],
     'fkey'       : [
-        'ar_customers', 'row_id', 'ledger_id, cust_id, location_id, function_id',
-        'ledger_id, cust_id, location_id, function_id', False, 'cust_bal_2'
+        'ap_suppliers', 'row_id', 'ledger_id, supp_id, location_id, function_id',
+        'ledger_id, supp_id, location_id, function_id', False, 'supp_bal_2'
         ],
     'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'tran_number',
     'data_type'  : 'TEXT',
-    'short_descr': 'Receipt number',
-    'long_descr' : 'Receipt number - see before_insert and before_update to ensure unique',
-    'col_head'   : 'Rec no',
+    'short_descr': 'Payment number',
+    'long_descr' : 'Payment number - see before_insert and before_update to ensure unique',
+    'col_head'   : 'Pmt no',
     'key_field'  : 'B',
     'calculated' : True,
     'allow_null' : False,
@@ -222,13 +222,13 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'cust_exch_rate',
+    'col_name'   : 'supp_exch_rate',
     'data_type'  : 'DEC',
-    'short_descr': 'Cust exchange rate',
-    'long_descr' : 'Exchange rate from customer currency to local currency',
-    'col_head'   : 'Rate cust',
+    'short_descr': 'Supp exchange rate',
+    'long_descr' : 'Exchange rate from supplier currency to local currency',
+    'col_head'   : 'Rate supp',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_ledger.alt_rec_override', 'is', '$False', '']],
+    'calculated' : [['where', '', '_ledger.alt_pmt_override', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -237,13 +237,13 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-            '<compare test="[[`if`, ``, `cust_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+            '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
             '<default>'
                 '<expr>'
                     '<exch_rate>'
-                        '<fld_val name="cust_row_id>currency_id"/>'
+                        '<fld_val name="supp_row_id>currency_id"/>'
                         '<fld_val name="tran_date"/>'
                     '</exch_rate>'
                 '</expr>'
@@ -258,7 +258,7 @@ cols.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
     'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date. Could be derived using fkey, but denormalised to speed up ar_trans view',
+    'long_descr' : 'Transaction date. Could be derived using fkey, but denormalised to speed up ap_trans view',
     'col_head'   : 'Date',
     'key_field'  : 'N',
     'calculated' : True,
@@ -274,11 +274,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'arec_amount',
+    'col_name'   : 'apmt_amount',
     'data_type'  : 'DEC',
-    'short_descr': 'Receipt amount',
-    'long_descr' : 'Receipt amount in transaction currency',
-    'col_head'   : 'Rec amount',
+    'short_descr': 'Payment amount',
+    'long_descr' : 'Payment amount in transaction currency',
+    'col_head'   : 'Pmt amount',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -293,47 +293,47 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'arec_cust',
+    'col_name'   : 'apmt_supp',
     'data_type'  : 'DEC',
-    'short_descr': 'Receipt cust',
-    'long_descr' : 'Receipt amount in customer currency',
-    'col_head'   : 'Rec cust',
+    'short_descr': 'Payment supp',
+    'long_descr' : 'Payment amount in supplier currency',
+    'col_head'   : 'Pmt supp',
     'key_field'  : 'N',
     # 'calculated' : False,
-    'calculated' : [['where', '', '_ledger.alt_rec_override', 'is', '$False', '']],
+    'calculated' : [['where', '', '_ledger.alt_pmt_override', 'is', '$False', '']],
     'allow_null' : False,
-    'allow_amend': [['where', '', '_ledger.alt_rec_override', 'is', '$True', '']],
+    'allow_amend': [['where', '', '_ledger.alt_pmt_override', 'is', '$True', '']],
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
-          '<fld_val name="arec_amount"/>'
+          '<fld_val name="apmt_amount"/>'
           '<op type="/"/>'
           '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
           '<op type="*"/>'
-          '<fld_val name="cust_exch_rate"/>'
+          '<fld_val name="supp_exch_rate"/>'
         '</expr>'
         ),
     'col_checks' : [
-        ['alt_rec_err', 'Outside valid range', [
-            ['check', '', '$value', '=', 'arec_cust', ''],
-            ['or', '', '_ledger.alt_rec_perc', '=', '0', ''],
+        ['alt_pmt_err', 'Outside valid range', [
+            ['check', '', '$value', '=', 'apmt_supp', ''],
+            ['or', '', '_ledger.alt_pmt_perc', '=', '0', ''],
             ['or', '',
-                '(abs(($value / (arec_amount / tran_det_row_id>tran_row_id>tran_exch_rate * cust_exch_rate))'
-                ' - 1) * 100)', '<=', '_ledger.alt_rec_perc', ''],
+                '(abs(($value / (apmt_amount / tran_det_row_id>tran_row_id>tran_exch_rate * supp_exch_rate))'
+                ' - 1) * 100)', '<=', '_ledger.alt_pmt_perc', ''],
             ]],
         ],
     'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'arec_local',
+    'col_name'   : 'apmt_local',
     'data_type'  : 'DEC',
-    'short_descr': 'Receipt local',
-    'long_descr' : 'Receipt amount in local currency',
-    'col_head'   : 'Rec local',
+    'short_descr': 'Payment local',
+    'long_descr' : 'Payment amount in local currency',
+    'col_head'   : 'Pmt local',
     'key_field'  : 'N',
     'calculated' : True,
     'allow_null' : False,
@@ -344,87 +344,11 @@ cols.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
-          '<fld_val name="arec_amount"/>'
+          '<fld_val name="apmt_amount"/>'
           '<op type="/"/>'
           '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tot_alloc_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total allocated - cust',
-    'long_descr' : 'Total allocated cust - updated from ar_allocations after_save',
-    'col_head'   : 'Disc',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tot_disc_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total discount - cust',
-    'long_descr' : 'Total discount cust - updated from ar_allocations after_save',
-    'col_head'   : 'Disc',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tot_alloc_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total allocated - local',
-    'long_descr' : 'Total allocated local - updated from ar_allocations after_save',
-    'col_head'   : 'Disc',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tot_disc_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total discount - local',
-    'long_descr' : 'Total discount local - updated from ar_allocations after_save',
-    'col_head'   : 'Disc',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -435,8 +359,8 @@ cols.append ({
     'short_descr': 'Posted?',
     'long_descr' : (
         'Has transaction been posted? '
-        'Could be derived using fkey, but denormalised to speed up ar_trans view.'
-        'ar_tran_rec_det and cb_tran_rec_det update this column when they are posted - see their on_post action.'
+        'Could be derived using fkey, but denormalised to speed up ap_trans view.'
+        'ap_tran_pmt_det and cb_tran_pmt_det update this column when they are posted - see their on_post action.'
         ),
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
@@ -479,10 +403,10 @@ virt.append ({
     'short_descr': 'Open item row id',
     'long_descr' : 'Open item row id',
     'col_head'   : 'Item id',
-    'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
+    'fkey'       : ['ap_openitems', 'row_id', None, None, False, None],
     'sql'        : (
-        "SELECT b.row_id FROM {company}.ar_openitems b "
-        "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id "
+        "SELECT b.row_id FROM {company}.ap_openitems b "
+        "WHERE b.tran_type = 'ap_pmt' AND b.tran_row_id = a.row_id "
         "AND b.split_no = 0 AND b.deleted_id = 0"
         ),
     })
@@ -492,7 +416,7 @@ virt.append ({
 #     'short_descr': 'Open item tran type',
 #     'long_descr' : 'Open item tran type',
 #     'col_head'   : 'Tran type',
-#     'sql'        : "'ar_rec'",
+#     'sql'        : "'ap_pmt'",
 #     })
 # virt.append ({
 #     'col_name'   : 'alloc_row_id',
@@ -500,10 +424,10 @@ virt.append ({
 #     'short_descr': 'Allocation row id',
 #     'long_descr' : 'Allocation row id',
 #     'col_head'   : 'Alloc id',
-#     'fkey'       : ['ar_allocations', 'row_id', None, None, False, None],
+#     'fkey'       : ['ap_tran_alloc_det', 'row_id', None, None, False, None],
 #     'sql'        : (
-#         "SELECT b.row_id FROM {company}.ar_allocations b "
-#         "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id "
+#         "SELECT b.row_id FROM {company}.ap_tran_alloc_det b "
+#         "WHERE b.tran_type = 'ap_pmt' AND b.tran_row_id = a.row_id "
 #         "AND b.item_row_id = a.item_row_id"
 #         ),
 #     })
@@ -536,63 +460,63 @@ virt.append ({
 #     'sql'        : "a.tran_det_row_id>tran_row_id>posted"
 #     })
 # virt.append ({
-#     'col_name'   : 'arec_local',
+#     'col_name'   : 'apmt_local',
 #     'data_type'  : 'DEC',
-#     'short_descr': 'Receipt local',
-#     'long_descr' : 'Receipt amount in local currency',
-#     'col_head'   : 'Rec local',
+#     'short_descr': 'Payment local',
+#     'long_descr' : 'Payment amount in local currency',
+#     'col_head'   : 'Pmt local',
 #     'db_scale'   : 2,
 #     'scale_ptr'  : '_param.local_curr_id>scale',
 #     'dflt_val'   : '0',
 #     'dflt_rule'  : (
 #         '<expr>'
-#           '<fld_val name="arec_amount"/>'
+#           '<fld_val name="apmt_amount"/>'
 #           '<op type="/"/>'
 #           '<fld_val name="tran_exch_rate"/>'
 #         '</expr>'
 #         ),
-#     'sql'        : "a.arec_amount / a.tran_exch_rate",
+#     'sql'        : "a.apmt_amount / a.tran_exch_rate",
 #     })
 virt.append ({
-    'col_name'   : 'arec_trans_cust',
+    'col_name'   : 'apmt_trans_supp',
     'data_type'  : 'DEC',
-    'short_descr': 'Receipt cust',
-    'long_descr' : 'Receipt amount for ar_trans in customer currency',
-    'col_head'   : 'Rec cust',
+    'short_descr': 'Payment supp',
+    'long_descr' : 'Payment amount for ap_trans in supplier currency',
+    'col_head'   : 'Pmt supp',
     'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
-    'sql'        : "0 - a.arec_cust",
+    'sql'        : "0 - a.apmt_supp",
     })
 virt.append ({
-    'col_name'   : 'arec_trans_local',
+    'col_name'   : 'apmt_trans_local',
     'data_type'  : 'DEC',
-    'short_descr': 'Receipt local',
-    'long_descr' : 'Receipt amount for ar_trans in local currency',
-    'col_head'   : 'Rec local',
+    'short_descr': 'Payment local',
+    'long_descr' : 'Payment amount for ap_trans in local currency',
+    'col_head'   : 'Pmt local',
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
-    'sql'        : "0 - a.arec_local",
+    'sql'        : "0 - a.apmt_local",
     })
 virt.append ({
     'col_name'   : 'unallocated',
     'data_type'  : 'DEC',
     'short_descr': 'Unallocated',
-    'long_descr' : 'Balance of receipt not allocated',
+    'long_descr' : 'Balance of payment not allocated',
     'col_head'   : 'Unalloc',
     'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'sql'        : (
-        "a.arec_cust "
+        "a.apmt_supp "
         "- "
         "COALESCE(("
-            "SELECT SUM(b.alloc_cust) "
-            "FROM {company}.ar_subtran_rec_alloc b "
+            "SELECT SUM(b.alloc_supp) "
+            "FROM {company}.ap_subtran_pmt_alloc b "
             "WHERE b.subtran_row_id = a.row_id AND b.deleted_id = 0"
             "), 0)"
         ),
@@ -609,9 +533,9 @@ virt.append ({
     'dflt_rule'  : None,
     'sql'        : (
         "SELECT 0 - SUM(c.discount_local) "
-        "FROM {company}.ar_openitems b "
-        "JOIN {company}.ar_allocations c ON c.item_row_id = b.row_id "
-        "WHERE b.tran_type = 'ar_rec' and b.tran_row_id = a.row_id"
+        "FROM {company}.ap_openitems b "
+        "JOIN {company}.ap_tran_alloc_det c ON c.item_row_id = b.row_id "
+        "WHERE b.tran_type = 'ap_pmt' and b.tran_row_id = a.row_id"
         ),
     })
 
@@ -621,18 +545,18 @@ cursors = []
 # actions
 actions = []
 actions.append([
-    'before_insert', '<pyfunc name="custom.artrans_funcs.check_unique" type="arec" mode="ins"/>'
+    'before_insert', '<pyfunc name="custom.artrans_funcs.check_unique" type="apmt" mode="ins"/>'
     ])
 actions.append([
-    'before_update', '<pyfunc name="custom.artrans_funcs.check_unique" type="arec" mode="upd"/>'
+    'before_update', '<pyfunc name="custom.artrans_funcs.check_unique" type="apmt" mode="upd"/>'
     ])
 actions.append([
     'upd_on_save', [
         [
-            'ar_allocations',
+            'ap_subtran_pmt_alloc',
             [  # condition
                 ['where', '', '_ledger.auto_alloc_oldest', 'is', '$True', ''],
-                ['and', '', '$in_db_post', 'is', '$False', ''],
+                ['and', '', 'posted', 'is', '$False', ''],
                 ],
 
             True,  # split source?
@@ -640,10 +564,10 @@ actions.append([
             'custom.artrans_funcs.alloc_oldest',  # function to populate table
 
             [  # fkey to this table
-                ['tran_row_id', 'row_id'],  # tgt_col, src_col
+                ['subtran_row_id', 'row_id'],  # tgt_col, src_col
                 ],
 
-            ['item_row_id', 'alloc_cust'],  # fields to be updated
+            ['item_row_id', 'alloc_supp'],  # fields to be updated
 
             [],  # return values
 
@@ -654,81 +578,59 @@ actions.append([
 actions.append([
     'upd_on_post', [
         [
-            'ar_openitems',  # table name
+            'ap_openitems',  # table name
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['tran_row_id', 'row_id'],  # tgt_col, src_col
+                ['tran_type', "'ap_pmt'"],  # tgt_col, src_col
+                ['tran_row_id', 'row_id'],
                 ['split_no', '0'],
                 ],
             [],  # aggregation
             [  # on post
-                ['item_type', '=', "'rec'"],  # tgt_col, op, src_col
+                ['item_type', '=', "'pmt'"],  # tgt_col, op, src_col
                 ['due_date', '=', 'tran_date'],
-                ['cust_row_id', '=', 'cust_row_id'],
+                ['supp_row_id', '=', 'supp_row_id'],
                 ['tran_date', '=', 'tran_date'],
-                ['amount_cust', '-', 'arec_cust'],
-                ['amount_local', '-', 'arec_local'],
-                ],
-            [],  # on unpost
-            [  # return values
-                ['item_row_id', 'row_id'],  # tgt_col, src_col
-                ],
-            ],
-        [
-            'ar_allocations',
-            [  # condition
-                # ['where', '', 'tot_alloc_cust', '!=', '0', ''],
-                ['where', '', 'tot_alloc_cust', 'pyfunc', 'custom.artrans_funcs.get_tot_alloc', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
-                ['item_row_id', 'item_row_id'],
-                ],
-            [],  # aggregation
-            [  # on post
-                ['alloc_cust', '-', 'tot_alloc_cust'],  # tgt_col, op, src_col
-                # ['discount_cust', '-', 'tot_disc_cust'],
-                ['alloc_local', '-', 'tot_alloc_local'],
-                # ['discount_local', '-', 'tot_disc_local'],
+                ['amount_supp', '-', 'apmt_supp'],
+                ['amount_local', '-', 'apmt_local'],
                 ],
             [],  # on unpost
             ],
         [
-            'ar_totals',  # table name
+            'ap_totals',  # table name
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'cust_row_id>location_row_id'],
-                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['ledger_row_id', 'supp_row_id>ledger_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'supp_row_id>location_row_id'],
+                ['function_row_id', 'supp_row_id>function_row_id'],
                 ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'arec_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'arec_local'],
+                ['tran_day', '-', 'apmt_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'apmt_local'],
                 ],
             [],  # on post
             [],  # on unpost
             ],
         [
-            'ar_cust_totals',  # table name
+            'ap_supp_totals',  # table name
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'cust_row_id>location_row_id'],
-                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['supp_row_id', 'supp_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'supp_row_id>location_row_id'],
+                ['function_row_id', 'supp_row_id>function_row_id'],
                 ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cust', '-', 'arec_cust'],  # tgt_col, op, src_col
-                ['tran_tot_cust', '-', 'arec_cust'],
-                ['tran_day_local', '-', 'arec_local'],
-                ['tran_tot_local', '-', 'arec_local'],
+                ['tran_day_supp', '-', 'apmt_supp'],  # tgt_col, op, src_col
+                ['tran_tot_supp', '-', 'apmt_supp'],
+                ['tran_day_local', '-', 'apmt_local'],
+                ['tran_tot_local', '-', 'apmt_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -740,15 +642,15 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'cust_row_id>location_row_id'],
-                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'supp_row_id>location_row_id'],
+                ['function_row_id', 'supp_row_id>function_row_id'],
                 ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'arec_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'arec_local'],
+                ['tran_day', '-', 'apmt_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'apmt_local'],
                 ],
             [],  # on post
             [],  # on unpost

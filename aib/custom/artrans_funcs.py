@@ -152,6 +152,34 @@ async def alloc_oldest(db_obj, conn, return_vals):
         if not tot_to_allocate:
             break # fully allocated
 
+async def get_tot_alloc(db_obj, fld, src):
+    # called from ar_tran_alloc/ar_subtran_rec in 'condition' for upd_on_post 'ar_allocations'
+    # get total allocations for this transaction and save
+    row_id = await db_obj.getval('row_id')
+    if db_obj.table_name == 'ar_tran_alloc':
+        tran_type = 'ar_alloc'
+    elif db_obj.table_name == 'ar_subtran_rec':
+        tran_type = 'ar_rec'
+
+    sql = (
+        "SELECT COUNT(*), SUM(alloc_cust) AS \"[REAL2]\", SUM(discount_cust) AS \"[REAL2]\", "
+        "SUM(alloc_local) AS \"[REAL2]\", SUM(discount_local) AS \"[REAL2]\" "
+        f"FROM {db_obj.company}.ar_allocations "
+        f"WHERE tran_type = {tran_type!r} AND tran_row_id = {row_id} AND deleted_id = 0"
+        )
+
+    async with db_obj.context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        async for count, alloc_cust, disc_cust, alloc_local, disc_local in await conn.exec_sql(sql):
+            if count:
+                await db_obj.setval('tot_alloc_cust', alloc_cust, validate=False)
+                await db_obj.setval('tot_disc_cust', disc_cust, validate=False)
+                await db_obj.setval('tot_alloc_local', alloc_local, validate=False)
+                await db_obj.setval('tot_disc_local', disc_local, validate=False)
+
+    return bool(count)  # False if count == 0, else True
+
+
 """
 async def change_balance_sql(caller, xml):
     # called from ar_receipt before_start_form
@@ -164,7 +192,7 @@ async def change_balance_sql(caller, xml):
     balance.sql = (
         "SELECT a.amount_cust + COALESCE(("
             "SELECT SUM(b.alloc_cust + b.discount_cust) "
-            "FROM {{company}}.ar_tran_alloc_det b "
+            "FROM {{company}}.ar_allocations b "
             "LEFT JOIN {{company}}.ar_trans c ON c.tran_type = b.tran_type "
                 "AND c.tran_row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND c.tran_date <= {{balance_date}} "
@@ -363,7 +391,7 @@ async def after_save_alloc(caller, xml):
     if alloc_cust == alloc_orig:
         return
 
-    alloc_det = caller.data_objects['alloc_detail']
+    alloc_det = caller.data_objects['ar_allocations']
     await alloc_det.init()
     await alloc_det.setval('item_row_id', await ar_item.getval('row_id'))
 
@@ -445,7 +473,7 @@ async def alloc_ageing(caller, xml):
 
     ar_items = caller.data_objects['ar_items']
     alloc_hdr = caller.data_objects['alloc_header']
-    alloc_det = caller.data_objects['alloc_detail']
+    alloc_det = caller.data_objects['ar_allocations']
 
     cust_row_id = await alloc_hdr.getval('cust_row_id')
 
@@ -842,103 +870,35 @@ async def check_ledg_per(caller, xml):
         await set_action('reopen')
         return
 
-async def check_allocations(db_obj, xml):
+async def check_disc_crn(db_obj, xml):
     # called from cb_tran_rec/ar_tran_rec after_post
-    # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
-    #    or create new column on cb_tran_rec/ar_tran_rec 'allocation_complete'?
-    #    any tran with 'posted' = True and 'alloction_complete' = False must be re-run
-    # if ar_subtran_rec has been allocated, set up ar_tran_alloc/det
     det_obj = [_ for _ in db_obj.children if _.table_name == (db_obj.table_name + '_det')][0]
     ar_rec = [_ for _ in det_obj.children if _.table_name == 'ar_subtran_rec']
     if not ar_rec:
-        return  # no ar_rec line items in cb_rec
+        return  # no ar_rec line items created
     ar_rec = ar_rec[0]
-    ar_rec_alloc = [_ for _ in ar_rec.children if _.table_name == 'ar_subtran_rec_alloc']
-    if not ar_rec_alloc:
-        return  # no ar_rec allocations
-    ar_rec_alloc = ar_rec_alloc[0]
-    await det_obj.init()
+    if await ar_rec.getval('tot_disc_cust'):
+        await create_disc_crn(ar_rec, xml)
 
-    all_det = det_obj.select_many(where=[], order=[])
-    async for _ in all_det:
-        if await det_obj.getval('line_type') != 'arec':
-            continue
-        # ar_rec has automatically been read in at this point
-        this_item_row_id = await ar_rec.getval('item_row_id')
-
-        # check for allocations - set up ar_tran_alloc/det first
-        context = db_obj.context
-        data_objects = context.data_objects
-        if 'ar_tran_alloc' not in data_objects:
-            data_objects['ar_tran_alloc'] = await db.objects.get_db_object(
-                context, db_obj.company, 'ar_tran_alloc')
-            data_objects['ar_tran_alloc_det'] = await db.objects.get_db_object(
-                context, db_obj.company, 'ar_tran_alloc_det',
-                parent=data_objects['ar_tran_alloc'])
-        ar_tran_alloc = data_objects['ar_tran_alloc']
-        ar_tran_alloc_det = data_objects['ar_tran_alloc_det']
-        await ar_tran_alloc.init()
-        # if called from cb_tran_rec, context.mod_ledg_id relates to cashbook
-        # in db.dflt_xml.alloc_tran_date, we need mod_ledg_id relating to customer
-        # next block derives this and stores it in context.cust_mod_ledg_id
-        # db.dflt_xml.alloc_tran_date retrieves it from there
-        ar_cust = (await ar_tran_alloc.getfld('item_row_id>cust_row_id>row_id')).db_obj
-        cust_module_row_id = ar_cust.db_table.module_row_id
-        cust_ledger_row_id = await ar_cust.getval(ar_cust.db_table.ledger_col)
-        ar_tran_alloc.context.cust_mod_ledg_id = (cust_module_row_id, cust_ledger_row_id)
-
-        all_alloc = ar_rec_alloc.select_many(where=[], order=[])
-        async for _ in all_alloc:
-
-            # we have found an allocation
-            if not ar_tran_alloc.exists:  # if first time, set up ar_tran_alloc and save
-                alloc_no = 0  # assume no prior allocations - if found, loop until not found
-                while True:
-                    await ar_tran_alloc.init()
-                    await ar_tran_alloc.setval('item_row_id', this_item_row_id)
-                    await ar_tran_alloc.setval('alloc_no', alloc_no)
-                    if not ar_tran_alloc.exists:
-                        break
-                    alloc_no += 1
-                await ar_tran_alloc.save()
-
-            # set up ar_tran_alloc_det for each item allocated against, and save
-            await ar_tran_alloc_det.init()
-            await ar_tran_alloc_det.setval('item_row_id', await ar_rec_alloc.getval('item_row_id'))
-            await ar_tran_alloc_det.setval('alloc_cust', await ar_rec_alloc.getval('alloc_cust'))
-            # discount_cust, alloc_local, and discount local are calculated programatically
-            await ar_tran_alloc_det.save(from_upd_on_save=True)
-
-        if ar_tran_alloc.exists:
-            await ar_tran_alloc.post()
-
-async def create_disc_crn(ar_tran_alloc, xml):
-    # called from ar_tran_alloc - after_post
+async def create_disc_crn(db_obj, xml):
+    # called from ar_tran_alloc.after_post or from check_disc_crn() above
     # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
     #    or create new column on ar_tran_alloc 'crn_check_complete'?
     #    any tran with 'posted' = True and 'crn_check_complete' = False must be re-run
-    this_row_id = await ar_tran_alloc.getval('row_id')
-    this_item_row_id = await ar_tran_alloc.getval('item_row_id')
-    ar_tran_alloc_det = ar_tran_alloc.children[0]
-    await ar_tran_alloc_det.init()
-    await ar_tran_alloc_det.setval('item_row_id', this_item_row_id)
 
-    discount_cust = await ar_tran_alloc_det.getval('discount_cust')
-    if not discount_cust:
-        print('WE SHOULD NOT GET HERE')
-        return
-    discount_local = await ar_tran_alloc_det.getval('discount_local')
+    discount_cust = await db_obj.getval('tot_disc_cust')
+    discount_local = await db_obj.getval('tot_disc_local')
 
-    context = ar_tran_alloc.context
+    context = db_obj.context
     data_objects = context.data_objects
     if 'ar_tran_disc' not in data_objects:
         data_objects['ar_tran_disc'] = await db.objects.get_db_object(
-            context, ar_tran_alloc.company, 'ar_tran_disc')
+            context, db_obj.company, 'ar_tran_disc')
         data_objects['ar_tran_disc_det'] = await db.objects.get_db_object(
-            context, ar_tran_alloc.company, 'ar_tran_disc_det',
+            context, db_obj.company, 'ar_tran_disc_det',
             parent=data_objects['ar_tran_disc'])
         data_objects['nsls'] = await db.objects.get_db_object(
-            context, ar_tran_alloc.company, 'sls_nsls_subtran',
+            context, db_obj.company, 'sls_nsls_subtran',
             parent=data_objects['ar_tran_disc_det'])
     ar_tran_disc = data_objects['ar_tran_disc']
     ar_tran_disc_det = data_objects['ar_tran_disc_det']
@@ -946,77 +906,25 @@ async def create_disc_crn(ar_tran_alloc, xml):
 
     await ar_tran_disc.init()
     await ar_tran_disc.setval('cust_row_id',
-        await ar_tran_alloc.getval('item_row_id>tran_row_id>cust_row_id'))
+        await db_obj.getval('item_row_id>tran_row_id>cust_row_id'))
     await ar_tran_disc.setval('tran_date',
-        await ar_tran_alloc.getval('tran_date'))
+        await db_obj.getval('tran_date'))
     await ar_tran_disc.setval('currency_id',
-        await ar_tran_alloc.getval('item_row_id>tran_row_id>cust_row_id>currency_id'))
+        await db_obj.getval('item_row_id>tran_row_id>cust_row_id>currency_id'))
     await ar_tran_disc.setval('cust_exch_rate',
-        await ar_tran_alloc.getval('item_row_id>tran_row_id>cust_exch_rate'))
+        await db_obj.getval('item_row_id>tran_row_id>cust_exch_rate'))
     await ar_tran_disc.setval('tran_exch_rate',
-        await ar_tran_alloc.getval('item_row_id>tran_row_id>tran_exch_rate'))
-    await ar_tran_disc.setval('discount_cust', 0-discount_cust)
-    await ar_tran_disc.setval('discount_local', 0-discount_local)
-    await ar_tran_disc.setval('alloc_row_id', this_row_id)
+        await db_obj.getval('item_row_id>tran_row_id>tran_exch_rate'))
+    await ar_tran_disc.setval('discount_cust', discount_cust)
+    await ar_tran_disc.setval('discount_local', discount_local)
+    await ar_tran_disc.setval('orig_item_id', await db_obj.getval('item_row_id'))
     await ar_tran_disc.save()
 
     await ar_tran_disc_det.init()
     await ar_tran_disc_det.setval('line_type', 'nsls')
     await nsls.setval('nsls_code_id',
         await ar_tran_disc.getval('cust_row_id>ledger_row_id>discount_code_id'))
-    await nsls.setval('nsls_amount', 0-discount_cust)
+    await nsls.setval('nsls_amount', discount_cust)
     await ar_tran_disc_det.save()
 
-    # get discount for each allocation and save in 'context'
-    #   so that tran_disc can be allocated after posting
-    allocations = []
-    where = []
-    where.append(['WHERE', '', 'tran_row_id', '=', await ar_tran_alloc.getval('row_id'), ''])
-    where.append(['AND', '', 'item_row_id', '!=', await ar_tran_alloc.getval('item_row_id'), ''])
-    where.append(['AND', '', 'discount_cust', '!=', '0', ''])
-    all_disc_det = ar_tran_alloc_det.select_many(where=where, order=[('row_id', False)])
-    async for _ in all_disc_det:
-        allocation = []
-        allocation.append(await ar_tran_alloc_det.getval('item_row_id'))
-        allocation.append(await ar_tran_alloc_det.getval('discount_cust'))
-        allocation.append(await ar_tran_alloc_det.getval('discount_local'))
-        allocations.append(allocation)
-    ar_tran_disc.context.allocations = allocations
-
     await ar_tran_disc.post()
-
-async def allocate_discount(ar_tran_disc, xml):
-    # called from ar_tran_disc after_post
-    # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
-
-    context = ar_tran_disc.context
-    data_objects = context.data_objects
-    if 'ar_tran_alloc' not in data_objects:
-        data_objects['ar_tran_alloc'] = await db.objects.get_db_object(
-            context, ar_tran_disc.company, 'ar_tran_alloc')
-        data_objects['ar_tran_alloc_det'] = await db.objects.get_db_object(
-            context, ar_tran_disc.company, 'ar_tran_alloc_det',
-            parent=data_objects['ar_tran_alloc'])
-
-    ar_tran_alloc = data_objects['ar_tran_alloc']
-    ar_tran_alloc_det = data_objects['ar_tran_alloc_det']
-
-    this_item_row_id = await ar_tran_disc.getval('item_row_id')
-    await ar_tran_alloc.init()
-    await ar_tran_alloc.setval('item_row_id', this_item_row_id)
-    await ar_tran_alloc.setval('alloc_no', 0)
-    await ar_tran_alloc.save()
-
-    # set up ar_tran_alloc_det for each item allocated against, and save
-    for alloc_item_row_id, alloc_cust, alloc_local in context.allocations:
-        await ar_tran_alloc_det.init()
-        await ar_tran_alloc_det.setval('item_row_id', alloc_item_row_id)
-        await ar_tran_alloc_det.setval('alloc_cust', alloc_cust)
-        # alloc_local is calculated programatically - assert after save that it has not changed
-        await ar_tran_alloc_det.save(from_upd_on_save=True)
-        assert await ar_tran_alloc_det.getval('alloc_local') == alloc_local, (
-            f"{alloc_local} != {await ar_tran_alloc_det.getval('alloc_local')}")
-
-    del context.allocations
-
-    await ar_tran_alloc.post()

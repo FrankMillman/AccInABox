@@ -1,6 +1,6 @@
 # table definition
 table = {
-    'table_name'    : 'ap_tran_alloc_det',
+    'table_name'    : 'ap_allocations',
     'module_id'     : 'ap',
     'short_descr'   : 'Ap allocation detail lines',
     'long_descr'    : 'Ap allocation detail lines',
@@ -10,9 +10,9 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : [
-        ['ap_alloc_items', [['item_row_id', False]], None, False]
+        ['ap_alloc_ndx', [['tran_row_id', False]], None, False]
         ],
-    'ledger_col'    : None,
+    'ledger_col'    : 'item_row_id>supp_row_id>ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -78,6 +78,30 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Type',
+    'key_field'  : 'A',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : [
+            ['ap_crn', 'Credit note'],
+            ['ap_pmt', 'Payment'],
+            ['ap_disc', 'Discount'],
+            ['ap_alloc', 'Allocation'],
+        ],
+    })
+cols.append ({
     'col_name'   : 'tran_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction id',
@@ -93,7 +117,14 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['ap_tran_alloc', 'row_id', None, None, True, None],
+    'fkey'       : [
+        ['tran_type', [
+            ['ap_crn', 'ap_tran_crn'],
+            ['ap_pmt', 'ap_subtran_pmt'],
+            ['ap_disc', 'ap_tran_disc'],
+            ['ap_alloc', 'ap_tran_alloc'],
+            ]],
+        'row_id', None, None, True, None],
     'choices'    : None,
     })
 cols.append ({
@@ -113,16 +144,30 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['match_supp_id', 'Must have same supplier id', [
-            ['check', '', 'item_row_id>tran_row_id>supp_row_id', '=',
-                'tran_row_id>item_row_id>tran_row_id>supp_row_id', ''],
+            ['check', '', 'item_row_id>supp_row_id', '=',
+                'tran_row_id>supp_row_id', ''],
             ]],
         ],
-    'fkey'       : [
-        'ap_openitems', 'row_id',
-            # 'item_tran_type, item_tran_row_id, ledger_id, item_supp_id, item_tran_number, item_split_no',
-            # 'tran_type, tran_row_id, ledger_id, supp_id, tran_number, split_no',
-            None, None, False, None
-        ],
+    'fkey'       : ['ap_openitems', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Transaction date',
+    'long_descr' : 'Transaction date. Could be derived using fkey, but denormalised for performance',
+    'col_head'   : 'Date',
+    'key_field'  : 'N',
+    'calculated' : True,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{tran_row_id>tran_date}',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
@@ -167,6 +212,9 @@ cols.append ({
             '<compare test="[[`if`, ``, `$exists`, `is`, `$True`, ``]]">'
                 '<fld_val name="discount_supp"/>'
             '</compare>'
+            '<compare test="[[`if`, ``, `_ledger.discount_code_id`, `is`, `$None`, ``]]">'
+                '<literal value="0"/>'
+            '</compare>'
             '<compare test="[[`if`, ``, `item_row_id`, `=`, `tran_row_id>item_row_id`, ``]]">'
                 '<fld_val name="discount_supp"/>'
             '</compare>'
@@ -201,17 +249,6 @@ cols.append ({
         '</case>'
         ),
     'col_checks' : None,
-    # 'col_checks' : [
-    #     ['check_discount', 'Invalid discount',
-    #         [
-    #             ['check', '', '$value', '=', '0', ''],
-    #             ['or', '(', '$value', '>', '0', ''],
-    #             # ['and', '', 'tran_row_id>tran_date', '<=', 'item_row_id>discount_date', ''],
-    #             ['and', '', 'tran_date', '<=', 'item_row_id>discount_date', ''],
-    #             ['and', '', '$value', '<=', 'os_disc_supp', ')'],
-    #             ],
-    #         ],
-    #     ],
     'fkey'       : None,
     'choices'    : None,
     })
@@ -269,6 +306,9 @@ cols.append ({
             '<compare test="[[`if`, ``, `$exists`, `is`, `$True`, ``]]">'
                 '<fld_val name="discount_local"/>'
             '</compare>'
+            '<compare test="[[`if`, ``, `_ledger.discount_code_id`, `is`, `$None`, ``]]">'
+                '<literal value="0"/>'
+            '</compare>'
             '<compare test="[[`if`, ``, `item_row_id`, `=`, `tran_row_id>item_row_id`, ``]]">'
                 '<fld_val name="discount_local"/>'
             '</compare>'
@@ -288,75 +328,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'tran_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date',
-    'col_head'   : 'Date',
-    'dflt_val'   : '{tran_row_id>tran_date}',
-    'sql'        : "a.tran_row_id>tran_date"
-    })
-virt.append ({
-    'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Posted?',
-    'long_descr' : 'Posted?',
-    'col_head'   : 'Posted?',
-    'dflt_val'   : '{tran_row_id>posted}',
-    'sql'        : "a.tran_row_id>posted"
-    })
 # virt.append ({
-#     'col_name'   : 'supp_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Supplier row id',
-#     'long_descr' : 'Supplier row id',
-#     'col_head'   : 'supp id',
-#     'dflt_val'   : '{item_row_id>tran_row_id>supp_row_id}',
-#     'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
-#     'sql'        : "a.item_row_id>tran_row_id>supp_row_id"
-#     })
-# virt.append ({
-#     'col_name'   : 'due_bal_supp',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Bal of trans_items - supp curr',
-#     'long_descr' : 'Balance of open item including this transaction - supp currency',
-#     'col_head'   : 'Due bal supp',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'tran_row_id>supp_row_id>currency_id>scale',
-#     'dflt_val'   : '0',
-#     'sql'        : (
-#         "SELECT a.item_row_id>amount_supp "
-#         "- "
-#         "COALESCE("
-#             "(SELECT SUM(b.alloc_supp) FROM {company}.ap_tran_alloc_det b "
-#             "WHERE b.item_row_id = a.item_row_id AND b.row_id != a.row_id)"
-#         ", 0) "
-#         "- "
-#         "a.alloc_supp"
-#         # "a.discount_supp"
-#         ),
-#     })
-# virt.append ({
-#     'col_name'   : 'os_bal_local',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'O/s trans_items - local curr',
-#     'long_descr' : 'Balance of open item excluding this transaction - local currency',
-#     'col_head'   : 'Os bal local',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_val'   : '0',
-#     'sql'        : (
-#         "SELECT a.item_row_id>amount_local "
-#         "- "
-#         "COALESCE("
-#             "(SELECT SUM(b.alloc_local) FROM {company}.ap_tran_alloc_det b "
-#             "WHERE b.item_row_id = a.item_row_id AND b.row_id != a.row_id)"
-#         ", 0) "
-#         "- "
-#         "a.alloc_local"
-#         # "a.discount_local"
-#         ),
+#     'col_name'   : 'posted',
+#     'data_type'  : 'BOOL',
+#     'short_descr': 'Posted?',
+#     'long_descr' : 'Posted?',
+#     'col_head'   : 'Posted?',
+#     'dflt_val'   : '{tran_row_id>posted}',
+#     'sql'        : "a.tran_row_id>posted"
 #     })
 virt.append ({
     'col_name'   : 'os_disc_supp',
@@ -371,7 +350,7 @@ virt.append ({
         "SELECT a.item_row_id>discount_supp "
         "- "
         "COALESCE("
-            "(SELECT SUM(b.discount_supp) FROM {company}.ap_tran_alloc_det b "
+            "(SELECT SUM(b.discount_supp) FROM {company}.ap_allocations b "
             "WHERE b.item_row_id = a.item_row_id AND b.row_id != a.row_id)"
         ", 0) "
         ),
@@ -382,26 +361,3 @@ cursors = []
 
 # actions
 actions = []
-actions.append([
-    'upd_on_post', [
-        [
-            'ap_tran_alloc_det',
-            [  # condition - don't update 'self' with total allocation
-                ['where', '', 'item_row_id', '!=', 'tran_row_id>item_row_id', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['tran_row_id', 'tran_row_id'],  # tgt_col, op, src_col
-                ['item_row_id', 'tran_row_id>item_row_id'],
-                ],
-            [  # aggregation
-                ['alloc_supp', '-', 'alloc_supp'],  # tgt_col, op, src_col
-                ['discount_supp', '-', 'discount_supp'],
-                ['alloc_local', '-', 'alloc_local'],
-                ['discount_local', '-', 'discount_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        ],
-    ])

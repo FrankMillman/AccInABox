@@ -262,15 +262,15 @@ virt.append ({
     'fkey'       : None,
     'sql'        : "'1'",
     })
-virt.append ({
-    'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Posted?',
-    'long_descr' : 'Has transaction been posted?',
-    'col_head'   : 'Posted?',
-    'dflt_val'   : '{tran_row_id>posted}',
-    'sql'        : "a.tran_row_id>posted"
-    })
+# virt.append ({
+#     'col_name'   : 'posted',
+#     'data_type'  : 'BOOL',
+#     'short_descr': 'Posted?',
+#     'long_descr' : 'Has transaction been posted?',
+#     'col_head'   : 'Posted?',
+#     'dflt_val'   : '{tran_row_id>posted}',
+#     'sql'        : "a.tran_row_id>posted"
+#     })
 virt.append ({
     'col_name'   : 'rec_local',
     'data_type'  : 'DEC',

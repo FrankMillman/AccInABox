@@ -467,16 +467,16 @@ class Field:
                 raise AibError(head=f'Amend {self.table_name}.{col_name}',
                     body='Table is read only - no amendments allowed')
             elif (
-                # col_defn.col_type != 'virt'  # e.g. ar_openitems.alloc_cust is ok
-                #     and 'posted' in db_obj.db_table.col_dict
-                'posted' in db_obj.db_table.col_dict
-                    # next line added 2019-08-20
-                    # in ar_alloc_item.xml we add the virtual column 'alloc_cust'
-                    #   to the grid where db_obj is ar_openitems
-                    # without the next line, it fails because ar_openitems is 'posted',
-                    #   but that is ok because we use it to update ar_tran_alloc_det
-                    # any implications?
-                    and db_obj.db_table.col_dict['posted'].col_type != 'virt'
+                col_defn.col_type != 'virt'  # e.g. ar_openitems.alloc_cust_gui is ok
+                    and 'posted' in db_obj.db_table.col_dict
+                    # 'posted' in db_obj.db_table.col_dict
+                    #     # next line added 2019-08-20
+                    #     # in ar_alloc_item.xml we add the virtual column 'alloc_cust_gui'
+                    #     #   to the grid where db_obj is ar_openitems
+                    #     # without the next line, it fails because ar_openitems is 'posted',
+                    #     #   but that is ok because we use it to update ar_allocations
+                    #     # any implications?
+                    #     # and db_obj.db_table.col_dict['posted'].col_type != 'virt'
                     and await db_obj.getval('posted')
                     and await db_obj.get_orig('posted')
                     ):

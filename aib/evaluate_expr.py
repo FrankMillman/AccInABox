@@ -89,6 +89,8 @@ async def eval_elem(elem, db_obj, fld=None, value=None):
         return True
     if elem == '$False':
         return False
+    if elem == '$in_db_post':
+        return db_obj.context.in_db_post
     if elem.startswith("'"):
         return elem[1:-1]
     if elem.isdigit():
