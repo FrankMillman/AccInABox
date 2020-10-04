@@ -48,6 +48,8 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.bal_date_cust`/>>
+                <<recalc obj_name=`cust` col_name=`bal_cus_tot`/>>
+                <<recalc obj_name=`cust` col_name=`bal_loc_tot`/>>
                 <<restart_grid obj_name=`cust`/>>
               <</return>>
             <</on_return>>
@@ -55,7 +57,8 @@
         "/>
 
       <block/>
-      <grid data_object="cust" growable="false" cursor_name="cust_bal">
+      <grid data_object="cust" growable="false" cursor_name="cust_bal"
+          footer_row="[`'Total:'`, null, `...`, `cust.bal_cus_tot`, `cust.bal_loc_tot`]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)" action="
             <<assign src=`balance_date_vars.settings` tgt=`var.settings`/>>

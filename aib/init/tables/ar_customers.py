@@ -591,6 +591,28 @@ virt.append ({
         ),
     })
 virt.append ({
+    'col_name'   : 'bal_cus_tot',
+    'data_type'  : 'DEC',
+    'short_descr': 'Total balance - cust',
+    'long_descr' : 'Total balance - cust',
+    'col_head'   : 'Tot bal cust',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'currency_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        "COALESCE((SELECT SUM(c.tran_tot_cust) FROM ( "
+            "SELECT b.tran_tot_cust, ROW_NUMBER() OVER (PARTITION BY "
+                "b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
+                "ORDER BY b.tran_date DESC) row_num "
+            "FROM {company}.ar_cust_totals b "
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date <= {bal_date_cust} "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            "), 0)"
+        ),
+    })
+virt.append ({
     'col_name'   : 'balance_loc',
     'data_type'  : 'DEC',
     'short_descr': 'Balance - local',
@@ -611,6 +633,28 @@ virt.append ({
             ") as c "
             "WHERE c.row_num = 1 "
             ")"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'bal_loc_tot',
+    'data_type'  : 'DEC',
+    'short_descr': 'Total balance - local',
+    'long_descr' : 'Total balance - local',
+    'col_head'   : 'Tot bal loc',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        "COALESCE((SELECT SUM(c.tran_tot_local) FROM ( "
+            "SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
+                "b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
+                "ORDER BY b.tran_date DESC) row_num "
+            "FROM {company}.ar_cust_totals b "
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date <= {bal_date_cust} "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            "), 0)"
         ),
     })
 

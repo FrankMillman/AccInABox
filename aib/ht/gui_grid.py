@@ -326,6 +326,8 @@ class GuiGrid:
                 footer_cols.append(None)
             elif footer_col.startswith("'"):
                 footer_cols.append(('text', {'value': footer_col[1:-1]}))
+            elif footer_col  == '...':  # insert None for any 'optional' columns
+                footer_cols.extend([None] * (len(gui_cols) - (len(footer_row) - 1)))  #  -1 to adj for '...'
             else:
                 obj_name, col_name = footer_col.split('.')
                 fld = await self.data_objects[obj_name].getfld(col_name)
