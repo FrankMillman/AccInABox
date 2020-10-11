@@ -230,7 +230,6 @@ async def get_db_table(context, db_company, table_name):
     if defn_company is None:
         defn_company = db_company
     else:
-
         context.company = defn_company
 
         # remove 'defn_company', 'data_company', 'read_only' from cols
@@ -3264,12 +3263,14 @@ class MemTable(DbTable):
         col.table_name = self.table_name.split('__')[-1]
 
         col.allow_amend = loads(col.allow_amend)
-        if col.allow_amend not in (False, True):
-            raise NotImplementedError
+        # removed [2020-10-08] - any problem?
+        # if col.allow_amend not in (False, True):
+        #     raise NotImplementedError
 
         col.calculated = loads(col.calculated)
-        if col.calculated not in (False, True):
-            raise NotImplementedError
+        # removed [2020-10-08] - any problem?
+        # if col.calculated not in (False, True):
+        #     raise NotImplementedError
 
         if col.col_checks is None:
             col.col_checks = []
@@ -3619,25 +3620,6 @@ async def setup_fkey(db_table, context, company, col):
             col.fkey[FK_TARGET_COLUMN],
             col.col_name
             ))
-
-    # if fkey points to table with tree_params, and tree_params defines fixed levels,
-    #   validate that fkey references a leaf node in the table
-    tgt_tablename = col.fkey[FK_TARGET_TABLE]
-    if (
-            isinstance(tgt_tablename, str)  # not implemented for multi-fkeys
-            and
-            not isinstance(db_table, MemTable)  # not implemented for mem_tables
-            ):
-        if tgt_tablename != db_table.table_name:  # if parent_id, will recurse!
-            tgt_table = await get_db_table(context, company, tgt_tablename)
-            if tgt_table.tree_params is not None:
-                group, col_names, levels = tgt_table.tree_params
-                if levels is not None:  # fixed levels defined
-                    col.col_checks.insert(0,  # make this the first check, if others exist
-                        ['check_level', 'Not a leaf node', [
-                            ['check', '', '$value', 'is', '$None', ''],
-                            ['or', '', '$value', 'pyfunc', 'db.checks.check_is_leaf', ''],
-                            ]])
 
     if col.fkey[FK_ALT_SOURCE] is None:
         return

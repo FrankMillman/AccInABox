@@ -633,6 +633,29 @@ class Field:
                             raise AibError(head=col_defn.short_descr, body=errmsg)
                         value = await tgt_field.getval()  # to change (eg) 'a001' to 'A001'
 
+                # if fkey points to table with tree_params, and tree_params defines fixed levels,
+                #   validate that fkey references a leaf node in the table
+                tree_params = tgt_field.db_obj.db_table.tree_params
+                if tree_params is not None:
+                    group, col_names, levels = tree_params
+                    if levels is not None:  # fixed levels defined
+                        if col_name in ('valid_loc_ids', 'valid_fun_ids'):
+                            pass  # these can be for any level, not just leaf
+                        else:
+                            code, descr, parent_id, seq = col_names
+                            type_colname, level_types, sublevel_type = levels
+                            valid_types = [level_types[-1][0]]  # 'code' portion of bottom level
+                            if sublevel_type is not None:
+                                # not elegant! - if sublevels allowed, parent type can be
+                                #   either bottom fixed level or any sub-level
+                                # wait for live situation to occur, then investigate thoroughly [2020-07-30]
+                                valid_types.append(sublevel_type[0])
+                            # this_type = await fld.foreign_key['tgt_field'].db_obj.getval(type_colname)
+                            this_type = await tgt_field.db_obj.getval(type_colname)
+                            if this_type not in valid_types:
+                                raise AibError(head=f'{self.table_name}.{self.col_name}',
+                                    body=f"{code}: {type_colname} must be {' or '.join(valid_types)}")
+
         if validate:
             # check for constant
             if self.constant is not None:

@@ -69,36 +69,6 @@ async def check_parent_id(db_obj, fld, parent_id):
 
     return True
 
-async def check_is_leaf(db_obj, fld, src_val):
-    # called as col_check from various 'fkey' fields if tgt_table has tree_params with fixed levels
-    # the col_check is set up dynamically in db.objects.setup_fkey() by reading tree_params
-    # validate that value entered is a 'leaf' node
-
-    if fld.col_name in ('valid_loc_ids', 'valid_fun_ids'):
-        return True  # these can be for any level, not just leaf
-
-    fkey_table_name = fld.col_defn.fkey[0]
-    fkey_table = await db.objects.get_db_table(db_obj.context, db_obj.company, fkey_table_name)
-    tree_params = fkey_table.tree_params
-
-    group, col_names, levels = tree_params
-    if not levels:  # no levels defined (should never get here!)
-        return True  # no validation required
-
-    code, descr, parent_id, seq = col_names
-    type_colname, level_types, sublevel_type = levels
-    valid_types = [level_types[-1][0]]  # 'code' portion of bottom level
-    if sublevel_type is not None:
-        # not elegant! - if sublevels allowed, parent type can be
-        #   either bottom fixed level or any sub-level
-        # wait for live situation to occur, then investigate thoroughly [2020-07-30]
-        valid_types.append(sublevel_type[0])
-    this_type = await fld.foreign_key['tgt_field'].db_obj.getval(type_colname)
-    if this_type not in valid_types:
-        raise AibError(head=f'{fld.table_name}.{fld.col_name}',
-            body=f"{code}: {type_colname} must be {' or '.join(valid_types)}")
-    return True
-
 async def valid_loc_id(db_obj, fld, src_val):
     # valid_locs can come from gl_codes, nsls_codes, npch_codes
 
