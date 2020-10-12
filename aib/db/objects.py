@@ -114,10 +114,10 @@ async def get_db_object(context, active_company, table_name, parent=None):
 
     db_table = await get_db_table(context, db_company, table_name)
 
-    context.company = db_table.data_company
+    # context.company = db_table.data_company
 
     db_obj = DbObject()
-    await db_obj._ainit_(context, db_table, parent)
+    await db_obj._ainit_(context, db_table.data_company, db_table, parent)
     return db_obj
 
 async def get_fkey_object(context, table_name, src_obj, src_colname):
@@ -136,10 +136,10 @@ async def get_mem_object(context, company, table_name, parent=None, table_defn=N
 
     mem_table = await get_mem_table(context, company, table_name, table_defn)
 
-    context.company = company
+    # context.company = company
 
     mem_obj = MemObject()
-    await mem_obj._ainit_(context, mem_table, parent)
+    await mem_obj._ainit_(context, company, mem_table, parent)
     return mem_obj
 
 async def get_mem_table(context, company, table_name, table_defn=None):
@@ -169,9 +169,9 @@ async def get_clone_object(context, company, table_name, clone_from, parent=None
         await cloned_table._ainit_(context, company, table_name, clone_from)
         context.mem_tables_open[table_name] = cloned_table
     mem_table = context.mem_tables_open[table_name]
-    context.company = company
+    # context.company = company
     mem_obj = MemObject()
-    await mem_obj._ainit_(context, mem_table, parent)
+    await mem_obj._ainit_(context, company, mem_table, parent)
     return mem_obj
 
 async def get_db_table(context, db_company, table_name):
@@ -190,9 +190,9 @@ async def get_db_table(context, db_company, table_name):
     # print('GET TABLE', table_name)
 
     if context is None:  # called from connection.check_sql_params() when evaluating `...`
-        context = db.cache.get_new_context(1, True)  # user_row_id, sys_admin
+        context = db.cache.get_new_context(1, True, db_company)  # user_row_id, sys_admin, company
 
-    context.company = db_company
+    # context.company = db_company
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
@@ -230,7 +230,7 @@ async def get_db_table(context, db_company, table_name):
     if defn_company is None:
         defn_company = db_company
     else:
-        context.company = defn_company
+        # context.company = defn_company
 
         # remove 'defn_company', 'data_company', 'read_only' from cols
         cols = ['row_id', 'table_name', 'module_row_id', 'short_descr', 'sub_types', 'sub_trans',
@@ -278,10 +278,10 @@ async def get_view_object(context, active_company, view_name):
         db_view = await get_db_view(context, db_company, view_name)
         tables_open[view_key] = db_view
 
-    context.company = db_view.data_company
+    # context.company = db_view.data_company
 
     db_obj = DbObject()
-    await db_obj._ainit_(context, db_view, view_obj=True)
+    await db_obj._ainit_(context, db_view.data_company, db_view, view_obj=True)
     return db_obj
 
 async def get_db_view(context, db_company, view_name):
@@ -290,7 +290,7 @@ async def get_db_view(context, db_company, view_name):
         'sequence', 'ledger_col', 'defn_company', 'data_company']
     where = [('WHERE', '', 'view_name', '=', view_name, '')]
 
-    context.company = db_company
+    # context.company = db_company
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
@@ -325,9 +325,8 @@ async def get_db_view(context, db_company, view_name):
 
     if defn_company is None:
         defn_company = db_company
-    else:
-
-        context.company = defn_company
+    # else:
+    #     context.company = defn_company
 
         # remove 'defn_company', 'data_company' from cols
         cols = ['row_id', 'view_name', 'module_row_id', 'short_descr',
@@ -379,12 +378,13 @@ class DbObject:
 
     # logger.warning('DbObject in db.objects')
 
-    async def _ainit_(self, context, db_table, parent=None, mem_obj=False, view_obj=False):
+    async def _ainit_(self, context, company, db_table, parent=None, mem_obj=False, view_obj=False):
 
         # print('INIT', db_table.table_name, None if parent is None else parent.table_name)
 
         self.context = context
-        self.company = context.company
+        # self.company = context.company
+        self.company = db_table.data_company  # do we need defn_company as well?
         self.db_table = db_table
         self.table_name = db_table.table_name
         self.mem_parent = None
@@ -2621,8 +2621,8 @@ class MemObject(DbObject):
     exactly the same as a database :class:`~db.objects.Column` object.
     """
 
-    async def _ainit_(self, context, db_table, parent):
-        await DbObject._ainit_(self, context, db_table, parent, mem_obj=True)
+    async def _ainit_(self, context, company, db_table, parent):
+        await DbObject._ainit_(self, context, company, db_table, parent, mem_obj=True)
         self.mem_parent = parent
         self.cursor_defn = db_table.cursor_defn
 
@@ -3299,6 +3299,7 @@ class ClonedTable(MemTable):
     async def _ainit_(self, context, company, table_name, clone_from):
         db_table = clone_from.db_table
         self.table_name = table_name
+        self.data_company = db_table.data_company
         self.defn_tableid = db_table.defn_tableid
         self.short_descr = db_table.short_descr
         self.constants = mem_constants
