@@ -1429,6 +1429,7 @@ class rTask:
         self.context = db.cache.get_new_context(
             root_context.user_row_id,
             root_context.sys_admin,
+            root_context.company,
             root_context.mem_id,
             root_context.mod_ledg_id,
             )

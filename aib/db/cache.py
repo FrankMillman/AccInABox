@@ -26,9 +26,10 @@ class delwatcher:
 #-----------------------------------------------------------------------------
 
 class Context:
-    def __init__(self, user_row_id, sys_admin, mem_id=None, mod_ledg_id=(None, None)):
+    def __init__(self, user_row_id, sys_admin, company, mem_id=None, mod_ledg_id=(None, None)):
         self._user_row_id = user_row_id
         self._sys_admin = sys_admin
+        self._company = company
         self._mem_id = mem_id
         self._mod_ledg_id = mod_ledg_id
         self._db_session = db.connection.DbSession(mem_id)
@@ -54,6 +55,9 @@ class Context:
     def sys_admin(self):
         return self._sys_admin
     @property
+    def company(self):
+        return self._company
+    @property
     def mem_id(self):
         return self._mem_id
     @property
@@ -69,13 +73,13 @@ class Context:
     def mem_tables_open(self):
         return self._mem_tables_open
 
-def get_new_context(user_row_id, sys_admin, mem_id=None, mod_ledg_id=(None, None)):
-    return Context(user_row_id, sys_admin, mem_id, mod_ledg_id)
+def get_new_context(user_row_id, sys_admin, company, mem_id=None, mod_ledg_id=(None, None)):
+    return Context(user_row_id, sys_admin, company, mem_id, mod_ledg_id)
 
 #-----------------------------------------------------------------------------
 
 # following lines used as 'context' for cached db objects
-cache_context = get_new_context(1, True)  # user_row_id, sys_admin
+cache_context = get_new_context(1, True, '_sys')  # user_row_id, sys_admin, company
 db_session = cache_context.db_session
 
 #-----------------------------------------------------------------------------
@@ -99,7 +103,8 @@ async def company_changed(db_obj, xml):
 adm_params = {}
 async def get_adm_params(company):
     if company not in adm_params:
-        adm_param = await db.objects.get_db_object(cache_context, company, 'adm_params')
+        context = get_new_context(1, True, company)
+        adm_param = await db.objects.get_db_object(context, company, 'adm_params')
         await adm_param.add_all_virtual()
         await adm_param.setval('row_id', 1)  # forces a select
         adm_params[company] = adm_param
@@ -187,20 +192,22 @@ async def get_ledger_params(company, module_row_id, ledger_row_id):
         if company not in ledger_params:
             ledger_params[company] = {}
 
+        context = get_new_context(1, True, company)
+
         if module_row_id not in ledger_params[company]:
             ledger_params[company][module_row_id] = {}
             module_id = (await get_mod_id(company, module_row_id))[0]
             table_name = f'{module_id}_ledger_params'
 
             # create 'blank' ledg_obj for use if db_obj.exists is False
-            ledg_obj = await db.objects.get_db_object(cache_context, company, table_name)
+            ledg_obj = await db.objects.get_db_object(context, company, table_name)
             await ledg_obj.add_all_virtual()
             ledger_params[company][module_row_id][None] = ledg_obj
 
         if ledger_row_id not in ledger_params[company][module_row_id]:
             module_id = (await get_mod_id(company, module_row_id))[0]
             table_name = f'{module_id}_ledger_params'
-            ledg_obj = await db.objects.get_db_object(cache_context, company, table_name)
+            ledg_obj = await db.objects.get_db_object(context, company, table_name)
             await ledg_obj.add_all_virtual()
             await ledg_obj.setval('row_id', ledger_row_id)  # to force a SELECT
             ledger_params[company][module_row_id][ledger_row_id] = ledg_obj
@@ -342,7 +349,8 @@ async def get_adm_periods(company):
     with await adm_per_lock:
         if company not in adm_periods:
             adm_per_list = []
-            adm_per_obj = await db.objects.get_db_object(cache_context, company, 'adm_periods')
+            context = get_new_context(1, True, company)
+            adm_per_obj = await db.objects.get_db_object(context, company, 'adm_periods')
             await adm_per_obj.getfld('year_no')  # to set up virtual field
             await adm_per_obj.getfld('year_per_id')  # ditto
             await adm_per_obj.getfld('year_per_no')  # ditto
@@ -542,8 +550,8 @@ async def ledger_period_updated(db_obj, xml):
 db_cursors = {}
 async def get_db_cursors(company):
     if company not in db_cursors:
-        db_obj = await db.objects.get_db_object(
-            cache_context, company, 'db_cursors')
+        context = get_new_context(1, True, company)
+        db_obj = await db.objects.get_db_object(context, company, 'db_cursors')
         # must set lock before using, to prevent clashes
         db_obj.lock = asyncio.Lock()
         db_cursors[company] = db_obj
@@ -555,8 +563,8 @@ async def get_db_cursors(company):
 form_defns = {}
 async def get_form_defns(company):
     if company not in form_defns:
-        db_obj = await db.objects.get_db_object(
-            cache_context, company, 'sys_form_defns')
+        context = get_new_context(1, True, company)
+        db_obj = await db.objects.get_db_object(context, company, 'sys_form_defns')
         # must set lock before using, to prevent clashes
         db_obj.lock = asyncio.Lock()
         form_defns[company] = db_obj
@@ -568,8 +576,8 @@ async def get_form_defns(company):
 report_defns = {}
 async def get_report_defns(company):
     if company not in report_defns:
-        db_obj = await db.objects.get_db_object(
-            cache_context, company, 'sys_report_defns')
+        context = get_new_context(1, True, company)
+        db_obj = await db.objects.get_db_object(context, company, 'sys_report_defns')
         # must set lock before using, to prevent clashes
         db_obj.lock = asyncio.Lock()
         report_defns[company] = db_obj
@@ -581,8 +589,8 @@ async def get_report_defns(company):
 proc_defns = {}
 async def get_proc_defns(company):
     if company not in proc_defns:
-        db_obj = await db.objects.get_db_object(
-            cache_context, company, 'sys_proc_defns')
+        context = get_new_context(1, True, company)
+        db_obj = await db.objects.get_db_object(context, company, 'sys_proc_defns')
         # must set lock before using, to prevent clashes
         db_obj.lock = asyncio.Lock()
         proc_defns[company] = db_obj
@@ -594,8 +602,8 @@ async def get_proc_defns(company):
 menu_defns = {}
 async def get_menu_defns(company):
     if company not in menu_defns:
-        db_obj = await db.objects.get_db_object(
-            cache_context, company, 'sys_menu_defns')
+        context = get_new_context(1, True, company)
+        db_obj = await db.objects.get_db_object(context, company, 'sys_menu_defns')
         # must set lock before using, to prevent clashes
         db_obj.lock = asyncio.Lock()
         menu_defns[company] = db_obj
@@ -635,8 +643,8 @@ curr_lock = asyncio.Lock()
 async def get_curr_rates(company):
     with await curr_lock:
         if company not in curr_rates:
-            comp_rates = await db.objects.get_db_object(
-                cache_context, company, 'adm_curr_rates')
+            context = get_new_context(1, True, company)
+            comp_rates = await db.objects.get_db_object(context, company, 'adm_curr_rates')
             curr_rates[company] = comp_rates
     return curr_rates[company]
 
@@ -648,8 +656,8 @@ tax_lock = asyncio.Lock()
 async def get_tax_rates(company):
     with await tax_lock:
         if company not in tax_rates:
-            comp_rates = await db.objects.get_db_object(
-                cache_context, company, 'adm_tax_rates')
+            context = get_new_context(1, True, company)
+            comp_rates = await db.objects.get_db_object(context, company, 'adm_tax_rates')
             tax_rates[company] = comp_rates
     return tax_rates[company]
 
@@ -659,8 +667,8 @@ async def get_tax_rates(company):
 sell_prices = {}
 async def get_sell_prices(company):
     if company not in sell_prices:
-        comp_prices = await db.objects.get_db_object(
-            cache_context, company, 'sls_sell_prices')
+        context = get_new_context(1, True, company)
+        comp_prices = await db.objects.get_db_object(context, company, 'sls_sell_prices')
         sell_prices[company] = comp_prices
     return sell_prices[company]
 
@@ -672,7 +680,8 @@ async def get_sell_prices(company):
 # async def get_genno(company):
 #     with await genno_lock:
 #         if company not in gennos:
-#             genno = await db.objects.get_db_object(cache_context, company, 'db_genno')
+#             context = get_new_context(1, True, company)
+#             genno = await db.objects.get_db_object(context, company, 'db_genno')
 #             # must set lock before using, to prevent clashes
 #             genno.lock = asyncio.Lock()
 #             gennos[company] = genno
@@ -800,8 +809,8 @@ async def get_user_perms(user_row_id, company):
         if user_row_id not in user_table_perms:
             user_table_perms[user_row_id] = {}
         if company not in user_table_perms[user_row_id]:
-            users_companies = await db.objects.get_db_object(
-                cache_context, '_sys', 'dir_users_companies')
+            context = get_new_context(1, True, company)
+            users_companies = await db.objects.get_db_object(context, '_sys', 'dir_users_companies')
             await users_companies.init()
             await users_companies.setval('user_row_id', user_row_id)
             await users_companies.setval('company_id', company)
@@ -894,7 +903,8 @@ async def get_user(user_id):
     with await user_lock:
         global users
         if users is None:
-            users = await db.objects.get_db_object(cache_context, '_sys', 'dir_users')
+            context = get_new_context(1, True, company)
+            users = await db.objects.get_db_object(context, '_sys', 'dir_users')
             await users.add_virtual('display_name')
         if isinstance(user_id, int):  # receive user_row_id, return display_name
             await users.select_row({'row_id': user_id})
