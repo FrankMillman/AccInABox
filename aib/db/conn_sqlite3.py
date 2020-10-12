@@ -200,10 +200,10 @@ sqlite3.register_adapter(bool, lambda b: str(int(b)))
 # Boolean converter (convert back to bool on return)
 sqlite3.register_converter('BOOLTEXT', lambda s: bool(int(s)))
 
-def init(self, pos, mem_id=None):
+def init(self, mem_id=None):
     if self.database == ':memory:':
         # conn = sqlite3.connect(':memory:',
-        conn = sqlite3.connect('file:{}?mode=memory&cache=shared'.format(mem_id),
+        conn = sqlite3.connect(f'file:{mem_id}?mode=memory&cache=shared',
             detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
             check_same_thread=False, uri=True)
         self.servertype = ':memory:'

@@ -43,7 +43,7 @@ def customise(constants, DbConn, db_params):
     DbConn.user = db_params['user']
     DbConn.pwd = db_params['pwd']
 
-def init(self, pos):
+def init(self):
     # C:\sqlcmd -S localhost\sqlexpress -E
     # conn = pyodbc.connect(driver='sql server', server=r'localhost\sqlexpress',
     #     database=self.database, user=self.user, password=self.pwd, trusted_connection=True)
@@ -53,17 +53,6 @@ def init(self, pos):
     self.conn = conn
     self.servertype = 'mssql'
     self.exception = (pyodbc.DatabaseError, pyodbc.IntegrityError)
-    if not pos:  # only need to do this once per database
-        self.create_functions()
-        conn.autocommit = True
-        cur = conn.cursor()
-        cur.execute(
-            'ALTER DATABASE {} SET ALLOW_SNAPSHOT_ISOLATION ON'
-            .format(self.database))
-        cur.execute(
-            'ALTER DATABASE {} SET READ_COMMITTED_SNAPSHOT ON'
-            .format(self.database))
-        conn.autocommit = False
 
 # async def add_lock(self, sql):
 #     words = sql.split()
@@ -431,6 +420,11 @@ def convert_dflt(self, string, data_type):
 def create_functions(self):
 
     cur = self.conn.cursor()
+
+    self.conn.autocommit = True
+    cur.execute(f'ALTER DATABASE {self.database} SET ALLOW_SNAPSHOT_ISOLATION ON')
+    cur.execute(f'ALTER DATABASE {self.database} SET READ_COMMITTED_SNAPSHOT ON')
+    self.conn.autocommit = False
 
     try:
         cur.execute("drop function subfield")

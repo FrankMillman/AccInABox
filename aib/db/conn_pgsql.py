@@ -61,7 +61,7 @@ def customise(constants, DbConn, db_params):
     DbConn.user = db_params['user']
     DbConn.pwd = db_params['pwd']
 
-def init(self, pos):
+def init(self):
     # conn = psycopg2.connect(database=self.database, host=self.host,
     #     port=self.port, user=self.user, password=self.pwd)
     conn = psycopg2.connect(database=self.database, user=self.user, password=self.pwd)
@@ -70,8 +70,6 @@ def init(self, pos):
     self.servertype = 'pgsql'
     self.exception = (psycopg2.ProgrammingError, psycopg2.IntegrityError,
         psycopg2.InternalError)
-    if not pos:
-        self.create_functions()
 
 # async def add_lock(self, sql):
 #     return sql + ' FOR UPDATE'

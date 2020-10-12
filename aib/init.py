@@ -79,20 +79,13 @@ def get_htc_params():
     htc_port = input('Enter web server port number [6543]: ') or '6543'
     return OD((('host', htc_host), ('port', htc_port)))
 
-async def setup_db(cfg):
-    db.api.config_connection(cfg['DbParams'])
-
-    context = db.cache.get_new_context(1, True)  # user_row_id, sys_admin
-    async with context.db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
-        await init.init_db.init_database(context, conn)
-
 if __name__ == '__main__':
 
     cfg = get_config()
+    db.api.config_connection(cfg['DbParams'])
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(setup_db(cfg))
+    loop.run_until_complete(init.init_db.init_database())
     db.api.close_all_connections()
 
     from releases import program_version_info, datamodel_version_info

@@ -81,6 +81,7 @@ async def _add_connections(n):
     for _ in range(n):
         conn = DbConn()
         await conn._ainit_(len(connection_list))
+        conn.dbh.start()
         connection_list.append(conn)
         connections_active.append(False)
 
@@ -109,6 +110,7 @@ async def _add_mem_connections(n, mem_id, mem_conn):
     for _ in range(n):
         conn = MemConn()
         await conn._ainit_(len(mem_conn_list), mem_id)
+        conn.dbh.start()
         mem_conn_list.append(conn)
         mem_conn_active.append(False)
 
@@ -259,7 +261,6 @@ class Conn:
         self.request_queue = queue.Queue()
         self.wait_event = asyncio.Event()  # to notify when all requests completed
         self.dbh = DbHandler(self)
-        self.dbh.start()
         self.tablenames = None
         self.joins = {}
         self.save_tablenames = []
@@ -1035,7 +1036,7 @@ class DbConn(Conn):
 
         # set up db connection - this blocks, so use run_in_executor()
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self.init, pos)
+        await loop.run_in_executor(None, self.init)
 
         self.pos = pos
         self.constants = db_constants
@@ -1063,7 +1064,7 @@ class MemConn(Conn):
 
         # set up db connection - this blocks, so use run_in_executor()
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self.init, pos, mem_id)
+        await loop.run_in_executor(None, self.init, mem_id)
 
         self.pos = pos
         self.constants = mem_constants

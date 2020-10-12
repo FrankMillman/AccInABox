@@ -13,22 +13,31 @@ import db.cache
 
 USER_ROW_ID = 1  # used in db updates
 
-async def init_database(context, conn):
+async def init_database():
 
     company = '_sys'
     company_name = 'System Administration'
+    context = db.cache.get_new_context(1, True, company)  # user_row_id, sys_admin, company
 
+    # MS-SQL cannot run ALTER TABLE inside transaction, so call create_functions() here
+    conn = db.connection.DbConn()
+    await conn._ainit_(0)
     conn.create_functions()
-    await conn.create_company(company)
+    conn.conn.commit()
+    conn.conn.close()
 
-    await setup_db_tables(conn, company, company_name)  # create tables to store database metadata
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        await conn.create_company(company)
 
-    await setup_other_tables(context, conn, company)
-    await setup_fkeys(context, company)
-    await setup_forms(context, company)
-    await setup_menus(context, company, company_name)
+        await setup_db_tables(conn, company, company_name)  # create tables to store database metadata
 
-    await setup_data(context, conn, company, company_name)
+        await setup_other_tables(context, conn, company)
+        await setup_fkeys(context, company)
+        await setup_forms(context, company)
+        await setup_menus(context, company, company_name)
+
+        await setup_data(context, conn, company, company_name)
 
 async def setup_db_tables(conn, company, company_name):
 
@@ -503,25 +512,25 @@ async def setup_menus(context, company, company_name):
 
 async def setup_data(context, conn, company, company_name):
 
-    #dir_comp = await db.objects.get_db_object(context, ccompany, 'dir_companies')
-    #await dir_comp.setval('company_id', company)
-    #await dir_comp.setval('company_name', company_name)
-    #await dir_comp.save()
- 
-    # can't do the above, as a tablehook tries to create
-    #   the company _sys, which already exists
-    # therefore do it manually -
+    # dir_comp = await db.objects.get_db_object(context, company, 'dir_companies')
+    # await dir_comp.setval('company_id', company)
+    # await dir_comp.setval('company_name', company_name)
+    # await dir_comp.save()
 
-    await conn.exec_cmd(
-        "INSERT INTO _sys.dir_companies (company_id, company_name) "
-        "VALUES ({})".format(', '.join([db_constants.param_style] * 2))
-        , (company, company_name)
-        )
+    # use SQL instead of above, to avoid table_hook 'create_company'
+    param_style = db_constants.param_style
     sql = (
-        "INSERT INTO {}.dir_companies_audit_xref "
+        "INSERT INTO _sys.dir_companies (company_id, company_name) "
+        "VALUES ({0}, {0})"
+        ).format(param_style)
+    params = (company, company_name)
+    await conn.exec_cmd(sql, params)
+
+    sql = (
+        "INSERT INTO _sys.dir_companies_audit_xref "
         "(data_row_id, user_row_id, date_time, type) "
-        "VALUES ({})".format(company, ', '.join([db_constants.param_style]*4))
-        )
+        "VALUES ({0}, {0}, {0}, {0})"
+        ).format(param_style)
     params = (1, USER_ROW_ID, conn.timestamp, 'add')
     await conn.exec_cmd(sql, params)
 
