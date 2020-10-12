@@ -85,7 +85,7 @@ async def setup_inv_alloc(db_obj, conn, return_vals):
 
     if 'fifo' not in db_obj.context.data_objects:
         db_obj.context.data_objects['fifo'] = await db.objects.get_db_object(
-            db_obj.context, db_obj.company, 'in_wh_prod_fifo')
+            db_obj.context, 'in_wh_prod_fifo')
     fifo = db_obj.context.data_objects['fifo']
 
     cols_to_select = ['row_id', 'unalloc_qty', 'unalloc_whouse', 'unalloc_local']
@@ -131,7 +131,7 @@ async def alloc_oldest(db_obj, conn, return_vals):
 
     if 'ar_openitems' not in db_obj.context.data_objects:
         db_obj.context.data_objects['ar_openitems'] = await db.objects.get_db_object(
-            db_obj.context, db_obj.company, 'ar_openitems')
+            db_obj.context, 'ar_openitems')
     ar_items = db_obj.context.data_objects['ar_openitems']
 
     cols_to_select = ['row_id', 'due_cust']
@@ -248,7 +248,7 @@ async def check_tran_date(db_obj, fld, value):
         if period_row_id == ledger_periods.curr + 1:
             module_row_id, ledger_row_id = db_obj.context.mod_ledg_id
             ledger_period = await db.objects.get_db_object(
-                db.cache.cache_context, db_obj.company, 'adm_ledger_periods')
+                db.cache.cache_context, 'adm_ledger_periods')
             await ledger_period.init(init_vals={
                 'module_row_id': module_row_id,
                 'ledger_row_id': ledger_row_id,
@@ -283,7 +283,7 @@ async def check_stat_date(db_obj, fld, src_val):
     return
     if 'stat_dates' not in db_obj.context.data_objects:
         db_obj.context.data_objects['stat_dates'] = await db.objects.get_db_object(
-            db_obj.context, db_obj.company, 'ar_stat_dates')
+            db_obj.context, 'ar_stat_dates')
     stat_dates = db_obj.context.data_objects['stat_dates']
     await stat_dates.init(init_vals={
         'cust_row_id': await db_obj.getval('cust_row_id'),
@@ -629,7 +629,7 @@ async def set_stat_closing_flag(caller, params):
     async def handle_all_cust():
         if 'ar_ledg_per' not in caller.context.data_objects:
             caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
-                caller.context, caller.company, 'ar_ledger_periods')
+                caller.context, 'ar_ledger_periods')
         ledg_per = caller.context.data_objects['ar_ledg_per']
         await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
         await ledg_per.setval('period_row_id', params['current_period'])
@@ -644,7 +644,7 @@ async def set_stat_closing_flag(caller, params):
         cust_row_id = params['cust_row_id']
         if 'ar_stat_dates' not in caller.context.data_objects:
             caller.context.data_objects['ar_stat_dates'] = await db.objects.get_db_object(
-                caller.context, caller.company, 'ar_stat_dates')
+                caller.context, 'ar_stat_dates')
         stat_dates = caller.context.data_objects['ar_stat_dates']
         await stat_dates.setval('cust_row_id', cust_row_id)
         await stat_dates.setval('period_row_id', params['current_period'])
@@ -657,15 +657,15 @@ async def set_stat_closing_flag(caller, params):
     async def handle_unhandled_cust():
         if 'ar_customers' not in caller.context.data_objects:
             caller.context.data_objects['ar_customers'] = await db.objects.get_db_object(
-                caller.context, caller.company, 'ar_customers')
+                caller.context, 'ar_customers')
         ar_cust = caller.context.data_objects['ar_customers']
         if 'ar_stat_dates' not in caller.context.data_objects:
             caller.context.data_objects['ar_stat_dates'] = await db.objects.get_db_object(
-                caller.context, caller.company, 'ar_stat_dates')
+                caller.context, 'ar_stat_dates')
         stat_dates = caller.context.data_objects['ar_stat_dates']
         if 'ar_ledg_per' not in caller.context.data_objects:
             caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
-                caller.context, caller.company, 'ar_ledger_periods')
+                caller.context, 'ar_ledger_periods')
         ledg_per = caller.context.data_objects['ar_ledg_per']
 
         unhandled_cust = ar_cust.select_many(where=[
@@ -701,7 +701,7 @@ async def set_per_closing_flag(caller, params):
 
     if 'ar_ledg_per' not in caller.context.data_objects:
         caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
-            caller.context, caller.company, 'ar_ledger_periods')
+            caller.context, 'ar_ledger_periods')
     ledg_per = caller.context.data_objects['ar_ledg_per']
     await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
     await ledg_per.setval('period_row_id', params['current_period'])
@@ -716,7 +716,7 @@ async def set_stat_closed_flag(caller, params):
     if not params['separate_stat_cust']:
         if 'ar_ledg_per' not in caller.context.data_objects:
             caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
-                caller.context, caller.company, 'ar_ledger_periods')
+                caller.context, 'ar_ledger_periods')
         ledg_per = caller.context.data_objects['ar_ledg_per']
         await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
         await ledg_per.setval('period_row_id', params['current_period'])
@@ -738,7 +738,7 @@ async def set_stat_closed_flag(caller, params):
     #     cust_row_id = params['cust_row_id']
     #     if 'ar_stat_dates' not in caller.context.data_objects:
     #         caller.context.data_objects['ar_stat_dates'] = await db.objects.get_db_object(
-    #             caller.context, caller.company, 'ar_stat_dates')
+    #             caller.context, 'ar_stat_dates')
     #     stat_dates = caller.context.data_objects['ar_stat_dates']
     #     await stat_dates.setval('cust_row_id', cust_row_id)
     #     await stat_dates.setval('period_row_id', params['current_period'])
@@ -751,15 +751,15 @@ async def set_stat_closed_flag(caller, params):
 
     # if 'ar_customers' not in caller.context.data_objects:
     #     caller.context.data_objects['ar_customers'] = await db.objects.get_db_object(
-    #         caller.context, caller.company, 'ar_customers')
+    #         caller.context, 'ar_customers')
     # ar_cust = caller.context.data_objects['ar_customers']
     # if 'ar_stat_dates' not in caller.context.data_objects:
     #     caller.context.data_objects['ar_stat_dates'] = await db.objects.get_db_object(
-    #         caller.context, caller.company, 'ar_stat_dates')
+    #         caller.context, 'ar_stat_dates')
     # stat_dates = caller.context.data_objects['ar_stat_dates']
     # if 'ar_ledg_per' not in caller.context.data_objects:
     #     caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
-    #         caller.context, caller.company, 'ar_ledger_periods')
+    #         caller.context, 'ar_ledger_periods')
     # ledg_per = caller.context.data_objects['ar_ledg_per']
 
     # all_stat = stat_dates.select_many(where=[
@@ -782,7 +782,7 @@ async def set_per_closed_flag(caller, params):
 
     if 'ar_ledg_per' not in caller.context.data_objects:
         caller.context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(
-            caller.context, caller.company, 'ar_ledger_periods')
+            caller.context, 'ar_ledger_periods')
     ledg_per = caller.context.data_objects['ar_ledg_per']
     await ledg_per.setval('ledger_row_id', caller.context.mod_ledg_id[1])
     await ledg_per.setval('period_row_id', params['period_to_close'])
@@ -893,12 +893,12 @@ async def create_disc_crn(db_obj, xml):
     data_objects = context.data_objects
     if 'ar_tran_disc' not in data_objects:
         data_objects['ar_tran_disc'] = await db.objects.get_db_object(
-            context, db_obj.company, 'ar_tran_disc')
+            context, 'ar_tran_disc')
         data_objects['ar_tran_disc_det'] = await db.objects.get_db_object(
-            context, db_obj.company, 'ar_tran_disc_det',
+            context, 'ar_tran_disc_det',
             parent=data_objects['ar_tran_disc'])
         data_objects['nsls'] = await db.objects.get_db_object(
-            context, db_obj.company, 'sls_nsls_subtran',
+            context, 'sls_nsls_subtran',
             parent=data_objects['ar_tran_disc_det'])
     ar_tran_disc = data_objects['ar_tran_disc']
     ar_tran_disc_det = data_objects['ar_tran_disc_det']

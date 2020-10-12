@@ -16,8 +16,7 @@ async def setup_audit_cols(caller, xml):
     params.append(('deleted_id', 'INT', 'Deleted id', 'Deleted row id', 'Deleted', 'N',
         True, False, True, 0, 0, None, '0', None, None, None))
 
-    db_column = await db.objects.get_db_object(
-        db_table.context, db_table.company, 'db_columns')
+    db_column = await db.objects.get_db_object(db_table.context, 'db_columns')
     for seq, param in enumerate(params):
         await db_column.init()
         await db_column.setval('table_id', table_id)

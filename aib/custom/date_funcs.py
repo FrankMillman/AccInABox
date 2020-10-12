@@ -431,8 +431,11 @@ async def check_tran_date(db_obj, fld, value):
         if period_row_id == ledger_periods.current_period + 1:  # create new open period
             # module_row_id, ledger_row_id = db_obj.context.mod_ledg_id
             module_id = (await db.cache.get_mod_id(db_obj.company, db_obj.db_table.module_row_id))[0]
-            ledger_period = await db.objects.get_db_object(
-                db.cache.cache_context, db_obj.company, '{}_ledger_periods'.format(module_id))
+            # ledger_period = await db.objects.get_db_object(db.cache.cache_context,
+            #     '{}_ledger_periods'.format(module_id))
+            context = db.cache.get_new_context(1, True, db_obj.company)
+            ledger_period = await db.objects.get_db_object(context,
+                '{}_ledger_periods'.format(module_id))
             await ledger_period.init(init_vals={
                 'ledger_row_id': ledger_row_id,
                 'period_row_id': period_row_id,
@@ -486,7 +489,7 @@ async def check_stat_date(db_obj, fld, value):
     if await ledger_params.getval('separate_stat_cust'):
         if 'stat_dates' not in db_obj.context.data_objects:
             db_obj.context.data_objects['stat_dates'] = await db.objects.get_db_object(
-                db_obj.context, db_obj.company, 'ar_stat_dates')
+                db_obj.context, 'ar_stat_dates')
         stat_dates = db_obj.context.data_objects['stat_dates']
         await stat_dates.init(init_vals={
             'cust_row_id': await db_obj.getval('cust_row_id'),
@@ -520,8 +523,10 @@ async def check_wh_date(db_obj, fld, ledger_row_id):
     if period_row_id not in ledger_periods:
         # if period_row_id == ledger_periods['curr'] + 1:  # create new open period
         if period_row_id == ledger_periods.current_period + 1:  # create new open period
-            ledger_period = await db.objects.get_db_object(
-                db.cache.cache_context, db_obj.company, 'in_ledger_periods')
+            # ledger_period = await db.objects.get_db_object(
+            #     db.cache.cache_context, 'in_ledger_periods')
+            context = db.cache.get_new_context(1, True, db_obj.company)
+            ledger_period = await db.objects.get_db_object(context, 'in_ledger_periods')
             await ledger_period.init(init_vals={
                 'ledger_row_id': ledger_row_id,
                 'period_row_id': period_row_id,

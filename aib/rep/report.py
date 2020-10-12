@@ -117,11 +117,11 @@ class Report:
                 db_obj = await db.objects.get_fkey_object(
                     self.context, table_name, src_obj, src_colname)
             elif obj_xml.get('view') == 'true':
-                db_obj = await db.objects.get_view_object(self.context,
-                    self.company, table_name)
+                db_obj = await db.objects.get_view_object(
+                    self.context, table_name)
             else:
-                db_obj = await db.objects.get_db_object(self.context,
-                    self.company, table_name, db_parent)
+                db_obj = await db.objects.get_db_object(
+                    self.context, table_name, db_parent)
 
             self.data_objects[obj_name] = db_obj
 

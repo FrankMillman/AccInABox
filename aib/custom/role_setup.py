@@ -26,7 +26,7 @@ async def before_start_form(caller, xml):
 
     # build in-memory table of module/ledger attributes
     mod_ledg = caller.data_objects['mod_ledg']
-    module = await db.objects.get_db_object(caller.context, caller.company, 'db_modules')
+    module = await db.objects.get_db_object(caller.context, 'db_modules')
     all_mod = module.select_many(where=[], order=[('row_id', False)])
     async for _ in all_mod:
         await mod_ledg.init(init_vals={
@@ -36,8 +36,8 @@ async def before_start_form(caller, xml):
             })
         await mod_ledg.save()
         try:  # not all modules use sub-ledgers
-            ledger = await db.objects.get_db_object(caller.context, caller.company,
-                '{}_ledger_params'.format(await module.getval('module_id')))
+            ledger = await db.objects.get_db_object(caller.context,
+                f'{await module.getval('module_id')}_ledger_params')
             all_ledg = ledger.select_many(where=[], order=[])
             async for _ in all_ledg:
                 await mod_ledg.init(init_vals={

@@ -260,7 +260,7 @@ class Field:
                                     break
 
                 tgt_object = await db.objects.get_db_object(self.db_obj.context,
-                    tgt_company, tgt_table_name, parent=parent_obj)
+                    tgt_table_name, parent=parent_obj)
 
             tgt_field = await tgt_object.getfld(tgt_col_name)
 
@@ -766,7 +766,7 @@ class Field:
                 if db_obj.sub_trans[col_name][value] is None:  # not set up
                     subtran_tblname = db_obj.db_table.sub_trans[col_name][value][0]
                     # creating sub_tran object triggers populating sub_trans on parent
-                    await db.objects.get_db_object(db_obj.context, db_obj.company,
+                    await db.objects.get_db_object(db_obj.context,
                         subtran_tblname, parent=db_obj)
                 subtran_obj = db_obj.sub_trans[col_name][value][0]
                 # we have populated the sub_tran 'identifier' column

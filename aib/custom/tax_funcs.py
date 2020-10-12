@@ -37,10 +37,9 @@ async def before_start_form(caller, xml):
             parent=tax_cat, table_defn=etree.fromstring(tax_code_defn))
     tax_code = caller.data_objects['tax_codes']
 
-    adm_tax_cat = await db.objects.get_db_object(
-        caller.context, caller.company, 'adm_tax_cats')
-    adm_tax_code = await db.objects.get_db_object(
-        caller.context, caller.company, 'adm_tax_codes', parent=adm_tax_cat)
+    adm_tax_cat = await db.objects.get_db_object(caller.context, 'adm_tax_cats')
+    adm_tax_code = await db.objects.get_db_object(caller.context,
+        'adm_tax_codes', parent=adm_tax_cat)
 
     all_cats = adm_tax_cat.select_many(where=[], order=[('seq', False)])
     async for _ in all_cats:
@@ -185,7 +184,7 @@ async def calc_tax(db_obj, conn, return_vals):
 
     if tax_code_table not in db_obj.context.data_objects:
         db_obj.context.data_objects[tax_code_table] = await db.objects.get_db_object(
-            db_obj.context, db_obj.company, tax_code_table)
+            db_obj.context, tax_code_table)
     db_tax_codes = db_obj.context.data_objects[tax_code_table]
 
     where=[['where', '', tax_code_key, '=', await db_obj.getval(tax_code_src), '']]

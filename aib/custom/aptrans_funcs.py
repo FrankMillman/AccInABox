@@ -23,7 +23,7 @@ async def split_npch(db_obj, conn, return_vals):
 # async def check_pmt_date(db_obj, fld, src_val):
 #     if 'pmt_dates' not in db_obj.context.data_objects:
 #         db_obj.context.data_objects['pmt_dates'] = await db.objects.get_db_object(
-#             db_obj.context, db_obj.company, 'ap_pmt_dates')
+#             db_obj.context, 'ap_pmt_dates')
 #     pmt_dates = db_obj.context.data_objects['pmt_dates']
 #     await pmt_dates.init(init_vals={
 #         'supp_row_id': await db_obj.getval('supp_row_id'),

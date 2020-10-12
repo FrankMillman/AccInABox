@@ -51,9 +51,9 @@ def restart_active_processes():  # called by start.py at start of program
     for company in companies:
         with db_session.get_connection() as conn:
             # cannot use 'select' - that is for a single row!
-            # process_state = db.api.get_db_object(db_session, company, 'process_states')
+            # process_state = db.api.get_db_object(db_session, 'process_states')
             # process_state.select(state='active')
-            db_obj = db.api.get_db_object(db_session, company, 'process_states')
+            db_obj = db.api.get_db_object(db_session,'process_states')
             process_states = db.api.select_rows(
                 conn, db_obj, cols, where={'state':'active'})
             for case in process_states:
@@ -192,9 +192,9 @@ class ProcessRoot:
         del self.defaults
         del self.boundary_events
 
-        bpm_header = await db.objects.get_db_object(self.context, self.company, 'bpm_headers')
+        bpm_header = await db.objects.get_db_object(self.context, 'bpm_headers')
         bpm_detail = await db.objects.get_db_object(
-            self.context, self.company, 'bpm_details', parent=bpm_header)
+            self.context, 'bpm_details', parent=bpm_header)
         self.bpm_detail = bpm_detail  # save reference for use in other methods
 
         if restart_id is not None:
@@ -288,10 +288,10 @@ class ProcessRoot:
                 db_obj = await db.objects.get_fkey_object(
                     self.context, table_name, src_obj, src_colname)
             elif obj_xml.get('view') == 'true':
-                db_obj = await db.objects.get_view_object(self.context, company, table_name)
+                db_obj = await db.objects.get_view_object(self.context, table_name)
             else:
                 db_obj = await db.objects.get_db_object(self.context,
-                    company, table_name, db_parent)
+                    table_name, db_parent)
 
             self.data_objects[obj_name] = db_obj
 

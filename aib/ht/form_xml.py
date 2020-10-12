@@ -214,7 +214,7 @@ async def select_from_view(grid, xml):
         path_dict[await grid.db_obj.getval(fld_const)]
     if base_table_name not in grid.parent.context.data_objects:
         grid.parent.context.data_objects[base_table_name] = await db.objects.get_db_object(
-            grid.parent.context, grid.parent.company, base_table_name)
+            grid.parent.context, base_table_name)
     base_obj = grid.parent.context.data_objects[base_table_name]
     await base_obj.init()
     await base_obj.setval(base_row_id, await grid.db_obj.getval(view_row_id))

@@ -12,7 +12,7 @@ from common import AibError
 #         table_name = 'inv_prod_tax_codes'
 #         if table_name not in db_obj.context.data_objects:
 #             db_obj.context.data_objects[table_name] = await db.objects.get_db_object(
-#                 db_obj.context, db_obj.company, table_name)
+#                 db_obj.context,  table_name)
 #         prod_tax_codes = db_obj.context.data_objects[table_name]
 #         all_codes = prod_tax_codes.select_many(
 #             where=[['where', '', 'prod_row_id', '=', await db_obj.getval('prod_row_id'), '']],
@@ -30,7 +30,7 @@ from common import AibError
 #         table_name = 'sls_sales_tax_codes'
 #         if table_name not in db_obj.context.data_objects:
 #             db_obj.context.data_objects[table_name] = await db.objects.get_db_object(
-#                 db_obj.context, db_obj.company, table_name)
+#                 db_obj.context, table_name)
 #         sls_tax_codes = db_obj.context.data_objects[table_name]
 #         all_codes = sls_tax_codes.select_many(
 #             where=[['where', '', 'code_id', '=', await db_obj.getval('sales_code_id'), '']],

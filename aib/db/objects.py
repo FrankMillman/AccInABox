@@ -95,7 +95,7 @@ middle man and await it directly.
 """
 #-----------------------------------------------------------------------------
 
-async def get_db_object(context, active_company, table_name, parent=None):
+async def get_db_object(context, table_name, parent=None):
     """
     Instantiate and return a :class:`~db.objects.DbObject` object.
     """
@@ -110,11 +110,9 @@ async def get_db_object(context, active_company, table_name, parent=None):
     if '.' in table_name:
         db_company, table_name = table_name.split('.')
     else:
-        db_company = active_company
+        db_company = context.company
 
     db_table = await get_db_table(context, db_company, table_name)
-
-    # context.company = db_table.data_company
 
     db_obj = DbObject()
     await db_obj._ainit_(context, db_table.data_company, db_table, parent)
@@ -135,8 +133,6 @@ async def get_mem_object(context, company, table_name, parent=None, table_defn=N
         table_name = context.data_objects[table_name].table_name
 
     mem_table = await get_mem_table(context, company, table_name, table_defn)
-
-    # context.company = company
 
     mem_obj = MemObject()
     await mem_obj._ainit_(context, company, mem_table, parent)
@@ -169,7 +165,6 @@ async def get_clone_object(context, company, table_name, clone_from, parent=None
         await cloned_table._ainit_(context, company, table_name, clone_from)
         context.mem_tables_open[table_name] = cloned_table
     mem_table = context.mem_tables_open[table_name]
-    # context.company = company
     mem_obj = MemObject()
     await mem_obj._ainit_(context, company, mem_table, parent)
     return mem_obj
@@ -191,8 +186,6 @@ async def get_db_table(context, db_company, table_name):
 
     if context is None:  # called from connection.check_sql_params() when evaluating `...`
         context = db.cache.get_new_context(1, True, db_company)  # user_row_id, sys_admin, company
-
-    # context.company = db_company
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
@@ -230,8 +223,6 @@ async def get_db_table(context, db_company, table_name):
     if defn_company is None:
         defn_company = db_company
     else:
-        # context.company = defn_company
-
         # remove 'defn_company', 'data_company', 'read_only' from cols
         cols = ['row_id', 'table_name', 'module_row_id', 'short_descr', 'sub_types', 'sub_trans',
             'sequence', 'tree_params', 'roll_params', 'ledger_col']
@@ -265,11 +256,11 @@ async def get_db_table(context, db_company, table_name):
 
     return db_table
 
-async def get_view_object(context, active_company, view_name):
+async def get_view_object(context, view_name):
     if '.' in view_name:
         db_company, view_name = view_name.split('.')
     else:
-        db_company = active_company
+        db_company = context.company
     view_key = f'{db_company.lower()}.{view_name.lower()}'
 
     if view_key in tables_open:
@@ -277,8 +268,6 @@ async def get_view_object(context, active_company, view_name):
     else:
         db_view = await get_db_view(context, db_company, view_name)
         tables_open[view_key] = db_view
-
-    # context.company = db_view.data_company
 
     db_obj = DbObject()
     await db_obj._ainit_(context, db_view.data_company, db_view, view_obj=True)
@@ -289,8 +278,6 @@ async def get_db_view(context, db_company, view_name):
     cols = ['row_id', 'view_name', 'module_row_id', 'short_descr', 'path_to_row',
         'sequence', 'ledger_col', 'defn_company', 'data_company']
     where = [('WHERE', '', 'view_name', '=', view_name, '')]
-
-    # context.company = db_company
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
@@ -325,9 +312,7 @@ async def get_db_view(context, db_company, view_name):
 
     if defn_company is None:
         defn_company = db_company
-    # else:
-    #     context.company = defn_company
-
+    else:
         # remove 'defn_company', 'data_company' from cols
         cols = ['row_id', 'view_name', 'module_row_id', 'short_descr',
             'path_to_row', 'sequence', 'ledger_col']
@@ -714,7 +699,7 @@ class DbObject:
                 subcol_name, subcol_val = obj_name[8:].split('=')
                 db_obj = self.sub_trans[subcol_name][subcol_val][0]
             else:
-                db_obj = await get_db_object(self.context, self.company, obj_name)
+                db_obj = await get_db_object(self.context, obj_name)
                 self.context.data_objects[obj_name] = db_obj
         else:
             db_obj = self
@@ -1079,7 +1064,7 @@ class DbObject:
             #     elif fld.col_name in self.sub_trans:
             #         if self.sub_trans[fld.col_name][fld._value] is None:  # not set up
             #             subtran_tblname = self.db_table.sub_trans[fld.col_name][fld._value][0]
-            #             await db.objects.get_db_object(self.context, self.company,
+            #             await db.objects.get_db_object(self.context,
             #                 subtran_tblname, parent=self)
 
             # if fld.fkey_parent is not None:  # get value from parent
@@ -1474,7 +1459,7 @@ class DbObject:
                     subtran_colval = await self.getval(subtran_colname)
                     if self.sub_trans[subtran_colname][subtran_colval] is None:  # not set up
                         subtran_tblname = self.db_table.sub_trans[subtran_colname][subtran_colval][0]
-                        await db.objects.get_db_object(self.context, self.company,
+                        await db.objects.get_db_object(self.context,
                             subtran_tblname, parent=self)
                     subtran_obj = self.sub_trans[subtran_colname][subtran_colval][0]
                     await subtran_obj.delete(from_upd_on_save=from_upd_on_save)
@@ -1490,7 +1475,7 @@ class DbObject:
                                 break  # use this one
                         else:  # child not set up
                             child = await get_db_object(
-                                self.context, self.company, tgt_fkey.src_tbl, parent=self)
+                                self.context, tgt_fkey.src_tbl, parent=self)
                         where=[]
                         # the next bit should be handled inside select_many - needs investigation
                         if tgt_fkey.test is not None:
@@ -1604,11 +1589,11 @@ class DbObject:
                                 break  # use this one
                         else:  # child not set up - next line will set it up
                             child = await get_db_object(self.context,
-                                self.company, tbl_name, parent=self)
+                                tbl_name, parent=self)
                         tgt_obj = child
                         break
             else:
-                tgt_obj = await get_db_object(self.context, self.company, tbl_name)
+                tgt_obj = await get_db_object(self.context, tbl_name)
             self.context.data_objects[tbl_key] = tgt_obj
         await tgt_obj.init()
         return tgt_obj
@@ -1993,7 +1978,7 @@ class DbObject:
                                     break  # use this one
                             else:  # child not set up - next line will set it up
                                 child = await get_db_object(
-                                    self.context, self.company, tgt_fkey.src_tbl, parent=self)
+                                    self.context, tgt_fkey.src_tbl, parent=self)
 
                             # next block added 2018-09-12
                             # if child does not have upd_on_post, do not post child,
@@ -2011,9 +1996,8 @@ class DbObject:
                                                 if child_2.table_name == tgt_fkey_2.src_tbl:
                                                     break  # use this one
                                             else:  # child not set up - next line will set it up
-                                                child_2 = await get_db_object(
-                                                    self.context, self.company,
-                                                        tgt_fkey_2.src_tbl, parent=parent)
+                                                child_2 = await get_db_object(self.context,
+                                                    tgt_fkey_2.src_tbl, parent=parent)
                                             if await check_children(child_2):
                                                 return True
                                     return False

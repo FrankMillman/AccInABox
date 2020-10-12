@@ -163,7 +163,7 @@ class Form:
         if grid_params is not None:  # passed in if setup_grid
             table_name, cursor_name = grid_params
             grid_obj = await db.objects.get_db_object(
-                self.context, self.company, table_name)
+                self.context, table_name)
             self.data_objects['grid_obj'] = grid_obj
             title = await grid_obj.setup_cursor_defn(cursor_name)
 
@@ -303,10 +303,10 @@ class Form:
                     self.context, table_name, src_obj, src_colname)
             elif obj_xml.get('view') == 'true':
                 db_obj = await db.objects.get_view_object(self.context,
-                    self.company, table_name)
+                    table_name)
             else:
                 db_obj = await db.objects.get_db_object(self.context,
-                    self.company, table_name, db_parent)
+                    table_name, db_parent)
 
             self.data_objects[obj_name] = db_obj
 

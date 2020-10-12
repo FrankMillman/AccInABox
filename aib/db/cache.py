@@ -104,7 +104,7 @@ adm_params = {}
 async def get_adm_params(company):
     if company not in adm_params:
         context = get_new_context(1, True, company)
-        adm_param = await db.objects.get_db_object(context, company, 'adm_params')
+        adm_param = await db.objects.get_db_object(context, 'adm_params')
         await adm_param.add_all_virtual()
         await adm_param.setval('row_id', 1)  # forces a select
         adm_params[company] = adm_param
@@ -200,14 +200,14 @@ async def get_ledger_params(company, module_row_id, ledger_row_id):
             table_name = f'{module_id}_ledger_params'
 
             # create 'blank' ledg_obj for use if db_obj.exists is False
-            ledg_obj = await db.objects.get_db_object(context, company, table_name)
+            ledg_obj = await db.objects.get_db_object(context, table_name)
             await ledg_obj.add_all_virtual()
             ledger_params[company][module_row_id][None] = ledg_obj
 
         if ledger_row_id not in ledger_params[company][module_row_id]:
             module_id = (await get_mod_id(company, module_row_id))[0]
             table_name = f'{module_id}_ledger_params'
-            ledg_obj = await db.objects.get_db_object(context, company, table_name)
+            ledg_obj = await db.objects.get_db_object(context, table_name)
             await ledg_obj.add_all_virtual()
             await ledg_obj.setval('row_id', ledger_row_id)  # to force a SELECT
             ledger_params[company][module_row_id][ledger_row_id] = ledg_obj
@@ -248,7 +248,7 @@ async def ledger_inserted(db_obj, xml):
     module_id, module_descr = await get_mod_id(company, module_row_id)
 
     # get module administrator role
-    acc_role = await db.objects.get_db_object(db_obj.context, company, 'acc_roles')
+    acc_role = await db.objects.get_db_object(db_obj.context, 'acc_roles')
     await acc_role.select_row({'module_row_id': module_row_id, 'ledger_row_id': None})
     parent_id = await acc_role.getval('row_id')
 
@@ -263,7 +263,7 @@ async def ledger_inserted(db_obj, xml):
     await acc_role.save()
 
     # set up menu for new ledger
-    menu = await db.objects.get_db_object(db_obj.context, company, 'sys_menu_defns')
+    menu = await db.objects.get_db_object(db_obj.context, 'sys_menu_defns')
 
     # get top-level menu for module, save parent_id
     # using 'parent_id: 1' is a bit dodgy, but no easy way to guarantee unique row [2019-08-20]
@@ -350,7 +350,7 @@ async def get_adm_periods(company):
         if company not in adm_periods:
             adm_per_list = []
             context = get_new_context(1, True, company)
-            adm_per_obj = await db.objects.get_db_object(context, company, 'adm_periods')
+            adm_per_obj = await db.objects.get_db_object(context, 'adm_periods')
             await adm_per_obj.getfld('year_no')  # to set up virtual field
             await adm_per_obj.getfld('year_per_id')  # ditto
             await adm_per_obj.getfld('year_per_no')  # ditto
@@ -551,7 +551,7 @@ db_cursors = {}
 async def get_db_cursors(company):
     if company not in db_cursors:
         context = get_new_context(1, True, company)
-        db_obj = await db.objects.get_db_object(context, company, 'db_cursors')
+        db_obj = await db.objects.get_db_object(context, 'db_cursors')
         # must set lock before using, to prevent clashes
         db_obj.lock = asyncio.Lock()
         db_cursors[company] = db_obj
@@ -564,7 +564,7 @@ form_defns = {}
 async def get_form_defns(company):
     if company not in form_defns:
         context = get_new_context(1, True, company)
-        db_obj = await db.objects.get_db_object(context, company, 'sys_form_defns')
+        db_obj = await db.objects.get_db_object(context, 'sys_form_defns')
         # must set lock before using, to prevent clashes
         db_obj.lock = asyncio.Lock()
         form_defns[company] = db_obj
@@ -577,7 +577,7 @@ report_defns = {}
 async def get_report_defns(company):
     if company not in report_defns:
         context = get_new_context(1, True, company)
-        db_obj = await db.objects.get_db_object(context, company, 'sys_report_defns')
+        db_obj = await db.objects.get_db_object(context, 'sys_report_defns')
         # must set lock before using, to prevent clashes
         db_obj.lock = asyncio.Lock()
         report_defns[company] = db_obj
@@ -590,7 +590,7 @@ proc_defns = {}
 async def get_proc_defns(company):
     if company not in proc_defns:
         context = get_new_context(1, True, company)
-        db_obj = await db.objects.get_db_object(context, company, 'sys_proc_defns')
+        db_obj = await db.objects.get_db_object(context, 'sys_proc_defns')
         # must set lock before using, to prevent clashes
         db_obj.lock = asyncio.Lock()
         proc_defns[company] = db_obj
@@ -603,7 +603,7 @@ menu_defns = {}
 async def get_menu_defns(company):
     if company not in menu_defns:
         context = get_new_context(1, True, company)
-        db_obj = await db.objects.get_db_object(context, company, 'sys_menu_defns')
+        db_obj = await db.objects.get_db_object(context, 'sys_menu_defns')
         # must set lock before using, to prevent clashes
         db_obj.lock = asyncio.Lock()
         menu_defns[company] = db_obj
@@ -644,7 +644,7 @@ async def get_curr_rates(company):
     with await curr_lock:
         if company not in curr_rates:
             context = get_new_context(1, True, company)
-            comp_rates = await db.objects.get_db_object(context, company, 'adm_curr_rates')
+            comp_rates = await db.objects.get_db_object(context, 'adm_curr_rates')
             curr_rates[company] = comp_rates
     return curr_rates[company]
 
@@ -657,7 +657,7 @@ async def get_tax_rates(company):
     with await tax_lock:
         if company not in tax_rates:
             context = get_new_context(1, True, company)
-            comp_rates = await db.objects.get_db_object(context, company, 'adm_tax_rates')
+            comp_rates = await db.objects.get_db_object(context, 'adm_tax_rates')
             tax_rates[company] = comp_rates
     return tax_rates[company]
 
@@ -668,7 +668,7 @@ sell_prices = {}
 async def get_sell_prices(company):
     if company not in sell_prices:
         context = get_new_context(1, True, company)
-        comp_prices = await db.objects.get_db_object(context, company, 'sls_sell_prices')
+        comp_prices = await db.objects.get_db_object(context, 'sls_sell_prices')
         sell_prices[company] = comp_prices
     return sell_prices[company]
 
@@ -681,7 +681,7 @@ async def get_sell_prices(company):
 #     with await genno_lock:
 #         if company not in gennos:
 #             context = get_new_context(1, True, company)
-#             genno = await db.objects.get_db_object(context, company, 'db_genno')
+#             genno = await db.objects.get_db_object(context, 'db_genno')
 #             # must set lock before using, to prevent clashes
 #             genno.lock = asyncio.Lock()
 #             gennos[company] = genno
@@ -706,7 +706,7 @@ async def get_sell_prices(company):
 genno_lock = asyncio.Lock()
 async def get_next(db_obj, key):
     with await genno_lock:
-        genno = await db.objects.get_db_object(db_obj.context, db_obj.company, 'db_genno')
+        genno = await db.objects.get_db_object(db_obj.context, 'db_genno')
         await genno.setval('gkey', key)
         curr_no = await genno.getval('number')
         next_no = curr_no + 1
@@ -810,7 +810,8 @@ async def get_user_perms(user_row_id, company):
             user_table_perms[user_row_id] = {}
         if company not in user_table_perms[user_row_id]:
             context = get_new_context(1, True, company)
-            users_companies = await db.objects.get_db_object(context, '_sys', 'dir_users_companies')
+            # users_companies = await db.objects.get_db_object(context, '_sys.dir_users_companies')
+            users_companies = await db.objects.get_db_object(context, 'dir_users_companies')
             await users_companies.init()
             await users_companies.setval('user_row_id', user_row_id)
             await users_companies.setval('company_id', company)
@@ -904,7 +905,8 @@ async def get_user(user_id):
         global users
         if users is None:
             context = get_new_context(1, True, company)
-            users = await db.objects.get_db_object(context, '_sys', 'dir_users')
+            # users = await db.objects.get_db_object(context, '_sys.dir_users')
+            users = await db.objects.get_db_object(context, 'dir_users')
             await users.add_virtual('display_name')
         if isinstance(user_id, int):  # receive user_row_id, return display_name
             await users.select_row({'row_id': user_id})

@@ -32,12 +32,12 @@ async def init_database():
 
         await setup_db_tables(conn, company, company_name)  # create tables to store database metadata
 
-        await setup_other_tables(context, conn, company)
-        await setup_fkeys(context, company)
-        await setup_forms(context, company)
-        await setup_menus(context, company, company_name)
+        await setup_other_tables(context, conn)
+        await setup_fkeys(context)
+        await setup_forms(context)
+        await setup_menus(context, company_name)
 
-        await setup_data(context, conn, company, company_name)
+        await setup_data(context, conn, company_name)
 
 async def setup_db_tables(conn, company, company_name):
 
@@ -253,9 +253,9 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
 
     return column_id
 
-async def setup_other_tables(context, conn, company):
-    db_tbl = await db.objects.get_db_object(context, company, 'db_tables')
-    db_col = await db.objects.get_db_object(context, company, 'db_columns')
+async def setup_other_tables(context, conn):
+    db_tbl = await db.objects.get_db_object(context, 'db_tables')
+    db_col = await db.objects.get_db_object(context, 'db_columns')
     tables = [
         'db_tables',
         'db_columns',
@@ -278,9 +278,9 @@ async def setup_other_tables(context, conn, company):
         if table_name not in (
                 'db_tables', 'db_actions', 'db_columns'):  # already created
             await setup_table(module, db_tbl, db_col, table_name)
-            await db.create_table.create_table(conn, company, table_name)
-    db_cur = await db.objects.get_db_object(context, company, 'db_cursors')
-    db_act = await db.objects.get_db_object(context, company, 'db_actions')
+            await db.create_table.create_table(conn, context.company, table_name)
+    db_cur = await db.objects.get_db_object(context, 'db_cursors')
+    db_act = await db.objects.get_db_object(context, 'db_actions')
     for table_name in tables:
         module = importlib.import_module('.tables.{}'.format(table_name), 'init')
         await setup_cursor(module, db_tbl, db_cur, table_name)
@@ -384,9 +384,9 @@ async def setup_actions(module, db_act, table_name):
             await db_act.setval(act, action)
         await db_act.save()
 
-async def setup_fkeys(context, company):
+async def setup_fkeys(context):
     # can only do this after dir_companies has been set up
-    db_col = await db.objects.get_db_object(context, company, 'db_columns')
+    db_col = await db.objects.get_db_object(context, 'db_columns')
     await db_col.setval('table_name', 'db_tables')
     await db_col.setval('col_name', 'defn_company')
     await db_col.setval('fkey', ['dir_companies', 'company_id', None, None, False, None])
@@ -398,14 +398,14 @@ async def setup_fkeys(context, company):
     await db_col.setval('fkey', ['dir_companies', 'company_id', None, None, False, None])
     await db_col.save()
 
-async def setup_forms(context, company):
+async def setup_forms(context):
     schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
     parser = etree.XMLParser(
         schema=etree.XMLSchema(file=os.path.join(schema_path, 'form.xsd')),
         attribute_defaults=True, remove_comments=True, remove_blank_text=True)
     form_path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'forms')
-    form_defn = await db.objects.get_db_object(context, company, 'sys_form_defns')
-    db_table = await db.objects.get_db_object(context, company, 'db_tables')
+    form_defn = await db.objects.get_db_object(context, 'sys_form_defns')
+    db_table = await db.objects.get_db_object(context, 'db_tables')
 
     async def setup_form(form_name):
         xml = open('{}/{}.xml'.format(form_path, form_name)).read()
@@ -457,8 +457,8 @@ async def setup_forms(context, company):
     await setup_form('select_balance_date')
     await setup_form('select_date_range')
 
-async def setup_menus(context, company, company_name):
-    db_obj = await db.objects.get_db_object(context, company, 'sys_menu_defns')
+async def setup_menus(context, company_name):
+    db_obj = await db.objects.get_db_object(context, 'sys_menu_defns')
 
     async def setup_menu(descr, parent, opt_type, module_id=None, table_name=None,
             cursor_name=None, form_name=None):
@@ -510,10 +510,10 @@ async def setup_menus(context, company, company_name):
 
     await parse_menu(menu, None)
 
-async def setup_data(context, conn, company, company_name):
+async def setup_data(context, conn, company_name):
 
-    # dir_comp = await db.objects.get_db_object(context, company, 'dir_companies')
-    # await dir_comp.setval('company_id', company)
+    # dir_comp = await db.objects.get_db_object(context, 'dir_companies')
+    # await dir_comp.setval('company_id', context.company)
     # await dir_comp.setval('company_name', company_name)
     # await dir_comp.save()
 
@@ -523,7 +523,7 @@ async def setup_data(context, conn, company, company_name):
         "INSERT INTO _sys.dir_companies (company_id, company_name) "
         "VALUES ({0}, {0})"
         ).format(param_style)
-    params = (company, company_name)
+    params = (context.company, company_name)
     await conn.exec_cmd(sql, params)
 
     sql = (
@@ -534,21 +534,21 @@ async def setup_data(context, conn, company, company_name):
     params = (1, USER_ROW_ID, conn.timestamp, 'add')
     await conn.exec_cmd(sql, params)
 
-    dir_user = await db.objects.get_db_object(context, company, 'dir_users')
+    dir_user = await db.objects.get_db_object(context, 'dir_users')
     await dir_user.setval('user_id', 'admin')
     await dir_user.setval('password', 'admin')
     await dir_user.setval('sys_admin', True)
     await dir_user.setval('user_type', 'admin')
     await dir_user.save()
 
-    acc_role = await db.objects.get_db_object(context, company, 'acc_roles')
+    acc_role = await db.objects.get_db_object(context, 'acc_roles')
     await acc_role.setval('role_type', '0')
     await acc_role.setval('role_id', 'admin')
     await acc_role.setval('descr', 'Company adminstrator')
     await acc_role.setval('parent_id', None)
     await acc_role.save()
 
-    db_module = await db.objects.get_db_object(context, company, 'db_modules')
+    db_module = await db.objects.get_db_object(context, 'db_modules')
     row_id = 1
     while True:  # don't know how many modules there are - loop until no more
         await db_module.init()

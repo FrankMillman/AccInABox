@@ -15,28 +15,28 @@ next_table_id = count(1)  # generate sequential numbers, starting from 1
 
 async def init_company(company, company_name):
 
-    context = db.cache.get_new_context(1, True)  # user_row_id, sys_admin
+    context = db.cache.get_new_context(1, True, company)  # user_row_id, sys_admin, company
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         await conn.create_company(company)
-        await setup_db_tables(context, conn, company, company_name)  # tables to store database metadata
-        await setup_dir_tables(context, conn, company)  # directory tables defined in _sys
-        await setup_sys_tables(context, conn, company)  # common table definitions defined in _sys
-        await setup_other_tables(context, conn, company)  # database tables for company
-        await setup_views(context, conn, company)  # database views for company
-        await setup_forms(context, conn, company)
-        await setup_reports(context, conn, company)
-        await setup_processes(context, conn, company)
-        await setup_menus(context, conn, company, company_name)
+        await setup_db_tables(context, conn, company_name)  # tables to store database metadata
+        await setup_dir_tables(context, conn)  # directory tables defined in _sys
+        await setup_sys_tables(context, conn)  # common table definitions defined in _sys
+        await setup_other_tables(context, conn)  # database tables for company
+        await setup_views(context, conn)  # database views for company
+        await setup_forms(context, conn)
+        await setup_reports(context, conn)
+        await setup_processes(context, conn)
+        await setup_menus(context, conn, company_name)
         # 'commit' happens here
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
-        await setup_init_data(context, conn, company, company_name)
+        await setup_init_data(context, conn, company_name)
 
     return f'company {company} created'
 
-async def setup_db_tables(context, conn, company, company_name):
+async def setup_db_tables(context, conn, company_name):
     tables = [
         'db_modules',
         'db_tables',
@@ -46,13 +46,13 @@ async def setup_db_tables(context, conn, company, company_name):
         ]
     # create tables first
     for table_name in tables:
-        await setup_db_table(conn, table_name, company)
-    await setup_modules(context, conn, company, company_name)
+        await setup_db_table(conn, table_name, context)
+    await setup_modules(context, conn, company_name)
     # then populate db_tables and db_columns
     for table_name in tables:
-        await setup_db_metadata(context, conn, table_name, company)
+        await setup_db_metadata(context, conn, table_name)
 
-async def setup_db_table(conn, table_name, company):
+async def setup_db_table(conn, table_name, context):
     module = importlib.import_module('.tables.{}'.format(table_name), 'init')
 
     tbl = module.table
@@ -74,19 +74,19 @@ async def setup_db_table(conn, table_name, company):
             db_col[20] = dumps(col['fkey'])
         db_columns.append(db_col)
 
-    await db.create_table.create_orig_table(conn, company, table_defn, db_columns)
+    await db.create_table.create_orig_table(conn, context.company, table_defn, db_columns)
 
-async def setup_modules(context, conn, company, company_name):
+async def setup_modules(context, conn, company_name):
     sql_1 = (
         "INSERT INTO {}.db_modules "
         "(created_id, module_id, descr, seq) "
-        "VALUES ({})".format(company, ', '.join([db_constants.param_style]*4))
+        "VALUES ({})".format(context.company, ', '.join([db_constants.param_style]*4))
         )
 
     sql_2 = (
         "INSERT INTO {}.db_modules_audit_xref "
         "(data_row_id, user_row_id, date_time, type) "
-        "VALUES ({})".format(company, ', '.join([db_constants.param_style]*4))
+        "VALUES ({})".format(context.company, ', '.join([db_constants.param_style]*4))
         )
 
     modules = [
@@ -112,14 +112,14 @@ async def setup_modules(context, conn, company, company_name):
         await conn.exec_cmd(sql_1, (pos, module_id, descr, pos-1))
         await conn.exec_cmd(sql_2, (pos, context.user_row_id, conn.timestamp, 'add'))
 
-async def setup_db_metadata(context, conn, table_name, company):
+async def setup_db_metadata(context, conn, table_name):
     module = importlib.import_module('.tables.{}'.format(table_name), 'init')
     tbl = module.table
 
     sql = (
         "INSERT INTO {}.db_tables "
         "(created_id, table_name, module_row_id, seq, short_descr, defn_company, read_only) "
-        "VALUES ({})".format(company, ', '.join([db_constants.param_style] * 7))
+        "VALUES ({})".format(context.company, ', '.join([db_constants.param_style] * 7))
         )
 
     table_id = next(next_table_id)
@@ -138,12 +138,12 @@ async def setup_db_metadata(context, conn, table_name, company):
     sql = (
         "INSERT INTO {}.db_tables_audit_xref "
         "(data_row_id, user_row_id, date_time, type) VALUES ({})"
-        .format(company, ', '.join([db_constants.param_style] * 4))
+        .format(context.company, ', '.join([db_constants.param_style] * 4))
         )
     params = [table_id, context.user_row_id, conn.timestamp, 'add']
     await conn.exec_cmd(sql, params)
 
-async def setup_dir_tables(context, conn, company):
+async def setup_dir_tables(context, conn):
 
     async def setup_dir_table(table_name, seq):
         module = importlib.import_module('.tables.{}'.format(table_name), 'init')
@@ -153,7 +153,7 @@ async def setup_dir_tables(context, conn, company):
             "INSERT INTO {}.db_tables "
             "(created_id, table_name, module_row_id, seq, short_descr, "
             "defn_company, data_company, read_only) "
-            "VALUES ({})".format(company, ', '.join([db_constants.param_style] * 8))
+            "VALUES ({})".format(context.company, ', '.join([db_constants.param_style] * 8))
             )
 
         table_id = next(next_table_id)
@@ -173,7 +173,7 @@ async def setup_dir_tables(context, conn, company):
         sql = (
             "INSERT INTO {}.db_tables_audit_xref "
             "(data_row_id, user_row_id, date_time, type) VALUES ({})"
-            .format(company, ', '.join([db_constants.param_style] * 4))
+            .format(context.company, ', '.join([db_constants.param_style] * 4))
             )
         params = [table_id, context.user_row_id, conn.timestamp, 'add']
         await conn.exec_cmd(sql, params)
@@ -182,8 +182,8 @@ async def setup_dir_tables(context, conn, company):
     await setup_dir_table('dir_companies', 1)
     await setup_dir_table('dir_users_companies', 2)
 
-async def setup_sys_tables(context, conn, company):
-    db_tbl = await db.objects.get_db_object(context, company, 'db_tables')
+async def setup_sys_tables(context, conn):
+    db_tbl = await db.objects.get_db_object(context, 'db_tables')
 
     tables = [
         'db_cursors',
@@ -209,13 +209,13 @@ async def setup_sys_tables(context, conn, company):
         await db_tbl.setval('defn_company', '_sys')
         await db_tbl.save()
  
-        await db.create_table.create_table(conn, company, table_name)
+        await db.create_table.create_table(conn, context.company, table_name)
 
-async def setup_other_tables(context, conn, company):
-    db_tbl = await db.objects.get_db_object(context, company, 'db_tables')
-    db_col = await db.objects.get_db_object(context, company, 'db_columns')
-    db_cur = await db.objects.get_db_object(context, company, 'db_cursors')
-    db_act = await db.objects.get_db_object(context, company, 'db_actions')
+async def setup_other_tables(context, conn):
+    db_tbl = await db.objects.get_db_object(context, 'db_tables')
+    db_col = await db.objects.get_db_object(context, 'db_columns')
+    db_cur = await db.objects.get_db_object(context, 'db_cursors')
+    db_act = await db.objects.get_db_object(context, 'db_actions')
     tables = [
         'db_genno',
         'adm_locations',
@@ -301,9 +301,9 @@ async def setup_other_tables(context, conn, company):
         'ap_tran_inv_det',
         'ap_tran_crn',
         'ap_tran_crn_det',
-        'ap_tran_pmt',
-        'ap_tran_pmt_det',
-        'ap_subtran_pmt',
+        # 'ap_tran_pmt',
+        # 'ap_tran_pmt_det',
+        # 'ap_subtran_pmt',
         'ap_tran_alloc',
         'ap_tran_bf',
         'ap_tran_bf_det',
@@ -317,6 +317,7 @@ async def setup_other_tables(context, conn, company):
         'cb_tran_rec_det',
         'cb_tran_pmt',
         'cb_tran_pmt_det',
+        'ap_tran_pmt',
         'cb_tran_bf',
         'cb_totals',
         'cb_comments',
@@ -353,12 +354,12 @@ async def setup_other_tables(context, conn, company):
         ]
     for table_name in tables:
         module = importlib.import_module('.tables.{}'.format(table_name), 'init')
-        await setup_table(module, company, db_tbl, db_col, table_name)
-        await db.create_table.create_table(conn, company, table_name)
+        await setup_table(module, db_tbl, db_col, table_name)
+        await db.create_table.create_table(conn, context.company, table_name)
         await setup_cursor(module, db_tbl, db_cur, table_name)
         await setup_actions(module, db_act, table_name)
 
-async def setup_table(module, company, db_tbl, db_col, table_name):
+async def setup_table(module, db_tbl, db_col, table_name):
     tbl = module.table
     assert table_name == tbl['table_name']
     await db_tbl.init()
@@ -456,9 +457,9 @@ async def setup_actions(module, db_act, table_name):
             await db_act.setval(act, action)
         await db_act.save()
 
-async def setup_views(context, conn, company):
-    db_view = await db.objects.get_db_object(context, company, 'db_views')
-    db_view_col = await db.objects.get_db_object(context, company, 'db_view_cols')
+async def setup_views(context, conn):
+    db_view = await db.objects.get_db_object(context, 'db_views')
+    db_view_col = await db.objects.get_db_object(context, 'db_view_cols')
     views = [
         'ar_trans',
         'ap_trans',
@@ -466,10 +467,10 @@ async def setup_views(context, conn, company):
         ]
     for view_name in views:
         module = importlib.import_module('.views.{}'.format(view_name), 'init')
-        await setup_view(module, company, db_view, db_view_col, view_name)
-        await db.create_view.create_view(context, conn, company, view_name)
+        await setup_view(module, db_view, db_view_col, view_name)
+        await db.create_view.create_view(context, conn, context.company, view_name)
 
-async def setup_view(module, company, db_view, db_view_col, view_name):
+async def setup_view(module, db_view, db_view_col, view_name):
     view = module.view
     await db_view.init()
     await db_view.setval('view_name', view_name)
@@ -523,13 +524,13 @@ async def setup_view(module, company, db_view, db_view_col, view_name):
         await db_view_col.setval('sql', virt.get('sql'))
         await db_view_col.save()
 
-async def setup_forms(context, conn, company):
+async def setup_forms(context, conn):
     schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
     parser = etree.XMLParser(
         schema=etree.XMLSchema(file=os.path.join(schema_path, 'form.xsd')),
         attribute_defaults=True, remove_comments=True, remove_blank_text=True)
     form_path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'forms')
-    form_defn = await db.objects.get_db_object(context, company, 'sys_form_defns')
+    form_defn = await db.objects.get_db_object(context, 'sys_form_defns')
 
     async def setup_form(form_name):
         xml = open('{}/{}.xml'.format(form_path, form_name)).read()
@@ -602,7 +603,7 @@ async def setup_forms(context, conn, company):
     await setup_form('setup_opmt_codes')
     await setup_form('cb_cashbook')
 
-async def setup_reports(context, conn, company):
+async def setup_reports(context, conn):
     # schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
     # parser = etree.XMLParser(
     #     schema=etree.XMLSchema(file=os.path.join(schema_path, 'report.xsd')),
@@ -610,7 +611,7 @@ async def setup_reports(context, conn, company):
     parser = etree.XMLParser(
         attribute_defaults=True, remove_comments=True, remove_blank_text=True)
     report_path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'reports')
-    report_defn = await db.objects.get_db_object(context, company, 'sys_report_defns')
+    report_defn = await db.objects.get_db_object(context, 'sys_report_defns')
 
     async def setup_report(report_name):
         xml = open('{}/{}.xml'.format(report_path, report_name)).read()
@@ -628,12 +629,12 @@ async def setup_reports(context, conn, company):
 
     await setup_report('ar_statement')
 
-async def setup_processes(context, conn, company):
+async def setup_processes(context, conn):
     parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
     schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
     schema=etree.XMLSchema(file=os.path.join(schema_path, 'bpmn20', 'BPMN20.xsd'))
     proc_path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'processes')
-    proc_defn = await db.objects.get_db_object(context, company, 'sys_proc_defns')
+    proc_defn = await db.objects.get_db_object(context, 'sys_proc_defns')
     S = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
 
     async def setup_process(process_id):
@@ -654,8 +655,8 @@ async def setup_processes(context, conn, company):
     await setup_process('ar_per_close')
     await setup_process('ar_stat_close')
 
-async def setup_menus(context, conn, company, company_name):
-    db_obj = await db.objects.get_db_object(context, company, 'sys_menu_defns')
+async def setup_menus(context, conn, company_name):
+    db_obj = await db.objects.get_db_object(context, 'sys_menu_defns')
 
     async def setup_menu(descr, parent_id, opt_type, module_id=None, table_name=None,
             cursor_name=None, form_name=None):
@@ -788,6 +789,9 @@ async def setup_menus(context, conn, company, company_name):
             ['Review unposted invoices', 'grid', 'ap_tran_inv', 'unposted_inv'],
             ['Review unposted payments', 'grid', 'ap_tran_pmt', 'unposted_pmt'],
             ]],
+        ['Ap payments', 'menu', 'ap', [
+            ['AP payments due', 'form', 'ap_pmts_due'],
+            ]],
         ['Ap enquiries', 'menu', 'ap', [
             ['AP balances', 'form', 'ap_balances'],
             ]],
@@ -828,28 +832,28 @@ async def setup_menus(context, conn, company, company_name):
 
     # set deleted_id on ledger template menus so they do not get selected when displaying menu
     await conn.exec_cmd(
-        f'UPDATE {company}.sys_menu_defns SET deleted_id = -1 WHERE ledger_row_id = -1')
+        f'UPDATE {context.company}.sys_menu_defns SET deleted_id = -1 WHERE ledger_row_id = -1')
 
-async def setup_init_data(context, conn, company, company_name):
+async def setup_init_data(context, conn, company_name):
 
-    adm_params = await db.objects.get_db_object(context, company, 'adm_params')
-    await adm_params.setval('company_id', company)
+    adm_params = await db.objects.get_db_object(context, 'adm_params')
+    await adm_params.setval('company_id', context.company)
     await adm_params.setval('company_name', company_name)
     await adm_params.save()
 
-    adm_loc = await db.objects.get_db_object(context, company, 'adm_locations')
+    adm_loc = await db.objects.get_db_object(context, 'adm_locations')
     await adm_loc.setval('location_id', 'all')
     await adm_loc.setval('descr', 'All locations')
     await adm_loc.setval('location_type', 'root')
     await adm_loc.save()
 
-    adm_fun = await db.objects.get_db_object(context, company, 'adm_functions')
+    adm_fun = await db.objects.get_db_object(context, 'adm_functions')
     await adm_fun.setval('function_id', 'all')
     await adm_fun.setval('descr', 'All Functions')
     await adm_fun.setval('function_type', 'root')
     await adm_fun.save()
 
-    gl_group = await db.objects.get_db_object(context, company, 'gl_groups')
+    gl_group = await db.objects.get_db_object(context, 'gl_groups')
     await gl_group.setval('gl_group', 'all')
     await gl_group.setval('descr', 'All groups')
     await gl_group.setval('group_type', 'root')
@@ -857,32 +861,32 @@ async def setup_init_data(context, conn, company, company_name):
     await gl_group.setval('valid_funs', 'all')
     await gl_group.save()
 
-    prod_group = await db.objects.get_db_object(context, company, 'in_prod_groups')
+    prod_group = await db.objects.get_db_object(context, 'in_prod_groups')
     await prod_group.setval('prod_group', 'all')
     await prod_group.setval('descr', 'All product groups')
     await prod_group.setval('group_type', 'root')
     await prod_group.save()
 
-    sls_group = await db.objects.get_db_object(context, company, 'sls_nsls_groups')
+    sls_group = await db.objects.get_db_object(context, 'sls_nsls_groups')
     await sls_group.setval('nsls_group', 'all')
     await sls_group.setval('descr', 'All sales codes')
     await sls_group.setval('group_type', 'root')
     await sls_group.save()
 
-    pch_group = await db.objects.get_db_object(context, company, 'pch_npch_groups')
+    pch_group = await db.objects.get_db_object(context, 'pch_npch_groups')
     await pch_group.setval('npch_group', 'all')
     await pch_group.setval('descr', 'All expense codes')
     await pch_group.setval('group_type', 'root')
     await pch_group.save()
 
-    acc_role = await db.objects.get_db_object(context, company, 'acc_roles')
+    acc_role = await db.objects.get_db_object(context, 'acc_roles')
     await acc_role.setval('role_type', '0')
     await acc_role.setval('role_id', 'admin')
     await acc_role.setval('descr', 'Company adminstrator')
     await acc_role.save()
 
     # create 'module administrator' role for each module
-    db_module = await db.objects.get_db_object(context, company, 'db_modules')
+    db_module = await db.objects.get_db_object(context, 'db_modules')
     all_modules = db_module.select_many(where=[], order=[('row_id', False)])
     async for _ in all_modules:
         await acc_role.init()
