@@ -46,22 +46,12 @@ class delwatcher:
 #----------------------------------------------------------------------------
 
 class Report:
-    def __init__(self, company, report_name, data_inputs=None):
-        """
-        Initialise a new report.
-        """
-
-        self.company = company
-        self.report_name = report_name
-
-        # self._del = delwatcher(self)
-
-        self.data_inputs = data_inputs
-
-    @log_func
-    async def start_report(self, session, context):
+    async def _ainit_(self, context, session, report_name, data_inputs=None):
 
         self.context = context
+        self.company = context.company
+        self.report_name = report_name
+        self.data_inputs = data_inputs
         self.data_objects = context.data_objects
         self.mem_tables = {}  # keep reference to restore when report is closed
 
@@ -118,7 +108,6 @@ class Report:
             db_parent = obj_xml.get('parent')
             if db_parent is not None:
                 db_parent = self.data_objects[db_parent]
-            company = obj_xml.get('company', self.company)
             table_name = obj_xml.get('table_name')
 
             if obj_xml.get('fkey') is not None:
@@ -128,10 +117,11 @@ class Report:
                 db_obj = await db.objects.get_fkey_object(
                     self.context, table_name, src_obj, src_colname)
             elif obj_xml.get('view') == 'true':
-                db_obj = await db.objects.get_view_object(self.context, company, table_name)
+                db_obj = await db.objects.get_view_object(self.context,
+                    self.company, table_name)
             else:
                 db_obj = await db.objects.get_db_object(self.context,
-                    company, table_name, db_parent)
+                    self.company, table_name, db_parent)
 
             self.data_objects[obj_name] = db_obj
 

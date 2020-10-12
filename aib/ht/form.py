@@ -68,86 +68,43 @@ class delwatcher:
 #----------------------------------------------------------------------------
 
 class Form:
-    def __init__(self, company, form_name, parent_form=None, data_inputs=None,
-        callback=None, ctrl_grid=None, inline=None):
-        """
-        Initialise a new form.
-        
-        :param company:      name of company involved
-        :param form_name:    name of form being invoked
-        :param parent_form:  if this is a root form, parent is None
-                             if it is a sub-form, this is the form that invoked
-                                 this one - must be a Form instance
-        :param data_inputs:  a dictionary containing the input
-                             parameters passed in by the caller
+    async def _ainit_(self,
+            context,
+            session,
+            form_name,
+            parent_form=None,   # None if root form, else this is a sub-form
+            data_inputs=None,   # optional dict containing input parameters
+            callback=None,      # if not None, function to call when form completed
+            ctrl_grid=None,     # if not None, this is a formview or subform linked to grid
+            inline=None,        # inline form part of form definition
+            grid_params=None,   # passed in from menu option if setup_grid
+            formview_obj=None,  # supplied if formview or lookdown selected
+            ):
 
-                             key = name of parameter (string)
-                             value = the value of the parameter
-                                 can be a python object or an aib data object
-        :param callback:     a tuple of information required to know what to
-                                 return to caller when form is completed
-                                 [specify contents ...]
-        """
-
-        self.company = company
+        self.context = context
+        self.company = context.company
         self.form_name = form_name
         self.callback = callback
         self.ctrl_grid = ctrl_grid
         self.inline = inline
         self.closed = False
 
-        # self.obj_list = []  # list of frames for this form
-        # self.obj_dict = {}  # dict of objects for this form
-        # self.obj_id = itertools.count()  # seq id for objects for this form
-
         self._del = delwatcher(self)
-
-        """
-        # this must be 'persisted', because it could be sitting on
-        #   one or more user's task-lists, and then the server may
-        #   have to be restarted
-
-        # create new row in DbTable 'bpm_tasks'
-        dbconnection = DbConnection()
-        self.bpm_case = await db.objects.get_db_object(company, 1, dbconnection, 'bpm_tasks')
-        await self.bpm_case.setval('task_name', f'{task_name}_{version}')
-        # must store data_inputs, callback, etc!
-        self.bpm_task.save()  # automatically generates row_id
-        self.task_id = await self.bpm_task.getval('row_id')
-        """
 
         self.data_inputs = data_inputs
         self.parent_form = parent_form
         self.form = self
 
-    def add_obj(self, parent, obj, add_to_list=True):
-        ref = next(self.obj_id)
-        self.obj_dict[ref] = obj
-        if add_to_list:
-            pos = len(parent.obj_list)
-            parent.obj_list.append(obj)
-        else:  # only used for ToolbarButton
-            pos = -1
-        return f'{self.ref}_{ref}', pos
-
-    @log_func
-    async def start_form(self, session,
-            context=None,  # supplied if form is root form
-            grid_params=None,   # passed in from menu option if setup_grid
-            formview_obj=None,   # supplied if formview or lookdown selected
-            ):
-
-        if self.parent_form is None:
+        if parent_form is None:
             root = SN()
             root.ref = session.add_root(root)
             root.session = session
             root.form_list = []  # list of forms for this root
             root.grid_dict = {}  # dict of grids referenced by obj_name
             self.root = root
-            self.context = context
         else:
             self.root = self.parent_form.form.root
-            self.context = self.parent_form.form.context
+
         self.ref = f'{self.root.ref}_{len(self.root.form_list)}'
         self.root.form_list.append(self)
 
@@ -157,8 +114,8 @@ class Form:
         self.mem_tables = {}  # keep reference to restore when sub-form is closed
         self.pdf_dict = {}  # keep reference to pdf's generated - close when form is closed
 
-        if self.inline is not None:  # form defn is passed in as parameter
-            form_defn = self.form_defn = self.inline
+        if inline is not None:  # form defn is passed in as parameter
+            form_defn = self.form_defn = inline
             title = form_defn.get('title')
         elif self.form_name.startswith('#'):  # userTask from bp.bpm
             _, title, form_type, *form_body = self.form_name.split(';')
@@ -253,6 +210,16 @@ class Form:
             get history
         """
 
+    def add_obj(self, parent, obj, add_to_list=True):
+        ref = next(self.obj_id)
+        self.obj_dict[ref] = obj
+        if add_to_list:
+            pos = len(parent.obj_list)
+            parent.obj_list.append(obj)
+        else:  # only used for ToolbarButton
+            pos = -1
+        return f'{self.ref}_{ref}', pos
+
     async def setup_input_obj(self, input_params):
         if input_params is None:
             return  # can happen with inline form
@@ -326,7 +293,6 @@ class Form:
             db_parent = obj_xml.get('parent')
             if db_parent is not None:
                 db_parent = self.data_objects[db_parent]
-            company = obj_xml.get('company', self.company)
             table_name = obj_xml.get('table_name')
 
             if obj_xml.get('fkey') is not None:
@@ -336,10 +302,11 @@ class Form:
                 db_obj = await db.objects.get_fkey_object(
                     self.context, table_name, src_obj, src_colname)
             elif obj_xml.get('view') == 'true':
-                db_obj = await db.objects.get_view_object(self.context, company, table_name)
+                db_obj = await db.objects.get_view_object(self.context,
+                    self.company, table_name)
             else:
                 db_obj = await db.objects.get_db_object(self.context,
-                    company, table_name, db_parent)
+                    self.company, table_name, db_parent)
 
             self.data_objects[obj_name] = db_obj
 

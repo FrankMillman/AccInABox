@@ -219,8 +219,9 @@ async def select_from_view(grid, xml):
     await base_obj.init()
     await base_obj.setval(base_row_id, await grid.db_obj.getval(view_row_id))
 
-    sub_form = ht.form.Form(grid.form.company, form_name, parent_form=grid.parent.form)
-    await sub_form.start_form(grid.session, formview_obj=base_obj)
+    sub_form = ht.form.Form()
+    await sub_form._ainit_(grid.form.context, grid.session, form_name,
+        formview_obj=base_obj, parent_form=grid.parent.form)
 
 async def grid_req_insert_row(grid, xml):
     row, = grid.btn_args
@@ -472,9 +473,9 @@ async def inline_form(caller, xml, form_name=None, callback=None):
         callback = (return_from_inlineform, caller, xml)
     form_defn = caller.form.form_defn
     form_xml = form_defn.find("inline_form[@name='{}']".format(form_name))
-    inline_form = ht.form.Form(caller.form.company, form_name, parent_form=caller.form,
-        callback=callback, inline=form_xml)
-    await inline_form.start_form(caller.session)
+    inline_form = ht.form.Form()
+    await inline_form._ainit_(caller.context, caller.session, form_name,
+        parent_form=caller.form, callback=callback, inline=form_xml)
 
 async def return_from_inlineform(caller, state, output_params, xml):
     # from xml, find steps with attribute 'state' = state
@@ -518,9 +519,9 @@ async def sub_form(caller, xml):
         data_inputs[param_name] = value
 
     form_name = xml.get('name')
-    sub_form = ht.form.Form(caller.form.company, form_name, parent_form=caller.form,
+    sub_form = ht.form.Form()
+    await sub_form._ainit_(caller.context, caller.session, form_name, parent_form=caller.form,
         data_inputs=data_inputs, callback=(return_from_subform, caller, xml))
-    await sub_form.start_form(caller.session)
 
 async def end_form(caller, xml):
     form = caller.form
@@ -584,7 +585,7 @@ async def start_process(caller, xml):
 
     process = bp.bpm.ProcessRoot(caller.company, xml.get('name'), data_inputs=data_inputs)
     context = db.cache.get_new_context(caller.context.user_row_id,
-        caller.context.sys_admin, id(process), caller.context.mod_ledg_id)
+        caller.context.sys_admin, caller.company, id(process), caller.context.mod_ledg_id)
     await process.start_process(context)
 
 async def run_report(caller, xml):
@@ -614,8 +615,8 @@ async def run_report(caller, xml):
         data_inputs[param_name] = value
 
     report_name = xml.get('name')
-    report = rep.report.Report(caller.company, report_name, data_inputs=data_inputs)
-    await report.start_report(caller.session, caller.context)
+    report = rep.report.Report()
+    await report._ainit_(caller.context, caller.session, report_name, data_inputs=data_inputs)
 
     # set up pdf title, replace {...} with actual values
     title = report.pdf_name

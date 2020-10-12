@@ -381,22 +381,22 @@ class ResponseHandler:
         mod_ledg_id = (module_row_id, ledger_row_id)
 
         if opt_type == 'grid':
-            form = ht.form.Form(company, '_sys.setup_grid')
+            form = ht.form.Form()
             context = db.cache.get_new_context(self.session.user_row_id,
-                self.session.sys_admin, id(form), mod_ledg_id)
-            await form.start_form(self.session, context=context,
+                self.session.sys_admin, company, id(form), mod_ledg_id)
+            await form._ainit_(context, self.session, '_sys.setup_grid',
                 grid_params=(menu_data['table_name'], menu_data['cursor_name']))
         elif opt_type == 'form':
-            form = ht.form.Form(company, menu_data['form_name'])
+            form = ht.form.Form()
             context = db.cache.get_new_context(self.session.user_row_id,
-                self.session.sys_admin, id(form), mod_ledg_id)
-            await form.start_form(self.session, context=context)
+                self.session.sys_admin, company, id(form), mod_ledg_id)
+            await form._ainit_(context, self.session, menu_data['form_name'])
         elif opt_type == 'report':
             pass
         elif opt_type == 'process':
             process = bp.bpm.ProcessRoot(company, menu_data['process_id'])
             context = db.cache.get_new_context(self.session.user_row_id,
-                self.session.sys_admin, id(process), mod_ledg_id)
+                self.session.sys_admin, company, id(process), mod_ledg_id)
             await process.start_process(context)
 
     async def on_get_prev(self, args):
@@ -541,10 +541,10 @@ class ResponseHandler:
         company = '_sys'
         form_name = 'login_form'
 
-        form = ht.form.Form(company, form_name, callback=(self.session.on_login,))
-        context = db.cache.get_new_context(
-            self.session.user_row_id, self.session.sys_admin, mem_id=id(form))
-        await form.start_form(self.session, context=context)
+        form = ht.form.Form()
+        context = db.cache.get_new_context(self.session.user_row_id,
+            self.session.sys_admin, company, mem_id=id(form))
+        await form._ainit_(context, self.session, form_name, callback=(self.session.on_login,))
 
 async def on_login_ok(caller, xml):
     # called from login_form on entry of valid user_id and password

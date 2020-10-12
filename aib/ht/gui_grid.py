@@ -16,6 +16,7 @@ import ht.form
 from ht.default_xml import get_form_dflt
 from common import AibError
 from common import log, debug
+from evaluate_expr import eval_bool_expr
 
 def log_func(func):
     def wrapper(*args, **kwargs):
@@ -93,8 +94,12 @@ class GuiGrid:
         cur_columns = element.find('cur_columns')
         if cur_columns is not None:  # cursor parameters part of form defn
             columns = []
-            for cur_col in cur_columns:  #.iterchildren():  # necessary? if not, remove [2019-06-27]
+            for cur_col in cur_columns:
                 if cur_col.tag == 'cur_col':
+                    if cur_col.get('if') is not None:  # check if column should be included
+                        test = loads(cur_col.get('if'))
+                        if not await eval_bool_expr(test, self.db_obj):  # skip column
+                            continue
                     col = [
                         'cur_col',
                         cur_col.get('col_name'),
@@ -769,19 +774,10 @@ class GuiGrid:
             formview_name, param = (_.strip() for _ in formview_name.split(','))
             self.context.formview_param = param
 
-        sub_form = ht.form.Form(self.company, formview_name,
-            parent_form=self.form, ctrl_grid=self, callback=(self.return_from_formview, self))
-        try:
-            await sub_form.start_form(self.session, formview_obj=self.db_obj)
-        except AibError:
-            # we never get here! [2017-06-13]
-            # ht.form.continue_form() traps AibError and does not re-raise
-            # not easy to fix, so leave for now
-            self.current_row = None
-            first_col_obj = self.obj_list[self.grid_cols[0]]
-            self.session.responder.send_cell_set_focus(self.ref, row, first_col_obj.ref)
-            # await sub_form.close_form()
-            raise
+        sub_form = ht.form.Form()
+        await sub_form._ainit_(self.context, self.session, formview_name,
+            parent_form=self.form, formview_obj=self.db_obj, ctrl_grid=self,
+            callback=(self.return_from_formview, self))
 
         self.formview_frame = sub_form.obj_list[0]  # main frame
 

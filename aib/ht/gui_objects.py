@@ -248,10 +248,10 @@ class GuiCtrl:
                 cursor_name = src_fld.col_defn.fkey[5]
                 await tgt_obj.setup_cursor_defn(cursor_name)
 
-        sub_form = ht.form.Form(self.parent.form.company, form_name,
-            parent_form=self.parent.form, data_inputs=data_inputs,
+        sub_form = ht.form.Form()
+        await sub_form._ainit_(self.parent.form.context, self.parent.session,
+            form_name, parent_form=self.parent.form, data_inputs=data_inputs,
             callback=(self.on_selected, self.parent))
-        await sub_form.start_form(self.parent.session)
 
     async def on_selected(self, caller, state, output_params):
         if self.save_lkup is not None:
@@ -276,9 +276,9 @@ class GuiCtrl:
 
             form_name = tgt_obj.cursor_defn[3]
             if form_name is not None:
-                sub_form = ht.form.Form(
-                    self.parent.form.company, form_name, parent_form=self.parent.form)
-                await sub_form.start_form(self.parent.session, formview_obj=tgt_obj)
+                sub_form = ht.form.Form()
+                await sub_form._ainit_(self.parent.form.context, self.parent.session,
+                    form_name, parent_form=self.parent.form, formview_obj=tgt_obj)
             # else display error message
 
 class GuiTextCtrl(GuiCtrl):
