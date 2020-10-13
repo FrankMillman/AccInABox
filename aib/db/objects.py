@@ -595,18 +595,7 @@ class DbObject:
         subtran_obj.subtran_parent = (self, return_vals)
 
     async def setup_cursor_defn(self, cursor_name):
-        if '.' in cursor_name:
-            cursor_company, cursor_name = cursor_name.split('.')
-        else:
-            cursor_company = self.db_table.defn_company
-        db_cursors = await db.cache.get_db_cursors(cursor_company)
-        with await db_cursors.lock:  # prevent clash with other users
-            await db_cursors.select_row(
-                {'table_id': self.db_table.defn_tableid, 'cursor_name': cursor_name})
-            cursor_data = await db_cursors.get_data()  # save data in local variable
-        if not cursor_data['_exists']:
-            raise AibError(head=self.table_name, body=f'Cursor {cursor_name} does not exist')
-
+        cursor_data = await self.db_table.get_cursor_defn(cursor_name)
         cursor_defn = []
         columns = cursor_data['columns']
         cur_cols = []
@@ -2681,6 +2670,7 @@ class DbTable:
         self.parent_params = []  # if fkey has 'child=True', append
                                  #   (parent_name, parent_pkey, fkey_colname)
                                  # can have > 1 parent e.g. dir_users_companies
+        self.cursor_defns = {}  # set up each defn only when requested
 
         # set up data dictionary
         self.col_list = []  # maintain sorted list of col_defns
@@ -3023,6 +3013,25 @@ class DbTable:
                         disp_col_defn.dflt_rule = fromstring(f'<_>{display_rule}</_>')
 
         return self.sub_trans
+
+    async def get_cursor_defn(self, cursor_name):
+        if cursor_name in self.cursor_defns:  # already set up
+            return self.cursor_defns[cursor_name]
+
+        if '.' in cursor_name:
+            cur_company, cur_name = cursor_name.split('.')
+        else:
+            cur_company, cur_name = self.defn_company, cursor_name
+        db_cursors = await db.cache.get_db_cursors(cur_company)
+        with await db_cursors.lock:  # prevent clash with other users
+            await db_cursors.select_row(
+                {'table_id': self.defn_tableid, 'cursor_name': cur_name})
+            cursor_data = await db_cursors.get_data()  # save data in local variable
+        if not cursor_data['_exists']:
+            raise AibError(head=self.table_name, body=f'Cursor {cursor_name} does not exist')
+
+        self.cursor_defns[cursor_name] = cursor_data
+        return cursor_data
 
 #-----------------------------------------------------------------------------
 
