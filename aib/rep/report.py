@@ -60,13 +60,14 @@ class Report:
             reportdefn_company, self.report_name = self.report_name.split('.')
         else:
             reportdefn_company = self.company
-        report_defns = await db.cache.get_report_defns(reportdefn_company)
-        with await report_defns.lock:  # prevent clash with other users
-            await report_defns.select_row({'report_name': self.report_name})
-            report_data = await report_defns.get_data()  # save data in local variable
-        if not report_data['_exists']:
+
+        ctx = db.cache.get_new_context(1, True, reportdefn_company)
+        report_defns = await db.objects.get_db_object(ctx, 'sys_report_defns')
+        await report_defns.select_row({'report_name': self.report_name})
+        if not report_defns.exists:
             raise AibError(head=f'Report {self.report_name}', body='Report does not exist')
-        report_defn = self.report_defn = report_data['report_xml']
+        report_defn = self.report_defn = await report_defns.getval('report_xml')
+
         self.pdf_name = report_defn.get('pdf_name')
 
         input_params = report_defn.find('input_params')

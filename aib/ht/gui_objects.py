@@ -138,6 +138,17 @@ class GuiCtrl:
         # it causes a problem with arec.xml ar_rec.ledger_id
         # we want to look up ar_ledger_params, but it asks for ar_customers!
         # if/when the reason crops up, must find a solution for both
+        #
+        # the reason is clear, the solution is not [2020-10-13]
+        # ar_subtran_rec.cust_row_id has an fkey with a complex altsrc - ledger_id, cust_id, loc_id, fun_id
+        # the fkey also has a cursor defined - 'cust_bal_2'
+        # 4 altsrc fields are created - each one has its own tgt_table, but they all have the same cursor name
+        # if we do a lookup on ledger_id, we want to look up ar_ledger_params, so don't use cust_bal_2
+        # if we do a lookup on cust_id, we want to use cust_bal_2
+        # at present there is no way for the system to know the difference
+        # using 'while True' forces always finding the top of the chain of fkeys
+        # so a lookup on ledger_id uses ar_ledger_params, and one on cust_id uses org_parties
+        # neither of them uses cust_bal_2, but they are both meaningful lookups, so acceptable
             if tgt_fld.foreign_key is None:
                 break
             src_fld = tgt_fld

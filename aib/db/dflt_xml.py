@@ -49,7 +49,7 @@ async def tax_rate(fld, xml, debug):
     if eff_date is None:
         return None
 
-    tax_rates = await db.cache.get_tax_rates(fld.db_obj.company)
+    tax_rates = await db.objects.get_db_object(fld.db_obj.context, 'adm_tax_rates')
     col_names = ['rate']
     where = []
     where.append(('WHERE', '', 'tax_code_id', '=', tax_code_id, ''))
@@ -77,7 +77,7 @@ async def exch_rate(fld, xml, debug):
     if eff_date is None:
         return None
 
-    curr_rates = await db.cache.get_curr_rates(fld.db_obj.company)
+    curr_rates = await db.objects.get_db_object(fld.db_obj.context, 'adm_curr_rates')
     col_names = ['rate']
     where = []
     where.append(('WHERE', '', 'currency_id', '=', curr_id, ''))
@@ -140,7 +140,7 @@ async def sell_price(fld, xml, debug):
     if eff_date is None:
         return None
 
-    sell_prices = await db.cache.get_sell_prices(fld.db_obj.company)
+    sell_prices = await db.objects.get_db_object(fld.db_obj.context, 'sls_sell_prices')
     col_names = ['sell_price']
     where = []
     where.append(('WHERE', '', 'prod_row_id', '=', prod_id, ''))

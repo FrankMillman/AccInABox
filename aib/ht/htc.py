@@ -370,14 +370,14 @@ class ResponseHandler:
     async def on_menuitem_selected(self, args):
         menu_id, = args
         company, row_id = loads(menu_id)
-        menu_defns = await db.cache.get_menu_defns(company)
-        with await menu_defns.lock:  # prevent clash with other users
-            await menu_defns.select_row({'row_id': int(row_id)})
-            menu_data = await menu_defns.get_data()  # save data in local variable
 
-        opt_type = menu_data['opt_type']
-        module_row_id = menu_data['module_row_id']
-        ledger_row_id = menu_data['ledger_row_id']
+        ctx = db.cache.get_new_context(1, True, company)
+        menu_defns = await db.objects.get_db_object(ctx, 'sys_menu_defns')
+        await menu_defns.select_row({'row_id': int(row_id)})
+
+        opt_type = await menu_defns.getval('opt_type')
+        module_row_id = await menu_defns.getval('module_row_id')
+        ledger_row_id = await menu_defns.getval('ledger_row_id')
         mod_ledg_id = (module_row_id, ledger_row_id)
 
         if opt_type == 'grid':
@@ -385,16 +385,16 @@ class ResponseHandler:
             context = db.cache.get_new_context(self.session.user_row_id,
                 self.session.sys_admin, company, id(form), mod_ledg_id)
             await form._ainit_(context, self.session, '_sys.setup_grid',
-                grid_params=(menu_data['table_name'], menu_data['cursor_name']))
+                grid_params=(await menu_defns.getval('table_name'), await menu_defns.getval('cursor_name')))
         elif opt_type == 'form':
             form = ht.form.Form()
             context = db.cache.get_new_context(self.session.user_row_id,
                 self.session.sys_admin, company, id(form), mod_ledg_id)
-            await form._ainit_(context, self.session, menu_data['form_name'])
+            await form._ainit_(context, self.session, await menu_defns.getval('form_name'))
         elif opt_type == 'report':
             pass
         elif opt_type == 'process':
-            process = bp.bpm.ProcessRoot(company, menu_data['process_id'])
+            process = bp.bpm.ProcessRoot(company, await menu_defns.getval('process_id'))
             context = db.cache.get_new_context(self.session.user_row_id,
                 self.session.sys_admin, company, id(process), mod_ledg_id)
             await process.start_process(context)

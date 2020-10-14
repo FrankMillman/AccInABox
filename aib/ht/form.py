@@ -141,23 +141,24 @@ class Form:
                 formdefn_company, self.form_name = self.form_name.split('.')
             else:
                 formdefn_company = self.company
-            form_defns = await db.cache.get_form_defns(formdefn_company)
-            with await form_defns.lock:  # prevent clash with other users
-                await form_defns.select_row({'form_name': self.form_name})
-                form_data = await form_defns.get_data()  # save data in local variable
-            if not form_data['_exists']:
+
+            ctx = db.cache.get_new_context(1, True, formdefn_company)
+            form_defns = await db.objects.get_db_object(ctx, 'sys_form_defns')
+            await form_defns.select_row({'form_name': self.form_name})
+            if not form_defns.exists:
                 if formview_obj is not None:
                     if formview_obj.db_table.defn_company != formdefn_company:
-                        form_defns = await db.cache.get_form_defns(
-                            formview_obj.db_table.defn_company)
-                        with await form_defns.lock:  # prevent clash with other users
-                            await form_defns.select_row({'form_name': self.form_name})
-                            form_data = await form_defns.get_data()  # save data in local variable
-            if not form_data['_exists']:
+                        ctx = db.cache.get_new_context(1, True, formview_obj.db_table.defn_company)
+                        form_defns = await db.objects.get_db_object(ctx, 'sys_form_defns')
+                        await form_defns.select_row({'form_name': self.form_name})
+
+            if not form_defns.exists:
                 del self.root.form_list[-1]
                 raise AibError(head=f'Form {self.form_name}', body='Form does not exist')
-            title = form_data['title']
-            form_defn = self.form_defn = form_data['form_xml']
+
+            title = await form_defns.getval('title')
+            form_defn = self.form_defn = await form_defns.getval('form_xml')
+
         title = title.replace('{comp_name}', db.cache.companies[self.company])
 
         if grid_params is not None:  # passed in if setup_grid

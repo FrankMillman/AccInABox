@@ -595,29 +595,27 @@ class DbObject:
         subtran_obj.subtran_parent = (self, return_vals)
 
     async def setup_cursor_defn(self, cursor_name):
-        cursor_data = await self.db_table.get_cursor_defn(cursor_name)
+        columns, filter, sequence, formview_name, title = await self.db_table.get_cursor_defn(cursor_name)
         cursor_defn = []
-        columns = cursor_data['columns']
         cur_cols = []
         for col in columns:
             # 'col' is a list of 4 or 5 elements
             # the first 4 are col_name, lng, expand, readonly
-            # the fifth item is optional - if it exists, it is a boolean test to determine
+            # the fifth is optional - if it exists, it is a boolean test to determine
             #   whether to include the column in the cursor definition
             col, include_col = col[:4], col[4:]
             if include_col:
                 if not await eval_bool_expr(include_col[0], self):
                     continue
-            cur_cols.append(['cur_col'] + col)  # add 'type' (type can be 'cur_col' or 'cur_btn')
+            cur_cols.append(['cur_col'] + col)  # add 'type' (can be 'cur_col' or 'cur_btn')
         cursor_defn.append(cur_cols)
-        filter = cursor_data['filter']
         test = 'AND' if filter else 'WHERE'
         filter.append((test, '', 'deleted_id', '=', 0, ''))
         cursor_defn.append(filter)
-        cursor_defn.append(cursor_data['sequence'])
-        cursor_defn.append(cursor_data['formview_name'])
+        cursor_defn.append(sequence)
+        cursor_defn.append(formview_name)
         self.cursor_defn = cursor_defn
-        return cursor_data['title']
+        return title
 
     def set_cursor(self, cursor):
         # called from ht.gui_grid.start_grid() or ht.gui_grid.start_row() or rep.report.Grid._ainit_()
@@ -3022,14 +3020,18 @@ class DbTable:
             cur_company, cur_name = cursor_name.split('.')
         else:
             cur_company, cur_name = self.defn_company, cursor_name
-        db_cursors = await db.cache.get_db_cursors(cur_company)
-        with await db_cursors.lock:  # prevent clash with other users
-            await db_cursors.select_row(
-                {'table_id': self.defn_tableid, 'cursor_name': cur_name})
-            cursor_data = await db_cursors.get_data()  # save data in local variable
-        if not cursor_data['_exists']:
+        ctx = db.cache.get_new_context(1, True, cur_company)
+        db_cursors = await get_db_object(ctx, 'db_cursors')
+        await db_cursors.select_row({'table_id': self.defn_tableid, 'cursor_name': cur_name})
+        if not db_cursors.exists:
             raise AibError(head=self.table_name, body=f'Cursor {cursor_name} does not exist')
-
+        cursor_data = (
+            await db_cursors.getval('columns'),
+            await db_cursors.getval('filter'),
+            await db_cursors.getval('sequence'),
+            await db_cursors.getval('formview_name'),
+            await db_cursors.getval('title'),
+            )
         self.cursor_defns[cursor_name] = cursor_data
         return cursor_data
 
