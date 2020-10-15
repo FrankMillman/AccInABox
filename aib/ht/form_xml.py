@@ -175,7 +175,9 @@ async def recalc(caller, xml):
 
 async def restart_grid(caller, xml):
     obj_name = xml.get('obj_name')
-    await caller.start_grid(obj_name)
+    start_col = xml.get('start_col')  # else None
+    start_val = xml.get('start_val')  # else None
+    await caller.start_grid(obj_name, start_col=start_col, start_val=start_val)
 
 async def init_grid(caller, xml):
     obj_name = xml.get('obj_name')

@@ -552,6 +552,10 @@ class GuiGrid:
         self.inserted = 0  # 0=existing row  -1=appended row  1=inserted row
 
         if start_val:
+            if start_val.startswith('{'):
+                start_objname, start_colname = start_val[1:-1].split('.')
+                start_obj = self.context.data_objects[start_objname]
+                start_val = await start_obj.getval(start_colname)
             await self.db_obj.init(display=False, init_vals={start_col: start_val})
             if start_col != self.cursor.order[0][0]:
                 # we typically get here if a cursor is sorted by a 'seq' field, but
