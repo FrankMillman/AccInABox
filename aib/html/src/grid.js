@@ -766,6 +766,13 @@ if (grid.header_row.length) {
 
   grid.onfocus = function() {
     //debug3('grid ' + this.ref + ' got focus');
+    if (
+        grid.active_row === -1 &&
+        grid.active_col === -1 &&
+        (grid.frame.form.current_focus === grid)
+        )
+      // grid has regained focus after start_grid - must execute grid.got_focus()
+      grid.frame.form.current_focus = null;
     got_focus(grid);
 //    if (grid.highlighted_cell !== null) {
 //      var cell = grid.highlighted_cell;
