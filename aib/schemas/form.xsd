@@ -30,12 +30,10 @@
     <xs:complexType>
       <xs:attribute name="name" use="required"/>
       <xs:attribute name="table_name" use="required"/>
-      <xs:attribute name="parent"/> <!-- setup_user -->
+      <xs:attribute name="parent"/>
       <xs:attribute name="view" type="xs:boolean"/>
-      <xs:attribute name="fkey"/> <!-- users_roles -->
-      <!-- xs:attribute name="cursor"/ --> <!-- users_roles -->
+      <xs:attribute name="fkey"/>
       <xs:attribute name="is_formview_obj" type="xs:boolean"/>
-      <xs:attribute name="must_exist" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="mem_objects">
@@ -309,6 +307,7 @@
       <xs:attribute name="expand" type="xs:boolean"/>
       <xs:attribute name="readonly" type="xs:boolean"/>
       <xs:attribute name="skip" type="xs:boolean"/>
+      <xs:attribute name="if"/>
       <xs:attribute name="before"/>
       <xs:attribute name="default"/>
       <xs:attribute name="validation"/>
