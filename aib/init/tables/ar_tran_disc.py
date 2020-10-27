@@ -107,7 +107,7 @@ cols.append ({
     'long_descr' : 'Credit note number - automatically generated',
     'col_head'   : 'Crn no',
     'key_field'  : 'A',
-    'calculated' : True,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -164,25 +164,6 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'currency_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Transaction currency',
-    'long_descr' : 'Currency used to enter transaction',
-    'col_head'   : 'Currency',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
     'choices'    : None,
     })
 cols.append ({
@@ -284,7 +265,7 @@ cols.append ({
     'col_name'   : 'disc_net_amt',
     'data_type'  : 'DEC',
     'short_descr': 'Discount net amount',
-    'long_descr' : 'Discount net amount in transaction currency - updated from ar_tran_disc_det',
+    'long_descr' : 'Discount net amount in transaction currency - updated from sls_nsls_subtran',
     'col_head'   : 'Disc net amt',
     'key_field'  : 'N',
     'calculated' : False,
@@ -303,27 +284,8 @@ cols.append ({
     'col_name'   : 'disc_tax_amt',
     'data_type'  : 'DEC',
     'short_descr': 'Discount tax amount',
-    'long_descr' : 'Discount tax amount in transaction currency - updated from ar_tran_disc_det',
+    'long_descr' : 'Discount tax amount in transaction currency - updated from sls_nsls_subtran',
     'col_head'   : 'Disc tax amt',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'disc_net_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cr note net cust',
-    'long_descr' : 'Cr note net amount in customer currency - updated from ar_tran_disc_det',
-    'col_head'   : 'Disc net cust',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -341,7 +303,7 @@ cols.append ({
     'col_name'   : 'disc_tax_cust',
     'data_type'  : 'DEC',
     'short_descr': 'Cr note tax cust',
-    'long_descr' : 'Cr note tax amount in customer currency - updated from ar_tran_disc_det',
+    'long_descr' : 'Cr note tax amount in customer currency - updated from sls_nsls_subtran',
     'col_head'   : 'Disc tax cust',
     'key_field'  : 'N',
     'calculated' : False,
@@ -357,29 +319,10 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'disc_net_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cr note net local',
-    'long_descr' : 'Cr note net amount in local currency - updated from ar_tran_disc_det',
-    'col_head'   : 'Disc net local',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'disc_tax_local',
     'data_type'  : 'DEC',
     'short_descr': 'Cr note tax local',
-    'long_descr' : 'Cr note tax amount in local currency - updated from ar_tran_disc_det',
+    'long_descr' : 'Cr note tax amount in local currency - updated from sls_nsls_subtran',
     'col_head'   : 'Disc tax local',
     'key_field'  : 'N',
     'calculated' : False,
@@ -425,14 +368,54 @@ virt.append ({
 # need to execute this when SELECTing, but don't need to recalc if a.tran_date changed
 # no way to distinguish at present, so leave for now
     'sql'        : (
-#       "SELECT b.row_id - 1 FROM {company}.adm_periods b, {company}.adm_periods c "
-#       "WHERE c.row_id = (b.row_id - 1) AND a.tran_date > c.statement_date "
-#       "AND a.tran_date <= b.statement_date"
-
         "SELECT count(*) FROM {company}.adm_periods b "
-#       "WHERE a.tran_date > b.statement_date"
         "WHERE b.closing_date < a.tran_date"
         ),
+    })
+virt.append ({
+    'col_name'   : 'party_currency_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Party id',
+    'long_descr' : 'Party id',
+    'col_head'   : 'Party id',
+    'dflt_val'   : '{cust_row_id>currency_id}',
+    'sql'        : 'a.cust_row_id>currency_id',
+    })
+virt.append ({
+    'col_name'   : 'party_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Party exchange rate',
+    'long_descr' : 'Party exchange rate',
+    'col_head'   : 'Party exch rate',
+    'db_scale'   : 8,
+    'fkey'       : None,
+    'dflt_val'   : '{cust_exch_rate}',
+    'sql'        : 'a.cust_exch_rate',
+    })
+virt.append ({
+    'col_name'   : 'module_id',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Module id',
+    'long_descr' : 'Module id',
+    'col_head'   : 'Module',
+    'sql'        : "'ar'",
+    })
+virt.append ({
+    'col_name'   : 'rev_sign_sls',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - sales transactions?',
+    'col_head'   : 'Reverse sign?',
+    'sql'        : "'1'",
+    })
+virt.append ({
+    'col_name'   : 'tax_incl',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Tax inclusive',
+    'long_descr' : 'Tax inclusive',
+    'col_head'   : 'Tax incl',
+    'fkey'       : None,
+    'sql'        : "'1'",
     })
 virt.append ({
     'col_name'   : 'item_row_id',
@@ -447,19 +430,55 @@ virt.append ({
         "AND b.split_no = 0 AND b.deleted_id = 0"
         ),
     })
-# virt.append ({
-#     'col_name'   : 'item_tran_type',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Open item tran type',
-#     'long_descr' : 'Open item tran type',
-#     'col_head'   : 'Tran type',
-#     # 'sql'        : (
-#     #     "SELECT b.tran_type FROM {company}.ar_openitems b "
-#     #     "WHERE b.tran_type = 'ar_disc' AND b.tran_row_id = a.row_id "
-#     #     "AND b.split_no = 0 AND b.deleted_id = 0"
-#     #     ),
-#     'sql'        : "'ar_disc'",
-#     })
+virt.append ({
+    'col_name'   : 'currency_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Transaction currency',
+    'long_descr' : 'Currency used to enter transaction',
+    'col_head'   : 'Currency',
+    'dflt_val'   : '{cust_row_id>currency_id}',
+    'sql'        : 'a.cust_row_id>currency_id',
+    })
+virt.append ({
+    'col_name'   : 'disc_net_cust',
+    'data_type'  : 'DEC',
+    'short_descr': 'Invoice net cust',
+    'long_descr' : 'Invoice net amount in customer currency',
+    'col_head'   : 'Inv net cust',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="disc_net_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="cust_exch_rate"/>'
+        '</expr>'
+        ),
+    'sql'        : (
+        "a.disc_net_amt / a.tran_exch_rate * a.cust_exch_rate"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'disc_net_local',
+    'data_type'  : 'DEC',
+    'short_descr': 'Invoice net local',
+    'long_descr' : 'Invoice net amount in local currency',
+    'col_head'   : 'Inv net local',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="disc_net_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+        '</expr>'
+        ),
+    'sql'        : "a.disc_net_amt / a.tran_exch_rate",
+    })
 virt.append ({
     'col_name'   : 'disc_tot_amt',
     'data_type'  : 'DEC',
@@ -545,6 +564,30 @@ cursors = []
 # actions
 actions = []
 actions.append([
+    'upd_on_save', [
+        [
+            'sls_nsls_subtran',  # table name
+            None,  # condition
+            False,  # split source?
+            [],  # key fields
+            [],  # aggregation
+            [  # on insert
+                # ['tran_det_row_id', '=', 'row_id'],  # tgt_col, src_col
+                ['nsls_code_id', '=', 'cust_row_id>ledger_row_id>discount_code_id'],
+                ['nsls_amount', '=', '_ctx.tot_disc_cust'],
+                ],
+            [],  # on update
+            [],  # on delete
+            [  # return values
+                ['disc_net_amt', 'net_amt'],  # tgt_col, src_col
+                ['disc_tax_amt', 'tax_amt'],
+                ['disc_tax_cust', 'tax_party'],
+                ['disc_tax_local', 'tax_local'],
+                ],
+            ],
+        ],
+    ])
+actions.append([
     'upd_on_post', [
         [
             'ar_openitems',  # table name
@@ -564,6 +607,9 @@ actions.append([
                 ['amount_local', '-', 'disc_tot_local'],
                 ],
             [],  # on unpost
+            [  # return values
+                ['item_row_id', 'row_id'],  # tgt_col, src_col
+                ],
             ],
         [
             'ar_allocations',
@@ -703,6 +749,3 @@ actions.append([
             ],
         ],
     ])
-# actions.append([
-#     'after_post', '<pyfunc name="custom.artrans_funcs.allocate_discount"/>'
-#     ])

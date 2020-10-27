@@ -145,7 +145,7 @@ cols.append ({
     'col_name'   : 'total_discount',
     'data_type'  : 'DEC',
     'short_descr': 'Total discount',
-    'long_descr' : 'Total discount allowed - updated from ap_tran_alloc_det after_save',
+    'long_descr' : 'Total discount allowed - updated from ap_allocations after_save',
     'col_head'   : 'Disc',
     'key_field'  : 'N',
     'calculated' : False,
@@ -197,10 +197,10 @@ virt = []
 #     'long_descr' : 'Allocation row id',
 #     'col_head'   : 'Alloc id',
 #     # fkey causes recursion after additions to db.objects.setup_fkey() [2020-07-30]
-#     # ap_tran_alloc_det.tran_row_id is an fkey to ap_tran_alloc
-#     # 'fkey'       : ['ap_tran_alloc_det', 'row_id', None, None, False, None],
+#     # ap_allocations.tran_row_id is an fkey to ap_tran_alloc
+#     # 'fkey'       : ['ap_allocations', 'row_id', None, None, False, None],
 #     'sql'        : (
-#         "SELECT b.row_id FROM {company}.ap_tran_alloc_det b "
+#         "SELECT b.row_id FROM {company}.ap_allocations b "
 #         "WHERE b.tran_type = 'ap_alloc' AND b.tran_row_id = a.row_id "
 #         "AND b.item_row_id = (SELECT b.row_id FROM {company}.ap_openitems b "
 #             "WHERE b.tran_type = a.item_row_id>tran_type AND b.tran_row_id = a.item_row_id>tran_row_id "
@@ -264,7 +264,7 @@ virt.append ({
     'long_descr' : 'Have any detail lines been entered?',
     'col_head'   : '',
     'sql'        : (
-        "CASE WHEN EXISTS(SELECT * FROM {company}.ap_tran_alloc_det b "
+        "CASE WHEN EXISTS(SELECT * FROM {company}.ap_allocations b "
         "WHERE b.tran_row_id = a.row_id) THEN 1 ELSE 0 END"
         ),
     })
@@ -282,7 +282,7 @@ virt.append ({
         "a.item_row_id>amount_supp "
         "+ "
         "COALESCE(("
-            "SELECT b.alloc_supp FROM {company}.ap_tran_alloc_det b "
+            "SELECT b.alloc_supp FROM {company}.ap_allocations b "
             "WHERE b.tran_row_id = a.row_id AND b.deleted_id = 0"
         "), 0)"
         ),

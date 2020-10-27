@@ -13,8 +13,8 @@ table = {
     # 'indexes'       : [
     #     ['apitems_supp', 'supp_row_id, tran_date', None, False]
     #     ],
-    'ledger_col'    : None,
-    # 'ledger_col'    : 'supp_row_id>ledger_row_id',
+    # 'ledger_col'    : None,
+    'ledger_col'    : 'supp_row_id>ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -222,7 +222,7 @@ cols.append ({
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
@@ -245,7 +245,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : None,
+    'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -264,7 +264,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : None,
+    'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -302,7 +302,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : 'tran_row_id>supp_row_id>currency_id>scale',
-    'dflt_val'   : None,
+    'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -326,7 +326,7 @@ virt = []
 #     'short_descr': 'Transaction date',
 #     'long_descr' : 'Transaction date',
 #     'col_head'   : 'Tran date',
-#     'sql'        : 'a.tran_row_id>tran_date'
+#     'sql'        : 'a.tran_row_id>tran_date',
 #     })
 virt.append ({
     'col_name'   : 'tran_number',
@@ -334,7 +334,15 @@ virt.append ({
     'short_descr': 'Transaction number',
     'long_descr' : 'Transaction number',
     'col_head'   : 'Tran no',
-    'sql'        : 'a.tran_row_id>tran_number'
+    'sql'        : 'a.tran_row_id>tran_number',
+    })
+virt.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text',
+    'long_descr' : 'Line of text to appear on reports',
+    'col_head'   : 'Text',
+    'sql'        : 'a.tran_row_id>text',
     })
 virt.append ({
     'col_name'   : 'balance_supp',
@@ -349,7 +357,7 @@ virt.append ({
         "- "
         "COALESCE(("
             "SELECT SUM(b.alloc_supp) "
-            "FROM {company}.ap_tran_alloc_det b "
+            "FROM {company}.ap_allocations b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
             "), 0)"
         )
@@ -367,7 +375,7 @@ virt.append ({
         "- "
         "COALESCE(("
             "SELECT SUM(b.alloc_supp) "
-            "FROM {company}.ap_tran_alloc_det b "
+            "FROM {company}.ap_allocations b "
             "JOIN {company}.ap_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
                 "c.tran_date <= {as_at_date} "
@@ -387,7 +395,7 @@ virt.append ({
         "- "
         "COALESCE(("
             "SELECT SUM(b.alloc_local) "
-            "FROM {company}.ap_tran_alloc_det b "
+            "FROM {company}.ap_allocations b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
             "), 0)"
         )
@@ -405,16 +413,91 @@ virt.append ({
         "- "
         "COALESCE(("
             "SELECT SUM(b.alloc_local) "
-            "FROM {company}.ap_tran_alloc_det b "
+            "FROM {company}.ap_allocations b "
             "JOIN {company}.ap_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
                 "c.tran_date <= {as_at_date} "
             "), 0)"
         )
     })
+virt.append ({
+    'col_name'   : 'due_supp',
+    'data_type'  : 'DEC',
+    'short_descr': 'Amount due - supp curr',
+    'long_descr' : 'Amount due after discount - supplier currency - at specified date',
+    'col_head'   : 'Due supp',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        """
+        a.amount_supp
+
+        - COALESCE((SELECT
+
+                COALESCE(alloc.tot_alloc, 0)
+                +
+                CASE
+                    WHEN a.discount_date IS NULL THEN 0
+                    WHEN '2018-03-02' > a.discount_date THEN 0
+                    ELSE a.discount_supp - COALESCE(alloc.disc_alloc, 0)
+                END
+        FROM
+            (SELECT c.item_row_id,
+                SUM(c.alloc_supp + c.discount_supp) AS tot_alloc,
+                SUM(c.discount_supp) AS disc_alloc
+            FROM ap_allocations c
+            WHERE c.item_row_id = a.row_id
+            GROUP BY c.item_row_id
+            ) AS alloc
+        ), 0)
+        """
+
+        # "a.amount_supp "
+        # "- "
+        # "COALESCE(("
+        #     "SELECT SUM(b.alloc_supp + b.discount_supp) "
+        #     "FROM {company}.ap_allocations b "
+        #     "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
+        #     "), 0) "
+        # "- "
+        # "CASE "
+        #     "WHEN a.discount_date IS NULL THEN 0 "
+        #     "WHEN {as_at_date} > a.discount_date THEN 0 "
+        #     "ELSE a.discount_supp - COALESCE(("
+        #         "SELECT SUM(b.discount_supp) "
+        #         "FROM {company}.ap_allocations b "
+        #         "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
+        #         "), 0) "
+        #     "END"
+        ),
+    })
 
 # cursor definitions
 cursors = []
+cursors.append({
+    'cursor_name': 'supp_due_as_at',
+    'title': 'Supplier balance due at date',
+    'columns': [
+        ['row_id', 80, False, True],
+        ['supp_row_id', 80, False, True],
+        # ['supp_row_id>supp_id', 80, False, True],
+        # ['supp_row_id>party_row_id>display_name', 150, True, True],
+        # ['supp_row_id>location_row_id>location_id', 60, False, True, [
+        #     ['if', '', '_ledger.valid_loc_ids>expandable', 'is', '$True', '']
+        #     ]],
+        # ['supp_row_id>function_row_id>function_id', 60, False, True, [
+        #     ['if', '', '_ledger.valid_fun_ids>expandable', 'is', '$True', '']
+        #     ]],
+        ['due_supp', 100, False, True],
+        ],
+    'filter': [
+        ['WHERE', '', 'due_date', '<=', '_ctx.as_at_date', ''],
+        ['AND', '', 'due_supp', '!=', '0', ''],
+        ],
+    'sequence': [['supp_row_id', False]],
+    'formview_name': None,
+    })
 
 # actions
 actions = []

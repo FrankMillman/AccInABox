@@ -179,8 +179,8 @@ virt.append ({
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted? Only here to satisfy diag.py',
     'col_head'   : 'Posted?',
-    'dflt_val'   : '{subtran_row_id>tran_det_row_id>tran_row_id>posted}',
-    'sql'        : "a.subtran_row_id>tran_det_row_id>tran_row_id>posted"
+    'dflt_val'   : '{subtran_row_id>tran_det_row_id>posted}',
+    'sql'        : "a.subtran_row_id>tran_det_row_id>posted"
     })
 virt.append ({
     'col_name'   : 'tran_date',
@@ -188,8 +188,8 @@ virt.append ({
     'short_descr': 'Transaction date',
     'long_descr' : 'Transaction date',
     'col_head'   : 'Tran date',
-    'dflt_val'   : '{subtran_row_id>tran_det_row_id>tran_row_id>tran_date}',
-    'sql'        : "a.subtran_row_id>tran_det_row_id>tran_row_id>tran_date"
+    'dflt_val'   : '{subtran_row_id>tran_det_row_id>tran_date}',
+    'sql'        : "a.subtran_row_id>tran_det_row_id>tran_date"
     })
 virt.append ({
     'col_name'   : 'upd_earned',
@@ -287,7 +287,7 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'subtran_row_id>nsls_code_id'],  # tgt_col, src_col
-                ['cust_row_id', 'subtran_row_id>tran_det_row_id>tran_row_id>cust_row_id'],
+                ['cust_row_id', 'subtran_row_id>tran_det_row_id>cust_row_id'],
                 ['location_row_id', 'subtran_row_id>location_row_id'],
                 ['function_row_id', 'subtran_row_id>function_row_id'],
                 ['source_code', 'ear_source_code'],
@@ -308,7 +308,7 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'subtran_row_id>nsls_code_id'],  # tgt_col, src_col
-                ['cust_row_id', 'subtran_row_id>tran_det_row_id>tran_row_id>cust_row_id'],
+                ['cust_row_id', 'subtran_row_id>tran_det_row_id>cust_row_id'],
                 ['location_row_id', 'subtran_row_id>location_row_id'],
                 ['function_row_id', 'subtran_row_id>function_row_id'],
                 ['source_code', 'ear_source_code'],

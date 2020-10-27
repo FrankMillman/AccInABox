@@ -176,7 +176,7 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>tran_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_det_row_id>currency_id>scale',
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -195,7 +195,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>tran_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_det_row_id>currency_id>scale',
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<expr>'
@@ -230,7 +230,7 @@ cols.append ({
             '<default>'
                 '<exch_rate>'
                     '<fld_val name="wh_prod_row_id>ledger_row_id>currency_id"/>'
-                    '<fld_val name="tran_det_row_id>tran_row_id>tran_date"/>'
+                    '<fld_val name="tran_det_row_id>tran_date"/>'
                 '</exch_rate>'
             '</default>'
         '</case>'
@@ -251,7 +251,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>tran_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_det_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -270,7 +270,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>tran_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_det_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -324,8 +324,8 @@ virt.append ({
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
-    'dflt_val'   : '{tran_det_row_id>tran_row_id>posted}',
-    'sql'        : "a.tran_det_row_id>tran_row_id>posted"
+    'dflt_val'   : '{tran_det_row_id>posted}',
+    'sql'        : "a.tran_det_row_id>posted"
     })
 virt.append ({
     'col_name'   : 'net_party',
@@ -340,13 +340,13 @@ virt.append ({
         '<expr>'
           '<fld_val name="net_amt"/>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
           '<op type="*"/>'
           '<fld_val name="tran_det_row_id>party_exch_rate"/>'
         '</expr>'
         ),
     'sql'        : (
-        "a.net_amt / a.tran_det_row_id>tran_row_id>tran_exch_rate * "
+        "a.net_amt / a.tran_det_row_id>tran_exch_rate * "
         "a.tran_det_row_id>party_exch_rate"
         ),
     })
@@ -363,13 +363,13 @@ virt.append ({
         '<expr>'
           '<fld_val name="net_amt"/>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
           '<op type="*"/>'
           '<fld_val name="wh_exch_rate"/>'
         '</expr>'
         ),
     'sql'        : (
-        "a.net_amt / a.tran_det_row_id>tran_row_id>tran_exch_rate * a.wh_exch_rate"
+        "a.net_amt / a.tran_det_row_id>tran_exch_rate * a.wh_exch_rate"
         ),
     })
 virt.append ({
@@ -385,10 +385,10 @@ virt.append ({
         '<expr>'
           '<fld_val name="net_amt"/>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
-    'sql'        : "a.net_amt / a.tran_det_row_id>tran_row_id>tran_exch_rate",
+    'sql'        : "a.net_amt / a.tran_det_row_id>tran_exch_rate",
     })
 virt.append ({
     'col_name'   : 'tot_amt',
@@ -397,7 +397,7 @@ virt.append ({
     'long_descr' : 'Total amount in transaction currency',
     'col_head'   : 'Net amount',
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>tran_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_det_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
@@ -425,13 +425,13 @@ virt.append ({
             '<fld_val name="tax_amt"/>'
           '</expr>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
           '<op type="*"/>'
           '<fld_val name="tran_det_row_id>party_exch_rate"/>'
         '</expr>'
         ),
     'sql'        : (
-        "(a.net_amt + a.tax_amt) / a.tran_det_row_id>tran_row_id>tran_exch_rate * "
+        "(a.net_amt + a.tax_amt) / a.tran_det_row_id>tran_exch_rate * "
         "a.tran_det_row_id>party_exch_rate)"
         ),
     })
@@ -452,11 +452,11 @@ virt.append ({
             '<fld_val name="tax_amt"/>'
           '</expr>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
     'sql'        : (
-        "(a.net_amt + a.tax_amt) / a.tran_det_row_id>tran_row_id>tran_exch_rate"
+        "(a.net_amt + a.tax_amt) / a.tran_det_row_id>tran_exch_rate"
         ),
     })
 virt.append ({
@@ -529,7 +529,7 @@ virt.append ({
           '<expr>'
             '<fld_val name="net_amt"/>'
             '<op type="/"/>'
-            '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+            '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
           '</expr>'
           '<op type="*"/>'
           '<case>'
@@ -543,7 +543,7 @@ virt.append ({
         '</expr>'
         ),
     'sql'        : (
-        "(a.net_amt / a.tran_det_row_id>tran_row_id>tran_exch_rate) "
+        "(a.net_amt / a.tran_det_row_id>tran_exch_rate) "
         "* "
         "CASE WHEN a.tran_det_row_id>rev_sign_pch = '1' THEN -1 ELSE 1 END"
         ),
@@ -604,7 +604,7 @@ actions.append([
                 ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['prod_row_id', 'wh_prod_row_id>prod_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ['tran_date', 'tran_det_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['qty_day', '+', 'upd_qty'],  # tgt_col, op, src_col
@@ -625,7 +625,7 @@ actions.append([
                 ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['class_row_id', 'wh_prod_row_id>prod_row_id>class_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ['tran_date', 'tran_det_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['qty_day', '+', 'upd_qty'],  # tgt_col, op, src_col
@@ -646,11 +646,11 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['prod_code_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
-                ['supp_row_id', 'tran_det_row_id>tran_row_id>supp_row_id'],
+                ['supp_row_id', 'tran_det_row_id>supp_row_id'],
                 ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
                 ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ['tran_date', 'tran_det_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['qty_day', '+', 'upd_qty'],  # tgt_col, op, src_col
@@ -672,7 +672,7 @@ actions.append([
                 ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
                 ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ['tran_date', 'tran_det_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col

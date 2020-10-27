@@ -1621,10 +1621,10 @@ class Frame:
         # notify client that data_obj is now clean - may or may not exist
         self.session.responder.obj_to_redisplay.append((self.ref, (True, set_obj_exists)))
 
-    async def start_grid(self, obj_name):
+    async def start_grid(self, obj_name, start_col=None, start_val=None):
         grid = self.grid_dict[obj_name]
         await grid.db_obj.close_cursor()
-        await grid.start_grid()
+        await grid.start_grid(start_col=start_col, start_val=start_val)
 
     async def init_grid(self, obj_name):
         grid = self.grid_dict[obj_name]

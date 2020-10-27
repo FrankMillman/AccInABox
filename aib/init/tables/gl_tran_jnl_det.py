@@ -197,6 +197,15 @@ virt.append ({
     'sql'        : "a.tran_row_id>tran_date"
     })
 virt.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text',
+    'long_descr' : 'Line of text to appear on reports',
+    'col_head'   : 'Text',
+    'dflt_val'   : '{tran_row_id>text}',
+    'sql'        : "a.tran_row_id>text"
+    })
+virt.append ({
     'col_name'   : 'rec_local',
     'data_type'  : 'DEC',
     'short_descr': 'Rec amt local',

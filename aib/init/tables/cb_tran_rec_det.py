@@ -225,6 +225,15 @@ virt.append ({
     'col_head'   : 'Description',
     })
 virt.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Receipt number',
+    'long_descr' : 'Receipt number',
+    'col_head'   : 'Rec no',
+    'dflt_val'   : '{tran_row_id>tran_number}',
+    'sql'        : "a.tran_row_id>tran_number"
+    })
+virt.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
     'short_descr': 'Transaction date',
@@ -234,6 +243,33 @@ virt.append ({
     'sql'        : "a.tran_row_id>tran_date"
     })
 virt.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text',
+    'long_descr' : 'Line of text to appear on reports',
+    'col_head'   : 'Text',
+    'dflt_val'   : '{tran_row_id>text}',
+    'sql'        : "a.tran_row_id>text"
+    })
+virt.append ({
+    'col_name'   : 'period_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Transaction period',
+    'long_descr' : 'Transaction period',
+    'col_head'   : 'Period',
+    'dflt_val'   : '{tran_row_id>period_row_id}',
+    'sql'        : "a.tran_row_id>period_row_id"
+    })
+virt.append ({
+    'col_name'   : 'currency_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Transaction currency',
+    'long_descr' : 'Currency used to enter transaction',
+    'col_head'   : 'Currency',
+    'dflt_val'   : '{tran_row_id>ledger_row_id>currency_id}',
+    'sql'        : 'a.tran_row_id>ledger_row_id>currency_id',
+    })
+virt.append ({
     'col_name'   : 'party_currency_id',
     'data_type'  : 'INT',
     'short_descr': 'Party id',
@@ -241,6 +277,17 @@ virt.append ({
     'col_head'   : 'Party id',
     'dflt_val'   : '{tran_row_id>ledger_row_id>currency_id}',
     'sql'        : 'a.tran_row_id>ledger_row_id>currency_id',
+    })
+virt.append ({
+    'col_name'   : 'tran_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Transaction exchange rate',
+    'long_descr' : 'Transacction exchange rate',
+    'col_head'   : 'Tran exch rate',
+    'db_scale'   : 8,
+    'fkey'       : None,
+    'dflt_val'   : '{tran_row_id>tran_exch_rate}',
+    'sql'        : 'a.tran_row_id>tran_exch_rate',
     })
 virt.append ({
     'col_name'   : 'party_exch_rate',
@@ -262,15 +309,31 @@ virt.append ({
     'fkey'       : None,
     'sql'        : "'1'",
     })
-# virt.append ({
-#     'col_name'   : 'posted',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Posted?',
-#     'long_descr' : 'Has transaction been posted?',
-#     'col_head'   : 'Posted?',
-#     'dflt_val'   : '{tran_row_id>posted}',
-#     'sql'        : "a.tran_row_id>posted"
-#     })
+virt.append ({
+    'col_name'   : 'cust_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Cust row id',
+    'long_descr' : 'Customer row id - this is only here to satisfy diag.py',
+    'col_head'   : 'Cust',
+    'sql'        : "NULL",
+    })
+virt.append ({
+    'col_name'   : 'supp_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Supp row id',
+    'long_descr' : 'Supplier row id - this is only here to satisfy diag.py',
+    'col_head'   : 'Supp',
+    'sql'        : "NULL",
+    })
+virt.append ({
+    'col_name'   : 'posted',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Posted?',
+    'long_descr' : 'Has transaction been posted?',
+    'col_head'   : 'Posted?',
+    'dflt_val'   : '{tran_row_id>posted}',
+    'sql'        : "a.tran_row_id>posted"
+    })
 virt.append ({
     'col_name'   : 'rec_local',
     'data_type'  : 'DEC',
@@ -309,26 +372,6 @@ actions.append([
             [],  # on insert
             [],  # on update
             [],  # on delete
-            ],
-        ],
-    ])
-actions.append([
-    'upd_on_post', [
-        [
-            'ar_subtran_rec',  # table name
-            [  # condition
-                ['where', '', 'line_type', '=', "'arec'", ''],
-            ],
-            False,  # split source?
-            [  # key fields
-                ['source_code', "'ar_rec_cb'"],  # tgt_col, src_col
-                ['tran_det_row_id', 'row_id'],
-                ],
-            [],  # aggregation
-            [  # on post
-                ['posted', '=', True],  # tgt_col, op, src_col
-                ],
-            [],  # on unpost
             ],
         ],
     ])

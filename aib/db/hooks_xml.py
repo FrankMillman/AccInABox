@@ -69,3 +69,67 @@ async def reset_table_defn(db_obj, xml):
     table_key = company.lower() + '.' + table_name.lower()
     if table_key in db.objects.tables_open:
         del db.objects.tables_open[table_key]
+
+async def on_post(db_obj, xml):
+    return db_obj.context.in_db_post
+
+async def append(db_obj, xml):
+    source = xml.get('src')
+    target = xml.get('tgt')
+
+    value_to_append = await get_val(db_obj, source)
+
+    target_objname, target_colname = target.split('.')
+    if target_objname == '_ctx':
+        tgt = getattr(db_obj.context, target_colname)
+    else:
+        target_obj = db_obj.data_objects[target_objname]
+        tgt = await target_obj.getval(target_colname)
+    tgt.append(value_to_append)
+
+async def assign(db_obj, xml):
+    source = xml.get('src')
+    target = xml.get('tgt')
+
+    value_to_assign = await get_val(db_obj, source)
+
+    target_objname, target_colname = target.split('.')
+    if target_objname == '_ctx':
+        setattr(db_obj.context, target_colname, value_to_assign)
+    else:
+        target_obj = db_obj.data_objects[target_objname]
+        await target_obj.setval(target_colname, value_to_assign)
+
+async def get_val(db_obj, value):
+    if value.startswith('('):  # expression
+        # for now assume a simple expression -
+        #    (lft [spc] op [spc] rgt)
+        # e.g. (item_row_id>balance_cust + alloc_cust)
+        lft, op, rgt = value[1:-1].split(' ')
+        lft = await get_val(db_obj, lft)
+        rgt = await get_val(db_obj, rgt)
+        op = getattr(operator,
+            {'+': 'add', '-': 'sub', '*': 'mul', '/': 'truediv'}[op])
+        if lft is None or rgt is None:
+            return None
+        else:
+            return op(lft, rgt)
+    if value == '[]':
+        return []
+    if value.startswith("'"):
+        return value[1:-1]
+    if value == '$True':
+        return True
+    if value == '$False':
+        return False
+    if value == '$None':
+        return None
+    if value == '$exists':
+        return db_obj.exists
+    if value.isdigit():
+        return int(value)
+    if value.startswith('-') and value[1:].isdigit():
+        return int(value)
+    if value.startswith('_ctx.'):
+        return getattr(db_obj.context, value[5:], None)
+    return await db_obj.getval(value)

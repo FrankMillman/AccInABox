@@ -179,8 +179,8 @@ async def calc_tax(db_obj, conn, return_vals):
 
     tax_incl = await db_obj.getval('tran_det_row_id>tax_incl')
     exch_rate_party = await db_obj.getval('tran_det_row_id>party_exch_rate')
-    exch_rate_tran = await db_obj.getval('tran_det_row_id>tran_row_id>tran_exch_rate')
-    tran_date = await db_obj.getval('tran_det_row_id>tran_row_id>tran_date')
+    exch_rate_tran = await db_obj.getval('tran_det_row_id>tran_exch_rate')
+    tran_date = await db_obj.getval('tran_det_row_id>tran_date')
 
     if tax_code_table not in db_obj.context.data_objects:
         db_obj.context.data_objects[tax_code_table] = await db.objects.get_db_object(

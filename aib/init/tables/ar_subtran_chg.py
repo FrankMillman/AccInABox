@@ -137,7 +137,7 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['alt_curr', 'Alternate currency not allowed', [
-            ['check', '', 'cust_row_id>currency_id', '=', 'tran_det_row_id>tran_row_id>currency_id', ''],
+            ['check', '', 'cust_row_id>currency_id', '=', 'tran_det_row_id>currency_id', ''],
             ['or', '', '_ledger.alt_curr', 'is', '$True', '']
             ]],
         ],
@@ -165,7 +165,7 @@ cols.append ({
         '<case>'
           '<on_post>'
             '<expr>'
-              '<fld_val name="tran_det_row_id>tran_row_id>tran_number"/>'
+              '<fld_val name="tran_det_row_id>tran_number"/>'
               '<op type="+"/>'
               '<literal value="/"/>'
               '<op type="+"/>'
@@ -180,7 +180,7 @@ cols.append ({
           '</on_post>'
           '<on_insert>'
             '<expr>'
-              '<fld_val name="tran_det_row_id>tran_row_id>tran_number"/>'
+              '<fld_val name="tran_det_row_id>tran_number"/>'
               '<op type="+"/>'
               '<literal value="/"/>'
               '<op type="+"/>'
@@ -216,7 +216,7 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'dflt_rule'  : '{tran_det_row_id>tran_row_id>text}',
+    'dflt_rule'  : '{tran_det_row_id>text}',
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -267,7 +267,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{tran_det_row_id>tran_row_id>tran_date}',
+    'dflt_val'   : '{tran_det_row_id>tran_date}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -285,7 +285,7 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>tran_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_det_row_id>currency_id>scale',
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -310,7 +310,7 @@ cols.append ({
         '<expr>'
           '<fld_val name="chg_amount"/>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
           '<op type="*"/>'
           '<fld_val name="cust_exch_rate"/>'
         '</expr>'
@@ -337,7 +337,7 @@ cols.append ({
         '<expr>'
           '<fld_val name="chg_amount"/>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
     'col_checks' : None,
@@ -355,14 +355,23 @@ cols.append ({
         ),
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'calculated' : True,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
-    'dflt_rule'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<on_post>'
+                '<literal value="$True"/>'
+            '</on_post>'
+            '<default>'
+                '<literal value="$False"/>'
+            '</default>'
+        '</case>'
+        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -370,15 +379,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'text',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Text',
-#     'long_descr' : 'Text',
-#     'col_head'   : 'Text',
-#     'dflt_val'   : '{tran_det_row_id>tran_row_id>text}',
-#     'sql'        : "a.tran_det_row_id>tran_row_id>text"
-#     })
 virt.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
@@ -386,8 +386,8 @@ virt.append ({
     'long_descr' : 'Exchange rate from transaction currency to local currency',
     'col_head'   : 'Rate tran',
     'db_scale'   : 8,
-    'dflt_val'   : '{tran_det_row_id>tran_row_id>tran_exch_rate}',
-    'sql'        : "a.tran_det_row_id>tran_row_id>tran_exch_rate"
+    'dflt_val'   : '{tran_det_row_id>tran_exch_rate}',
+    'sql'        : "a.tran_det_row_id>tran_exch_rate"
     })
 virt.append ({
     'col_name'   : 'currency_id',
@@ -395,9 +395,9 @@ virt.append ({
     'short_descr': 'Transaction currency id',
     'long_descr' : 'Transaction currency id',
     'col_head'   : 'Currency id',
-    'dflt_val'   : '{tran_det_row_id>tran_row_id>currency_id}',
+    'dflt_val'   : '{tran_det_row_id>currency_id}',
     # 'fkey'       : ['adm_currencies', 'row_id', None, None, False, None],
-    'sql'        : "a.tran_det_row_id>tran_row_id>currency_id"
+    'sql'        : "a.tran_det_row_id>currency_id"
     })
 # virt.append ({
 #     'col_name'   : 'chg_local',

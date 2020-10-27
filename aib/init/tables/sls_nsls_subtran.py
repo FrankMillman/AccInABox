@@ -114,10 +114,10 @@ cols.append ({
         ['source_code', [
             ['nsls_ar_inv', 'ar_tran_inv_det'],
             ['nsls_ar_crn', 'ar_tran_crn_det'],
-            ['nsls_ar_disc', 'ar_tran_disc_det'],
+            ['nsls_ar_disc', 'ar_tran_disc'],
             ['nsls_cb_inv', 'cb_tran_rec_det'],
             ['nsls_cb_crn', 'cb_tran_pmt_det'],
-            ['nsls_ar_ueabf', 'ar_uea_bf_det'],
+            ['nsls_ar_ueabf', 'ar_uea_bf'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -161,7 +161,7 @@ cols.append ({
             '<fld_val name="nsls_code_id>valid_loc_ids"/>'
           '</compare>'
           '<compare test="[[`if`, ``, `tran_det_row_id>module_id`, `=`, `~ar~`, ``]]">'
-            '<fld_val name="tran_det_row_id>tran_row_id>cust_row_id>location_row_id"/>'
+            '<fld_val name="tran_det_row_id>cust_row_id>location_row_id"/>'
           '</compare>'
         '</case>'
         ),
@@ -197,7 +197,7 @@ cols.append ({
             '<fld_val name="nsls_code_id>valid_fun_ids"/>'
           '</compare>'
           '<compare test="[[`if`, ``, `tran_det_row_id>module_id`, `=`, `~ar~`, ``]]">'
-            '<fld_val name="tran_det_row_id>tran_row_id>cust_row_id>function_row_id"/>'
+            '<fld_val name="tran_det_row_id>cust_row_id>function_row_id"/>'
           '</compare>'
         '</case>'
         ),
@@ -271,11 +271,11 @@ cols.append ({
             '<fld_val name="eff_date"/>'
           '</compare>'
           '<compare test="[[`if`, ``, `nsls_code_id>chg_eff_date`, `=`, `~0~`, ``]]">'
-            '<fld_val name="tran_det_row_id>tran_row_id>tran_date"/>'
+            '<fld_val name="tran_det_row_id>tran_date"/>'
           '</compare>'
           '<compare test="[[`if`, ``, `nsls_code_id>chg_eff_date`, `=`, `~1~`, ``]]">'
             '<expr>'
-              '<literal value="closing_date(tran_det_row_id>tran_row_id>period_row_id)"/>'
+              '<literal value="closing_date(tran_det_row_id>period_row_id)"/>'
               '<op type="+"/>'
               '<literal value="td(1)"/>'
             '</expr>'
@@ -284,12 +284,12 @@ cols.append ({
         ),
     'col_checks' : [
         ['eff_date_allowed', 'Cannot change effective date for this code', [
-            ['check', '', '$value', '=', 'tran_det_row_id>tran_row_id>tran_date', ''],
+            ['check', '', '$value', '=', 'tran_det_row_id>tran_date', ''],
             ['or', '', 'nsls_code_id>chg_eff_date', '!=', '0', ''],
             ]],
         ['eff_date_valid', 'Cannot be before transaction date', [
             ['check', '', 'nsls_code_id>chg_eff_date', '=', '0', ''],
-            ['or', '', '$value', '>=', 'tran_det_row_id>tran_row_id>tran_date', ''],
+            ['or', '', '$value', '>=', 'tran_det_row_id>tran_date', ''],
             ]],
         ],
     'fkey'       : None,
@@ -380,8 +380,8 @@ virt.append ({
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted? Only here to satisfy diag.py',
     'col_head'   : 'Posted?',
-    'dflt_val'   : '{tran_det_row_id>tran_row_id>posted}',
-    'sql'        : "a.tran_det_row_id>tran_row_id>posted"
+    'dflt_val'   : '{tran_det_row_id>posted}',
+    'sql'        : "a.tran_det_row_id>posted"
     })
 virt.append ({
     'col_name'   : 'net_party',
@@ -396,14 +396,13 @@ virt.append ({
         '<expr>'
           '<fld_val name="net_amt"/>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
           '<op type="*"/>'
           '<fld_val name="tran_det_row_id>party_exch_rate"/>'
         '</expr>'
         ),
     'sql'        : (
-        "a.net_amt / a.tran_det_row_id>tran_row_id>tran_exch_rate * "
-        "a.tran_det_row_id>party_exch_rate"
+        "a.net_amt / a.tran_det_row_id>tran_exch_rate * a.tran_det_row_id>party_exch_rate"
         ),
     })
 virt.append ({
@@ -419,10 +418,10 @@ virt.append ({
         '<expr>'
           '<fld_val name="net_amt"/>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
-    'sql'        : "a.net_amt / a.tran_det_row_id>tran_row_id>tran_exch_rate",
+    'sql'        : "a.net_amt / a.tran_det_row_id>tran_exch_rate",
     })
 virt.append ({
     'col_name'   : 'tot_amt',
@@ -431,7 +430,7 @@ virt.append ({
     'long_descr' : 'Total amount in transaction currency',
     'col_head'   : 'Net amount',
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>tran_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_det_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
@@ -459,13 +458,13 @@ virt.append ({
             '<fld_val name="tax_amt"/>'
           '</expr>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
           '<op type="*"/>'
           '<fld_val name="tran_det_row_id>party_exch_rate"/>'
         '</expr>'
         ),
     'sql'        : (
-        "(a.net_amt + a.tax_amt) / a.tran_det_row_id>tran_row_id>tran_exch_rate * "
+        "(a.net_amt + a.tax_amt) / a.tran_det_row_id>tran_exch_rate * "
         "a.tran_det_row_id>party_exch_rate"
         ),
     })
@@ -486,11 +485,11 @@ virt.append ({
             '<fld_val name="tax_amt"/>'
           '</expr>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
     'sql'        : (
-        "(a.net_amt + a.tax_amt) / a.tran_det_row_id>tran_row_id>tran_exch_rate"
+        "(a.net_amt + a.tax_amt) / a.tran_det_row_id>tran_exch_rate"
         ),
     })
 virt.append ({
@@ -507,7 +506,7 @@ virt.append ({
           '<expr>'
             '<fld_val name="net_amt"/>'
             '<op type="/"/>'
-            '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+            '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
           '</expr>'
           '<op type="*"/>'
           '<case>'
@@ -521,7 +520,7 @@ virt.append ({
         '</expr>'
         ),
     'sql'        : (
-        "(a.net_amt / a.tran_det_row_id>tran_row_id>tran_exch_rate) "
+        "(a.net_amt / a.tran_det_row_id>tran_exch_rate) "
         "* "
         "CASE WHEN a.tran_det_row_id>rev_sign_sls = '1' THEN -1 ELSE 1 END"
         ),
@@ -594,7 +593,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ['tran_date', 'tran_det_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
@@ -614,7 +613,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ['tran_date', 'tran_det_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
@@ -632,11 +631,11 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
-                ['cust_row_id', 'tran_det_row_id>tran_row_id>cust_row_id'],
+                ['cust_row_id', 'tran_det_row_id>cust_row_id'],
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ['tran_date', 'tran_det_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
@@ -654,11 +653,11 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
-                ['cust_row_id', 'tran_det_row_id>tran_row_id>cust_row_id'],
+                ['cust_row_id', 'tran_det_row_id>cust_row_id'],
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ['tran_date', 'tran_det_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
@@ -679,7 +678,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ['tran_date', 'tran_det_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '-', 'upd_local'],  # tgt_col, op, src_col
@@ -700,7 +699,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ['tran_date', 'tran_det_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '-', 'upd_local'],  # tgt_col, op, src_col

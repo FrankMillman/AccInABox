@@ -12,7 +12,7 @@ from common import AibError, AibDenied
 async def split_nsls(db_obj, conn, return_vals):
     # called as split_src func from various.upd_on_save()
     eff_date = await db_obj.getval('eff_date')
-    tran_date = await db_obj.getval('tran_det_row_id>tran_row_id>tran_date')
+    tran_date = await db_obj.getval('tran_det_row_id>tran_date')
     amount_pty = await db_obj.getval('net_party')
     amount_loc = await db_obj.getval('net_local')
 
@@ -154,7 +154,7 @@ async def alloc_oldest(db_obj, conn, return_vals):
 
 async def get_tot_alloc(db_obj, fld, src):
     # called from ar_tran_alloc/ar_subtran_rec in 'condition' for upd_on_post 'ar_allocations'
-    # get total allocations for this transaction and save
+    # get total allocations for this transaction and save in 'context'
     row_id = await db_obj.getval('row_id')
     if db_obj.table_name == 'ar_tran_alloc':
         tran_type = 'ar_alloc'
@@ -162,7 +162,7 @@ async def get_tot_alloc(db_obj, fld, src):
         tran_type = 'ar_rec'
 
     sql = (
-        "SELECT COUNT(*), SUM(alloc_cust) AS \"[REAL2]\", SUM(discount_cust) AS \"[REAL2]\", "
+        "SELECT SUM(alloc_cust) AS \"[REAL2]\", SUM(discount_cust) AS \"[REAL2]\", "
         "SUM(alloc_local) AS \"[REAL2]\", SUM(discount_local) AS \"[REAL2]\" "
         f"FROM {db_obj.company}.ar_allocations "
         f"WHERE tran_type = {tran_type!r} AND tran_row_id = {row_id} AND deleted_id = 0"
@@ -170,14 +170,13 @@ async def get_tot_alloc(db_obj, fld, src):
 
     async with db_obj.context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
-        async for count, alloc_cust, disc_cust, alloc_local, disc_local in await conn.exec_sql(sql):
-            if count:
-                await db_obj.setval('tot_alloc_cust', alloc_cust, validate=False)
-                await db_obj.setval('tot_disc_cust', disc_cust, validate=False)
-                await db_obj.setval('tot_alloc_local', alloc_local, validate=False)
-                await db_obj.setval('tot_disc_local', disc_local, validate=False)
+        async for alloc_cust, disc_cust, alloc_local, disc_local in await conn.exec_sql(sql):
+            db_obj.context.tot_alloc_cust = alloc_cust or 0
+            db_obj.context.tot_disc_cust = disc_cust or 0
+            db_obj.context.tot_alloc_local = alloc_local or 0
+            db_obj.context.tot_disc_local = disc_local or 0
 
-    return bool(count)  # False if count == 0, else True
+    return bool(alloc_cust)  # False if alloc_cust == 0, else True
 
 
 """
@@ -870,61 +869,16 @@ async def check_ledg_per(caller, xml):
         await set_action('reopen')
         return
 
-async def check_disc_crn(db_obj, xml):
-    # called from cb_tran_rec/ar_tran_rec after_post
-    det_obj = [_ for _ in db_obj.children if _.table_name == (db_obj.table_name + '_det')][0]
-    ar_rec = [_ for _ in det_obj.children if _.table_name == 'ar_subtran_rec']
-    if not ar_rec:
-        return  # no ar_rec line items created
-    ar_rec = ar_rec[0]
-    if await ar_rec.getval('tot_disc_cust'):
-        await create_disc_crn(ar_rec, xml)
-
-async def create_disc_crn(db_obj, xml):
-    # called from ar_tran_alloc.after_post or from check_disc_crn() above
-    # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
-    #    or create new column on ar_tran_alloc 'crn_check_complete'?
-    #    any tran with 'posted' = True and 'crn_check_complete' = False must be re-run
-
-    discount_cust = await db_obj.getval('tot_disc_cust')
-    discount_local = await db_obj.getval('tot_disc_local')
-
+async def post_disc_crn(db_obj, xml):
     context = db_obj.context
-    data_objects = context.data_objects
-    if 'ar_tran_disc' not in data_objects:
-        data_objects['ar_tran_disc'] = await db.objects.get_db_object(
-            context, 'ar_tran_disc')
-        data_objects['ar_tran_disc_det'] = await db.objects.get_db_object(
-            context, 'ar_tran_disc_det',
-            parent=data_objects['ar_tran_disc'])
-        data_objects['nsls'] = await db.objects.get_db_object(
-            context, 'sls_nsls_subtran',
-            parent=data_objects['ar_tran_disc_det'])
-    ar_tran_disc = data_objects['ar_tran_disc']
-    ar_tran_disc_det = data_objects['ar_tran_disc_det']
-    nsls = data_objects['nsls']
+    disc_objname = [x for x in context.data_objects if x.endswith('ar_tran_disc')][0]
+    disc = context.data_objects[disc_objname]
+    for row_id in context.disc_to_post:
+        await disc.setval('row_id', row_id)
+        await disc.post()
 
-    await ar_tran_disc.init()
-    await ar_tran_disc.setval('cust_row_id',
-        await db_obj.getval('item_row_id>tran_row_id>cust_row_id'))
-    await ar_tran_disc.setval('tran_date',
-        await db_obj.getval('tran_date'))
-    await ar_tran_disc.setval('currency_id',
-        await db_obj.getval('item_row_id>tran_row_id>cust_row_id>currency_id'))
-    await ar_tran_disc.setval('cust_exch_rate',
-        await db_obj.getval('item_row_id>tran_row_id>cust_exch_rate'))
-    await ar_tran_disc.setval('tran_exch_rate',
-        await db_obj.getval('item_row_id>tran_row_id>tran_exch_rate'))
-    await ar_tran_disc.setval('discount_cust', discount_cust)
-    await ar_tran_disc.setval('discount_local', discount_local)
-    await ar_tran_disc.setval('orig_item_id', await db_obj.getval('item_row_id'))
-    await ar_tran_disc.save()
-
-    await ar_tran_disc_det.init()
-    await ar_tran_disc_det.setval('line_type', 'nsls')
-    await nsls.setval('nsls_code_id',
-        await ar_tran_disc.getval('cust_row_id>ledger_row_id>discount_code_id'))
-    await nsls.setval('nsls_amount', discount_cust)
-    await ar_tran_disc_det.save()
-
-    await ar_tran_disc.post()
+async def post_alloc_crn(db_obj, xml):
+    context = db_obj.context
+    disc = context.data_objects[f'{id(db_obj)}.ar_tran_disc']
+    await disc.setval('row_id', context.disc_row_id)
+    await disc.post()

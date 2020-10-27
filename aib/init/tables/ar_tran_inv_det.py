@@ -210,7 +210,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -272,6 +272,16 @@ virt.append ({
     'sql'        : "''"
     })
 virt.append ({
+    'col_name'   : 'cust_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Customer row id',
+    'long_descr' : 'Customer row id',
+    'col_head'   : 'Customer',
+    'dflt_val'   : '{tran_row_id>cust_row_id}',
+    'fkey'       : ['ar_customers', 'row_id', None, None, False, None],
+    'sql'        : 'a.tran_row_id>cust_row_id',
+    })
+virt.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
     'short_descr': 'Transaction date',
@@ -281,13 +291,51 @@ virt.append ({
     'sql'        : "a.tran_row_id>tran_date"
     })
 virt.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text',
+    'long_descr' : 'Line of text to appear on reports',
+    'col_head'   : 'Text',
+    'dflt_val'   : '{tran_row_id>text}',
+    'sql'        : "a.tran_row_id>text"
+    })
+virt.append ({
+    'col_name'   : 'period_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Transaction period',
+    'long_descr' : 'Transaction period',
+    'col_head'   : 'Period',
+    'dflt_val'   : '{tran_row_id>period_row_id}',
+    'sql'        : "a.tran_row_id>period_row_id"
+    })
+virt.append ({
+    'col_name'   : 'currency_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Currency id',
+    'long_descr' : 'Currency id',
+    'col_head'   : 'Currency id',
+    'dflt_val'   : '{tran_row_id>currency_id}',
+    'sql'        : 'a.tran_row_id>currency_id',
+    })
+virt.append ({
+    'col_name'   : 'tran_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Transaction exchange rate',
+    'long_descr' : 'Transacction exchange rate',
+    'col_head'   : 'Tran exch rate',
+    'db_scale'   : 8,
+    'fkey'       : None,
+    'dflt_val'   : '{tran_row_id>tran_exch_rate}',
+    'sql'        : 'a.tran_row_id>tran_exch_rate',
+    })
+virt.append ({
     'col_name'   : 'party_currency_id',
     'data_type'  : 'INT',
     'short_descr': 'Party currency id',
     'long_descr' : 'Party currency id',
     'col_head'   : 'Party currency id',
-    'dflt_val'   : '{tran_row_id>cust_row_id>currency_id}',
-    'sql'        : 'a.tran_row_id>cust_row_id>currency_id',
+    'dflt_val'   : '{cust_row_id>currency_id}',
+    'sql'        : 'a.cust_row_id>currency_id',
     })
 virt.append ({
     'col_name'   : 'party_exch_rate',
@@ -310,15 +358,15 @@ virt.append ({
     'dflt_val'   : '{tran_row_id>tax_incl}',
     'sql'        : 'a.tran_row_id>tax_incl',
     })
-# virt.append ({
-#     'col_name'   : 'posted',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Posted?',
-#     'long_descr' : 'Has transaction been posted?',
-#     'col_head'   : 'Posted?',
-#     'dflt_val'   : '{tran_row_id>posted}',
-#     'sql'        : "a.tran_row_id>posted"
-#     })
+virt.append ({
+    'col_name'   : 'posted',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Posted?',
+    'long_descr' : 'Has transaction been posted?',
+    'col_head'   : 'Posted?',
+    'dflt_val'   : '{tran_row_id>posted}',
+    'sql'        : "a.tran_row_id>posted"
+    })
 virt.append ({
     'col_name'   : 'inv_tot_amt',
     'data_type'  : 'DEC',
@@ -344,7 +392,7 @@ virt.append ({
     'long_descr' : 'Line net amount in customer currency',
     'col_head'   : 'Inv net cust',
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'

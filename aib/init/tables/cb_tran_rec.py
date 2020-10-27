@@ -470,5 +470,15 @@ actions.append([
         ],
     ])
 actions.append([
-    'after_post', '<pyfunc name="custom.artrans_funcs.check_disc_crn"/>'
+    'before_post',
+        '<assign src="[]" tgt="_ctx.disc_to_post"/>'
+        '<assign src="$None" tgt="_ctx.disc_row_id"/>'
+    ])
+actions.append([
+    'after_post',
+        '<case>'
+            '<compare test="[[`if`, ``, `_ctx.disc_to_post`, `!=`, `[]`, ``]]">'
+                '<pyfunc name="custom.artrans_funcs.post_disc_crn"/>'
+            '</compare>'
+        '</case>'
     ])

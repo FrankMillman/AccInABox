@@ -11,7 +11,7 @@ table = {
     'roll_params'   : None,
     # 'indexes'       : [['arrec_cust_date', [['cust_row_id', False], ['tran_date', False]], None, False]],
     'indexes'       : None,
-    'ledger_col'    : 'ledger_row_id',
+    'ledger_col'    : 'cust_row_id>ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -77,22 +77,25 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'ledger_row_id',
+    'col_name'   : 'cust_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Ledger row id',
-    'long_descr' : 'Ledger row id',
-    'col_head'   : 'Ledger',
+    'short_descr': 'Customer row id',
+    'long_descr' : 'Customer row id. In theory, should check if statement period still open. Leave for now.',
+    'col_head'   : 'Customer',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_param.ar_ledger_id', 'is not', '$None', '']],
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{_param.ar_ledger_id}',
+    'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['ar_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, None],
+    'fkey'       : [
+        'ar_customers', 'row_id', 'ledger_id, cust_id, location_id, function_id',
+        'ledger_id, cust_id, location_id, function_id', False, 'cust_bal_2'
+        ],
     'choices'    : None,
     })
 cols.append ({
@@ -195,9 +198,14 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{_ledger.currency_id}',
+    'dflt_val'   : '{cust_row_id>currency_id}',
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        ['alt_curr', 'Alternate currency not allowed', [
+            ['check', '', '$value', '=', 'cust_row_id>currency_id', ''],
+            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+            ]],
+        ],
     'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
     'choices'    : None,
     })
@@ -251,52 +259,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'amount_tran',
-    'data_type'  : 'DEC',
-    'short_descr': 'Amount received - tran curr',
-    'long_descr' : 'Amount received in transaction currency - updated from ar_tran_rec_det',
-    'col_head'   : 'Amount tran',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-# cols.append ({
-#     'col_name'   : 'rec_cust',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Receipt net cust',
-#     'long_descr' : 'Receipt net amount in customer currency',
-#     'col_head'   : 'Rec net cust',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'cust_row_id>currency_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#             '<fld_val name="rec_amt"/>'
-#             '<op type="/"/>'
-#             '<fld_val name="tran_exch_rate"/>'
-#             '<op type="*"/>'
-#             '<fld_val name="cust_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'amount_local',
     'data_type'  : 'DEC',
@@ -394,16 +356,34 @@ actions.append([
         ],
     ])
 actions.append([
-    'post_checks', [
+    'upd_on_save', [
         [
-            'check_totals',
-            'Total amount does not equal total of line items',
-            [
-                ['check', '', 'amount', '=', 'amount_tran', ''],
+            'ar_subtran_rec',  # table name
+            None,  # condition
+            False,  # split source?
+            [],  # key fields
+            [],  # aggregation
+            [  # on insert
+                ['cust_row_id', '=', 'cust_row_id'],  # tgt_col, op, src_col
+                ['arec_amount', '=', 'amount'],
                 ],
+            [  # on update
+                ['arec_amount', '=', 'amount'],  # tgt_col, op, src_col
+                ],
+            [],  # on delete
             ],
         ],
     ])
 actions.append([
-    'after_post', '<pyfunc name="custom.artrans_funcs.check_disc_crn"/>'
+    'before_post',
+        '<assign src="[]" tgt="_ctx.disc_to_post"/>'
+        '<assign src="$None" tgt="_ctx.disc_row_id"/>'
+    ])
+actions.append([
+    'after_post',
+        '<case>'
+            '<compare test="[[`if`, ``, `_ctx.disc_to_post`, `!=`, `[]`, ``]]">'
+                '<pyfunc name="custom.artrans_funcs.post_disc_crn"/>'
+            '</compare>'
+        '</case>'
     ])

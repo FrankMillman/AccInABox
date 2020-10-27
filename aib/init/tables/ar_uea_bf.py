@@ -139,25 +139,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'text',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Text',
-#     'long_descr' : 'Line of text to appear on reports',
-#     'col_head'   : 'Text',
-#     'key_field'  : 'N',
-#     'calculated' : False,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 0,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : 'Invoice',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'cust_exch_rate',
     'data_type'  : 'DEC',
@@ -231,12 +212,48 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'module_id',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Module id',
+    'long_descr' : 'Module id',
+    'col_head'   : 'Module',
+    'sql'        : "'ar'",
+    })
+virt.append ({
+    'col_name'   : 'rev_sign_sls',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - sales transactions?',
+    'col_head'   : 'Reverse sign?',
+    'sql'        : "'0'",
+    })
+virt.append ({
+    'col_name'   : 'party_currency_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Party currency id',
+    'long_descr' : 'Party currency id',
+    'col_head'   : 'Party currency id',
+    'dflt_val'   : '{cust_row_id>currency_id}',
+    'sql'        : 'a.cust_row_id>currency_id',
+    })
+virt.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction currency',
     'long_descr' : 'Currency used to enter transaction',
     'col_head'   : 'Currency',
     'sql'        : 'a.cust_row_id>currency_id',
+    })
+virt.append ({
+    'col_name'   : 'party_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Party exchange rate',
+    'long_descr' : 'Party exchange rate',
+    'col_head'   : 'Party exch rate',
+    'db_scale'   : 8,
+    'fkey'       : None,
+    'dflt_val'   : '{cust_exch_rate}',
+    'sql'        : 'a.cust_exch_rate',
     })
 
 # cursor definitions

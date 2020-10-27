@@ -114,7 +114,7 @@ cols.append ({
     'col_checks' : None,
     'fkey'       : [
         ['source_code', [
-            ['ar_rec_ar', 'ar_tran_rec_det'],
+            ['ar_rec_ar', 'ar_tran_rec'],
             ['ar_rec_cb', 'cb_tran_rec_det'],
             ]],
         'row_id', None, None, True, None],
@@ -135,12 +135,13 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : [
-        ['alt_curr', 'Alternate currency not allowed', [
-            ['check', '', 'cust_row_id>currency_id', '=', 'tran_det_row_id>tran_row_id>currency_id', ''],
-            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
-            ]],
-        ],
+    'col_checks' : None,
+    # 'col_checks' : [
+    #     ['alt_curr', 'Alternate currency not allowed', [
+    #         ['check', '', 'cust_row_id>currency_id', '=', 'currency_id', ''],
+    #         ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+    #         ]],
+    #     ],
     'fkey'       : [
         'ar_customers', 'row_id', 'ledger_id, cust_id, location_id, function_id',
         'ledger_id, cust_id, location_id, function_id', False, 'cust_bal_2'
@@ -148,77 +149,55 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_number',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Receipt number',
-    'long_descr' : 'Receipt number - see before_insert and before_update to ensure unique',
-    'col_head'   : 'Rec no',
-    'key_field'  : 'B',
+    'col_name'   : 'tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Transaction date',
+    'long_descr' : 'Transaction date',
+    'col_head'   : 'Date',
+    'key_field'  : 'N',
     'calculated' : True,
     'allow_null' : False,
     'allow_amend': False,
-    'max_len'    : 15,
+    'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-          '<on_post>'
-            '<expr>'
-              '<fld_val name="tran_det_row_id>tran_row_id>tran_number"/>'
-              '<op type="+"/>'
-              '<literal value="/"/>'
-              '<op type="+"/>'
-              '<string>'
-                '<expr>'
-                  '<fld_val name="tran_det_row_id>line_no"/>'
-                  '<op type="+"/>'
-                  '<literal value="1"/>'
-                '</expr>'
-              '</string>'
-            '</expr>'
-          '</on_post>'
-          '<on_insert>'
-            '<expr>'
-              '<fld_val name="tran_det_row_id>tran_row_id>tran_number"/>'
-              '<op type="+"/>'
-              '<literal value="/"/>'
-              '<op type="+"/>'
-              '<string>'
-                '<expr>'
-                  '<fld_val name="tran_det_row_id>line_no"/>'
-                  '<op type="+"/>'
-                  '<literal value="1"/>'
-                '</expr>'
-              '</string>'
-            '</expr>'
-          '</on_insert>'
-          '<default>'
-            '<fld_val name="tran_number"/>'
-          '</default>'
-        '</case>'
-        ),
+    'dflt_val'   : '{tran_det_row_id>tran_date}',
+    'dflt_rule'   : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'text',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Description',
-    'long_descr' : 'Description',
-    'col_head'   : 'Description',
+    'col_name'   : 'currency_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Transaction currency id',
+    'long_descr' : 'Transaction currency id',
+    'col_head'   : 'Currency id',
     'key_field'  : 'N',
-    'calculated' : False,
+    'calculated' : True,
     'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 30,
+    'allow_amend': False,
+    'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{tran_det_row_id>tran_row_id>text}',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
+    'dflt_val'   : None,
+    'dflt_rule'   : (
+        '<case>'
+          '<compare test="[[`if`, ``, `source_code`, `=`, `~ar_rec_ar~`, ``]]">'
+            '<fld_val name="cust_row_id>currency_id"/>'
+          '</compare>'
+          '<default>'
+            '<fld_val name="tran_det_row_id>currency_id"/>'
+          '</default>'
+        '</case>'
+        ),
+    'col_checks' : [
+        ['alt_curr', 'Alternate currency not allowed', [
+            ['check', '', 'cust_row_id>currency_id', '=', 'currency_id', ''],
+            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+            ]],
+        ],
+    'fkey'       : ['adm_currencies', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -228,7 +207,7 @@ cols.append ({
     'long_descr' : 'Exchange rate from customer currency to local currency',
     'col_head'   : 'Rate cust',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_ledger.alt_rec_override', 'is', '$False', '']],
+    'calculated' : True,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -255,19 +234,117 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date. Could be derived using fkey, but denormalised to speed up ar_trans view',
-    'col_head'   : 'Date',
+    'col_name'   : 'tran_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Tran exchange rate',
+    'long_descr' : 'Exchange rate from transaction currency to local currency',
+    'col_head'   : 'Rate cust',
     'key_field'  : 'N',
     'calculated' : True,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
+    'db_scale'   : 8,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+                '<literal value="1"/>'
+            '</compare>'
+            '<default>'
+                '<expr>'
+                    '<exch_rate>'
+                        '<fld_val name="currency_id"/>'
+                        '<fld_val name="tran_date"/>'
+                    '</exch_rate>'
+                '</expr>'
+            '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Receipt number',
+    'long_descr' : 'Receipt number - see before_insert and before_update to ensure unique',
+    'col_head'   : 'Rec no',
+    'key_field'  : 'B',
+    'calculated' : [
+        ['where', '', '_ledger.auto_rec_no', 'is not', '$None', ''],
+        ['or', '', 'cust_row_id>ledger_row_id>auto_rec_no', 'is not', '$None', ''],
+        ],
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 15,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{tran_det_row_id>tran_row_id>tran_date}',
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `source_code`, `=`, `~ar_rec_ar~`, ``]]">'
+            '<fld_val name="tran_det_row_id>tran_number"/>'
+          '</compare>'
+          '<default>'
+            '<case>'
+                '<on_post>'
+                    '<expr>'
+                    '<fld_val name="tran_det_row_id>tran_number"/>'
+                    '<op type="+"/>'
+                    '<literal value="/"/>'
+                    '<op type="+"/>'
+                    '<string>'
+                        '<expr>'
+                        '<fld_val name="tran_det_row_id>line_no"/>'
+                        '<op type="+"/>'
+                        '<literal value="1"/>'
+                        '</expr>'
+                    '</string>'
+                    '</expr>'
+                '</on_post>'
+                '<on_insert>'
+                    '<expr>'
+                    '<fld_val name="tran_det_row_id>tran_number"/>'
+                    '<op type="+"/>'
+                    '<literal value="/"/>'
+                    '<op type="+"/>'
+                    '<string>'
+                        '<expr>'
+                        '<fld_val name="tran_det_row_id>line_no"/>'
+                        '<op type="+"/>'
+                        '<literal value="1"/>'
+                        '</expr>'
+                    '</string>'
+                    '</expr>'
+                '</on_insert>'
+                '<default>'
+                    '<fld_val name="tran_number"/>'
+                '</default>'
+            '</case>'
+          '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Description',
+    'long_descr' : 'Description',
+    'col_head'   : 'Description',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 30,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{tran_det_row_id>text}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -285,7 +362,7 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>tran_row_id>currency_id>scale',
+    'scale_ptr'  : 'currency_id>scale',
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -311,7 +388,7 @@ cols.append ({
         '<expr>'
           '<fld_val name="arec_amount"/>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_exch_rate"/>'
           '<op type="*"/>'
           '<fld_val name="cust_exch_rate"/>'
         '</expr>'
@@ -321,111 +398,10 @@ cols.append ({
             ['check', '', '$value', '=', 'arec_cust', ''],
             ['or', '', '_ledger.alt_rec_perc', '=', '0', ''],
             ['or', '',
-                '(abs(($value / (arec_amount / tran_det_row_id>tran_row_id>tran_exch_rate * cust_exch_rate))'
+                '(abs(($value / (arec_amount / tran_exch_rate * cust_exch_rate))'
                 ' - 1) * 100)', '<=', '_ledger.alt_rec_perc', ''],
             ]],
         ],
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'arec_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Receipt local',
-    'long_descr' : 'Receipt amount in local currency',
-    'col_head'   : 'Rec local',
-    'key_field'  : 'N',
-    'calculated' : True,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="arec_amount"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
-        '</expr>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tot_alloc_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total allocated - cust',
-    'long_descr' : 'Total allocated cust - updated from ar_allocations after_save',
-    'col_head'   : 'Disc',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tot_disc_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total discount - cust',
-    'long_descr' : 'Total discount cust - updated from ar_allocations after_save',
-    'col_head'   : 'Disc',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tot_alloc_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total allocated - local',
-    'long_descr' : 'Total allocated local - updated from ar_allocations after_save',
-    'col_head'   : 'Disc',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tot_disc_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total discount - local',
-    'long_descr' : 'Total discount local - updated from ar_allocations after_save',
-    'col_head'   : 'Disc',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -436,18 +412,26 @@ cols.append ({
     'long_descr' : (
         'Has transaction been posted? '
         'Could be derived using fkey, but denormalised to speed up ar_trans view.'
-        'ar_tran_rec_det and cb_tran_rec_det update this column when they are posted - see their on_post action.'
         ),
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'calculated' : True,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
-    'dflt_rule'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<on_post>'
+                '<literal value="$True"/>'
+            '</on_post>'
+            '<default>'
+                '<literal value="$False"/>'
+            '</default>'
+        '</case>'
+        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -455,24 +439,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'tran_date',
-#     'data_type'  : 'DTE',
-#     'short_descr': 'Transaction date',
-#     'long_descr' : 'Transaction date',
-#     'col_head'   : 'Tran date',
-#     'dflt_val'   : '{tran_det_row_id>tran_row_id>tran_date}',
-#     'sql'        : "a.tran_det_row_id>tran_row_id>tran_date"
-#     })
-# virt.append ({
-#     'col_name'   : 'text',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Text',
-#     'long_descr' : 'Text',
-#     'col_head'   : 'Text',
-#     'dflt_val'   : '{tran_det_row_id>tran_row_id>text}',
-#     'sql'        : "a.tran_det_row_id>tran_row_id>text"
-#     })
 virt.append ({
     'col_name'   : 'item_row_id',
     'data_type'  : 'INT',
@@ -486,73 +452,24 @@ virt.append ({
         "AND b.split_no = 0 AND b.deleted_id = 0"
         ),
     })
-# virt.append ({
-#     'col_name'   : 'item_tran_type',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Open item tran type',
-#     'long_descr' : 'Open item tran type',
-#     'col_head'   : 'Tran type',
-#     'sql'        : "'ar_rec'",
-#     })
-# virt.append ({
-#     'col_name'   : 'alloc_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Allocation row id',
-#     'long_descr' : 'Allocation row id',
-#     'col_head'   : 'Alloc id',
-#     'fkey'       : ['ar_allocations', 'row_id', None, None, False, None],
-#     'sql'        : (
-#         "SELECT b.row_id FROM {company}.ar_allocations b "
-#         "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id "
-#         "AND b.item_row_id = a.item_row_id"
-#         ),
-#     })
 virt.append ({
-    'col_name'   : 'tran_exch_rate',
+    'col_name'   : 'arec_local',
     'data_type'  : 'DEC',
-    'short_descr': 'Transaction exchange rate',
-    'long_descr' : 'Exchange rate from transaction currency to local currency',
-    'col_head'   : 'Rate tran',
-    'db_scale'   : 8,
-    'dflt_val'   : '{tran_det_row_id>tran_row_id>tran_exch_rate}',
-    'sql'        : "a.tran_det_row_id>tran_row_id>tran_exch_rate"
+    'short_descr': 'Receipt local',
+    'long_descr' : 'Receipt amount in local currency',
+    'col_head'   : 'Rec local',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="arec_amount"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+        '</expr>'
+        ),
+    'sql'        : "a.arec_amount / a.tran_exch_rate",
     })
-virt.append ({
-    'col_name'   : 'currency_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Transaction currency id',
-    'long_descr' : 'Transaction currency id',
-    'col_head'   : 'Currency id',
-    'dflt_val'   : '{tran_det_row_id>tran_row_id>currency_id}',
-    'sql'        : "a.tran_det_row_id>tran_row_id>currency_id"
-    })
-# virt.append ({
-#     'col_name'   : 'posted',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Posted?',
-#     'long_descr' : 'Has transaction been posted?',
-#     'col_head'   : 'Posted?',
-#     'dflt_val'   : '{tran_det_row_id>tran_row_id>posted}',
-#     'sql'        : "a.tran_det_row_id>tran_row_id>posted"
-#     })
-# virt.append ({
-#     'col_name'   : 'arec_local',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Receipt local',
-#     'long_descr' : 'Receipt amount in local currency',
-#     'col_head'   : 'Rec local',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#           '<fld_val name="arec_amount"/>'
-#           '<op type="/"/>'
-#           '<fld_val name="tran_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'sql'        : "a.arec_amount / a.tran_exch_rate",
-#     })
 virt.append ({
     'col_name'   : 'arec_trans_cust',
     'data_type'  : 'DEC',
@@ -593,7 +510,7 @@ virt.append ({
         "COALESCE(("
             "SELECT SUM(b.alloc_cust) "
             "FROM {company}.ar_subtran_rec_alloc b "
-            "WHERE b.subtran_row_id = a.row_id AND b.deleted_id = 0"
+            "WHERE b.subtran_det_row_id = a.row_id AND b.deleted_id = 0"
             "), 0)"
         ),
     })
@@ -678,8 +595,7 @@ actions.append([
         [
             'ar_allocations',
             [  # condition
-                # ['where', '', 'tot_alloc_cust', '!=', '0', ''],
-                ['where', '', 'tot_alloc_cust', 'pyfunc', 'custom.artrans_funcs.get_tot_alloc', ''],
+                ['where', '', '_ctx.tot_alloc_cust', 'pyfunc', 'custom.artrans_funcs.get_tot_alloc', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -688,12 +604,33 @@ actions.append([
                 ],
             [],  # aggregation
             [  # on post
-                ['alloc_cust', '-', 'tot_alloc_cust'],  # tgt_col, op, src_col
-                # ['discount_cust', '-', 'tot_disc_cust'],
-                ['alloc_local', '-', 'tot_alloc_local'],
-                # ['discount_local', '-', 'tot_disc_local'],
+                ['alloc_cust', '-', '_ctx.tot_alloc_cust'],  # tgt_col, op, src_col
+                ['alloc_local', '-', '_ctx.tot_alloc_local'],
                 ],
             [],  # on unpost
+            ],
+        [
+            'ar_tran_disc',
+            [  # condition
+                ['where', '', '_ctx.tot_disc_cust', '!=', '0', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['cust_row_id', 'cust_row_id'],  # tgt_col, op, src_col
+                ],
+            [],  # aggregation
+            [  # on post
+                ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
+                ['cust_exch_rate', '=', 'cust_exch_rate'],
+                ['tran_exch_rate', '=', 'tran_exch_rate'],
+                ['discount_cust', '-', '_ctx.tot_disc_cust'],
+                ['discount_local', '-', '_ctx.tot_disc_local'],
+                ['orig_item_id', '=', 'item_row_id'],
+                ],
+            [],  # on unpost
+            [  # return values
+                ['_ctx.disc_row_id', 'row_id'],  # tgt_col, src_col
+                ],
             ],
         [
             'ar_totals',  # table name
@@ -754,4 +691,17 @@ actions.append([
             [],  # on unpost
             ],
         ],
+    ])
+actions.append([
+    'after_update',
+        '<case>'
+            '<on_post>'
+                '<case>'
+                    '<compare test="[[`if`, ``, `_ctx.disc_row_id`, `is not`, `$None`, ``]]">'
+                        '<append src="_ctx.disc_row_id" tgt="_ctx.disc_to_post"/>'
+                        '<assign src="$None" tgt="_ctx.disc_row_id"/>'
+                    '</compare>'
+                '</case>'
+            '</on_post>'
+        '</case>'
     ])

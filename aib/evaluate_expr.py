@@ -91,6 +91,8 @@ async def eval_elem(elem, db_obj, fld=None, value=None):
         return False
     if elem == '$in_db_post':
         return db_obj.context.in_db_post
+    if elem == '[]':
+        return []
     if elem.startswith("'"):
         return elem[1:-1]
     if elem.isdigit():
@@ -120,9 +122,12 @@ async def eval_elem(elem, db_obj, fld=None, value=None):
 
 async def eval_bool(src, chk, tgt, db_obj, fld, value):
     if chk == 'pyfunc':
-        if fld is None:  # called from db.objects
-            fld = await db_obj.getfld(src)  # src is the field name to check
-        src_val = await eval_elem(src, db_obj, fld, value)
+        if src.startswith('_ctx.'):
+            src_val = getattr(db_obj.context, src[5:], None)
+        else:
+            if fld is None:  # called from db.objects
+                fld = await db_obj.getfld(src)  # src is the field name to check
+            src_val = await eval_elem(src, db_obj, fld, value)
         func_name = tgt
         module_name, func_name = func_name.rsplit('.', 1)
         module = importlib.import_module(module_name)

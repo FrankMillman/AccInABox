@@ -431,7 +431,7 @@ class DbObject:
                 raise AibError(head='Error',
                     body=f'{parent.table_name} is not a parent of {self.table_name}')
 
-        self.fields = OD()  # key=col_name value=Field() instance
+        self.fields = {}  # key=col_name value=Field() instance
         self.flds_to_update = []
         self.select_cols = []
         self.virtual_flds = []
@@ -477,22 +477,25 @@ class DbObject:
                 await field.setup_foreign_key()
                 field._value = fkey_parent._value
 
-            for col_name in col_defn.dependencies:
-                fld = await self.getfld(col_name)
-                fld.notify_recalc(field)
-
-        # convert table.primary_keys (column instances)
-        #   to record.primary_keys (field instances)
+        # convert db_table.primary_keys (column instances)
+        #   to db_obj.primary_keys (field instances)
         self.primary_keys = [
             self.fields[col_defn.col_name]
                 for col_defn in db_table.primary_keys]
 
-        # convert col.alt_keys (column instances)
-        #   to field.alt_keys (field instances)
-        for col_name, field in self.fields.items():
-            field.table_keys = [
-                self.fields[col.col_name]
-                    for col in field.col_defn.table_keys]
+        # this can only be done after all fields set up
+        for col_defn in db_table.col_list:
+            if col_defn.col_type != 'virt':
+                field = self.fields[col_defn.col_name]
+                # convert any col_defn.table_keys (column instances)
+                #   to field.table_keys (field instances)
+                field.table_keys = [
+                    self.fields[col.col_name]
+                        for col in col_defn.table_keys]
+                # notify affected fields about any dependencies
+                for col_name in col_defn.dependencies:
+                    fld = await self.getfld(col_name)
+                    fld.notify_recalc(field)
 
         if db_table.sequence is not None:
             seq_col = db_table.sequence[0]
@@ -1260,7 +1263,7 @@ class DbObject:
                 for tgt_fld, src_fld in return_vals:
                     await tgt_fld.setval(await src_fld.getval(), display=True, validate=False)
 
-            if self.dirty:  # could have been updated in upd_on_save or from sub_tran
+            if self.dirty:  # could have been updated in upd_on_save/post or from sub_tran
                 await self.update(conn, from_upd_on_save=True)
         
             if not from_upd_on_save:
@@ -1723,17 +1726,6 @@ class DbObject:
                             src_val = await src_fld.getval() - await src_fld.get_orig()
                         elif upd_type == 'deleted':
                             src_val = 0 - await src_fld.getval()
-                        # tgt_fld = await tgt_obj.getfld(tgt_col)
-                        # tgt_scale = tgt_fld.col_defn.db_scale
-                        # if op == '+':
-                        #     sql += '{0} = ROUND({0} + {1}, {1}), '.format(tgt_col, param_style)
-                        # elif op == '-':
-                        #     sql += '{0} = ROUND({0} - {1}, {1}, '.format(tgt_col, param_style)
-                        # else:
-                        #     raise NotImplementedError
-                        # upd_params += [src_val, tgt_scale]
-                        # sql += f'{tgt_col} = ROUND({tgt_col} {op} {param_style}, {param_style}), '
-                        # upd_params += [src_val, tgt_scale]
                         sql += f'{tgt_col} = {tgt_col} {op} {param_style}, '
                         upd_params += [src_val]
                 sql = sql[:-2] + where_clause
@@ -1795,7 +1787,13 @@ class DbObject:
 
         if return_vals:
             for tgt, src in return_vals[0]:
-                await self.setval(tgt, await tgt_obj.getval(src))
+                if tgt.startswith('_ctx.'):
+                    tgt = tgt[5:]
+                    setattr(self.context, tgt, await tgt_obj.getval(src))
+                else:
+                    await self.setval(tgt, await tgt_obj.getval(src))
+            if self.dirty:
+                await self.update(conn, from_upd_on_save=True, call_upd_on_save=False)
 
     async def upd_split_src(self, tbl_name, upd_on_save, conn, upd_type):
         func_name, fkeys, flds_to_upd, return_cols, check_totals = upd_on_save
@@ -1882,9 +1880,6 @@ class DbObject:
                     if not await eval_bool_expr(post_chk, self):
                         raise AibError(head=self.db_table.short_descr, body=errmsg)
 
-            if self.dirty:
-                await self.save()
-
             if not posting_child:
                 if post_type == 'post':
                     if await self.getval('posted'):
@@ -1910,7 +1905,7 @@ class DbObject:
                 #   called 'post', update it with date/time/user_id of posting, and populate
                 #   'posted' with a reference to {table}_audit_xref
                 # implemented [2018-09-13] - without setting 'posted' to xref (chicken/egg)
-                #   also, 'posted' is bool, not int - thought could change to int if required [2019-08-23]
+                #   also, 'posted' is bool, not int - though could change to int if required [2019-08-23]
                 # another thought [2018-05-04]
                 # is it possible to change a record and post it in one operation?
                 # if so, must preserve audit trail of changes
@@ -2016,7 +2011,7 @@ class DbObject:
     async def unpost(self):
         await self.post(post_type='unpost')
 
-    async def upd_on_post(self, upd_on_post, conn, upd_type):
+    async def upd_on_post(self, upd_on_post, conn, post_type):
         tbl_name, condition, split_src, *upd_on_post = upd_on_post
 
         if condition:
@@ -2024,7 +2019,7 @@ class DbObject:
                 return
 
         if split_src:
-            await self.upd_split_src(tbl_name, upd_on_post, conn, upd_type)
+            await self.upd_split_src(tbl_name, upd_on_post, conn, post_type)
             return
 
         param_style = self.db_table.constants.param_style
@@ -2088,12 +2083,7 @@ class DbObject:
 
             for tgt_col, op, src_col in aggr:
                 src_val = await self.getval(src_col)
-                # src_fld = await self.getfld(src_col)
-                # if upd_type == 'post':
-                #     src_val = await src_fld.getval()
-                # elif upd_type == 'unpost':
-                #     src_val = 0 - await src_fld.getval()
-                if upd_type == 'unpost':
+                if post_type == 'unpost':
                     src_val = 0 - src_val
                 tgt_fld = await tgt_obj.getfld(tgt_col)
                 tgt_val = await tgt_fld.getval()
@@ -2107,32 +2097,12 @@ class DbObject:
             if roll_params is not None:
                 sql = 'UPDATE {0}.{1} SET '.format(tgt_obj.company, tbl_name)
                 upd_params = []
-                # for tgt_col, op, src_col in aggr:
-                #     src_fld = await self.getfld(src_col)
-                #     tgt_fld = await tgt_obj.getfld(tgt_col)
-                #     tgt_scale = tgt_fld.col_defn.db_scale
-                #     if tgt_col in roll_columns:
-                #         if upd_type == 'post':
-                #             src_val = await src_fld.getval()
-                #         elif upd_type == 'unpost':
-                #             src_val = 0 - await src_fld.getval()
-                #         if op == '+':
-                #             sql += '{0} = ROUND({0} + {1}, {1}), '.format(tgt_col, param_style)
-                #         elif op == '-':
-                #             sql += '{0} = ROUND({0} - {1}, {1}), '.format(tgt_col, param_style)
-                #         else:
-                #             raise NotImplementedError
-                #         upd_params += [src_val, tgt_scale]
-
                 for tgt_col, op, src_col in aggr:
                     if tgt_col in roll_columns:
                         tgt_fld = await tgt_obj.getfld(tgt_col)
-                        tgt_scale = tgt_fld.col_defn.db_scale
                         src_val = await self.getval(src_col)
-                        if upd_type == 'unpost':
+                        if post_type == 'unpost':
                             src_val = 0 - src_val
-                        # sql += f'{tgt_col} = ROUND({tgt_col} {op} {param_style}, {param_style}), '
-                        # upd_params += [src_val, tgt_scale]
                         sql += f'{tgt_col} = {tgt_col} {op} {param_style}, '
                         upd_params += [src_val]
 
@@ -2140,7 +2110,7 @@ class DbObject:
                 upd_params.extend(params)
                 await conn.exec_cmd(sql, upd_params)
 
-        if upd_type == 'post':
+        if post_type == 'post':
             if len(on_post) == 1 and on_post[0][0] == 'delete':
                 delete_obj = True
             else:
@@ -2156,7 +2126,7 @@ class DbObject:
                     elif op == '-':
                         await tgt_fld.setval(await tgt_fld.getval() - src_val, validate=False)
 
-        elif upd_type == 'unpost':
+        elif post_type == 'unpost':
             if len(on_unpost) == 1 and on_unpost[0][0] == 'delete':
                 delete_obj = True
             else:
@@ -2179,7 +2149,11 @@ class DbObject:
 
         if return_vals:
             for tgt, src in return_vals[0]:
-                await self.setval(tgt, await tgt_obj.getval(src))
+                if tgt.startswith('_ctx.'):
+                    tgt = tgt[5:]
+                    setattr(self.context, tgt, await tgt_obj.getval(src))
+                else:
+                    await self.setval(tgt, await tgt_obj.getval(src))
 
     async def increment_seq(self, conn):  # called before save
         param_style = self.db_table.constants.param_style
@@ -2733,9 +2707,11 @@ class DbTable:
         if alt_keys:
             alt_keys[-1].table_keys = alt_keys
             # if col has a dflt_rule, allow previous col to attempt a select_row()
+            # but not if dflt_rule uses 'auto_gen' - will keep generating next no!
             pos = len(alt_keys) - 1
             while pos:
-                if alt_keys[pos].dflt_rule is None:
+                if (alt_keys[pos].dflt_rule is None or
+                        alt_keys[pos].dflt_rule.find('.//auto_gen') is not None):
                     break
                 alt_keys[pos-1].table_keys = alt_keys
                 pos -= 1

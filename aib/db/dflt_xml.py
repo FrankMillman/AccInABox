@@ -18,7 +18,7 @@ async def get_db_dflt(fld, orig=False):
     calc_orig_value = orig
     debug = False
 
-    # debug = (fld.col_name == 'eff_date')
+    # debug = (f'{fld.table_name}.{fld.col_name}' == 'ar_tran_disc.tran_number')
 
     for xml in fld.col_defn.dflt_rule:
         if debug:
@@ -334,6 +334,8 @@ async def get_val(fld, value):
             return None
         else:
             return op(lft, rgt)
+    if value == '[]':
+        return []
     if value.startswith("'"):
         return value[1:-1]
     if value == '$True':

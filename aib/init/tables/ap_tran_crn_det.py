@@ -271,6 +271,16 @@ virt.append ({
     'col_head'   : 'Description',
     })
 virt.append ({
+    'col_name'   : 'supp_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Supplier row id',
+    'long_descr' : 'Supplier row id',
+    'col_head'   : 'Supplier',
+    'dflt_val'   : '{tran_row_id>supp_row_id}',
+    'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
+    'sql'        : 'a.tran_row_id>supp_row_id',
+    })
+virt.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
     'short_descr': 'Transaction date',
@@ -278,6 +288,42 @@ virt.append ({
     'col_head'   : 'Tran date',
     'dflt_val'   : '{tran_row_id>tran_date}',
     'sql'        : "a.tran_row_id>tran_date"
+    })
+virt.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text',
+    'long_descr' : 'Line of text to appear on reports',
+    'col_head'   : 'Text',
+    'dflt_val'   : '{tran_row_id>text}',
+    'sql'        : "a.tran_row_id>text"
+    })
+virt.append ({
+    'col_name'   : 'period_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Transaction period',
+    'long_descr' : 'Transaction period',
+    'col_head'   : 'Period',
+    'dflt_val'   : '{tran_row_id>period_row_id}',
+    'sql'        : "a.tran_row_id>period_row_id"
+    })
+virt.append ({
+    'col_name'   : 'currency_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Currency id',
+    'long_descr' : 'Currency id',
+    'col_head'   : 'Currency id',
+    'dflt_val'   : '{tran_row_id>currency_id}',
+    'sql'        : 'a.tran_row_id>currency_id',
+    })
+virt.append ({
+    'col_name'   : 'tran_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Transaction exchange rate',
+    'long_descr' : 'Exchange rate from transaction currency to local',
+    'col_head'   : 'Rate tran',
+    'dflt_val'   : '{tran_row_id>tran_exch_rate}',
+    'sql'        : "a.tran_row_id>tran_exch_rate"
     })
 virt.append ({
     'col_name'   : 'party_currency_id',
