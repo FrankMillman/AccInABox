@@ -140,6 +140,25 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text',
+    'long_descr' : 'Line of text to appear on reports',
+    'col_head'   : 'Text',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'B/fwd',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'supp_exch_rate',
     'data_type'  : 'DEC',
     'short_descr': 'Supp exchange rate',

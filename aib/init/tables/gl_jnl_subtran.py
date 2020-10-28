@@ -155,8 +155,17 @@ cols.append ({
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{tran_det_row_id>text}',
-    'dflt_rule'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `text`, `is not`, `$None`, ``]]">'
+            '<fld_val name="text"/>'
+          '</compare>'
+          '<default>'
+            '<fld_val name="tran_det_row_id>text"/>'
+          '</default>'
+        '</case>'
+        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,

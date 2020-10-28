@@ -47,7 +47,7 @@ function AibText() {};
 AibText.prototype = new AibCtrl();
 AibText.prototype.after_got_focus = function(text) {
   if (!text.amendable()) {
-    setInsertionPoint(text, 0);  //inp.value.length);
+    setInsertionPoint(text, 0, text.value.length);
     return;
     };
   if (text.multi_line === true) {
@@ -55,7 +55,7 @@ AibText.prototype.after_got_focus = function(text) {
     setInsertionPoint(text, 0);
     }
   else
-    setInsertionPoint(text, 0);  //inp.value.length);
+    setInsertionPoint(text, 0, text.value.length);
   };
 AibText.prototype.set_dflt_val = function(text, value) {
   text.value = value;
@@ -379,7 +379,7 @@ AibDate.prototype.after_got_focus = function(date) {
   if (date.valid) {
     date.value = this.date_to_string(date, date.current_value, date.input_format);
     date.pos = 0;  //date.blank.length;
-    setInsertionPoint(date, 0);  //, date.pos);
+    setInsertionPoint(date, 0, date.blank.length);
     date.selected = true;
     }
   else  // returning from failed validation - leave string untouched

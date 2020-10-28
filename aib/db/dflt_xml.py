@@ -229,6 +229,8 @@ async def fld_val(fld, xml, debug):
     tgt_fld = await fld.db_obj.getfld(fld_name)
     if calc_orig_value:
         return await tgt_fld.get_orig()
+    elif xml.get('prev') == 'true':
+        return await tgt_fld.get_prev()
     else:
         fld_value = await tgt_fld.getval()
         if fld in tgt_fld.flds_to_recalc:  # fld.must_be_evaluated has been set, but we are evaluating!
@@ -293,12 +295,6 @@ async def on_insert(fld, xml, debug):
 
 async def on_post(fld, xml, debug):
     return fld.db_obj.context.in_db_post
-    # posted = await fld.db_obj.getfld('posted')
-    # if posted.col_defn.dflt_val is not None:
-    #     if posted.col_defn.dflt_val.startswith('{'):  # must be a virtual field pointing to 'posted'
-    #         # get the underlying field 'posted', not the virtual field
-    #         posted = await posted.db_obj.getfld(posted.col_defn.dflt_val[1:-1])
-    # return await posted.getval() and not await posted.get_orig()
 
 async def compare(fld, xml, debug):
     test = loads(xml.get('test').replace("'", '"').replace('~', "'"))
@@ -344,6 +340,8 @@ async def get_val(fld, value):
         return False
     if value == '$None':
         return None
+    if value == '$prev':
+        return await fld.get_prev()
     if value == '$exists':
         return fld.db_obj.exists
     if value.isdigit():

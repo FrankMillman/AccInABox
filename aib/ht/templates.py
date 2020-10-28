@@ -735,7 +735,9 @@ class Transaction:  # template for capturing transactions
               '&lt;parent_req_cancel/&gt;'
           '"/>'
 
-          f'{do_save}'
+          '<method name="do_save" action="'  # separate method so it can be over-ridden
+              '&lt;save_obj obj_name=&quot;[obj_name]&quot; from_upd_on_save=&quot;true&quot;/&gt;'
+          '"/>'
 
           '<method name="do_post" action="'  # separate method so it can be over-ridden
               '&lt;post_obj obj_name=&quot;[obj_name]&quot;/&gt;'

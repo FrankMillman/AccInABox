@@ -103,6 +103,8 @@ async def eval_elem(elem, db_obj, fld=None, value=None):
         return await eval_infix(elem[1:-1], db_obj, fld, value)
     if elem == '$orig':
         return await fld.get_orig()
+    if elem == '$prev':
+        return await fld.get_prev()
     if '$exists' in elem:
         obj_name = elem.split('$')[0]
         if obj_name:

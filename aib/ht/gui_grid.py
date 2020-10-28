@@ -884,6 +884,8 @@ class GuiGrid:
             fld = obj.fld
             if fld.must_be_evaluated:
                 dflt_val = await fld.getval()
+            elif await fld.getval() is None:
+                dflt_val = await fld.get_dflt()
         self.session.responder.send_cell_set_focus(self.ref, row, obj.ref, dflt_val)
 
     @log_func
@@ -1098,6 +1100,8 @@ class GuiGrid:
                     fld = obj.fld
                     if fld.must_be_evaluated:
                         self.temp_data[obj.ref] = await fld.val_to_str(await fld.getval())
+                    elif await fld.getval() is None:
+                        self.temp_data[obj.ref] = await fld.val_to_str(await fld.get_dflt())
 
             try:
                 self.last_vld += 1  # preset, for 'after_input'

@@ -191,7 +191,8 @@ async def req_save(caller, xml):
 
 async def save_obj(caller, xml):
     db_obj = caller.data_objects[xml.get('obj_name')]
-    await db_obj.save()
+    from_upd_on_save = (xml.get('from_upd_on_save') == 'true')
+    await db_obj.save(from_upd_on_save=from_upd_on_save)
 
 async def post_obj(caller, xml):
     db_obj = caller.data_objects[xml.get('obj_name')]

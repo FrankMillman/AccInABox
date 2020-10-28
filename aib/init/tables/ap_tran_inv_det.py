@@ -23,7 +23,7 @@ table = {
                     ['inv_tax_supp', 'tax_party'],
                     ['inv_tax_local', 'tax_local'],
                     ],
-                ['npch_descr'],  # display descr
+                ['npch_code_id>descr'],  # display descr
                 ],
             ['archg', 'Charge to customer', 'ar_subtran_chg',
                 [  # return values

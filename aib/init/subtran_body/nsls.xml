@@ -8,9 +8,9 @@
   <input obj_name="nsls" col_name="nsls_code" lng="80"/>
   <row/>
   <col/>
-  <label value="Description:"/>
+  <label value="Text:"/>
   <col/>
-  <input obj_name="nsls" col_name="nsls_descr" lng="120"/>
+  <input obj_name="nsls" col_name="text" lng="120"/>
   <row/>
   <col/>
   <label value="Amount:"/>

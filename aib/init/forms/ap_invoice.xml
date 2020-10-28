@@ -9,6 +9,7 @@
     <db_obj name="ipch" table_name="pch_ipch_subtran" parent="ap_invdet"/>
     <db_obj name="npch" table_name="pch_npch_subtran" parent="ap_invdet"/>
     <db_obj name="achg" table_name="ar_subtran_chg" parent="ap_invdet"/>
+    <db_obj name="gl" table_name="gl_jnl_subtran" parent="ap_invdet"/>
     <db_obj name="com" table_name="ap_comments" parent="ap_invdet"/>
   </db_objects>
 
@@ -32,30 +33,25 @@
       <col/>
       <label value="Invoice no:"/>
       <col/>
-      <input obj_name="ap_inv" col_name="tran_number" lng="80" readonly="true" skip="true"/>
+      <input obj_name="ap_inv" col_name="tran_number" lng="80" skip="true"/>
 
       <row/>
       <col/>
       <label value="Invoice date:"/>
       <col/>
-      <input obj_name="ap_inv" col_name="tran_date" lng="84" readonly="true" skip="true"/>
-
-      <col/>
-      <label value="Terms code:"/>
-      <col/>
-      <input obj_name="ap_inv" col_name="terms_code" lng="60" readonly="true" skip="true"/>
+      <input obj_name="ap_inv" col_name="tran_date" lng="84" skip="true"/>
 
       <row/>
       <col/>
-      <label value="Tax inclusive?"/>
+      <label value="Text:"/>
       <col/>
-      <input obj_name="ap_inv" col_name="tax_incl" readonly="true" skip="true"/>
+      <input obj_name="ap_inv" col_name="text" lng="250" skip="true"/>
 
       <row/>
       <col/>
       <label value="Amount:"/>
       <col/>
-      <input obj_name="ap_inv" col_name="inv_amount" lng="120" readonly="true" skip="true"/>
+      <input obj_name="ap_inv" col_name="inv_amount" lng="120" skip="true"/>
 
       <col/>
       <label value="Invoice total:"/>
@@ -112,7 +108,7 @@
 
           <row/>
           <col/>
-          <input obj_name="ap_invdet" col_name="line_type" radio="true" form_dflt="
+          <input obj_name="ap_invdet" col_name="line_type" form_dflt="
             <<prev_value/>>
             "/>
 
@@ -121,6 +117,7 @@
             <subtran_body subtran_id="ipch"/>
             <subtran_body subtran_id="npch"/>
             <subtran_body subtran_id="ar_chg"/>
+            <subtran_body subtran_id="gl"/>
             <subtran_body subtran_id="com"/>
           </subtran_frame>
 
@@ -353,6 +350,12 @@
         <label value="Amount:"/>
         <col/>
         <input obj_name="ap_inv" col_name="inv_amount" lng="120"/>
+
+        <row/>
+        <col/>
+        <label value="Text:"/>
+        <col/>
+        <input obj_name="ap_inv" col_name="text" lng="250" form_dflt="<<prev_value/>>"/>
 
       </body>
 

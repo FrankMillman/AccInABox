@@ -17,7 +17,7 @@ table = {
                 [  # return values
                     ['rec_cb', 'tot_amt'],  # tgt_col, src_col
                     ],
-                ['nsls_descr'],  # display descr
+                ['nsls_code_id>descr'],  # display descr
                 ],
             ['arec', 'Ar receipt', 'ar_subtran_rec',
                 [  # return values

@@ -38,8 +38,9 @@
       <col/>
       <label value="Invoice date:"/>
       <col/>
-      <input obj_name="ar_inv" col_name="tran_date" lng="84" readonly="true" skip="true"/>
+      <input obj_name="ar_inv" col_name="tran_date" lng="84" skip="true"/>
 
+<!--
       <col/>
       <label value="Terms code:"/>
       <col/>
@@ -50,6 +51,7 @@
       <label value="Tax inclusive?"/>
       <col/>
       <input obj_name="ar_inv" col_name="tax_incl" readonly="true" skip="true"/>
+-->
 
       <col/>
       <label value="Invoice total:"/>
@@ -202,6 +204,12 @@
         <col/>
         <input obj_name="ar_inv" col_name="tran_number" lng="80"/>
         <end_if/>
+
+        <row/>
+        <col/>
+        <label value="Text:"/>
+        <col/>
+        <input obj_name="ar_inv" col_name="text" lng="250" form_dflt="<<prev_value/>>"/>
 
         <!-- <row/>
         <col/>

@@ -214,11 +214,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'npch_descr',
+    'col_name'   : 'text',
     'data_type'  : 'TEXT',
-    'short_descr': 'Description',
-    'long_descr' : 'Description',
-    'col_head'   : 'Description',
+    'short_descr': 'Text',
+    'long_descr' : 'Line of text to appear on reports',
+    'col_head'   : 'Text',
     'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
@@ -226,8 +226,17 @@ cols.append ({
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{npch_code_id>descr}',
-    'dflt_rule'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `text`, `is not`, `$None`, ``]]">'
+            '<fld_val name="text"/>'
+          '</compare>'
+          '<default>'
+            '<fld_val name="tran_det_row_id>text"/>'
+          '</default>'
+        '</case>'
+        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,

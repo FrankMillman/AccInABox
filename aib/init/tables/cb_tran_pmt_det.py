@@ -19,7 +19,7 @@ table = {
                     # ['pmt_cb', 'tot_party'],
                     # ['pmt_local', 'tot_local'],
                     ],
-                ['npch_descr'],  # display descr
+                ['npch_code_id>descr'],  # display descr
                 ],
             # ['nsls', 'Refund of non-inventory item', 'cb_nsls_crn',
             #     [  # return values
@@ -27,7 +27,7 @@ table = {
             #         # ['pmt_cb', 'tot_party'],
             #         # ['pmt_local', 'tot_local'],
             #         ],
-            #     ['nsls_descr'],  # display descr
+            #     ['nsls_code_id>descr'],  # display descr
             #     ],
             ['archg', 'Charge to customer', 'ar_subtran_chg',
                 [  # return values

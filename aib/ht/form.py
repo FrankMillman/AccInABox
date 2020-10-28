@@ -1392,18 +1392,37 @@ class Frame:
         if obj.before_input is not None:  # steps to perform before input
             await ht.form_xml.before_input(obj)
 
-        if obj.form_dflt is not None:
-            if await obj.fld.getval() is None:
-                dflt_value = await obj.fld.val_to_str(
-                    await get_form_dflt(self, obj, obj.form_dflt))
-                if dflt_value:  # can be '' if form_dflt is <prev_value>
-                    obj.dflt_val = dflt_value
-                    self.session.responder.set_dflt_val(obj.ref, dflt_value)
-        elif hasattr(obj, 'fld'):
+        # if obj.form_dflt is not None:
+        #     if await obj.fld.getval() is None:
+        #     # if await obj.fld.getval() == await obj.fld.get_dflt():  # i.e. None or dflt_val
+        #         dflt_value = await obj.fld.val_to_str(
+        #             await get_form_dflt(self, obj, obj.form_dflt))
+        #         if dflt_value:  # can be '' if form_dflt is <prev_value>
+        #             obj.dflt_val = dflt_value
+        #             self.session.responder.set_dflt_val(obj.ref, dflt_value)
+        # elif hasattr(obj, 'fld'):
+        #     fld = obj.fld
+        #     if fld.must_be_evaluated:
+        #         self.session.responder.set_dflt_val(obj.ref,
+        #             await fld.val_to_str(await fld.getval()))
+        #     elif await fld.getval() is None:
+        #         self.session.responder.set_dflt_val(obj.ref,
+        #             await fld.val_to_str(await fld.get_dflt()))
+        dflt_value = None
+        if hasattr(obj, 'fld'):
             fld = obj.fld
-            if fld.must_be_evaluated:
-                self.session.responder.set_dflt_val(obj.ref,
-                    await fld.val_to_str(await fld.getval()))
+            if obj.form_dflt is not None:
+                if await fld.getval() is None:  # don't change existing value
+                    dflt_value = await get_form_dflt(self, obj, obj.form_dflt)
+            if dflt_value is None:
+                if fld.must_be_evaluated:
+                    dflt_value = await fld.getval()
+                elif await fld.getval() is None:
+                    dflt_value = await fld.get_dflt()
+            if dflt_value is not None:
+                dflt_value = await fld.val_to_str(dflt_value)
+                obj.dflt_val = dflt_value
+                self.session.responder.set_dflt_val(obj.ref, dflt_value)
 
     @log_func
     async def on_clicked(self, button, btn_args):
@@ -1456,6 +1475,8 @@ class Frame:
                     fld = obj.fld
                     if fld.must_be_evaluated:
                         self.temp_data[obj.ref] = await fld.val_to_str(await fld.getval())
+                    elif await fld.getval() is None:
+                        self.temp_data[obj.ref] = await fld.val_to_str(await fld.get_dflt())
 
             try:
                 self.last_vld += 1  # preset, for 'after_input'

@@ -23,7 +23,7 @@ table = {
                     ['crn_tax_cust', 'tax_cust'],
                     ['crn_tax_local', 'tax_local'],
                     ],
-                ['nsls_descr'],
+                ['nsls_code_id>descr'],
                 ],
             ['com', 'Comment', 'ar_comments',
                 [],  # return values

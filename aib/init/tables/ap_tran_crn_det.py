@@ -23,7 +23,7 @@ table = {
                     ['crn_tax_supp', 'tax_party'],
                     ['crn_tax_local', 'tax_local'],
                     ],
-                ['npch_descr'],
+                ['npch_code_id>descr'],
                 ],
             ['com', 'Comment', 'ap_comments',
                 [],  # return values
