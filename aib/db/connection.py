@@ -67,7 +67,7 @@ mem_conn_dict = {}
 connection_lock = asyncio.Lock()
 
 async def _get_connection():
-    with await connection_lock:
+    async with connection_lock:
         try: # look for an inactive connection
             pos = connections_active.index(False)
         except ValueError:   # if not found, create 10 more
@@ -89,7 +89,7 @@ def _release_connection(pos):  # make connection available for reuse
     connections_active[pos] = False
 
 async def _get_mem_connection(mem_id):
-    with await connection_lock:
+    async with connection_lock:
         if mem_id not in mem_conn_dict:
             mem_conn_dict[mem_id] = ([], [])  # conn_list, conn_active
         mem_conn = mem_conn_dict[mem_id]

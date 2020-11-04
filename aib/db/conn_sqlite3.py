@@ -266,7 +266,7 @@ async def form_sql(self, columns, tablenames, where_clause='',
     return sql
 
 async def attach_company(self, company):
-    with await attach_lock:
+    async with attach_lock:
         if company not in self.companies:
             await self.exec_cmd(f"attach '{self.database}/{company}' as {company}", raw=True)
             self.companies.add(company)

@@ -125,7 +125,7 @@ async def get_mod_id(company, mod_id):
     # mod_id could be numeric, asking for module_id, or alpha, asking for module_row_id
     if mod_id is None:
         raise AibError(head='Module', body='Module id is None')
-    with await mod_lock:
+    async with mod_lock:
         if company not in mod_ids:
             mod_ids[company] = {}
             async with db_session.get_connection() as db_mem_conn:
@@ -144,7 +144,7 @@ mod_ledg_ids = {}
 mod_ledg_lock = asyncio.Lock()
 async def get_mod_ledg_id(company, module_id, ledger_id):
     search_key = (module_id, ledger_id)
-    with await mod_ledg_lock:
+    async with mod_ledg_lock:
         if company not in mod_ledg_ids:
             mod_ledg_ids[company] = {}
         if search_key not in mod_ledg_ids[company]:
@@ -167,7 +167,7 @@ async def get_mod_ledg_id(company, module_id, ledger_id):
 mod_ledg_names = {}
 mod_name_lock = asyncio.Lock()
 async def get_mod_ledg_name(company, mod_ledg_id):
-    with await mod_name_lock:
+    async with mod_name_lock:
         if company not in mod_ledg_names:
             mod_ledg_names[company] = {}
         if mod_ledg_id not in mod_ledg_names[company]:
@@ -188,7 +188,7 @@ async def get_mod_ledg_name(company, mod_ledg_id):
 ledger_params = {}
 ledg_param_lock = asyncio.Lock()
 async def get_ledger_params(company, module_row_id, ledger_row_id):
-    with await ledg_param_lock:
+    async with ledg_param_lock:
         if company not in ledger_params:
             ledger_params[company] = {}
 
@@ -222,7 +222,7 @@ async def ledger_updated(db_obj, xml):
         if module_row_id in ledger_params[company]:
             ledger_row_id = await db_obj.getval('row_id')
             if ledger_row_id in ledger_params[company][module_row_id]:
-                with await ledg_param_lock:
+                async with ledg_param_lock:
                     del ledger_params[company][module_row_id][ledger_row_id]  # force re-build on next call to get
 
 # callback on change of gl_params.actions.after_commit
@@ -346,7 +346,7 @@ adm_period = NT('adm_period',
 adm_periods = {}
 adm_per_lock = asyncio.Lock()
 async def get_adm_periods(company):
-    with await adm_per_lock:
+    async with adm_per_lock:
         if company not in adm_periods:
             adm_per_list = []
             context = get_new_context(1, True, company)
@@ -374,7 +374,7 @@ async def get_adm_periods(company):
 async def periods_updated(db_obj, xml):
     company = db_obj.company
     if company in adm_periods:
-        with await adm_per_lock:
+        async with adm_per_lock:
             del adm_periods[company]
 
 async def extend_periods(company, adm_per, periods):
@@ -491,7 +491,7 @@ the value for each company is a dictionary -
 ledger_periods = {}
 ledg_per_lock = asyncio.Lock()
 async def get_ledger_periods(company, module_row_id, ledger_row_id):
-    with await ledg_per_lock:
+    async with ledg_per_lock:
         if company not in ledger_periods:
             ledger_periods[company] = {}
         if module_row_id not in ledger_periods[company]:
@@ -541,7 +541,7 @@ async def ledger_period_updated(db_obj, xml):
         if module_row_id in ledger_periods[company]:
             ledger_row_id = await db_obj.getval('ledger_row_id')
             if ledger_row_id in ledger_periods[company][module_row_id]:
-                with await ledg_per_lock:
+                async with ledg_per_lock:
                     del ledger_periods[company][module_row_id][ledger_row_id]
 
 #----------------------------------------------------------------------------
@@ -549,7 +549,7 @@ async def ledger_period_updated(db_obj, xml):
 # get next number from db_genno using specified key
 genno_lock = asyncio.Lock()
 async def get_next(db_obj, key):
-    with await genno_lock:
+    async with genno_lock:
         genno = await db.objects.get_db_object(db_obj.context, 'db_genno')
         await genno.setval('gkey', key)
         curr_no = await genno.getval('number')
@@ -564,7 +564,7 @@ async def get_next(db_obj, key):
 fkeys = {}
 fkey_lock = asyncio.Lock()
 async def get_fkeys(context, company, table_name):
-    with await fkey_lock:
+    async with fkey_lock:
         if company not in fkeys:
 
             src_fkeys = DD(list)
@@ -649,7 +649,7 @@ db.objects.check_perms() -
 user_table_perms = {}
 perm_lock = asyncio.Lock()
 async def get_user_perms(user_row_id, company):
-    with await perm_lock:
+    async with perm_lock:
         if user_row_id not in user_table_perms:
             user_table_perms[user_row_id] = {}
         if company not in user_table_perms[user_row_id]:
@@ -745,7 +745,7 @@ async def get_user_perms(user_row_id, company):
 users = None  # cannot 'await' outside function
 user_lock = asyncio.Lock()
 async def get_user(user_id):
-    with await user_lock:
+    async with user_lock:
         global users
         if users is None:
             context = get_new_context(1, True, company)
@@ -781,7 +781,7 @@ async def set_tran_lock(caller, xml):
         )
     action = xml.get('action')
     if action == 'lock':
-        with await tran_lock:
+        async with tran_lock:
             if key in tran_locks:
                 locking_caller = tran_locks[key]
                 locking_user = await get_user(

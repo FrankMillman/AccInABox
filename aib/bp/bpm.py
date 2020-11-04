@@ -338,7 +338,7 @@ class ProcessRoot:
                     raise AibError(head=head, body=body)
 
     async def close(self, state):
-        with await self.db_lock:
+        async with self.db_lock:
             bpm_detail = self.bpm_detail
             await bpm_detail.init()
             await bpm_detail.setval('row_id', self.det_row_id)  # retrieve starting detail row
@@ -649,7 +649,7 @@ class rSubProcess(rProcess):
         self.manager.active_subprocesses.add(self)
 
         bpm_detail = self.process.root.bpm_detail
-        with await self.process.root.db_lock:
+        async with self.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('line_type', 'sub_process')
             await bpm_detail.setval('element_id', self.process.elem_id)
@@ -681,7 +681,7 @@ class rSubProcess(rProcess):
         self.manager.active_subprocesses.remove(self)
 
         bpm_detail = self.process.root.bpm_detail
-        with await self.process.root.db_lock:
+        async with self.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('row_id', self.det_row_id)
             await bpm_detail.setval('state', 'completed')
@@ -705,7 +705,7 @@ class rSubProcess(rProcess):
             await active_element.terminate_element()
 
         bpm_detail = self.process.root.bpm_detail
-        with await self.process.root.db_lock:
+        async with self.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('row_id', self.det_row_id)  # retrieve starting detail row
             await bpm_detail.setval('state', 'terminated')
@@ -925,7 +925,7 @@ class rTimerIntermediateEvent(rFlowElement):
             return
 
         bpm_detail = self.process.root.bpm_detail
-        with await self.process.root.db_lock:
+        async with self.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('line_type', 'inter_timer_event')
             await bpm_detail.setval('element_id', self.defn.elem_id)
@@ -949,7 +949,7 @@ class rTimerIntermediateEvent(rFlowElement):
             print(f'timer "{self.defn.elem_id}" iter={self.iteration} done')
 
         bpm_detail = self.process.root.bpm_detail
-        with await self.process.root.db_lock:
+        async with self.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('row_id', self.det_row_id)
             await bpm_detail.setval('state', 'completed')
@@ -969,7 +969,7 @@ class rTimerIntermediateEvent(rFlowElement):
         self.deactivate()
 
         bpm_detail = self.process.root.bpm_detail
-        with await self.process.root.db_lock:
+        async with self.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('row_id', self.det_row_id)
             await bpm_detail.setval('state', 'terminated')
@@ -1025,7 +1025,7 @@ class rTimerNoninterruptingBoundaryEvent(rFlowElement):
             return
 
         bpm_detail = self.process.root.bpm_detail
-        with await self.process.root.db_lock:
+        async with self.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('line_type', 'boundary_timer_event')
             await bpm_detail.setval('element_id', self.defn.elem_id)
@@ -1064,7 +1064,7 @@ class rTimerNoninterruptingBoundaryEvent(rFlowElement):
             print(f'boundary timer "{self.defn.elem_id}" iter={self.iteration} done')
 
         bpm_detail = self.process.root.bpm_detail
-        with await self.process.root.db_lock:
+        async with self.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('row_id', self.det_row_id)
             await bpm_detail.setval('state', 'completed')
@@ -1085,7 +1085,7 @@ class rTimerNoninterruptingBoundaryEvent(rFlowElement):
         self.deactivate()
 
         bpm_detail = self.process.root.bpm_detail
-        with await self.process.root.db_lock:
+        async with self.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('row_id', self.det_row_id)
             await bpm_detail.setval('state', 'terminated')
@@ -1491,7 +1491,7 @@ class rUserTask(rTask):
                 data_inputs[target] = manager.process.data_objects[source]
 
         bpm_detail = manager.process.root.bpm_detail
-        with await manager.process.root.db_lock:
+        async with manager.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('line_type', 'user_task')
             await bpm_detail.setval('element_id', manager.defn.elem_id)
@@ -1546,7 +1546,7 @@ class rUserTask(rTask):
         manager.active_tasks.remove(self)
 
         bpm_detail = manager.process.root.bpm_detail
-        with await manager.process.root.db_lock:
+        async with manager.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('row_id', det_row_id)
             await bpm_detail.setval('state', 'completed')
@@ -1586,7 +1586,7 @@ class rUserTask(rTask):
         print(f'task {self.manager.defn.elem_id} terminated')
 
         bpm_detail = self.manager.process.root.bpm_detail
-        with await self.manager.process.root.db_lock:
+        async with self.manager.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('row_id', self.det_row_id)
             await bpm_detail.setval('state', 'terminated')
@@ -1642,7 +1642,7 @@ class rScriptTask(rTask):
                 data_inputs[target] = manager.process.data_objects[source]
 
         bpm_detail = manager.process.root.bpm_detail
-        with await manager.process.root.db_lock:
+        async with manager.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('line_type', 'script_task')
             await bpm_detail.setval('element_id', manager.defn.elem_id)
@@ -1672,7 +1672,7 @@ class rScriptTask(rTask):
             print(f'script task "{manager.defn.elem_id}" iter={manager.iteration} rep={rep} done')
 
         bpm_detail = manager.process.root.bpm_detail
-        with await manager.process.root.db_lock:
+        async with manager.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('row_id', self.det_row_id)
             await bpm_detail.setval('state', 'completed')
@@ -1687,7 +1687,7 @@ class rScriptTask(rTask):
 
     async def terminate_task(self):
         bpm_detail = self.manager.process.root.bpm_detail
-        with await self.manager.process.root.db_lock:
+        async with self.manager.process.root.db_lock:
             await bpm_detail.init()
             await bpm_detail.setval('row_id', self.det_row_id)
             await bpm_detail.setval('state', 'terminated')

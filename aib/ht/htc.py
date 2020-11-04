@@ -128,7 +128,7 @@ class Session:
         dir_user = self.dir_user  # set up in on_get_login()
         del self.dir_user
 
-        with await menu_lock:  # to prevent 2 users selecting menus simultaneously
+        async with menu_lock:  # to prevent 2 users selecting menus simultaneously
             client_menu = await self.setup_menu()
 
         if len(client_menu) > 1:
