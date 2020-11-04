@@ -15,6 +15,7 @@ import email.utils
 from json import loads, dumps
 import itertools
 import random
+import ssl
 
 import logging
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ import bp.bpm
 import ht.form
 import ht.htm
 from common import AibError
-from common import log, debug
+from common import log, debug, log_db, db_log
 
 sessions = {}  # key=session_id, value=session instance
 pdf_dict = {}  # key=pdf_name, value=reference to pdf_fd generated
@@ -647,26 +648,20 @@ class Response:
         self.writer.close()
         await self.writer.wait_closed()
 
-def accept_client(client_reader, client_writer):
-    task = asyncio.Task(handle_client(client_reader, client_writer))
-
-    # def client_done(task):
-    #     print("End Connection")
-
-    # print("New Connection", id(client_reader), id(client_writer))
-    # task.add_done_callback(client_done)
-
 async def handle_client(client_reader, client_writer):
 
-    # req_line = await asyncio.wait_for(client_reader.readline(), timeout=10.0)
-    req_line = await client_reader.readline()
+    # req_line = await client_reader.readline()
+    try:
+        req_line = await asyncio.wait_for(client_reader.readline(), timeout=1)
+    except asyncio.exceptions.TimeoutError:
+        return
 
     if not req_line:
         return
     # print(f'Req line "{req_line}"')
 
     try:
-        method, path, version = req_line.decode().split(' ')
+        method, path, version = req_line.rstrip().decode().split(' ')
     except ValueError:
         print('***', req_line, '***')
         raise
@@ -822,34 +817,47 @@ async def counter():
     except asyncio.CancelledError:
         print('CAN 3')
 
-def setup(params):
-    # get network parameters
+def start(params):
     host = params.get('Host')
     port = params.getint('Port')
+    ssl_dir = params.get('ssl')
+
+    ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    ssl_ctx.check_hostname = False
+    ssl_ctx.load_cert_chain(f'./{ssl_dir}/aib.crt', f'./{ssl_dir}/aib.key')
 
     loop = asyncio.get_event_loop()
-    server = loop.run_until_complete(asyncio.start_server(accept_client, host, port))
+    server = loop.run_until_complete(asyncio.start_server(ht.htc.handle_client, host, port, ssl=ssl_ctx))
     logger.info(f'task client listening on port {port}')
 
     # cnt = asyncio.ensure_future(counter())
     loop.run_until_complete(db.cache.setup_companies())
-    session_check = asyncio.ensure_future(check_sessions())  # start background task
+    session_check = asyncio.ensure_future(ht.htc.check_sessions())  # start background task
     # run_tests = asyncio.ensure_future(run_test())  # start background task
     run_tests = None
 
-    return (loop, server, session_check, run_tests)
-
-async def shutdown(loop, server, session_check, run_tests):
-    # called from start.py on shutdown
-    session_check.cancel()  # tell session_check to stop running
-    await asyncio.wait([session_check], loop=loop)
-    if run_tests is not None:
-        run_tests.cancel()  # tell run_tests to stop running
-        await asyncio.wait([run_tests], loop=loop)
-    for session in list(sessions.values()):
-        await session.close()
-    # we should wait for unfinished tasks to complete - e.g. init_company (how?)
-    db.api.close_all_connections()
-    server.close()
-    loop.stop()
-    logger.info('task client stopped')
+    print('Press Ctrl+C to stop')
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        print()
+    finally:
+        session_check.cancel()  # tell session_check to stop running
+        loop.run_until_complete(asyncio.wait([session_check]))
+        if run_tests is not None:
+            run_tests.cancel()  # tell run_tests to stop running
+            loop.run_until_complete(asyncio.wait([run_tests]))
+        for session in list(ht.htc.sessions.values()):
+            loop.run_until_complete(session.close())
+        server.close()
+        loop.stop()
+        db.api.close_all_connections()
+        if debug:
+            if log != sys.stderr:
+                log.flush()
+                log.close()
+        if log_db:
+            if db_log != sys.stderr:
+                db_log.flush()
+                db_log.close()
+        logger.info('task client stopped')

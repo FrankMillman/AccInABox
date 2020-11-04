@@ -16,6 +16,7 @@ aib/init/forms/testing
 aib/init/processes/testing
 aib/schemas/testing
 aib/imports/
+aib/ssl/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
