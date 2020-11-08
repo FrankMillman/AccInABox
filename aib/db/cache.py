@@ -192,14 +192,13 @@ async def get_ledger_params(company, module_row_id, ledger_row_id):
         if company not in ledger_params:
             ledger_params[company] = {}
 
-        context = get_new_context(1, True, company)
-
         if module_row_id not in ledger_params[company]:
             ledger_params[company][module_row_id] = {}
             module_id = (await get_mod_id(company, module_row_id))[0]
             table_name = f'{module_id}_ledger_params'
 
             # create 'blank' ledg_obj for use if db_obj.exists is False
+            context = get_new_context(1, True, company)
             ledg_obj = await db.objects.get_db_object(context, table_name)
             await ledg_obj.add_all_virtual()
             ledger_params[company][module_row_id][None] = ledg_obj
@@ -207,6 +206,8 @@ async def get_ledger_params(company, module_row_id, ledger_row_id):
         if ledger_row_id not in ledger_params[company][module_row_id]:
             module_id = (await get_mod_id(company, module_row_id))[0]
             table_name = f'{module_id}_ledger_params'
+            context = get_new_context(1, True, company,
+                mod_ledg_id = (module_row_id, ledger_row_id))
             ledg_obj = await db.objects.get_db_object(context, table_name)
             await ledg_obj.add_all_virtual()
             await ledg_obj.setval('row_id', ledger_row_id)  # to force a SELECT

@@ -699,10 +699,13 @@ async def btn_has_label(caller, xml):
     return btn.label == xml.get('label')
 
 async def compare(caller, xml):
-    # not every caller has a db_obj - may need more robust approach [2020-09-05]
-    # previously, db_obj was taken from caller.data_objects[obj_name]
+    try:
+        db_obj = caller.db_obj
+    except AttributeError:  # not every caller has a db_obj - try ledger_params
+        mod_ledg_id = caller.context.mod_ledg_id
+        db_obj = await db.cache.get_ledger_params(caller.company, *mod_ledg_id)
     test = loads(xml.get('test').replace("'", '"').replace('~', "'"))
-    return await eval_bool_expr(test, caller.db_obj)
+    return await eval_bool_expr(test, db_obj)
 
 async def get_val(caller, value):
     if value.startswith('('):  # expression
