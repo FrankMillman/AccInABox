@@ -475,7 +475,7 @@ async def inline_form(caller, xml, form_name=None, callback=None):
     if callback is None:  # e.g. gui_bpmn.on_selected supplies the callback
         callback = (return_from_inlineform, caller, xml)
     form_defn = caller.form.form_defn
-    form_xml = form_defn.find("inline_form[@name='{}']".format(form_name))
+    form_xml = form_defn.find(f"inline_form[@name='{form_name}']")
     inline_form = ht.form.Form()
     await inline_form._ainit_(caller.context, caller.session, form_name,
         parent_form=caller.form, callback=callback, inline=form_xml)
@@ -662,6 +662,13 @@ async def has_temp_data(caller, xml):
 async def posted(caller, xml):
     obj_name = xml.get('obj_name')
     return await caller.data_objects[obj_name].getval('posted')
+
+async def no_tran_header(caller, xml):
+    # check if form does *not* have an inline form called 'tran_header'
+    # called from templates.Transaction.on_start_frame - if True, do not call inline form
+    form_defn = caller.form.form_defn
+    tran_header = form_defn.find("inline_form[@name='tran_header']")
+    return tran_header is None
 
 async def obj_exists(caller, xml):
     obj_name = xml.get('obj_name')
