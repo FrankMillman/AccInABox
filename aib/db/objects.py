@@ -2203,8 +2203,8 @@ class DbObject:
                 appending = True  # must get new_seq as 'select max' + 1
             else:
                 new_seq = self.cursor_row  # using gui_grid - can just use cursor_row
-                await seq.setval(new_seq)  # calls select_row() if table_keys - not ideal!
                 if new_seq == self.cursor.num_rows:  # row appended - no checking required
+                    await seq.setval(new_seq)  # calls select_row() if table_keys - not ideal!
                     return parent_changed
 
         if self.exists and new_seq == orig_seq:
@@ -2377,6 +2377,8 @@ class DbObject:
             await conn.exec_cmd(
                 'UPDATE {0} SET {1} = -{1} WHERE {1} < 0'.format(combo, seq_col_name)
                 )
+
+        await seq.setval(new_seq)  # calls select_row() if table_keys - not ideal!
 
         return parent_changed
 
