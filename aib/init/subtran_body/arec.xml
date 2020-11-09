@@ -2,49 +2,49 @@
   <block/>
   <panel/>
 
-  <if test="[[`if`, ``, `ar_rec.ledger_id`, `is`, `$None`, ``]]"/>
+  <if test="[[`if`, ``, `ar_subrec.ledger_id`, `is`, `$None`, ``]]"/>
   <row/>
   <col/>
   <label value="Ledger id:"/>
   <col/>
-  <input obj_name="ar_rec" col_name="ledger_id" lng="84"/>
+  <input obj_name="ar_subrec" col_name="ledger_id" lng="84"/>
   <end_if/>
 
   <row/>
   <col/>
   <label value="Customer Id:"/>
   <col/>
-  <input obj_name="ar_rec" col_name="cust_id" lng="84" after="
+  <input obj_name="ar_subrec" col_name="cust_id" lng="84" after="
     <<!--  show exch_rate and arec_cust if alt_curr - enable arec_cust if override allowed -->>
     <<case>>
       <<compare test=`[['if', '', '_param.allow_alloc_rec', 'is', '$True', ''],
-          ['and', '', 'ar_rec.cust_row_id>ledger_row_id>auto_alloc_oldest', 'is', '$False', '']]`>
+          ['and', '', 'ar_subrec.cust_row_id>ledger_row_id>auto_alloc_oldest', 'is', '$False', '']]`>
         <<change_button>>
           <<btn_enabled btn_id=`alloc` state=`true`/>>
         <</change_button>>
       <</compare>>
     <</case>>
     "/>
-  <display obj_name="ar_rec" col_name="cust_row_id>party_row_id>display_name" lng="120"/>
+  <display obj_name="ar_subrec" col_name="cust_row_id>party_row_id>display_name" lng="120"/>
 
   <row/>
   <col/>
   <label value="Receipt amount:"/>
   <col/>
-  <display obj_name="ar_rec" col_name="currency_id>symbol" lng="10"/>
-  <input obj_name="ar_rec" col_name="arec_amount" lng="84"/>
+  <display obj_name="ar_subrec" col_name="currency_id>symbol" lng="10"/>
+  <input obj_name="ar_subrec" col_name="arec_amount" lng="84"/>
 
   <!-- this does not work well - if > 1 ledger, alt_curr is $None when form is created -->
-  <if test="[[`if`, ``, `ar_rec.cust_row_id>ledger_row_id>alt_curr`, `is`, `$True`, ``]]"/>
+  <if test="[[`if`, ``, `ar_subrec.cust_row_id>ledger_row_id>alt_curr`, `is`, `$True`, ``]]"/>
 
   <row/>
   <col/>
   <label value="@"/>
-  <display obj_name="ar_rec" col_name="cust_exch_rate" lng="100"/>
+  <display obj_name="ar_subrec" col_name="cust_exch_rate" lng="100"/>
   <label value="="/>
   <col/>
-  <display obj_name="ar_rec" col_name="cust_row_id>currency_id>symbol" lng="10"/>
-  <input obj_name="ar_rec" col_name="arec_cust" lng="84"/>
+  <display obj_name="ar_subrec" col_name="cust_row_id>currency_id>symbol" lng="10"/>
+  <input obj_name="ar_subrec" col_name="arec_cust" lng="84"/>
 
   <end_if/>
 
@@ -54,15 +54,15 @@
   <button lng="150" btn_id="alloc" btn_label="Allocate now"
     btn_enabled="false" btn_validate="true" action="
       <<req_save/>>
+      <<assign src=`$None` tgt=`_ctx.this_item_rowid`/>>
       <<sub_form name=`ar_alloc_item`>>
         <<call_params>>
-          <<call_param name=`alloc_header` type=`data_obj` source=`ar_rec`/>>
-          <<call_param name=`this_item_rowid` type=`data_attr` source=`ar_rec.item_row_id`/>>
-          <<call_param name=`amount_to_alloc` type=`data_attr` source=`ar_rec.arec_cust`/>>
-          <<call_param name=`unallocated` type=`data_attr` source=`ar_rec.unallocated`/>>
+          <<call_param name=`alloc_header` type=`data_obj` source=`ar_subrec`/>>
+          <<call_param name=`amount_to_alloc` type=`data_attr` source=`ar_subrec.arec_cust`/>>
+          <<call_param name=`unallocated` type=`data_attr` source=`ar_subrec.unallocated`/>>
         <</call_params>>
         <<return_params>>
-          <<return_param name=`unallocated` type=`data_attr` target=`ar_rec.unallocated`/>>
+          <<return_param name=`unallocated` type=`data_attr` target=`ar_subrec.unallocated`/>>
         <</return_params>>
         <<on_return>>
           <<return state=`cancelled`>>

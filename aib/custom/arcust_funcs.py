@@ -74,7 +74,14 @@ async def get_due_date(src_obj):
     return due_date
 
 async def get_aged_bal(caller, xml):
-    # called from ar_cust_bal/ar_allocation on start_frame
+    """
+    called from ar_cust_bal on start_frame
+
+    the form ar_cust_bal presents a grid of items outstanding
+
+    the purpose of this function is to return a summary of the items, grouped in
+        buckets of 0-30, 31-60, 61-90, 91-120, and >120 by tran date
+    """
 
     cust = caller.data_objects['cust']
     if not cust.exists:

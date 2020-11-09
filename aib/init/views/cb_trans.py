@@ -178,7 +178,7 @@ virt.append ({
     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
     'sql'        : (
         """
-        (SELECT SUM(b.tran_tot_cb) FROM (
+        COALESCE((SELECT SUM(b.tran_tot_cb) FROM (
             SELECT c.tran_tot_cb, ROW_NUMBER() OVER (PARTITION BY
                 c.ledger_row_id, c.location_row_id, c.function_row_id, c.source_code_id
                 ORDER BY c.tran_date DESC) row_num
@@ -188,7 +188,7 @@ virt.append ({
             AND c.deleted_id = 0 
             ) as b
             WHERE b.row_num = 1
-            )
+            ), 0)
         """
         )
     })
@@ -201,7 +201,7 @@ virt.append ({
     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
     'sql'        : (
         """
-        (SELECT SUM(b.tran_tot_cb) FROM (
+        COALESCE((SELECT SUM(b.tran_tot_cb) FROM (
             SELECT c.tran_tot_cb, ROW_NUMBER() OVER (PARTITION BY
                 c.ledger_row_id, c.location_row_id, c.function_row_id, c.source_code_id
                 ORDER BY c.tran_date DESC) row_num
@@ -211,7 +211,7 @@ virt.append ({
             AND c.deleted_id = 0 
             ) as b
             WHERE b.row_num = 1
-            )
+            ), 0)
         """
         )
     })

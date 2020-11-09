@@ -5,78 +5,80 @@
   ">
   <db_objects>
     <db_obj name="ar_rec" table_name="ar_tran_rec" is_formview_obj="true"/>
-    <db_obj name="ar_det" table_name="ar_tran_rec_det" parent="ar_rec"/>
-    <db_obj name="ar_rec" table_name="ar_subtran_rec" parent="ar_det"/>
-    <db_obj name="ar_allocations" table_name="ar_allocations" parent="ar_rec"/>
+    <db_obj name="ar_subrec" table_name="ar_subtran_rec" parent="ar_rec"/>
+    <db_obj name="ar_allocations" table_name="ar_allocations" parent="ar_subrec"/>
   </db_objects>
   <mem_objects/>
 
   <input_params/>
   <output_params/>
 
-  <frame main_object="ar_rec">
-    <toolbar/>
-    <body>
-      <block/>
-      <panel/>
-
-      <row/>
-      <col/>
-      <label value="Receipt no:"/>
-      <col/>
-      <input obj_name="ar_rec" col_name="tran_number" lng="84" readonly="true" skip="true"/>
-
-      <col/>
-      <label value="Receipt date:"/>
-      <col/>
-      <input obj_name="ar_rec" col_name="tran_date" lng="84" readonly="true" skip="true"/>
-
-      <col/>
-      <label value="Amount:"/>
-      <col/>
-      <display obj_name="ar_rec" col_name="currency_id>symbol" lng="10"/>
-      <input obj_name="ar_rec" col_name="amount" lng="84" readonly="true" skip="true"/>
-
-      <block/>
-      <grid data_object="ar_det" growable="true" num_grid_rows="5" readonly="true"
-          footer_row="[`'Total:'`, `ar_rec.amount_tran`]">
-        <toolbar template="Grid"/>
-        <cur_columns>
-          <cur_col col_name="display_descr" lng="80"/>
-          <cur_col col_name="rec_amt" lng="120"/>
-        </cur_columns>
-        <cur_filter/>
-        <cur_sequence>
-          <cur_seq col_name="line_no"/>
-        </cur_sequence>
-        <grid_methods template="Grid"/>
-      </grid>
-
-      <grid_frame main_object="ar_det">
-        <toolbar/>
-        <body>
-
-          <block/>
-          <subtran_frame subtran_obj="ar_det" subtran_col="line_type">
-            <subtran_body subtran_id="arec"/>
-          </subtran_frame>
-
-        </body>
-        <button_row template="Grid_Frame_Grid_RO"/>
-        <frame_methods template="Grid_Frame_Grid_RO"/>
-
-      </grid_frame>
-
-    </body>
-    <button_row template="Transaction"/>
-    <frame_methods template="Transaction"/>
-  </frame>
-  <inline_form name="tran_header" title="Receipt header">
     <frame main_object="ar_rec">
       <toolbar/>
       <body>
         <block/>
         <panel/>
+
+        <row/>
+        <col/>
+        <label value="Customer Id:"/>
+        <col/>
+        <input obj_name="ar_rec" col_name="cust_id" lng="80"/>
+        <display obj_name="ar_rec" col_name="cust_row_id>party_row_id>display_name" lng="160"/>
+
+        <if test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``],
+          [`and`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
+
+        <row/>
+        <col/>
+        <label value="Location Id:"/>
+        <col/>
+        <input obj_name="ar_rec" col_name="location_id" lng="80" form_dflt="
+          <<case>>
+            <<compare test=`[['if', '', '_ledger.multiple_locations', 'is', '$False', '']]`>>
+              <<fld_val name=`cust_row_id>loc_id_if_exists`/>>
+            <</compare>>
+          <</case>>
+          "/>
+        <display obj_name="ar_rec" col_name="cust_row_id>location_id>descr" lng="160"/>
+
+        <end_if/>
+
+        <if test="[[`if`, ``, `_param.function_row_id`, `is`, `$None`, ``],
+          [`and`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
+
+        <row/>
+        <col/>
+        <label value="Function Id:"/>
+        <col/>
+        <input obj_name="ar_rec" col_name="function_id" lng="80" form_dflt="
+          <<case>>
+            <<compare test=`[['if', '', '_ledger.multiple_functions', 'is', '$False', '']]`>>
+              <<fld_val name=`cust_row_id>fun_id_if_exists`/>>
+            <</compare>>
+          <</case>>
+          "/>
+        <display obj_name="ar_rec" col_name="cust_row_id>function_id>descr" lng="160"/>
+
+        <end_if/>
+
+        <dummy validation="
+            <<validation>>
+              <<case>>
+                <<compare test=`[['if', '', 'ar_rec.cust_row_id', 'is', '$None', '']]`>>
+                  <<error head=`Customer` body=`Customer does not exist`/>>
+                <</compare>>
+              <</case>>
+            <</validation>>
+          "/>
+
+        <row/>
+        <col/>
+        <label value="Receipt date:"/>
+        <col/>
+        <input obj_name="ar_rec" col_name="tran_date" lng="84" form_dflt="
+          <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
+          "/>
 
         <if test="[[`if`, ``, `_ledger.auto_rec_no`, `is`, `$None`, ``]]"/>
         <row/>
@@ -88,50 +90,45 @@
 
         <row/>
         <col/>
-        <label value="Receipt date:"/>
+        <label value="Text:"/>
         <col/>
-        <input obj_name="ar_rec" col_name="tran_date" lng="84" form_dflt="
-          <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
-          "/>
-
-        <if test="[[`if`, ``, `_ledger.currency_id`, `is`, `$None`, ``]]"/>
-        <row/>
-        <col/>
-        <label value="Currency:"/>
-        <col/>
-        <input obj_name="ar_rec" col_name="currency" lng="60" form_dflt="
-          <<fld_val name=`_param.local_currency`/>>
-          "/>
-        <display obj_name="ar_rec" col_name="currency_id>descr" lng="140"/>
-        <end_if/>
+        <input obj_name="ar_rec" col_name="text" lng="250" form_dflt="<<prev_value/>>"/>
 
         <row/>
         <col/>
         <label value="Amount:"/>
         <col/>
-        <input obj_name="ar_rec" col_name="amount" lng="80"/>
-      </body>
+        <input obj_name="ar_rec" col_name="amount" lng="120"/>
 
-      <button_row template="Transaction_Header"/>
-      <frame_methods template="Transaction_Header">
-        <method name="do_save" action="
-          <<case>>
-            <<compare test=`[['if', '', 'ar_rec.amount', '=', '0', '']]`>>
-              <<ask title=`Receipt` enter=`No` escape=`No`
-                  question=`No value entered - sure you want to save?`>>
-                <<response ans=`No`>>
-                <</response>>
-                <<response ans=`Yes`>>
-                  <<save_obj obj_name=`ar_rec`/>>
-                <</response>>
-              <</ask>>
-            <</compare>>
-            <<default>>
-              <<save_obj obj_name=`ar_rec`/>>
-            <</default>>
-          <</case>>
+        <row/>
+        <col/>
+        <col/>
+        <button lng="150" btn_id="alloc" btn_label="Allocate now"
+          btn_enabled="true" btn_validate="true" action="
+            <<req_save/>>
+            <<assign src=`$None` tgt=`_ctx.this_item_rowid`/>>
+            <<sub_form name=`ar_alloc_item`>>
+              <<call_params>>
+                <<call_param name=`alloc_header` type=`data_obj` source=`ar_rec`/>>
+                <<call_param name=`amount_to_alloc` type=`data_attr` source=`ar_rec.amount`/>>
+                <<call_param name=`unallocated` type=`data_attr` source=`ar_rec.unallocated`/>>
+              <</call_params>>
+              <<return_params>>
+                <<return_param name=`unallocated` type=`data_attr` target=`ar_rec.unallocated`/>>
+              <</return_params>>
+              <<on_return>>
+                <<return state=`cancelled`>>
+                  <<btn_set_focus btn_id=`btn_post`/>>
+                <</return>>
+                <<return state=`completed`>>
+                  <<btn_set_focus btn_id=`btn_post`/>>
+                <</return>>
+              <</on_return>>
+            <</sub_form>>
           "/>
-        </frame_methods>
-    </frame>
-  </inline_form>
+
+      </body>
+    <button_row template="Transaction"/>
+    <frame_methods template="Transaction"/>
+  </frame>
 </form>

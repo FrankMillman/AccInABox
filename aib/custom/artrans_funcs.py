@@ -49,7 +49,10 @@ async def setup_openitems(db_obj, conn, return_vals):
     due_rule = await terms_obj.getval('due_rule')
     if not due_rule:
         due_rule = [1, 30, 'd']  # default to '30 days'
-    discount_rule = await terms_obj.getval('discount_rule')
+    if await db_obj.getval('_ledger.discount_code_id') is None:
+        discount_rule = None
+    else:
+        discount_rule = await terms_obj.getval('discount_rule')
     instalments, terms, term_type = due_rule
     if instalments == 1:
         if term_type == 'd':  # days
@@ -79,7 +82,7 @@ async def setup_openitems(db_obj, conn, return_vals):
             )
 
 async def setup_inv_alloc(db_obj, conn, return_vals):
-    # called as split_src func from sls_isls_inv_ar/cb.upd_on_save()
+    # called as split_src func from sls_isls_subtran.upd_on_save()
     # return values - cost_whouse, cost_local
     tot_to_allocate = await db_obj.getval('qty')
 
@@ -294,13 +297,32 @@ async def check_stat_date(db_obj, fld, src_val):
 """
 
 async def get_due_bal(caller, xml):
-    # called from ar_alloc_item on start_frame
+    """
+    called from form ar_alloc_item, which is used to 'allocate' an item against outstanding items
+
+    ar_alloc_item is called from form.ar_alloc or form.ar_receipt or subtran_body.arec
+        when user selects 'Allocate now'.
+
+    if called from form.ar_alloc, we are allocating an item that has already been posted. In this
+        case, it is necessary to exclude the item being allocated from the list of items
+        to allocated against.
+
+    otherwise we are allocating an item 'realtime', while it is being
+        captured. In this case no 'exclude' is necessary as the item has not yet been posted.
+
+    the form ar_alloc_item presents a grid of items to allocate using a cursor, with the
+        appropriate exclusion in the filter.
+
+    the purpose of this function is to return a summary of the items, grouped in
+        buckets of 0-30, 31-60, 61-90, 91-120, and >120 by tran date.
+
+    NB shouldn't this be grouped by 'due_date'? [2020-11-06]
+    """
 
     alloc_hdr = caller.data_objects['alloc_header']
     cust_row_id = await alloc_hdr.getval('cust_row_id')
 
-    vars = caller.data_objects['vars']
-    this_item_rowid = await vars.getval('this_item_rowid')
+    this_item_rowid = caller.context.this_item_rowid
     # if allocation is done realtime, ar_openitems has not been updated, so item_rowid is None
     # if allocation is done after transaction is posted, item_rowid is not None
 
@@ -344,7 +366,7 @@ async def get_due_bal(caller, xml):
         SUM(CASE WHEN q.tran_date <= '{dates[4]}' THEN q.due ELSE 0 END)
         FROM
         (SELECT
-            a.cust_row_id, a.tran_date, `a.{company}.ar_openitems.due_cust_gui` AS due
+            a.cust_row_id, a.tran_date, `a.{company}.ar_openitems.due_cust` AS due
             FROM {company}.ar_openitems a
             WHERE a.cust_row_id = {cust_row_id}
                 AND a.tran_date <= '{as_at_date}'
@@ -489,12 +511,12 @@ async def alloc_ageing(caller, xml):
         where.append(['AND', '', 'tran_date', '>', prev_end_date, ''])
         where.append(['AND', '', 'tran_date', '<=', curr_end_date, ''])
         where.append(['AND', '', 'row_id', '!=', this_item_rowid, ''])
-        where.append(['AND', '', 'due_cust_gui', '!=', 0, ''])
+        where.append(['AND', '', 'due_cust', '!=', 0, ''])
         all_alloc = ar_items.select_many(where=where, order=[])
         async for _ in all_alloc:
             await alloc_det.init(init_vals={
                 'item_row_id': await ar_items.getval('row_id'),
-                'alloc_cust': await ar_items.getval('due_cust_gui'),
+                'alloc_cust': await ar_items.getval('due_cust'),
                 })
             await alloc_det.save(from_upd_on_save=True)  # do not update audit trail
             await ar_items.setval('alloc_cust_gui', await alloc_det.getval('alloc_cust'))
@@ -508,7 +530,7 @@ async def alloc_ageing(caller, xml):
         where.append(['AND', '', 'tran_date', '>', prev_end_date, ''])
         where.append(['AND', '', 'tran_date', '<=', curr_end_date, ''])
         where.append(['AND', '', 'row_id', '!=', this_item_rowid, ''])
-        where.append(['AND', '', 'due_cust_gui', '!=', 0, ''])
+        where.append(['AND', '', 'due_cust', '!=', 0, ''])
         all_alloc = ar_items.select_many(where=where, order=[])
         async for _ in all_alloc:
             await alloc_det.init(init_vals={

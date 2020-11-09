@@ -414,7 +414,6 @@ virt.append ({
     'short_descr': 'Tax inclusive',
     'long_descr' : 'Tax inclusive',
     'col_head'   : 'Tax incl',
-    'fkey'       : None,
     'sql'        : "'1'",
     })
 virt.append ({
@@ -574,7 +573,7 @@ actions.append([
             [  # on insert
                 # ['tran_det_row_id', '=', 'row_id'],  # tgt_col, src_col
                 ['nsls_code_id', '=', 'cust_row_id>ledger_row_id>discount_code_id'],
-                ['nsls_amount', '=', '_ctx.tot_disc_cust'],
+                ['nsls_amount', '=', 'discount_cust'],
                 ],
             [],  # on update
             [],  # on delete
@@ -616,13 +615,13 @@ actions.append([
             [],  # condition
             False,  # split source?
             [  # key fields
-                ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
-                ['item_row_id', 'item_row_id'],
+                # ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
+                ['item_row_id', 'item_row_id'],  # tgt_col, op, src_col
                 ],
             [],  # aggregation
             [  # on post
-                ['discount_cust', '-', 'discount_cust'],  # tgt_col, op, src_col
-                ['discount_local', '-', 'discount_local'],
+                ['discount_cust', '-', 'disc_tot_cust'],  # tgt_col, op, src_col
+                ['discount_local', '-', 'disc_tot_local'],
                 ],
             [],  # on unpost
             ],

@@ -300,14 +300,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'tran_type',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Transaction type',
-#     'long_descr' : 'Transaction type',
-#     'col_head'   : 'Tran type',
-#     'sql'        : "'ar_rec'",
-#     })
+virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type - used in gui to ask "Post another?"',
+    'col_head'   : 'Tran type',
+    'sql'        : "'ar_rec'",
+    })
 virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
@@ -319,6 +319,25 @@ virt.append ({
     'sql'        : (
         "SELECT count(*) FROM {company}.adm_periods b "
         "WHERE b.closing_date < a.tran_date"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'unallocated',
+    'data_type'  : 'DEC',
+    'short_descr': 'Unallocated',
+    'long_descr' : 'Balance of receipt not allocated',
+    'col_head'   : 'Unalloc',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'sql'        : (
+        "a.amount "
+        "- "
+        "COALESCE(("
+            "SELECT SUM(b.alloc_cust) FROM {company}.ar_allocations b "
+            "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id AND b.deleted_id = 0"
+            "), 0)"
         ),
     })
 

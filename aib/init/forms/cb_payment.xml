@@ -11,7 +11,7 @@
     <db_obj name="achg" table_name="ar_subtran_chg" parent="cb_det"/>
     <!-- <db_obj name="ar_pmt" table_name="ar_subtran_pmt" parent="cb_det"/> -->
     <!-- <db_obj name="ar_pmt_alloc" table_name="ar_subtran_pmt_alloc" parent="ar_pmt"/> -->
-    <db_obj name="gl_jnl" table_name="gl_jnl_subtran" parent="cb_det"/>
+    <db_obj name="gl" table_name="gl_jnl_subtran" parent="cb_det"/>
     <db_obj name="com" table_name="cb_comments" parent="cb_det"/>
   </db_objects>
 
@@ -81,7 +81,7 @@
             <subtran_body subtran_id="npch"/>
             <!-- <subtran_body subtran_id="apmt"/> -->
             <subtran_body subtran_id="ar_chg"/>
-            <subtran_body subtran_id="gl_jnl"/>
+            <subtran_body subtran_id="gl"/>
             <subtran_body subtran_id="com"/>
           </subtran_frame>
         </body>

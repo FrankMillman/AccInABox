@@ -75,9 +75,10 @@ def get_sq_params():
 def get_htc_params():
     import socket as s
     host = s.gethostbyname(s.gethostname())
-    htc_host = input('Enter web server host address [{}]: '.format(host)) or host
+    htc_host = input(f'Enter web server host address [{host}]: ') or host
     htc_port = input('Enter web server port number [6543]: ') or '6543'
-    return OD((('host', htc_host), ('port', htc_port)))
+    ssl_dir = input('Enter directory for ssl key/crt: ')
+    return OD((('host', htc_host), ('port', htc_port), ('ssl', ssl_dir)))
 
 if __name__ == '__main__':
 

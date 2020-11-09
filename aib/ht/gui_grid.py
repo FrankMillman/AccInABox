@@ -552,7 +552,7 @@ class GuiGrid:
         self.inserted = 0  # 0=existing row  -1=appended row  1=inserted row
 
         if start_val:
-            if start_val.startswith('{'):
+            if isinstance(start_val, str) and start_val.startswith('{'):
                 start_objname, start_colname = start_val[1:-1].split('.')
                 start_obj = self.context.data_objects[start_objname]
                 start_val = await start_obj.getval(start_colname)

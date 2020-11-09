@@ -230,7 +230,7 @@ class ProcessRoot:
 
         else:
 
-            await bpm_header.setval('process_row_id', proc_data['row_id'])
+            await bpm_header.setval('process_row_id', await proc_defns.getval('row_id'))
             await bpm_header.setval('state', 'active')
             await bpm_header.save()
 

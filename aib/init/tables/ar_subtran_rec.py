@@ -126,7 +126,7 @@ cols.append ({
     'short_descr': 'Customer row id',
     'long_descr' : 'Customer row id. In theory, should check if statement period still open. Leave for now.',
     'col_head'   : 'Customer',
-    'key_field'  : 'B',
+    'key_field'  : 'N',
     'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
@@ -272,7 +272,7 @@ cols.append ({
     'short_descr': 'Receipt number',
     'long_descr' : 'Receipt number - see before_insert and before_update to ensure unique',
     'col_head'   : 'Rec no',
-    'key_field'  : 'B',
+    'key_field'  : 'N',
     'calculated' : [
         ['where', '', '_ledger.auto_rec_no', 'is not', '$None', ''],
         ['or', '', 'cust_row_id>ledger_row_id>auto_rec_no', 'is not', '$None', ''],
@@ -508,9 +508,8 @@ virt.append ({
         "a.arec_cust "
         "- "
         "COALESCE(("
-            "SELECT SUM(b.alloc_cust) "
-            "FROM {company}.ar_subtran_rec_alloc b "
-            "WHERE b.subtran_det_row_id = a.row_id AND b.deleted_id = 0"
+            "SELECT SUM(b.alloc_cust) FROM {company}.ar_allocations b "
+            "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id AND b.deleted_id = 0"
             "), 0)"
         ),
     })
@@ -599,8 +598,8 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
-                ['item_row_id', 'item_row_id'],
+                # ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
+                ['item_row_id', 'item_row_id'],  # tgt_col, op, src_col
                 ],
             [],  # aggregation
             [  # on post
@@ -623,8 +622,8 @@ actions.append([
                 ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
                 ['cust_exch_rate', '=', 'cust_exch_rate'],
                 ['tran_exch_rate', '=', 'tran_exch_rate'],
-                ['discount_cust', '-', '_ctx.tot_disc_cust'],
-                ['discount_local', '-', '_ctx.tot_disc_local'],
+                ['discount_cust', '=', '_ctx.tot_disc_cust'],
+                ['discount_local', '=', '_ctx.tot_disc_local'],
                 ['orig_item_id', '=', 'item_row_id'],
                 ],
             [],  # on unpost

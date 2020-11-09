@@ -264,8 +264,8 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
-                ['item_row_id', 'item_row_id'],
+                # ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
+                ['item_row_id', 'item_row_id'],  # tgt_col, op, src_col
                 ],
             [],  # aggregation
             [  # on post
@@ -288,8 +288,8 @@ actions.append([
                 ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
                 ['cust_exch_rate', '=', 'cust_exch_rate'],
                 ['tran_exch_rate', '=', 'tran_exch_rate'],
-                ['discount_cust', '-', '_ctx.tot_disc_cust'],
-                ['discount_local', '-', '_ctx.tot_disc_local'],
+                ['discount_cust', '=', '_ctx.tot_disc_cust'],
+                ['discount_local', '=', '_ctx.tot_disc_local'],
                 ['orig_item_id', '=', 'item_row_id'],
                 ],
             [],  # on unpost

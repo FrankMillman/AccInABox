@@ -688,8 +688,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'crn_net_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'crn_net_local'],
+                ['tran_day', '-', 'crn_net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'crn_net_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -708,8 +708,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'crn_tax_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'crn_tax_local'],
+                ['tran_day', '-', 'crn_tax_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'crn_tax_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -726,10 +726,10 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cust', '+', 'crn_net_cust'],  # tgt_col, op, src_col
-                ['tran_tot_cust', '+', 'crn_net_cust'],
-                ['tran_day_local', '+', 'crn_net_local'],
-                ['tran_tot_local', '+', 'crn_net_local'],
+                ['tran_day_cust', '-', 'crn_net_cust'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '-', 'crn_net_cust'],
+                ['tran_day_local', '-', 'crn_net_local'],
+                ['tran_tot_local', '-', 'crn_net_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -748,10 +748,10 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cust', '+', 'crn_tax_cust'],  # tgt_col, op, src_col
-                ['tran_tot_cust', '+', 'crn_tax_cust'],
-                ['tran_day_local', '+', 'crn_tax_local'],
-                ['tran_tot_local', '+', 'crn_tax_local'],
+                ['tran_day_cust', '-', 'crn_tax_cust'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '-', 'crn_tax_cust'],
+                ['tran_day_local', '-', 'crn_tax_local'],
+                ['tran_tot_local', '-', 'crn_tax_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -770,8 +770,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'crn_net_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'crn_net_local'],
+                ['tran_day', '-', 'crn_net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'crn_net_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -791,8 +791,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'crn_tax_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'crn_tax_local'],
+                ['tran_day', '-', 'crn_tax_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'crn_tax_local'],
                 ],
             [],  # on post
             [],  # on unpost

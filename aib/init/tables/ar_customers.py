@@ -657,6 +657,58 @@ virt.append ({
             "), 0)"
         ),
     })
+virt.append ({
+    'col_name'   : 'bal_due_cust',
+    'data_type'  : 'DEC',
+    'short_descr': 'Balance due cust at date',
+    'long_descr' : 'Balance due from customer at date - not used at present',
+    'col_head'   : 'Bal due cust',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'currency_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        """
+        COALESCE((
+            SELECT SUM(b.amount_cust
+                -
+                COALESCE(alloc.tot_alloc, 0)
+                -
+                CASE
+                    WHEN b.discount_date IS NULL THEN 0
+                    WHEN {as_at_date} > b.discount_date THEN 0
+                    ELSE b.discount_cust - COALESCE(alloc.disc_alloc, 0)
+                END
+            )
+            FROM {company}.ar_openitems b
+
+            LEFT JOIN (SELECT c.item_row_id,
+                    SUM(c.alloc_cust + c.discount_cust) AS tot_alloc,
+                    SUM(c.discount_cust) AS disc_alloc
+                FROM {company}.ar_allocations c
+
+                WHERE
+                    CASE
+                        WHEN c.tran_type = 'ar_alloc' THEN
+                            (SELECT d.row_id FROM ar_allocations d
+                                WHERE d.tran_type = c.tran_type AND
+                                    d.tran_row_id = c.tran_row_id AND
+                                    d.item_row_id =
+                                        (SELECT e.item_row_id FROM ar_tran_alloc e
+                                        WHERE e.row_id = c.tran_row_id))
+                        ELSE
+                            (SELECT d.row_id FROM ar_openitems d
+                                WHERE d.tran_type = c.tran_type AND d.tran_row_id = c.tran_row_id)
+                    END IS NOT NULL
+
+                GROUP BY c.item_row_id
+                ) AS alloc
+                ON alloc.item_row_id = b.row_id
+
+            WHERE b.cust_row_id = a.row_id AND b.due_date <= {as_at_date} AND b.deleted_id = 0
+        ), 0)
+        """
+        ),
+    })
 
 # cursor definitions
 cursors = []

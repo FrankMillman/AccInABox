@@ -113,7 +113,7 @@ async def eval_elem(elem, db_obj, fld=None, value=None):
             test_obj = db_obj
         return test_obj.exists
     if elem.endswith('$orig'):
-        return await db_obj.get_orig(elem[:-5])
+        return await db_obj.get_orig(elem[1:-5])
     if elem.startswith('recalc('):
         fld2 = await db_obj.getfld(elem[7:-1])
         await fld2.recalc()
