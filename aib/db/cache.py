@@ -40,6 +40,17 @@ class Context:
 
         self._del = delwatcher(self)
 
+    def __str__(self):
+        descr = ['Context:']
+        descr.append(f"company={vars(self)['_company']};")
+        descr.append(f"user={vars(self)['_user_row_id']};")
+        descr.append(f"sys_admin={vars(self)['_sys_admin']};")
+        descr.append(f"mod_ledg_id={vars(self)['_mod_ledg_id']};")
+        for k, v in vars(self).items():
+            if not k.startswith('_') and k not in ('in_db_save', 'in_db_post'):
+                descr.append(f"{k}={v!r};")
+        return ' '.join(descr)
+
     async def close(self):  # called from various places when context completed
         if self._mem_id is not None:
             # close mem_db connections - this blocks, so use run_in_executor()
