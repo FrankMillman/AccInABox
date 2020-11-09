@@ -520,6 +520,10 @@ class Conn:
                     #   int/text to bool, unless you cast it to bool first
                     if col.data_type == 'BOOL':
                         as_clause = f"CAST({as_clause} AS {self.convert_string('BOOL')})"
+                    # if test is 'WHERE {as_clause} != 0', sqlite3 can return True even if
+                    #   the rounded result evaluates to 0. This fixes it - added [2020-11-09]
+                    elif col.data_type == 'DEC':
+                        as_clause = f'ROUND({as_clause}, {col.db_scale})'
                     col_text = as_clause
                 elif col.data_type == 'TEXT':
                     # col_text = f'LOWER({alias}.{col.col_name})'
