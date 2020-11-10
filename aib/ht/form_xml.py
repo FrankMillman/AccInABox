@@ -156,12 +156,12 @@ async def restart_frame_if_not_grid(caller, xml):
 async def get_op_cl_bal(caller, xml):
     # receive col names for op_bal, cl_bal, tot trans
     # populate fields, verify that op_bal + tot = cl_bal
-    obj_name, op_fld, cl_fld, tot_fld = (_.strip() for _ in xml.get('args').split(','))
+    obj_name, op_col, cl_col, tot_col = (_.strip() for _ in xml.get('args').split(','))
     db_obj = caller.context.data_objects[obj_name]
     async with caller.context.db_session.get_connection():  # starts a transaction
-        op_bal = await db_obj.getval(op_fld)
-        cl_bal = await db_obj.getval(cl_fld)
-        tot = await db_obj.getval(tot_fld)
+        op_bal = await db_obj.getval(op_col)
+        cl_bal = await db_obj.getval(cl_col)
+        tot = await db_obj.getval(tot_col)
     assert (op_bal + tot == cl_bal), f'{op_bal} + {tot} != {cl_bal}'
 
 async def recalc(caller, xml):

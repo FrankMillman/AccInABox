@@ -820,11 +820,11 @@ async def counter():
 def start(params):
     host = params.get('Host')
     port = params.getint('Port')
-    ssl_dir = params.get('ssl')
+    domain = params.get('ssl')
 
     ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     ssl_ctx.check_hostname = False
-    ssl_ctx.load_cert_chain(f'./{ssl_dir}/aib.crt', f'./{ssl_dir}/aib.key')
+    ssl_ctx.load_cert_chain(f'./ssl/{domain}/aib.crt', f'./ssl/{domain}/aib.key')
 
     loop = asyncio.get_event_loop()
     server = loop.run_until_complete(asyncio.start_server(ht.htc.handle_client, host, port, ssl=ssl_ctx))

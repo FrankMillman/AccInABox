@@ -390,7 +390,7 @@ virt.append ({
     'long_descr' : (
         'Balance outstanding at specified date - customer currency. '
         'The assumption is that any SQL that includes this virtual column will also include '
-            'WHERE tran_date <= {as_at_date} in its selection criteria. '
+            'WHERE tran_date <= {_ctx.as_at_date} in its selection criteria. '
         'Used in ar_cust_funcs.get_aged_bal, which is called from form ar_cust_bal. '
         ),
     'col_head'   : 'Balance',
@@ -403,7 +403,7 @@ virt.append ({
             "SELECT SUM(b.alloc_cust + b.discount_cust) "
             "FROM {company}.ar_allocations b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "b.tran_date <= {as_at_date} AND "
+                "b.tran_date <= {_ctx.as_at_date} AND "
                     "CASE "
                         "WHEN b.tran_type = 'ar_alloc' THEN "
                             "(SELECT row_id FROM {company}.ar_allocations c "
@@ -414,7 +414,7 @@ virt.append ({
                                         "WHERE d.row_id = b.tran_row_id)) "
                         "ELSE "
                             "(SELECT row_id FROM {company}.ar_openitems c "
-                                "WHERE c.tran_type = b.tran_type AND d.tran_row_id = b.tran_row_id) "
+                                "WHERE c.tran_type = b.tran_type AND c.tran_row_id = b.tran_row_id) "
                     "END IS NOT NULL "
             "), 0)"
         ),
@@ -456,7 +456,7 @@ virt.append ({
     'long_descr' : (
         'Balance outstanding at specified date - local currency. '
         'The assumption is that any SQL that includes this virtual column will also include '
-            'WHERE tran_date <= {as_at_date} in its selection criteria. '
+            'WHERE tran_date <= {_ctx.as_at_date} in its selection criteria. '
         ),
     'col_head'   : 'Balance',
     'db_scale'   : 2,
@@ -468,7 +468,7 @@ virt.append ({
             "SELECT SUM(b.alloc_local + b.discount_local) "
             "FROM {company}.ar_allocations b "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "b.tran_date <= {as_at_date} AND "
+                "b.tran_date <= {_ctx.as_at_date} AND "
                     "CASE "
                         "WHEN b.tran_type = 'ar_alloc' THEN "
                             "(SELECT row_id FROM {company}.ar_allocations c "
@@ -479,7 +479,7 @@ virt.append ({
                                         "WHERE d.row_id = b.tran_row_id)) "
                         "ELSE "
                             "(SELECT row_id FROM {company}.ar_openitems c "
-                                "WHERE c.tran_type = b.tran_type AND d.tran_row_id = b.tran_row_id) "
+                                "WHERE c.tran_type = b.tran_type AND c.tran_row_id = b.tran_row_id) "
                     "END IS NOT NULL "
             "), 0)"
         )
@@ -550,7 +550,7 @@ virt.append ({
         "- "
         "CASE "
             "WHEN a.discount_date IS NULL THEN 0 "
-            "WHEN a.discount_date < {as_at_date} THEN 0 "
+            "WHEN a.discount_date < {_ctx.as_at_date} THEN 0 "
             "ELSE a.discount_cust - COALESCE(("
                 "SELECT SUM(b.discount_cust) "
                 "FROM {company}.ar_allocations b "
@@ -582,7 +582,7 @@ virt.append ({
     'sql'        : (
         # "SELECT b.alloc_cust + b.discount_cust FROM {company}.ar_allocations b "
         "SELECT b.alloc_cust FROM {company}.ar_allocations b "
-        "WHERE b.item_row_id = a.row_id AND b.tran_row_id = {tran_row_id} "
+        "WHERE b.item_row_id = a.row_id AND b.tran_row_id = {_ctx.tran_row_id} "
         "AND b.deleted_id = 0"
         )
     })

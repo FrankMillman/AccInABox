@@ -27,6 +27,7 @@ class delwatcher:
 
 class Context:
     def __init__(self, user_row_id, sys_admin, company, mem_id=None, mod_ledg_id=(None, None)):
+        self._flds_to_recalc = DD(list)  # dictionary of fields to recalc if attribute value changes
         self._user_row_id = user_row_id
         self._sys_admin = sys_admin
         self._company = company
@@ -50,6 +51,16 @@ class Context:
             if not k.startswith('_') and k not in ('in_db_save', 'in_db_post'):
                 descr.append(f"{k}={v!r};")
         return ' '.join(descr)
+
+    def __setattr__(self, name, value):
+        object.__setattr__(self, name, value)
+        if name in self._flds_to_recalc:
+            for fld in self._flds_to_recalc[name]:
+                fld.must_be_evaluated = True
+
+    def notify_recalc(self, name, fld):
+        # if attribute 'name' changes, fld must be re-evaluated
+        self._flds_to_recalc[name].append(fld)
 
     async def close(self):  # called from various places when context completed
         if self._mem_id is not None:
@@ -244,12 +255,15 @@ async def gl_param_updated(db_obj, xml):
 # callback to set up ledger role - {module_id}_ledger_params.actions.after_insert
 async def ledger_inserted(db_obj, xml):
 
-    # force re-evaluation of ledger_id in adm_params
-    params = await get_adm_params(db_obj.company)
-    ledger_split = db_obj.table_name.split('_')  # {module_id}_ledger_params
-    ledger_split[2] = 'id'  # becomes {module_id}_ledger_id
-    ledger_id = '_'.join(ledger_split)
-    fld = await params.getfld(ledger_id)
+    # if there is exactly one row in {module_id}_ledger_params, the virtual field
+    #   adm_params.{module_id}_ledger_id returns the ledger_id, else it returns None.
+    # adding a new ledger can affect this logic, so setting 'must_be_evaluated' to
+    #   True forces it to be re-evaluated the next time it is accessed.
+    adm_params = await get_adm_params(db_obj.company)
+    ledger_split = db_obj.table_name.split('_')  # [module_id, 'ledger', 'params']
+    ledger_split[2] = 'id'  # [module_id, 'ledger', 'id']
+    ledger_id = '_'.join(ledger_split)  # this is the field name in adm_params
+    fld = await adm_params.getfld(ledger_id)
     fld.must_be_evaluated = True
 
     company = db_obj.company

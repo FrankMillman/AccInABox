@@ -77,8 +77,8 @@ def get_htc_params():
     host = s.gethostbyname(s.gethostname())
     htc_host = input(f'Enter web server host address [{host}]: ') or host
     htc_port = input('Enter web server port number [6543]: ') or '6543'
-    ssl_dir = input('Enter directory for ssl key/crt: ')
-    return OD((('host', htc_host), ('port', htc_port), ('ssl', ssl_dir)))
+    domain = input('Enter domain for ssl key/crt: ')
+    return OD((('host', htc_host), ('port', htc_port), ('ssl', domain)))
 
 if __name__ == '__main__':
 

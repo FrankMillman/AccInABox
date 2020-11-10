@@ -420,9 +420,9 @@ virt.append ({
                 "WHERE d.item_row_id = b.row_id), 0) AS balances "
             # "FROM {company}.ar_openitems b, {company}.ar_trans c "
             # "WHERE b.tran_type = c.tran_type  AND b.tran_row_id = c.tran_row_id "
-            #     "AND c.tran_date <= {bal_date_cust} "
+            #     "AND c.tran_date <= {_ctx.bal_date_cust} "
             "FROM {company}.ar_openitems b "
-            "WHERE b.tran_date <= {bal_date_cust} "
+            "WHERE b.tran_date <= {_ctx.bal_date_cust} "
             ") AS temp_openitems "
         "WHERE temp_openitems.cust_row_id = a.row_id "
         )
@@ -443,9 +443,9 @@ virt.append ({
                 "WHERE d.item_row_id = b.row_id), 0) AS balances "
             # "FROM {company}.ar_openitems b, {company}.ar_trans c "
             # "WHERE b.tran_type = c.tran_type  AND b.tran_row_id = c.tran_row_id "
-            #     "AND c.tran_date <= {bal_date_cust} "
+            #     "AND c.tran_date <= {_ctx.bal_date_cust} "
             "FROM {company}.ar_openitems b "
-            "WHERE b.tran_date <= {bal_date_cust} "
+            "WHERE b.tran_date <= {_ctx.bal_date_cust} "
             ") AS temp_openitems "
         "WHERE temp_openitems.cust_row_id = a.row_id "
         )
@@ -463,22 +463,22 @@ virt.append ({
             "(SELECT SUM(d.alloc_cust + d.discount_cust) "
                 "FROM {company}.ar_allocations d "
                 "WHERE d.item_row_id = b.row_id AND "
-                    "d.tran_row_id>tran_date <= {bal_date_curr} "
+                    "d.tran_row_id>tran_date <= {_ctx.bal_date_curr} "
                 # "LEFT JOIN {company}.ar_trans e "
                 #     "ON e.tran_type = d.tran_type "
                 #     "AND e.tran_row_id = d.tran_row_id "
                 # "WHERE d.item_row_id = b.row_id "
-                # "AND e.tran_date <= {bal_date_curr}) "
+                # "AND e.tran_date <= {_ctx.bal_date_curr}) "
             ", 0)) "
         "FROM {company}.ar_openitems b "
-        "WHERE b.tran_row_id>tran_date <= {bal_date_curr} "
-            "AND b.tran_row_id>tran_date > {bal_date_30} "
+        "WHERE b.tran_row_id>tran_date <= {_ctx.bal_date_curr} "
+            "AND b.tran_row_id>tran_date > {_ctx.bal_date_30} "
         # "LEFT JOIN {company}.ar_trans c "
         #     "ON c.tran_type = b.tran_type "
         #     "AND c.tran_row_id = b.tran_row_id "
         # "WHERE c.cust_row_id = a.row_id "
-        # "AND c.tran_date <= {bal_date_curr} "
-        # "AND c.tran_date > {bal_date_30} "
+        # "AND c.tran_date <= {_ctx.bal_date_curr} "
+        # "AND c.tran_date > {_ctx.bal_date_30} "
         )
     })
 virt.append ({
@@ -497,7 +497,7 @@ virt.append ({
                 "ORDER BY b.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals b "
             "WHERE b.deleted_id = 0 "
-            "AND b.tran_date < {tran_start_date} "
+            "AND b.tran_date < {_ctx.tran_start_date} "
             "AND b.cust_row_id = a.row_id "
             ") as c "
             "WHERE c.row_num = 1 "
@@ -520,7 +520,7 @@ virt.append ({
                 "ORDER BY b.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals b "
             "WHERE b.deleted_id = 0 "
-            "AND b.tran_date < {tran_start_date}     "
+            "AND b.tran_date < {_ctx.tran_start_date}     "
             "AND b.cust_row_id = a.row_id "
             ") as c "
             "WHERE c.row_num = 1 "
@@ -543,7 +543,7 @@ virt.append ({
                 "ORDER BY b.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals b "
             "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {tran_end_date} "
+            "AND b.tran_date <= {_ctx.tran_end_date} "
             "AND b.cust_row_id = a.row_id "
             ") as c "
             "WHERE c.row_num = 1 "
@@ -563,7 +563,7 @@ virt.append ({
           "COALESCE((SELECT SUM(b.amount_cust) AS \"x [REAL2]\" "
             "FROM {company}.ar_trans b "
             "WHERE b.cust_row_id = a.row_id "
-            "AND b.tran_date BETWEEN {tran_start_date} AND {tran_end_date})"
+            "AND b.tran_date BETWEEN {_ctx.tran_start_date} AND {_ctx.tran_end_date})"
             ", 0)"
         )
     })
@@ -583,7 +583,7 @@ virt.append ({
                 "ORDER BY b.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals b "
             "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {bal_date_cust} "
+            "AND b.tran_date <= {_ctx.bal_date_cust} "
             "AND b.cust_row_id = a.row_id "
             ") as c "
             "WHERE c.row_num = 1 "
@@ -606,7 +606,7 @@ virt.append ({
                 "ORDER BY b.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals b "
             "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {bal_date_cust} "
+            "AND b.tran_date <= {_ctx.bal_date_cust} "
             ") as c "
             "WHERE c.row_num = 1 "
             "), 0)"
@@ -628,7 +628,7 @@ virt.append ({
                 "ORDER BY b.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals b "
             "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {bal_date_cust} "
+            "AND b.tran_date <= {_ctx.bal_date_cust} "
             "AND b.cust_row_id = a.row_id "
             ") as c "
             "WHERE c.row_num = 1 "
@@ -651,7 +651,7 @@ virt.append ({
                 "ORDER BY b.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals b "
             "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {bal_date_cust} "
+            "AND b.tran_date <= {_ctx.bal_date_cust} "
             ") as c "
             "WHERE c.row_num = 1 "
             "), 0)"
@@ -675,7 +675,7 @@ virt.append ({
                 -
                 CASE
                     WHEN b.discount_date IS NULL THEN 0
-                    WHEN {as_at_date} > b.discount_date THEN 0
+                    WHEN b.discount_date < {_ctx.as_at_date} THEN 0
                     ELSE b.discount_cust - COALESCE(alloc.disc_alloc, 0)
                 END
             )
@@ -704,7 +704,7 @@ virt.append ({
                 ) AS alloc
                 ON alloc.item_row_id = b.row_id
 
-            WHERE b.cust_row_id = a.row_id AND b.due_date <= {as_at_date} AND b.deleted_id = 0
+            WHERE b.cust_row_id = a.row_id AND b.due_date <= {_ctx.as_at_date} AND b.deleted_id = 0
         ), 0)
         """
         ),

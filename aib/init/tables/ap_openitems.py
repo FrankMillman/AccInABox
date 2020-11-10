@@ -378,7 +378,7 @@ virt.append ({
             "FROM {company}.ap_allocations b "
             "JOIN {company}.ap_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "c.tran_date <= {as_at_date} "
+                "c.tran_date <= {_ctx.as_at_date} "
             "), 0)"
         ),
     })
@@ -416,7 +416,7 @@ virt.append ({
             "FROM {company}.ap_allocations b "
             "JOIN {company}.ap_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "c.tran_date <= {as_at_date} "
+                "c.tran_date <= {_ctx.as_at_date} "
             "), 0)"
         )
     })
@@ -463,7 +463,7 @@ virt.append ({
         # "- "
         # "CASE "
         #     "WHEN a.discount_date IS NULL THEN 0 "
-        #     "WHEN {as_at_date} > a.discount_date THEN 0 "
+        #     "WHEN {_ctx.as_at_date} > a.discount_date THEN 0 "
         #     "ELSE a.discount_supp - COALESCE(("
         #         "SELECT SUM(b.discount_supp) "
         #         "FROM {company}.ap_allocations b "

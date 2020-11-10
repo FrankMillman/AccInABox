@@ -315,16 +315,13 @@ class Conn:
             expr = sql[pos_1+1: pos_2]
             if expr == 'company':
                 sql = sql[:pos_1] + context.company + sql[pos_2+1:]
-            elif sql[pos_1 - 1] == '.':  # assume we are evaluating a table name
-                db_obj = context.data_objects[expr]
-                sql = sql[:pos_1] + db_obj.table_name + sql[pos_2+1:]
             else:
-                if '.' in expr:  # e.g. {ar_cust.op_bal_cust} in ar_trans.balance_cust
-                    table_name, col_name = expr.split('.')
+                table_name, col_name = expr.split('.')
+                if table_name == '_ctx':
+                    val = getattr(context, col_name)
+                else:
                     db_obj = context.data_objects[table_name]
                     val = await db_obj.getval(col_name)
-                else:
-                    val = getattr(context, expr)
 
                 # find where to insert val in params
                 occurrence = 0

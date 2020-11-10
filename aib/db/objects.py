@@ -494,8 +494,12 @@ class DbObject:
                         for col in col_defn.table_keys]
                 # notify affected fields about any dependencies
                 for col_name in col_defn.dependencies:
-                    fld = await self.getfld(col_name)
-                    fld.notify_recalc(field)
+                    if col_name.startswith('_ctx'):
+                        col_name = col_name.split('.')[1]
+                        context.notify_recalc(col_name, field)
+                    else:
+                        fld = await self.getfld(col_name)
+                        fld.notify_recalc(field)
 
         if db_table.sequence is not None:
             seq_col = db_table.sequence[0]
@@ -763,8 +767,13 @@ class DbObject:
         self.virtual_flds.append((col_defn, field))
 
         for dep_name in col_defn.dependencies:
-            fld = await self.getfld(dep_name)
-            fld.notify_recalc(field)
+            if dep_name.startswith('_ctx'):
+                dep_name = dep_name.split('.')[1]
+                self.context.notify_recalc(dep_name, field)
+            else:
+                fld = await self.getfld(dep_name)
+                fld.notify_recalc(field)
+
 
         if col_defn.dflt_val is not None or col_defn.dflt_rule is not None:
             field._orig = field._value = await field.get_dflt()
@@ -3551,8 +3560,7 @@ async def get_dependencies(col):
         sql = col.sql
         lng = len(sql)
         p = 0
-        while 'a.' in sql[p:]:
-            q = sql[p:].index('a.')
+        while (q := sql[p:].find('a.')) > -1:
             if q > 0 and sql[p:][q-1] not in ' ,()-+[]\r\n':  # any others needed ??
                 p = q + 1
                 continue  # e.g. ignore e.g. 'information_schema.tables'
@@ -3581,6 +3589,15 @@ async def get_dependencies(col):
             col.sql_a_cols.append(a_col)
 
             p = r
+
+        # look for {_ctx.attr} - make attr a dependency
+        p = 0
+        while (q := sql[p:].find('{_ctx.')) > -1:
+            r = sql[p+q:].find('}')
+            ctx_col = sql[p+q+1:p+q+r]
+            if ctx_col not in col.dependencies:
+                col.dependencies.add(ctx_col)
+            p += (q + r + 1)
 
 #----------------------------------------------------------------------------
 
@@ -3703,9 +3720,9 @@ class Column:
         self.dependencies = set()  # set of col_names affecting this col value
 
     def __str__(self):
-        descr = ['Column {}.{}:'.format(self.table_name, self.col_name)]
+        descr = [f'Column {self.table_name}.{self.col_name}:']
         for name in self.names:
-            descr.append('{}={};'.format(name, repr(getattr(self, name))))
+            descr.append(f'{name}={getattr(self, name)!r};')
         return ' '.join(descr)
 
     def get_flds(self):
