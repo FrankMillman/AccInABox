@@ -580,10 +580,9 @@ virt.append ({
     'db_scale'   : 2,
     'scale_ptr'  : 'cust_row_id>currency_id>scale',
     'sql'        : (
-        # "SELECT b.alloc_cust + b.discount_cust FROM {company}.ar_allocations b "
-        "SELECT b.alloc_cust FROM {company}.ar_allocations b "
+        "(SELECT b.alloc_cust FROM {company}.ar_allocations b "
         "WHERE b.item_row_id = a.row_id AND b.tran_row_id = {_ctx.tran_row_id} "
-        "AND b.deleted_id = 0"
+        "AND b.deleted_id = 0)"
         )
     })
 virt.append ({

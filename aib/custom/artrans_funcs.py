@@ -497,12 +497,11 @@ async def alloc_ageing(caller, xml):
     alloc_det = caller.data_objects['ar_allocations']
 
     cust_row_id = await alloc_hdr.getval('cust_row_id')
+    this_item_rowid = caller.context.this_item_rowid
 
     vars = caller.data_objects['vars']
-    this_item_rowid = await vars.getval('this_item_rowid')
     unalloc_fld = await vars.getfld('unallocated')
     unallocated = await unalloc_fld.getval()
-
 
     async def alloc(conn):
         nonlocal unallocated
@@ -516,9 +515,12 @@ async def alloc_ageing(caller, xml):
         async for _ in all_alloc:
             await alloc_det.init(init_vals={
                 'item_row_id': await ar_items.getval('row_id'),
-                'alloc_cust': await ar_items.getval('due_cust'),
                 })
-            await alloc_det.save(from_upd_on_save=True)  # do not update audit trail
+            # cannot include alloc_cust in init_vals
+            # in db.objects.init(), _orig is set to _value for init_vals
+            # ar_allocations.discount_cust uses 'if _orig = _value' in dflt_rule
+            await alloc_det.setval('alloc_cust', await ar_items.getval('due_cust'))
+            await alloc_det.save()
             await ar_items.setval('alloc_cust_gui', await alloc_det.getval('alloc_cust'))
             unallocated -= await alloc_det.getval('alloc_cust')
             await unalloc_fld.setval(unallocated)
@@ -539,7 +541,7 @@ async def alloc_ageing(caller, xml):
             if alloc_det.exists:
                 unallocated += await ar_items.getval('alloc_cust_gui')
                 await unalloc_fld.setval(unallocated)
-                await alloc_det.delete(from_upd_on_save=True)  # actually delete
+                await alloc_det.delete()
                 await ar_items.setval('alloc_cust_gui', None)
 
     async with caller.db_session.get_connection() as db_mem_conn:

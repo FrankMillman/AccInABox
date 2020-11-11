@@ -736,7 +736,14 @@ class Transaction:  # template for capturing transactions
           '"/>'
 
           '<method name="do_save" action="'  # separate method so it can be over-ridden
-              '&lt;save_obj obj_name=&quot;[obj_name]&quot; from_upd_on_save=&quot;true&quot;/&gt;'
+              '&lt;case&gt;'
+                '&lt;no_tran_header&gt;'
+                  '&lt;save_obj obj_name=&quot;[obj_name]&quot;/&gt;'
+                '&lt;/no_tran_header&gt;'
+                '&lt;default&gt;'
+                  '&lt;save_obj obj_name=&quot;[obj_name]&quot; from_upd_on_save=&quot;true&quot;/&gt;'
+                '&lt;/default&gt;'
+              '&lt;/case&gt;'
           '"/>'
 
           '<method name="do_post" action="'  # separate method so it can be over-ridden
