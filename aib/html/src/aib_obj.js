@@ -47,7 +47,7 @@ function AibText() {};
 AibText.prototype = new AibCtrl();
 AibText.prototype.after_got_focus = function(text) {
   if (!text.amendable()) {
-    setInsertionPoint(text, 0, text.value.length);
+    setInsertionPoint(text, 0);
     return;
     };
   if (text.multi_line === true) {
@@ -1215,7 +1215,7 @@ AibChoice.prototype.create_dropdown = function(choice) {
 
     dropdown.appendChild(row);
     };
-  
+
   dropdown.draw_window = function() {
     for (i=0; i<max_rows; i++) {
       var row = dropdown.childNodes[i];
@@ -1226,7 +1226,7 @@ AibChoice.prototype.create_dropdown = function(choice) {
         };
       };
     };
-  
+
   dropdown.option_highlighted = choice.ndx;
   if (choice.ndx > 3)
     dropdown.top_row = choice.ndx - 3
