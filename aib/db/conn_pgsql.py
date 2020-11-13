@@ -91,28 +91,22 @@ async def form_sql(self, columns, tablenames, where_clause='',
         sql += f' OFFSET {offset}'
     return sql
 
-async def insert_row(self, db_obj, cols, vals, generated_flds, from_upd_on_save):
+async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
     company = db_obj.company
     table_name = db_obj.table_name
 
-    if generated_flds:
-        returning_clause = f" RETURNING {', '.join([fld.col_name for fld in generated_flds])}"
-    else:
-        returning_clause = ''
-
     sql = (
         f"INSERT INTO {company}.{table_name} ({', '.join(cols)}) "
-        f"VALUES ({', '.join([self.constants.param_style]*len(cols))}){returning_clause}"
+        f"VALUES ({', '.join([self.constants.param_style]*len(cols))}) RETURNING row_id"
         )
 
     cur = await self.exec_sql(sql, vals)
+    data_row_id, = await cur.__anext__()
 
-    if generated_flds:
-        vals_generated = await cur.__anext__()
-        for fld, val in zip(generated_flds, vals_generated):
-            for child in fld.children:
-                child._value = val
-            fld._value = val
+    fld = await db_obj.getfld('row_id')
+    fld._value = data_row_id
+    for child in fld.children:
+        child._value = data_row_id
 
     # if True:  # always add 'created_id' - [2017-01-14]
     # what was the reason for the above? [2017-07-20]
@@ -120,14 +114,12 @@ async def insert_row(self, db_obj, cols, vals, generated_flds, from_upd_on_save)
     # these can be deleted on the fly and recreated, leaving dangling audit trail entries
     if not from_upd_on_save:
 
-        data_row_id = await db_obj.getval('row_id')
-        cols = 'data_row_id, user_row_id, date_time, type'
-        vals = (data_row_id, db_obj.context.user_row_id, self.timestamp, 'add')
-        returning_clause = ' RETURNING row_id'
+        cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
+        vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, 'add']
 
         sql = (
-            f"INSERT INTO {company}.{table_name}_audit_xref ({cols}) "
-            f"VALUES ({', '.join([self.constants.param_style]*4)}){returning_clause}"
+            f"INSERT INTO {company}.{table_name}_audit_xref ({', '.join(cols)}) "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))}) RETURNING row_id"
             )
 
         cur = await self.exec_sql(sql, vals)

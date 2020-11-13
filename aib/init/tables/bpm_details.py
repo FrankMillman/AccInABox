@@ -45,7 +45,7 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : True,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

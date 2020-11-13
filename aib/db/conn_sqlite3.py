@@ -278,89 +278,58 @@ async def convert_sql(self, sql, params=None):
                 await self.attach_company(company)
     return sql, params
 
-async def insert_row(self, db_obj, cols, vals, generated_flds, from_upd_on_save):
+async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
     table_name = db_obj.table_name
 
     if not db_obj.mem_obj:
         company = db_obj.company
         table_name = '{}.{}'.format(company, table_name)
 
-    for gen_fld in generated_flds:
-        if gen_fld.col_defn.data_type == 'AUT0':
-            sql = f"SELECT EXISTS(SELECT * FROM {table_name})"
-            cur = await self.exec_sql(sql)
-            exists, = await cur.__anext__()
-            if not exists:  # if first row, insert row_id with value of 0
-                cols.insert(0, gen_fld.col_name)
-                vals.insert(0, 0)
-                data_row_id = 0
-                gen_fld._value = data_row_id
-                for child in gen_fld.children:
-                    child._value = data_row_id
-                generated_flds.remove(gen_fld)
-            break
+    fld = await db_obj.getfld('row_id')
+    if fld.col_defn.data_type == 'AUT0':
+        sql = f"SELECT EXISTS(SELECT * FROM {table_name})"
+        cur = await self.exec_sql(sql)
+        exists, = await cur.__anext__()
+        if not exists:  # if first row, insert row_id with value of 0
+            cols.insert(0, 'row_id')
+            vals.insert(0, 0)
 
-    sql = ('INSERT INTO {} ({}) VALUES ({})'.format(table_name,
-        ', '.join(cols), ', '.join([self.constants.param_style]*len(cols))))
+    sql = (
+        f"INSERT INTO {table_name} ({', '.join(cols)}) "
+        f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+        )
 
     await self.exec_cmd(sql, vals)
+    data_row_id = self.lastrowid  # automatically returned by sqlite3
 
-    for gen_fld in generated_flds:
-        if gen_fld.col_defn.data_type in ('AUTO', 'AUT0'):
-            data_row_id = self.lastrowid  # automatically returned by sqlite3
-            gen_fld._value = data_row_id
-            for child in gen_fld.children:
-                child._value = data_row_id
-            generated_flds.remove(gen_fld)
-            break
-
-    if generated_flds:  # any other generated fields left?
-        key_cols = []  # build primary key(s)
-        key_vals = []  #   to read row to get values
-        for primary_key in db_obj.primary_keys:
-            key_cols.append(primary_key.col_name)
-            key_vals.append(await primary_key.getval())
-
-        where = ' AND '.join(['='.join((col_name, self.constants.param_style))
-            for col_name in key_cols])
-        sql = 'SELECT {} FROM {} WHERE {}'.format(
-            ', '.join([fld.col_name for fld in generated_flds]),
-            table_name, where)
-        cur = await self.exec_sql(sql, key_vals)
-        vals_generated = await cur.__anext__()
-        for fld, val in zip(generated_flds, vals_generated):
-            for child in fld.children:
-                child._value = val
-            fld._value = val
+    fld._value = data_row_id
+    for child in fld.children:
+        child._value = data_row_id
 
     # if not db_obj.mem_obj:  # always add 'created_id' - [2017-01-14]
     # what was the reason for the above? [2017-07-20]
     # it causes a problem with tables like inv_wh_prod_unposted, or any split_src table
     # these can be deleted on the fly and recreated, leaving dangling audit trail entries
     if not db_obj.mem_obj and not from_upd_on_save:
-        # if True, assume that data_row_id was populated above
 
+        cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
+        vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, 'add']
         if data_row_id == 0:  # data_type 'AUT0', insert row_id with value of 0
-            cols = 'row_id, data_row_id, user_row_id, date_time, type'
-            sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
-                    "({2}, {2}, {2}, {2}, 'add')".format(
-                table_name, cols, self.constants.param_style))
-            params = (0, data_row_id, db_obj.context.user_row_id, self.timestamp)
-        else:
-            cols = 'data_row_id, user_row_id, date_time, type'
-            sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
-                    "({2}, {2}, {2}, 'add')".format(
-                table_name, cols, self.constants.param_style))
-            params = (data_row_id, db_obj.context.user_row_id, self.timestamp)
+            cols.insert(0, 'row_id')
+            vals.insert(0, 0)
 
-        await self.exec_cmd(sql, params)
+        sql = (
+            f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+            )
+
+        await self.exec_cmd(sql, vals)
         xref_row_id = self.lastrowid
 
         fld = await db_obj.getfld('created_id')
         fld._value = xref_row_id
         sql = (
-            'UPDATE {} SET created_id = {} WHERE row_id = {}'
-            .format(table_name, xref_row_id, data_row_id)
+            f'UPDATE {table_name} SET created_id = {xref_row_id} WHERE row_id = {data_row_id}'
             )
         await self.exec_cmd(sql)
 

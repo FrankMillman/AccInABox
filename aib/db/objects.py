@@ -456,7 +456,8 @@ class DbObject:
             self.fields[col_defn.col_name] = field
             if col_defn.col_type != 'alt':
                 self.select_cols.append(field)  # excludes any 'alt_src' columns
-                self.flds_to_update.append(field)
+                if col_defn.col_name not in ('row_id', 'created_id', 'deleted_id'):
+                    self.flds_to_update.append(field)
 
             if field.col_name in col_const:  # e.g. tran_type in ar_openitems
                 if col_defn.col_type == 'alt':
@@ -1321,13 +1322,12 @@ class DbObject:
 
     async def setup_defaults(self):  # generate defaults for blank fields
         for fld in self.get_flds_to_update():  # core + active_subtype fields
-            if fld.col_defn.data_type not in ('AUTO', 'AUT0'):
-                # must check calculated first, else getval() will re-calculate if True!
-                calculated = await fld.calculated()
-                if calculated or await fld.getval() is None:
-                    dflt_val = await fld.get_dflt()
-                    validate = not calculated  # assume if calculated, validation not required
-                    await fld.setval(dflt_val, display=True, validate=validate)
+            # must check calculated first, else getval() will re-calculate if True!
+            calculated = await fld.calculated()
+            if calculated or await fld.getval() is None:
+                dflt_val = await fld.get_dflt()
+                validate = not calculated  # assume if calculated, validation not required
+                await fld.setval(dflt_val, display=True, validate=validate)
 
     async def insert(self, conn, from_upd_on_save):
         if not from_upd_on_save:
@@ -1335,20 +1335,16 @@ class DbObject:
 
         cols = []
         vals = []
-        generated_flds = []
 
         for fld in self.get_flds_to_update():  # core + active_subtype fields
-            if fld.col_defn.data_type in ('AUTO', 'AUT0'):
-                generated_flds.append(fld)
-            else:
-                cols.append(fld.col_name)
-                vals.append(await fld.get_val_for_sql())
+            cols.append(fld.col_name)
+            vals.append(await fld.get_val_for_sql())
 
         for before_insert in self.db_table.actions.before_insert:
             await db.hooks_xml.table_hook(self, before_insert)
 
         try:
-            await conn.insert_row(self, cols, vals, generated_flds, from_upd_on_save)
+            await conn.insert_row(self, cols, vals, from_upd_on_save)
         except conn.exception as err:
             raise AibError(head='Insert {}'.format(self.table_name),
                 body=str(err))
@@ -1366,9 +1362,8 @@ class DbObject:
         vals_to_update = []
         for fld in self.get_flds_to_update():  # core + active_subtype fields
             if await fld.value_changed():
-                if fld.col_defn.data_type not in ('AUTO', 'AUT0'):  # can happen if insert, then dirty, then update
-                    cols_to_update.append(fld.col_name)
-                    vals_to_update.append(await fld.get_val_for_sql())
+                cols_to_update.append(fld.col_name)
+                vals_to_update.append(await fld.get_val_for_sql())
 
         if not cols_to_update:  # possible if child changed but not parent, or if virt fld changed
             self.dirty = False
