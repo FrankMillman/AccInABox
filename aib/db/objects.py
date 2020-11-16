@@ -456,8 +456,7 @@ class DbObject:
             self.fields[col_defn.col_name] = field
             if col_defn.col_type != 'alt':
                 self.select_cols.append(field)  # excludes any 'alt_src' columns
-                if col_defn.col_name not in ('row_id', 'created_id', 'deleted_id'):
-                    self.flds_to_update.append(field)
+                self.flds_to_update.append(field)
 
             if field.col_name in col_const:  # e.g. tran_type in ar_openitems
                 if col_defn.col_type == 'alt':
@@ -576,8 +575,11 @@ class DbObject:
                 descr.append('{}={!r};'.format(field.col_name, await field.getval()))
         return ' '.join(descr)
 
-    def get_flds_to_update(self, all=False):
+    def get_flds_to_update(self, row_id=True, all=False):
         for fld in self.flds_to_update:
+            if not row_id:  # ignore following fields when inserting/updating
+                if fld.col_name in ('row_id', 'created_id', 'deleted_id'):
+                    continue
             yield fld
         if all:
             yielded = set()  # to avoid yielding duplicates
@@ -1321,7 +1323,7 @@ class DbObject:
             fld._orig = fld._value_  # if not evaluated yet, any need to evaluate now? [2018-11-07]
 
     async def setup_defaults(self):  # generate defaults for blank fields
-        for fld in self.get_flds_to_update():  # core + active_subtype fields
+        for fld in self.get_flds_to_update(row_id=False):  # core + active_subtype fields
             # must check calculated first, else getval() will re-calculate if True!
             calculated = await fld.calculated()
             if calculated or await fld.getval() is None:
@@ -1336,7 +1338,7 @@ class DbObject:
         cols = []
         vals = []
 
-        for fld in self.get_flds_to_update():  # core + active_subtype fields
+        for fld in self.get_flds_to_update(row_id=False):  # core + active_subtype fields
             cols.append(fld.col_name)
             vals.append(await fld.get_val_for_sql())
 
@@ -1360,7 +1362,7 @@ class DbObject:
     async def update(self, conn, from_upd_on_save, call_upd_on_save=True):
         cols_to_update = []
         vals_to_update = []
-        for fld in self.get_flds_to_update():  # core + active_subtype fields
+        for fld in self.get_flds_to_update(row_id=False):  # core + active_subtype fields
             if await fld.value_changed():
                 cols_to_update.append(fld.col_name)
                 vals_to_update.append(await fld.get_val_for_sql())
