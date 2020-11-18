@@ -199,15 +199,6 @@ cols.append ({
     'short_descr': 'Discount allowed - cust',
     'long_descr' : (
         'Discount allowed - customer currency. '
-        'This is automatically calculated as follows. '
-        'If alloc_cust = alloc_cust.orig, no change, use existing value. '
-        'If item_row_id = tran_row_id>item_row_id, this is the double-entry allocation '
-            'generated programmatically on_post - use existing value, updated by on_post. '
-        'If discount_date is None or < tran_date, discount_cust = 0. '
-        'Else calculate discount allowed as follows. '
-        'Move tran_date to _ctx.as_at_date - this is needed by item_row_id>due_cust. '
-        'If alloc_cust >= item_row_id>due_cust, item is fully paid, allow item_row_id>os_disc_cust. '
-        'Else pro-rata item_row_id>os_disc_cust - divide by item_row_id>due_cust, multiply by alloc_cust.'
         ),
     'col_head'   : 'Disc cust',
     'key_field'  : 'N',
@@ -219,6 +210,17 @@ cols.append ({
     'scale_ptr'  : 'tran_row_id>cust_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
+        '<!--'
+        'Calculated as follows -\n'
+        'If alloc_cust = alloc_cust.orig, no change, use existing value.\n'
+        'If item_row_id = tran_row_id>item_row_id, this is the double-entry allocation '
+            'generated programmatically on_post - use existing value, updated by on_post.\n'
+        'If discount_date is None or < tran_date, discount_cust = 0.\n'
+        'Else calculate discount allowed as follows.\n'
+        'Move tran_date to _ctx.as_at_date - this is needed by item_row_id>due_cust.\n'
+        'If alloc_cust >= item_row_id>due_cust, item is fully paid, allow item_row_id>os_disc_cust.\n'
+        'Else pro-rata item_row_id>os_disc_cust - divide by item_row_id>due_cust, multiply by alloc_cust.'
+        '-->'
         '<case>'
             '<compare test="[[`if`, ``, `alloc_cust`, `=`, `$alloc_cust$orig`, ``]]">'
                 '<fld_val name="discount_cust"/>'
@@ -261,11 +263,6 @@ cols.append ({
     'short_descr': 'Amount allocated - local',
     'long_descr' : (
         'Amount allocated - local currency. '
-        'This is automatically calculated as follows. '
-        'If alloc_cust = alloc_cust.orig, no change, use existing value. '
-        'If item_row_id = tran_row_id>item_row_id, this is the double-entry allocation '
-            'generated programmatically on_post - use existing value, updated by on_post. '
-        'Else calculate by dividing alloc_cust by tran_row_id>tran_exch_rate.'
         ),
     'col_head'   : 'Alloc local',
     'key_field'  : 'N',
@@ -277,6 +274,13 @@ cols.append ({
     'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
+        '<!--'
+        'Calculated as follows -\n'
+        'If alloc_cust = alloc_cust.orig, no change, use existing value.\n'
+        'If item_row_id = tran_row_id>item_row_id, this is the double-entry allocation '
+            'generated programmatically on_post - use existing value, updated by on_post.\n'
+        'Else calculate by dividing alloc_cust by tran_row_id>tran_exch_rate.'
+        '-->'
         '<case>'
             '<compare test="[[`if`, ``, `alloc_cust`, `=`, `$alloc_cust$orig`, ``]]">'
                 '<fld_val name="alloc_local"/>'
@@ -303,12 +307,6 @@ cols.append ({
     'short_descr': 'Discount allowed - local',
     'long_descr' : (
         'Discount allowed - local currency. '
-        'This is automatically calculated as follows. '
-        'If alloc_cust = alloc_cust.orig, no change, use existing value. '
-        'If discount_cust = 0, then discount_local = 0. '
-        'If item_row_id = tran_row_id>item_row_id, this is the double-entry allocation '
-            'generated programmatically on_post - use existing value, updated by on_post. '
-        'Else calculate by dividing discount_cust by tran_row_id>tran_exch_rate.'
         ),
     'col_head'   : 'Disc local',
     'key_field'  : 'N',
@@ -320,6 +318,14 @@ cols.append ({
     'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
+        '<!--'
+        'Calculated as follows -\n'
+        'If alloc_cust = alloc_cust.orig, no change, use existing value.\n'
+        'If discount_cust = 0, then discount_local = 0.\n'
+        'If item_row_id = tran_row_id>item_row_id, this is the double-entry allocation '
+            'generated programmatically on_post - use existing value, updated by on_post.\n'
+        'Else calculate by dividing discount_cust by tran_row_id>tran_exch_rate.'
+        '-->'
         '<case>'
             '<compare test="[[`if`, ``, `alloc_cust`, `=`, `$alloc_cust$orig`, ``]]">'
                 '<fld_val name="discount_local"/>'

@@ -381,7 +381,11 @@ class GuiSxmlCtrl(GuiCtrl):
             pwd, lng, height, label, action, gui, grid=False):
         await GuiCtrl._ainit_(self, parent, fld, readonly, action)
         if lng != 0:
-            value = None if grid else await fld.val_to_str()
+            if grid:
+                value = None
+            else:
+                comment, xml_code = await fld.val_to_str()
+                value = f'{comment}\f{xml_code}'  # use ASCII ff to join
 
             input = {'type': 'sxml', 'lng': lng, 'ref': self.ref, 'value': value,
                 'help_msg': fld.col_defn.long_descr, 'head': fld.col_defn.col_head,
