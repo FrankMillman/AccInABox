@@ -41,7 +41,7 @@ cols.append ({
     'long_descr' : 'Row id - starts from 0, so equal to period_row_id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : True,
+    'calculated' : False,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

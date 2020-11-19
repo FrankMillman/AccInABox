@@ -107,7 +107,7 @@ cols.append ({
     'long_descr' : 'Credit note number - automatically generated',
     'col_head'   : 'Crn no',
     'key_field'  : 'A',
-    'calculated' : False,
+    'calculated' : True,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,

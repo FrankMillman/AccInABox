@@ -282,16 +282,11 @@ cols.append ({
     'long_descr' : (
         'Is value assigned programatically? '
         'Can be True, False, or a condition to evaluate. '
-        'Ideally, condition must be evaluatable when setting up db_obj - '
-            'not sure if true - see db.object_fields.calculated()'
-        'True if col_name = db_table.ledger_col - will be evaluated in get_dflt() '
-        'True if values are accumulated from child table while updating '
-        'True if there is a dflt_rule, and allow_amend is false '
-        'True if col_type = "virt "'
-        'If True and not "virt", amendment not allowed '
-        'If True and not "virt", re-evaluated on save in setup_defaults() '
-        'If True and not "virt", set amend_ok to False on client '
-        'if True, do not include in WSDL '
+        'Always True if col_type = "virt ". '
+        'If True and not "virt", amendment not allowed. '
+        'If True and not "virt", re-evaluated on save in setup_defaults(). '
+        'If True and not "virt", set amend_ok to False on client. '
+        'If True, do not include in WSDL. '
         ),
     'col_head'   : 'Calculated?',
     'key_field'  : 'N',

@@ -1003,7 +1003,7 @@ class Field:
             #       for child in self.children:
             #           child._value = value
             #           if child.table_keys:
-            #               await child.read_row(vaue, display)
+            #               await child.read_row(value, display)
             #     to setval()
             #   adding
             #       for child in self.children:
