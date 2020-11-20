@@ -2,6 +2,7 @@ import asyncio
 import importlib
 import operator
 from json import loads
+from lxml import etree
 
 from init import init_company
 
@@ -13,6 +14,8 @@ from evaluate_expr import eval_bool_expr
 
 async def table_hook(db_obj, elem):
     for xml in elem:
+        if isinstance(xml, etree._Comment):
+            continue
         await globals()[xml.tag](db_obj, xml)
 
 #----------------------------------------------------------------------

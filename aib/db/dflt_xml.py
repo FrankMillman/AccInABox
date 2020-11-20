@@ -3,6 +3,7 @@ import operator
 from datetime import date as dt, timedelta as td
 from bisect import bisect_left
 from json import loads
+from lxml import etree
 
 
 import db
@@ -21,6 +22,8 @@ async def get_db_dflt(fld, orig=False):
     # debug = (f'{fld.table_name}.{fld.col_name}' == 'ar_tran_disc.tran_number')
 
     for xml in fld.col_defn.dflt_rule:
+        if isinstance(xml, etree._Comment):
+            continue
         if debug:
             print('dbg:', xml.tag)
         value = await globals()[xml.tag](fld, xml, debug)

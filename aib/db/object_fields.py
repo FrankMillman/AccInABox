@@ -1365,7 +1365,10 @@ class StringXml(Xml):
         if not from_gui:  # from database
             xml = etree.fromstring(f'<_>{string}</_>', parser=self.parser)
         else:  # from gui
-            comment, xml_code = string.split('\f')  # ASCII ff used to join
+            if '\f' in string:  # ASCII ff used to join comment and xml_code
+                comment, xml_code = string.split('\f')
+            else:
+                comment, xml_code = '', string
             xml_code = f'<_>{xml_code}</_>'
             lines = xml_code.split('"')  # split on attributes
             for pos, line in enumerate(lines):
@@ -1374,7 +1377,8 @@ class StringXml(Xml):
                         '&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
             xml_code = '"'.join(lines)
             xml = etree.fromstring(xml_code, parser=self.parser)
-            xml.insert(0, etree.Comment(comment))
+            if comment:
+                xml.insert(0, etree.Comment(comment))
         return xml
 
     def to_string(self, xml, for_gui=False):
@@ -1394,7 +1398,7 @@ class StringXml(Xml):
                             lines[pos] = line.replace(
                                 '&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
                     xml_code += '"'.join(lines)
-            return comment, xml_code
+            return f'{comment}\f{xml_code}'  # ASCII ff used to join comment and xml_code
 
 class Integer(Field):
     async def get_dflt(self, from_init=False):
