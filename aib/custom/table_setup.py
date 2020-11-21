@@ -2,42 +2,44 @@ import db.objects
 import db.create_table
 from common import AibError
 
-async def setup_audit_cols(caller, xml):
-    # called when saving header
-    # [TO DO] this should really be called from db_tables.after_insert, not from the form definition!
+async def setup_init_cols(caller, xml):
+    # called when saving header (db_table) in form setup_table.xml
+    #
+    # ideally this should be called from db_tables.after_insert
+    # but this would require big changes to init_db/init_company
+    #
+    # on rare occasions, row_id data_type should be 'AUT0' instead of 'AUTO'
+    # this is not catered for here - some thought required!
+
     db_table = caller.data_objects['db_table']
     table_id = await db_table.getval('row_id')
 
     params = []
-    params.append(('row_id', 'AUTO', 'Row id', 'Row id', 'Row', 'Y',
-        True, False, False, 0, 0, None, None, None, None, None))
-    params.append(('created_id', 'INT', 'Created id', 'Created row id', 'Created', 'N',
-        True, False, True, 0, 0, None, '0', None, None, None))
-    params.append(('deleted_id', 'INT', 'Deleted id', 'Deleted row id', 'Deleted', 'N',
-        True, False, True, 0, 0, None, '0', None, None, None))
+    params.append(('row_id', 'AUTO', 'Row id', 'Row id', 'Row', 'Y', None))
+    params.append(('created_id', 'INT', 'Created id', 'Created row id', 'Created', 'N', '0'))
+    params.append(('deleted_id', 'INT', 'Deleted id', 'Deleted row id', 'Deleted', 'N', '0'))
 
     db_column = await db.objects.get_db_object(db_table.context, 'db_columns')
-    for seq, param in enumerate(params):
+    for param in params:
         await db_column.init()
         await db_column.setval('table_id', table_id)
         await db_column.setval('col_name', param[0])
         await db_column.setval('col_type', 'sys')
-        await db_column.setval('seq', seq)
         await db_column.setval('data_type', param[1])
         await db_column.setval('short_descr', param[2])
         await db_column.setval('long_descr', param[3])
         await db_column.setval('col_head', param[4])
         await db_column.setval('key_field', param[5])
-        await db_column.setval('calculated', param[6])
-        await db_column.setval('allow_null', param[7])
-        await db_column.setval('allow_amend', param[8])
-        await db_column.setval('max_len', param[9])
-        await db_column.setval('db_scale', param[10])
-        await db_column.setval('scale_ptr', param[11])
-        await db_column.setval('dflt_val', param[12])
-        await db_column.setval('col_checks', param[13])
-        await db_column.setval('fkey', param[14])
-        await db_column.setval('choices', param[15])
+        await db_column.setval('calculated', False)
+        await db_column.setval('allow_null', False)
+        await db_column.setval('allow_amend', False)
+        await db_column.setval('max_len', 0)
+        await db_column.setval('db_scale', 0)
+        await db_column.setval('scale_ptr', None)
+        await db_column.setval('dflt_val', param[6])
+        await db_column.setval('col_checks', None)
+        await db_column.setval('fkey', None)
+        await db_column.setval('choices', None)
         await db_column.setval('sql', None)
         await db_column.save()
 

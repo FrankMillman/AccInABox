@@ -216,7 +216,7 @@
                   <<change_button>>
                     <<btn_show btn_id=`pre_save` state=`false`/>>
                   <</change_button>>
-                  <<pyfunc name=`custom.table_setup.setup_audit_cols`/>>
+                  <<pyfunc name=`custom.table_setup.setup_init_cols`/>>
                 " validation="
                   <<validation>>
                     <<case>>
