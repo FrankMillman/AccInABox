@@ -4,24 +4,23 @@ from bisect import bisect_left
 from decimal import Decimal as D
 from datetime import date as dt, datetime as dtm, timedelta as td
 
-import bp.bpm
 import db.objects
 import db.cache
 from common import AibError, AibDenied
 
 async def split_nsls(db_obj, conn, return_vals):
-    # called as split_src func from various.upd_on_save()
-    eff_date = await db_obj.getval('eff_date')
-    tran_date = await db_obj.getval('tran_det_row_id>tran_date')
-    amount_pty = await db_obj.getval('net_party')
-    amount_loc = await db_obj.getval('net_local')
-
-    # at the moment this achieves nothing! [2019-08-09]
-    # but it will be used when there are multiple effective dates
-    if eff_date == tran_date:
-        yield (tran_date, amount_pty, amount_loc)
+    # called as split_src func from sls_nsls_subtran.upd_on_save()
+    eff_date_param = await db_obj.getval('nsls_code_id>chg_eff_date')
+    if eff_date_param == '1':  # 1st day of following month
+        period_no = await db_obj.getval('tran_det_row_id>period_row_id')
+        adm_periods = await db.cache.get_adm_periods(db_obj.company)
+        closing_date = adm_periods[period_no].closing_date
+        eff_date = closing_date + td(1)
     else:
-        yield (eff_date, amount_pty, amount_loc)
+        # [TO DO - implement multiple effective dates
+        raise NotImplementedError
+
+    yield (eff_date, await db_obj.getval('net_party'), await db_obj.getval('net_local'))
 
 async def setup_openitems(db_obj, conn, return_vals):
     # called as split_src func from ar_tran_inv.upd_on_post()
@@ -158,6 +157,7 @@ async def alloc_oldest(db_obj, conn, return_vals):
 async def get_tot_alloc(db_obj, fld, src):
     # called from ar_tran_alloc/ar_subtran_rec in 'condition' for upd_on_post 'ar_allocations'
     # get total allocations for this transaction and save in 'context'
+    # used to create 'double-entry' allocation for item being allocated
     row_id = await db_obj.getval('row_id')
     if db_obj.table_name == 'ar_tran_alloc':
         tran_type = 'ar_alloc'

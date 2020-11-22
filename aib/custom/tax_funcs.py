@@ -178,8 +178,8 @@ async def calc_tax(db_obj, conn, return_vals):
         raise NotImplementedError
 
     tax_incl = await db_obj.getval('tran_det_row_id>tax_incl')
-    exch_rate_party = await db_obj.getval('tran_det_row_id>party_exch_rate')
-    exch_rate_tran = await db_obj.getval('tran_det_row_id>tran_exch_rate')
+    party_exch_rate = await db_obj.getval('tran_det_row_id>party_exch_rate')
+    tran_exch_rate = await db_obj.getval('tran_det_row_id>tran_exch_rate')
     tran_date = await db_obj.getval('tran_det_row_id>tran_date')
 
     if tax_code_table not in db_obj.context.data_objects:
@@ -203,10 +203,10 @@ async def calc_tax(db_obj, conn, return_vals):
             tax_amt = await tax_amt_fld.check_val(inv_amt * tax_rate / 100)
         return_vals[1] += tax_amt
 
-        tax_amt_party = await tax_amt_fld.check_val(tax_amt / exch_rate_tran * exch_rate_party)
+        tax_amt_party = await tax_amt_fld.check_val(tax_amt / tran_exch_rate * party_exch_rate)
         return_vals[2] += tax_amt_party
 
-        tax_amt_local = await tax_amt_fld.check_val(tax_amt / exch_rate_tran)
+        tax_amt_local = await tax_amt_fld.check_val(tax_amt / tran_exch_rate)
         return_vals[3] += tax_amt_local
 
         yield (tax_code_id, tax_rate, tax_amt)

@@ -247,6 +247,17 @@ virt.append ({
     'sql'        : "'0'",
     })
 virt.append ({
+    'col_name'   : 'period_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Transaction period',
+    'long_descr' : 'Transaction period',
+    'col_head'   : 'Period',
+    'sql'        : (
+        "SELECT count(*) FROM {company}.adm_periods b "
+        "WHERE b.closing_date < a.tran_date"
+        ),
+    })
+virt.append ({
     'col_name'   : 'party_currency_id',
     'data_type'  : 'INT',
     'short_descr': 'Party currency id',

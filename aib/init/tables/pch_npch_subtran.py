@@ -261,50 +261,6 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'eff_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Effective date',
-    'long_descr' : 'Effective date',
-    'col_head'   : 'Eff date',
-    'key_field'  : 'N',
-    'calculated' : [['where', '', '_param.eff_date_npch', 'is', '$False', '']],
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-          '<compare test="[[`if`, ``, `eff_date`, `is not`, `$None`, ``]]">'
-            '<fld_val name="eff_date"/>'
-          '</compare>'
-          '<compare test="[[`if`, ``, `npch_code_id>chg_eff_date`, `=`, `~0~`, ``]]">'
-            '<fld_val name="tran_det_row_id>tran_date"/>'
-          '</compare>'
-          '<compare test="[[`if`, ``, `npch_code_id>chg_eff_date`, `=`, `~1~`, ``]]">'
-            '<expr>'
-              '<literal value="closing_date(tran_det_row_id>period_row_id)"/>'
-              '<op type="+"/>'
-              '<literal value="td(1)"/>'
-            '</expr>'
-          '</compare>'
-        '</case>'
-        ),
-    'col_checks' : [
-        ['eff_date_allowed', 'Cannot change effective date for this code', [
-            ['check', '', '$value', '=', 'tran_det_row_id>tran_date', ''],
-            ['or', '', 'npch_code_id>chg_eff_date', '!=', '0', ''],
-            ]],
-        ['eff_date_valid', 'Cannot be before transaction date', [
-            ['check', '', 'npch_code_id>chg_eff_date', '=', '0', ''],
-            ['or', '', '$value', '>=', 'tran_det_row_id>tran_date', ''],
-            ]],
-        ],
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'net_amt',
     'data_type'  : 'DEC',
     'short_descr': 'Net amount',

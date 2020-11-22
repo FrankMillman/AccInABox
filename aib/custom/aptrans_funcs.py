@@ -6,19 +6,18 @@ import db.cache
 from common import AibError
 
 async def split_npch(db_obj, conn, return_vals):
-    # called as split_src func from various.upd_on_save()
-    eff_date = await db_obj.getval('eff_date')
-    tran_date = await db_obj.getval('tran_det_row_id>tran_row_id>tran_date')
-    npch_code = await db_obj.getval('npch_code_id')
-    amount_pty = await db_obj.getval('net_party')
-    amount_loc = await db_obj.getval('net_local')
-
-    # at the moment this achieves nothing! [2019-08-09]
-    # but it will be used when there are multiple effective dates
-    if eff_date == tran_date:
-        yield (tran_date, amount_pty, amount_loc)
+    # called as split_src func from pch_npch_subtran.upd_on_save()
+    eff_date_param = await db_obj.getval('npch_code_id>chg_eff_date')
+    if eff_date_param == '1':  # 1st day of following month
+        period_no = await db_obj.getval('tran_det_row_id>period_row_id')
+        adm_periods = await db.cache.get_adm_periods(db_obj.company)
+        closing_date = adm_periods[period_no].closing_date
+        eff_date = closing_date + td(1)
     else:
-        yield (eff_date, amount_pty, amount_loc)
+        # [TO DO - implement multiple effective dates
+        raise NotImplementedError
+
+    yield (eff_date, await db_obj.getval('net_party'), await db_obj.getval('net_local'))
 
 # async def check_pmt_date(db_obj, fld, src_val):
 #     if 'pmt_dates' not in db_obj.context.data_objects:
