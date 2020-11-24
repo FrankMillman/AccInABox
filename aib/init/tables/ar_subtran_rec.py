@@ -136,16 +136,78 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    # 'col_checks' : [
-    #     ['alt_curr', 'Alternate currency not allowed', [
-    #         ['check', '', 'cust_row_id>currency_id', '=', 'currency_id', ''],
-    #         ['or', '', '_ledger.alt_curr', 'is', '$True', '']
-    #         ]],
-    #     ],
+    'col_checks' : [
+        ['alt_curr', 'Customer currency does not match', [
+            ['check', '', 'cust_row_id>currency_id', '=', 'tran_det_row_id>currency_id', ''],
+            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+            ]],
+        ],
     'fkey'       : [
         'ar_customers', 'row_id', 'ledger_id, cust_id, location_id, function_id',
         'ledger_id, cust_id, location_id, function_id', False, 'cust_bal_2'
         ],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Receipt number',
+    'long_descr' : 'Receipt number',
+    'col_head'   : 'Rec no',
+    'key_field'  : 'N',
+    'calculated' : True,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 15,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `source_code`, `=`, `~ar_rec_ar~`, ``]]">'
+            '<fld_val name="tran_det_row_id>tran_number"/>'
+          '</compare>'
+          '<default>'
+            '<case>'
+                '<on_post>'
+                    '<expr>'
+                    '<fld_val name="tran_det_row_id>tran_number"/>'
+                    '<op type="+"/>'
+                    '<literal value="/"/>'
+                    '<op type="+"/>'
+                    '<string>'
+                        '<expr>'
+                        '<fld_val name="tran_det_row_id>line_no"/>'
+                        '<op type="+"/>'
+                        '<literal value="1"/>'
+                        '</expr>'
+                    '</string>'
+                    '</expr>'
+                '</on_post>'
+                '<on_insert>'
+                    '<expr>'
+                    '<fld_val name="tran_det_row_id>tran_number"/>'
+                    '<op type="+"/>'
+                    '<literal value="/"/>'
+                    '<op type="+"/>'
+                    '<string>'
+                        '<expr>'
+                        '<fld_val name="tran_det_row_id>line_no"/>'
+                        '<op type="+"/>'
+                        '<literal value="1"/>'
+                        '</expr>'
+                    '</string>'
+                    '</expr>'
+                '</on_insert>'
+                '<default>'
+                    '<fld_val name="tran_number"/>'
+                '</default>'
+            '</case>'
+          '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
@@ -163,6 +225,25 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '{tran_det_row_id>tran_date}',
     'dflt_rule'   : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Description',
+    'long_descr' : 'Description',
+    'col_head'   : 'Description',
+    'key_field'  : 'N',
+    'calculated' : False,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 30,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{tran_det_row_id>text}',
+    'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -262,90 +343,6 @@ cols.append ({
             '</default>'
         '</case>'
         ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tran_number',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Receipt number',
-    'long_descr' : 'Receipt number - see before_insert and before_update to ensure unique',
-    'col_head'   : 'Rec no',
-    'key_field'  : 'N',
-    'calculated' : [
-        ['where', '', '_ledger.auto_rec_no', 'is not', '$None', ''],
-        ['or', '', 'cust_row_id>ledger_row_id>auto_rec_no', 'is not', '$None', ''],
-        ],
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 15,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-          '<compare test="[[`if`, ``, `source_code`, `=`, `~ar_rec_ar~`, ``]]">'
-            '<fld_val name="tran_det_row_id>tran_number"/>'
-          '</compare>'
-          '<default>'
-            '<case>'
-                '<on_post>'
-                    '<expr>'
-                    '<fld_val name="tran_det_row_id>tran_number"/>'
-                    '<op type="+"/>'
-                    '<literal value="/"/>'
-                    '<op type="+"/>'
-                    '<string>'
-                        '<expr>'
-                        '<fld_val name="tran_det_row_id>line_no"/>'
-                        '<op type="+"/>'
-                        '<literal value="1"/>'
-                        '</expr>'
-                    '</string>'
-                    '</expr>'
-                '</on_post>'
-                '<on_insert>'
-                    '<expr>'
-                    '<fld_val name="tran_det_row_id>tran_number"/>'
-                    '<op type="+"/>'
-                    '<literal value="/"/>'
-                    '<op type="+"/>'
-                    '<string>'
-                        '<expr>'
-                        '<fld_val name="tran_det_row_id>line_no"/>'
-                        '<op type="+"/>'
-                        '<literal value="1"/>'
-                        '</expr>'
-                    '</string>'
-                    '</expr>'
-                '</on_insert>'
-                '<default>'
-                    '<fld_val name="tran_number"/>'
-                '</default>'
-            '</case>'
-          '</default>'
-        '</case>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'text',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Description',
-    'long_descr' : 'Description',
-    'col_head'   : 'Description',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 30,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : '{tran_det_row_id>text}',
-    'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -517,7 +514,7 @@ virt.append ({
     'col_name'   : 'discount_allowed',
     'data_type'  : 'DEC',
     'short_descr': 'Discount allowed',
-    'long_descr' : 'Discount allowed - local currency',
+    'long_descr' : 'Discount allowed - local currency. Used in form ar_rec_day.',
     'col_head'   : 'Disc',
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -536,12 +533,6 @@ cursors = []
 
 # actions
 actions = []
-actions.append([
-    'before_insert', '<pyfunc name="custom.artrans_funcs.check_unique" type="arec" mode="ins"/>'
-    ])
-actions.append([
-    'before_update', '<pyfunc name="custom.artrans_funcs.check_unique" type="arec" mode="upd"/>'
-    ])
 actions.append([
     'upd_on_save', [
         [
@@ -598,7 +589,6 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                # ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
                 ['item_row_id', 'item_row_id'],  # tgt_col, op, src_col
                 ],
             [],  # aggregation

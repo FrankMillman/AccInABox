@@ -552,54 +552,6 @@ async def alloc_ageing(caller, xml):
 
     await caller.start_grid('ar_items')
 
-async def check_unique(db_obj, xml):
-    # called from ar_subtran_rec/chg before_insert/update
-    # this function solves the following problem -
-    #   ar_subtran_rec/chg have two sets of alternate keys -
-    #      1. tran_type/tran_row_id
-    #      2. customer_row_id/tran_number
-    #   1 is guaranteed to be unique
-    #   2 is not guaranteed, as tran_number can be derived from different transactions
-    #   this function checks for duplicates and adds suffix to ensure uniqueness
-    #
-    #   must check 'upd' as well as 'ins', as tran_number can change when transaction is posted
-
-    type = xml.get('type')
-    if type == 'arec':
-        table_name = 'ar_subtran_rec'
-    elif type == 'achg':
-        table_name = 'ar_subtran_chg'
-
-    mode = xml.get('mode')  # 'ins' or 'upd'
-
-    cust_row_id = await db_obj.getval('cust_row_id')
-    tran_number = await db_obj.getval('tran_number')
-    suffix = ''
-    next_num = 97
-
-    async with db_obj.context.db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
-        sql = (
-            f"SELECT row_id FROM {db_obj.company}.{table_name} "
-            f"WHERE cust_row_id = {conn.constants.param_style} "
-            f"AND tran_number = {conn.constants.param_style}"
-            )
-
-        while True:
-            params = (cust_row_id, tran_number+suffix)  # first time, suffix is ''
-            cur = await conn.exec_sql(sql, params)
-            try:
-                row_id, = await cur.__anext__()
-            except StopAsyncIteration:  # no rows selected
-                break
-            if mode == 'upd' and row_id == await db_obj.getval('row_id'):
-                break
-            suffix = chr(next_num)  # a, b, ...
-            next_num += 1
-
-    if suffix:
-        await db_obj.setval('tran_number', tran_number+suffix)
-
 async def posted_check(caller, params):
     context = caller.context
 
@@ -894,6 +846,10 @@ async def check_ledg_per(caller, xml):
         return
 
 async def post_disc_crn(db_obj, xml):
+    # called from ar_tran_rec/cb_tran_rec - after_post
+    # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
+    #    or create new column on ar_tran_rec/cb_tran_rec 'crn_check_complete'?
+    #    any tran with 'posted' = True and 'crn_check_complete' = False must be re-run
     context = db_obj.context
     disc_objname = [x for x in context.data_objects if x.endswith('ar_tran_disc')][0]
     disc = context.data_objects[disc_objname]
@@ -902,6 +858,10 @@ async def post_disc_crn(db_obj, xml):
         await disc.post()
 
 async def post_alloc_crn(db_obj, xml):
+    # called from ar_tran_alloc - after_post
+    # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
+    #    or create new column on ar_tran_alloc 'crn_check_complete'?
+    #    any tran with 'posted' = True and 'crn_check_complete' = False must be re-run
     context = db_obj.context
     disc = context.data_objects[f'{id(db_obj)}.ar_tran_disc']
     await disc.setval('row_id', context.disc_row_id)

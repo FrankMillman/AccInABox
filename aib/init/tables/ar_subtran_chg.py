@@ -151,7 +151,7 @@ cols.append ({
     'col_name'   : 'tran_number',
     'data_type'  : 'TEXT',
     'short_descr': 'Tran number',
-    'long_descr' : 'Transaction number - see before_insert and before_update to ensure unique',
+    'long_descr' : 'Transaction number',
     'col_head'   : 'Tran no',
     'key_field'  : 'N',
     'calculated' : True,
@@ -423,12 +423,6 @@ cursors = []
 
 # actions
 actions = []
-actions.append([
-    'before_insert', '<pyfunc name="custom.artrans_funcs.check_unique" type="achg" mode="ins"/>'
-    ])
-actions.append([
-    'before_update', '<pyfunc name="custom.artrans_funcs.check_unique" type="achg" mode="upd"/>'
-    ])
 actions.append([
     'upd_on_post', [
         [

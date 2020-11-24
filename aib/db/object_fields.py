@@ -1366,7 +1366,10 @@ class StringXml(Xml):
             return etree.fromstring(f'<_>{string}</_>', parser=self.parser)
         if string == '\f':  # ASCII ff used to join comment and xml_code
             return None  # gui return blank comment and xml_code
-        comment, xml_code = string.split('\f')
+        if '\f' in string:
+            comment, xml_code = string.split('\f')
+        else:  # not from gui but from init_company
+            comment, xml_code = '', string
         xml_code = f'<_>{xml_code}</_>'
         lines = xml_code.split('"')  # split on attributes
         for pos, line in enumerate(lines):
