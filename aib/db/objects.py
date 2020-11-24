@@ -1573,6 +1573,8 @@ class DbObject:
         await self.init(display=False)
 
     async def get_tgt_obj(self, tbl_name):
+        # we want to cache any tgt_obj updated from *this* db_obj
+        # so we make a unique key from id(self) + tgt_obj.table_name
         tbl_key = f'{id(self)}.{tbl_name}'
         if tbl_key in self.context.data_objects:  # already set up
             tgt_obj = self.context.data_objects[tbl_key]
@@ -1625,6 +1627,10 @@ class DbObject:
                 src_db_obj = await db.cache.get_ledger_params(
                     self.company, module_row_id, ledger_row_id)
             else:
+                # this assumes that we are getting a value from a table
+                #   updated by this db_obj in upd_on_save/upd_on_post
+                # see above in get_tgt_obj() where unique key is created
+                # not used at present [2020-11-23]
                 tbl_key = f'{id(self)}.{src_tbl}'
                 src_db_obj = self.context.data_objects[tbl_key]
             src_val = await src_db_obj.getval(src_col)

@@ -1329,11 +1329,11 @@ class StringXml(Xml):
         try:
             await self.db_obj.check_perms('view', self)
         except AibDenied:
-            return '*', '*'
+            return '*\f*'  # equivalent to '*', '*'
         if value is blank:
             value = await self.getval()
         if value is None:
-            return '', ''
+            return '\f'  # equivalent to '', ''
         return self.to_string(value, for_gui=True)
 
     async def get_val_for_sql(self):
@@ -1363,42 +1363,39 @@ class StringXml(Xml):
 
     def from_string(self, string, from_gui=False):
         if not from_gui:  # from database
-            xml = etree.fromstring(f'<_>{string}</_>', parser=self.parser)
-        else:  # from gui
-            if '\f' in string:  # ASCII ff used to join comment and xml_code
-                comment, xml_code = string.split('\f')
-            else:
-                comment, xml_code = '', string
-            xml_code = f'<_>{xml_code}</_>'
-            lines = xml_code.split('"')  # split on attributes
-            for pos, line in enumerate(lines):
-                if pos%2:  # every 2nd line is an attribute
-                    lines[pos] = line.replace(
-                        '&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-            xml_code = '"'.join(lines)
-            xml = etree.fromstring(xml_code, parser=self.parser)
-            if comment:
-                xml.insert(0, etree.Comment(comment))
+            return etree.fromstring(f'<_>{string}</_>', parser=self.parser)
+        if string == '\f':  # ASCII ff used to join comment and xml_code
+            return None  # gui return blank comment and xml_code
+        comment, xml_code = string.split('\f')
+        xml_code = f'<_>{xml_code}</_>'
+        lines = xml_code.split('"')  # split on attributes
+        for pos, line in enumerate(lines):
+            if pos%2:  # every 2nd line is an attribute
+                lines[pos] = line.replace(
+                    '&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        xml_code = '"'.join(lines)
+        xml = etree.fromstring(xml_code, parser=self.parser)
+        if comment:
+            xml.insert(0, etree.Comment(comment))
         return xml
 
     def to_string(self, xml, for_gui=False):
         if not for_gui:  # for storing in database
             return ''.join(etree.tostring(_, encoding=str) for _ in xml)
-        else:  # for gui
-            comment = ''  # should only be one comment
-            xml_code = ''  # could be > 1 top-level elements
-            for elem in xml:  # top level only
-                if isinstance(elem, etree._Comment):
-                    comment += elem.text
-                else:
-                    elem = etree.tostring(elem, encoding=str, pretty_print=True)
-                    lines = elem.split('"')  # split on attributes
-                    for pos, line in enumerate(lines):
-                        if pos%2:  # every 2nd line is an attribute
-                            lines[pos] = line.replace(
-                                '&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
-                    xml_code += '"'.join(lines)
-            return f'{comment}\f{xml_code}'  # ASCII ff used to join comment and xml_code
+        comment = ''  # should only be one comment
+        xml_code = ''  # could be > 1 top-level elements
+        for elem in xml:  # top level only
+            if isinstance(elem, etree._Comment):
+                comment += elem.text
+            else:
+                elem = etree.tostring(elem, encoding=str, pretty_print=True)
+                lines = elem.split('"')  # split on attributes
+                for pos, line in enumerate(lines):
+                    if pos%2:  # every 2nd line is an attribute
+                        lines[pos] = line.replace(
+                            '&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+                xml_code += '"'.join(lines)
+        return f'{comment}\f{xml_code}'  # ASCII ff used to join comment and xml_code
 
 class Integer(Field):
     async def get_dflt(self, from_init=False):
