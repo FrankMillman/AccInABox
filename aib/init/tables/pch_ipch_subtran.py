@@ -25,7 +25,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -44,7 +45,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -63,7 +65,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -82,7 +85,8 @@ cols.append ({
     'long_descr' : 'Source code id',
     'col_head'   : 'Source code',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_con',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -101,7 +105,8 @@ cols.append ({
     'long_descr' : 'Transaction detail row id',
     'col_head'   : 'Tran id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_id',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -127,7 +132,8 @@ cols.append ({
     'long_descr' : 'Wh product row id',
     'col_head'   : 'Wh prod code',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -152,7 +158,8 @@ cols.append ({
     'long_descr' : 'Quantity',
     'col_head'   : 'Qty',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -166,12 +173,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'price',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Unit price',
     'long_descr' : 'Unit price in transaction currency',
     'col_head'   : 'Price',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -185,12 +193,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'ipch_amount',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Inv amount',
     'long_descr' : 'Inv amount in transaction currency',
     'col_head'   : 'Inv amount',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -215,7 +224,8 @@ cols.append ({
     'long_descr' : 'Exchange rate from transaction currency to w/house currency',
     'col_head'   : 'Rate w/h',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -241,12 +251,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'net_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Net amount',
     'long_descr' : 'Net amount - updated when tax is calculated',
     'col_head'   : 'Net amt',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'ret_split',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -260,12 +271,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tax_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Tax amount',
     'long_descr' : 'Tax amount - updated when tax is calculated',
     'col_head'   : 'Tax amt',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'ret_split',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -278,32 +290,14 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tax_party',
-    'data_type'  : 'DEC',
-    'short_descr': 'Tax party',
-    'long_descr' : 'Tax amount in party currency - updated when tax is calculated',
-    'col_head'   : 'Tax party',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>party_currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'tax_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Tax local',
     'long_descr' : 'Tax amount in local currency - updated when tax is calculated',
     'col_head'   : 'Tax local',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'ret_split',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -328,31 +322,8 @@ virt.append ({
     'sql'        : "a.tran_det_row_id>posted"
     })
 virt.append ({
-    'col_name'   : 'net_party',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net party',
-    'long_descr' : 'Purchase net amount in party currency',
-    'col_head'   : 'Net party',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>party_currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="net_amt"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
-          '<op type="*"/>'
-          '<fld_val name="tran_det_row_id>party_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.net_amt / a.tran_det_row_id>tran_exch_rate * "
-        "a.tran_det_row_id>party_exch_rate"
-        ),
-    })
-virt.append ({
     'col_name'   : 'net_whouse',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Invoice net w/house',
     'long_descr' : 'Invoice net amount in w/house currency',
     'col_head'   : 'Inv net wh',
@@ -374,7 +345,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'net_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Purchase net local',
     'long_descr' : 'Purchase net amount in local currency',
     'col_head'   : 'Net local',
@@ -392,7 +363,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'tot_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Total in transaction currency',
     'long_descr' : 'Total amount in transaction currency',
     'col_head'   : 'Net amount',
@@ -409,35 +380,8 @@ virt.append ({
     'sql'        : "a.net_amt + a.tax_amt",
     })
 virt.append ({
-    'col_name'   : 'tot_party',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total in party currency',
-    'long_descr' : 'Total amount in party currency',
-    'col_head'   : 'Net party',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>party_currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<expr>'
-            '<fld_val name="net_amt"/>'
-            '<op type="+"/>'
-            '<fld_val name="tax_amt"/>'
-          '</expr>'
-          '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
-          '<op type="*"/>'
-          '<fld_val name="tran_det_row_id>party_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "(a.net_amt + a.tax_amt) / a.tran_det_row_id>tran_exch_rate * "
-        "a.tran_det_row_id>party_exch_rate)"
-        ),
-    })
-virt.append ({
     'col_name'   : 'tot_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Total in local currency',
     'long_descr' : 'Total amount in local currency',
     'col_head'   : 'Net local',
@@ -462,7 +406,7 @@ virt.append ({
 virt.append ({
     'col_name'   : 'upd_qty',
     'data_type'  : 'DEC',
-    'short_descr': 'Quantity',
+    'short_descr': 'Signed quantity',
     'long_descr' : 'Quantity - pos for inv, neg for crn',
     'col_head'   : 'Qty',
     'db_scale'   : 6,
@@ -489,8 +433,8 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'upd_whouse',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cost',
+    'data_type'  : '$PTY',
+    'short_descr': 'Signed cost',
     'long_descr' : 'Cost in whouse currency - pos for inv, neg for crn',
     'col_head'   : 'Cost',
     'db_scale'   : 2,
@@ -517,8 +461,8 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'upd_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Net local',
+    'data_type'  : '$LCL',
+    'short_descr': 'Signed net local',
     'long_descr' : 'Purchase net amount in local currency - pos for inv, neg for crn',
     'col_head'   : 'Net local',
     'db_scale'   : 2,
@@ -570,7 +514,8 @@ actions.append([
 
             ['tax_code_id', 'tax_rate', 'tax_amt'],  # fields to be updated
 
-            ['net_amt', 'tax_amt', 'tax_party', 'tax_local'],  # return values
+            # ['net_amt', 'tax_amt', 'tax_party', 'tax_local'],  # return values
+            ['net_amt', 'tax_amt', 'tax_local'],  # return values
 
             [  # check totals
                 ['tax_amt', 'tax_amt'],  # src_col == sum(tgt_col)

@@ -161,13 +161,12 @@ function create_tree(container, frame, page, toolbar){
     };
 
   tree.input_handler = function(e) {
-    if (!e) e=window.event;
-    if (e.keyCode === 27) {
+    if (e.key === 'Escape') {
       input = this;  // for setTimeout
       setTimeout(function() {end_edit(input, false);}, 0);
       return false;
       };
-    if (e.keyCode === 13) {
+    if (e.key === 'Enter') {
       input = this;  // for setTimeout
       setTimeout(function() {end_edit(input, true);}, 0);
       return false;
@@ -191,21 +190,19 @@ function create_tree(container, frame, page, toolbar){
     setTimeout(function() {tree.focus()}, 0);
     };
 
-  tree.key_handler = function(e) {
-    if (!e) e=window.event;
-    //debug(e.keyCode);
-    switch (e.keyCode) {
-      case 113:  // F2 - edit text
+  tree.onkeydown = function(e) {
+    switch (e.key) {
+      case 'F2':  // edit text
         this.handle_edit(); return false; break;
-      case 37:  // left
+      case 'ArrowLeft':
         this.handle_left(); return false; break;
-      case 39:  // right
+      case 'ArrowRight':
         this.handle_right(); return false; break;
-      case 38:  // up
+      case 'ArrowUp':
         this.handle_up(); return false; break;
-      case 40:  // down
+      case 'ArrowDown':
         this.handle_down(); return false; break;
-      case 13:  // enter
+      case 'Enter':
         if (this.select_any || !this.active_node.expandable) {
           //debug('enter ' + this.active_node.text + ' ' + this.active_node.node_id);
           node = this.active_node;
@@ -213,7 +210,7 @@ function create_tree(container, frame, page, toolbar){
           return false;
           };
         break;
-      case 45:  // insert
+      case 'Insert':
         if (this.toolbar) {
           if (e.ctrlKey) {
             if (tree.toolbar)
@@ -223,32 +220,24 @@ function create_tree(container, frame, page, toolbar){
             this.req_append_node();
           };
         return false; break;
-      case 46:  // delete
+      case 'Delete':
         if (this.toolbar)
           if (e.ctrlKey) {
             if (tree.toolbar)
               this.req_delete_node();
             };
         return false; break;
-      case 114:  // F3
+      case 'F3':
         if (this.toolbar)
           this.move_node();
         return false; break;
       };
     };
 
-  if (navigator.appName === 'Opera')
-    tree.onkeypress = tree.key_handler;  // else 'return false' does not work
-  else
-    tree.onkeydown = tree.key_handler;
-
   tree.handle_edit = function() {
     if (!this.allow_edit)
       return;
-    if (navigator.appName === 'Opera')
-      this.onkeypress = null;
-    else
-      this.onkeydown = null;
+    this.onkeydown = null;
     var active_node = this.active_node;
     setTimeout(function() {edit_label(active_node)}, 0);
     };
@@ -748,14 +737,14 @@ function create_tree_report(container, frame, page){
 
   tree.key_handler = function(e) {
     if (!e) e=window.event;
-    switch (e.keyCode) {
-      case 37:  // left
+    switch (e.key) {
+      case 'ArrowLeft':
         this.handle_left(); return false; break;
-      case 39:  // right
+      case 'ArrowRight':
         this.handle_right(); return false; break;
-      case 38:  // up
+      case 'ArrowUp':
         this.handle_up(); return false; break;
-      case 40:  // down
+      case 'ArrowDown':
         this.handle_down(); return false; break;
       };
     };

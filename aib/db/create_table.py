@@ -193,7 +193,8 @@ def setup_column(conn, column):
 ,LONG_DESCR
 ,COL_HEAD
 ,KEY_FIELD
-,CALCULATED
+,DATA_SOURCE
+,CONDITION
 ,ALLOW_NULL
 ,ALLOW_AMEND
 ,MAX_LEN
@@ -205,7 +206,7 @@ def setup_column(conn, column):
 ,FKEY
 ,CHOICES
 ,SQL
-) = range(24)
+) = range(25)
 
 # fkey elements
 (FK_TGT_TBL

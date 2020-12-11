@@ -1,0 +1,133 @@
+<form name="ap_supp_pmt" title="Ap supplier payment">
+  <db_objects>
+    <db_obj name="ap_pmt" table_name="ap_tran_pmt" is_formview_obj="true"/>
+    <db_obj name="ap_det" table_name="ap_tran_pmt_det" parent="ap_pmt"/>
+    <db_obj name="ap_pmt" table_name="ap_subtran_pmt" parent="ap_det"/>
+    <db_obj name="ap_allocations" table_name="ap_allocations" parent="ap_pmt"/>
+  </db_objects>
+  <mem_objects/>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="ap_pmt">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+
+      <row/>
+      <col/>
+      <label value="Payment no:"/>
+      <col/>
+      <input obj_name="ap_pmt" col_name="tran_number" lng="84" readonly="true" skip="true"/>
+
+      <col/>
+      <label value="Payment date:"/>
+      <col/>
+      <input obj_name="ap_pmt" col_name="tran_date" lng="84" readonly="true" skip="true"/>
+
+      <col/>
+      <label value="Amount:"/>
+      <col/>
+      <display obj_name="ap_pmt" col_name="currency_id>symbol" lng="10"/>
+      <input obj_name="ap_pmt" col_name="amount" lng="84" readonly="true" skip="true"/>
+
+      <block/>
+      <grid data_object="ap_det" growable="true" num_grid_rows="5" readonly="true"
+          footer_row="[`'Total:'`, `ap_pmt.amount_tran`]">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="display_descr" lng="80"/>
+          <cur_col col_name="pmt_amt" lng="120"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="line_no"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <grid_frame main_object="ap_det">
+        <toolbar/>
+        <body>
+
+          <block/>
+          <subtran_frame subtran_obj="ap_det" subtran_col="line_type">
+            <subtran_body subtran_id="apmt"/>
+          </subtran_frame>
+
+        </body>
+        <button_row template="Grid_Frame_Grid_RO"/>
+        <frame_methods template="Grid_Frame_Grid_RO"/>
+
+      </grid_frame>
+
+    </body>
+    <button_row template="Transaction"/>
+    <frame_methods template="Transaction"/>
+  </frame>
+  <inline_form name="tran_header" title="Payment header">
+    <frame main_object="ap_pmt">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+
+        <if test="[[`if`, ``, `_ledger.auto_pmt_no`, `is`, `$None`, ``]]"/>
+        <row/>
+        <col/>
+        <label value="Payment no:"/>
+        <col/>
+        <input obj_name="ap_pmt" col_name="tran_number" lng="80"/>
+        <end_if/>
+
+        <row/>
+        <col/>
+        <label value="Payment date:"/>
+        <col/>
+        <input obj_name="ap_pmt" col_name="tran_date" lng="84" form_dflt="
+          <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
+          "/>
+
+        <if test="[[`if`, ``, `_ledger.currency_id`, `is`, `$None`, ``]]"/>
+        <row/>
+        <col/>
+        <label value="Currency:"/>
+        <col/>
+        <input obj_name="ap_pmt" col_name="currency" lng="60" form_dflt="
+          <<fld_val name=`_param.local_currency`/>>
+          "/>
+        <display obj_name="ap_pmt" col_name="currency_id>descr" lng="140"/>
+        <end_if/>
+
+        <row/>
+        <col/>
+        <label value="Amount:"/>
+        <col/>
+        <input obj_name="ap_pmt" col_name="amount" lng="80"/>
+      </body>
+
+      <button_row template="Transaction_Header"/>
+      <frame_methods template="Transaction_Header">
+        <method name="do_save" action="
+          <<case>>
+            <<compare test=`[['if', '', 'ap_pmt.amount', '=', '0', '']]`>>
+              <<ask title=`Payment` enter=`No` escape=`No`
+                  question=`No value entered - sure you want to save?`>>
+                <<response ans=`No`>>
+                <</response>>
+                <<response ans=`Yes`>>
+                  <<save_obj obj_name=`ap_pmt`/>>
+                <</response>>
+              <</ask>>
+            <</compare>>
+            <<default>>
+              <<save_obj obj_name=`ap_pmt`/>>
+            <</default>>
+          <</case>>
+          "/>
+        </frame_methods>
+    </frame>
+  </inline_form>
+</form>

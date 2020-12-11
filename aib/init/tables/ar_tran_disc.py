@@ -28,7 +28,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -47,7 +48,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -66,7 +68,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -85,7 +88,8 @@ cols.append ({
     'long_descr' : 'Customer row id',
     'col_head'   : 'Customer',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -107,7 +111,8 @@ cols.append ({
     'long_descr' : 'Credit note number - automatically generated',
     'col_head'   : 'Crn no',
     'key_field'  : 'A',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -135,7 +140,8 @@ cols.append ({
     'long_descr' : 'Transaction date - copy of allocation date',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -154,7 +160,8 @@ cols.append ({
     'long_descr' : 'Line of text to appear on reports',
     'col_head'   : 'Text',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -167,32 +174,14 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'cust_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cust exchange rate',
-    'long_descr' : 'Exchange rate from customer currency to local',
-    'col_head'   : 'Rate cust',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 8,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
     'short_descr': 'Transaction exchange rate',
     'long_descr' : 'Exchange rate from transaction currency to local',
     'col_head'   : 'Rate tran',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -211,7 +200,8 @@ cols.append ({
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -225,12 +215,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'discount_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Discount cust',
     'long_descr' : 'Discount amount in customer currency',
     'col_head'   : 'Disc cust',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -244,12 +235,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'discount_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Discount local',
     'long_descr' : 'Discount amount in local currency',
     'col_head'   : 'Disc local',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -263,12 +255,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'disc_net_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Discount net amount',
     'long_descr' : 'Discount net amount in transaction currency - updated from sls_nsls_subtran',
     'col_head'   : 'Disc net amt',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'ret_sub',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -282,31 +275,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'disc_tax_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Discount tax amount',
     'long_descr' : 'Discount tax amount in transaction currency - updated from sls_nsls_subtran',
     'col_head'   : 'Disc tax amt',
     'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'disc_tax_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cr note tax cust',
-    'long_descr' : 'Cr note tax amount in customer currency - updated from sls_nsls_subtran',
-    'col_head'   : 'Disc tax cust',
-    'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'ret_sub',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -320,12 +295,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'disc_tax_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Cr note tax local',
     'long_descr' : 'Cr note tax amount in local currency - updated from sls_nsls_subtran',
     'col_head'   : 'Disc tax local',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'ret_sub',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -344,7 +320,8 @@ cols.append ({
     'long_descr' : 'Item row id of item triggering this discount',
     'col_head'   : 'Orig item id',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
@@ -439,30 +416,8 @@ virt.append ({
     'sql'        : 'a.cust_row_id>currency_id',
     })
 virt.append ({
-    'col_name'   : 'disc_net_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Invoice net cust',
-    'long_descr' : 'Invoice net amount in customer currency',
-    'col_head'   : 'Inv net cust',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="disc_net_amt"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-          '<op type="*"/>'
-          '<fld_val name="cust_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.disc_net_amt / a.tran_exch_rate * a.cust_exch_rate"
-        ),
-    })
-virt.append ({
     'col_name'   : 'disc_net_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Invoice net local',
     'long_descr' : 'Invoice net amount in local currency',
     'col_head'   : 'Inv net local',
@@ -480,7 +435,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'disc_tot_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Total amount',
     'long_descr' : 'Cr note total amount in transaction currency',
     'col_head'   : 'Tot amt',
@@ -497,26 +452,8 @@ virt.append ({
     'sql'        : "a.disc_net_amt + a.disc_tax_amt"
     })
 virt.append ({
-    'col_name'   : 'disc_tot_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Total amount',
-    'long_descr' : 'Total amount in customer currency',
-    'col_head'   : 'Tot amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="disc_net_cust"/>'
-          '<op type="+"/>'
-          '<fld_val name="disc_tax_cust"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.disc_net_cust + a.disc_tax_cust"
-    })
-virt.append ({
     'col_name'   : 'disc_tot_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Total amount local',
     'long_descr' : 'Total amount in customer currency',
     'col_head'   : 'Tot amt',
@@ -533,22 +470,22 @@ virt.append ({
     'sql'        : "a.disc_net_local + a.disc_tax_local"
     })
 virt.append ({
-    'col_name'   : 'disc_trans_cust',
-    'data_type'  : 'DEC',
+    'col_name'   : 'disc_view_cust',
+    'data_type'  : '$PTY',
     'short_descr': 'Amount for ar_trans - cust',
-    'long_descr' : 'Total amount for ar_trans in customer currency',
+    'long_descr' : 'Total amount for ar_trans view in customer currency',
     'col_head'   : 'Tran cust',
     'db_scale'   : 2,
     'scale_ptr'  : 'cust_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
-    'sql'        : "0 - (a.disc_net_cust + a.disc_tax_cust)"
+    'sql'        : "0 - (a.disc_net_amt + a.disc_tax_amt)"
     })
 virt.append ({
-    'col_name'   : 'disc_trans_local',
-    'data_type'  : 'DEC',
+    'col_name'   : 'disc_view_local',
+    'data_type'  : '$LCL',
     'short_descr': 'Amount for ar_trans - local',
-    'long_descr' : 'Total amount for ar_trans in local currency',
+    'long_descr' : 'Total amount for ar_trans view in local currency',
     'col_head'   : 'Tran local',
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -580,7 +517,6 @@ actions.append([
             [  # return values
                 ['disc_net_amt', 'net_amt'],  # tgt_col, src_col
                 ['disc_tax_amt', 'tax_amt'],
-                ['disc_tax_cust', 'tax_party'],
                 ['disc_tax_local', 'tax_local'],
                 ],
             ],
@@ -602,7 +538,7 @@ actions.append([
                 ['due_date', '=', 'tran_date'],
                 ['cust_row_id', '=', 'cust_row_id'],
                 ['tran_date', '=', 'tran_date'],
-                ['amount_cust', '-', 'disc_tot_cust'],
+                ['amount_cust', '-', 'disc_tot_amt'],
                 ['amount_local', '-', 'disc_tot_local'],
                 ],
             [],  # on unpost
@@ -620,7 +556,7 @@ actions.append([
                 ],
             [],  # aggregation
             [  # on post
-                ['discount_cust', '-', 'disc_tot_cust'],  # tgt_col, op, src_col
+                ['discount_cust', '-', 'disc_tot_amt'],  # tgt_col, op, src_col
                 ['discount_local', '-', 'disc_tot_local'],
                 ],
             [],  # on unpost
@@ -675,8 +611,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cust', '-', 'disc_net_cust'],  # tgt_col, op, src_col
-                ['tran_tot_cust', '-', 'disc_net_cust'],
+                ['tran_day_cust', '-', 'disc_net_amt'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '-', 'disc_net_amt'],
                 ['tran_day_local', '-', 'disc_net_local'],
                 ['tran_tot_local', '-', 'disc_net_local'],
                 ],
@@ -697,8 +633,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cust', '-', 'disc_tax_cust'],  # tgt_col, op, src_col
-                ['tran_tot_cust', '-', 'disc_tax_cust'],
+                ['tran_day_cust', '-', 'disc_tax_amt'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '-', 'disc_tax_amt'],
                 ['tran_day_local', '-', 'disc_tax_local'],
                 ['tran_tot_local', '-', 'disc_tax_local'],
                 ],

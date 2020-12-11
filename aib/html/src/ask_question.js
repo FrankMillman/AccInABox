@@ -126,12 +126,12 @@ question.text = question_text.firstChild;
 
 question.onkeydown = function(e) {
   if (!e) e=window.event;
-  switch (e.keyCode) {
-    case 27: {  // Esc
+  switch (e.key) {
+    case 'Escape': {
       this.close_window(this.escape);
       break;
       };
-    case 37: {  // Left
+    case 'ArrowLeft': {
       if (this.dflt_pos > 0) {
         this.current_focus = this.lastChild.childNodes[this.dflt_pos];
         this.current_focus.style.border = '1px solid darkgrey';
@@ -142,7 +142,7 @@ question.onkeydown = function(e) {
         };
       break;
       };
-    case 38: {  // Up
+    case 'ArrowUp': {
       if (this.dflt_pos > 0) {
         this.current_focus = this.lastChild.childNodes[this.dflt_pos];
         this.current_focus.style.border = '1px solid darkgrey';
@@ -153,7 +153,7 @@ question.onkeydown = function(e) {
         };
       break;
       };
-    case 39: {  // Right
+    case 'ArrowRight': {
       if (this.dflt_pos < (this.lastChild.childNodes.length-1)) {
         this.current_focus = this.lastChild.childNodes[this.dflt_pos];
         this.current_focus.style.border = '1px solid darkgrey';
@@ -164,7 +164,7 @@ question.onkeydown = function(e) {
         };
       break;
       };
-    case 40: {  // Down
+    case 'ArrowDown': {
       if (this.dflt_pos < (this.lastChild.childNodes.length-1)) {
         this.current_focus = this.lastChild.childNodes[this.dflt_pos];
         this.current_focus.style.border = '1px solid darkgrey';

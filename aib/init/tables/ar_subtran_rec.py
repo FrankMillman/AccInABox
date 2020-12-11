@@ -27,7 +27,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -46,7 +47,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -65,7 +67,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -84,7 +87,8 @@ cols.append ({
     'long_descr' : 'Source code id',
     'col_head'   : 'Source code',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_con',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -103,7 +107,8 @@ cols.append ({
     'long_descr' : 'Transaction detail row id',
     'col_head'   : 'Tran id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_id',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -127,7 +132,8 @@ cols.append ({
     'long_descr' : 'Customer row id. In theory, should check if statement period still open. Leave for now.',
     'col_head'   : 'Customer',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -155,7 +161,8 @@ cols.append ({
     'long_descr' : 'Receipt number',
     'col_head'   : 'Rec no',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -217,7 +224,8 @@ cols.append ({
     'long_descr' : 'Transaction date',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'repl',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -236,7 +244,8 @@ cols.append ({
     'long_descr' : 'Description',
     'col_head'   : 'Description',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 30,
@@ -255,27 +264,19 @@ cols.append ({
     'long_descr' : 'Transaction currency id',
     'col_head'   : 'Currency id',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'repl',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'   : (
-        '<case>'
-          '<compare test="[[`if`, ``, `source_code`, `=`, `~ar_rec_ar~`, ``]]">'
-            '<fld_val name="cust_row_id>currency_id"/>'
-          '</compare>'
-          '<default>'
-            '<fld_val name="tran_det_row_id>currency_id"/>'
-          '</default>'
-        '</case>'
-        ),
+    'dflt_val'    : '{tran_det_row_id>currency_id}',
+    'dflt_rule'   : None,
     'col_checks' : [
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', 'cust_row_id>currency_id', '=', 'currency_id', ''],
-            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+            ['or', '', 'cust_row_id>ledger_row_id>alt_curr', 'is', '$True', '']
             ]],
         ],
     'fkey'       : ['adm_currencies', 'row_id', None, None, False, None],
@@ -288,7 +289,8 @@ cols.append ({
     'long_descr' : 'Exchange rate from customer currency to local currency',
     'col_head'   : 'Rate cust',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -321,7 +323,8 @@ cols.append ({
     'long_descr' : 'Exchange rate from transaction currency to local currency',
     'col_head'   : 'Rate cust',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -349,12 +352,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'arec_amount',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Receipt amount',
     'long_descr' : 'Receipt amount in transaction currency',
     'col_head'   : 'Rec amount',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -368,13 +372,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'arec_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Receipt cust',
     'long_descr' : 'Receipt amount in customer currency',
     'col_head'   : 'Rec cust',
     'key_field'  : 'N',
-    # 'calculated' : False,
-    'calculated' : [['where', '', '_ledger.alt_rec_override', 'is', '$False', '']],
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.alt_rec_override', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': [['where', '', '_ledger.alt_rec_override', 'is', '$True', '']],
     'max_len'    : 0,
@@ -412,7 +416,8 @@ cols.append ({
         ),
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -451,7 +456,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'arec_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Receipt local',
     'long_descr' : 'Receipt amount in local currency',
     'col_head'   : 'Rec local',
@@ -468,10 +473,10 @@ virt.append ({
     'sql'        : "a.arec_amount / a.tran_exch_rate",
     })
 virt.append ({
-    'col_name'   : 'arec_trans_cust',
-    'data_type'  : 'DEC',
+    'col_name'   : 'arec_view_cust',
+    'data_type'  : '$PTY',
     'short_descr': 'Receipt cust',
-    'long_descr' : 'Receipt amount for ar_trans in customer currency',
+    'long_descr' : 'Receipt amount for ar_trans view in customer currency',
     'col_head'   : 'Rec cust',
     'db_scale'   : 2,
     'scale_ptr'  : 'cust_row_id>currency_id>scale',
@@ -480,10 +485,10 @@ virt.append ({
     'sql'        : "0 - a.arec_cust",
     })
 virt.append ({
-    'col_name'   : 'arec_trans_local',
-    'data_type'  : 'DEC',
+    'col_name'   : 'arec_view_local',
+    'data_type'  : '$LCL',
     'short_descr': 'Receipt local',
-    'long_descr' : 'Receipt amount for ar_trans in local currency',
+    'long_descr' : 'Receipt amount for ar_trans view in local currency',
     'col_head'   : 'Rec local',
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -493,7 +498,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'unallocated',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Unallocated',
     'long_descr' : 'Balance of receipt not allocated',
     'col_head'   : 'Unalloc',
@@ -512,7 +517,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'discount_allowed',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Discount allowed',
     'long_descr' : 'Discount allowed - local currency. Used in form ar_rec_day.',
     'col_head'   : 'Disc',
@@ -610,7 +615,6 @@ actions.append([
             [],  # aggregation
             [  # on post
                 ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
-                ['cust_exch_rate', '=', 'cust_exch_rate'],
                 ['tran_exch_rate', '=', 'tran_exch_rate'],
                 ['discount_cust', '=', '_ctx.tot_disc_cust'],
                 ['discount_local', '=', '_ctx.tot_disc_local'],

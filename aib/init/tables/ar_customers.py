@@ -25,7 +25,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -44,7 +45,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -63,7 +65,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -82,7 +85,8 @@ cols.append ({
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_param.ar_ledger_id', 'is not', '$None', '']],
+    'data_source': 'ctx_if',
+    'condition'  : [['where', '', '$module_row_id', '=', '_ctx.module_row_id', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -101,7 +105,8 @@ cols.append ({
     'long_descr' : 'Customer id',
     'col_head'   : 'Customer',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -120,10 +125,8 @@ cols.append ({
     'long_descr' : 'Location row id',
     'col_head'   : 'Loc',
     'key_field'  : 'A',
-    'calculated' : [
-        ['where', '', '_param.location_row_id', 'is not', '$None', ''],
-        ['or', '', '_ledger.valid_loc_ids>expandable', 'is', '$False', ''],
-        ],
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.valid_loc_ids>expandable', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -178,10 +181,8 @@ cols.append ({
     'long_descr' : 'Function row id',
     'col_head'   : 'Fun',
     'key_field'  : 'A',
-    'calculated' : [
-        ['where', '',  '_param.function_row_id', 'is not', '$None', ''],
-        ['or', '', '_ledger.valid_fun_ids>expandable', 'is', '$False', ''],
-        ],
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.valid_fun_ids>expandable', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -236,7 +237,8 @@ cols.append ({
     'long_descr' : 'Currency',
     'col_head'   : 'Currency',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_ledger.currency_id', 'is not', '$None', '']],
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.currency_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -255,7 +257,8 @@ cols.append ({
     'long_descr' : 'Customers supplier code for this company',
     'col_head'   : 'Supplier code',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 30,
@@ -269,12 +272,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'credit_limit',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Credit limit',
     'long_descr' : 'Credit limit - 0 means no limit',
     'col_head'   : 'Limit',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
@@ -293,7 +297,8 @@ cols.append ({
     'long_descr' : 'Terms code',
     'col_head'   : 'Terms code',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
@@ -312,9 +317,10 @@ cols.append ({
     'long_descr' : 'Tax inclusive?',
     'col_head'   : 'Tax incl?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
@@ -331,7 +337,8 @@ cols.append ({
     'long_descr' : 'On hold indicator - if set, no sales orders/invoices can be raised',
     'col_head'   : 'On hold',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -406,7 +413,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'tran_bal_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Balance',
     'long_descr' : 'Balance outstanding - customer currency',
     'col_head'   : 'Cust due',
@@ -429,7 +436,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'tran_bal_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Balance',
     'long_descr' : 'Balance outstanding - local currency',
     'col_head'   : 'Local due',
@@ -452,7 +459,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'bal_cust_curr',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Balance - current',
     'long_descr' : 'Balance current - customer currency',
     'col_head'   : 'Cust bal curr',
@@ -483,7 +490,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'op_bal_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Opening bal - cust currency',
     'long_descr' : 'Opening balance - customer currency',
     'col_head'   : 'Op bal cust',
@@ -506,7 +513,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'op_bal_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Opening bal - local currency',
     'long_descr' : 'Opening balance - local currency',
     'col_head'   : 'Op bal loc',
@@ -529,7 +536,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'cl_bal_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Closing bal - cust currency',
     'long_descr' : 'Closing balance - customer currency',
     'col_head'   : 'Cl bal cust',
@@ -552,7 +559,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'tot_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Tran total - cust currency',
     'long_descr' : 'Transaction total - customer currency',
     'col_head'   : 'Total cust',
@@ -569,7 +576,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'balance_cus',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Balance - cust',
     'long_descr' : 'Balance - cust',
     'col_head'   : 'Balance cust',
@@ -592,7 +599,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'bal_cus_tot',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Total balance - cust',
     'long_descr' : 'Total balance - cust',
     'col_head'   : 'Tot bal cust',
@@ -614,7 +621,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'balance_loc',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Balance - local',
     'long_descr' : 'Balance - local',
     'col_head'   : 'Balance loc',
@@ -637,7 +644,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'bal_loc_tot',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Total balance - local',
     'long_descr' : 'Total balance - local',
     'col_head'   : 'Tot bal loc',
@@ -659,7 +666,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'bal_due_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Balance due cust at date',
     'long_descr' : 'Balance due from customer at date - not used at present',
     'col_head'   : 'Bal due cust',

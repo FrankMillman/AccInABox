@@ -25,7 +25,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -44,7 +45,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -63,7 +65,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -81,8 +84,9 @@ cols.append ({
     'short_descr': 'Supplier row id',
     'long_descr' : 'Supplier row id',
     'col_head'   : 'Supplier',
-    'key_field'  : 'A',
-    'calculated' : False,
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -97,33 +101,15 @@ cols.append ({
         ],
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'tran_number',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Transaction number',
-#     'long_descr' : 'Transaction number',
-#     'col_head'   : 'Tran no',
-#     'key_field'  : 'A',
-#     'calculated' : False,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 15,
-#     'db_scale'   : 0,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : None,
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
 cols.append ({
-    'col_name'   : 'bal_date',
+    'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
     'short_descr': 'Balance date',
     'long_descr' : 'Balance date',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -139,33 +125,47 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'text',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Text',
-#     'long_descr' : 'Line of text to appear on reports',
-#     'col_head'   : 'Text',
-#     'key_field'  : 'N',
-#     'calculated' : False,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 0,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : 'Invoice',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
+cols.append ({
+    'col_name'   : 'supp_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Supp exchange rate',
+    'long_descr' : 'Exchange rate from supplier currency to local',
+    'col_head'   : 'Rate supp',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 8,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+                '<literal value="1"/>'
+            '</compare>'
+            '<default>'
+                '<exch_rate>'
+                    '<fld_val name="supp_row_id>currency_id"/>'
+                    '<fld_val name="tran_date"/>'
+                '</exch_rate>'
+            '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 cols.append ({
     'col_name'   : 'bf_bal',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'B/f balance',
     'long_descr' : 'B/f balance in supplier currency',
     'col_head'   : 'B/f balance',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -179,12 +179,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'bf_supp',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Balance updated - supp',
     'long_descr' : 'Balance updated from ap_tran_bf_det - supplier currency',
     'col_head'   : 'Upd bal - supp',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'aggr',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -198,12 +199,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'bf_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Balance updated - local',
     'long_descr' : 'Balance updated from ap_tran_bf_det - local currency',
     'col_head'   : 'Upd bal - local',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'aggr',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -222,7 +224,8 @@ cols.append ({
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -265,7 +268,7 @@ actions.append([
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
                 ['source_code', "'ap_bf'"],
-                ['tran_date', 'bal_date'],
+                ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'bf_local'],  # tgt_col, op, src_col
@@ -283,7 +286,7 @@ actions.append([
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
                 ['source_code', "'ap_bf'"],
-                ['tran_date', 'bal_date'],
+                ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
                 ['tran_day_supp', '+', 'bf_supp'],  # tgt_col, op, src_col
@@ -305,7 +308,7 @@ actions.append([
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
                 ['source_code', "'ap_bf'"],
-                ['tran_date', 'bal_date'],
+                ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '-', 'bf_local'],  # tgt_col, op, src_col

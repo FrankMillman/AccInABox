@@ -484,6 +484,9 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('DTE', 'DATE')
         .replace('DTM', 'TIMESTAMP')
         .replace('DEC', f'REAL{db_scale}')  # to allow correct rounding when reading back
+        .replace('$TRN', f'REAL{db_scale}')
+        .replace('$PTY', f'REAL{db_scale}')
+        .replace('$LCL', f'REAL{db_scale}')
         .replace('AUTO', 'INTEGER PRIMARY KEY')
         .replace('AUT0', 'INTEGER PRIMARY KEY')
         .replace('JSON', 'TEXT')
@@ -501,6 +504,8 @@ def convert_dflt(self, string, data_type):
     elif data_type == 'INT':
         return string
     elif data_type == 'DEC':
+        return string
+    elif data_type.startswith('$'):
         return string
     elif data_type == 'BOOL':
         if string.lower() == 'true':

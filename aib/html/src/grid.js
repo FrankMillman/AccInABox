@@ -105,6 +105,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
         //input.style.width = col_defn.lng + 'px';
         input.choices = (col_defn.choices !== null);
         if (input.choices) {
+          debug3('DO WE GET HERE?');
           input.choice_data = [];
           input.choice_values = [];
           var choices = col_defn.choices[1];
@@ -222,17 +223,13 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
           var btn_lng = 19;  // changed 2017-07-02 - MS Edge problem
         break;
       case 'bool':
-        var input = {};  //new Object();  //document.createElement('span');
-//        input.grid = grid;
+        var input = {};
         input.aib_obj = new AibBool();
         input.images = [iChkBoxUnchk_src, iChkBoxChk_src];
-        input.edit_cell = function(cell, current_value, keyCode) {
-          if (keyCode === 32)
+        input.edit_cell = function(cell, current_value, key) {
+          if (key === ' ')
             cell.aib_obj.grid_chkbox_change(cell, grid.active_row);
           };
-//        input.set_readonly = function(state) {
-//          input.readonly = state;
-//          };
         input.set_value_from_server = function(args) {
           if (this.grid.active_row === -1)  // grid not yet set up
             return
@@ -331,38 +328,10 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
           }
         input.dropdown = null;
 
-        input.edit_cell = function(cell, current_value, keyCode) {
-          if (keyCode === 32)
+        input.edit_cell = function(cell, current_value, key) {
+          if (key === ' ')
             cell.aib_obj.grid_create_dropdown(cell);
           };
-
-        input.end_edit = function(update, reset_focus) {
-          debug3('DO WE GET HERE?');
-          var cell = this.cell, grid = this.grid;
-          grid.edit_in_progress = false;
-          if (update) {
-            if (!this.aib_obj.before_lost_focus(this))  // validation failed
-              return false;
-            // before_lost_focus() copies input.value to input.current_value
-            cell.current_value = this.current_value;
-            cell.text_node.data = this.value;
-            grid.set_amended(true);
-            };
-          cell.parentNode.removeChild(this);
-          cell.style.display = 'inline-block';
-          grid.onkeypress = grid.save_onkeypress;
-          grid.onkeydown = grid.save_onkeydown;
-          if (reset_focus) {
-            this_grid = grid;  // make global
-            setTimeout(function() {this_grid.focus()}, 0);  // IE needs timeout!
-            };
-          return true;
-          };
-
-//        input.set_readonly = function(state) {
-//          input.readonly = state;
-//          input.aib_obj.set_readonly(input, state);
-//          };
 
         input.set_value_from_server = function(args) {
           if (this.grid.active_row === -1)  // grid not yet set up
@@ -376,8 +345,11 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
 //          this.grid.set_amended(true);
           };
 
-//        var btn_lng = 18;
-        var btn_lng = 19;  // changed 2017-07-02 - MS Edge problem
+          if (col_defn.readonly === true || grid.readonly === true)
+          var btn_lng = 0;
+        else
+//          var btn_lng = 18;
+          var btn_lng = 19;  // changed 2017-07-02 - MS Edge problem
         break;
       };
 
@@ -1748,12 +1720,11 @@ if (grid.header_row.length) {
       };
     };
 
-  grid.edit_cell = function(keyCode) {
+  grid.edit_cell = function(key) {
     var input = grid.obj_list[grid.active_col];
-    // if (input.readonly || !(input.allow_amend || grid.inserted))
     if (!input.amendable())
       return;
-    input.edit_cell(grid.active_cell, null, keyCode);
+    input.edit_cell(grid.active_cell, null, key);
     };
   
   grid.clear_cell = function() {
@@ -1998,16 +1969,14 @@ if (grid.header_row.length) {
 
   grid.onkeydown = function(e) {
     if (grid.frame.form.disable_count) return false;
-    var opera = (navigator.appName === 'Opera');
-    if (!e) e=window.event;
     if (e.altKey)
-      var target = grid.kbd_shortcuts['alt'][e.keyCode];
+      var target = grid.kbd_shortcuts['alt'][e.key];
     else if (e.ctrlKey)
-      var target = grid.kbd_shortcuts['ctrl'][e.keyCode];
+      var target = grid.kbd_shortcuts['ctrl'][e.key];
     else if (e.shiftKey)
-      var target = grid.kbd_shortcuts['shift'][e.keyCode];
+      var target = grid.kbd_shortcuts['shift'][e.key];
     else if (!grid.amended())  // Enter can mean 'save' if amended, or 'select' if not
-      var target = grid.kbd_shortcuts['normal'][e.keyCode];
+      var target = grid.kbd_shortcuts['normal'][e.key];
 
     if (target !== undefined) {
       target.onclick.call(target);
@@ -2018,83 +1987,43 @@ if (grid.header_row.length) {
     if (e.altKey)
       return;
     if (e.ctrlKey)
-      if ([35, 36, 45, 46].indexOf(e.keyCode) === -1)
+      if (!['Home', 'End', 'Insert', 'Delete'].includes(e.key))
         return;
-//    if (e.keyCode === 13 && grid.grid_frame !== null)
-//      return;  // allow <enter> to trigger active_button
     var key_handled = true;
-    switch (e.keyCode) {
-      case 9:  grid.handle_tab(e.shiftKey); break;          // Tab
-//    case 13: if (e.ctrlKey)                               // Enter
-//                grid.req_formview();
-//              else
-//                grid.handle_enter();
-//              break;
-      case 13: grid.handle_enter(); break;                  // Enter
-      case 27: grid.handle_escape(); break;                 // Esc
-      case 33: if (!opera) {grid.page_up()}; break;         // PageUp
-      case 34: if (!opera) {grid.page_down()}; break;       // PageDown
-      case 35: if (e.ctrlKey) {grid.goto_bottom()}; break;  // Ctrl+End
-      case 36: if (e.ctrlKey) {grid.goto_top()}; break;     // Ctrl+Home
-      case 37: if (!opera) {grid.left()}; break;            // Left
-      case 38: if (!opera) {grid.up()}; break;              // Up
-      case 39: if (!opera) {grid.right()}; break;           // Right
-      case 40: if (!opera) {grid.down()}; break;            // Down
-//    case 45: if (e.ctrlKey) {grid.req_insert()}; break;   // Ctrl+Ins
-//    case 46: if (e.ctrlKey) {grid.req_delete()}; break;   // Ctrl+Del
-      case 46: if (!e.ctrlKey) {grid.clear_cell()}; break;  // Del
-      case 113: grid.edit_cell(null); break;                // F2
+    switch (e.key) {
+      case 'Tab':  grid.handle_tab(e.shiftKey); break;
+      case 'Enter': grid.handle_enter(); break;
+      case 'Escape': grid.handle_escape(); break;
+      case 'PageUp': grid.page_up(); break;
+      case 'PageDown': grid.page_down(); break;
+      case 'Home': if (e.ctrlKey) {grid.goto_top()}; break;
+      case 'End': if (e.ctrlKey) {grid.goto_bottom()}; break;
+      case 'ArrowLeft': grid.left(); break;
+      case 'ArrowUp': grid.up(); break;
+      case 'ArrowRight': grid.right(); break;
+      case 'ArrowDown': grid.down(); break;
+      case 'Delete': if (!e.ctrlKey) {grid.clear_cell()}; break;
+      case 'F2': grid.edit_cell(null); break;
       default: key_handled = false;
       };
     if (key_handled) {
       e.cancelBubble = true;
       return false;
       };
-    };
-
-  grid.onkeypress = function(e) {
-    if (grid.frame.form.disable_count) return false;
-    var opera = (navigator.appName === 'Opera') && (e.which === 0);
-    if (!e) e=window.event;
-    if (e.ctrlKey  || e.altKey)
-      return;
-    if (e.keyCode === 9) {
-      if (grid.tabbed === true) return false;  // FF workaround
-      grid.tabbed = true;  // allow first tab, reject second
-      };
-    if (opera) {  // Opera does not auto-repeat arrow-keys from onkeydown!
-      switch (e.keyCode) {
-        case 33: grid.page_up(); return false; break;
-        case 34: grid.page_down(); return false; break;
-        case 37: grid.left(); return false; break;
-        case 38: grid.up(); return false; break;
-        case 39: grid.right(); return false; break;
-        case 40: grid.down(); return false; break;
-        };
-      };
-    if (!e.which) e.which=e.keyCode;
     var input = grid.obj_list[grid.active_col];
-//    if (input.readonly || !(input.allow_amend || grid.inserted))
-    if (!input.amendable())
-      return;
-    if (e.which === 92) {  // backslash
+    if (e.key === '\\') {
       input.handle_backslash();
       return false;
       };
-    if (e.which === 32 && (input.expander !== undefined)) {  // space
+    if (e.key === ' ' && (input.expander !== undefined)) {
       input.cell = grid.active_cell;
       input.expander(input);
       return false;
       };
-    if (e.which > 31 && e.which < 127 && !e.ctrlKey && !e.altKey) {
-      grid.edit_cell(e.which);
+    if (e.key.length === 1 && !e.ctrlKey && !e.altKey) {
+      grid.edit_cell(e.key);
       return false;
       };
-    };
-
-  grid.onkeyup = function(e) {
-    if (!e) e=window.event;
-    if (e.keyCode === 9) grid.tabbed = false;  // FF workaround
     };
 
 // SCROLLBAR SETUP AND FUNCTIONS

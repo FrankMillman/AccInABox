@@ -194,14 +194,14 @@ function setup_form(args) {
           if (form.disable_count)
             return;
           if (!e) e=window.event;
-          if (e.keyCode === 9) {  // user pressed Tab
+          if (e.key === 'Tab') {
             if (e.shiftKey)
               form.tabdir = -1
             else
               form.tabdir = 1;
             return;
             };
-          if (e.keyCode === 13) {  // user pressed Enter
+          if (e.key === 'Enter') {
             // ignore_enter is set by a 'textarea' object, which uses
             //   'Enter' for new lines
             if (ignore_enter)
@@ -245,26 +245,25 @@ function setup_form(args) {
             e.cancelBubble = true;
             return false;
             };
-          if (e.keyCode === 27) {  // Esc
+          if (e.key === 'Escape') {
             form.req_cancel();
             e.cancelBubble = true;
             return false;
             };
-          if (e.keyCode === 115 && e.shiftKey) {  //  user pressed Shift+F4
+          if (e.key === 'F4' && e.shiftKey) {
             form.req_close();
             e.cancelBubble = true;
             return false;  // with Alt+F4 the main window is closed!
             };
-          if (e.keyCode === 116) {  //  user pressed F5 - prevent refresh
+          if (e.key === 'F5') {  //  user pressed F5 - prevent refresh
             e.cancelBubble = true;
-            e.keyCode = 0;
             return false;
             };
           };
 
         document.onkeyup = function(e) {
           if (!e) e=window.event;
-          if (e.keyCode === 13) {  // user released Enter
+          if (e.key === 'Enter') {
             if (!ignore_enter) {
               click_from_kbd = false;
               e.cancelBubble = true;
@@ -668,14 +667,14 @@ function setup_form(args) {
           if (this.frame.form.disable_count) return false;
           if (!e) e=window.event;
           if (e.ctrlKey) {
-            if (e.keyCode === 33) {  // page up
+            if (e.key === 'PageUp') {
               if (this.pos > 1) {
                 this.parentNode.req_new_page(this.pos-1, true)
                 e.cancelBubble = true;
                 return false;
                 };
               }
-            else if (e.keyCode === 34) {  // page down
+            else if (e.key === 'PageDown') {
               if (this.pos < (this.parentNode.childNodes.length - 1)) {
                 this.parentNode.req_new_page(this.pos+1, false)
                 e.cancelBubble = true;
@@ -710,7 +709,7 @@ function setup_form(args) {
           nb_btn.onkeydown = function(e) {
             if (this.frame.form.disable_count) return false;
             if (!e) e=window.event;
-            if (e.keyCode === 13) {  // Enter
+            if (e.key === 'Enter') {
               var next = (back ? this.nb_page.pos-1 : this.nb_page.pos+1)
               this.nb_page.parentNode.req_new_page(next, back)
               e.cancelBubble = true;

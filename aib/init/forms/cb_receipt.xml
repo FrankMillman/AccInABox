@@ -55,7 +55,7 @@
         <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="display_descr" lng="80"/>
-          <cur_col col_name="rec_cb" lng="120"/>
+          <cur_col col_name="rec_tran" lng="120"/>
         </cur_columns>
         <cur_filter/>
         <cur_sequence>

@@ -472,7 +472,9 @@ class GuiButton:
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
         self.pos = pos
-
+        if help_msg.startswith('$'):  # get help_msg from col_defn
+            obj_name, col_name = help_msg[1:].split('.')
+            help_msg = parent.data_objects[obj_name].db_table.col_dict[col_name].long_descr
         self.form_dflt = None
         self.before_input = None
         self.after_input = None
@@ -541,6 +543,9 @@ gui_ctrls = {
     'PWD'   : (GuiTextCtrl),
     'INT'   : (GuiNumCtrl),
     'DEC'   : (GuiNumCtrl),
+    '$TRN'  : (GuiNumCtrl),
+    '$PTY'  : (GuiNumCtrl),
+    '$LCL'  : (GuiNumCtrl),
     'DTE'   : (GuiDateCtrl),
     'DTM'   : (GuiTextCtrl),
     'BOOL'  : (GuiBoolCtrl),

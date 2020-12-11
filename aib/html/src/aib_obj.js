@@ -64,8 +64,8 @@ AibText.prototype.set_dflt_val = function(text, value) {
     setInsertionPoint(text, 0);
     }
   else
-    setInsertionPoint(text, 0);  //inp.value.length);
-  };
+  setInsertionPoint(text, 0, text.value.length);
+};
 AibText.prototype.before_lost_focus = function(text) {
   if (text.multi_line === true)
     // IE8 converts all \n to \r\n
@@ -82,9 +82,6 @@ AibText.prototype.after_lost_focus = function(text) {
   text.className = 'blur_background';
   };
 AibText.prototype.ondownkey = function(text, e) {
-  return true;
-  };
-AibText.prototype.onpresskey = function(text, e) {
   return true;
   };
 AibText.prototype.data_changed = function(text) {
@@ -183,11 +180,11 @@ AibText.prototype.get_cell_value_for_server = function(cell) {
 //    value = '';
   return value;
   };
-AibText.prototype.start_edit = function(input, current_value, keyCode) {  // called from grid
-  if (keyCode === null)  // user pressed F2 or double-clicked
+AibText.prototype.start_edit = function(input, current_value, key) {  // called from grid
+  if (key === null)  // user pressed F2 or double-clicked
     input.value = current_value;
   else {
-    input.value = String.fromCharCode(keyCode);
+    input.value = key;
     };
   setInsertionPoint(input, input.value.length);
   };
@@ -243,44 +240,33 @@ AibNum.prototype.num_to_string = function(num, value) {
   return value;
   };
 AibNum.prototype.ondownkey = function(num, e) {
-  return true;
-  };
-AibNum.prototype.onpresskey = function(num, e) {
-  if (!e.which) e.which=e.keyCode;
-  if (e.which < 32)
+  if (e.key.length > 1)  // control key
     return true;
-  return this.validate_chr(num, e.which);
-  };
+  return this.validate_chr(num, e.key);
+};
 AibNum.prototype.validate_chr = function(num, key) {
-//  var inp = num.firstChild;
-  if (key >= 48 && key <= 57) {
-//    var decimal_pos = inp.value.indexOf('.');
+  if ('0123456789'.includes(key)) {
     var decimal_pos = num.value.indexOf('.');
     if (decimal_pos === -1)  // no decimal point present
       return true;
     if (num.integer)
       return false;  // decimal point not allowed
-    if (getCaret(num) < decimal_pos)
-//    if (num.get_caret() < decimal_pos)
+    if (getCaret(num) <= decimal_pos)
       return true;  // cursor is before decimal point - ok
-//    var no_decimals = inp.value.length - decimal_pos - 1;
     var no_decimals = num.value.length - decimal_pos - 1;
     if (no_decimals === num.max_decimals)
       return false;
     return true;
     };
   if (
-      key === 45 &&                          // minus sign
-//      inp.value.indexOf('-') === -1 &&     // the only one
-      num.value.indexOf('-') === -1 &&   // the only one
-      getCaret(num) === 0                  // at the beginning
-//      num.get_caret() === 0                  // at the beginning
+      key === '-' &&
+      num.value.indexOf('-') === -1 &&  // the only one
+      getCaret(num) === 0  // at the beginning
       )
     return true;
   if (
-      key === 46 &&                      // decimal point
-      !num.integer &&                    // not an 'integer' type
- //     inp.value.indexOf('.') === -1    // the only one
+      key === '.' &&
+      !num.integer &&  // not an 'integer' type
       num.value.indexOf('.') === -1  // the only one
       )
     return true;
@@ -352,13 +338,13 @@ AibNum.prototype.get_cell_value_for_server = function(cell) {
     return null;  // no change
   return cell.current_value;
   };
-AibNum.prototype.start_edit = function(input, current_value, keyCode) {  // called from grid
-  if (keyCode === null)  // user pressed F2 or double-clicked
+AibNum.prototype.start_edit = function(input, current_value, key) {  // called from grid
+  if (key === null)  // user pressed F2 or double-clicked
     input.value = current_value;
   else {
     input.value = '';
-    if (this.validate_chr(input, keyCode))
-      input.value = String.fromCharCode(keyCode);
+    if (this.validate_chr(input, key))
+      input.value = key;
     };
   setInsertionPoint(input, input.value.length);
   };
@@ -585,50 +571,34 @@ AibDate.prototype.handle_end = function(date) {
   date.pos = date.blank.length;
   date.selected = false;
   };
-AibDate.prototype.handle_keyCode = function(date, keyCode) {
+AibDate.prototype.handle_digit = function(date, digit) {
   if (date.selected) {
     date.value = date.blank;
     date.pos = 0;
     date.selected = false;
     };
-  date.value =
-    date.value.substring(0, date.pos) +
-    String.fromCharCode(keyCode) +
-    date.value.substring(date.pos+1);
+  date.value = date.value.substring(0, date.pos) + digit + date.value.substring(date.pos+1);
   date.pos += 1;
   while (this.test_literal(date, date.pos))
     date.pos += 1;
   };
-AibDate.prototype.onkey = function(date, e) {
+AibDate.prototype.ondownkey = function(date, e) {
   if (!date.amendable())
     return;
-  // allow 'space' (32) for use as 'date expander'
-  if (e.keyCode < 33 && e.keyCode !== 8)
-    return true;
-  if (e.keyCode === 220)  // backslash
+  if ([' ', 'Tab', 'Escape', 'Enter', '\\'].includes(e.key))
     return true;
   if (e.ctrlKey || e.altKey)
     return true;
-  if (e.keyCode === 8) this.handle_bs(date)
-  else if (e.keyCode === 46) this.handle_del(date)
-  else if (e.keyCode === 37) this.handle_left(date)
-  else if (e.keyCode === 39) this.handle_right(date)
-  else if (e.keyCode === 36) this.handle_home(date)
-  else if (e.keyCode === 35) this.handle_end(date)
-  else if (e.keyCode >= 48 && e.keyCode <= 57) this.handle_keyCode(date, e.keyCode)
-  else if ((e.keyCode >= 96 && e.keyCode <= 105) && (navigator.appName !== 'Opera'))
-    this.handle_keyCode(date, e.keyCode-48);
+  if (e.key === 'Backspace') this.handle_bs(date)
+  else if (e.key === 'Delete') this.handle_del(date)
+  else if (e.key === 'ArrowLeft') this.handle_left(date)
+  else if (e.key === 'ArrowRight') this.handle_right(date)
+  else if (e.key === 'Home') this.handle_home(date)
+  else if (e.key === 'End') this.handle_end(date)
+  else if ('0123456789'.includes(e.key)) this.handle_digit(date, e.key)
   setInsertionPoint(date, date.pos);
   e.cancelBubble = true;
   return false;
-  };
-if (navigator.appName === 'Opera') {
-  AibDate.prototype.onpresskey = AibDate.prototype.onkey;
-  AibDate.prototype.ondownkey = function(date, e) {return true;};
-  }
-else {
-  AibDate.prototype.ondownkey = AibDate.prototype.onkey;
-  AibDate.prototype.onpresskey = function(date, e) {return true;};
   };
 //AibDate.prototype.data_changed = function(date, value) {
 //  return (value !== this.date_to_string(date, date.form_value, date.input_format));
@@ -766,9 +736,9 @@ AibDate.prototype.get_cell_value_for_server = function(cell) {
 //      + '-' + zfill(value.getDate(), 2);
   return value;
   };
-AibDate.prototype.start_edit = function(input, current_value, keyCode) {  // called from grid
+AibDate.prototype.start_edit = function(input, current_value, key) {  // called from grid
   var date = input;
-  if (keyCode === null) {  // user pressed F2 or double-clicked
+  if (key === null) {  // user pressed F2 or double-clicked
     date.value = current_value;
     date.pos = date.blank.length;
     setInsertionPoint(date, date.pos);
@@ -777,15 +747,13 @@ AibDate.prototype.start_edit = function(input, current_value, keyCode) {  // cal
   else {
     date.value = date.blank;
     date.selected = true;
-    if (keyCode === 8) this.handle_bs(date)
-    else if (keyCode === 46) this.handle_del(date)
-    else if (keyCode === 37) this.handle_left(date)
-    else if (keyCode === 39) this.handle_right(date)
-    else if (keyCode === 36) this.handle_home(date)
-    else if (keyCode === 35) this.handle_end(date)
-    else if (keyCode >= 48 && keyCode <= 57) this.handle_keyCode(date, keyCode)
-    else if ((keyCode >= 96 && keyCode <= 105) && (navigator.appName !== 'Opera'))
-      this.handle_keyCode(date, keyCode-48)
+    if (key === 'Backspace') this.handle_bs(date)
+    else if (key === 'Delete') this.handle_del(date)
+    else if (key === 'ArrowLeft') this.handle_left(date)
+    else if (key === 'ArrowRight') this.handle_right(date)
+    else if (key ==='Home' ) this.handle_home(date)
+    else if (key === 'End') this.handle_end(date)
+    else if ('0123456789'.includes(key)) this.handle_digit(date, key)
     setInsertionPoint(date, date.pos);
     };
   };
@@ -908,11 +876,8 @@ AibBool.prototype.onclick = function(bool) {
 AibBool.prototype.ondownkey = function(bool, e) {
   if (!bool.amendable())
     return;
-  if (e.keyCode === 32)
+  if (e.key === ' ')
     this.chkbox_change(bool);
-  };
-AibBool.prototype.onpresskey = function(bool, e) {
-  return true;
   };
 AibBool.prototype.chkbox_change = function(bool) {
   //bool.value = !bool.value;
@@ -1250,13 +1215,12 @@ AibChoice.prototype.create_dropdown = function(choice) {
 
   dropdown.onkey = function(e) {
     debug4('op');  // workaround for Opera
-    if (!e) e=window.event;
     if (e.ctrlKey || e.altKey) return;
-    if ((e.keyCode === 13) || (e.keyCode === 32))  // enter|space
+    if ((e.key === 'Enter') || (e.key === ' '))
       dropdown.choice.aib_obj.onselection(dropdown.choice, this.option_highlighted);
-    else if (e.keyCode === 27)  // escape
+    else if (e.key === 'Escape')
       dropdown.choice.aib_obj.onselection(dropdown.choice, null);
-    else if (e.keyCode === 37 || e.keyCode === 38) {  // left|up
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
       var row = this.option_highlighted - this.top_row;
       if (row > 0) {
         this.childNodes[row].style.background = 'white';
@@ -1272,7 +1236,7 @@ AibChoice.prototype.create_dropdown = function(choice) {
         this.draw_window();
         };
       }
-    else if (e.keyCode === 39 || e.keyCode === 40) {  // right|down
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       var row = this.option_highlighted - this.top_row;
       if (row < (max_rows-1)) {
         this.childNodes[row].style.background = 'white';
@@ -1299,39 +1263,26 @@ AibChoice.prototype.create_dropdown = function(choice) {
 
   setTimeout(function() {dropdown.focus()}, 0);
   };
-AibChoice.prototype.onkey = function(choice, e) {
+AibChoice.prototype.ondownkey = function(choice, e) {
   if (!e) e=window.event;
   if (e.ctrlKey || e.altKey)
     return;
   if (!choice.amendable())
     return;
-  if (e.keyCode === 32) {  // space
+  if (e.key === ' ') {
     choice.on_selection = this.after_selection;
     this.create_dropdown(choice);
     }
-//  else if (e.keyCode === 13) {  // enter
-//    this.onselection(choice, choice.ndx);
-//    e.cancelBubble = true;
-//    return false;
-//    }
-  else if ((e.keyCode === 37) || (e.keyCode === 38)) {  // left|up
+  else if ((e.key === 'ArrowLeft') || (e.key === 'ArrowUp')) {
     if (choice.ndx > 0) {
       this.after_selection(choice, choice.ndx-1)
       };
     }
-  else if ((e.keyCode === 39) || (e.keyCode === 40)) {  // right|down
+  else if ((e.key === 'ArrowRight') || (e.key === 'ArrowDown')) {
     if (choice.ndx < (choice.values.length-1)) {
       this.after_selection(choice, choice.ndx+1);
       };
     };
-  };
-if (navigator.appName === 'Opera') {
-  AibChoice.prototype.onpresskey = AibChoice.prototype.onkey
-  AibChoice.prototype.ondownkey = function(e) {return true};
-  }
-else {
-  AibChoice.prototype.ondownkey = AibChoice.prototype.onkey;
-  AibChoice.prototype.onpresskey = function(e) {return true};
   };
 AibChoice.prototype.data_changed = function(choice) {
   value = choice.form_value;
@@ -1388,9 +1339,14 @@ AibChoice.prototype.set_cell_value_got_focus = function(cell) {
   };
 AibChoice.prototype.set_cell_value_lost_focus = function(cell, value) {
   cell.current_value = value;
-  pos = cell.input.data.indexOf(value);
-  cell.pos = pos;
-  value = cell.input.values[pos];
+  if (value === '') {  // bottom 'blank' row
+    cell.pos = -1;
+    }
+  else {
+    pos = cell.input.data.indexOf(value);
+    cell.pos = pos;
+    value = cell.input.values[pos];
+    }
   cell.text_node.data = value;
   };
 AibChoice.prototype.get_cell_value_for_server = function(cell) {
@@ -1454,36 +1410,25 @@ AibRadio.prototype.onselection = function(radio, option_selected) {
   radio.current_value = radio.value;
   radio.callback(radio.value);
   };
-AibRadio.prototype.onkey = function(radio, e) {
-  if (!e) e=window.event;
+AibRadio.prototype.ondownkey = function(radio, e) {
   if (!radio.amendable())
     return;
   if (e.ctrlKey || e.altKey)
     return;
-  if (e.keyCode === 9)  // tab
+  if (['Tab', 'Enter'].includes(e.key))
     return;
-  if (e.keyCode === 13)  // enter
-    return;
-  switch (e.keyCode) {
-    case 37:  // left
+  switch (e.key) {
+    case 'ArrowLeft':
       if (radio.ndx > 0)
         this.onselection(radio, radio.ndx-1);
       break;
-    case 39:  // right
+    case 'ArrowRight':
       if (radio.ndx < (radio.buttons.length-1))
         this.onselection(radio, radio.ndx+1);
       break;
     default:
       return false;
     };
-  };
-if (navigator.appName === 'Opera') {
-  AibRadio.prototype.onpresskey = AibRadio.prototype.onkey
-  AibRadio.prototype.ondownkey = function(e) {return true};
-  }
-else {
-  AibRadio.prototype.ondownkey = AibRadio.prototype.onkey;
-  AibRadio.prototype.onpresskey = function(e) {return true};
   };
 AibRadio.prototype.data_changed = function(radio) {
   value = radio.form_value;
@@ -1551,24 +1496,16 @@ AibSpin.prototype.change = function(spin, incr) {
       };
     };
   };
-AibSpin.prototype.onkey = function(spin, e) {
+AibSpin.prototype.ondownkey = function(spin, e) {
   if (!e) e=window.event;
-  if (e.keyCode === 38) {  // up
+  if (e.key === 'ArrowUp') {
     this.change(spin, 1);
     setTimeout(function() {spin.focus()}, 0);
     }
-  else if (e.keyCode === 40) {  // down
+  else if (e.key === 'ArrowDown') {
     this.change(spin, -1);
     setTimeout(function() {spin.focus()}, 0);
     };
-  };
-if (navigator.appName === 'Opera') {
-  AibSpin.prototype.onpresskey = AibSpin.prototype.onkey
-  AibSpin.prototype.ondownkey = function(e) {return true};
-  }
-else {
-  AibSpin.prototype.ondownkey = AibSpin.prototype.onkey;
-  AibSpin.prototype.onpresskey = function(e) {return true};
   };
 AibSpin.prototype.data_changed = function(spin) {
   return (spin.current_value !== spin.form_value);
@@ -1621,16 +1558,29 @@ AibSxml.prototype.after_lost_focus = function(sxml) {
   sxml.style.background = sxml.bg_blur;
   sxml.style.border = '1px solid darkgrey';
   sxml.has_focus = false;
-  };
+  if (sxml.value.length === 1)
+    sxml.style.fontWeight = 'normal';
+  else
+    sxml.style.fontWeight = 'bold';
+};
 AibSxml.prototype.ondownkey = function(sxml, e) {
-  if (e.keyCode === 13) {
+  if (e.key === 'Enter') {
     sxml.onclick(sxml);
     e.cancelBubble = true;
     return false;
     };
-  };
-AibSxml.prototype.onpresskey = function(sxml, e) {
-  return true;
+  if ((e.key === 'ArrowLeft') || (e.key === 'ArrowUp'))
+    var dir = -1
+  else if ((e.key === 'ArrowRight') || (e.key === 'ArrowDown'))
+    var dir = 1
+  else
+    return;
+  var pos = sxml.pos + dir;
+  if (pos < 0)
+    pos = sxml.frame.obj_list.length-1
+  else if (pos === sxml.frame.obj_list.length)
+    pos = 0;
+  sxml.frame.obj_list[pos].focus();
   };
 AibSxml.prototype.popup = function(sxml) {
   sxml_popup(sxml);
@@ -1655,6 +1605,10 @@ AibSxml.prototype.set_value_from_server = function(sxml, value) {
   if (value !== sxml.current_value) {
     sxml.current_value = value;
     sxml.value = value;
+    if (sxml.value.length === 1)
+    sxml.style.fontWeight = 'normal';
+  else
+    sxml.style.fontWeight = 'bold';
     };
   sxml.form_value = value;
   };
@@ -1740,9 +1694,6 @@ AibDummy.prototype.before_lost_focus = function(dummy) {
 AibDummy.prototype.after_lost_focus = function(dummy) {
   };
 AibDummy.prototype.ondownkey = function(dummy, e) {
-  return true;
-  };
-AibDummy.prototype.onpresskey = function(dummy, e) {
   return true;
   };
 AibDummy.prototype.data_changed = function(dummy) {

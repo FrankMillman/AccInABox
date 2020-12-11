@@ -28,7 +28,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -47,7 +48,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -66,7 +68,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -85,7 +88,8 @@ cols.append ({
     'long_descr' : 'Supplier row id',
     'col_head'   : 'Supplier',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -107,7 +111,8 @@ cols.append ({
     'long_descr' : 'Credit note number',
     'col_head'   : 'Crn no',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -126,7 +131,8 @@ cols.append ({
     'long_descr' : 'Transaction date',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -149,7 +155,8 @@ cols.append ({
     'long_descr' : 'Line of text to appear on reports',
     'col_head'   : 'Text',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -168,7 +175,8 @@ cols.append ({
     'long_descr' : 'Currency used to enter transaction',
     'col_head'   : 'Currency',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -187,7 +195,8 @@ cols.append ({
     'long_descr' : 'Exchange rate from supplier currency to local',
     'col_head'   : 'Rate supp',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -218,7 +227,8 @@ cols.append ({
     'long_descr' : 'Exchange rate from transaction currency to local',
     'col_head'   : 'Rate tran',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -252,7 +262,8 @@ cols.append ({
     'long_descr' : 'Terms code',
     'col_head'   : 'Terms code',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : True,
     'allow_amend': False,
     'max_len'    : 0,
@@ -271,7 +282,8 @@ cols.append ({
     'long_descr' : 'Tax inclusive?',
     'col_head'   : 'Tax incl?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -285,12 +297,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'crn_amount',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Cr note amount',
-    'long_descr' : 'Credit note amount in cr note currency',
+    'long_descr' : 'Credit note amount in transaction currency',
     'col_head'   : 'Crn amount',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -309,7 +322,8 @@ cols.append ({
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -323,12 +337,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'crn_net_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Cr note net amount',
-    'long_descr' : 'Cr note net amount in cr note currency - updated from ap_tran_crn_det',
+    'long_descr' : 'Cr note net amount in tran currency - updated from ap_tran_crn_det',
     'col_head'   : 'Crn net amt',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'aggr',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -342,12 +357,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'crn_tax_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Cr note tax amount',
-    'long_descr' : 'Cr note tax amount in cr note currency - updated from ap_tran_crn_det',
+    'long_descr' : 'Cr note tax amount in tran currency - updated from ap_tran_crn_det',
     'col_head'   : 'Crn tax amt',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'aggr',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -360,51 +376,14 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'crn_net_supp',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cr note net supp',
-    'long_descr' : 'Cr note net amount in supplier currency - updated from ap_tran_crn_det',
-    'col_head'   : 'Crn net supp',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'crn_tax_supp',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cr note tax supp',
-    'long_descr' : 'Cr note tax amount in supplier currency - updated from ap_tran_crn_det',
-    'col_head'   : 'crn tax supp',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'crn_net_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Cr note net local',
     'long_descr' : 'Cr note net amount in local currency - updated from ap_tran_crn_det',
     'col_head'   : 'crn net local',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'aggr',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -418,12 +397,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'crn_tax_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Cr note tax local',
     'long_descr' : 'Cr note tax amount in local currency - updated from ap_tran_crn_det',
     'col_head'   : 'crn tax local',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'aggr',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -466,9 +446,9 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'crn_tot_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Total amount',
-    'long_descr' : 'Cr note total amount in cr note currency',
+    'long_descr' : 'Cr note total amount in tran currency',
     'col_head'   : 'Tot amt',
     'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
@@ -483,8 +463,52 @@ virt.append ({
     'sql'        : "a.crn_net_amt + a.crn_tax_amt"
     })
 virt.append ({
+    'col_name'   : 'crn_net_supp',
+    'data_type'  : '$PTY',
+    'short_descr': 'Net amount',
+    'long_descr' : 'Net amount in supplier currency',
+    'col_head'   : 'Net amt',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="crn_net_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="supp_exch_rate"/>'
+        '</expr>'
+        ),
+    'sql'        : (
+        "a.crn_net_amt / a.tran_exch_rate * a.supp_exch_rate"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'crn_tax_supp',
+    'data_type'  : '$PTY',
+    'short_descr': 'Tax amount',
+    'long_descr' : 'Tax amount in supplier currency',
+    'col_head'   : 'Tax amt',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="crn_tax_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="supp_exch_rate"/>'
+        '</expr>'
+        ),
+    'sql'        : (
+        "a.crn_tax_amt / a.tran_exch_rate * a.supp_exch_rate"
+        ),
+    })
+virt.append ({
     'col_name'   : 'crn_tot_supp',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Total amount',
     'long_descr' : 'Total amount in supplier currency',
     'col_head'   : 'Tot amt',
@@ -502,7 +526,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'crn_tot_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Total amount local',
     'long_descr' : 'Total amount in supplier currency',
     'col_head'   : 'Tot amt',
@@ -519,10 +543,10 @@ virt.append ({
     'sql'        : "a.crn_net_local + a.crn_tax_local"
     })
 virt.append ({
-    'col_name'   : 'crn_trans_supp',
-    'data_type'  : 'DEC',
+    'col_name'   : 'crn_view_supp',
+    'data_type'  : '$PTY',
     'short_descr': 'Total amount',
-    'long_descr' : 'Total amount for trans in supplier currency',
+    'long_descr' : 'Total amount for ap_trans view in supplier currency',
     'col_head'   : 'Tot amt',
     'db_scale'   : 2,
     'scale_ptr'  : 'supp_row_id>currency_id>scale',
@@ -531,10 +555,10 @@ virt.append ({
     'sql'        : "0 - (a.crn_net_supp + a.crn_tax_supp)"
     })
 virt.append ({
-    'col_name'   : 'crn_trans_local',
-    'data_type'  : 'DEC',
+    'col_name'   : 'crn_view_local',
+    'data_type'  : '$LCL',
     'short_descr': 'Total amount local',
-    'long_descr' : 'Total amount for trans in local currency',
+    'long_descr' : 'Total amount for ap_trans view in local currency',
     'col_head'   : 'Tot amt',
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',

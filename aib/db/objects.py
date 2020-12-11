@@ -461,7 +461,7 @@ class DbObject:
             if field.col_name in col_const:  # e.g. tran_type in ar_openitems
                 if col_defn.col_type == 'alt':
                     foreign_key = await self.get_foreign_key(field)
-                    await foreign_key['tgt_field'].setval(col_const[field.col_name])
+                    await foreign_key['tgt_field'].setval(col_const[field.col_name], validate=False)
                     field.constant = foreign_key['tgt_field']._value
                     field._orig = field._value = field.constant
                     true_src = foreign_key['true_src']
@@ -677,9 +677,8 @@ class DbObject:
                 db_obj = await db.cache.get_adm_params(self.company)
             elif obj_name == '_ledger':
                 module_row_id = self.db_table.module_row_id
-                ctx_mod_id, ctx_ledg_id = getattr(self.context, 'mod_ledg_id', (None, None))
-                if ctx_mod_id == module_row_id:  # get ledger_row_id from 'context'
-                    ledger_row_id = ctx_ledg_id
+                if module_row_id == self.context.module_row_id:  # get ledger_row_id from 'context'
+                    ledger_row_id = self.context.ledger_row_id
                 else:  # get ledger_row_id from db_table.ledger_col - could be None
                     ledger_col = self.db_table.ledger_col
                     ledger_row_id = await self.getval(ledger_col)
@@ -777,8 +776,10 @@ class DbObject:
                 fld = await self.getfld(dep_name)
                 fld.notify_recalc(field)
 
-
-        if col_defn.dflt_val is not None or col_defn.dflt_rule is not None:
+        if col_defn.dflt_rule is not None:
+            field._value = await db.dflt_xml.get_db_dflt(field)
+            field._orig = await db.dflt_xml.get_db_dflt(field, orig=True)
+        elif col_defn.dflt_val is not None:
             field._orig = field._value = await field.get_dflt()
 
         if col_defn.sql is not None:
@@ -812,10 +813,9 @@ class DbObject:
                     (test, '', self.db_table.ledger_col, '=', ledger_val, ''))
                 test = 'AND'  # in case there is another one
             else:
-                ctx_mod_id, ctx_ledg_id = getattr(self.context, 'mod_ledg_id', (None, None))
-                if ctx_mod_id == self.db_table.module_row_id:
-                    where.append(
-                        (test, '', self.db_table.ledger_col, '=', ctx_ledg_id, ''))
+                if self.context.module_row_id == self.db_table.module_row_id:
+                    where.append((test, '', self.db_table.ledger_col,
+                        '=', self.context.ledger_row_id, ''))
                     test = 'AND'  # in case there is another one
 
         parent = self.parent
@@ -1618,9 +1618,8 @@ class DbObject:
             src_tbl, src_col = src_col.split('.')
             if src_tbl == '_ledger':
                 module_row_id = self.db_table.module_row_id
-                ctx_mod_id, ctx_ledg_id = getattr(self.context, 'mod_ledg_id', (None, None))
-                if ctx_mod_id == module_row_id:  # get ledger_row_id from 'context'
-                    ledger_row_id = ctx_ledg_id
+                if module_row_id == self.context.module_row_id:  # get ledger_row_id from 'context'
+                    ledger_row_id = self.context.ledger_row_id
                 else:  # get ledger_row_id from db_table.ledger_col - could be None
                     ledger_col = self.db_table.ledger_col
                     ledger_row_id = await self.getval(ledger_col)
@@ -1717,14 +1716,15 @@ class DbObject:
                     src_val = await src_fld.getval() - await src_fld.get_orig()
                 elif upd_type == 'deleted':
                     src_val = 0 - await src_fld.getval()
-                tgt_fld = await tgt_obj.getfld(tgt_col)
-                tgt_val = await tgt_fld.getval()
-                if op == '+':
-                    await tgt_fld.setval(tgt_val + src_val, validate=False)
-                elif op == '-':
-                    await tgt_fld.setval(tgt_val - src_val, validate=False)
-                else:
-                    raise NotImplementedError
+                if src_val:
+                    tgt_fld = await tgt_obj.getfld(tgt_col)
+                    tgt_val = await tgt_fld.getval()
+                    if op == '+':
+                        await tgt_fld.setval(tgt_val + src_val, validate=False)
+                    elif op == '-':
+                        await tgt_fld.setval(tgt_val - src_val, validate=False)
+                    else:
+                        raise NotImplementedError
 
             if roll_params is not None:
                 sql = 'UPDATE {0}.{1} SET '.format(tgt_obj.company, tbl_name)
@@ -1803,7 +1803,7 @@ class DbObject:
                     tgt = tgt[5:]
                     setattr(self.context, tgt, await tgt_obj.getval(src))
                 else:
-                    await self.setval(tgt, await tgt_obj.getval(src))
+                    await self.setval(tgt, await tgt_obj.getval(src), validate=False)
             if self.dirty:
                 await self.update(conn, from_upd_on_save=True, call_upd_on_save=False)
 
@@ -2097,14 +2097,15 @@ class DbObject:
                 src_val = await self.getval(src_col)
                 if post_type == 'unpost':
                     src_val = 0 - src_val
-                tgt_fld = await tgt_obj.getfld(tgt_col)
-                tgt_val = await tgt_fld.getval()
-                if op == '+':
-                    await tgt_fld.setval(tgt_val + src_val, validate=False)
-                elif op == '-':
-                    await tgt_fld.setval(tgt_val - src_val, validate=False)
-                else:
-                    raise NotImplementedError
+                if src_val:
+                    tgt_fld = await tgt_obj.getfld(tgt_col)
+                    tgt_val = await tgt_fld.getval()
+                    if op == '+':
+                        await tgt_fld.setval(tgt_val + src_val, validate=False)
+                    elif op == '-':
+                        await tgt_fld.setval(tgt_val - src_val, validate=False)
+                    else:
+                        raise NotImplementedError
 
             if roll_params is not None:
                 sql = 'UPDATE {0}.{1} SET '.format(tgt_obj.company, tbl_name)
@@ -2165,7 +2166,7 @@ class DbObject:
                     tgt = tgt[5:]
                     setattr(self.context, tgt, await tgt_obj.getval(src))
                 else:
-                    await self.setval(tgt, await tgt_obj.getval(src))
+                    await self.setval(tgt, await tgt_obj.getval(src), validate=False)
 
     async def increment_seq(self, conn):  # called before save
         param_style = self.db_table.constants.param_style
@@ -2285,7 +2286,7 @@ class DbObject:
 
             cur = await conn.exec_sql(sql, params)
             seq = (await anext(cur))[0] + 1
-            await self.setval(seq_col_name, seq)
+            await self.setval(seq_col_name, seq, validate=False)
             return parent_changed
 
         # if parent changed, don't adjust prev sequence - will be adjusted after save
@@ -2322,10 +2323,10 @@ class DbObject:
             return  # appending - nothing to adjust
         if new_seq > max:
             new_seq = max
-            await self.setval(seq_col_name, new_seq)
+            await self.setval(seq_col_name, new_seq, validate=False)
         elif new_seq < min:
             new_seq = min
-            await self.setval(seq_col_name, new_seq)
+            await self.setval(seq_col_name, new_seq, validate=False)
 
         if self.exists:
             if new_seq > orig_seq:
@@ -2390,7 +2391,7 @@ class DbObject:
                 'UPDATE {0} SET {1} = -{1} WHERE {1} < 0'.format(combo, seq_col_name)
                 )
 
-        await seq.setval(new_seq)  # calls select_row() if table_keys - not ideal!
+        await seq.setval(new_seq, validate=False)  # calls select_row() if table_keys - not ideal!
 
         return parent_changed
 
@@ -2697,7 +2698,8 @@ class DbTable:
 
                 col.allow_amend = loads(col.allow_amend)
 
-                col.calculated = loads(col.calculated)
+                if col.condition is not None:
+                    col.condition = loads(col.condition)
 
                 if col.col_checks is None:
                     col.col_checks = []
@@ -2805,7 +2807,8 @@ class DbTable:
                         level_descr,           # long_descr
                         level_type,            # col_head
                         'N',                   # key_field
-                        True,                  # calculated
+                        'calc',                # data_source
+                        None,                  # condition
                         True,                  # allow_null
                         True,                  # allow_amend
                         0,                     # max len
@@ -3089,7 +3092,8 @@ class MemTable(DbTable):
             'Row id',  # long_descr
             'row',     # col_head
             'Y',       # key_field
-            'true',    # calculated
+            'gen',     # data_source
+            None,      # condition
             False,     # allow_null
             'false',   # allow_amend
             0,         # max_len
@@ -3114,7 +3118,8 @@ class MemTable(DbTable):
                 col_defn.get('long_descr'),
                 col_defn.get('col_head', ''),
                 col_defn.get('key_field', 'N'),
-                col_defn.get('calculated', 'false'),
+                col_defn.get('data_source', 'input'),
+                col_defn.get('condition'),
                 col_defn.get('allow_null') == 'true',
                 col_defn.get('allow_amend', 'false'),
                 0 if col_defn.get('max_len') is None else int(col_defn.get('max_len')),
@@ -3212,7 +3217,7 @@ class MemTable(DbTable):
         """
 
         (col_name, col_type, data_type, short_descr, long_descr, col_head, key_field,
-            calculated, allow_null, allow_amend, max_len, db_scale, scale_ptr,
+            data_source, condition, allow_null, allow_amend, max_len, db_scale, scale_ptr,
             dflt_val, dflt_rule, col_checks, fkey, choices, sql) = col_flds
 
         if col_name in [col.col_name for col in self.col_list]:
@@ -3230,7 +3235,8 @@ class MemTable(DbTable):
             long_descr,            # long_descr
             col_head,              # col_head
             key_field,             # key_field
-            calculated,            # calculated
+            data_source,           # data_source
+            condition,             # condition
             allow_null,            # allow_null
             allow_amend,           # allow_amend
             max_len,               # max len
@@ -3252,10 +3258,8 @@ class MemTable(DbTable):
         # if col.allow_amend not in (False, True):
         #     raise NotImplementedError
 
-        col.calculated = loads(col.calculated)
-        # removed [2020-10-08] - any problem?
-        # if col.calculated not in (False, True):
-        #     raise NotImplementedError
+        if col.condition is not None:
+            col.condition = loads(col.condition)
 
         if col.col_checks is None:
             col.col_checks = []
@@ -3317,7 +3321,8 @@ class ClonedTable(MemTable):
             'Row id',  # long_descr
             'row',     # col_head
             'Y',       # key_field
-            'true',    # calculated
+            'gen',     # data_source
+            None,      # condition
             False,     # allow_null
             'false',   # allow_amend
             0,         # max_len
@@ -3434,8 +3439,6 @@ class DbView:
                 col.allow_null = bool(col.allow_null)  # sqlite3 returns 0/1
 
                 col.allow_amend = loads(col.allow_amend)
-
-                col.calculated = loads(col.calculated)
 
                 if col.choices is not None:
                     col.choices = OD(loads(col.choices))
@@ -3660,7 +3663,8 @@ async def setup_fkey(db_table, context, company, col):
         altsrc_coldefn.key_field = col.key_field  # to allow data change without perms check
         altsrc_coldefn.allow_null = col.allow_null
         altsrc_coldefn.allow_amend = col.allow_amend
-        altsrc_coldefn.calculated = col.calculated
+        # altsrc_coldefn.calculated = col.calculated
+        altsrc_coldefn.condition = col.condition
         altsrc_coldefn.dflt_val = None  # if applicable, set on self, not alt_src
         altsrc_coldefn.dflt_rule = None  # if applicable, set on self, not alt_src
         altsrc_coldefn.fkey = [
@@ -3707,12 +3711,12 @@ class Column:
     """
 
     names = ('row_id', 'table_id', 'col_name', 'col_type', 'seq', 'data_type', 'short_descr',
-        'long_descr', 'col_head', 'key_field', 'calculated', 'allow_null', 'allow_amend',
-        'max_len', 'db_scale', 'scale_ptr', 'dflt_val', 'dflt_rule', 'col_checks',
+        'long_descr', 'col_head', 'key_field', 'data_source', 'condition', 'allow_null',
+        'allow_amend', 'max_len', 'db_scale', 'scale_ptr', 'dflt_val', 'dflt_rule', 'col_checks',
         'fkey', 'choices', 'sql')
 
     view_names = ('row_id', 'view_id', 'col_name', 'col_type', 'seq', 'data_type', 'short_descr',
-        'long_descr', 'col_head', 'key_field', "'false'", "'0'", "'true'",
+        'long_descr', 'col_head', 'key_field', "'calc'", 'null', "'0'", "'true'",
         '0', '0', 'scale_ptr', 'null', 'null', 'null', 'fkey', 'choices', 'sql')
 
     def __init__(self, values):

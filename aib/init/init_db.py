@@ -37,6 +37,7 @@ async def init_database():
         await setup_forms(context)
         await setup_menus(context, company_name)
 
+    async with context.db_session.get_connection() as db_mem_conn:
         await setup_data(context, conn, company_name)
 
 async def setup_db_tables(conn, company, company_name):
@@ -67,16 +68,16 @@ async def setup_db_table(conn, table_name, company):
     cols = module.cols
     db_columns = []
     for col in cols:
-        db_col = [None] * 24
+        db_col = [None] * 25
         db_col[4] = col['col_name']
         db_col[7] = col['data_type']
         db_col[11] = col['key_field']
-        db_col[13] = col['allow_null']
-        db_col[14] = dumps(col['allow_amend'])
-        db_col[16] = col['db_scale']
-        db_col[18] = col['dflt_val']
+        db_col[14] = col['allow_null']
+        db_col[15] = dumps(col['allow_amend'])
+        db_col[17] = col['db_scale']
+        db_col[19] = col['dflt_val']
         if col['fkey'] is not None:
-            db_col[20] = dumps(col['fkey'])
+            db_col[21] = dumps(col['fkey'])
         db_columns.append(db_col)
 
     await db.create_table.create_orig_table(conn, company, table_defn, db_columns)
@@ -150,9 +151,9 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
     sql = (
         "INSERT INTO {}.db_columns "
         "(created_id, table_id, col_name, col_type, seq, data_type, short_descr, "
-        "long_descr, col_head, key_field, calculated, allow_null, allow_amend, "
+        "long_descr, col_head, key_field, data_source, condition, allow_null, allow_amend, "
         "max_len, db_scale, scale_ptr, dflt_val, dflt_rule, col_checks, fkey, choices) "
-        "VALUES ({})".format(company, ', '.join([db_constants.param_style] * 21))
+        "VALUES ({})".format(company, ', '.join([db_constants.param_style] * 22))
         )
     cols = module.cols
     params = []
@@ -168,8 +169,8 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
             col['long_descr'],
             col['col_head'],
             col['key_field'],
-            # 'true' if col['calculated'] else 'false',
-            dumps(col['calculated']),
+            col['data_source'],
+            None if col['condition'] is None else dumps(col['condition']),
             col['allow_null'],
             dumps(col['allow_amend']),
             col['max_len'],
@@ -203,10 +204,10 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
         sql = (
             "INSERT INTO {}.db_columns "
             "(created_id, table_id, col_name, col_type, seq, data_type, "
-            "short_descr, long_descr, col_head, key_field, calculated, "
+            "short_descr, long_descr, col_head, key_field, data_source, condition, "
             "allow_null, allow_amend, max_len, db_scale, scale_ptr, dflt_val, "
             "dflt_rule, col_checks, fkey, choices, sql) "
-            "VALUES ({})".format(company, ', '.join([db_constants.param_style] * 22))
+            "VALUES ({})".format(company, ', '.join([db_constants.param_style] * 23))
             )
         params = []
         for seq, col in enumerate(cols):
@@ -221,7 +222,8 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
                 col['long_descr'],
                 col['col_head'],
                 col.get('key_field', 'N'),
-                col.get('calculated', 'true'),
+                col.get('data_source', 'calc'),
+                col.get('condition'),
                 col.get('allow_null', True),
                 col.get('allow_amend', 'true'),
                 col.get('max_len', 0),
@@ -319,7 +321,8 @@ async def setup_table(module, db_tbl, db_col, table_name):
         await db_col.setval('long_descr', col['long_descr'])
         await db_col.setval('col_head', col['col_head'])
         await db_col.setval('key_field', col['key_field'])
-        await db_col.setval('calculated', col['calculated'])
+        await db_col.setval('data_source', col['data_source'])
+        await db_col.setval('condition', col['condition'])
         await db_col.setval('allow_null', col['allow_null'])
         await db_col.setval('allow_amend', col['allow_amend'])
         await db_col.setval('max_len', col['max_len'])
@@ -345,7 +348,8 @@ async def setup_table(module, db_tbl, db_col, table_name):
         await db_col.setval('long_descr', virt['long_descr'])
         await db_col.setval('col_head', virt['col_head'])
         await db_col.setval('key_field', 'N')
-        await db_col.setval('calculated', True)
+        await db_col.setval('data_source', 'calc')
+        await db_col.setval('condition', None)
         await db_col.setval('allow_null', True)
         await db_col.setval('allow_amend', True)
         await db_col.setval('max_len', 0)
@@ -437,8 +441,6 @@ async def setup_forms(context):
     await setup_form('setup_proc_dbobj')
     await setup_form('setup_proc_memobj')
     await setup_form('setup_proc_ioparams')
-    await setup_form('foreign_key')
-    await setup_form('choices')
     await setup_form('dbcols_setup')
     await setup_form('setup_company')
     await setup_form('setup_cursor')
@@ -448,7 +450,6 @@ async def setup_forms(context):
     await setup_form('setup_table_dbcols')
     await setup_form('actions')
     await setup_form('checks')
-    await setup_form('hooks')
     await setup_form('updates')
     await setup_form('setup_bpmn')
     await setup_form('setup_roles')
@@ -460,15 +461,14 @@ async def setup_forms(context):
 async def setup_menus(context, company_name):
     db_obj = await db.objects.get_db_object(context, 'sys_menu_defns')
 
-    async def setup_menu(descr, parent, opt_type, module_id=None, table_name=None,
+    async def setup_menu(descr, parent_id, opt_type, module_id, table_name=None,
             cursor_name=None, form_name=None):
         await db_obj.init()
         await db_obj.setval('descr', descr)
-        await db_obj.setval('parent_id', parent)
+        await db_obj.setval('parent_id', parent_id)
         await db_obj.setval('opt_type', opt_type)
-        if opt_type == 'menu':
-            await db_obj.setval('module_id', module_id)
-        elif opt_type == 'grid':
+        await db_obj.setval('module_id', module_id)
+        if opt_type == 'grid':
             await db_obj.setval('table_name', table_name)
             await db_obj.setval('cursor_name', cursor_name)
         elif opt_type == 'form':
@@ -495,18 +495,19 @@ async def setup_menus(context, company_name):
             ]],
         ]]
 
-    async def parse_menu(menu_opt, parent):
+    async def parse_menu(menu_opt, parent_id, module_id=None):
         descr = menu_opt[0]
         opt_type = menu_opt[1]
         if opt_type == 'menu':
-            menu_id = await setup_menu(descr, parent, opt_type, module_id=menu_opt[2])
+            module_id = menu_opt[2]
+            menu_id = await setup_menu(descr, parent_id, opt_type, module_id=module_id)
             for opt in menu_opt[3]:
-                await parse_menu(opt, menu_id)
+                await parse_menu(opt, menu_id, module_id=module_id)
         elif opt_type == 'grid':
-            await setup_menu(descr, parent, opt_type, table_name=menu_opt[2],
+            await setup_menu(descr, parent_id, opt_type, module_id=module_id, table_name=menu_opt[2],
                 cursor_name=menu_opt[3])
         elif opt_type == 'form':
-            await setup_menu(descr, parent, opt_type, form_name=menu_opt[2])
+            await setup_menu(descr, parent_id, opt_type, module_id=module_id, form_name=menu_opt[2])
 
     await parse_menu(menu, None)
 
@@ -548,18 +549,14 @@ async def setup_data(context, conn, company_name):
     await acc_role.setval('parent_id', None)
     await acc_role.save()
 
+    # create 'module administrator' role for each module
     db_module = await db.objects.get_db_object(context, 'db_modules')
-    row_id = 1
-    while True:  # don't know how many modules there are - loop until no more
-        await db_module.init()
-        await db_module.setval('row_id', row_id)
-        if not db_module.exists:
-            break
+    all_modules = db_module.select_many(where=[], order=[('row_id', False)])
+    async for _ in all_modules:
         await acc_role.init()
         await acc_role.setval('role_type', '1')
         await acc_role.setval('role_id', await db_module.getval('module_id'))
-        await acc_role.setval('descr', '{} administrator'.format(await db_module.getval('descr')))
+        await acc_role.setval('descr', f"{await db_module.getval('descr')} administrator")
         await acc_role.setval('parent_id', 1)
-        await acc_role.setval('module_row_id', row_id)
+        await acc_role.setval('module_row_id', await db_module.getval('row_id'))
         await acc_role.save()
-        row_id += 1

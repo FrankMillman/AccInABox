@@ -346,6 +346,9 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('DTE', 'DATE')
         .replace('DTM', 'TIMESTAMP')
         .replace('DEC', f'DEC (21,{db_scale})')
+        .replace('$TRN', f'DEC (21,{db_scale})')
+        .replace('$PTY', f'DEC (21,{db_scale})')
+        .replace('$LCL', f'DEC (21,{db_scale})')
         .replace('AUTO', 'SERIAL PRIMARY KEY')
         .replace('AUT0', 'INT GENERATED ALWAYS AS IDENTITY (minvalue 0) PRIMARY KEY')
         .replace('JSON', 'VARCHAR')
@@ -362,6 +365,8 @@ def convert_dflt(self, string, data_type):
     elif data_type == 'INT':
         return string
     elif data_type == 'DEC':
+        return string
+    elif data_type.startswith('$'):
         return string
     elif data_type == 'BOOL':
         if string.lower() == 'true':

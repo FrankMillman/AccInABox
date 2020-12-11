@@ -70,11 +70,11 @@
     <toolbar>
       <tool type="img" name="prev" tip="Prev year (Ctrl+PgUp)" action="
         <<pyfunc name=`custom.finperiod_funcs.goto_prev`/>>
-        " shortcut="ctrl,33"/>
+        " shortcut="ctrl,PageUp"/>
       <tool type="text" obj_name="var" col_name="ye_date" lng="200"/>
       <tool type="img" name="next" tip="Next year (Ctrl+PgDn)" action="
         <<pyfunc name=`custom.finperiod_funcs.goto_next`/>>
-        " shortcut="ctrl,34"/>
+        " shortcut="ctrl,PageDown"/>
     </toolbar>
     <body>
       <block/>

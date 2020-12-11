@@ -387,7 +387,6 @@ async def check_cust_bal(cust_totals, xml):
 async def setup_mem_trans(caller, xml):
     # called from ar_ledger_summary.dummy after date selection
     company = caller.company
-    module_row_id, ledger_row_id = caller.context.mod_ledg_id
     var = caller.context.data_objects['var']
     mem_totals = caller.context.data_objects['mem_totals']
     await mem_totals.delete_all()
@@ -405,7 +404,7 @@ async def setup_mem_trans(caller, xml):
             cte, params = get_cte(company, conn, per_no)
 
         from sql.ar_tots_by_src import get_sql
-        sql, params, fmt = get_sql(cte, params, company, conn, ledger_row_id)
+        sql, params, fmt = get_sql(cte, params, company, conn, caller.context.ledger_row_id)
 
         cur = await conn.exec_sql(sql, params)
         async for op_date, cl_date, op_bal, inv, crn, chg, jnl, rec, disc, cl_bal in cur:
@@ -426,7 +425,6 @@ async def setup_mem_trans(caller, xml):
 async def setup_tran_day_per(caller, xml):
     # called from various ar_[tran]_day_per.before_start_form
     company = caller.company
-    module_row_id, ledger_row_id = caller.context.mod_ledg_id
     var = caller.context.data_objects['var']
     start_date = await var.getval('op_date')
     end_date = await var.getval('cl_date')
@@ -444,7 +442,7 @@ async def setup_tran_day_per(caller, xml):
         from sql.cte_date_list import get_cte
         cte, params = get_cte(conn, start_date, end_date)
         from sql.ar_tots_src_day import get_sql
-        sql, params, fmt = get_sql(cte, params, company, conn, ledger_row_id, srcs)
+        sql, params, fmt = get_sql(cte, params, company, conn, caller.context.ledger_row_id, srcs)
 
         cur = await conn.exec_sql(sql, params)
         async for date, *db_tots in cur:

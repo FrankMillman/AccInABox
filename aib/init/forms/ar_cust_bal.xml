@@ -287,7 +287,7 @@
           footer_row="[`date_range_vars.end_date`, `'Bal c/f'`, null, null, `tran_vars.cl_bal`]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
-            shortcut="ctrl,13" action="
+            shortcut="ctrl,Enter" action="
               <<select_from_view/>>
             "/>
           <tool type="nav"/>

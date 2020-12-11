@@ -314,11 +314,11 @@ cal_page.onkey = function(e) {
   if (!e) e=window.event;
   if (e.altKey)
     return;
-  if (e.keyCode === 9)  // tab
+  if (e.key === 'Tab')
     return;
   if (e.ctrlKey) {
-    switch (e.keyCode) {
-      case 37:  // left - prev month
+    switch (e.key) {
+      case 'ArrowLeft':  // prev month
         if (calendar.current_month === 0) {
           calendar.onchange_yr(calendar.current_year-1);
           calendar.data_yr.set_value_from_server(calendar.current_year);
@@ -330,11 +330,7 @@ cal_page.onkey = function(e) {
           calendar.data_mth.set_value_from_server(calendar.current_month);
           };
         break;
-      case 38:  // up - next year
-        calendar.onchange_yr(calendar.current_year+1);
-        calendar.data_yr.set_value_from_server(calendar.current_year);
-        break;
-      case 39:  // right - next month
+      case 'ArrowRight':  // next month
         if (calendar.current_month === 11) {
           calendar.onchange_yr(calendar.current_year+1);
           calendar.data_yr.set_value_from_server(calendar.current_year);
@@ -346,8 +342,12 @@ cal_page.onkey = function(e) {
           calendar.data_mth.set_value_from_server(calendar.current_month);
           };
         break;
-      case 40:  // down - prev year
+      case 'ArrowDown':  // prev year
         calendar.onchange_yr(calendar.current_year-1);
+        calendar.data_yr.set_value_from_server(calendar.current_year);
+        break;
+      case 'ArrowUp':  // next year
+        calendar.onchange_yr(calendar.current_year+1);
         calendar.data_yr.set_value_from_server(calendar.current_year);
         break;
       };
@@ -356,36 +356,36 @@ cal_page.onkey = function(e) {
     dd.style.color = 'white';
     return;
     };
-  switch (e.keyCode) {
-    case 13:  // Enter
+  switch (e.key) {
+    case 'Enter':
         var new_date = new Date(calendar.current_year, calendar.current_month, calendar.current_day);
         calendar.close_window(new_date);
       break;
-    case 27:  // Escape
+    case 'Escape':
       var new_date = null;
       calendar.close_window(new_date);
       break;
-    case 37:  // left
+    case 'ArrowLeft':
       if (calendar.current_day > 1)
         calendar.onchange_day(calendar.current_day-1);
       break;
-    case 38:  // up
+    case 'ArrowUp':
       if (calendar.current_day > 7)
         calendar.onchange_day(calendar.current_day-7);
       break;
-    case 39:  // right
+    case 'ArrowRight':
       if (calendar.current_day < calendar.last_day)
         calendar.onchange_day(calendar.current_day+1);
       break;
-    case 40:  // down
+    case 'ArrowDown':
       if (calendar.current_day < (calendar.last_day-6))
         calendar.onchange_day(calendar.current_day+7);
       break;
-    case 36:  // home
+    case 'Home':
       if (calendar.current_day > 1)
         calendar.onchange_day(1);
       break;
-    case 35:  // end
+    case 'End':
       if (calendar.current_day < calendar.last_day)
         calendar.onchange_day(calendar.last_day);
       break;

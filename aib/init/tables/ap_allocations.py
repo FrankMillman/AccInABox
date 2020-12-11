@@ -27,7 +27,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -46,7 +47,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -65,7 +67,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -84,7 +87,8 @@ cols.append ({
     'long_descr' : 'Transaction type',
     'col_head'   : 'Type',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_con',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -97,7 +101,7 @@ cols.append ({
     'choices'    : [
             ['ap_crn', 'Credit note'],
             ['ap_pmt', 'Payment'],
-            ['ap_disc', 'Discount'],
+            # ['ap_disc', 'Discount'],
             ['ap_alloc', 'Allocation'],
         ],
     })
@@ -108,7 +112,8 @@ cols.append ({
     'long_descr' : 'Transaction row id',
     'col_head'   : 'Tran id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_id',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -121,7 +126,7 @@ cols.append ({
         ['tran_type', [
             ['ap_crn', 'ap_tran_crn'],
             ['ap_pmt', 'ap_subtran_pmt'],
-            ['ap_disc', 'ap_tran_disc'],
+            # ['ap_disc', 'ap_tran_disc'],
             ['ap_alloc', 'ap_tran_alloc'],
             ]],
         'row_id', None, None, True, None],
@@ -134,7 +139,8 @@ cols.append ({
     'long_descr' : 'Item row id of item allocated',
     'col_head'   : 'Item id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -158,7 +164,8 @@ cols.append ({
     'long_descr' : 'Transaction date. Could be derived using fkey, but denormalised for performance',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'repl',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -172,12 +179,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'alloc_supp',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Amount allocated - supp',
     'long_descr' : 'Amount allocated - supplier currency',
     'col_head'   : 'Alloc supp',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -187,7 +195,8 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['not_self', 'Cannot allocate against itself', [
-            ['check', '', 'item_row_id', '!=', 'tran_row_id>item_row_id', ''],
+            ['check', '', 'tran_type', '!=', "'ap_alloc'", ''],
+            ['or', '', 'item_row_id', '!=', 'tran_row_id>item_row_id', ''],
             ]],
         ],
     'fkey'       : None,
@@ -195,12 +204,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'discount_supp',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Discount allowed - supp',
-    'long_descr' : 'Discount allowed - supplier currency',
+    'long_descr' : 'Discount allowed - supplier currency - programmatically calculated',
     'col_head'   : 'Disc supp',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -254,12 +264,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'alloc_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Amount allocated - local',
-    'long_descr' : 'Amount allocated - local currency',
+    'long_descr' : 'Amount allocated - local currency - programmatically calculated',
     'col_head'   : 'Alloc local',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -289,12 +300,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'discount_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Discount allowed - local',
-    'long_descr' : 'Discount allowed - local currency',
+    'long_descr' : 'Discount allowed - local currency - programmatically calculated',
     'col_head'   : 'Disc local',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -328,33 +340,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'posted',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Posted?',
-#     'long_descr' : 'Posted?',
-#     'col_head'   : 'Posted?',
-#     'dflt_val'   : '{tran_row_id>posted}',
-#     'sql'        : "a.tran_row_id>posted"
-#     })
-virt.append ({
-    'col_name'   : 'os_disc_supp',
-    'data_type'  : 'DEC',
-    'short_descr': 'O/s discount - supp curr',
-    'long_descr' : 'Outstanding discount excluding this transaction - supplier currency',
-    'col_head'   : 'Os disc supp',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>supp_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'sql'        : (
-        "SELECT a.item_row_id>discount_supp "
-        "- "
-        "COALESCE("
-            "(SELECT SUM(b.discount_supp) FROM {company}.ap_allocations b "
-            "WHERE b.item_row_id = a.item_row_id AND b.row_id != a.row_id)"
-        ", 0) "
-        ),
-    })
 
 # cursor definitions
 cursors = []

@@ -45,11 +45,13 @@ async def setup_date_choices(caller):
 
 async def setup_balance_date(caller, xml):
     # called from ar_balances before_start_form
+    context = caller.context
     fin_periods = await db.cache.get_adm_periods(caller.company)
-    ledger_periods = await db.cache.get_ledger_periods(caller.company, *caller.context.mod_ledg_id)
+    ledger_periods = await db.cache.get_ledger_periods(context.company,
+        context.module_row_id, context.ledger_row_id)
     if not ledger_periods:
-        raise AibError(head='Periods', body='No periods set up for {}'.format(
-            caller.context.mod_ledg_id))
+        raise AibError(head='Periods',
+            body=f'No periods set up for {caller.context.module_row_id}.{caller.context.ledger_row_id}')
     current_period = ledger_periods.current_period  # set initial period_no to current_period
 
     today = dt.today()
@@ -97,7 +99,8 @@ async def save_bal_settings(caller, xml):
 
 async def setup_date_range(caller, xml):
     # called from various before_start_form
-    fin_periods = await db.cache.get_adm_periods(caller.company)
+    context = caller.context
+    fin_periods = await db.cache.get_adm_periods(context.company)
 
     start_period = None
     if 'balance_date_vars' in caller.data_objects:
@@ -111,7 +114,9 @@ async def setup_date_range(caller, xml):
     if start_period is None:
         # get current_period from ledger_periods, and use
         #   that as the inital value for date_range
-        ledger_periods = await db.cache.get_ledger_periods(caller.company, *caller.context.mod_ledg_id)
+
+        ledger_periods = await db.cache.get_ledger_periods(context.company,
+            context.module_row_id, context.ledger_row_id)
         start_period = ledger_periods.current_period
 
     start_date = fin_periods[start_period].opening_date
@@ -169,7 +174,8 @@ async def save_range_settings(caller, xml):
     
 async def load_ye_per(caller, xml):
     # called from ar_tran_summary before_start_form
-    fin_periods = await db.cache.get_adm_periods(caller.company)
+    context = caller.context
+    fin_periods = await db.cache.get_adm_periods(context.company)
 
     ye_choices = {(fin_per := fin_periods[ye_per]).year_no: 
         f'{fin_per.year_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
@@ -179,7 +185,8 @@ async def load_ye_per(caller, xml):
         f'{fin_per.year_per_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
             for fin_per in fin_periods[1:]}
 
-    ledger_periods = await db.cache.get_ledger_periods(caller.company, 10, 1)
+    ledger_periods = await db.cache.get_ledger_periods(context.company,
+        context.module_row_id, context.ledger_row_id)
 
     var = caller.data_objects['var']
 
@@ -218,7 +225,8 @@ async def setup_choices(caller, xml):
             ))
     settings = await var.getval('settings')
     if settings is None:  # first time - set up defaults
-        ledger_periods = await db.cache.get_ledger_periods(caller.company, *caller.context.mod_ledg_id)
+        ledger_periods = await db.cache.get_ledger_periods(caller.company,
+            caller.context.module_row_id, caller.context.ledger_row_id)
         # current_period = ledger_periods['curr']
         current_period = ledger_periods.current_period
         fld = await var.getfld('start_period')
@@ -357,7 +365,8 @@ async def get_dflt_date(caller, obj, xml):
         return prev_date
     db_obj = obj.fld.db_obj
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
-    ledger_periods = await db.cache.get_ledger_periods(caller.company, *caller.context.mod_ledg_id)
+    ledger_periods = await db.cache.get_ledger_periods(caller.company,
+        caller.context.module_row_id, caller.context.ledger_row_id)
     if ledger_periods == {}:
         raise AibError(head=obj.fld.col_defn.short_descr, body='Ledger periods not set up')
     curr_closing_date = adm_periods[ledger_periods.current_period].closing_date
@@ -366,6 +375,10 @@ async def get_dflt_date(caller, obj, xml):
         return today
     else:
         return curr_closing_date
+
+async def get_due_date(caller, obj, xml):
+    # called as form_dflt from various 'due_date' fields
+    return dt.today()
 
 async def check_bf_date(db_obj, fld, value):
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
@@ -433,9 +446,7 @@ async def check_tran_date(db_obj, fld, value):
             module_id = (await db.cache.get_mod_id(db_obj.company, db_obj.db_table.module_row_id))[0]
             # ledger_period = await db.objects.get_db_object(db.cache.cache_context,
             #     '{}_ledger_periods'.format(module_id))
-            context = db.cache.get_new_context(1, True, db_obj.company)
-            ledger_period = await db.objects.get_db_object(context,
-                '{}_ledger_periods'.format(module_id))
+            ledger_period = await db.objects.get_db_object(db_obj.context, f'{module_id}_ledger_periods')
             await ledger_period.init(init_vals={
                 'ledger_row_id': ledger_row_id,
                 'period_row_id': period_row_id,
@@ -445,8 +456,6 @@ async def check_tran_date(db_obj, fld, value):
 
             ledger_periods = await db.cache.get_ledger_periods(
                 db_obj.company, module_row_id, ledger_row_id)
-            # ledger_periods = await db.cache.get_ledger_periods(
-            #     db_obj.company, *db_obj.context.mod_ledg_id)
 
     if period_row_id not in ledger_periods:
         raise AibError(head='Transaction date', body='Period not open')

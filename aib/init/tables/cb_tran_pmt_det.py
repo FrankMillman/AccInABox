@@ -9,41 +9,41 @@ table = {
         ['line_type', 'display_descr', [
             ['ipch', 'Purchase of inventory item', 'pch_ipch_subtran',
                 [  # return values
-                    ['pmt_cb', 'tot_amt'],  # tgt_col, src_col
+                    ['pmt_tran', 'tot_amt'],  # tgt_col, src_col
                     ],
                 ['wh_prod_row_id>prod_row_id>prod_code'],  # display descr
                 ],
             ['npch', 'Purchase of non-inventory item', 'pch_npch_subtran',
                 [  # return values
-                    ['pmt_cb', 'tot_amt'],  # tgt_col, src_col
-                    # ['pmt_cb', 'tot_party'],
+                    ['pmt_tran', 'tot_amt'],  # tgt_col, src_col
+                    # ['pmt_tran', 'tot_party'],
                     # ['pmt_local', 'tot_local'],
                     ],
                 ['npch_code_id>descr'],  # display descr
                 ],
             # ['nsls', 'Refund of non-inventory item', 'cb_nsls_crn',
             #     [  # return values
-            #         ['pmt_cb', 'tot_amt'],  # tgt_col, src_col
-            #         # ['pmt_cb', 'tot_party'],
+            #         ['pmt_tran', 'tot_amt'],  # tgt_col, src_col
+            #         # ['pmt_tran', 'tot_party'],
             #         # ['pmt_local', 'tot_local'],
             #         ],
             #     ['nsls_code_id>descr'],  # display descr
             #     ],
             ['archg', 'Charge to customer', 'ar_subtran_chg',
                 [  # return values
-                    ['pmt_cb', 'chg_amount'],  # tgt_col, src_col
+                    ['pmt_tran', 'chg_amount'],  # tgt_col, src_col
                     ],
                 ['cust_row_id>party_row_id>display_name'],  # display descr
                 ],
             # ['apmt', 'Ap payment', 'ap_subtran_pmt',
             #     [  # return values
-            #         ['pmt_cb', 'apmt_amount'],  # tgt_col, src_col
+            #         ['pmt_tran', 'apmt_amount'],  # tgt_col, src_col
             #         ],
             #     ['supp_id'],  # display descr
             #     ],
             ['gl', 'Post to g/l', 'gl_jnl_subtran',
                 [  # return values
-                    ['pmt_cb', 'gl_amount'],  # tgt_col, src_col
+                    ['pmt_tran', 'gl_amount'],  # tgt_col, src_col
                     ],
                 ['gl_code'],  # display descr
                 ],
@@ -72,7 +72,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -91,7 +92,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -110,7 +112,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -129,7 +132,8 @@ cols.append ({
     'long_descr' : 'Transaction row id',
     'col_head'   : 'Tran id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_id',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -148,7 +152,8 @@ cols.append ({
     'long_descr' : 'Line number',
     'col_head'   : 'Seq',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'seq',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -167,7 +172,8 @@ cols.append ({
     'long_descr' : 'Line type',
     'col_head'   : 'Line type',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -180,18 +186,19 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'pmt_cb',
-    'data_type'  : 'DEC',
-    'short_descr': 'Pmt amount in cb currency',
+    'col_name'   : 'pmt_tran',
+    'data_type'  : '$TRN',
+    'short_descr': 'Pmt amount in tran currency',
     'long_descr' : 'Payment amount - updated when subtran is saved',
     'col_head'   : 'Pmt amt',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'ret_sub',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>ledger_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -286,31 +293,11 @@ virt.append ({
     'sql'        : 'a.tran_row_id>ledger_row_id>currency_id',
     })
 virt.append ({
-    'col_name'   : 'party_currency_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Party id',
-    'long_descr' : 'Party id',
-    'col_head'   : 'Party id',
-    'dflt_val'   : '{tran_row_id>ledger_row_id>currency_id}',
-    'sql'        : 'a.tran_row_id>ledger_row_id>currency_id',
-    })
-virt.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
     'short_descr': 'Transaction exchange rate',
     'long_descr' : 'Transacction exchange rate',
     'col_head'   : 'Tran exch rate',
-    'db_scale'   : 8,
-    'fkey'       : None,
-    'dflt_val'   : '{tran_row_id>tran_exch_rate}',
-    'sql'        : 'a.tran_row_id>tran_exch_rate',
-    })
-virt.append ({
-    'col_name'   : 'party_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Party exchange rate',
-    'long_descr' : 'Party exchange rate',
-    'col_head'   : 'Party exch rate',
     'db_scale'   : 8,
     'fkey'       : None,
     'dflt_val'   : '{tran_row_id>tran_exch_rate}',
@@ -352,7 +339,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'pmt_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Pmt amt local',
     'long_descr' : 'Payment amount in local currency',
     'col_head'   : 'Pmt local',
@@ -361,12 +348,12 @@ virt.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
-          '<fld_val name="pmt_cb"/>'
+          '<fld_val name="pmt_tran"/>'
           '<op type="/"/>'
           '<fld_val name="tran_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
-    'sql'        : "a.pmt_cb / a.tran_row_id>tran_exch_rate",
+    'sql'        : "a.pmt_tran / a.tran_row_id>tran_exch_rate",
     })
 
 # cursor definitions
@@ -382,7 +369,7 @@ actions.append([
             False,  # split source?
             [],  # key fields
             [  # aggregation
-                ['amount_cb', '+', 'pmt_cb'],  # tgt_col, op, src_col
+                ['amount_tran', '+', 'pmt_tran'],  # tgt_col, op, src_col
                 ['amount_local', '+', 'pmt_local'],
                 ],
             [],  # on insert

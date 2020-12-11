@@ -25,7 +25,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -44,7 +45,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -63,7 +65,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -82,7 +85,8 @@ cols.append ({
     'long_descr' : 'Transaction row id',
     'col_head'   : 'Tran id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_id',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -101,7 +105,8 @@ cols.append ({
     'long_descr' : 'Line number',
     'col_head'   : 'Seq',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'seq',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -113,33 +118,35 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'supp_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Supplier row id',
-    'long_descr' : 'Supplier row id',
-    'col_head'   : 'Supplier',
-    'key_field'  : 'A',
-    'calculated' : True,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : '{tran_row_id>supp_row_id}',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
-    'choices'    : None,
-    })
+# cols.append ({
+#     'col_name'   : 'supp_row_id',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Supplier row id',
+#     'long_descr' : 'Supplier row id',
+#     'col_head'   : 'Supplier',
+#     'key_field'  : 'N',
+#     'data_source': 'calc',
+#     'condition'  : None,
+#     'allow_null' : False,
+#     'allow_amend': False,
+#     'max_len'    : 0,
+#     'db_scale'   : 0,
+#     'scale_ptr'  : None,
+#     'dflt_val'   : '{tran_row_id>supp_row_id}',
+#     'dflt_rule'  : None,
+#     'col_checks' : None,
+#     'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
+#     'choices'    : None,
+#     })
 cols.append ({
     'col_name'   : 'tran_number',
     'data_type'  : 'TEXT',
     'short_descr': 'Transaction number',
     'long_descr' : 'Transaction number',
     'col_head'   : 'Tran no',
-    'key_field'  : 'A',
-    'calculated' : False,
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -158,7 +165,8 @@ cols.append ({
     'long_descr' : 'Transaction date',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -181,7 +189,8 @@ cols.append ({
     'long_descr' : 'Due date',
     'col_head'   : 'Due',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -204,7 +213,8 @@ cols.append ({
     'long_descr' : 'Line of text to appear on reports',
     'col_head'   : 'Text',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -216,69 +226,70 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'supp_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Supp exchange rate',
-    'long_descr' : 'Exchange rate from supplier currency to local',
-    'col_head'   : 'Rate supp',
-    'key_field'  : 'N',
-    'calculated' : True,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 8,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-            '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
-                '<literal value="1"/>'
-            '</compare>'
-            '<default>'
-                '<exch_rate>'
-                    '<fld_val name="supp_row_id>currency_id"/>'
-                    '<fld_val name="tran_date"/>'
-                '</exch_rate>'
-            '</default>'
-        '</case>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tran_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Transaction exchange rate',
-    'long_descr' : 'Exchange rate from transaction currency to local',
-    'col_head'   : 'Rate tran',
-    'key_field'  : 'N',
-    'calculated' : True,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 8,
-    'scale_ptr'  : None,
-    'dflt_val'   : '{supp_exch_rate}',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
+# cols.append ({
+#     'col_name'   : 'supp_exch_rate',
+#     'data_type'  : 'DEC',
+#     'short_descr': 'Supp exchange rate',
+#     'long_descr' : 'Exchange rate from supplier currency to local',
+#     'col_head'   : 'Rate supp',
+#     'key_field'  : 'N',
+#     'calculated' : True,
+#     'allow_null' : False,
+#     'allow_amend': False,
+#     'max_len'    : 0,
+#     'db_scale'   : 8,
+#     'scale_ptr'  : None,
+#     'dflt_val'   : None,
+#     'dflt_rule'  : (
+#         '<case>'
+#             '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+#                 '<literal value="1"/>'
+#             '</compare>'
+#             '<default>'
+#                 '<exch_rate>'
+#                     '<fld_val name="supp_row_id>currency_id"/>'
+#                     '<fld_val name="tran_date"/>'
+#                 '</exch_rate>'
+#             '</default>'
+#         '</case>'
+#         ),
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
+# cols.append ({
+#     'col_name'   : 'tran_exch_rate',
+#     'data_type'  : 'DEC',
+#     'short_descr': 'Transaction exchange rate',
+#     'long_descr' : 'Exchange rate from transaction currency to local',
+#     'col_head'   : 'Rate tran',
+#     'key_field'  : 'N',
+#     'calculated' : True,
+#     'allow_null' : False,
+#     'allow_amend': False,
+#     'max_len'    : 0,
+#     'db_scale'   : 8,
+#     'scale_ptr'  : None,
+#     'dflt_val'   : '{supp_exch_rate}',
+#     'dflt_rule'  : None,
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
 cols.append ({
     'col_name'   : 'bf_supp',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'B/f supp',
     'long_descr' : 'B/f amount in supplier currency',
     'col_head'   : 'B/f supp',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_row_id>supp_row_id>currency_id>scale',
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -289,8 +300,17 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'supp_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Supplier row id',
+    'long_descr' : 'Supplier row id',
+    'col_head'   : 'Supplier',
+    'dflt_val'   : '{tran_row_id>supp_row_id}',
+    'sql'        : 'a.tran_row_id>supp_row_id',
+    })
+virt.append ({
     'col_name'   : 'bf_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'B/f local',
     'long_descr' : 'B/f amount in local currency',
     'col_head'   : 'B/f local',
@@ -301,10 +321,10 @@ virt.append ({
         '<expr>'
           '<fld_val name="bf_supp"/>'
           '<op type="/"/>'
-          '<fld_val name="supp_exch_rate"/>'
+          '<fld_val name="tran_row_id>supp_exch_rate"/>'
         '</expr>'
         ),
-    'sql'        : "a.bf_supp / a.supp_exch_rate",
+    'sql'        : "a.bf_supp / a.tran_row_id>supp_exch_rate",
     })
 
 # cursor definitions

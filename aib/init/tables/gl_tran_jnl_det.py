@@ -34,7 +34,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -53,7 +54,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -72,7 +74,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -91,7 +94,8 @@ cols.append ({
     'long_descr' : 'Transaction row id',
     'col_head'   : 'Tran id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_id',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -110,7 +114,8 @@ cols.append ({
     'long_descr' : 'Line number',
     'col_head'   : 'Seq',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'seq',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -129,7 +134,8 @@ cols.append ({
     'long_descr' : 'Line type',
     'col_head'   : 'Line type',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -143,17 +149,18 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'jnl_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Journal amount',
     'long_descr' : 'Journal amount - updated when subtran is saved',
     'col_head'   : 'Jnl amt',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'ret_sub',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>currency_id>scale',
+    'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -204,24 +211,6 @@ virt.append ({
     'col_head'   : 'Text',
     'dflt_val'   : '{tran_row_id>text}',
     'sql'        : "a.tran_row_id>text"
-    })
-virt.append ({
-    'col_name'   : 'rec_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Rec amt local',
-    'long_descr' : 'Receipt amount in local currency',
-    'col_head'   : 'Rec local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="rec_amt"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_row_id>tran_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.rec_amt / a.tran_row_id>tran_exch_rate",
     })
 
 # cursor definitions

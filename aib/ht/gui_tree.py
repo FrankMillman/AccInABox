@@ -327,7 +327,10 @@ class GuiTreeCommon:
 
         code, descr, parent_id, seq = col_names
 
-        self.levels = len(levels)
+        if levels is None:
+            self.levels = 0
+        else:
+            self.levels = len(levels)
         async with self.parent.db_session.get_connection() as db_mem_conn:
             if self.db_obj.mem_obj:
                 conn = db_mem_conn.mem

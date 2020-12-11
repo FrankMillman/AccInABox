@@ -202,7 +202,15 @@
         <col/>
         <label value="Invoice no:"/>
         <col/>
-        <input obj_name="ar_inv" col_name="tran_number" lng="80"/>
+        <input obj_name="ar_inv" col_name="tran_number" lng="80" validation="
+            <<validation>>
+              <<case>>
+                <<obj_exists obj_name=`ar_inv`>>
+                  <<error head=`Invoice` body=`Invoice number already exists`/>>
+                <</obj_exists>>
+              <</case>>
+            <</validation>>
+          "/>
         <end_if/>
 
         <row/>

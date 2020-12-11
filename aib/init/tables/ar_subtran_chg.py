@@ -27,7 +27,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -46,7 +47,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -65,7 +67,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -84,7 +87,8 @@ cols.append ({
     'long_descr' : 'Source code id',
     'col_head'   : 'Source code',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_con',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -103,7 +107,8 @@ cols.append ({
     'long_descr' : 'Transaction detail row id',
     'col_head'   : 'Tran id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_id',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -127,7 +132,8 @@ cols.append ({
     'long_descr' : 'Customer row id. In theory, should check if statement period still open. Leave for now.',
     'col_head'   : 'Customer',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -154,7 +160,8 @@ cols.append ({
     'long_descr' : 'Transaction number',
     'col_head'   : 'Tran no',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -209,7 +216,8 @@ cols.append ({
     'long_descr' : 'Description',
     'col_head'   : 'Description',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 30,
@@ -228,7 +236,8 @@ cols.append ({
     'long_descr' : 'Exchange rate from customer currency to local currency',
     'col_head'   : 'Rate cust',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_ledger.alt_rec_override', 'is', '$False', '']],
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -261,7 +270,8 @@ cols.append ({
     'long_descr' : 'Transaction date. Could be derived using fkey, but denormalised to speed up ar_trans view',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'repl',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -275,12 +285,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'chg_amount',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Charge amount',
     'long_descr' : 'Charge amount in transaction currency',
     'col_head'   : 'Chg amount',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -292,58 +303,60 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'chg_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Charge cust',
-    'long_descr' : 'Charge amount in customer currency',
-    'col_head'   : 'Chg cust',
-    'key_field'  : 'N',
-    'calculated' : True,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="chg_amount"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
-          '<op type="*"/>'
-          '<fld_val name="cust_exch_rate"/>'
-        '</expr>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'chg_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Charge local',
-    'long_descr' : 'Charge amount in local currency',
-    'col_head'   : 'Chg local',
-    'key_field'  : 'N',
-    'calculated' : True,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="chg_amount"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
-        '</expr>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
+# cols.append ({
+#     'col_name'   : 'chg_cust',
+#     'data_type'  : '$PTY',
+#     'short_descr': 'Charge cust',
+#     'long_descr' : 'Charge amount in customer currency',
+#     'col_head'   : 'Chg cust',
+#     'key_field'  : 'N',
+#     'data_source': 'calc',
+#     'condition'  : None,
+#     'allow_null' : False,
+#     'allow_amend': False,
+#     'max_len'    : 0,
+#     'db_scale'   : 2,
+#     'scale_ptr'  : 'cust_row_id>currency_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="chg_amount"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
+#           '<op type="*"/>'
+#           '<fld_val name="cust_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
+# cols.append ({
+#     'col_name'   : 'chg_local',
+#     'data_type'  : '$LCL',
+#     'short_descr': 'Charge local',
+#     'long_descr' : 'Charge amount in local currency',
+#     'col_head'   : 'Chg local',
+#     'key_field'  : 'N',
+#     'data_source': 'calc',
+#     'condition'  : None,
+#     'allow_null' : False,
+#     'allow_amend': False,
+#     'max_len'    : 0,
+#     'db_scale'   : 2,
+#     'scale_ptr'  : '_param.local_curr_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="chg_amount"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
 cols.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
@@ -355,7 +368,8 @@ cols.append ({
         ),
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -399,24 +413,44 @@ virt.append ({
     # 'fkey'       : ['adm_currencies', 'row_id', None, None, False, None],
     'sql'        : "a.tran_det_row_id>currency_id"
     })
-# virt.append ({
-#     'col_name'   : 'chg_local',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Charge local',
-#     'long_descr' : 'Charge amount in local currency',
-#     'col_head'   : 'Chg local',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#           '<fld_val name="chg_amount"/>'
-#           '<op type="/"/>'
-#           '<fld_val name="tran_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'sql'        : "a.chg_amount / a.tran_exch_rate",
-#     })
+virt.append ({
+    'col_name'   : 'chg_cust',
+    'data_type'  : '$PTY',
+    'short_descr': 'Charge cust',
+    'long_descr' : 'Charge amount in customer currency',
+    'col_head'   : 'Chg cust',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="chg_amount"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="cust_exch_rate"/>'
+        '</expr>'
+        ),
+    'sql'        : "a.chg_amount / a.tran_exch_rate * a.cust_exch_rate",
+    })
+virt.append ({
+    'col_name'   : 'chg_local',
+    'data_type'  : '$LCL',
+    'short_descr': 'Charge local',
+    'long_descr' : 'Charge amount in local currency',
+    'col_head'   : 'Chg local',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="chg_amount"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+        '</expr>'
+        ),
+    'sql'        : "a.chg_amount / a.tran_exch_rate",
+    })
 
 # cursor definitions
 cursors = []

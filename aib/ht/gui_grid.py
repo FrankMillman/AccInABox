@@ -221,8 +221,11 @@ class GuiGrid:
                         lkup = True  # tell client to set up 'lookup' button
                 choices = None
                 if fld.col_defn.choices is not None:
-                    if not readonly and not self.readonly:  # if col or grid readonly, disable 'choice'
-                        choices = [None, fld.col_defn.choices, False]
+                    # if not readonly and not self.readonly:  # if col or grid readonly, disable 'choice'
+                    #     choices = [None, fld.col_defn.choices, False]
+                    subtype_fld = None  # no sub_types in grid
+                    radio = False  # no radio button in grid
+                    choices = [subtype_fld, fld.col_defn.choices, radio]
                 height = None
                 label = None
 
@@ -484,10 +487,13 @@ class GuiGrid:
             start_val = await self.data_objects['listview_vars'].getval('start_val')
             await self.data_objects['listview_vars'].setval('start_col', None)
             await self.data_objects['listview_vars'].setval('start_val', None)
-        elif self.start_col is not None:
+        elif self.start_col is not None:  # specified in form definition
             start_col =  self.start_col
-            start_fld = await self.db_obj.getfld(self.start_val)
-            start_val = await start_fld.getval()
+            if self.start_val.startswith("'"):  # either literal or column name
+                start_val = self.start_val[1:-1]
+            else:
+                start_fld = await self.db_obj.getfld(self.start_val)
+                start_val = await start_fld.getval()
 
         if debug:
             log.write(

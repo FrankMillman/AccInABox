@@ -61,7 +61,7 @@
             <<assign src=`balance_date_vars.settings` tgt=`var.settings`/>>
             <<assign src=`balance_date_vars.balance_date` tgt=`var.balance_date`/>>
             <<req_formview/>>
-            " shortcut="ctrl,13"/>
+            " shortcut="ctrl,Enter"/>
           <tool type="nav"/>
         </toolbar>
         <grid_methods template="Grid">

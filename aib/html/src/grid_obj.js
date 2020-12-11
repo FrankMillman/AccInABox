@@ -56,7 +56,7 @@ function create_cell_input(grid) {
     input.aib_obj.reset_cell_value(cell);
     };
 
-  input.edit_cell = function(cell, current_value, keyCode) {
+  input.edit_cell = function(cell, current_value, key) {
     input.style.width = cell.style.width;
     this.cell = cell;  // save for use in end_edit()
     cell.style.display = 'none';
@@ -67,7 +67,7 @@ function create_cell_input(grid) {
     this.grid.onkeypress = null;
     this.grid.onkeydown = null;
 
-    if (keyCode === null) {
+    if (key === null) {
       if (current_value === null)
         current_value = cell.text_node.data;
         // if (current_value === '\xa0')
@@ -75,7 +75,7 @@ function create_cell_input(grid) {
       };
 
     grid.edit_in_progress = true;
-    input.aib_obj.start_edit(input, current_value, keyCode);
+    input.aib_obj.start_edit(input, current_value, key);
     input.className = cell.className;
     input.focus();
 //    debug3(input.offsetHeight + ' ' + input.parentNode + ' ' + input.parentNode.offsetHeight);
@@ -138,14 +138,14 @@ function create_cell_input(grid) {
 
   input.onkeydown = function(e) {
     if (!e) e=window.event;
-    switch (e.keyCode) {
-      case 9:  // tab
+    switch (e.key) {
+      case 'Tab':
         if (input.end_edit(true, true))
           this.grid.handle_tab(e.shiftKey);
         e.cancelBubble = true;
         return false;
         break;
-      case 13:  // enter
+      case 'Enter':
         // either 'end edit *and* move down' or just 'end edit'
         // for now, run with the second option
         // slight problem [2013-12-31]
@@ -163,12 +163,12 @@ function create_cell_input(grid) {
         e.cancelBubble = true;
         return false;
         break;
-      case 27:  // escape
+      case 'Escape':
         input.end_edit(false, true);
         e.cancelBubble = true;
         return false;
         break;
-      case 113:  // F2
+      case 'F2':
         input.end_edit(true, true);
         e.cancelBubble = true;
         return false;
@@ -564,48 +564,51 @@ function create_grid_input(col_span, col_defn, cell) {
       cell.text_node = document.createTextNode('');  //('\xa0');
       cell.appendChild(cell.text_node);
 
-      //var btn = document.createElement('span');
-      //btn.style.display = 'inline-block';
-      var btn = document.createElement('div');
-      btn.style[cssFloat] = 'right';
-      col_span.appendChild(btn);
-      btn.style.backgroundImage = 'url(' + iDown_src + ')';
-      btn.style.backgroundRepeat = 'no-repeat';
-      //btn.style.width = '16px';
-      //btn.style.height = '16px';
-      //btn.style.margin = '1px 1px 0px 1px';  // top/right/bottom/left
-      btn.style.width = '17px';
-      btn.style.height = '17px';
-//      btn.style.paddingRight = '1px';
-//      btn.style.borderTop = '1px solid transparent';
-//      btn.style.borderBottom = '1px solid transparent';
-      btn.title = 'Show choices (Space)';
+      // if col_defn or grid is readonly, do not show button
+      if (col_defn.readonly !== true && col_span.parentNode.parentNode.readonly !== true) {
+        //var btn = document.createElement('span');
+        //btn.style.display = 'inline-block';
+        var btn = document.createElement('div');
+        btn.style[cssFloat] = 'right';
+        col_span.appendChild(btn);
+        btn.style.backgroundImage = 'url(' + iDown_src + ')';
+        btn.style.backgroundRepeat = 'no-repeat';
+        //btn.style.width = '16px';
+        //btn.style.height = '16px';
+        //btn.style.margin = '1px 1px 0px 1px';  // top/right/bottom/left
+        btn.style.width = '17px';
+        btn.style.height = '17px';
+  //      btn.style.paddingRight = '1px';
+  //      btn.style.borderTop = '1px solid transparent';
+  //      btn.style.borderBottom = '1px solid transparent';
+        btn.title = 'Show choices (Space)';
 
-      btn.onmouseover = function(e) {
-        this.style.cursor = 'pointer';
-        };
-      btn.onmouseleave = function(e) {
-        this.style.cursor = 'default';
-        };
-      btn.onclick = function(e) {
-        if (!e) e=window.event;
-        var cell = this.parentNode.firstChild;
-        var grid = cell.grid;
-        if (grid.frame.form.disable_count) return false;
-        if (grid.active_cell === cell)
-          btn.afterclick(cell, e);
-        else {
-          callbacks.push([btn, btn.afterclick, cell, e]);
-          grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
+        btn.onmouseover = function(e) {
+          this.style.cursor = 'pointer';
           };
-        };
-      btn.afterclick = function(cell, e) {
-        var grid = cell.grid;
-        if (grid.active_cell !== cell)  // server has set focus somewhere else
-          return;
-        cell.aib_obj.grid_create_dropdown(cell);
-        e.cancelBubble = true;
-        return false;
+        btn.onmouseleave = function(e) {
+          this.style.cursor = 'default';
+          };
+        btn.onclick = function(e) {
+          if (!e) e=window.event;
+          var cell = this.parentNode.firstChild;
+          var grid = cell.grid;
+          if (grid.frame.form.disable_count) return false;
+          if (grid.active_cell === cell)
+            btn.afterclick(cell, e);
+          else {
+            callbacks.push([btn, btn.afterclick, cell, e]);
+            grid.req_cell_focus((grid.first_grid_row + cell.grid_row), cell.grid_col);
+            };
+          };
+        btn.afterclick = function(cell, e) {
+          var grid = cell.grid;
+          if (grid.active_cell !== cell)  // server has set focus somewhere else
+            return;
+          cell.aib_obj.grid_create_dropdown(cell);
+          e.cancelBubble = true;
+          return false;
+          };
         };
 
       break;

@@ -19,13 +19,13 @@ function create_page() {
     if (!e) e=window.event;
 
     if (e.altKey)
-      var target = this.kbd_shortcuts['alt'][e.keyCode];
+      var target = this.kbd_shortcuts['alt'][e.key];
     else if (e.ctrlKey)
-      var target = this.kbd_shortcuts['ctrl'][e.keyCode];
+      var target = this.kbd_shortcuts['ctrl'][e.key];
     else if (e.shiftKey)
-      var target = this.kbd_shortcuts['shift'][e.keyCode];
+      var target = this.kbd_shortcuts['shift'][e.key];
     else
-      var target = this.kbd_shortcuts['normal'][e.keyCode];
+      var target = this.kbd_shortcuts['normal'][e.key];
 
     if (target !== undefined) {
       target.onclick.call(target);
@@ -37,37 +37,37 @@ function create_page() {
     if (!e.ctrlKey)
       return;
     var ctrl_grid = this.frame.ctrl_grid;
-    if (e.keyCode === 45 && ctrl_grid.insert_ok) {
+    if (e.key === 'Insert' && ctrl_grid.insert_ok) {
       ctrl_grid.req_insert();
       return;
       };
-    if (e.keyCode === 46 && ctrl_grid.delete_ok) {
+    if (e.key === 'Delete' && ctrl_grid.delete_ok) {
       ctrl_grid.req_delete();
       return;
       };
     if (ctrl_grid.navigate_ok !== true)
       return;
-    switch (e.keyCode) {
-      case 35:  // end
+    switch (e.key) {
+      case 'End':
 //        if (ctrl_grid.active_row !== (ctrl_grid.total_rows()-1)) {
         if (ctrl_grid.active_row !== (ctrl_grid.num_data_rows)) {
           var args = [this.frame.ref, 'last'];
           send_request('navigate', args);
           };
         break;
-      case 36:  // home
+      case 'Home':
         if (ctrl_grid.active_row !== 0) {
           var args = [this.frame.ref, 'first'];
           send_request('navigate', args);
           };
         break;
-      case 38:  // up
+      case 'ArrowUp':
         if (ctrl_grid.active_row !== 0) {
           var args = [this.frame.ref, 'prev'];
           send_request('navigate', args);
           };
         break;
-      case 40:  // down
+      case 'ArrowDown':
 //        if (ctrl_grid.active_row !== (ctrl_grid.total_rows()-1)) {
         if (ctrl_grid.active_row !== (ctrl_grid.num_data_rows)) {
           var args = [this.frame.ref, 'next'];
@@ -222,9 +222,9 @@ function create_input(frame, page, json_elem, label) {
 
   if (json_elem.lng !== null)
     input.style.width = json_elem.lng + 'px';
-  input.style.font = '10pt Verdana,sans-serif';
-  input.style.color = 'navy';
-  input.style.outline = '0px solid transparent';  // disable highlight on focus
+  // input.style.font = '10pt Verdana,sans-serif';
+  // input.style.color = 'navy';
+  // input.style.outline = '0px solid transparent';  // disable highlight on focus
 
   if (json_elem.skip)
     input.tabIndex = -1;  // remove from tab order
@@ -271,36 +271,43 @@ function create_input(frame, page, json_elem, label) {
 
   input.onkeydown = function(e) {
     if (input.frame.form.disable_count) return false;
-    if (!e) e=window.event;
-    if (e.ctrlKey && (e.keyCode === 70) && (input.lkup !== undefined)) {  // Ctrl+F
+    // if (!e) e=window.event;
+    if (e.ctrlKey && (e.key === 'F' || e.key === 'f') && (input.lkup !== undefined)) {
       input.lkup();
       e.cancelBubble = true;
-      e.keyCode = 0;
       return false;
       };
-    switch(e.keyCode) {
-      case 27:  // Esc
+    switch(e.key) {
+      case 'Escape':
         if (input.aib_obj.data_changed(input)) {  //, input.childNodes[0].value)) {
-          if (input.key_strokes) {
+          if (input.key_pressed) {
             input.value = input.current_value;
-            input.key_strokes = 0;
+            input.key_pressed = false;
             }
           else
-            // timeout needed for Opera, Firefox
-            setTimeout(function() {input.aib_obj.reset_value(input)}, 0);
+            // // timeout needed for Opera, Firefox
+            // setTimeout(function() {input.aib_obj.reset_value(input)}, 0);
+            input.aib_obj.reset_value(input);
           e.cancelBubble = true;
           return false;
           };
         // else allow escape to bubble up to form, which sends 'req_cancel'
         break;
-      case 32:  // space
-        if (!input.key_strokes && input.expander !== undefined && input.amendable()) {
+      case ' ':
+        if (!input.key_pressed && input.expander !== undefined && input.amendable()) {
           input.expander();
           e.cancelBubble = true;
           return false;
           };
         break;
-      case 13:  // enter
+      case '\\':  // Backslash
+        if (!input.key_pressed) {
+          var args = [input.ref];
+          send_request('get_prev', args);
+          return false;
+          };
+        break;
+      case 'Enter':
         if (e.shiftKey && input.lookdown !== undefined) {
           input.lookdown();
           e.cancelBubble = true;
@@ -308,22 +315,8 @@ function create_input(frame, page, json_elem, label) {
           };
         break;
       };
-    return input.aib_obj.ondownkey(input, e);
-    };
-
-  input.onkeypress = function(e) {
-    if (!e) e=window.event;
-    if (!e.which) e.which=e.keyCode;
-    if (!input.amendable())
-      if (e.which > 31)
-        return false;
-    if (e.which === 92 && !input.key_strokes) {  // backslash
-      var args = [input.ref];
-      send_request('get_prev', args);
-      return false;
-      };
-    input.key_strokes += 1;
-    return input.aib_obj.onpresskey(input, e);
+      input.key_pressed = true;
+      return input.aib_obj.ondownkey(input, e);
     };
 
   if (input.onfocus === null)  // already set on bool, sxml
@@ -344,7 +337,7 @@ function create_input(frame, page, json_elem, label) {
       if (callbacks.length)
         setTimeout(function() {exec_callbacks()}, 0);
       };
-    input.key_strokes = 0;
+    input.key_pressed = false;  // set to true after first key pressed
     input.aib_obj.after_got_focus(input);
     };
 
@@ -1079,19 +1072,6 @@ function setup_sxml(sxml, json_elem) {
       return;
     sxml.aib_obj.popup(sxml);
     };
-
-  sxml.onkeydown = function(e) {
-    if (sxml.frame.form.disable_count) return false;
-    if (!e) e=window.event;
-    alert(e.keyCode);
-    if (e.keyCode === 27) {
-      if (sxml.aib_obj.data_changed(sxml, sxml.current_value))
-        setTimeout(function() {sxml.aib_obj.reset_value(sxml)}, 0);
-      e.cancelBubble = true;
-      return false;
-      };
-    };
-
   sxml.has_focus = false;
   sxml.mouse_down = false;
 
@@ -1274,9 +1254,9 @@ function create_button(frame, json_elem) {
     if (!e) e=window.event;
     if (e.ctrlKey) return;
     if (e.altKey) return;
-    if ((e.keyCode === 37) || (e.keyCode === 38))  // left|up
+    if ((e.key === 'ArrowLeft') || (e.key === 'ArrowUp'))
       var dir = -1
-    else if ((e.keyCode === 39) || (e.keyCode === 40))  // right|down
+    else if ((e.key === 'ArrowRight') || (e.key === 'ArrowDown'))
       var dir = 1
     else
       return;
@@ -1290,10 +1270,11 @@ function create_button(frame, json_elem) {
 
   button.onclick = function() {
     if (button.frame.form.disable_count) return;
-    if (button.readonly) {
-      button.frame.form.current_focus.focus();
-      return;
-      };
+    // removed - 2020-11-24 - there may be a pending event to enable the button
+    // if (button.readonly) {
+    //   button.frame.form.current_focus.focus();
+    //   return;
+    //   };
     if (button.frame.form.current_focus !== button) {
       button.after_focus = button.after_click;
       if (button.has_focus)  // can't call focus() - it will be ignored!

@@ -25,7 +25,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -44,7 +45,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -63,7 +65,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -82,7 +85,8 @@ cols.append ({
     'long_descr' : 'Subtran row id',
     'col_head'   : 'Subtran row id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_id',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -101,7 +105,8 @@ cols.append ({
     'long_descr' : 'Tax code id',
     'col_head'   : 'Tax code',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -120,7 +125,8 @@ cols.append ({
     'long_descr' : 'Tax rate as at transaction date',
     'col_head'   : 'Tax rate',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -134,12 +140,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tax_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Tax amount',
     'long_descr' : 'Tax amount in transaction currency',
     'col_head'   : 'Tax amt',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -165,7 +172,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'tax_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Tax local',
     'long_descr' : 'Tax amount in local currency',
     'col_head'   : 'Tax local',
@@ -180,13 +187,15 @@ virt.append ({
         '</expr>'
         ),
     'sql'        : (
-        "a.tax_amt / a.subtran_row_id>tran_det_row_id>tran_exch_rate"
+        "a.tax_amt"
+        " / "
+        "a.subtran_row_id>tran_det_row_id>tran_exch_rate"
         ),
     })
 virt.append ({
     'col_name'   : 'upd_tax',
-    'data_type'  : 'DEC',
-    'short_descr': 'Tax local',
+    'data_type'  : '$LCL',
+    'short_descr': 'Signed tax local',
     'long_descr' : 'Tax amount in local currency - pos for inv, neg for crn',
     'col_head'   : 'Tax local',
     'db_scale'   : 2,

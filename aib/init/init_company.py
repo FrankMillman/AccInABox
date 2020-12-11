@@ -62,16 +62,16 @@ async def setup_db_table(conn, table_name, context):
     cols = module.cols
     db_columns = []
     for col in cols:
-        db_col = [None] * 24
+        db_col = [None] * 25
         db_col[4] = col['col_name']
         db_col[7] = col['data_type']
         db_col[11] = col['key_field']
-        db_col[13] = col['allow_null']
-        db_col[14] = col['allow_amend']
+        db_col[14] = col['allow_null']
+        db_col[15] = col['allow_amend']
         db_col[16] = col['db_scale']
-        db_col[18] = col['dflt_val']
+        db_col[19] = col['dflt_val']
         if col['fkey'] is not None:
-            db_col[20] = dumps(col['fkey'])
+            db_col[21] = dumps(col['fkey'])
         db_columns.append(db_col)
 
     await db.create_table.create_orig_table(conn, context.company, table_defn, db_columns)
@@ -386,7 +386,8 @@ async def setup_table(module, db_tbl, db_col, table_name):
         await db_col.setval('long_descr', col['long_descr'])
         await db_col.setval('col_head', col['col_head'])
         await db_col.setval('key_field', col['key_field'])
-        await db_col.setval('calculated', col['calculated'])
+        await db_col.setval('data_source', col['data_source'])
+        await db_col.setval('condition', col['condition'])
         await db_col.setval('allow_null', col['allow_null'])
         await db_col.setval('allow_amend', col['allow_amend'])
         await db_col.setval('max_len', col['max_len'])
@@ -412,7 +413,8 @@ async def setup_table(module, db_tbl, db_col, table_name):
         await db_col.setval('long_descr', virt['long_descr'])
         await db_col.setval('col_head', virt['col_head'])
         await db_col.setval('key_field', 'N')
-        await db_col.setval('calculated', True)
+        await db_col.setval('data_source', 'calc')
+        await db_col.setval('condition', None)
         await db_col.setval('allow_null', True)
         await db_col.setval('allow_amend', True)
         await db_col.setval('max_len', 0)
@@ -652,21 +654,19 @@ async def setup_processes(context, conn):
 async def setup_menus(context, conn, company_name):
     db_obj = await db.objects.get_db_object(context, 'sys_menu_defns')
 
-    async def setup_menu(descr, parent_id, opt_type, module_id=None, table_name=None,
+    async def setup_menu(descr, parent_id, opt_type, module_id, table_name=None,
             cursor_name=None, form_name=None):
         await db_obj.init()
         await db_obj.setval('descr', descr)
         await db_obj.setval('parent_id', parent_id)
         await db_obj.setval('opt_type', opt_type)
-        # if opt_type == 'menu':
-        #     await db_obj.setval('module_id', module_id)
+        await db_obj.setval('module_id', module_id)
+        await db_obj.setval('ledger_row_id', ledger_row_id)
         if opt_type == 'grid':
             await db_obj.setval('table_name', table_name)
             await db_obj.setval('cursor_name', cursor_name)
         elif opt_type == 'form':
             await db_obj.setval('form_name', form_name)
-        await db_obj.setval('module_id', module_id)
-        await db_obj.setval('ledger_row_id', ledger_row_id)
         await db_obj.save()
         return await db_obj.getval('row_id')
 

@@ -316,6 +316,8 @@ class Conn:
             if expr == 'company':
                 sql = sql[:pos_1] + context.company + sql[pos_2+1:]
             else:
+                if not '.' in expr:
+                    breakpoint()
                 table_name, col_name = expr.split('.')
                 if table_name == '_ctx':
                     val = getattr(context, col_name)
@@ -519,7 +521,7 @@ class Conn:
                         as_clause = f"CAST({as_clause} AS {self.convert_string('BOOL')})"
                     # if test is 'WHERE {as_clause} != 0', sqlite3 can return True even if
                     #   the rounded result evaluates to 0. This fixes it - added [2020-11-09]
-                    elif col.data_type == 'DEC':
+                    elif col.data_type == 'DEC' or col.data_type.startswith('$'):
                         as_clause = f'ROUND({as_clause}, {col.db_scale})'
                     col_text = as_clause
                 elif col.data_type == 'TEXT':
@@ -571,10 +573,7 @@ class Conn:
                         obj_name, col_name = expr.split('.')
 
                         if obj_name == '_ctx':  #'_context':
-                            if col_name == 'ledger_row_id':
-                                expr = getattr(context, 'mod_ledg_id')[1]
-                            else:
-                                expr = getattr(context, col_name)
+                            expr = getattr(context, col_name)
                         else:
                             obj = context.data_objects[obj_name]
                             expr =  await obj.getval(col_name)
@@ -699,7 +698,7 @@ class Conn:
         if col is None:
             col_text = f'NULL AS {col_name}'
         elif as_clause is not None:
-            if col.data_type == 'DEC' and not self.grouping:
+            if (col.data_type == 'DEC' or col.data_type.startswith('$')) and not self.grouping:
                 # force sqlite3 to return Decimal type
                 col_name = f'"{col.col_name} AS [REAL{col.db_scale}]"'
             elif col.data_type == 'BOOL' and not self.grouping:
@@ -715,7 +714,7 @@ class Conn:
             else:
                 col_text = f'{as_clause} as {col_name}'
         elif build_sum:
-            if col.data_type == 'DEC' and not self.grouping:
+            if (col.data_type == 'DEC' or col.data_type.startswith('$')) and not self.grouping:
                 col_text = f'SUM({alias}.{col.col_name}) AS "{col.col_name} [REAL{col.db_scale}]"'
             else:
                 col_text = f'SUM({alias}.{col.col_name})'
@@ -850,7 +849,7 @@ class Conn:
 
         # is this still necessary - sqlite3 rounding has been sorted with REAL2/4/6/8
         # it is necessary - it is used in diag.py [2020-09-09]
-        if col.data_type == 'DEC' and '/' in sql:
+        if (col.data_type == 'DEC' or col.data_type.startswith('$')) and '/' in sql:
             sql = f'ROUND({sql}, {col.db_scale})'
 
         if sql.startswith('SELECT '):

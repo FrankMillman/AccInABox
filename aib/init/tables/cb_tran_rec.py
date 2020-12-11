@@ -27,7 +27,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -46,7 +47,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -65,7 +67,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -84,7 +87,8 @@ cols.append ({
     'long_descr' : 'Bank account row id',
     'col_head'   : 'Bank id',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_param.cb_ledger_id', 'is not', '$None', '']],
+    'data_source': 'ctx_if',
+    'condition'  : [['where', '', '$module_row_id', '=', '_ctx.module_row_id', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -103,7 +107,8 @@ cols.append ({
     'long_descr' : 'Receipt number',
     'col_head'   : 'Rec no',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_ledger.auto_rec_no', 'is not', '$None', '']],
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.auto_rec_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -152,7 +157,8 @@ cols.append ({
     'long_descr' : 'Transaction date',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -175,7 +181,8 @@ cols.append ({
     'long_descr' : 'Line of text to appear on reports',
     'col_head'   : 'Text',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -188,13 +195,34 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_exch_rate',
+    'col_name'   : 'currency_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Transaction currency',
+    'long_descr' : 'Currency used to enter transaction',
+    'col_head'   : 'Currency',
+    'key_field'  : 'N',
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{ledger_row_id>currency_id}',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'cb_exch_rate',
     'data_type'  : 'DEC',
     'short_descr': 'Cb exchange rate',
-    'long_descr' : 'Exchange rate from cb currency to local',
+    'long_descr' : 'Exchange rate from cash book currency to local',
     'col_head'   : 'Rate cb',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -219,13 +247,49 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'tran_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Transaction exchange rate',
+    'long_descr' : 'Exchange rate from transaction currency to local',
+    'col_head'   : 'Rate tran',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 8,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+                '<literal value="1"/>'
+            '</compare>'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `ledger_row_id>currency_id`, ``]]">'
+                '<fld_val name="cb_exch_rate"/>'
+            '</compare>'
+            '<default>'
+                '<exch_rate>'
+                    '<fld_val name="currency_id"/>'
+                    '<fld_val name="tran_date"/>'
+                '</exch_rate>'
+            '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'payer',
     'data_type'  : 'TEXT',
     'short_descr': 'Received from',
     'long_descr' : 'Received from',
     'col_head'   : 'Payer',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 30,
@@ -239,17 +303,18 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Amount received',
-    'long_descr' : 'Amount received in cb currency',
+    'long_descr' : 'Amount received in tran currency',
     'col_head'   : 'Amount',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
+    'scale_ptr'  : 'currency_id>scale',
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -258,17 +323,54 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_cb',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Amount received - cb curr',
-    'long_descr' : 'Amount received in cb currency - updated from cb_tran_rec_det',
-    'col_head'   : 'Amount cb',
+    'long_descr' : 'Amount received in cb currency',
+    'col_head'   : 'Amt rec cb',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.alt_amt_override', 'is', '$False', '']],
+    'allow_null' : False,
+    'allow_amend': [['where', '', '_ledger.alt_amt_override', 'is', '$True', '']],
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="amount"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="cb_exch_rate"/>'
+        '</expr>'
+        ),
+    'col_checks' : [
+        ['alt_amt_err', 'Outside valid range', [
+            ['check', '', '$value', '=', 'amount_cb', ''],
+            ['or', '', '_ledger.alt_amt_perc', '=', '0', ''],
+            ['or', '',
+                '(abs(($value / (amount_cb / tran_exch_rate * cb_exch_rate))'
+                ' - 1) * 100)', '<=', '_ledger.alt_amt_perc', ''],
+            ]],
+        ],
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'amount_tran',
+    'data_type'  : '$TRN',
+    'short_descr': 'Amount received',
+    'long_descr' : 'Amount received in tran currency - updated from cb_tran_rec_det',
+    'col_head'   : 'Amount tran',
+    'key_field'  : 'N',
+    'data_source': 'aggr',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
+    'scale_ptr'  : 'currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -277,12 +379,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Amount received - local curr',
     'long_descr' : 'Amount received in local currency - updated from cb_tran_rec_det',
     'col_head'   : 'Amount loc',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'aggr',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -301,7 +404,8 @@ cols.append ({
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -323,15 +427,6 @@ virt.append ({
     'long_descr' : 'Transaction type - used in gui to ask "Post another?"',
     'col_head'   : 'Tran type',
     'sql'        : "'cb_rec'",
-    })
-virt.append ({
-    'col_name'   : 'currency_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Transaction currency',
-    'long_descr' : 'Currency used to enter transaction',
-    'col_head'   : 'Currency',
-    'dflt_val'   : '{ledger_row_id>currency_id}',
-    'sql'        : 'a.ledger_row_id>currency_id',
     })
 virt.append ({
     'col_name'   : 'period_row_id',
@@ -364,7 +459,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'view_cb',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Amount received - cb curr',
     'long_descr' : 'Amount received in cb currency',
     'col_head'   : 'Amount cb',
@@ -374,7 +469,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'view_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Amount received - local curr',
     'long_descr' : 'Amount received in local currency',
     'col_head'   : 'Amount local',
@@ -420,7 +515,7 @@ actions.append([
             'check_totals',
             'Total amount does not equal total of line items',
             [
-                ['check', '', 'amount', '=', 'amount_cb', ''],
+                ['check', '', 'amount', '=', 'amount_tran', ''],
                 ],
             ],
         ],

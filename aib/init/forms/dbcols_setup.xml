@@ -4,18 +4,17 @@
   </db_objects>
   <mem_objects>
 
-    <mem_obj name="var" descr="Form variables" parent="db_cols">
+    <mem_obj name="var" descr="Form variables">
       <mem_col col_name="col_type" data_type="TEXT" short_descr="Column type"
         long_descr="Column type"/>
       <mem_col col_name="table_name" data_type="TEXT" short_descr="Table name"
         long_descr="Table name"/>
       <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
         long_descr="Description"/>
+      <mem_col col_name="full_col_name" data_type="TEXT" short_descr="Full column name"
+        long_descr="Table name [dot] column name" allow_amend="true"/>
       <mem_col col_name="allow_amend" data_type="TEXT" short_descr="Allow amend?"
         long_descr="Allow amend?" allow_amend="true" dflt_val="false"
-        choices="[[`false`, `N`], [`true`, `Y`], [`cond`, `?`]]"/>
-      <mem_col col_name="calculated" data_type="TEXT" short_descr="Calculated?"
-        long_descr="Calculated?" allow_amend="true" dflt_val="false"
         choices="[[`false`, `N`], [`true`, `Y`], [`cond`, `?`]]"/>
     </mem_obj>
 
@@ -38,7 +37,7 @@
         allow_amend="true" max_len="1"/>
     </mem_obj>
 
-    <mem_obj name="calc" descr="Steps for calculated" sequence="[`seq`, [], null]">
+    <mem_obj name="cond" descr="Steps for condition" sequence="[`seq`, [], null]">
       <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
         long_descr="Sequence" col_head="Seq" allow_amend="true"/>
       <mem_col col_name="test" data_type="TEXT" short_descr="Test"
@@ -55,6 +54,35 @@
       <mem_col col_name="rbr" data_type="TEXT" short_descr="Right bracket"
         long_descr="Right bracket (if required)" col_head=")" allow_null="true"
         allow_amend="true" max_len="1"/>
+    </mem_obj>
+
+    <mem_obj name="choices" descr="Choices" sequence="[`seq`, [], null]">
+      <mem_col col_name="code" data_type="TEXT" short_descr="Code"
+        long_descr="Choice code" col_head="Code" key_field="A"
+        allow_amend="true" max_len="15"/>
+      <mem_col col_name="descr" data_type="TEXT" short_descr="Description"
+        long_descr="Choice description" col_head="Description"
+        allow_amend="true" max_len="30"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="fkey_flds" descr="Foreign key fields">
+      <mem_col col_name="tgt_table" data_type="TEXT" short_descr="Target table"
+        long_descr="Target table name" col_head="Tgt table" allow_amend="true"/>
+      <mem_col col_name="tgt_col" data_type="TEXT" short_descr="Target column"
+        long_descr="Target column name" col_head="Tgt col" allow_amend="true"/>
+      <mem_col col_name="alt_src" data_type="TEXT" short_descr="Alternate source"
+        long_descr="Alternate source column name" col_head="Alt src"
+        allow_null="true" allow_amend="true"/>
+      <mem_col col_name="alt_tgt" data_type="TEXT" short_descr="Alternate target"
+        long_descr="Alternate target column name" col_head="Alt tgt"
+        allow_null="true" allow_amend="true"/>
+      <mem_col col_name="child" data_type="BOOL" short_descr="Child?"
+        long_descr="Is this a child table?" col_head="Child?" allow_amend="true"/>
+      <mem_col col_name="cursor" data_type="TEXT" short_descr="Cursor"
+        long_descr="Cursor to use for lookups" col_head="Cursor"
+        allow_null="true" allow_amend="true"/>
     </mem_obj>
 
   </mem_objects>
@@ -176,34 +204,40 @@
       <input obj_name="db_cols" col_name="dflt_val" lng="80"/>
       <row/>
       <col/>
-      <label value="Calculated?"/>
+      <label value="Data source:"/>
+      <row/>
+      <col colspan="2"/>
+      <input obj_name="db_cols" col_name="data_source" lng="200"/>
+
+      <panel/>
+      <if test="[[`if`, ``, `_ctx.formview_param`, `!=`, `~virt~`, ``]]"/>
       <row/>
       <col/>
-      <input obj_name="var" col_name="calculated" radio="true" after="
-        <<case>>
-          <<compare test=`[['if', '', 'var.calculated', '=', '~cond~', '']]`>>
-            <<change_button>>
-              <<btn_enabled btn_id=`calc` state=`true`/>>
-            <</change_button>>
-          <</compare>>
-          <<default>>
-            <<change_button>>
-              <<btn_enabled btn_id=`calc` state=`false`/>>
-            <</change_button>>
-          <</default>>
-        <</case>>
-        "/>
-      <col/>
-      <button lng="60" btn_id="calc" btn_label="?"
+      <button lng="100" btn_id="cond" btn_label="Condition"
           btn_enabled="true" btn_validate="true" action="
-        <<inline_form name=`calculated`>>
+        <<pyfunc name=`custom.column_setup.load_condition`/>>
+        <<inline_form name=`cond`>>
           <<on_return>>
-            <<return state=`completed`/>>
+            <<return state=`completed`>>
+              <<pyfunc name=`custom.column_setup.dump_condition`/>>
+              <<case>>
+                <<compare test=`[['if', '', 'db_cols.condition', 'is not', '$None', '']]`>>
+                  <<change_button>>
+                    <<font_weight btn_id=`cond` value=`bold`/>>
+                  <</change_button>>
+                <</compare>>
+                <<default>>
+                  <<change_button>>
+                    <<font_weight btn_id=`cond` value=`normal`/>>
+                  <</change_button>>
+                <</default>>
+              <</case>>
+            <</return>>
             <<return state=`cancelled`/>>
           <</on_return>>
         <</inline_form>>
       "/>
-      <panel/>
+      <end_if/>
       <row/>
       <col/>
       <input obj_name="db_cols" col_name="dflt_rule" lng="100" label="Default rule"/>
@@ -225,46 +259,73 @@
             <<return state=`completed`/>>
             <<return state=`cancelled`/>>
           <</on_return>>
+          <<case>>
+            <<compare test=`[['if', '', 'chks', 'is not', '$None', '']]`>>
+              <<change_button>>
+                <<font_weight btn_id=`chks` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+            <<default>>
+              <<change_button>>
+                <<font_weight btn_id=`chks` value=`normal`/>>
+              <</change_button>>
+            <</default>>
+          <</case>>
         <</sub_form>>
       "/>
       <row/>
       <col/>
       <button lng="100" btn_id="fkey" btn_label="Foreign key"
           btn_enabled="true" btn_validate="true" action="
-        <<sub_form name=`_sys.foreign_key`>>
-          <<call_params>>
-            <<call_param name=`table_name` type=`data_attr` source=`var.table_name`/>>
-            <<call_param name=`col_name` type=`data_attr` source=`db_cols.col_name`/>>
-            <<call_param name=`fkey` type=`data_attr` source=`db_cols.fkey`/>>
-          <</call_params>>
-          <<return_params>>
-            <<return_param name=`fkey` type=`data_attr` target=`db_cols.fkey`/>>
-          <</return_params>>
+        <<pyfunc name=`custom.column_setup.load_fkey`/>>
+        <<inline_form name=`fkey`>>
           <<on_return>>
-            <<return state=`completed`/>>
+            <<return state=`completed`>>
+              <<pyfunc name=`custom.column_setup.dump_fkey`/>>
+              <<case>>
+                <<compare test=`[['if', '', 'db_cols.fkey', 'is not', '$None', '']]`>>
+                  <<change_button>>
+                    <<font_weight btn_id=`fkey` value=`bold`/>>
+                  <</change_button>>
+                <</compare>>
+                <<default>>
+                  <<change_button>>
+                    <<font_weight btn_id=`fkey` value=`normal`/>>
+                  <</change_button>>
+                <</default>>
+              <</case>>
+            <</return>>
             <<return state=`cancelled`/>>
           <</on_return>>
-        <</sub_form>>
+        <</inline_form>>
       "/>
       <row/>
       <col/>
-      <button lng="100" btn_id="sub" btn_label="Choices"
+      <button lng="100" btn_id="choices" btn_label="Choices"
           btn_enabled="true" btn_validate="true" action="
-        <<sub_form name=`_sys.choices`>>
-          <<call_params>>
-            <<call_param name=`table_name` type=`data_attr` source=`var.table_name`/>>
-            <<call_param name=`col_name` type=`data_attr` source=`db_cols.col_name`/>>
-            <<call_param name=`choices` type=`data_attr` source=`db_cols.choices`/>>
-          <</call_params>>
-          <<return_params>>
-            <<return_param name=`choices` type=`data_attr` target=`db_cols.choices`/>>
-          <</return_params>>
+        <<pyfunc name=`custom.column_setup.load_choices`/>>
+        <<inline_form name=`choices`>>
           <<on_return>>
-            <<return state=`completed`/>>
+            <<return state=`completed`>>
+              <<pyfunc name=`custom.column_setup.dump_choices`/>>
+              <<case>>
+                <<compare test=`[['if', '', 'db_cols.choices', 'is not', '$None', '']]`>>
+                  <<change_button>>
+                    <<font_weight btn_id=`choices` value=`bold`/>>
+                  <</change_button>>
+                <</compare>>
+                <<default>>
+                  <<change_button>>
+                    <<font_weight btn_id=`choices` value=`normal`/>>
+                  <</change_button>>
+                <</default>>
+              <</case>>
+            <</return>>
             <<return state=`cancelled`/>>
           <</on_return>>
-        <</sub_form>>
+        <</inline_form>>
       "/>
+      <if test="[[`if`, ``, `_ctx.formview_param`, `=`, `~virt~`, ``]]"/>
       <row/>
       <col/>
       <button lng="100" btn_id="sql" btn_label="SQL"
@@ -274,13 +335,50 @@
             <<return state=`completed`/>>
             <<return state=`cancelled`/>>
           <</on_return>>
+          <<case>>
+            <<compare test=`[['if', '', 'db_cols.sql', 'is not', '$None', '']]`>>
+              <<change_button>>
+                <<font_weight btn_id=`sql` value=`bold`/>>
+              <</change_button>>
+            <</compare>>
+            <<default>>
+              <<change_button>>
+                <<font_weight btn_id=`sql` value=`normal`/>>
+              <</change_button>>
+            <</default>>
+          <</case>>
         <</inline_form>>
       "/>
+      <end_if/>
     </body>
     <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form">
       <method name="on_start_frame" action="
         <<pyfunc name=`custom.column_setup.on_start_frame`/>>
+        <<pyfunc name=`custom.column_setup.load_tristates`/>>
+        <<case>>
+          <<compare test=`[['if', '', '_ctx.formview_param', '!=', '~virt~', '']]`>>
+            <<change_button>>
+              <<font_weight btn_id=`cond` value=`normal`/>>
+            <</change_button>>
+          <</compare>>
+        <</case>>
+        <<change_button>>
+          <<font_weight btn_id=`chks` value=`normal`/>>
+        <</change_button>>
+        <<change_button>>
+          <<font_weight btn_id=`fkey` value=`normal`/>>
+        <</change_button>>
+        <<change_button>>
+          <<font_weight btn_id=`choices` value=`normal`/>>
+        <</change_button>>
+        <<case>>
+          <<compare test=`[['if', '', '_ctx.formview_param', '=', '~virt~', '']]`>>
+            <<change_button>>
+              <<font_weight btn_id=`sql` value=`normal`/>>
+            <</change_button>>
+          <</compare>>
+        <</case>>
         <<case>>
           <<compare test=`[['if', '', 'var.allow_amend', '=', '~cond~', '']]`>>
             <<change_button>>
@@ -294,16 +392,39 @@
           <</default>>
         <</case>>
         <<case>>
-          <<compare test=`[['if', '', 'var.calculated', '=', '~cond~', '']]`>>
+          <<compare test=`[['if', '', 'db_cols.condition', 'is not', '$None', '']]`>>
             <<change_button>>
-              <<btn_enabled btn_id=`calc` state=`true`/>>
+              <<font_weight btn_id=`cond` value=`bold`/>>
             <</change_button>>
           <</compare>>
-          <<default>>
+        <</case>>
+        <<case>>
+          <<compare test=`[['if', '', 'db_cols.col_checks', 'is not', '$None', '']]`>>
             <<change_button>>
-              <<btn_enabled btn_id=`calc` state=`false`/>>
+              <<font_weight btn_id=`chks` value=`bold`/>>
             <</change_button>>
-          <</default>>
+          <</compare>>
+        <</case>>
+        <<case>>
+          <<compare test=`[['if', '', 'db_cols.fkey', 'is not', '$None', '']]`>>
+            <<change_button>>
+              <<font_weight btn_id=`fkey` value=`bold`/>>
+            <</change_button>>
+          <</compare>>
+        <</case>>
+        <<case>>
+          <<compare test=`[['if', '', 'db_cols.choices', 'is not', '$None', '']]`>>
+            <<change_button>>
+              <<font_weight btn_id=`choices` value=`bold`/>>
+            <</change_button>>
+          <</compare>>
+        <</case>>
+        <<case>>
+          <<compare test=`[['if', '', 'db_cols.sql', 'is not', '$None', '']]`>>
+            <<change_button>>
+              <<font_weight btn_id=`sql` value=`bold`/>>
+            <</change_button>>
+          <</compare>>
         <</case>>
       "/>
       <method name="before_save" action="
@@ -336,25 +457,6 @@
           <grid_methods template="Grid"/>
         </grid>
 
-<!--
-        <panel/>
-        <row/>
-        <col/>
-        <label value="Parameter:"/>
-        <col/>
-        <input obj_name="amend" col_name="param" lng="200"/>
-        <row/>
-        <col/>
-        <label value="Is/Is not"/>
-        <col/>
-        <input obj_name="amend" col_name="test" lng="60"/>
-        <row/>
-        <col/>
-        <label value="True/False/None"/>
-        <col/>
-        <input obj_name="amend" col_name="value" lng="60"/>
--->
-
       </body>
       <button_row template="Setup_Form_Single"/>
       <frame_methods template="Setup_Form_Single">
@@ -362,13 +464,17 @@
     </frame>
   </inline_form>
 
-  <inline_form name="calculated" title="Calculated?">
-    <frame main_object="calc">
+  <inline_form name="cond" title="Condition">
+    <frame main_object="db_cols">
       <toolbar/>
       <body>
         <block/>
-
-        <grid data_object="calc" growable="true" num_grid_rows="5">
+        <panel/>
+        <row/>
+        <col/>
+        <display obj_name="var" col_name="full_col_name" lng="250"/>
+        <block/>
+        <grid data_object="cond" growable="true" num_grid_rows="5">
           <toolbar template="Grid"/>
           <cur_columns>
             <cur_col col_name="test" lng="80"/>
@@ -384,35 +490,99 @@
           </cur_sequence>
           <grid_methods template="Grid"/>
         </grid>
+      </body>
+      <button_row>
+        <button lng="60" btn_id="cond_ok" btn_label="Ok"
+          btn_enabled="true" btn_validate="true" action="
+            <<end_form state=`completed`/>>
+          "/>
+      </button_row>
+      <frame_methods/>
+    </frame>
+  </inline_form>
 
-<!--
+  <inline_form name="choices" title="Choices">
+    <frame main_object="db_cols">
+      <toolbar/>
+      <body>
+        <block/>
         <panel/>
         <row/>
         <col/>
-        <label value="Parameter type:"/>
-        <col/>
-        <input obj_name="calc" col_name="type" lng="120"/>
-        <row/>
-        <col/>
-        <label value="Parameter name:"/>
-        <col/>
-        <input obj_name="calc" col_name="name" lng="120"/>
-        <row/>
-        <col/>
-        <label value="Is/Is not"/>
-        <col/>
-        <input obj_name="calc" col_name="test" lng="60"/>
-        <row/>
-        <col/>
-        <label value="True/False/None"/>
-        <col/>
-        <input obj_name="calc" col_name="value" lng="60"/>
--->
-
+        <display obj_name="var" col_name="full_col_name" lng="250"/>
+        <block/>
+        <grid data_object="choices" growable="true" num_grid_rows="10">
+          <toolbar template="Grid"/>
+          <cur_columns>
+            <cur_col col_name="code" lng="100"/>
+            <cur_col col_name="descr" lng="200" expand="true"/>
+          </cur_columns>
+          <cur_filter/>
+          <cur_sequence>
+            <cur_seq col_name="seq"/>
+          </cur_sequence>
+          <grid_methods template="Grid"/>
+        </grid>
       </body>
-      <button_row template="Setup_Form_Single"/>
-      <frame_methods template="Setup_Form_Single">
-      </frame_methods>
+      <button_row>
+        <button lng="60" btn_id="choice_ok" btn_label="Ok"
+          btn_enabled="true" btn_validate="true" action="
+            <<end_form state=`completed`/>>
+          "/>
+      </button_row>
+      <frame_methods/>
+    </frame>
+  </inline_form>
+
+  <inline_form name="fkey" title="Foreign_key">
+    <frame main_object="db_cols">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <display obj_name="var" col_name="full_col_name" lng="250"/>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Target table:"/>
+        <col/>
+        <input obj_name="fkey_flds" col_name="tgt_table" lng="120"/>
+        <row/>
+        <col/>
+        <label value="Target column:"/>
+        <col/>
+        <input obj_name="fkey_flds" col_name="tgt_col" lng="120"/>
+        <row/>
+        <col/>
+        <label value="Alternate source:"/>
+        <col/>
+        <input obj_name="fkey_flds" col_name="alt_src" lng="120"/>
+        <row/>
+        <col/>
+        <label value="Alternate target:"/>
+        <col/>
+        <input obj_name="fkey_flds" col_name="alt_tgt" lng="120"/>
+        <row/>
+        <col/>
+        <label value="Child table?"/>
+        <col/>
+        <input obj_name="fkey_flds" col_name="child"/>
+        <row/>
+        <col/>
+        <label value="Cursor name"/>
+        <col/>
+        <input obj_name="fkey_flds" col_name="cursor"/>
+      </body>
+      <button_row>
+        <button lng="60" btn_id="sql_ok" btn_label="Ok"
+          btn_enabled="true" btn_validate="true" action="
+            <<end_form state=`completed`/>>
+          "/>
+      </button_row>
+      <frame_methods/>
     </frame>
   </inline_form>
 

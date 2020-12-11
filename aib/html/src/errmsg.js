@@ -93,23 +93,22 @@ errmsg.close_window = function() {
 errmsg.onkeydown = function(e) {
   if (click_from_kbd)  // Enter pressed while on a form, still active
     return false;  // wait for user to release Enter, else we close too soon
-  if (!e) e=window.event;
-  if ((e.keyCode === 13) || (e.keyCode === 27) || (e.keyCode === 32)) {
+  if ((e.key === 'Enter') || (e.key === 'Escape') || (e.key === ' ')) {
     errmsg.close_window();
     e.cancelBubble = true;
     return false;
     };
-  if (e.keyCode === 9) {
+  if (e.key === 'Tab') {
     e.cancelBubble = true;
     return false;
     };
   };
 
 errmsg.onkeyup = function(e) {
-  if (!e) e=window.event;
   // FF workaround - if press space to trigger checkbox, and validation fails,
   //    errmsg is shown, keyup is caught here and generates a click event!
-  if (e.keyCode === 32)
+  // [2020-12-09] confirmed that this workaround is still necessary
+  if (e.key === ' ')
       return false;
   };
 

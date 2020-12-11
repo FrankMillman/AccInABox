@@ -377,28 +377,31 @@ class ResponseHandler:
         await menu_defns.select_row({'row_id': int(row_id)})
 
         opt_type = await menu_defns.getval('opt_type')
-        module_row_id = await menu_defns.getval('module_row_id')
-        ledger_row_id = await menu_defns.getval('ledger_row_id')
-        mod_ledg_id = (module_row_id, ledger_row_id)
 
         if opt_type == 'grid':
             form = ht.form.Form()
             context = db.cache.get_new_context(self.session.user_row_id,
-                self.session.sys_admin, company, id(form), mod_ledg_id)
+                self.session.sys_admin, company, id(form),
+                await menu_defns.getval('module_row_id'),
+                await menu_defns.getval('ledger_row_id'))
             await form._ainit_(context, self.session, '_sys.setup_grid',
                 grid_params=(await menu_defns.getval('table_name'), await menu_defns.getval('cursor_name')))
         elif opt_type == 'form':
             form = ht.form.Form()
             context = db.cache.get_new_context(self.session.user_row_id,
-                self.session.sys_admin, company, id(form), mod_ledg_id)
+                self.session.sys_admin, company, id(form),
+                await menu_defns.getval('module_row_id'),
+                await menu_defns.getval('ledger_row_id'))
             await form._ainit_(context, self.session, await menu_defns.getval('form_name'))
         elif opt_type == 'report':
             pass
-        elif opt_type == 'process':
-            process = bp.bpm.ProcessRoot(company, await menu_defns.getval('process_id'))
-            context = db.cache.get_new_context(self.session.user_row_id,
-                self.session.sys_admin, company, id(process), mod_ledg_id)
-            await process.start_process(context)
+        # elif opt_type == 'process':
+        #     process = bp.bpm.ProcessRoot(company, await menu_defns.getval('process_id'))
+        #     context = db.cache.get_new_context(self.session.user_row_id,
+        #         self.session.sys_admin, company, id(process),
+        #         await menu_defns.getval('module_row_id'),
+        #         await menu_defns.getval('ledger_row_id'))
+        #     await process.start_process(context)
 
     async def on_get_prev(self, args):
         ref, = args

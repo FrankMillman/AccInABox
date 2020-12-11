@@ -29,7 +29,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -48,7 +49,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -67,7 +69,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -86,7 +89,8 @@ cols.append ({
     'long_descr' : 'Transaction type',
     'col_head'   : 'Type',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_con',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -112,7 +116,8 @@ cols.append ({
     'long_descr' : 'Transaction row id',
     'col_head'   : 'Tran id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_id',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -140,7 +145,8 @@ cols.append ({
     'long_descr' : 'Split line no',
     'col_head'   : 'Split',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -159,7 +165,8 @@ cols.append ({
     'long_descr' : 'Item type - see choices for details',
     'col_head'   : 'Type',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -187,7 +194,8 @@ cols.append ({
     'long_descr' : 'Customer row id. Could be derived using fkey, but denormalised for performance',
     'col_head'   : 'Customer',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'repl',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -206,7 +214,8 @@ cols.append ({
     'long_descr' : 'Transaction date. Could be derived using fkey, but denormalised for performance',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'repl',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -225,7 +234,8 @@ cols.append ({
     'long_descr' : 'Due date',
     'col_head'   : 'Due date',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -239,12 +249,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Original amount cust',
     'long_descr' : 'Original amount - customer currency',
     'col_head'   : 'Orig cust',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -258,12 +269,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Original amount local',
     'long_descr' : 'Original amount - local currency',
     'col_head'   : 'Orig local',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -282,7 +294,8 @@ cols.append ({
     'long_descr' : 'Discount is allowable if paid by this date',
     'col_head'   : 'Disc date',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : True,
     'allow_amend': False,
     'max_len'    : 0,
@@ -296,12 +309,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'discount_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Discount amount cust',
     'long_descr' : 'Discount allowable if paid by discount date - customer currency',
     'col_head'   : 'Disc cust',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : True,
     'allow_amend': False,
     'max_len'    : 0,
@@ -351,7 +365,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'balance_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Balance',
     'long_descr' : (
         'Balance outstanding - customer currency. '
@@ -385,7 +399,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'balance_cust_as_at',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Balance',
     'long_descr' : (
         'Balance outstanding at specified date - customer currency. '
@@ -421,7 +435,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'balance_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Balance',
     'long_descr' : 'Balance outstanding - local currency',
     'col_head'   : 'Balance',
@@ -451,7 +465,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'balance_local_as_at',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Balance',
     'long_descr' : (
         'Balance outstanding at specified date - local currency. '
@@ -486,7 +500,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'os_disc_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'O/s discount - cust curr',
     'long_descr' : (
         'Outstanding discount - customer currency. '
@@ -520,7 +534,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'due_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Amount due - cust curr',
     'long_descr' : 'Amount due after discount - customer currency - at specified date (to check discount)',
     'col_head'   : 'Due cust',
@@ -573,7 +587,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'alloc_cust_gui',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Amount allocated - cust',
     'long_descr' : 'Amount allocated - customer currency - used in form ar_alloc_item',
     'col_head'   : 'Alloc cust',
@@ -598,7 +612,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'unallocated',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Amount unallocated',
     'long_descr' : (
         'Amount still to be allocated. '

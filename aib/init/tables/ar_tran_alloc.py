@@ -25,7 +25,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -44,7 +45,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -63,7 +65,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -82,7 +85,8 @@ cols.append ({
     'long_descr' : 'Transaction item row id',
     'col_head'   : 'Item id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -108,7 +112,8 @@ cols.append ({
     'long_descr' : 'Allocation number for this item',
     'col_head'   : 'Alloc no',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -127,7 +132,8 @@ cols.append ({
     'long_descr' : 'Transaction date - used for credit note date if discount allowed',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -148,7 +154,8 @@ cols.append ({
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -181,17 +188,6 @@ virt.append ({
     'sql'        : 'a.item_row_id>cust_row_id'
     })
 virt.append ({
-    'col_name'   : 'cust_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Customer exchange rate',
-    'long_descr' : 'Exchange rate from customer currency to local',
-    'col_head'   : 'Rate cust',
-    'db_scale'   : 8,
-    'scale_ptr'  : None,
-    'dflt_val'   : '{item_row_id>tran_row_id>cust_exch_rate}',
-    'sql'        : 'a.item_row_id>tran_row_id>cust_exch_rate',
-    })
-virt.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
     'short_descr': 'Transaction exchange rate',
@@ -199,8 +195,14 @@ virt.append ({
     'col_head'   : 'Rate tran',
     'db_scale'   : 8,
     'scale_ptr'  : None,
-    'dflt_val'   : '{item_row_id>tran_row_id>tran_exch_rate}',
-    'sql'        : 'a.item_row_id>tran_row_id>tran_exch_rate',
+    'dflt_rule'  : (
+        '<expr>'
+            '<fld_val name="item_row_id>amount_cust"/>'
+            '<op type="/"/>'
+            '<fld_val name="item_row_id>amount_local"/>'
+        '</expr>'
+        ),
+    'sql'        : 'a.item_row_id>amount_cust / a.item_row_id>amount_local',
     })
 virt.append ({
     'col_name'   : 'det_exists',
@@ -215,7 +217,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'unallocated',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Unallocated',
     'long_descr' : 'Balance of transaction not allocated',
     'col_head'   : 'Unalloc',
@@ -286,7 +288,6 @@ actions.append([
             [],  # aggregation
             [  # on post
                 ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
-                ['cust_exch_rate', '=', 'cust_exch_rate'],
                 ['tran_exch_rate', '=', 'tran_exch_rate'],
                 ['discount_cust', '=', '_ctx.tot_disc_cust'],
                 ['discount_local', '=', '_ctx.tot_disc_local'],

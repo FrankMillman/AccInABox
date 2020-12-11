@@ -29,7 +29,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -48,7 +49,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -67,7 +69,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -86,7 +89,8 @@ cols.append ({
     'long_descr' : 'Transaction type',
     'col_head'   : 'Type',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_con',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -110,7 +114,8 @@ cols.append ({
     'long_descr' : 'Transaction row id',
     'col_head'   : 'Tran id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_id',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -136,7 +141,8 @@ cols.append ({
     'long_descr' : 'Split line no',
     'col_head'   : 'Split',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -155,7 +161,8 @@ cols.append ({
     'long_descr' : 'Item type - see choices for details',
     'col_head'   : 'Type',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -182,7 +189,8 @@ cols.append ({
     'long_descr' : 'Supplier row id',
     'col_head'   : 'Supplier',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'repl',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -201,7 +209,8 @@ cols.append ({
     'long_descr' : 'Transaction date',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'repl',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -220,7 +229,8 @@ cols.append ({
     'long_descr' : 'Due date',
     'col_head'   : 'Due date',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -234,12 +244,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_supp',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Original amount supp',
     'long_descr' : 'Original amount - supplier currency',
     'col_head'   : 'Orig supp',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -253,12 +264,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Original amount local',
     'long_descr' : 'Original amount - local currency',
     'col_head'   : 'Orig local',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -277,7 +289,8 @@ cols.append ({
     'long_descr' : 'Discount is allowable if paid by this date',
     'col_head'   : 'Disc date',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : True,
     'allow_amend': False,
     'max_len'    : 0,
@@ -291,12 +304,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'discount_supp',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Discount amount supp',
     'long_descr' : 'Discount allowed if paid by discount date - supplier currency',
     'col_head'   : 'Disc supp',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : True,
     'allow_amend': False,
     'max_len'    : 0,
@@ -346,7 +360,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'balance_supp',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Balance',
     'long_descr' : 'Balance outstanding - supplier currency',
     'col_head'   : 'Balance',
@@ -356,15 +370,27 @@ virt.append ({
         "a.amount_supp "
         "- "
         "COALESCE(("
-            "SELECT SUM(b.alloc_supp) "
+            "SELECT SUM(b.alloc_supp + b.discount_supp) "
             "FROM {company}.ap_allocations b "
-            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
+                "CASE "
+                    "WHEN b.tran_type = 'ap_alloc' THEN "
+                        "(SELECT row_id FROM {company}.ap_allocations c "
+                            "WHERE c.tran_type = b.tran_type AND "
+                                "c.tran_row_id = b.tran_row_id AND "
+                                "c.item_row_id = "
+                                    "(SELECT d.item_row_id FROM {company}.ap_tran_alloc d "
+                                    "WHERE d.row_id = b.tran_row_id)) "
+                    "ELSE "
+                        "(SELECT row_id FROM {company}.ap_openitems c "
+                            "WHERE c.tran_type = b.tran_type AND c.tran_row_id = b.tran_row_id) "
+                "END IS NOT NULL "
             "), 0)"
         )
     })
 virt.append ({
     'col_name'   : 'balance_supp_as_at',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Balance',
     'long_descr' : 'Balance outstanding at specified date - supplier currency',
     'col_head'   : 'Balance',
@@ -374,17 +400,28 @@ virt.append ({
         "a.amount_supp "
         "- "
         "COALESCE(("
-            "SELECT SUM(b.alloc_supp) "
+            "SELECT SUM(b.alloc_supp + b.discount_supp) "
             "FROM {company}.ap_allocations b "
-            "JOIN {company}.ap_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "c.tran_date <= {_ctx.as_at_date} "
+                "b.tran_date <= {_ctx.as_at_date} AND "
+                    "CASE "
+                        "WHEN b.tran_type = 'ap_alloc' THEN "
+                            "(SELECT row_id FROM {company}.ap_allocations c "
+                                "WHERE c.tran_type = b.tran_type AND "
+                                    "c.tran_row_id = b.tran_row_id AND "
+                                    "c.item_row_id = "
+                                        "(SELECT d.item_row_id FROM {company}.ap_tran_alloc d "
+                                        "WHERE d.row_id = b.tran_row_id)) "
+                        "ELSE "
+                            "(SELECT row_id FROM {company}.ap_openitems c "
+                                "WHERE c.tran_type = b.tran_type AND c.tran_row_id = b.tran_row_id) "
+                    "END IS NOT NULL "
             "), 0)"
         ),
     })
 virt.append ({
     'col_name'   : 'balance_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Balance',
     'long_descr' : 'Balance outstanding - local currency',
     'col_head'   : 'Balance',
@@ -396,13 +433,25 @@ virt.append ({
         "COALESCE(("
             "SELECT SUM(b.alloc_local) "
             "FROM {company}.ap_allocations b "
-            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0"
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
+                "CASE "
+                    "WHEN b.tran_type = 'ap_alloc' THEN "
+                        "(SELECT row_id FROM {company}.ap_allocations c "
+                            "WHERE c.tran_type = b.tran_type AND "
+                                "c.tran_row_id = b.tran_row_id AND "
+                                "c.item_row_id = "
+                                    "(SELECT d.item_row_id FROM {company}.ap_tran_alloc d "
+                                    "WHERE d.row_id = b.tran_row_id)) "
+                    "ELSE "
+                        "(SELECT row_id FROM {company}.ap_openitems c "
+                            "WHERE c.tran_type = b.tran_type AND c.tran_row_id = b.tran_row_id) "
+                "END IS NOT NULL "
             "), 0)"
         )
     })
 virt.append ({
     'col_name'   : 'balance_local_as_at',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Balance',
     'long_descr' : 'Balance outstanding at specified date - local currency',
     'col_head'   : 'Balance',
@@ -412,17 +461,28 @@ virt.append ({
         "a.amount_local "
         "- "
         "COALESCE(("
-            "SELECT SUM(b.alloc_local) "
+            "SELECT SUM(b.alloc_local + b.discount_local) "
             "FROM {company}.ap_allocations b "
-            "JOIN {company}.ap_tran_alloc c ON c.row_id = b.tran_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "c.tran_date <= {_ctx.as_at_date} "
+                "b.tran_date <= {_ctx.as_at_date} AND "
+                    "CASE "
+                        "WHEN b.tran_type = 'ap_alloc' THEN "
+                            "(SELECT row_id FROM {company}.ap_allocations c "
+                                "WHERE c.tran_type = b.tran_type AND "
+                                    "c.tran_row_id = b.tran_row_id AND "
+                                    "c.item_row_id = "
+                                        "(SELECT d.item_row_id FROM {company}.ap_tran_alloc d "
+                                        "WHERE d.row_id = b.tran_row_id)) "
+                        "ELSE "
+                            "(SELECT row_id FROM {company}.ap_openitems c "
+                                "WHERE c.tran_type = b.tran_type AND c.tran_row_id = b.tran_row_id) "
+                    "END IS NOT NULL "
             "), 0)"
         )
     })
 virt.append ({
     'col_name'   : 'due_supp',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Amount due - supp curr',
     'long_descr' : 'Amount due after discount - supplier currency - at specified date',
     'col_head'   : 'Due supp',
@@ -430,46 +490,47 @@ virt.append ({
     'scale_ptr'  : 'supp_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'sql'        : (
-        """
-        a.amount_supp
-
-        - COALESCE((SELECT
-
-                COALESCE(alloc.tot_alloc, 0)
-                +
-                CASE
-                    WHEN a.discount_date IS NULL THEN 0
-                    WHEN '2018-03-02' > a.discount_date THEN 0
-                    ELSE a.discount_supp - COALESCE(alloc.disc_alloc, 0)
-                END
-        FROM
-            (SELECT c.item_row_id,
-                SUM(c.alloc_supp + c.discount_supp) AS tot_alloc,
-                SUM(c.discount_supp) AS disc_alloc
-            FROM ap_allocations c
-            WHERE c.item_row_id = a.row_id
-            GROUP BY c.item_row_id
-            ) AS alloc
-        ), 0)
-        """
-
-        # "a.amount_supp "
-        # "- "
-        # "COALESCE(("
-        #     "SELECT SUM(b.alloc_supp + b.discount_supp) "
-        #     "FROM {company}.ap_allocations b "
-        #     "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-        #     "), 0) "
-        # "- "
-        # "CASE "
-        #     "WHEN a.discount_date IS NULL THEN 0 "
-        #     "WHEN {_ctx.as_at_date} > a.discount_date THEN 0 "
-        #     "ELSE a.discount_supp - COALESCE(("
-        #         "SELECT SUM(b.discount_supp) "
-        #         "FROM {company}.ap_allocations b "
-        #         "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
-        #         "), 0) "
-        #     "END"
+        "a.amount_supp "
+        "- "
+        "COALESCE(("
+            "SELECT SUM(b.alloc_supp + b.discount_supp) "
+            "FROM {company}.ap_allocations b "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
+                "CASE "
+                    "WHEN b.tran_type = 'ap_alloc' THEN "
+                        "(SELECT row_id FROM {company}.ap_allocations c "
+                            "WHERE c.tran_type = b.tran_type AND "
+                                "c.tran_row_id = b.tran_row_id AND "
+                                "c.item_row_id = "
+                                    "(SELECT d.item_row_id FROM {company}.ap_tran_alloc d "
+                                    "WHERE d.row_id = b.tran_row_id)) "
+                    "ELSE "
+                        "(SELECT row_id FROM {company}.ap_openitems c "
+                            "WHERE c.tran_type = b.tran_type AND c.tran_row_id = b.tran_row_id) "
+                "END IS NOT NULL "
+            "), 0) "
+        "- "
+        "CASE "
+            "WHEN a.discount_date IS NULL THEN 0 "
+            "WHEN a.discount_date < {_ctx.as_at_date} THEN 0 "
+            "ELSE a.discount_supp - COALESCE(("
+                "SELECT SUM(b.discount_supp) "
+                "FROM {company}.ap_allocations b "
+                "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
+                    "CASE "
+                        "WHEN b.tran_type = 'ap_alloc' THEN "
+                            "(SELECT row_id FROM {company}.ap_allocations c "
+                                "WHERE c.tran_type = b.tran_type AND "
+                                    "c.tran_row_id = b.tran_row_id AND "
+                                    "c.item_row_id = "
+                                        "(SELECT d.item_row_id FROM {company}.ap_tran_alloc d "
+                                        "WHERE d.row_id = b.tran_row_id)) "
+                        "ELSE "
+                            "(SELECT row_id FROM {company}.ap_openitems c "
+                                "WHERE c.tran_type = b.tran_type AND c.tran_row_id = b.tran_row_id) "
+                    "END IS NOT NULL "
+                "), 0) "
+            "END"
         ),
     })
 

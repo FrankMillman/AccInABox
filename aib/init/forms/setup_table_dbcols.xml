@@ -32,8 +32,10 @@
         <toolbar template="Grid_Setup"/>
         <cur_columns>
           <cur_col col_name="col_name" lng="120"/>
-          <cur_col col_name="short_descr" lng="200" expand="true"/>
-          <cur_col col_name="key_field" lng="40"/>
+          <cur_col col_name="short_descr" lng="185" expand="true"/>
+          <cur_col col_name="key_field" lng="35" readonly="true"/>
+          <cur_col col_name="data_type" lng="150" readonly="true"/>
+          <cur_col col_name="data_source" lng="240" readonly="true"/>
         </cur_columns>
         <cur_filter>
           <cur_fil test="WHERE" lbr="" col_name="col_type" op="=" expr="'sys'" rbr=""/>
@@ -49,7 +51,9 @@
         <toolbar template="Grid_Setup"/>
         <cur_columns>
           <cur_col col_name="col_name" lng="120"/>
-          <cur_col col_name="short_descr" lng="200" expand="true"/>
+          <cur_col col_name="short_descr" lng="185" expand="true"/>
+          <cur_col col_name="data_type" lng="150" readonly="true"/>
+          <cur_col col_name="data_source" lng="240" readonly="true"/>
         </cur_columns>
         <cur_filter>
           <cur_fil test="WHERE" lbr="" col_name="col_type" op="=" expr="'user'" rbr=""/>
@@ -65,7 +69,8 @@
         <toolbar template="Grid_Setup"/>
         <cur_columns>
           <cur_col col_name="col_name" lng="120"/>
-          <cur_col col_name="short_descr" lng="200" expand="true"/>
+          <cur_col col_name="short_descr" lng="185" expand="true"/>
+          <cur_col col_name="data_type" lng="240" readonly="true"/>
         </cur_columns>
         <cur_filter>
           <cur_fil test="WHERE" lbr="" col_name="col_type" op="=" expr="'virt'" rbr=""/>

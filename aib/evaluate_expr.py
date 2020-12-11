@@ -81,16 +81,25 @@ async def eval_infix(elem, db_obj, fld, value):
 async def eval_elem(elem, db_obj, fld=None, value=None):
     if elem == '':
         return None
-    if elem == '$value':
-        return value
-    if elem == '$None':
-        return None
-    if elem == '$True':
-        return True
-    if elem == '$False':
-        return False
-    if elem == '$in_db_post':
-        return db_obj.context.in_db_post
+    if elem.startswith('$'):
+        if elem == '$value':
+            return value
+        if elem == '$None':
+            return None
+        if elem == '$True':
+            return True
+        if elem == '$False':
+            return False
+        if elem == '$exists':
+            return db_obj.exists
+        if elem == '$orig':
+            return await fld.get_orig()
+        if elem == '$prev':
+            return await fld.get_prev()
+        if elem == '$in_db_post':
+            return db_obj.context.in_db_post
+        if elem.startswith('$module_row_id'):
+            return db_obj.db_table.module_row_id
     if elem == '[]':
         return []
     if elem.startswith("'"):
@@ -101,17 +110,10 @@ async def eval_elem(elem, db_obj, fld=None, value=None):
         return D(elem)
     if elem.startswith('('):
         return await eval_infix(elem[1:-1], db_obj, fld, value)
-    if elem == '$orig':
-        return await fld.get_orig()
-    if elem == '$prev':
-        return await fld.get_prev()
-    if '$exists' in elem:
+    if '$exists' in elem:  # e.g. db_table$exists in form setup_table
         obj_name = elem.split('$')[0]
-        if obj_name:
-            test_obj = db_obj.context.data_objects[obj_name]
-        else:
-            test_obj = db_obj
-        return test_obj.exists
+        tgt_obj = db_obj.context.data_objects[obj_name]
+        return tgt_obj.exists
     if elem.endswith('$orig'):
         return await db_obj.get_orig(elem[1:-5])
     if elem.startswith('recalc('):

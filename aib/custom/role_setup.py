@@ -37,7 +37,7 @@ async def before_start_form(caller, xml):
         await mod_ledg.save()
         try:  # not all modules use sub-ledgers
             ledger = await db.objects.get_db_object(caller.context,
-                f'{await module.getval('module_id')}_ledger_params')
+                f"{await module.getval('module_id')}_ledger_params")
             all_ledg = ledger.select_many(where=[], order=[])
             async for _ in all_ledg:
                 await mod_ledg.init(init_vals={

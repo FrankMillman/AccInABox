@@ -143,8 +143,10 @@
     </mem_obj>
 
   </mem_objects>
+
   <input_params/>
   <output_params/>
+
   <frame main_object="db_table">
     <toolbar/>
     <body>
@@ -421,9 +423,6 @@
             <<case>>
               <<obj_exists obj_name=`db_table`>>
                 <<pyfunc name=`custom.table_setup.chk_table_created`/>>
-                <<!--change_button>>
-                  <<btn_dflt btn_id=`btn_rgt`/>>
-                <</change_button-->>
                 <<change_button>>
                   <<btn_show btn_id=`pre_save` state=`false`/>>
                 <</change_button>>

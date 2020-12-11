@@ -372,6 +372,9 @@ def convert_string(self, string, db_scale=None, text_key=False):
         # DATETIME2 is accurate to 100ns, so compatible with datetime.datetime type
         .replace('DTM', 'DATETIME2')
         .replace('DEC', f'DEC (21,{db_scale})')
+        .replace('$TRN', f'DEC (21,{db_scale})')
+        .replace('$PTY', f'DEC (21,{db_scale})')
+        .replace('$LCL', f'DEC (21,{db_scale})')
         .replace('AUTO', 'INT IDENTITY PRIMARY KEY NONCLUSTERED')
         .replace('AUT0', 'INT IDENTITY(0,1) PRIMARY KEY NONCLUSTERED')
         .replace('BOOL', 'BIT')
@@ -389,6 +392,8 @@ def convert_dflt(self, string, data_type):
     elif data_type == 'INT':
         return string
     elif data_type == 'DEC':
+        return string
+    elif data_type.startswith('$'):
         return string
     elif data_type == 'BOOL':
         if string.lower() == 'true':

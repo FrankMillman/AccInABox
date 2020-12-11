@@ -29,7 +29,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -48,7 +49,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -67,7 +69,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -86,7 +89,8 @@ cols.append ({
     'long_descr' : 'Customer row id',
     'col_head'   : 'Customer',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -108,7 +112,8 @@ cols.append ({
     'long_descr' : 'Invoice number',
     'col_head'   : 'Inv no',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_ledger.auto_inv_no', 'is not', '$None', '']],
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.auto_inv_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -153,7 +158,8 @@ cols.append ({
     'long_descr' : 'Transaction date',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -179,7 +185,8 @@ cols.append ({
     'long_descr' : 'Line of text to appear on reports',
     'col_head'   : 'Text',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -200,7 +207,8 @@ cols.append ({
     'long_descr' : 'Currency used to enter transaction',
     'col_head'   : 'Currency',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -219,7 +227,8 @@ cols.append ({
     'long_descr' : 'Exchange rate from customer currency to local',
     'col_head'   : 'Rate cust',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -250,7 +259,8 @@ cols.append ({
     'long_descr' : 'Exchange rate from transaction currency to local',
     'col_head'   : 'Rate tran',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -284,7 +294,8 @@ cols.append ({
     'long_descr' : 'Tax inclusive?',
     'col_head'   : 'Tax incl?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -303,7 +314,8 @@ cols.append ({
     'long_descr' : 'Terms code',
     'col_head'   : 'Terms code',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
@@ -322,7 +334,8 @@ cols.append ({
     'long_descr' : 'Salesman',
     'col_head'   : 'Salesman',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
@@ -341,7 +354,8 @@ cols.append ({
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -355,12 +369,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'inv_net_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Invoice net amount',
     'long_descr' : 'Invoice net amount in invoice currency - updated from ar_tran_inv_det',
     'col_head'   : 'Inv net amt',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'aggr',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -374,12 +389,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'inv_tax_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Invoice tax amount',
     'long_descr' : 'Invoice tax amount in invoice currency - updated from ar_tran_inv_det',
     'col_head'   : 'Inv tax amt',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'aggr',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -392,51 +408,14 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'inv_net_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Invoice net cust',
-    'long_descr' : 'Invoice net amount in customer currency - updated from ar_tran_inv_det',
-    'col_head'   : 'Inv net cust',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'inv_tax_cust',
-    'data_type'  : 'DEC',
-    'short_descr': 'Invoice tax cust',
-    'long_descr' : 'Invoice tax amount in customer currency - updated from ar_tran_inv_det',
-    'col_head'   : 'Inv tax cust',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'inv_net_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Invoice net local',
     'long_descr' : 'Invoice net amount in local currency - updated from ar_tran_inv_det',
     'col_head'   : 'Inv net local',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'aggr',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -450,12 +429,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'inv_tax_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Invoice tax local',
     'long_descr' : 'Invoice tax amount in local currency - updated from ar_tran_inv_det',
     'col_head'   : 'Inv tax local',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'aggr',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -493,9 +473,9 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'inv_tot_amt',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Total amount',
-    'long_descr' : 'Invoice total amount in invoice currency',
+    'long_descr' : 'Invoice total amount in transaction currency',
     'col_head'   : 'Tot amt',
     'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
@@ -510,8 +490,52 @@ virt.append ({
     'sql'        : "a.inv_net_amt + a.inv_tax_amt"
     })
 virt.append ({
+    'col_name'   : 'inv_net_cust',
+    'data_type'  : '$PTY',
+    'short_descr': 'Net amount',
+    'long_descr' : 'Net amount in customer currency',
+    'col_head'   : 'Net amt',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="inv_net_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="cust_exch_rate"/>'
+        '</expr>'
+        ),
+    'sql'        : (
+        "a.inv_net_amt / a.tran_exch_rate * a.cust_exch_rate"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'inv_tax_cust',
+    'data_type'  : '$PTY',
+    'short_descr': 'Tax amount',
+    'long_descr' : 'Tax amount in customer currency',
+    'col_head'   : 'Tax amt',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="inv_tax_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="cust_exch_rate"/>'
+        '</expr>'
+        ),
+    'sql'        : (
+        "a.inv_tax_amt / a.tran_exch_rate * a.cust_exch_rate"
+        ),
+    })
+virt.append ({
     'col_name'   : 'inv_tot_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Total amount',
     'long_descr' : 'Total amount in customer currency',
     'col_head'   : 'Tot amt',
@@ -529,7 +553,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'inv_tot_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Total amount local',
     'long_descr' : 'Total amount in customer currency',
     'col_head'   : 'Tot amt',

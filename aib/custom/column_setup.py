@@ -28,102 +28,146 @@ async def on_start_frame(caller, xml):
         init_vals['descr'] = await db_tbl.getval('short_descr')
         init_vals['col_type'] = caller.context.formview_param
 
+    init_vals['full_col_name'] = f"{init_vals['table_name']}.{await db_cols.getval('col_name')}"
+
+    # allow_amend = await db_cols.getval('allow_amend')
+    # if allow_amend is None:
+    #     init_vals['allow_amend'] = 'false'
+    # elif allow_amend is False:
+    #     init_vals['allow_amend'] = 'false'
+    # elif allow_amend is True:
+    #     init_vals['allow_amend'] = 'true'
+    # else:
+    #     init_vals['allow_amend'] = 'cond'
+    #     amend = caller.data_objects['amend']
+    #     await amend.delete_all()
+    #     for sub_seq, (test, lbr, src, chk, tgt, rbr) in enumerate(allow_amend):
+    #         await amend.init(display=False, init_vals={
+    #             'seq': sub_seq, 'test': test, 'lbr': lbr,
+    #             'src': src, 'chk': chk, 'tgt': tgt, 'rbr': rbr})
+    #         await amend.save()
+
+    await var.init(init_vals=init_vals)
+
+async def load_tristates(caller, xml):
+    db_cols = caller.data_objects['db_cols']
+    var = caller.data_objects['var']
     allow_amend = await db_cols.getval('allow_amend')
     if allow_amend is None:
-        init_vals['allow_amend'] = 'false'
+        var_allow_amend = 'false'
     elif allow_amend is False:
-        init_vals['allow_amend'] = 'false'
+        var_allow_amend = 'false'
     elif allow_amend is True:
-        init_vals['allow_amend'] = 'true'
+        var_allow_amend = 'true'
     else:
-        init_vals['allow_amend'] = 'cond'
+        var_allow_amend = 'cond'
         amend = caller.data_objects['amend']
-        # param, test, value = allow_amend
-        # amend_init_vals = {}
-        # amend_init_vals['param'] = param
-        # amend_init_vals['test'] = test
-        # amend_init_vals['value'] = str(value)  # False/True/None
-        # await amend.init(init_vals=amend_init_vals)
         await amend.delete_all()
         for sub_seq, (test, lbr, src, chk, tgt, rbr) in enumerate(allow_amend):
             await amend.init(display=False, init_vals={
                 'seq': sub_seq, 'test': test, 'lbr': lbr,
                 'src': src, 'chk': chk, 'tgt': tgt, 'rbr': rbr})
             await amend.save()
+    await var.setval('allow_amend', var_allow_amend)
 
-    calculated = await db_cols.getval('calculated')
-    if calculated is None:
-        init_vals['calculated'] = 'false'
-    elif calculated is False:
-        init_vals['calculated'] = 'false'
-    elif calculated is True:
-        init_vals['calculated'] = 'true'
-    else:
-        init_vals['calculated'] = 'cond'
-        calc = caller.data_objects['calc']
-        # param, test, value = calculated
-        # calc_init_vals = {}
-        # param_type, param_name = param.split('.')
-        # calc_init_vals['type'] = param_type
-        # calc_init_vals['name'] = param_name
-        # calc_init_vals['test'] = test
-        # calc_init_vals['value'] = str(value)  # False/True/None
-        # await calc.init(init_vals=calc_init_vals)
-        await calc.delete_all()
-        for sub_seq, (test, lbr, src, chk, tgt, rbr) in enumerate(calculated):
-            await calc.init(display=False, init_vals={
-                'seq': sub_seq, 'test': test, 'lbr': lbr,
-                'src': src, 'chk': chk, 'tgt': tgt, 'rbr': rbr})
-            await calc.save()
-
-    await var.init(init_vals=init_vals)
 
 async def dump_tristates(caller, xml):
     # called from dbcols_setup before_save
     db_cols = caller.data_objects['db_cols']
     var = caller.data_objects['var']
 
-    if await var.getval('allow_amend') == 'false':
+    var_allow_amend = var.getval('allow_amend')
+    if await var_allow_amend == 'false':
         allow_amend = False
-    elif await var.getval('allow_amend') == 'true':
+    elif await var_allow_amend == 'true':
         allow_amend = True
     else:
         amend = caller.data_objects['amend']
-        # if await amend.getval('param') is None:
-        #     raise AibError(head='Allow amend', body='Parameters required')
-        # allow_amend = [
-        #     await amend.getval('param'), await amend.getval('test'),
-        #     {'False': False, 'True': True, 'None': None}[await amend.getval('value')]
-        #     ]
         allow_amend = []
         all_amend = amend.select_many(where=[], order=[('seq', False)])
         async for _ in all_amend:
             allow_amend.append(
-                [await amend.getval(col) for col in ('test', 'lbr', 'src', 'chk', 'tgt', 'rbr')]
+                [(await amend.getval(col) or '') for col in ('test', 'lbr', 'src', 'chk', 'tgt', 'rbr')]
                 )
         if not allow_amend:
             raise AibError(head='Allow amend', body='Parameters required')
     await db_cols.setval('allow_amend', allow_amend)
 
-    if await var.getval('calculated') == 'false':
-        calculated = False
-    elif await var.getval('calculated') == 'true':
-        calculated = True
+async def load_condition(caller, xml):
+    # called before dbcols_setup inline_form 'cond'
+    db_cols = caller.data_objects['db_cols']
+    condition = await db_cols.getval('condition')
+    cond = caller.data_objects['cond']
+    await cond.delete_all()
+    if condition is not None:
+        for sub_seq, (test, lbr, src, chk, tgt, rbr) in enumerate(condition):
+            await cond.init(display=False, init_vals={
+                'seq': sub_seq, 'test': test, 'lbr': lbr,
+                'src': src, 'chk': chk, 'tgt': tgt, 'rbr': rbr})
+            await cond.save()
+
+async def dump_condition(caller, xml):
+    # called after dbcols_setup inline_form 'cond'
+    cond_rows = []
+    cond = caller.data_objects['cond']
+    all_cond = cond.select_many(where=[], order=[('seq', False)])
+    async for _ in all_cond:
+        cond_rows.append(
+            [(await cond.getval(col) or '') for col in ('test', 'lbr', 'src', 'chk', 'tgt', 'rbr')]
+            )
+    db_cols = caller.data_objects['db_cols']
+    await db_cols.setval('condition', cond_rows or None)
+
+async def load_fkey(caller, xml):
+    # called before dbcols_setup inline_form 'fkey'
+    db_cols = caller.data_objects['db_cols']
+    fkey_flds = caller.data_objects['fkey_flds']
+    fkey = await db_cols.getval('fkey')
+    if fkey is None:
+        await fkey_flds.init()
     else:
-        calc = caller.data_objects['calc']
-        # if await calc.getval('name') is None:
-        #     raise AibError(head='Calculated', body='Parameters required')
-        # calculated = [
-        #     f'{await calc.getval("type")}.{await calc.getval("name")}',
-        #     await calc.getval('test'),
-        #     {'False': False, 'True': True, 'None': None}[await calc.getval('value')]
-        #     ]
-        calculated = []
-        all_calc = calc.select_many(where=[], order=[('seq', False)])
-        async for _ in all_calc:
-            calculated.append(
-                [await calc.getval(col) for col in ('test', 'lbr', 'src', 'chk', 'tgt', 'rbr')]
-                )
-        if not calculated:
-            raise AibError(head='Allow amend', body='Parameters required')
-    await db_cols.setval('calculated', calculated)
+        await fkey_flds.init(init_vals = {
+            'tgt_table': fkey[0],
+            'tgt_col': fkey[1],
+            'alt_src': fkey[2],
+            'alt_tgt': fkey[3],
+            'child': fkey[4],
+            'cursor': fkey[5],
+            })
+
+async def dump_fkey(caller, xml):
+    # called after dbcols_setup inline_form 'fkey'
+    fkey_flds = caller.data_objects['fkey_flds']
+    fkey = [
+        await fkey_flds.getval('tgt_table'),
+        await fkey_flds.getval('tgt_col'),
+        await fkey_flds.getval('alt_src'),
+        await fkey_flds.getval('alt_tgt'),
+        await fkey_flds.getval('child'),
+        await fkey_flds.getval('cursor'),
+        ]
+    if fkey[0] is None:
+        fkey = None
+    db_cols = caller.data_objects['db_cols']
+    await db_cols.setval('fkey', fkey)
+
+async def load_choices(caller, xml):
+    # called before dbcols_setup inline_form 'choices'
+    db_cols = caller.data_objects['db_cols']
+    choice_data = await db_cols.getval('choices') or ()
+    choices = caller.data_objects['choices']
+    await choices.delete_all()
+    for seq, (code, descr) in enumerate(choice_data):
+        await choices.init(init_vals={
+            'code': code, 'descr': descr, 'seq': seq})
+        await choices.save()
+
+async def dump_choices(caller, xml):
+    # called after dbcols_setup inline_form 'choices'
+    choice_rows = []
+    choices = caller.data_objects['choices']
+    all_choices = choices.select_many(where=[], order=[('seq', False)])
+    async for _ in all_choices:
+        choice_rows.append([await choices.getval('code'), await choices.getval('descr')])
+    db_cols = caller.data_objects['db_cols']
+    await db_cols.setval('choices', choice_rows or None)

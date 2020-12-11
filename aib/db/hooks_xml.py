@@ -123,12 +123,13 @@ async def get_val(db_obj, value):
         return value[1:-1]
     if value == '$True':
         return True
-    if value == '$False':
-        return False
-    if value == '$None':
-        return None
-    if value == '$exists':
-        return db_obj.exists
+    if value.startswith("$"):
+        if value == '$False':
+            return False
+        if value == '$None':
+            return None
+        if value == '$exists':
+            return db_obj.exists
     if value.isdigit():
         return int(value)
     if value.startswith('-') and value[1:].isdigit():

@@ -145,11 +145,9 @@ async def get_val(caller, value):
     if '.' in value:
         obj_name, col_name = value.split('.')
         if obj_name == '_ctx':
-            if col_name == 'ledger_row_id':
-                return getattr(caller.report.context, 'mod_ledg_id')[1]
-            elif col_name == 'current_period':
-                ledger_periods = await db.cache.get_ledger_periods(
-                    caller.company, *caller.report.context.mod_ledg_id)
+            if col_name == 'current_period':
+                ledger_periods = await db.cache.get_ledger_periods(caller.company,
+                    caller.report.context.module_row_id, caller.report.context.ledger_row_id)
                 return ledger_periods.current_period
             else:
                 return getattr(caller.report.context, col_name)
@@ -157,9 +155,8 @@ async def get_val(caller, value):
             if obj_name == '_param':
                 db_obj = await db.cache.get_adm_params(caller.company)
             elif obj_name == '_ledger':
-                module_row_id, ledger_row_id = caller.report.context.mod_ledg_id
-                db_obj = await db.cache.get_ledger_params(
-                    caller.company, module_row_id, ledger_row_id)
+                db_obj = await db.cache.get_ledger_params(caller.company,
+                    caller.report.context.module_row_id, caller.report.context.ledger_row_id)
             else:
                 db_obj = caller.report.data_objects[obj_name]
             return await db_obj.getval(col_name)

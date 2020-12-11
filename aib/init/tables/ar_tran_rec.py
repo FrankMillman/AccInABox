@@ -26,7 +26,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -45,7 +46,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -64,7 +66,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -83,7 +86,8 @@ cols.append ({
     'long_descr' : 'Customer row id. In theory, should check if statement period still open. Leave for now.',
     'col_head'   : 'Customer',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -105,7 +109,8 @@ cols.append ({
     'long_descr' : 'Receipt number',
     'col_head'   : 'Rec no',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_ledger.auto_rec_no', 'is not', '$None', '']],
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.auto_rec_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -150,7 +155,8 @@ cols.append ({
     'long_descr' : 'Transaction date',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -161,6 +167,9 @@ cols.append ({
     'col_checks' : [
         ['per_date', 'Period not open', [
             ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+            ]],
+        ['stat_date', 'Statement period not open', [
+            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
             ]],
         ],
     'fkey'       : None,
@@ -173,7 +182,8 @@ cols.append ({
     'long_descr' : 'Line of text to appear on reports',
     'col_head'   : 'Text',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -192,7 +202,8 @@ cols.append ({
     'long_descr' : 'Currency used to enter transaction',
     'col_head'   : 'Currency',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -200,13 +211,40 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '{cust_row_id>currency_id}',
     'dflt_rule'  : None,
-    'col_checks' : [
-        ['alt_curr', 'Alternate currency not allowed', [
-            ['check', '', '$value', '=', 'cust_row_id>currency_id', ''],
-            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
-            ]],
-        ],
+    'col_checks' : None,
     'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'cust_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Cust exchange rate',
+    'long_descr' : 'Exchange rate from customer currency to local',
+    'col_head'   : 'Rate cust',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 8,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<compare test="[[`if`, ``, `cust_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+                '<literal value="1"/>'
+            '</compare>'
+            '<default>'
+                '<exch_rate>'
+                    '<fld_val name="cust_row_id>currency_id"/>'
+                    '<fld_val name="tran_date"/>'
+                '</exch_rate>'
+            '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
@@ -216,7 +254,8 @@ cols.append ({
     'long_descr' : 'Exchange rate from transaction currency to local',
     'col_head'   : 'Rate tran',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -227,6 +266,9 @@ cols.append ({
         '<case>'
             '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
+            '</compare>'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `cust_row_id>currency_id`, ``]]">'
+                '<fld_val name="cust_exch_rate"/>'
             '</compare>'
             '<default>'
                 '<exch_rate>'
@@ -242,12 +284,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount',
-    'data_type'  : 'DEC',
+    'data_type'  : '$TRN',
     'short_descr': 'Receipt amount',
     'long_descr' : 'Receipt amount in transaction currency',
     'col_head'   : 'Rec amt',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -259,25 +302,26 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'amount_local',
-    'data_type'  : 'DEC',
-    'short_descr': 'Receipt local',
-    'long_descr' : 'Receipt amount in local currency - updated when ar_tran_rec_det saved',
-    'col_head'   : 'Rec net local',
-    'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
+# cols.append ({
+#     'col_name'   : 'amount_local',
+#     'data_type'  : '$LCL',
+#     'short_descr': 'Receipt local',
+#     'long_descr' : 'Receipt amount in local currency - updated when ar_tran_rec_det saved',
+#     'col_head'   : 'Rec net local',
+#     'key_field'  : 'N',
+#     'data_source': 'aggr',
+#     'condition'  : None,
+#     'allow_null' : False,
+#     'allow_amend': False,
+#     'max_len'    : 0,
+#     'db_scale'   : 2,
+#     'scale_ptr'  : '_param.local_curr_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : None,
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
 cols.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
@@ -285,7 +329,8 @@ cols.append ({
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -323,7 +368,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'unallocated',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Unallocated',
     'long_descr' : 'Balance of receipt not allocated',
     'col_head'   : 'Unalloc',

@@ -109,7 +109,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_supp',
-    'source'     : ['inv_tot_supp', 'crn_trans_supp', 'pmt_trans_supp'],
+    'source'     : ['inv_tot_supp', 'crn_view_supp', 'pmt_view_supp'],
     'data_type'  : 'DEC',
     'short_descr': 'Transaction amount - supp',
     'long_descr' : 'Transaction amount - supp',
@@ -122,7 +122,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'source'     : ['inv_tot_local', 'crn_trans_local', 'pmt_trans_local'],
+    'source'     : ['inv_tot_local', 'crn_view_local', 'pmt_view_local'],
     'data_type'  : 'DEC',
     'short_descr': 'Transaction amount - local',
     'long_descr' : 'Transaction amount - local',

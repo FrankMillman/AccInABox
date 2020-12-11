@@ -9,25 +9,25 @@ table = {
         ['line_type', 'display_descr', [
             ['isls', 'Sale of inventory item', 'sls_isls_subtran',
                 [  # return values
-                    ['rec_cb', 'tot_amt'],  # tgt_col, src_col
+                    ['rec_tran', 'tot_amt'],  # tgt_col, src_col
                     ],
                 ['wh_prod_row_id>prod_row_id>prod_code'],  # display descr
                 ],
             ['nsls', 'Sale of non-inventory item', 'sls_nsls_subtran',
                 [  # return values
-                    ['rec_cb', 'tot_amt'],  # tgt_col, src_col
+                    ['rec_tran', 'tot_amt'],  # tgt_col, src_col
                     ],
                 ['nsls_code_id>descr'],  # display descr
                 ],
             ['arec', 'Ar receipt', 'ar_subtran_rec',
                 [  # return values
-                    ['rec_cb', 'arec_amount'],  # tgt_col, src_col
+                    ['rec_tran', 'arec_amount'],  # tgt_col, src_col
                     ],
                 ['cust_id'],  # display descr
                 ],
             ['gl', 'Post to g/l', 'gl_jnl_subtran',
                 [  # return values
-                    ['rec_cb', 'gl_amount'],  # tgt_col, src_col
+                    ['rec_tran', 'gl_amount'],  # tgt_col, src_col
                     ],
                 ['gl_code'],  # display descr
                 ],
@@ -56,7 +56,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -75,7 +76,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -94,7 +96,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -113,7 +116,8 @@ cols.append ({
     'long_descr' : 'Transaction row id',
     'col_head'   : 'Tran id',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'par_id',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -132,7 +136,8 @@ cols.append ({
     'long_descr' : 'Line number',
     'col_head'   : 'Seq',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'seq',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -151,7 +156,8 @@ cols.append ({
     'long_descr' : 'Line type',
     'col_head'   : 'Line type',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -164,18 +170,19 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'rec_cb',
-    'data_type'  : 'DEC',
-    'short_descr': 'Rec amount in cb currency',
+    'col_name'   : 'rec_tran',
+    'data_type'  : '$TRN',
+    'short_descr': 'Rec amount in tran currency',
     'long_descr' : 'Receipt amount - updated when subtran is saved',
     'col_head'   : 'Rec amt',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'ret_sub',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>ledger_row_id>currency_id>scale',
+    'scale_ptr'  : 'tran_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -270,31 +277,11 @@ virt.append ({
     'sql'        : 'a.tran_row_id>ledger_row_id>currency_id',
     })
 virt.append ({
-    'col_name'   : 'party_currency_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Party id',
-    'long_descr' : 'Party id',
-    'col_head'   : 'Party id',
-    'dflt_val'   : '{tran_row_id>ledger_row_id>currency_id}',
-    'sql'        : 'a.tran_row_id>ledger_row_id>currency_id',
-    })
-virt.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
     'short_descr': 'Transaction exchange rate',
     'long_descr' : 'Transacction exchange rate',
     'col_head'   : 'Tran exch rate',
-    'db_scale'   : 8,
-    'fkey'       : None,
-    'dflt_val'   : '{tran_row_id>tran_exch_rate}',
-    'sql'        : 'a.tran_row_id>tran_exch_rate',
-    })
-virt.append ({
-    'col_name'   : 'party_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Party exchange rate',
-    'long_descr' : 'Party exchange rate',
-    'col_head'   : 'Party exch rate',
     'db_scale'   : 8,
     'fkey'       : None,
     'dflt_val'   : '{tran_row_id>tran_exch_rate}',
@@ -336,7 +323,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'rec_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Rec amt local',
     'long_descr' : 'Receipt amount in local currency',
     'col_head'   : 'Rec local',
@@ -345,12 +332,12 @@ virt.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
-          '<fld_val name="rec_cb"/>'
+          '<fld_val name="rec_tran"/>'
           '<op type="/"/>'
           '<fld_val name="tran_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
-    'sql'        : "a.rec_cb / a.tran_row_id>tran_exch_rate",
+    'sql'        : "a.rec_tran / a.tran_row_id>tran_exch_rate",
     })
 
 # cursor definitions
@@ -366,7 +353,7 @@ actions.append([
             False,  # split source?
             [],  # key fields
             [  # aggregation
-                ['amount_cb', '+', 'rec_cb'],  # tgt_col, op, src_col
+                ['amount_tran', '+', 'rec_tran'],  # tgt_col, op, src_col
                 ['amount_local', '+', 'rec_local'],
                 ],
             [],  # on insert

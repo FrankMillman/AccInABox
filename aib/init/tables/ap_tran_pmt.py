@@ -19,6 +19,8 @@ table = {
     'read_only'     : False,
     }
 
+# add column to move state from 'provisional' to 'authorised'? 'paid' is indicated by 'posted'
+
 # column definitions
 cols = []
 cols.append ({
@@ -28,7 +30,8 @@ cols.append ({
     'long_descr' : 'Row id',
     'col_head'   : 'Row',
     'key_field'  : 'Y',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -47,7 +50,8 @@ cols.append ({
     'long_descr' : 'Created row id',
     'col_head'   : 'Created',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -66,7 +70,8 @@ cols.append ({
     'long_descr' : 'Deleted row id',
     'col_head'   : 'Deleted',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'gen',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -85,7 +90,8 @@ cols.append ({
     'long_descr' : 'Supplier row id',
     'col_head'   : 'Supplier',
     'key_field'  : 'A',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -107,14 +113,19 @@ cols.append ({
     'long_descr' : 'Payment number',
     'col_head'   : 'Pmt no',
     'key_field'  : 'A',
-    'calculated' : [['where', '', '_ledger.auto_pmt_no', 'is not', '$None', '']],
-    'allow_null' : False,
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.auto_pmt_no', 'is not', '$None', '']],
+    'allow_null' : True,
     'allow_amend': False,
     'max_len'    : 15,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : (
+        # if no 'rules', use manual input, else
+        #   on insert, use temp
+        #   on post, if posted from cb, use tran_number / line_number
+        #           else use auto_pmt_no
         '<case>'
           '<on_insert>'
             '<case>'
@@ -139,9 +150,11 @@ cols.append ({
     'long_descr' : 'Transaction date',
     'col_head'   : 'Date',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
-    'allow_amend': False,
+    # 'allow_amend': False,
+    'allow_amend': [['where', '', 'posted', 'is', '$False', '']],
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
@@ -162,7 +175,8 @@ cols.append ({
     'long_descr' : 'Line of text to appear on reports',
     'col_head'   : 'Text',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -181,7 +195,8 @@ cols.append ({
     'long_descr' : 'Currency used to enter transaction',
     'col_head'   : 'Currency',
     'key_field'  : 'N',
-    'calculated' : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -189,7 +204,12 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '{supp_row_id>currency_id}',
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        ['alt_curr', 'Alternate currency not allowed', [
+            ['check', '', '$value', '=', 'supp_row_id>currency_id', ''],
+            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+            ]],
+        ],
     'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
     'choices'    : None,
     })
@@ -200,7 +220,8 @@ cols.append ({
     'long_descr' : 'Exchange rate from supplier currency to local',
     'col_head'   : 'Rate supp',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -231,7 +252,8 @@ cols.append ({
     'long_descr' : 'Exchange rate from transaction currency to local',
     'col_head'   : 'Rate tran',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -260,13 +282,14 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'pmt_amt',
-    'data_type'  : 'DEC',
-    'short_descr': 'Payment net amount',
-    'long_descr' : 'Payment net amount in payment currency',
-    'col_head'   : 'Pmt net amt',
+    'data_type'  : '$TRN',
+    'short_descr': 'Payment amount',
+    'long_descr' : 'Payment amount in transaction currency - updated from ap_allocations',
+    'col_head'   : 'Pmt amt',
     'key_field'  : 'N',
-    'calculated' : False,
-    'allow_null' : True,
+    'data_source': 'aggr',
+    'condition'  : None,
+    'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
@@ -279,12 +302,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'pmt_supp',
-    'data_type'  : 'DEC',
-    'short_descr': 'Payment net supp',
-    'long_descr' : 'Payment net amount in supplier currency',
-    'col_head'   : 'Pmt net supp',
+    'data_type'  : '$PTY',
+    'short_descr': 'Payment supp',
+    'long_descr' : 'Payment amount in supplier currency',
+    'col_head'   : 'Pmt supp',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -306,12 +330,13 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'pmt_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Payment net local',
     'long_descr' : 'Payment net amount in local currency',
     'col_head'   : 'Pmt net local',
     'key_field'  : 'N',
-    'calculated' : True,
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -336,7 +361,8 @@ cols.append ({
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'calculated' : False,
+    'data_source': 'prog',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -373,10 +399,10 @@ virt.append ({
         ),
     })
 virt.append ({
-    'col_name'   : 'pmt_trans_supp',
-    'data_type'  : 'DEC',
+    'col_name'   : 'pmt_view_supp',
+    'data_type'  : '$PTY',
     'short_descr': 'Amount for ap_trans - supp',
-    'long_descr' : 'Receipt amount for ar_trans in supplier currency',
+    'long_descr' : 'Receipt amount for ar_trans view in supplier currency',
     'col_head'   : 'Tot amt',
     'db_scale'   : 2,
     'scale_ptr'  : 'supp_row_id>currency_id>scale',
@@ -385,10 +411,10 @@ virt.append ({
     'sql'        : "0 - a.pmt_supp"
     })
 virt.append ({
-    'col_name'   : 'pmt_trans_local',
-    'data_type'  : 'DEC',
+    'col_name'   : 'pmt_view_local',
+    'data_type'  : '$LCL',
     'short_descr': 'Amount for ap_trans - local',
-    'long_descr' : 'Receipt amount for ap_trans in local currency',
+    'long_descr' : 'Receipt amount for ap_trans view in local currency',
     'col_head'   : 'Tot amt',
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -398,7 +424,7 @@ virt.append ({
     })
 # virt.append ({
 #     'col_name'   : 'unallocated',
-#     'data_type'  : 'DEC',
+#     'data_type'  : '$PTY',
 #     'short_descr': 'Unallocated',
 #     'long_descr' : 'Unallocated amount in supplier currency',
 #     'col_head'   : 'Unalloc',

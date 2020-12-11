@@ -128,7 +128,7 @@
           cursor_name="adm_per" readonly="true">
           <toolbar>
             <tool type="img" name="selected" tip="Item selected (Enter)"
-              shortcut="normal,13" action="
+              shortcut="normal,Enter" action="
                 <<row_selected/>>
               "/>
             <tool type="nav"/>

@@ -25,14 +25,19 @@ class delwatcher:
 
 #-----------------------------------------------------------------------------
 
+def get_new_context(user_row_id, sys_admin, company, mem_id=None,
+        module_row_id=None, ledger_row_id=None):
+    return Context(user_row_id, sys_admin, company, mem_id, module_row_id, ledger_row_id)
+
 class Context:
-    def __init__(self, user_row_id, sys_admin, company, mem_id=None, mod_ledg_id=(None, None)):
+    def __init__(self, user_row_id, sys_admin, company, mem_id, module_row_id, ledger_row_id):
         self._flds_to_recalc = DD(list)  # dictionary of fields to recalc if attribute value changes
         self._user_row_id = user_row_id
         self._sys_admin = sys_admin
         self._company = company
         self._mem_id = mem_id
-        self._mod_ledg_id = mod_ledg_id
+        self._module_row_id = module_row_id
+        self._ledger_row_id = ledger_row_id
         self._db_session = db.connection.DbSession(mem_id)
         self._data_objects = {}  # dictionary of shared data objects
         self._mem_tables_open = {}  # dictionary of mem tables opened
@@ -43,13 +48,14 @@ class Context:
 
     def __str__(self):
         descr = ['Context:']
-        descr.append(f"company={vars(self)['_company']};")
-        descr.append(f"user={vars(self)['_user_row_id']};")
-        descr.append(f"sys_admin={vars(self)['_sys_admin']};")
-        descr.append(f"mod_ledg_id={vars(self)['_mod_ledg_id']};")
+        descr.append(f'company={self._company};')
+        descr.append(f'user={self._user_row_id};')
+        descr.append(f'sys_admin={self._sys_admin};')
+        descr.append(f'module_row_id={self._module_row_id};')
+        descr.append(f'ledger_row_id={self._ledger_row_id};')
         for k, v in vars(self).items():
             if not k.startswith('_') and k not in ('in_db_save', 'in_db_post'):
-                descr.append(f"{k}={v!r};")
+                descr.append(f'{k}={v!r};')
         return ' '.join(descr)
 
     def __setattr__(self, name, value):
@@ -83,8 +89,11 @@ class Context:
     def mem_id(self):
         return self._mem_id
     @property
-    def mod_ledg_id(self):
-        return self._mod_ledg_id
+    def module_row_id(self):
+        return self._module_row_id
+    @property
+    def ledger_row_id(self):
+        return self._ledger_row_id
     @property
     def db_session(self):
         return self._db_session
@@ -94,9 +103,6 @@ class Context:
     @property
     def mem_tables_open(self):
         return self._mem_tables_open
-
-def get_new_context(user_row_id, sys_admin, company, mem_id=None, mod_ledg_id=(None, None)):
-    return Context(user_row_id, sys_admin, company, mem_id, mod_ledg_id)
 
 #-----------------------------------------------------------------------------
 
@@ -165,11 +171,10 @@ async def get_mod_id(company, mod_id):
 mod_ledg_ids = {}
 mod_ledg_lock = asyncio.Lock()
 async def get_mod_ledg_id(company, module_id, ledger_id):
-    search_key = (module_id, ledger_id)
     async with mod_ledg_lock:
         if company not in mod_ledg_ids:
             mod_ledg_ids[company] = {}
-        if search_key not in mod_ledg_ids[company]:
+        if (module_id, ledger_id) not in mod_ledg_ids[company]:
             module_row_id = await get_mod_id(company, module_id)
             async with db_session.get_connection() as db_mem_conn:
                 conn = db_mem_conn.db
@@ -177,34 +182,33 @@ async def get_mod_ledg_id(company, module_id, ledger_id):
                     f"SELECT row_id, ledger_id FROM {company}.{module_id}_ledger_params "
                     "WHERE deleted_id = 0"
                     )
-                async for ledger_row_id, ledger_id in await conn.exec_sql(sql):
-                    mod_ledg_ids[company][module_id, ledger_id] = module_row_id, ledger_row_id
+                async for ledger_row_id, ledger_id2 in await conn.exec_sql(sql):
+                    mod_ledg_ids[company][(module_id, ledger_id2)] = module_row_id, ledger_row_id
     try:
-        return mod_ledg_ids[company][search_key]
+        return mod_ledg_ids[company][(module_id, ledger_id)]
     except KeyError:
-        raise AibError(head='Module/ledger_id',
-            body='"{}.{}" not found'.format(*search_key))
+        raise AibError(head='Module/ledger_id', body=f'"{module_id}.{ledger_id}" not found')
 
-# get module id/descr, ledger id/descr from mod_ledg_id
-mod_ledg_names = {}
-mod_name_lock = asyncio.Lock()
-async def get_mod_ledg_name(company, mod_ledg_id):
-    async with mod_name_lock:
-        if company not in mod_ledg_names:
-            mod_ledg_names[company] = {}
-        if mod_ledg_id not in mod_ledg_names[company]:
-            module_row_id, ledger_row_id = mod_ledg_id
-            module_id, module_descr = await get_mod_id(company, module_row_id)
-            async with db_session.get_connection() as db_mem_conn:
-                conn = db_mem_conn.db
-                sql = (
-                    f"SELECT row_id, ledger_id, descr FROM {company}.{module_id}_ledger_params "
-                    "WHERE deleted_id = 0"
-                    )
-                async for ledger_row_id, ledger_id, ledger_descr in await conn.exec_sql(sql):
-                    mod_ledg_names[company][(module_row_id, ledger_row_id)] = (
-                        module_id, module_descr, ledger_id, ledger_descr)
-        return mod_ledg_names[company][mod_ledg_id]
+# # get module id/descr, ledger id/descr from mod_ledg_id
+# mod_ledg_names = {}
+# mod_name_lock = asyncio.Lock()
+# async def get_mod_ledg_name(company, mod_ledg_id):
+#     async with mod_name_lock:
+#         if company not in mod_ledg_names:
+#             mod_ledg_names[company] = {}
+#         if mod_ledg_id not in mod_ledg_names[company]:
+#             module_row_id, ledger_row_id = mod_ledg_id
+#             module_id, module_descr = await get_mod_id(company, module_row_id)
+#             async with db_session.get_connection() as db_mem_conn:
+#                 conn = db_mem_conn.db
+#                 sql = (
+#                     f"SELECT row_id, ledger_id, descr FROM {company}.{module_id}_ledger_params "
+#                     "WHERE deleted_id = 0"
+#                     )
+#                 async for ledger_row_id, ledger_id, ledger_descr in await conn.exec_sql(sql):
+#                     mod_ledg_names[company][(module_row_id, ledger_row_id)] = (
+#                         module_id, module_descr, ledger_id, ledger_descr)
+#         return mod_ledg_names[company][mod_ledg_id]
 
 # ledger_param data object for each company/module/ledger
 ledger_params = {}
@@ -228,8 +232,9 @@ async def get_ledger_params(company, module_row_id, ledger_row_id):
         if ledger_row_id not in ledger_params[company][module_row_id]:
             module_id = (await get_mod_id(company, module_row_id))[0]
             table_name = f'{module_id}_ledger_params'
-            context = get_new_context(1, True, company,
-                mod_ledg_id = (module_row_id, ledger_row_id))
+            # context = get_new_context(1, True, company,
+            #     mod_ledg_id = (module_row_id, ledger_row_id))
+            context = get_new_context(1, True, company, None, module_row_id, ledger_row_id)
             ledg_obj = await db.objects.get_db_object(context, table_name)
             await ledg_obj.add_all_virtual()
             await ledg_obj.setval('row_id', ledger_row_id)  # to force a SELECT
@@ -330,11 +335,11 @@ async def ledger_inserted(db_obj, xml):
             )
         sql = (cte +
             "SELECT row_id, parent_id, descr, opt_type, table_name, "
-                "cursor_name, form_name, process_id FROM _tree "
+                "cursor_name, form_name FROM _tree "
             "ORDER BY _key, parent_id, seq"
             )
         async for row in await conn.exec_sql(sql):
-            row_id, parent_id, descr, opt_type, table_name, cursor_name, form_name, process_id = row
+            row_id, parent_id, descr, opt_type, table_name, cursor_name, form_name = row
 
             if parent_id is None:  # top level - do not save, but calculate parent_id_diff
                 parent_id_diff = save_parent_id - row_id
@@ -349,12 +354,19 @@ async def ledger_inserted(db_obj, xml):
                 await menu.setval('cursor_name', cursor_name)
             if form_name is not None:
                 await menu.setval('form_name', form_name)
-            if process_id is not None:
-                await menu.setval('process_id', process_id)
             await menu.setval('parent_id', parent_id + parent_id_diff)
             await menu.setval('module_row_id', module_row_id)
             await menu.setval('ledger_row_id', ledger_row_id)
             await menu.save()
+
+# callback to update menu on client if changed
+# called from various {mod}_ledger_new.xml on_close_form
+async def menu_updated(caller, xml):
+    ledger = caller.context.data_objects['ledger']
+    if not ledger.exists:
+        return
+    client_menu = await caller.session.setup_menu()
+    caller.session.responder.reply.append(('start_menu', client_menu))
 
 #-----------------------------------------------------------------------------
 
@@ -774,9 +786,7 @@ async def get_user(user_id):
     async with user_lock:
         global users
         if users is None:
-            context = get_new_context(1, True, company)
-            # users = await db.objects.get_db_object(context, '_sys.dir_users')
-            users = await db.objects.get_db_object(context, 'dir_users')
+            users = await db.objects.get_db_object(cache_context, 'dir_users')
             await users.add_virtual('display_name')
         if isinstance(user_id, int):  # receive user_row_id, return display_name
             await users.select_row({'row_id': user_id})

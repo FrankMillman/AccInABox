@@ -78,24 +78,23 @@ function get_sxml_popup(sxml) {
 
   comment_area.onkeydown = function(e) {
     if (!e) e=window.event;
-    if (e.keyCode === 9)
-      return;  // always allow 'tab'
-    if (e.keyCode >= 33 && e.keyCode <= 40)
+    if (['Tab', 'Home', 'End', 'PageUp', 'PageDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
+        .includes(e.key))
       return;  // always allow cursor keys
     var popup = this.parentNode.parentNode;
     if (popup.readonly) {
       e.cancelBubble = true;
       return false;
       };
-    if (e.keyCode === 27) {
-	  if (this.value === popup.comment) {
+    if (e.key === 'Escape') {
+  	  if (this.value === popup.comment) {
         popup.close_window();
       } else {
         this.value = popup.comment;
         this.scrollTop = 0;
         this.selectionEnd = 0;
         };
-	  };
+  	  };
     };
 
   var xml_div = document.createElement('div');
@@ -112,17 +111,16 @@ function get_sxml_popup(sxml) {
 
   xml_area.onkeydown = function(e) {
     if (!e) e=window.event;
-    if (e.keyCode === 9)
-      return;  // always allow 'tab'
-    if (e.keyCode >= 33 && e.keyCode <= 40)
+    if (['Tab', 'Home', 'End', 'PageUp', 'PageDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
+        .includes(e.key))
       return;  // always allow cursor keys
     var popup = this.parentNode.parentNode;
     if (popup.readonly) {
       e.cancelBubble = true;
       return false;
       };
-    if (e.keyCode === 27) {
-	  if (this.value === popup.xml_code) {
+    if (e.key === 'Escape') {
+  	  if (this.value === popup.xml_code) {
         popup.close_window();
       } else {
         this.value = popup.xml_code;

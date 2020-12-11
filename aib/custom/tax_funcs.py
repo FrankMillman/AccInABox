@@ -136,8 +136,6 @@ split_defn = (
             '"/>'
         '<mem_col col_name="tax_amt" data_type="DEC" short_descr="Tax amount" '
             'long_descr="Tax amount" allow_amend="true" db_scale="2" dflt_val="0"/>'
-        '<mem_col col_name="tax_amt_party" data_type="DEC" '
-            'short_descr="Tax amount" long_descr="Tax amount" db_scale="2"/>'
         '<mem_col col_name="tax_amt_local" data_type="DEC" '
             'short_descr="Tax amount" long_descr="Tax amount" db_scale="2"/>'
     '</mem_obj>'
@@ -146,7 +144,7 @@ split_defn = (
 
 async def calc_tax(db_obj, conn, return_vals):
     # called as split_src func from various sls/pch_tran.upd_on_save()
-    # return values - inv_net_amt, inv_tax_amt, inv_tax_party, inv_tax_local
+    # return values - inv_net_amt, inv_tax_amt, inv_tax_local
 
     split_name = 'mem_tax_split'
     if split_name not in db_obj.context.data_objects:
@@ -178,7 +176,6 @@ async def calc_tax(db_obj, conn, return_vals):
         raise NotImplementedError
 
     tax_incl = await db_obj.getval('tran_det_row_id>tax_incl')
-    party_exch_rate = await db_obj.getval('tran_det_row_id>party_exch_rate')
     tran_exch_rate = await db_obj.getval('tran_det_row_id>tran_exch_rate')
     tran_date = await db_obj.getval('tran_det_row_id>tran_date')
 
@@ -203,11 +200,8 @@ async def calc_tax(db_obj, conn, return_vals):
             tax_amt = await tax_amt_fld.check_val(inv_amt * tax_rate / 100)
         return_vals[1] += tax_amt
 
-        tax_amt_party = await tax_amt_fld.check_val(tax_amt / tran_exch_rate * party_exch_rate)
-        return_vals[2] += tax_amt_party
-
         tax_amt_local = await tax_amt_fld.check_val(tax_amt / tran_exch_rate)
-        return_vals[3] += tax_amt_local
+        return_vals[2] += tax_amt_local
 
         yield (tax_code_id, tax_rate, tax_amt)
 

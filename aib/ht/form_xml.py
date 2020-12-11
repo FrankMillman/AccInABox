@@ -509,9 +509,8 @@ async def sub_form(caller, xml):
                 if obj_name == '_param':
                     db_obj = await db.cache.get_adm_params(caller.company)
                 elif obj_name == '_ledger':
-                    module_row_id, ledger_row_id = caller.context.mod_ledg_id
-                    db_obj = await db.cache.get_ledger_params(
-                         caller.company, module_row_id, ledger_row_id)
+                    db_obj = await db.cache.get_ledger_params(caller.company,
+                        caller.context.module_row_id, caller.context.ledger_row_id)
                 else:
                     db_obj = caller.data_objects[obj_name]
                 value = await db_obj.getval(col_name)
@@ -576,9 +575,8 @@ async def start_process(caller, xml):
                 if obj_name == '_param':
                     db_obj = await db.cache.get_adm_params(caller.company)
                 elif obj_name == '_ledger':
-                    module_row_id, ledger_row_id = caller.context.mod_ledg_id
-                    db_obj = await db.cache.get_ledger_params(
-                         caller.company, module_row_id, ledger_row_id)
+                    db_obj = await db.cache.get_ledger_params(caller.company,
+                        caller.context.module_row_id, caller.context.ledger_row_id)
                 else:
                     db_obj = caller.data_objects[obj_name]
                 value = await db_obj.getval(col_name)
@@ -588,7 +586,8 @@ async def start_process(caller, xml):
 
     process = bp.bpm.ProcessRoot(caller.company, xml.get('name'), data_inputs=data_inputs)
     context = db.cache.get_new_context(caller.context.user_row_id,
-        caller.context.sys_admin, caller.company, id(process), caller.context.mod_ledg_id)
+        caller.context.sys_admin, caller.context.company, id(process),
+        caller.context.module_row_id, caller.context.ledger_row_id)
     await process.start_process(context)
 
 async def run_report(caller, xml):
@@ -607,9 +606,8 @@ async def run_report(caller, xml):
                 if obj_name == '_param':
                     db_obj = await db.cache.get_adm_params(caller.company)
                 elif obj_name == '_ledger':
-                    module_row_id, ledger_row_id = caller.context.mod_ledg_id
-                    db_obj = await db.cache.get_ledger_params(
-                         caller.company, module_row_id, ledger_row_id)
+                    db_obj = await db.cache.get_ledger_params(caller.company,
+                        caller.context.module_row_id, caller.context.ledger_row_id)
                 else:
                     db_obj = caller.data_objects[obj_name]
                 value = await db_obj.getval(col_name)
@@ -709,8 +707,8 @@ async def compare(caller, xml):
     try:
         db_obj = caller.db_obj
     except AttributeError:  # not every caller has a db_obj - try ledger_params
-        mod_ledg_id = caller.context.mod_ledg_id
-        db_obj = await db.cache.get_ledger_params(caller.company, *mod_ledg_id)
+        db_obj = await db.cache.get_ledger_params(caller.company,
+            caller.context.module_row_id, caller.context.ledger_row_id)
     test = loads(xml.get('test').replace("'", '"').replace('~', "'"))
     return await eval_bool_expr(test, db_obj)
 
@@ -731,11 +729,9 @@ async def get_val(caller, value):
     if '.' in value:
         obj_name, col_name = value.split('.')
         if obj_name == '_ctx':
-            if col_name == 'ledger_row_id':
-                return getattr(caller.context, 'mod_ledg_id')[1]
-            elif col_name == 'current_period':
-                ledger_periods = await db.cache.get_ledger_periods(
-                    caller.company, *caller.context.mod_ledg_id)
+            if col_name == 'current_period':
+                ledger_periods = await db.cache.get_ledger_periods(caller.company,
+                    caller.context.module_row_id, caller.context.ledger_row_id)
                 return ledger_periods.current_period
             else:
                 return getattr(caller.context, col_name)
@@ -743,9 +739,8 @@ async def get_val(caller, value):
             if obj_name == '_param':
                 db_obj = await db.cache.get_adm_params(caller.company)
             elif obj_name == '_ledger':
-                module_row_id, ledger_row_id = caller.context.mod_ledg_id
-                db_obj = await db.cache.get_ledger_params(
-                    caller.company, module_row_id, ledger_row_id)
+                db_obj = await db.cache.get_ledger_params(caller.company,
+                    caller.context.module_row_id, caller.context.ledger_row_id)
             else:
                 db_obj = caller.data_objects[obj_name]
             return await db_obj.getval(col_name)

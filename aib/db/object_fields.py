@@ -82,8 +82,10 @@ class Field:
         self.table_keys = []  # populated if this is a key field
         self.constant = None  # can be over-ridden in db.objects after fields set up
 
-        if col_defn.calculated in (True, False):
-            self._calculated = col_defn.calculated
+        if col_defn.data_source == 'calc':
+            self._calculated = True
+        elif col_defn.condition is None:
+            self._calculated = False
         else:
             self._calculated = None  # will be evaluated in self.calculated()
 
@@ -285,20 +287,6 @@ class Field:
             self.flds_to_recalc = weakref.WeakSet()
         self.flds_to_recalc.add(fld)
 
-    async def recalc_orig(self):
-        # called from db.objects.add_virtual()
-        # used to set up _orig when initialising a virtual field
-
-        if self.col_defn.dflt_rule is not None:
-            orig_value = await db.dflt_xml.get_db_dflt(self, orig=True)
-            # print(f'{self.table_name}.{self.col_name} {self._value} -> {dflt_value}')
-            if orig_value is not None:  # added 2016-04-17 - to be tested
-                if orig_value != self._orig:
-                    orig_value = await self.get_val_from_sql(orig_value)
-                    self._orig = orig_value
-                    for child in self.children:  # probably not required
-                        child._orig = orig_value  # but does no harm
-
     async def recalc(self, display=False):
         if self.col_defn.dflt_val is not None:
             if self.col_defn.dflt_val.startswith('{'):  # get value from another field
@@ -352,7 +340,7 @@ class Field:
 
         if self.col_defn.data_type == 'BOOL':
             sql += ' AS "x [BOOLTEXT]"'
-        elif self.col_defn.data_type == 'DEC':
+        elif self.col_defn.data_type == 'DEC' or self.col_defn.data_type.startswith('$'):
             sql += f' AS "x [REAL{self.col_defn.db_scale}]"'
 
         if sql[:7].upper() != 'SELECT ':
@@ -439,16 +427,15 @@ class Field:
                             errmsg = f'{self.table_name}.{col_name} - a value is required'
                             raise AibError(head=col_defn.short_descr, body=errmsg)
 
-        if not from_init:
-            if self.ledger_col:  # check subledger matches ctx.mod_ledg_id if present
-                ctx_mod_id, ctx_ledg_id = getattr(db_obj.context, 'mod_ledg_id', (None, None))
-                if ctx_mod_id == db_obj.db_table.module_row_id:
-                    if ctx_ledg_id is not None:  # can be None when setting up ledger_periods
-                        if value != ctx_ledg_id:
-                            ledger_id = (await db.cache.get_mod_ledg_name(
-                                db_obj.company, (ctx_mod_id, ctx_ledg_id)))[2]
-                            raise AibError(head=self.table_name,
-                                body=f'Sub-ledger must be {ledger_id}')
+        # if not from_init:
+        #     if self.ledger_col:  # check subledger matches ctx.mod_ledg_id if present
+        #         ctx_mod_id, ctx_ledg_id = getattr(db_obj.context, 'mod_ledg_id', (None, None))
+        #         if ctx_mod_id == db_obj.db_table.module_row_id:
+        #             if value != ctx_ledg_id:
+        #                 ledger_id = (await db.cache.get_mod_ledg_name(
+        #                     db_obj.company, (ctx_mod_id, ctx_ledg_id)))[2]
+        #                 raise AibError(head=self.table_name,
+        #                     body=f'Sub-ledger must be {ledger_id}')
 
         changed = await self.value_changed(value)
 
@@ -461,7 +448,7 @@ class Field:
             allow_amend = col_defn.allow_amend
             if allow_amend not in (False, True):
                 allow_amend = await eval_bool_expr(allow_amend, db_obj, self)
-            if not db_obj.exists and col_defn.key_field != 'N':
+            if self._value_ is None and not db_obj.exists and col_defn.key_field != 'N':
                 pass  # trying to select
             elif db_obj.db_table.read_only:
                 raise AibError(head=f'Amend {self.table_name}.{col_name}',
@@ -921,10 +908,9 @@ class Field:
         if self.constant is not None:
             return self.constant  # e.g. tran_type in ar_openitems
         if self.ledger_col:
-            ctx_mod_id, ctx_ledg_id = getattr(self.db_obj.context, 'mod_ledg_id', (None, None))
-            if ctx_mod_id == self.db_obj.db_table.module_row_id:
-                if ctx_ledg_id is not None:  # can be None when setting up ledger_periods
-                    return ctx_ledg_id
+            # if self.db_obj.context.module_row_id == self.db_obj.db_table.module_row_id:
+            if await self.calculated():
+                return self.db_obj.context.ledger_row_id
         if not from_init and self.col_defn.dflt_rule is not None:
             return await db.dflt_xml.get_db_dflt(self)
         dflt_val = self.col_defn.dflt_val
@@ -969,8 +955,8 @@ class Field:
         # if we get here, None is returned
 
     async def calculated(self):
-        if self._calculated is None:  # first time
-            self._calculated = await eval_bool_expr(self.col_defn.calculated, self.db_obj, self)
+        if self._calculated is None:  # first time, and condition is not None
+            self._calculated = await eval_bool_expr(self.col_defn.condition, self.db_obj, self)
         return self._calculated
 
     async def value_changed(self, value=blank):
@@ -1761,6 +1747,9 @@ DATA_TYPES = {
     'PWD'  :Password,
     'INT'  :Integer,
     'DEC'  :Decimal,
+    '$TRN' :Decimal,
+    '$PTY' :Decimal,
+    '$LCL' :Decimal,
     'DTE'  :Date,
     'DTM'  :DateTime,
     'BOOL' :Boolean,

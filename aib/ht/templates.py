@@ -6,28 +6,28 @@ tool_nav = (
 
 tool_insert = (
     '<tool type="img" name="insert" tip="Insert row (Ctrl+Insert)" '
-        'shortcut="ctrl,45" action="'
+        'shortcut="ctrl,Insert" action="'
         '&lt;req_insert_row/&gt;'
     '"/>'
     )
 
 tool_delete = (
     '<tool type="img" name="delete" tip="Delete row (Ctrl+Delete)" '
-        'shortcut="ctrl,46" action="'
+        'shortcut="ctrl,Delete" action="'
         '&lt;req_delete_row/&gt;'
     '"/>'
     )
 
 tool_formview = (
     '<tool type="img" name="formview" tip="Form view (Ctrl+Enter)" '
-        'shortcut="ctrl,13" action="'
+        'shortcut="ctrl,Enter" action="'
         '&lt;req_formview/&gt;'
     '"/>'
     )
 
 tool_selected = (
     '<tool type="img" name="selected" tip="Item selected (Enter)" '
-        'shortcut="normal,13" action="'
+        'shortcut="normal,Enter" action="'
         '&lt;row_selected/&gt;'
     '"/>'
     )
