@@ -14,18 +14,15 @@ function create_page() {
   page.kbd_shortcuts['shift'] = {};
 
   page.onkeydown = function(e) {
-//    if (this.frame.ctrl_grid === null)
-//      return;
-    if (!e) e=window.event;
 
     if (e.altKey)
-      var target = this.kbd_shortcuts['alt'][e.key];
+      var target = this.kbd_shortcuts['alt'][e.code];
     else if (e.ctrlKey)
-      var target = this.kbd_shortcuts['ctrl'][e.key];
+      var target = this.kbd_shortcuts['ctrl'][e.code];
     else if (e.shiftKey)
-      var target = this.kbd_shortcuts['shift'][e.key];
+      var target = this.kbd_shortcuts['shift'][e.code];
     else
-      var target = this.kbd_shortcuts['normal'][e.key];
+      var target = this.kbd_shortcuts['normal'][e.code];
 
     if (target !== undefined) {
       target.onclick.call(target);

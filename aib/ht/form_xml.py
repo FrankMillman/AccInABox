@@ -706,9 +706,12 @@ async def btn_has_label(caller, xml):
 async def compare(caller, xml):
     try:
         db_obj = caller.db_obj
-    except AttributeError:  # not every caller has a db_obj - try ledger_params
-        db_obj = await db.cache.get_ledger_params(caller.company,
-            caller.context.module_row_id, caller.context.ledger_row_id)
+    except AttributeError:  # not every caller has a db_obj - try params
+        if caller.context.ledger_row_id is not None:  # get ledger_params
+            db_obj = await db.cache.get_ledger_params(caller.company,
+                caller.context.module_row_id, caller.context.ledger_row_id)
+        else:  # get adm_params
+            db_obj = await db.cache.get_adm_params(caller.company)
     test = loads(xml.get('test').replace("'", '"').replace('~', "'"))
     return await eval_bool_expr(test, db_obj)
 

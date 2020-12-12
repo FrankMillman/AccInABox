@@ -937,7 +937,7 @@ function setup_form(args) {
           send_request('navigate', args);
           frame.form.current_focus.focus();
           }
-        page.kbd_shortcuts['ctrl'][36] = page.nav.top;  // Ctrl+Home
+        page.kbd_shortcuts['ctrl']['Home'] = page.nav.top;
 
         page.nav.up = {}
         page.nav.up.frame = page.frame;
@@ -950,7 +950,7 @@ function setup_form(args) {
           send_request('navigate', args);
           frame.form.current_focus.focus();
           }
-        page.kbd_shortcuts['ctrl'][38] = page.nav.up;  // Ctrl+Up
+        page.kbd_shortcuts['ctrl']['ArrowUp'] = page.nav.up;
 
         page.nav.down = {}
         page.nav.down.frame = page.frame;
@@ -964,7 +964,7 @@ function setup_form(args) {
           send_request('navigate', args);
           frame.form.current_focus.focus();
           }
-        page.kbd_shortcuts['ctrl'][40] = page.nav.down;  // Ctrl+Down
+        page.kbd_shortcuts['ctrl']['ArrowDown'] = page.nav.down;
 
         page.nav.end = {}
         page.nav.end.frame = page.frame;
@@ -978,7 +978,7 @@ function setup_form(args) {
           send_request('navigate', args);
           frame.form.current_focus.focus();
           }
-        page.kbd_shortcuts['ctrl'][35] = page.nav.end;  // Ctrl+End
+        page.kbd_shortcuts['ctrl']['End'] = page.nav.end;
 
         frame.set_amended = function(state) {
           //debug3('fset2 ' + this.ref + ' ' + state);

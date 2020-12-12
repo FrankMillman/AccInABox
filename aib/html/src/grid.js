@@ -1970,13 +1970,13 @@ if (grid.header_row.length) {
   grid.onkeydown = function(e) {
     if (grid.frame.form.disable_count) return false;
     if (e.altKey)
-      var target = grid.kbd_shortcuts['alt'][e.key];
+      var target = grid.kbd_shortcuts['alt'][e.code];
     else if (e.ctrlKey)
-      var target = grid.kbd_shortcuts['ctrl'][e.key];
+      var target = grid.kbd_shortcuts['ctrl'][e.code];
     else if (e.shiftKey)
-      var target = grid.kbd_shortcuts['shift'][e.key];
+      var target = grid.kbd_shortcuts['shift'][e.code];
     else if (!grid.amended())  // Enter can mean 'save' if amended, or 'select' if not
-      var target = grid.kbd_shortcuts['normal'][e.key];
+      var target = grid.kbd_shortcuts['normal'][e.code];
 
     if (target !== undefined) {
       target.onclick.call(target);
@@ -2225,109 +2225,6 @@ if (grid.header_row.length) {
     for (var i=0, l=tool_list.length; i<l; i++) {
       tool = tool_list[i];
       switch(tool.type) {
-/*
-        case 'selected': {
-          this.grid.lkup_select_ok = true;
-          var btn = document.createElement('div');
-          btn.style[cssFloat] = 'left';
-          btn.style.backgroundImage = 'url(' + iSelected_src + ')';
-          btn.style.width = '16px';
-          btn.style.height = '16px';
-          btn.style.marginLeft = '5px';
-          btn.style.marginRight = '2px';
-          btn.style.marginTop = '5px';
-          btn.style.position = 'relative';
-
-          btn.title = tool.tip;
-          btn.onclick = function(e) {
-            var grid = this.parentNode.grid;
-            if (grid.frame.form.disable_count) return false;
-            if (grid.frame.form.current_focus !== grid) {
-              grid.focus();  // set focus on grid first
-              if ((grid.frame.form.current_focus !== grid)
-                  || (grid.frame.form.setting_focus !== grid))  // focus reset by server
-                return;
-              };
-            grid.send_selected();
-            grid.focus();
-            };
-          toolbar.appendChild(btn)
-          break;
-          }
-        case 'formview': {
-          this.grid.formview_ok = true;
-          var btn = document.createElement('div');
-          btn.style[cssFloat] = 'left';
-          btn.style.backgroundImage = 'url(' + iFormview_src + ')';
-          btn.style.width = '16px';
-          btn.style.height = '16px';
-          btn.style.marginLeft = '5px';
-          btn.style.marginRight = '2px';
-          btn.style.marginTop = '5px';
-          btn.style.position = 'relative';
-
-          btn.title = tool.tip;
-          btn.onclick = function(e) {
-            var grid = this.parentNode.grid;
-            if (grid.frame.form.disable_count) return false;
-            if (grid.frame.form.current_focus !== grid) {
-              grid.focus();  // set focus on grid first
-              if ((grid.frame.form.current_focus !== grid)
-                  || (grid.frame.form.setting_focus !== grid))  // focus reset by server
-                return;
-              };
-            grid.req_formview();
-            grid.focus();
-            };
-          toolbar.appendChild(btn)
-          break;
-          }
-        case 'ins_row': {
-          this.grid.insert_ok = true;
-          var btn = document.createElement('div');
-          btn.style[cssFloat] = 'left';
-          btn.style.backgroundImage = 'url(' + iInsert_src + ')';
-          btn.style.width = '16px';
-          btn.style.height = '16px';
-          btn.style.marginLeft = '5px';
-          btn.style.marginRight = '2px';
-          btn.style.marginTop = '5px';
-          btn.style.position = 'relative';
-
-          btn.title = tool.tip;
-          btn.onclick = function(e) {
-            var grid = this.parentNode.grid;
-            if (grid.frame.form.disable_count) return false;
-            grid.req_insert();
-            grid.focus();
-            };
-          toolbar.appendChild(btn)
-          break;
-          }
-        case 'del_row': {
-          this.grid.delete_ok = true;
-          this.grid.confirm_delete = tool.confirm;
-          var btn = document.createElement('div');
-          btn.style[cssFloat] = 'left';
-          btn.style.backgroundImage = 'url(' + iDelete_src + ')';
-          btn.style.width = '16px';
-          btn.style.height = '16px';
-          btn.style.marginLeft = '5px';
-          btn.style.marginRight = '2px';
-          btn.style.marginTop = '5px';
-          btn.style.position = 'relative';
-
-          btn.title = tool.tip;
-          btn.onclick = function(e) {
-            var grid = this.parentNode.grid;
-            if (grid.frame.form.disable_count) return false;
-            grid.req_delete();
-            grid.focus();
-            };
-          toolbar.appendChild(btn)
-          break;
-          }
-*/
         case 'btn':
           var label = tool.label;
           var text = '';  // convert '&' to underline
@@ -2374,15 +2271,8 @@ if (grid.header_row.length) {
 
           if (tool.shortcut !== null) {
             var type_key = tool.shortcut.split(',');
-            if (type_key[0] === 'normal')
-              grid.kbd_shortcuts['normal'][type_key[1]] = btn;
-            else if (type_key[0] === 'alt')
-              grid.kbd_shortcuts['alt'][type_key[1]] = btn;
-            else if (type_key[0] === 'ctrl')
-              grid.kbd_shortcuts['ctrl'][type_key[1]] = btn;
-            else if (type_key[0] === 'shift')
-              grid.kbd_shortcuts['shift'][type_key[1]] = btn;
-            };
+            grid.kbd_shortcuts[type_key[0]][type_key[1]] = btn;
+          };
 
           toolbar.appendChild(btn);
           break;
@@ -2413,33 +2303,21 @@ if (grid.header_row.length) {
 
           if (tool.shortcut !== null) {
             var type_key = tool.shortcut.split(',');
-            if (type_key[0] === 'normal')
-              grid.kbd_shortcuts['normal'][type_key[1]] = btn;
-            else if (type_key[0] === 'alt')
-              grid.kbd_shortcuts['alt'][type_key[1]] = btn;
-            else if (type_key[0] === 'ctrl')
-              grid.kbd_shortcuts['ctrl'][type_key[1]] = btn;
-            else if (type_key[0] === 'shift')
-              grid.kbd_shortcuts['shift'][type_key[1]] = btn;
+            grid.kbd_shortcuts[type_key[0]][type_key[1]] = btn;
             };
 
           toolbar.appendChild(btn);
           break;
         case 'nav':
-          //grid.navigate_ok = true;
           // FIRST
-          //var nav = document.createElement('div');
-          //var nav = iFirst;
           var nav = document.createElement('div');
           nav.style.backgroundImage = 'url(' + iFirst_src + ')';
           nav.style[cssFloat] = 'left';
-          //nav.style.border = '1px solid darkgrey';
           nav.style.width = '16px';
           nav.style.height = '16px';
           nav.style.marginLeft = '5px';
           nav.style.marginRight = '2px';
           nav.style.marginTop = '5px';
-          //nav.style.background = 'lightgrey';
           nav.style.position = 'relative';
           nav.title = 'Go to top';
           nav.onclick = function(e) {
@@ -2450,38 +2328,15 @@ if (grid.header_row.length) {
             };
           toolbar.appendChild(nav);
 
-/*
-          if (EX) nav.innerHTML = '^'; else {
-            var canvas = new_canvas(15, 15, nav);
-            var ctx = canvas.getContext('2d');
-            ctx.beginPath();
-            ctx.moveTo(4.5, 7.5);
-            ctx.lineTo(12.5, 1.5);
-            ctx.lineTo(12.5, 12.5);
-            ctx.lineTo(4.5, 7.5);
-            ctx.lineTo(4.5, 1.5);
-            ctx.lineTo(2.5, 1.5);
-            ctx.lineTo(2.5, 12.5);
-            ctx.lineTo(4.5, 12.5);
-            ctx.lineTo(4.5, 7.5);
-            ctx.fillStyle = 'black';
-            ctx.fill();
-            };
-*/
-
           // PAGE UP
-          //var nav = document.createElement('div');
-          //var nav = iPrev;
           var nav = document.createElement('div');
           nav.style.backgroundImage = 'url(' + iPrev_src + ')';
           nav.style[cssFloat] = 'left';
-          //nav.style.border = '1px solid darkgrey';
           nav.style.width = '16px';
           nav.style.height = '16px';
           nav.style.marginLeft = '2px';
           nav.style.marginRight = '2px';
           nav.style.marginTop = '5px';
-          //nav.style.background = 'lightgrey';
           nav.style.position = 'relative';
           nav.title = 'Page up';
           nav.onclick = function(e) {
@@ -2491,19 +2346,6 @@ if (grid.header_row.length) {
             grid.focus();
             }
           toolbar.appendChild(nav);
-
-/*
-          if (EX) nav.innerHTML = '&lt;'; else {
-            var canvas = new_canvas(15, 15, nav);
-            var ctx = canvas.getContext('2d');
-            ctx.beginPath();
-            ctx.moveTo(11.5, 1.5);
-            ctx.lineTo(11.5, 12.5);
-            ctx.lineTo(3.5, 7.5);
-            ctx.fillStyle = 'black';
-            ctx.fill();
-            };
-*/
 
           // ROW COUNTER
           var row_count = document.createElement('div');
@@ -2515,18 +2357,14 @@ if (grid.header_row.length) {
           grid.row_count = row_count;
 
           // PAGE DOWN
-          //var nav = document.createElement('div');
-          //var nav = iNext;
           var nav = document.createElement('div');
           nav.style.backgroundImage = 'url(' + iNext_src + ')';
           nav.style[cssFloat] = 'left';
-          //nav.style.border = '1px solid darkgrey';
           nav.style.width = '16px';
           nav.style.height = '16px';
           nav.style.marginLeft = '2px';
           nav.style.marginRight = '2px';
           nav.style.marginTop = '5px';
-          //nav.style.background = 'lightgrey';
           nav.style.position = 'relative';
           nav.title = 'Page down';
           nav.onclick = function(e) {
@@ -2537,32 +2375,15 @@ if (grid.header_row.length) {
             };
           toolbar.appendChild(nav);
 
-/*
-          if (EX) nav.innerHTML = '&gt;'; else {
-            var canvas = new_canvas(15, 15, nav);
-            var ctx = canvas.getContext('2d');
-            ctx.beginPath();
-            ctx.moveTo(3.5, 1.5);
-            ctx.lineTo(3.5, 12.5);
-            ctx.lineTo(11.5, 7.5);
-            ctx.fillStyle = 'black';
-            ctx.fill();
-            };
-*/
-
           // GO TO BOTTOM
-          //var nav = document.createElement('div');
-          //var nav = iLast;
           var nav = document.createElement('div');
           nav.style.backgroundImage = 'url(' + iLast_src + ')';
           nav.style[cssFloat] = 'left';
-          //nav.style.border = '1px solid darkgrey';
           nav.style.width = '16px';
           nav.style.height = '16px';
           nav.style.marginLeft = '2px';
           nav.style.marginRight = '5px';
           nav.style.marginTop = '5px';
-          //nav.style.background = 'lightgrey';
           nav.style.position = 'relative';
           nav.title = 'Go to bottom';
           nav.onclick = function(e) {
@@ -2572,25 +2393,6 @@ if (grid.header_row.length) {
             grid.focus();
             };
           toolbar.appendChild(nav);
-
-/*
-          if (EX) nav.innerHTML = 'v'; else {
-            var canvas = new_canvas(15, 15, nav);
-            var ctx = canvas.getContext('2d');
-            ctx.beginPath();
-            ctx.moveTo(10.5, 7.5);
-            ctx.lineTo(2.5, 1.5);
-            ctx.lineTo(2.5, 12.5);
-            ctx.lineTo(10.5, 7.5);
-            ctx.lineTo(10.5, 1.5);
-            ctx.lineTo(12.5, 1.5);
-            ctx.lineTo(12.5, 12.5);
-            ctx.lineTo(10.5, 12.5);
-            ctx.lineTo(10.5, 7.5);
-            ctx.fillStyle = 'black';
-            ctx.fill();
-            };
-*/
 
           break;
         default: debug3(tool.type + ' UNKNOWN'); break;

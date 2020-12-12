@@ -653,10 +653,10 @@ class Response:
 
 async def handle_client(client_reader, client_writer):
 
-    # req_line = await client_reader.readline()
     try:
-        req_line = await asyncio.wait_for(client_reader.readline(), timeout=1)
+        req_line = await asyncio.wait_for(client_reader.readline(), timeout=2)
     except asyncio.exceptions.TimeoutError:
+        print('timeout')
         return
 
     if not req_line:
@@ -830,7 +830,7 @@ def start(params):
     ssl_ctx.load_cert_chain(f'./ssl/{domain}/aib.crt', f'./ssl/{domain}/aib.key')
 
     loop = asyncio.get_event_loop()
-    server = loop.run_until_complete(asyncio.start_server(ht.htc.handle_client, host, port, ssl=ssl_ctx))
+    server = loop.run_until_complete(asyncio.start_server(handle_client, host, port, ssl=ssl_ctx))
     logger.info(f'task client listening on port {port}')
 
     # cnt = asyncio.ensure_future(counter())
