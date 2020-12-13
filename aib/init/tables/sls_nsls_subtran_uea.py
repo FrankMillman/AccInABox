@@ -167,8 +167,8 @@ virt.append ({
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted? Only here to satisfy diag.py',
     'col_head'   : 'Posted?',
-    'dflt_val'   : '{subtran_row_id>tran_det_row_id>posted}',
-    'sql'        : "a.subtran_row_id>tran_det_row_id>posted"
+    'dflt_val'   : '{subtran_row_id>subparent_row_id>posted}',
+    'sql'        : "a.subtran_row_id>subparent_row_id>posted"
     })
 virt.append ({
     'col_name'   : 'tran_date',
@@ -176,8 +176,8 @@ virt.append ({
     'short_descr': 'Transaction date',
     'long_descr' : 'Transaction date',
     'col_head'   : 'Tran date',
-    'dflt_val'   : '{subtran_row_id>tran_det_row_id>tran_date}',
-    'sql'        : "a.subtran_row_id>tran_det_row_id>tran_date"
+    'dflt_val'   : '{subtran_row_id>subparent_row_id>tran_date}',
+    'sql'        : "a.subtran_row_id>subparent_row_id>tran_date"
     })
 virt.append ({
     'col_name'   : 'upd_earned',
@@ -193,7 +193,7 @@ virt.append ({
           '<fld_val name="nsls_earned_loc"/>'
           '<op type="*"/>'
           '<case>'
-            '<compare test="[[`if`, ``, `subtran_row_id>tran_det_row_id>rev_sign_sls`, `is`, `$True`, ``]]">'
+            '<compare test="[[`if`, ``, `subtran_row_id>subparent_row_id>rev_sign_sls`, `is`, `$True`, ``]]">'
               '<literal value="-1"/>'
             '</compare>'
             '<default>'
@@ -205,7 +205,7 @@ virt.append ({
     'sql'        : (
         "a.nsls_earned_loc "
         "* "
-        "CASE WHEN a.subtran_row_id>tran_det_row_id>rev_sign_sls = '1' THEN -1 ELSE 1 END"
+        "CASE WHEN a.subtran_row_id>subparent_row_id>rev_sign_sls = '1' THEN -1 ELSE 1 END"
         ),
     })
 virt.append ({
@@ -270,12 +270,12 @@ actions.append([
         [
             'sls_nsls_cust_uea_totals',  # table name
             [  # condition
-                ['where', '', 'subtran_row_id>tran_det_row_id>module_id', '=', "'ar'", ''],
+                ['where', '', 'subtran_row_id>subparent_row_id>module_id', '=', "'ar'", ''],
                 ],
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'subtran_row_id>nsls_code_id'],  # tgt_col, src_col
-                ['cust_row_id', 'subtran_row_id>tran_det_row_id>cust_row_id'],
+                ['cust_row_id', 'subtran_row_id>subparent_row_id>cust_row_id'],
                 ['location_row_id', 'subtran_row_id>location_row_id'],
                 ['function_row_id', 'subtran_row_id>function_row_id'],
                 ['source_code', 'ear_source_code'],
@@ -291,12 +291,12 @@ actions.append([
         [
             'sls_nsls_cust_totals',  # table name
             [  # condition
-                ['where', '', 'subtran_row_id>tran_det_row_id>module_id', '=', "'ar'", ''],
+                ['where', '', 'subtran_row_id>subparent_row_id>module_id', '=', "'ar'", ''],
                 ],
             False,  # split source?
             [  # key fields
                 ['nsls_code_id', 'subtran_row_id>nsls_code_id'],  # tgt_col, src_col
-                ['cust_row_id', 'subtran_row_id>tran_det_row_id>cust_row_id'],
+                ['cust_row_id', 'subtran_row_id>subparent_row_id>cust_row_id'],
                 ['location_row_id', 'subtran_row_id>location_row_id'],
                 ['function_row_id', 'subtran_row_id>function_row_id'],
                 ['source_code', 'ear_source_code'],

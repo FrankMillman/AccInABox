@@ -215,38 +215,6 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'cb_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cb exchange rate',
-    'long_descr' : 'Exchange rate from cash book currency to local',
-    'col_head'   : 'Rate cb',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 8,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-            '<compare test="[[`if`, ``, `ledger_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
-                '<literal value="1"/>'
-            '</compare>'
-            '<default>'
-                '<exch_rate>'
-                    '<fld_val name="ledger_row_id>currency_id"/>'
-                    '<fld_val name="tran_date"/>'
-                '</exch_rate>'
-            '</default>'
-        '</case>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
     'short_descr': 'Transaction exchange rate',
@@ -266,12 +234,44 @@ cols.append ({
             '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
-            '<compare test="[[`if`, ``, `currency_id`, `=`, `ledger_row_id>currency_id`, ``]]">'
-                '<fld_val name="cb_exch_rate"/>'
-            '</compare>'
             '<default>'
                 '<exch_rate>'
                     '<fld_val name="currency_id"/>'
+                    '<fld_val name="tran_date"/>'
+                '</exch_rate>'
+            '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'cb_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Cb exchange rate',
+    'long_descr' : 'Exchange rate from cash book currency to local',
+    'col_head'   : 'Rate cb',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 8,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<compare test="[[`if`, ``, `ledger_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+                '<literal value="1"/>'
+            '</compare>'
+            '<compare test="[[`if`, ``, `ledger_row_id>currency_id`, `=`, `currency_id`, ``]]">'
+                '<fld_val name="tran_exch_rate"/>'
+            '</compare>'
+            '<default>'
+                '<exch_rate>'
+                    '<fld_val name="ledger_row_id>currency_id"/>'
                     '<fld_val name="tran_date"/>'
                 '</exch_rate>'
             '</default>'

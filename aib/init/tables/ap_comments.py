@@ -102,11 +102,11 @@ cols.append ({
         ],
     })
 cols.append ({
-    'col_name'   : 'tran_det_row_id',
+    'col_name'   : 'subparent_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Transaction detail id',
-    'long_descr' : 'Transaction detail row id',
-    'col_head'   : 'Tran id',
+    'short_descr': 'Subtran parent row id',
+    'long_descr' : 'Subtran parent row id',
+    'col_head'   : 'Sub par id',
     'key_field'  : 'A',
     'data_source': 'par_id',
     'condition'  : None,

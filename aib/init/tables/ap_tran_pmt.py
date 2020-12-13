@@ -214,6 +214,38 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'tran_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Transaction exchange rate',
+    'long_descr' : 'Exchange rate from transaction currency to local',
+    'col_head'   : 'Rate tran',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 8,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+                '<literal value="1"/>'
+            '</compare>'
+            '<default>'
+                '<exch_rate>'
+                    '<fld_val name="currency_id"/>'
+                    '<fld_val name="tran_date"/>'
+                '</exch_rate>'
+            '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'supp_exch_rate',
     'data_type'  : 'DEC',
     'short_descr': 'Supp exchange rate',
@@ -238,41 +270,9 @@ cols.append ({
                     '<fld_val name="supp_row_id>currency_id"/>'
                     '<fld_val name="tran_date"/>'
                 '</exch_rate>'
-            '</default>'
-        '</case>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tran_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Transaction exchange rate',
-    'long_descr' : 'Exchange rate from transaction currency to local',
-    'col_head'   : 'Rate tran',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 8,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-            '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
-                '<literal value="1"/>'
+            '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `currency_id`, ``]]">'
+                '<fld_val name="tran_exch_rate"/>'
             '</compare>'
-            '<compare test="[[`if`, ``, `currency_id`, `=`, `supp_row_id>currency_id`, ``]]">'
-                '<fld_val name="supp_exch_rate"/>'
-            '</compare>'
-            '<default>'
-                '<exch_rate>'
-                    '<fld_val name="currency_id"/>'
-                    '<fld_val name="tran_date"/>'
-                '</exch_rate>'
             '</default>'
         '</case>'
         ),
@@ -469,6 +469,25 @@ actions.append([
                 ['check', '', '$exists', 'is', '$True', ''],
                 ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
                 ],
+            ],
+        ],
+    ])
+actions.append([
+    'upd_on_save', [
+        [
+            'ap_subtran_pmt',  # table name
+            None,  # condition
+            False,  # split source?
+            [],  # key fields
+            [],  # aggregation
+            [  # on insert
+                ['supp_row_id', '=', 'supp_row_id'],  # tgt_col, op, src_col
+                ['arec_amount', '=', 'amount'],
+                ],
+            [  # on update
+                ['arec_amount', '=', 'amount'],  # tgt_col, op, src_col
+                ],
+            [],  # on delete
             ],
         ],
     ])

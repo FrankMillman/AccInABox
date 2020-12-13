@@ -2961,14 +2961,14 @@ class DbTable:
                                 # display_sql += (
                                 #     f"(SELECT {display_elems} FROM {conn.tablenames} "
                                 #     f"WHERE b.tran_type = {tran_type} "
-                                #     "AND b.tran_det_row_id = a.row_id "
+                                #     "AND b.subparent_row_id = a.row_id "
                                 #     "AND b.deleted_id = 0)"
                                 #     )
 
                                 display_elems = f" {self.constants.concat} ".join(sql_elem)
                                 display_sql += (
                                     f"(SELECT {display_elems} FROM {conn.tablenames} "
-                                    "WHERE b.tran_det_row_id = a.row_id "
+                                    "WHERE b.subparent_row_id = a.row_id "
                                     "AND b.deleted_id = 0)"
                                     )
                                 disp_col_defn.sql_a_cols.append('row_id')

@@ -101,11 +101,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_det_row_id',
+    'col_name'   : 'subparent_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Transaction detail id',
-    'long_descr' : 'Transaction detail row id',
-    'col_head'   : 'Tran id',
+    'short_descr': 'Subtran parent row id',
+    'long_descr' : 'Subtran parent row id',
+    'col_head'   : 'Sub par id',
     'key_field'  : 'A',
     'data_source': 'par_id',
     'condition'  : None,
@@ -141,10 +141,9 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
     'col_checks' : [
         ['alt_curr', 'Customer currency does not match', [
-            ['check', '', 'cust_row_id>currency_id', '=', 'tran_det_row_id>currency_id', ''],
+            ['check', '', 'cust_row_id>currency_id', '=', 'currency_id', ''],
             ['or', '', '_ledger.alt_curr', 'is', '$True', '']
             ]],
         ],
@@ -172,19 +171,19 @@ cols.append ({
     'dflt_rule'  : (
         '<case>'
           '<compare test="[[`if`, ``, `source_code`, `=`, `~ar_rec_ar~`, ``]]">'
-            '<fld_val name="tran_det_row_id>tran_number"/>'
+            '<fld_val name="subparent_row_id>tran_number"/>'
           '</compare>'
           '<default>'
             '<case>'
                 '<on_post>'
                     '<expr>'
-                    '<fld_val name="tran_det_row_id>tran_number"/>'
+                    '<fld_val name="subparent_row_id>tran_number"/>'
                     '<op type="+"/>'
                     '<literal value="/"/>'
                     '<op type="+"/>'
                     '<string>'
                         '<expr>'
-                        '<fld_val name="tran_det_row_id>line_no"/>'
+                        '<fld_val name="subparent_row_id>line_no"/>'
                         '<op type="+"/>'
                         '<literal value="1"/>'
                         '</expr>'
@@ -193,13 +192,13 @@ cols.append ({
                 '</on_post>'
                 '<on_insert>'
                     '<expr>'
-                    '<fld_val name="tran_det_row_id>tran_number"/>'
+                    '<fld_val name="subparent_row_id>tran_number"/>'
                     '<op type="+"/>'
                     '<literal value="/"/>'
                     '<op type="+"/>'
                     '<string>'
                         '<expr>'
-                        '<fld_val name="tran_det_row_id>line_no"/>'
+                        '<fld_val name="subparent_row_id>line_no"/>'
                         '<op type="+"/>'
                         '<literal value="1"/>'
                         '</expr>'
@@ -231,7 +230,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{tran_det_row_id>tran_date}',
+    'dflt_val'   : '{subparent_row_id>tran_date}',
     'dflt_rule'   : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -251,35 +250,10 @@ cols.append ({
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{tran_det_row_id>text}',
+    'dflt_val'   : '{subparent_row_id>text}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'currency_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Transaction currency id',
-    'long_descr' : 'Transaction currency id',
-    'col_head'   : 'Currency id',
-    'key_field'  : 'N',
-    'data_source': 'repl',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'    : '{tran_det_row_id>currency_id}',
-    'dflt_rule'   : None,
-    'col_checks' : [
-        ['alt_curr', 'Alternate currency not allowed', [
-            ['check', '', 'cust_row_id>currency_id', '=', 'currency_id', ''],
-            ['or', '', 'cust_row_id>ledger_row_id>alt_curr', 'is', '$True', '']
-            ]],
-        ],
-    'fkey'       : ['adm_currencies', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -302,44 +276,13 @@ cols.append ({
             '<compare test="[[`if`, ``, `cust_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
-            '<default>'
-                '<expr>'
-                    '<exch_rate>'
-                        '<fld_val name="cust_row_id>currency_id"/>'
-                        '<fld_val name="tran_date"/>'
-                    '</exch_rate>'
-                '</expr>'
-            '</default>'
-        '</case>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tran_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Tran exchange rate',
-    'long_descr' : 'Exchange rate from transaction currency to local currency',
-    'col_head'   : 'Rate cust',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 8,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-            '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
-                '<literal value="1"/>'
+            '<compare test="[[`if`, ``, `cust_row_id>currency_id`, `=`, `currency_id`, ``]]">'
+                '<fld_val name="tran_exch_rate"/>'
             '</compare>'
             '<default>'
                 '<expr>'
                     '<exch_rate>'
-                        '<fld_val name="currency_id"/>'
+                        '<fld_val name="cust_row_id>currency_id"/>'
                         '<fld_val name="tran_date"/>'
                     '</exch_rate>'
                 '</expr>'
@@ -453,6 +396,25 @@ virt.append ({
         "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id "
         "AND b.split_no = 0 AND b.deleted_id = 0"
         ),
+    })
+virt.append ({
+    'col_name'   : 'currency_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Currency id',
+    'long_descr' : 'Currency id',
+    'col_head'   : 'Currency id',
+    'dflt_val'   : '{subparent_row_id>currency_id}',
+    'sql'        : 'a.subparent_row_id>currency_id',
+    })
+virt.append ({
+    'col_name'   : 'tran_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Tran exchange rate',
+    'long_descr' : 'Exchange rate from transaction currency to local currency',
+    'col_head'   : 'Tran exch rate',
+    'db_scale'   : 8,
+    'dflt_val'   : '{subparent_row_id>tran_exch_rate}',
+    'sql'        : "a.subparent_row_id>tran_exch_rate",
     })
 virt.append ({
     'col_name'   : 'arec_local',

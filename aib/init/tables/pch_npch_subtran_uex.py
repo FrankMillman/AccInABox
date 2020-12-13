@@ -167,8 +167,8 @@ virt.append ({
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
-    'dflt_val'   : '{subtran_row_id>tran_det_row_id>posted}',
-    'sql'        : "a.subtran_row_id>tran_det_row_id>posted"
+    'dflt_val'   : '{subtran_row_id>subparent_row_id>posted}',
+    'sql'        : "a.subtran_row_id>subparent_row_id>posted"
     })
 virt.append ({
     'col_name'   : 'tran_date',
@@ -176,8 +176,8 @@ virt.append ({
     'short_descr': 'Transaction date',
     'long_descr' : 'Transaction date',
     'col_head'   : 'Tran date',
-    'dflt_val'   : '{subtran_row_id>tran_det_row_id>tran_date}',
-    'sql'        : "a.subtran_row_id>tran_det_row_id>tran_date"
+    'dflt_val'   : '{subtran_row_id>subparent_row_id>tran_date}',
+    'sql'        : "a.subtran_row_id>subparent_row_id>tran_date"
     })
 virt.append ({
     'col_name'   : 'upd_expensed',
@@ -193,7 +193,7 @@ virt.append ({
           '<fld_val name="npch_expensed_loc"/>'
           '<op type="*"/>'
           '<case>'
-            '<compare test="[[`if`, ``, `subtran_row_id>tran_det_row_id>rev_sign_pch`, `is`, `$True`, ``]]">'
+            '<compare test="[[`if`, ``, `subtran_row_id>subparent_row_id>rev_sign_pch`, `is`, `$True`, ``]]">'
               '<literal value="-1"/>'
             '</compare>'
             '<default>'
@@ -205,7 +205,7 @@ virt.append ({
     'sql'        : (
         "a.npch_expensed_loc "
         "* "
-        "CASE WHEN a.subtran_row_id>tran_det_row_id>rev_sign_pch = '1' THEN -1 ELSE 1 END"
+        "CASE WHEN a.subtran_row_id>subparent_row_id>rev_sign_pch = '1' THEN -1 ELSE 1 END"
         ),
     })
 virt.append ({
@@ -270,12 +270,12 @@ actions.append([
         [
             'pch_npch_supp_uex_totals',  # table name
             [  # condition
-                ['where', '', 'subtran_row_id>tran_det_row_id>module_id', '=', "'ap'", ''],
+                ['where', '', 'subtran_row_id>subparent_row_id>module_id', '=', "'ap'", ''],
                 ],
             False,  # split source?
             [  # key fields
                 ['npch_code_id', 'subtran_row_id>npch_code_id'],  # tgt_col, src_col
-                ['supp_row_id', 'subtran_row_id>tran_det_row_id>supp_row_id'],
+                ['supp_row_id', 'subtran_row_id>subparent_row_id>supp_row_id'],
                 ['location_row_id', 'subtran_row_id>location_row_id'],
                 ['function_row_id', 'subtran_row_id>function_row_id'],
                 ['source_code', 'exp_source_code'],
@@ -291,12 +291,12 @@ actions.append([
         [
             'pch_npch_supp_totals',  # table name
             [  # condition
-                ['where', '', 'subtran_row_id>tran_det_row_id>module_id', '=', "'ap'", ''],
+                ['where', '', 'subtran_row_id>subparent_row_id>module_id', '=', "'ap'", ''],
                 ],
             False,  # split source?
             [  # key fields
                 ['npch_code_id', 'subtran_row_id>npch_code_id'],  # tgt_col, src_col
-                ['supp_row_id', 'subtran_row_id>tran_det_row_id>supp_row_id'],
+                ['supp_row_id', 'subtran_row_id>subparent_row_id>supp_row_id'],
                 ['location_row_id', 'subtran_row_id>location_row_id'],
                 ['function_row_id', 'subtran_row_id>function_row_id'],
                 ['source_code', 'exp_source_code'],

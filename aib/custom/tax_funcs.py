@@ -175,9 +175,9 @@ async def calc_tax(db_obj, conn, return_vals):
     else:
         raise NotImplementedError
 
-    tax_incl = await db_obj.getval('tran_det_row_id>tax_incl')
-    tran_exch_rate = await db_obj.getval('tran_det_row_id>tran_exch_rate')
-    tran_date = await db_obj.getval('tran_det_row_id>tran_date')
+    tax_incl = await db_obj.getval('subparent_row_id>tax_incl')
+    tran_exch_rate = await db_obj.getval('subparent_row_id>tran_exch_rate')
+    tran_date = await db_obj.getval('subparent_row_id>tran_date')
 
     if tax_code_table not in db_obj.context.data_objects:
         db_obj.context.data_objects[tax_code_table] = await db.objects.get_db_object(

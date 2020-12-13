@@ -235,11 +235,6 @@ class Field:
                 tgt_object = await db.objects.get_mem_object(self.db_obj.context,
                     self.db_obj.company, tgt_table_name, parent=parent_obj)
             else:
-
-                # check if tgt_object is a child of this object [added 2018-11-05]
-                #   e.g. ar_tran_disc_det.subtran_row_id > pch_npch_subtran.tran_det_row_id
-                # this example no longer applies [2019-01-23] - any other examples?
-
                 tgt_table = await db.objects.get_db_table(self.db_obj.context,
                     tgt_company, tgt_table_name)
                 if tgt_table.parent_params:
@@ -570,7 +565,7 @@ class Field:
                             if true_src.table_keys and db_obj.exists:
                                 changed = False
                 elif db_obj.parent and tgt_field == db_obj.parent[1]:
-                    pass  # e.g. ap_tran_inv_tax.tran_det_row_id -> ap_tran_inv_det.row_id
+                    pass  # e.g. sls_nsls_subtran_tax.subparent_row_id -> sls_nsls_subtran.row_id
                 else:
                     if true_src:  # this is an alt_src
                         altsrc_pos = altsrc_names.index(col_name)

@@ -99,11 +99,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_det_row_id',
+    'col_name'   : 'subparent_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Transaction detail id',
-    'long_descr' : 'Transaction detail row id',
-    'col_head'   : 'Tran id',
+    'short_descr': 'Subtran parent row id',
+    'long_descr' : 'Subtran parent row id',
+    'col_head'   : 'Sub par id',
     'key_field'  : 'A',
     'data_source': 'par_id',
     'condition'  : None,
@@ -162,7 +162,7 @@ cols.append ({
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{tran_det_row_id>text}',
+    'dflt_val'   : '{subparent_row_id>text}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -188,11 +188,11 @@ cols.append ({
           '<compare test="[[`if`, ``, `gl_code_id>valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
             '<fld_val name="gl_code_id>valid_loc_ids"/>'
           '</compare>'
-          '<compare test="[[`if`, ``, `tran_det_row_id>module_id`, `=`, `~ar~`, ``]]">'
-            '<fld_val name="tran_det_row_id>tran_row_id>cust_row_id>location_row_id"/>'
+          '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ar~`, ``]]">'
+            '<fld_val name="subparent_row_id>tran_row_id>cust_row_id>location_row_id"/>'
           '</compare>'
-          '<compare test="[[`if`, ``, `tran_det_row_id>module_id`, `=`, `~ap~`, ``]]">'
-            '<fld_val name="tran_det_row_id>tran_row_id>supp_row_id>location_row_id"/>'
+          '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ap~`, ``]]">'
+            '<fld_val name="subparent_row_id>tran_row_id>supp_row_id>location_row_id"/>'
           '</compare>'
           '<default>'
             '<fld_val name="_param.dflt_loc_row_id"/>'
@@ -231,11 +231,11 @@ cols.append ({
           '<compare test="[[`if`, ``, `gl_code_id>valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
             '<fld_val name="gl_code_id>valid_fun_ids"/>'
           '</compare>'
-          '<compare test="[[`if`, ``, `tran_det_row_id>module_id`, `=`, `~ar~`, ``]]">'
-            '<fld_val name="tran_det_row_id>tran_row_id>cust_row_id>function_row_id"/>'
+          '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ar~`, ``]]">'
+            '<fld_val name="subparent_row_id>tran_row_id>cust_row_id>function_row_id"/>'
           '</compare>'
-          '<compare test="[[`if`, ``, `tran_det_row_id>module_id`, `=`, `~ap~`, ``]]">'
-            '<fld_val name="tran_det_row_id>tran_row_id>supp_row_id>function_row_id"/>'
+          '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ap~`, ``]]">'
+            '<fld_val name="subparent_row_id>tran_row_id>supp_row_id>function_row_id"/>'
           '</compare>'
           '<default>'
             '<fld_val name="_param.dflt_fun_row_id"/>'
@@ -267,7 +267,7 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>tran_row_id>currency_id>scale',
+    'scale_ptr'  : 'subparent_row_id>tran_row_id>currency_id>scale',
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -283,8 +283,8 @@ virt.append ({
     'short_descr': 'Transaction date',
     'long_descr' : 'Transaction date',
     'col_head'   : 'Tran date',
-    'dflt_val'   : '{tran_det_row_id>tran_row_id>tran_date}',
-    'sql'        : "a.tran_det_row_id>tran_row_id>tran_date"
+    'dflt_val'   : '{subparent_row_id>tran_row_id>tran_date}',
+    'sql'        : "a.subparent_row_id>tran_row_id>tran_date"
     })
 virt.append ({
     'col_name'   : 'posted',
@@ -292,8 +292,8 @@ virt.append ({
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
-    'dflt_val'   : '{tran_det_row_id>tran_row_id>posted}',
-    'sql'        : "a.tran_det_row_id>tran_row_id>posted"
+    'dflt_val'   : '{subparent_row_id>tran_row_id>posted}',
+    'sql'        : "a.subparent_row_id>tran_row_id>posted"
     })
 virt.append ({
     'col_name'   : 'gl_local',
@@ -308,10 +308,10 @@ virt.append ({
         '<expr>'
           '<fld_val name="gl_amount"/>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+          '<fld_val name="subparent_row_id>tran_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
-    'sql'        : "a.gl_amount / a.tran_det_row_id>tran_row_id>tran_exch_rate",
+    'sql'        : "a.gl_amount / a.subparent_row_id>tran_row_id>tran_exch_rate",
     })
 virt.append ({
     'col_name'   : 'upd_gl',
@@ -327,11 +327,11 @@ virt.append ({
             '<expr>'
               '<fld_val name="gl_amount"/>'
               '<op type="/"/>'
-              '<fld_val name="tran_det_row_id>tran_row_id>tran_exch_rate"/>'
+              '<fld_val name="subparent_row_id>tran_row_id>tran_exch_rate"/>'
             '</expr>'
           '<op type="*"/>'
           '<case>'
-            '<compare test="[[`if`, ``, `tran_det_row_id>rev_sign_gl`, `is`, `$True`, ``]]">'
+            '<compare test="[[`if`, ``, `subparent_row_id>rev_sign_gl`, `is`, `$True`, ``]]">'
               '<literal value="-1"/>'
             '</compare>'
             '<default>'
@@ -341,9 +341,9 @@ virt.append ({
         '</expr>'
         ),
     'sql'        : (
-        "(a.gl_amount / a.tran_det_row_id>tran_row_id>tran_exch_rate) "
+        "(a.gl_amount / a.subparent_row_id>tran_row_id>tran_exch_rate) "
         "* "
-        "CASE WHEN a.tran_det_row_id>rev_sign_gl = '1' THEN -1 ELSE 1 END"
+        "CASE WHEN a.subparent_row_id>rev_sign_gl = '1' THEN -1 ELSE 1 END"
         ),
     })
 
@@ -363,7 +363,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_row_id>tran_date'],
+                ['tran_date', 'subparent_row_id>tran_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_gl'],  # tgt_col, op, src_col

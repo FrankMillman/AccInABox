@@ -220,8 +220,8 @@ virt.append ({
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
-    'dflt_val'   : '{subtran_row_id>tran_det_row_id>tran_row_id>posted}',
-    'sql'        : "a.subtran_row_id>tran_det_row_id>tran_row_id>posted"
+    'dflt_val'   : '{subtran_row_id>subtran_row_id>tran_row_id>posted}',
+    'sql'        : "a.subtran_row_id>subtran_row_id>tran_row_id>posted"
     })
 
 # cursor definitions

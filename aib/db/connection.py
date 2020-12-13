@@ -867,16 +867,16 @@ class Conn:
         src_col = src_tbl.col_dict[src_colname]
 
         if src_col.sql is not None:
-            # pch_ipch_subinv.tot_party.sql contains the following -
-            #     a.tran_det_row_id>party_currency_id>scale
+            # pch_ipch_subtran.tot_amt.sql contains the following -
+            #     a.subparent_row_id>currency_id>scale
             #
-            # tran_det_row_id can point to ap_tran_inv_det.row_id
+            # subparent_row_id can point to ap_tran_inv_det.row_id
             #
-            # ap_tran_inv_det.party_currency_id.sql consists of -
-            #     a.tran_row_id>supp_row_id>currency_id
+            # ap_tran_inv_det.currency_id.sql consists of -
+            #     a.tran_row_id>currency_id
             #
             # the following block of code replaces the original sql with -
-            #     a.tran_det_row_id>tran_row_id>supp_row_id>currency_id>scale
+            #     a.subparent_row_id>tran_row_id>currency_id>scale
             #
             if not src_col.sql.startswith('a.'):
                 print(src_col.col_name, src_col.sql)

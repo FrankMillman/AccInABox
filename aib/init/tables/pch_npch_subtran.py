@@ -99,11 +99,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_det_row_id',
+    'col_name'   : 'subparent_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Transaction detail id',
-    'long_descr' : 'Transaction detail row id',
-    'col_head'   : 'Tran id',
+    'short_descr': 'Subtran parent row id',
+    'long_descr' : 'Subtran parent row id',
+    'col_head'   : 'Sub par id',
     'key_field'  : 'A',
     'data_source': 'par_id',
     'condition'  : None,
@@ -167,8 +167,8 @@ cols.append ({
           '<compare test="[[`if`, ``, `npch_code_id>valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
             '<fld_val name="npch_code_id>valid_loc_ids"/>'
           '</compare>'
-          '<compare test="[[`if`, ``, `tran_det_row_id>module_id`, `=`, `~ap~`, ``]]">'
-            '<fld_val name="tran_det_row_id>supp_row_id>location_row_id"/>'
+          '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ap~`, ``]]">'
+            '<fld_val name="subparent_row_id>supp_row_id>location_row_id"/>'
           '</compare>'
         '</case>'
         ),
@@ -204,8 +204,8 @@ cols.append ({
           '<compare test="[[`if`, ``, `npch_code_id>valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
             '<fld_val name="npch_code_id>valid_fun_ids"/>'
           '</compare>'
-          '<compare test="[[`if`, ``, `tran_det_row_id>module_id`, `=`, `~ap~`, ``]]">'
-            '<fld_val name="tran_det_row_id>supp_row_id>function_row_id"/>'
+          '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ap~`, ``]]">'
+            '<fld_val name="subparent_row_id>supp_row_id>function_row_id"/>'
           '</compare>'
         '</case>'
         ),
@@ -235,7 +235,7 @@ cols.append ({
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{tran_det_row_id>text}',
+    'dflt_val'   : '{subparent_row_id>text}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -254,7 +254,7 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>currency_id>scale',
+    'scale_ptr'  : 'subparent_row_id>currency_id>scale',
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -274,7 +274,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>currency_id>scale',
+    'scale_ptr'  : 'subparent_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -294,7 +294,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>currency_id>scale',
+    'scale_ptr'  : 'subparent_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -330,8 +330,8 @@ virt.append ({
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
-    'dflt_val'   : '{tran_det_row_id>posted}',
-    'sql'        : "a.tran_det_row_id>posted"
+    'dflt_val'   : '{subparent_row_id>posted}',
+    'sql'        : "a.subparent_row_id>posted"
     })
 virt.append ({
     'col_name'   : 'net_local',
@@ -346,10 +346,10 @@ virt.append ({
         '<expr>'
           '<fld_val name="net_amt"/>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
+          '<fld_val name="subparent_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
-    'sql'        : "a.net_amt / a.tran_det_row_id>tran_exch_rate",
+    'sql'        : "a.net_amt / a.subparent_row_id>tran_exch_rate",
     })
 virt.append ({
     'col_name'   : 'tot_amt',
@@ -358,7 +358,7 @@ virt.append ({
     'long_descr' : 'Total amount in transaction currency',
     'col_head'   : 'Net amount',
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_det_row_id>currency_id>scale',
+    'scale_ptr'  : 'subparent_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
@@ -386,11 +386,11 @@ virt.append ({
             '<fld_val name="tax_amt"/>'
           '</expr>'
           '<op type="/"/>'
-          '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
+          '<fld_val name="subparent_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
     'sql'        : (
-        "(a.net_amt + a.tax_amt) / a.tran_det_row_id>tran_exch_rate"
+        "(a.net_amt + a.tax_amt) / a.subparent_row_id>tran_exch_rate"
         ),
     })
 virt.append ({
@@ -407,11 +407,11 @@ virt.append ({
           '<expr>'
             '<fld_val name="net_amt"/>'
             '<op type="/"/>'
-            '<fld_val name="tran_det_row_id>tran_exch_rate"/>'
+            '<fld_val name="subparent_row_id>tran_exch_rate"/>'
           '</expr>'
           '<op type="*"/>'
           '<case>'
-            '<compare test="[[`if`, ``, `tran_det_row_id>rev_sign_pch`, `is`, `$True`, ``]]">'
+            '<compare test="[[`if`, ``, `subparent_row_id>rev_sign_pch`, `is`, `$True`, ``]]">'
               '<literal value="-1"/>'
             '</compare>'
             '<default>'
@@ -421,9 +421,9 @@ virt.append ({
         '</expr>'
         ),
     'sql'        : (
-        "(a.net_amt / a.tran_det_row_id>tran_exch_rate) "
+        "(a.net_amt / a.subparent_row_id>tran_exch_rate) "
         "* "
-        "CASE WHEN a.tran_det_row_id>rev_sign_pch = '1' THEN -1 ELSE 1 END"
+        "CASE WHEN a.subparent_row_id>rev_sign_pch = '1' THEN -1 ELSE 1 END"
         ),
     })
 
@@ -494,7 +494,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_date'],
+                ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
@@ -514,7 +514,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_date'],
+                ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
@@ -527,16 +527,16 @@ actions.append([
             'pch_npch_supp_totals',  # table name
             [  # condition
                 ['where', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
-                ['and', '', 'tran_det_row_id>module_id', '=', "'ap'", ''],
+                ['and', '', 'subparent_row_id>module_id', '=', "'ap'", ''],
                 ],
             False,  # split source?
             [  # key fields
                 ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
-                ['supp_row_id', 'tran_det_row_id>supp_row_id'],
+                ['supp_row_id', 'subparent_row_id>supp_row_id'],
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_date'],
+                ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
@@ -549,16 +549,16 @@ actions.append([
             'pch_npch_supp_uex_totals',  # table name
             [  # condition
                 ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
-                ['and', '', 'tran_det_row_id>module_id', '=', "'ap'", ''],
+                ['and', '', 'subparent_row_id>module_id', '=', "'ap'", ''],
                 ],
             False,  # split source?
             [  # key fields
                 ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
-                ['supp_row_id', 'tran_det_row_id>supp_row_id'],
+                ['supp_row_id', 'subparent_row_id>supp_row_id'],
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_date'],
+                ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
@@ -579,7 +579,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_date'],
+                ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
@@ -600,7 +600,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['source_code_id', 'source_code_id'],
-                ['tran_date', 'tran_det_row_id>tran_date'],
+                ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col

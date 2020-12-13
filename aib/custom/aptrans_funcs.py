@@ -9,7 +9,7 @@ async def split_npch(db_obj, conn, return_vals):
     # called as split_src func from pch_npch_subtran.upd_on_save() for pch_npch_subtran_uex
     eff_date_param = await db_obj.getval('npch_code_id>chg_eff_date')
     if eff_date_param == '1':  # 1st day of following month
-        period_no = await db_obj.getval('tran_det_row_id>period_row_id')
+        period_no = await db_obj.getval('subparent_row_id>period_row_id')
         adm_periods = await db.cache.get_adm_periods(db_obj.company)
         closing_date = adm_periods[period_no].closing_date
         eff_date = closing_date + td(1)

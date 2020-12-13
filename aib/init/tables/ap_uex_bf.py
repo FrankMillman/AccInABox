@@ -166,38 +166,6 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'supp_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Supp exchange rate',
-    'long_descr' : 'Exchange rate from supplier currency to local',
-    'col_head'   : 'Rate supp',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 8,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-            '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
-                '<literal value="1"/>'
-            '</compare>'
-            '<default>'
-                '<exch_rate>'
-                    '<fld_val name="supp_row_id>currency_id"/>'
-                    '<fld_val name="tran_date"/>'
-                '</exch_rate>'
-            '</default>'
-        '</case>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
     'short_descr': 'Transaction exchange rate',
@@ -211,8 +179,20 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 8,
     'scale_ptr'  : None,
-    'dflt_val'   : '{supp_exch_rate}',
-    'dflt_rule'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+                '<literal value="1"/>'
+            '</compare>'
+            '<default>'
+                '<exch_rate>'
+                    '<fld_val name="supp_row_id>currency_id"/>'
+                    '<fld_val name="tran_date"/>'
+                '</exch_rate>'
+            '</default>'
+        '</case>'
+        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -268,32 +248,12 @@ virt.append ({
         ),
     })
 virt.append ({
-    'col_name'   : 'party_currency_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Party currency id',
-    'long_descr' : 'Party currency id',
-    'col_head'   : 'Party currency id',
-    'dflt_val'   : '{supp_row_id>currency_id}',
-    'sql'        : 'a.supp_row_id>currency_id',
-    })
-virt.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction currency',
     'long_descr' : 'Currency used to enter transaction',
     'col_head'   : 'Currency',
     'sql'        : 'a.supp_row_id>currency_id',
-    })
-virt.append ({
-    'col_name'   : 'party_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Party exchange rate',
-    'long_descr' : 'Party exchange rate',
-    'col_head'   : 'Party exch rate',
-    'db_scale'   : 8,
-    'fkey'       : None,
-    'dflt_val'   : '{supp_exch_rate}',
-    'sql'        : 'a.supp_exch_rate',
     })
 
 # cursor definitions

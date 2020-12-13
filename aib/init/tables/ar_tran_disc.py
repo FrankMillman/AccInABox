@@ -350,26 +350,6 @@ virt.append ({
         ),
     })
 virt.append ({
-    'col_name'   : 'party_currency_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Party id',
-    'long_descr' : 'Party id',
-    'col_head'   : 'Party id',
-    'dflt_val'   : '{cust_row_id>currency_id}',
-    'sql'        : 'a.cust_row_id>currency_id',
-    })
-virt.append ({
-    'col_name'   : 'party_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Party exchange rate',
-    'long_descr' : 'Party exchange rate',
-    'col_head'   : 'Party exch rate',
-    'db_scale'   : 8,
-    'fkey'       : None,
-    'dflt_val'   : '{cust_exch_rate}',
-    'sql'        : 'a.cust_exch_rate',
-    })
-virt.append ({
     'col_name'   : 'module_id',
     'data_type'  : 'TEXT',
     'short_descr': 'Module id',
@@ -508,7 +488,7 @@ actions.append([
             [],  # key fields
             [],  # aggregation
             [  # on insert
-                # ['tran_det_row_id', '=', 'row_id'],  # tgt_col, src_col
+                # ['subparent_row_id', '=', 'row_id'],  # tgt_col, src_col
                 ['nsls_code_id', '=', 'cust_row_id>ledger_row_id>discount_code_id'],
                 ['nsls_amount', '=', 'discount_cust'],
                 ],

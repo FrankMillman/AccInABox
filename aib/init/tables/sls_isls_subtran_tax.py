@@ -151,7 +151,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'subtran_row_id>tran_det_row_id>currency_id>scale',
+    'scale_ptr'  : 'subtran_row_id>subparent_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -167,8 +167,8 @@ virt.append ({
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted? Only here to satisfy diag.py',
     'col_head'   : 'Posted?',
-    'dflt_val'   : '{subtran_row_id>tran_det_row_id>posted}',
-    'sql'        : "a.subtran_row_id>tran_det_row_id>posted"
+    'dflt_val'   : '{subtran_row_id>subparent_row_id>posted}',
+    'sql'        : "a.subtran_row_id>subparent_row_id>posted"
     })
 virt.append ({
     'col_name'   : 'tax_local',
@@ -183,13 +183,13 @@ virt.append ({
         '<expr>'
           '<fld_val name="tax_amt"/>'
           '<op type="/"/>'
-          '<fld_val name="subtran_row_id>tran_det_row_id>tran_exch_rate"/>'
+          '<fld_val name="subtran_row_id>subparent_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
     'sql'        : (
         "a.tax_amt"
         " / "
-        "a.subtran_row_id>tran_det_row_id>tran_exch_rate"
+        "a.subtran_row_id>subparent_row_id>tran_exch_rate"
         ),
     })
 virt.append ({
@@ -205,11 +205,11 @@ virt.append ({
             '<expr>'
             '<fld_val name="tax_amt"/>'
             '<op type="/"/>'
-            '<fld_val name="subtran_row_id>tran_det_row_id>tran_exch_rate"/>'
+            '<fld_val name="subtran_row_id>subparent_row_id>tran_exch_rate"/>'
             '</expr>'
           '<op type="*"/>'
           '<case>'
-            '<compare test="[[`if`, ``, `subtran_row_id>tran_det_row_id>rev_sign_sls`, `is`, `$True`, ``]]">'
+            '<compare test="[[`if`, ``, `subtran_row_id>subparent_row_id>rev_sign_sls`, `is`, `$True`, ``]]">'
               '<literal value="-1"/>'
             '</compare>'
             '<default>'
@@ -219,9 +219,9 @@ virt.append ({
         '</expr>'
         ),
     'sql'        : (
-        "(a.tax_amt / a.subtran_row_id>tran_det_row_id>tran_exch_rate) "
+        "(a.tax_amt / a.subtran_row_id>subparent_row_id>tran_exch_rate) "
         "* "
-        "CASE WHEN a.subtran_row_id>tran_det_row_id>rev_sign_sls = '1' THEN -1 ELSE 1 END"
+        "CASE WHEN a.subtran_row_id>subparent_row_id>rev_sign_sls = '1' THEN -1 ELSE 1 END"
         ),
     })
 virt.append ({
@@ -256,7 +256,7 @@ actions.append([
                 ['location_row_id', 'tax_code_id>tax_cat_id>location_row_id'],
                 ['function_row_id', 'tax_code_id>tax_cat_id>function_row_id'],
                 ['source_code', 'tax_source_code'],
-                ['tran_date', 'subtran_row_id>tran_det_row_id>tran_date'],
+                ['tran_date', 'subtran_row_id>subparent_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['sales_day', '+', 'subtran_row_id>upd_local'],  # tgt_col, op, src_col
@@ -278,7 +278,7 @@ actions.append([
                 ['location_row_id', 'tax_code_id>tax_cat_id>location_row_id'],
                 ['function_row_id', 'tax_code_id>tax_cat_id>function_row_id'],
                 ['source_code', 'tax_source_code'],
-                ['tran_date', 'subtran_row_id>tran_det_row_id>tran_date'],
+                ['tran_date', 'subtran_row_id>subparent_row_id>tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'upd_tax'],  # tgt_col, op, src_col

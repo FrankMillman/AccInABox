@@ -311,7 +311,6 @@ virt.append ({
     'long_descr' : 'Transacction exchange rate',
     'col_head'   : 'Tran exch rate',
     'db_scale'   : 8,
-    'fkey'       : None,
     'dflt_val'   : '{tran_row_id>tran_exch_rate}',
     'sql'        : 'a.tran_row_id>tran_exch_rate',
     })

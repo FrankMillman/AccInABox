@@ -211,40 +211,13 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '{cust_row_id>currency_id}',
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        ['alt_curr', 'Alternate currency not allowed', [
+            ['check', '', '$value', '=', 'cust_row_id>currency_id', ''],
+            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+            ]],
+        ],
     'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'cust_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cust exchange rate',
-    'long_descr' : 'Exchange rate from customer currency to local',
-    'col_head'   : 'Rate cust',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 8,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-            '<compare test="[[`if`, ``, `cust_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
-                '<literal value="1"/>'
-            '</compare>'
-            '<default>'
-                '<exch_rate>'
-                    '<fld_val name="cust_row_id>currency_id"/>'
-                    '<fld_val name="tran_date"/>'
-                '</exch_rate>'
-            '</default>'
-        '</case>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
@@ -267,9 +240,6 @@ cols.append ({
             '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
             '</compare>'
-            '<compare test="[[`if`, ``, `currency_id`, `=`, `cust_row_id>currency_id`, ``]]">'
-                '<fld_val name="cust_exch_rate"/>'
-            '</compare>'
             '<default>'
                 '<exch_rate>'
                     '<fld_val name="currency_id"/>'
@@ -282,6 +252,41 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+# cols.append ({
+#     'col_name'   : 'cust_exch_rate',
+#     'data_type'  : 'DEC',
+#     'short_descr': 'Cust exchange rate',
+#     'long_descr' : 'Exchange rate from customer currency to local',
+#     'col_head'   : 'Rate cust',
+#     'key_field'  : 'N',
+#     'data_source': 'calc',
+#     'condition'  : None,
+#     'allow_null' : False,
+#     'allow_amend': False,
+#     'max_len'    : 0,
+#     'db_scale'   : 8,
+#     'scale_ptr'  : None,
+#     'dflt_val'   : None,
+#     'dflt_rule'  : (
+#         '<case>'
+#             '<compare test="[[`if`, ``, `cust_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+#                 '<literal value="1"/>'
+#             '</compare>'
+#             '<compare test="[[`if`, ``, `cust_row_id>currency_id`, `=`, `currency_id`, ``]]">'
+#                 '<fld_val name="cust_exch_rate"/>'
+#             '</compare>'
+#             '<default>'
+#                 '<exch_rate>'
+#                     '<fld_val name="cust_row_id>currency_id"/>'
+#                     '<fld_val name="tran_date"/>'
+#                 '</exch_rate>'
+#             '</default>'
+#         '</case>'
+#         ),
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
 cols.append ({
     'col_name'   : 'amount',
     'data_type'  : '$TRN',

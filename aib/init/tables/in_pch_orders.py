@@ -209,38 +209,6 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'wh_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Whouse exch rate',
-    'long_descr' : 'Warehouse exchange rate',
-    'col_head'   : 'Wh exch rate',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 8,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-          '<compare test="[[`if`, ``, `ledger_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
-            '<literal value="1"/>'
-          '</compare>'
-          '<default>'
-            '<exch_rate>'
-              '<fld_val name="ledger_row_id>currency_id"/>'
-              '<fld_val name="order_date"/>'
-            '</exch_rate>'
-          '</default>'
-        '</case>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
     'short_descr': 'Transaction exch rate',
@@ -263,6 +231,41 @@ cols.append ({
           '<default>'
             '<exch_rate>'
               '<fld_val name="currency_id"/>'
+              '<fld_val name="order_date"/>'
+            '</exch_rate>'
+          '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'wh_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Whouse exch rate',
+    'long_descr' : 'Warehouse exchange rate',
+    'col_head'   : 'Wh exch rate',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 8,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `ledger_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+            '<literal value="1"/>'
+          '</compare>'
+            '<compare test="[[`if`, ``, `ledger_row_id>currency_id`, `=`, `currency_id`, ``]]">'
+                '<fld_val name="tran_exch_rate"/>'
+            '</compare>'
+          '<default>'
+            '<exch_rate>'
+              '<fld_val name="ledger_row_id>currency_id"/>'
               '<fld_val name="order_date"/>'
             '</exch_rate>'
           '</default>'
