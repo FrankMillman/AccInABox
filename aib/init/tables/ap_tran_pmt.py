@@ -461,6 +461,18 @@ cursors.append({
 # actions
 actions = []
 actions.append([
+    'on_setup',
+        '<case>'
+          '<compare test="[[\'if\', \'\', \'_ctx.module_id\', \'=\', \'~ap~\', \'\']]">'
+            '<case>'
+              '<compare test="[[\'if\', \'\', \'_ledger.pmt_tran_source\', \'!=\', \'~ap~\', \'\']]">'
+                '<aib_error head="Payment param" body="Payment source is not ap module"/>'
+              '</compare>'
+            '</case>'
+          '</compare>'
+        '</case>'
+    ])
+actions.append([
     'upd_checks', [
         [
             'recheck_date',

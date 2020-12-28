@@ -39,6 +39,10 @@ class Context:
         self._company = company
         self._mem_id = mem_id
         self._module_row_id = module_row_id
+        if module_row_id is None:
+            self._module_id = None
+        else:
+            self._module_id = await get_mod_id(company, module_row_id)
         self._ledger_row_id = ledger_row_id
         self._db_session = db.connection.DbSession(mem_id)
         self._data_objects = {}  # dictionary of shared data objects
@@ -54,6 +58,7 @@ class Context:
         descr.append(f'user={self._user_row_id};')
         descr.append(f'sys_admin={self._sys_admin};')
         descr.append(f'module_row_id={self._module_row_id};')
+        descr.append(f'module_id={self._module_id};')
         descr.append(f'ledger_row_id={self._ledger_row_id};')
         for k, v in vars(self).items():
             if not k.startswith('_') and k not in ('in_db_save', 'in_db_post'):
@@ -93,6 +98,9 @@ class Context:
     @property
     def module_row_id(self):
         return self._module_row_id
+    @property
+    def module_id(self):
+        return self._module_id
     @property
     def ledger_row_id(self):
         return self._ledger_row_id
