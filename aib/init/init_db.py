@@ -17,7 +17,7 @@ async def init_database():
 
     company = '_sys'
     company_name = 'System Administration'
-    context = db.cache.get_new_context(1, True, company)  # user_row_id, sys_admin, company
+    context = await db.cache.get_new_context(1, True, company)  # user_row_id, sys_admin, company
 
     # MS-SQL cannot run ALTER TABLE inside transaction, so call create_functions() here
     conn = db.connection.DbConn()

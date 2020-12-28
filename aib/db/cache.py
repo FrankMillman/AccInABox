@@ -25,12 +25,14 @@ class delwatcher:
 
 #-----------------------------------------------------------------------------
 
-def get_new_context(user_row_id, sys_admin, company, mem_id=None,
+async def get_new_context(user_row_id, sys_admin, company, mem_id=None,
         module_row_id=None, ledger_row_id=None):
-    return Context(user_row_id, sys_admin, company, mem_id, module_row_id, ledger_row_id)
+    context = Context()
+    await context._ainit_(user_row_id, sys_admin, company, mem_id, module_row_id, ledger_row_id)
+    return context
 
 class Context:
-    def __init__(self, user_row_id, sys_admin, company, mem_id, module_row_id, ledger_row_id):
+    async def _ainit_(self, user_row_id, sys_admin, company, mem_id, module_row_id, ledger_row_id):
         self._flds_to_recalc = DD(list)  # dictionary of fields to recalc if attribute value changes
         self._user_row_id = user_row_id
         self._sys_admin = sys_admin
@@ -106,20 +108,13 @@ class Context:
 
 #-----------------------------------------------------------------------------
 
-# following lines used as 'context' for cached db objects
-cache_context = get_new_context(1, True, '_sys')  # user_row_id, sys_admin, company
-db_session = cache_context.db_session
-
-#-----------------------------------------------------------------------------
-
 companies = {'_sys': None}  # else sqlite3 cannot 'attach' _sys
 # called from ht.htc.start() - read in all company ids and names up front
 async def setup_companies():
-    async with db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
-        sql = 'SELECT company_id, company_name FROM _sys.dir_companies'
-        async for comp_id, comp_name in await conn.exec_sql(sql):
-            companies[comp_id] = comp_name
+    sql = 'SELECT company_id, company_name FROM _sys.dir_companies'
+    conn = await db.connection._get_connection()
+    async for comp_id, comp_name in await conn.exec_sql(sql):
+        companies[comp_id] = comp_name
 
 # callback to update 'companies' - dir_companies.actions.after_commit
 async def company_changed(db_obj, xml):
@@ -131,7 +126,7 @@ async def company_changed(db_obj, xml):
 adm_params = {}
 async def get_adm_params(company):
     if company not in adm_params:
-        context = get_new_context(1, True, company)
+        context = await get_new_context(1, True, company)
         adm_param = await db.objects.get_db_object(context, 'adm_params')
         await adm_param.add_all_virtual()
         await adm_param.setval('row_id', 1)  # forces a select
@@ -156,12 +151,11 @@ async def get_mod_id(company, mod_id):
     async with mod_lock:
         if company not in mod_ids:
             mod_ids[company] = {}
-            async with db_session.get_connection() as db_mem_conn:
-                conn = db_mem_conn.db
-                sql = f'SELECT row_id, module_id, descr FROM {company}.db_modules WHERE deleted_id = 0'
-                async for row_id, module_id, descr in await conn.exec_sql(sql):
-                    mod_ids[company][row_id] = (module_id, descr)
-                    mod_ids[company][module_id] = row_id
+            sql = f'SELECT row_id, module_id FROM {company}.db_modules WHERE deleted_id = 0'
+            conn = await db.connection._get_connection()
+            async for row_id, module_id in await conn.exec_sql(sql):
+                mod_ids[company][row_id] = module_id
+                mod_ids[company][module_id] = row_id
     try:
         return mod_ids[company][mod_id]
     except KeyError:
@@ -176,39 +170,17 @@ async def get_mod_ledg_id(company, module_id, ledger_id):
             mod_ledg_ids[company] = {}
         if (module_id, ledger_id) not in mod_ledg_ids[company]:
             module_row_id = await get_mod_id(company, module_id)
-            async with db_session.get_connection() as db_mem_conn:
-                conn = db_mem_conn.db
-                sql = (
-                    f"SELECT row_id, ledger_id FROM {company}.{module_id}_ledger_params "
-                    "WHERE deleted_id = 0"
-                    )
-                async for ledger_row_id, ledger_id2 in await conn.exec_sql(sql):
-                    mod_ledg_ids[company][(module_id, ledger_id2)] = module_row_id, ledger_row_id
+            sql = (
+                f"SELECT row_id, ledger_id FROM {company}.{module_id}_ledger_params "
+                "WHERE deleted_id = 0"
+                )
+            conn = await db.connection._get_connection()
+            async for ledger_row_id, ledger_id2 in await conn.exec_sql(sql):
+                mod_ledg_ids[company][(module_id, ledger_id2)] = module_row_id, ledger_row_id
     try:
         return mod_ledg_ids[company][(module_id, ledger_id)]
     except KeyError:
         raise AibError(head='Module/ledger_id', body=f'"{module_id}.{ledger_id}" not found')
-
-# # get module id/descr, ledger id/descr from mod_ledg_id
-# mod_ledg_names = {}
-# mod_name_lock = asyncio.Lock()
-# async def get_mod_ledg_name(company, mod_ledg_id):
-#     async with mod_name_lock:
-#         if company not in mod_ledg_names:
-#             mod_ledg_names[company] = {}
-#         if mod_ledg_id not in mod_ledg_names[company]:
-#             module_row_id, ledger_row_id = mod_ledg_id
-#             module_id, module_descr = await get_mod_id(company, module_row_id)
-#             async with db_session.get_connection() as db_mem_conn:
-#                 conn = db_mem_conn.db
-#                 sql = (
-#                     f"SELECT row_id, ledger_id, descr FROM {company}.{module_id}_ledger_params "
-#                     "WHERE deleted_id = 0"
-#                     )
-#                 async for ledger_row_id, ledger_id, ledger_descr in await conn.exec_sql(sql):
-#                     mod_ledg_names[company][(module_row_id, ledger_row_id)] = (
-#                         module_id, module_descr, ledger_id, ledger_descr)
-#         return mod_ledg_names[company][mod_ledg_id]
 
 # ledger_param data object for each company/module/ledger
 ledger_params = {}
@@ -220,21 +192,19 @@ async def get_ledger_params(company, module_row_id, ledger_row_id):
 
         if module_row_id not in ledger_params[company]:
             ledger_params[company][module_row_id] = {}
-            module_id = (await get_mod_id(company, module_row_id))[0]
+            module_id = (await get_mod_id(company, module_row_id))
             table_name = f'{module_id}_ledger_params'
 
             # create 'blank' ledg_obj for use if db_obj.exists is False
-            context = get_new_context(1, True, company)
+            context = await get_new_context(1, True, company)
             ledg_obj = await db.objects.get_db_object(context, table_name)
             await ledg_obj.add_all_virtual()
             ledger_params[company][module_row_id][None] = ledg_obj
 
         if ledger_row_id not in ledger_params[company][module_row_id]:
-            module_id = (await get_mod_id(company, module_row_id))[0]
+            module_id = (await get_mod_id(company, module_row_id))
             table_name = f'{module_id}_ledger_params'
-            # context = get_new_context(1, True, company,
-            #     mod_ledg_id = (module_row_id, ledger_row_id))
-            context = get_new_context(1, True, company, None, module_row_id, ledger_row_id)
+            context = await get_new_context(1, True, company, None, module_row_id, ledger_row_id)
             ledg_obj = await db.objects.get_db_object(context, table_name)
             await ledg_obj.add_all_virtual()
             await ledg_obj.setval('row_id', ledger_row_id)  # to force a SELECT
@@ -276,7 +246,7 @@ async def ledger_inserted(db_obj, xml):
     ledger_row_id = await db_obj.getval('row_id')
     ledger_id = await db_obj.getval('ledger_id')
     descr = await db_obj.getval('descr')
-    module_id, module_descr = await get_mod_id(company, module_row_id)
+    module_id = await get_mod_id(company, module_row_id)
 
     # get module administrator role
     acc_role = await db.objects.get_db_object(db_obj.context, 'acc_roles')
@@ -317,47 +287,46 @@ async def ledger_inserted(db_obj, xml):
     await menu.save()
     save_parent_id = await menu.getval('row_id')
 
-    async with db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
+    conn = await db.connection._get_connection()
 
-        company = db_obj.company
-        cte = conn.tree_select(
-            company_id=company,
-            table_name='sys_menu_defns',
-            link_col='parent_id',
-            start_col='parent_id',
-            start_value=None,
-            filter=[
-                ['WHERE', '', 'module_row_id', '=',module_row_id, ''],
-                ['AND', '', 'deleted_id', '=', -1, ''],
-                ],
-            sort=True,
-            )
-        sql = (cte +
-            "SELECT row_id, parent_id, descr, opt_type, table_name, "
-                "cursor_name, form_name FROM _tree "
-            "ORDER BY _key, parent_id, seq"
-            )
-        async for row in await conn.exec_sql(sql):
-            row_id, parent_id, descr, opt_type, table_name, cursor_name, form_name = row
+    company = db_obj.company
+    cte = conn.tree_select(
+        company_id=company,
+        table_name='sys_menu_defns',
+        link_col='parent_id',
+        start_col='parent_id',
+        start_value=None,
+        filter=[
+            ['WHERE', '', 'module_row_id', '=',module_row_id, ''],
+            ['AND', '', 'deleted_id', '=', -1, ''],
+            ],
+        sort=True,
+        )
+    sql = (cte +
+        "SELECT row_id, parent_id, descr, opt_type, table_name, "
+            "cursor_name, form_name FROM _tree "
+        "ORDER BY _key, parent_id, seq"
+        )
+    async for row in await conn.exec_sql(sql):
+        row_id, parent_id, descr, opt_type, table_name, cursor_name, form_name = row
 
-            if parent_id is None:  # top level - do not save, but calculate parent_id_diff
-                parent_id_diff = save_parent_id - row_id
-                continue
+        if parent_id is None:  # top level - do not save, but calculate parent_id_diff
+            parent_id_diff = save_parent_id - row_id
+            continue
 
-            await menu.init()
-            await menu.setval('descr', descr)
-            await menu.setval('opt_type', opt_type)
-            if table_name is not None:
-                await menu.setval('table_name', table_name)
-            if cursor_name is not None:
-                await menu.setval('cursor_name', cursor_name)
-            if form_name is not None:
-                await menu.setval('form_name', form_name)
-            await menu.setval('parent_id', parent_id + parent_id_diff)
-            await menu.setval('module_row_id', module_row_id)
-            await menu.setval('ledger_row_id', ledger_row_id)
-            await menu.save()
+        await menu.init()
+        await menu.setval('descr', descr)
+        await menu.setval('opt_type', opt_type)
+        if table_name is not None:
+            await menu.setval('table_name', table_name)
+        if cursor_name is not None:
+            await menu.setval('cursor_name', cursor_name)
+        if form_name is not None:
+            await menu.setval('form_name', form_name)
+        await menu.setval('parent_id', parent_id + parent_id_diff)
+        await menu.setval('module_row_id', module_row_id)
+        await menu.setval('ledger_row_id', ledger_row_id)
+        await menu.save()
 
 # callback to update menu on client if changed
 # called from various {mod}_ledger_new.xml on_close_form
@@ -387,7 +356,7 @@ async def get_adm_periods(company):
     async with adm_per_lock:
         if company not in adm_periods:
             adm_per_list = []
-            context = get_new_context(1, True, company)
+            context = await get_new_context(1, True, company)
             adm_per_obj = await db.objects.get_db_object(context, 'adm_periods')
             await adm_per_obj.getfld('year_no')  # to set up virtual field
             await adm_per_obj.getfld('year_per_id')  # ditto
@@ -536,38 +505,37 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
             ledger_periods[company][module_row_id] = {}
         if ledger_row_id not in ledger_periods[company][module_row_id]:
             ledger_periods[company][module_row_id][ledger_row_id] = OD()
-            module_id = (await get_mod_id(company, module_row_id))[0]
+            module_id = (await get_mod_id(company, module_row_id))
 
-            async with db_session.get_connection() as db_mem_conn:
-                conn = db_mem_conn.db
-                # select all periods for module/ledger combination, with their current state
+            conn = await db.connection._get_connection()
+            # select all periods for module/ledger combination, with their current state
+            if module_id == 'ar':
+                sub_date = 'statement_date'
+                sub_state = 'statement_state'
+            elif module_id == 'ap':
+                sub_date = 'payment_date'
+                sub_state = 'payment_state'
+            else:
+                sub_date = 'null'
+                sub_state = 'null'
+            sql = (
+                f'SELECT period_row_id, state, {sub_date}, {sub_state} '
+                f'FROM {company}.{module_id}_ledger_periods '
+                f'WHERE ledger_row_id = {conn.constants.param_style} AND deleted_id = 0 '
+                f'ORDER BY period_row_id'
+                )
+            params = [ledger_row_id]
+            async for period_row_id, state, sub_date, sub_state in await conn.exec_sql(sql, params):
+                period_data = SN(state=state)
                 if module_id == 'ar':
-                    sub_date = 'statement_date'
-                    sub_state = 'statement_state'
+                    period_data.statement_date = sub_date
+                    period_data.statement_state = sub_state
                 elif module_id == 'ap':
-                    sub_date = 'payment_date'
-                    sub_state = 'payment_state'
-                else:
-                    sub_date = 'null'
-                    sub_state = 'null'
-                sql = (
-                    f'SELECT period_row_id, state, {sub_date}, {sub_state} '
-                    f'FROM {company}.{module_id}_ledger_periods '
-                    f'WHERE ledger_row_id = {conn.constants.param_style} AND deleted_id = 0 '
-                    f'ORDER BY period_row_id'
-                    )
-                params = [ledger_row_id]
-                async for period_row_id, state, sub_date, sub_state in await conn.exec_sql(sql, params):
-                    period_data = SN(state=state)
-                    if module_id == 'ar':
-                        period_data.statement_date = sub_date
-                        period_data.statement_state = sub_state
-                    elif module_id == 'ap':
-                        period_data.payment_date = sub_date
-                        period_data.payment_state = sub_state
-                    ledger_periods[company][module_row_id][ledger_row_id][period_row_id] = period_data
-                    if state == 'current':
-                        ledger_periods[company][module_row_id][ledger_row_id].current_period = period_row_id
+                    period_data.payment_date = sub_date
+                    period_data.payment_state = sub_state
+                ledger_periods[company][module_row_id][ledger_row_id][period_row_id] = period_data
+                if state == 'current':
+                    ledger_periods[company][module_row_id][ledger_row_id].current_period = period_row_id
 
     return ledger_periods[company][module_row_id][ledger_row_id]
 
@@ -691,7 +659,7 @@ async def get_user_perms(user_row_id, company):
         if user_row_id not in user_table_perms:
             user_table_perms[user_row_id] = {}
         if company not in user_table_perms[user_row_id]:
-            context = get_new_context(1, True, company)
+            context = await get_new_context(1, True, company)
             # users_companies = await db.objects.get_db_object(context, '_sys.dir_users_companies')
             users_companies = await db.objects.get_db_object(context, 'dir_users_companies')
             await users_companies.init()
@@ -708,70 +676,69 @@ async def get_user_perms(user_row_id, company):
                 table_dict = dict()
                 table_perms = [module_set, ledger_set, table_dict]
 
-                async with db_session.get_connection() as db_mem_conn:
-                    conn = db_mem_conn.db
+                conn = await db.connection._get_connection()
 
-                    role_row_ids = []  # build list of role id's for this user
+                role_row_ids = []  # build list of role id's for this user
 
+                sql = (
+                    "SELECT b.row_id, b.role_type, b.module_row_id, b.ledger_row_id "
+                    f"FROM {company}.acc_users_roles a, {company}.acc_roles b "
+                    f"WHERE b.row_id = a.role_row_id AND a.user_row_id = {user_row_id} "
+                    "AND a.deleted_id = 0 AND b.deleted_id = 0 "
+                    "AND b.role_type != '0' "
+                    "ORDER BY b.role_type"
+                    )
+                cur = await conn.exec_sql(sql)
+                async for row_id, role_type, module_row_id, ledger_row_id in cur:
+                    if role_type == '1':  # module administrator
+                        module_set.add(module_row_id)
+                    elif role_type == '2':  # ledger administrator
+                        if module_row_id not in module_set:
+                            ledger_set.add((module_row_id, ledger_row_id))
+                    else:  # must be role_type 3 - user-defined role
+                        if module_row_id in module_set:
+                            continue  # already has full permissions on this module
+                        if ledger_row_id is not None and (module_row_id, ledger_row_id) in ledger_set:
+                            continue  # already has full permissions on this ledger
+                        role_row_ids.append(row_id)  # add to list of roles for this user
+
+                if role_row_ids:
                     sql = (
-                        "SELECT b.row_id, b.role_type, b.module_row_id, b.ledger_row_id "
-                        f"FROM {company}.acc_users_roles a, {company}.acc_roles b "
-                        f"WHERE b.row_id = a.role_row_id AND a.user_row_id = {user_row_id} "
-                        "AND a.deleted_id = 0 AND b.deleted_id = 0 "
-                        "AND b.role_type != '0' "
-                        "ORDER BY b.role_type"
+                        "SELECT a.table_id, a.sel_ok, a.ins_ok, a.upd_ok, a.del_ok, b.ledger_row_id "
+                        f"FROM {company}.acc_table_perms a, {company}.acc_roles b "
+                        "WHERE a.deleted_id = 0 AND b.row_id = a.role_row_id AND a.role_row_id in "
+                        f"({', '.join([conn.constants.param_style] * len(role_row_ids))}) "
                         )
-                    cur = await conn.exec_sql(sql)
-                    async for row_id, role_type, module_row_id, ledger_row_id in cur:
-                        if role_type == '1':  # module administrator
-                            module_set.add(module_row_id)
-                        elif role_type == '2':  # ledger administrator
-                            if module_row_id not in module_set:
-                                ledger_set.add((module_row_id, ledger_row_id))
-                        else:  # must be role_type 3 - user-defined role
-                            if module_row_id in module_set:
-                                continue  # already has full permissions on this module
-                            if ledger_row_id is not None and (module_row_id, ledger_row_id) in ledger_set:
-                                continue  # already has full permissions on this ledger
-                            role_row_ids.append(row_id)  # add to list of roles for this user
-
-                    if role_row_ids:
-                        sql = (
-                            "SELECT a.table_id, a.sel_ok, a.ins_ok, a.upd_ok, a.del_ok, b.ledger_row_id "
-                            f"FROM {company}.acc_table_perms a, {company}.acc_roles b "
-                            "WHERE a.deleted_id = 0 AND b.row_id = a.role_row_id AND a.role_row_id in "
-                            f"({', '.join([conn.constants.param_style] * len(role_row_ids))}) "
-                            )
-                        cur = await conn.exec_sql(sql, role_row_ids)
-                        async for table_id, sel_new, ins_new, upd_new, del_new, ledger_row_id in cur:
-                            key = (table_id, ledger_row_id)  # ledger_row_id can be None
-                            sel_new = loads(sel_new)
-                            ins_new = loads(ins_new)
-                            upd_new = loads(upd_new)
-                            del_new = loads(del_new)
-                            if key in table_dict:
-                                sel_now, ins_now, upd_now, del_now = table_dict[key]
-                                if sel_new is True:
-                                    sel_now = True
-                                elif isinstance(sel_new, dict):
-                                    if sel_now is False:
-                                        sel_now = sel_new
-                                    else:
-                                        sel_now.update(sel_new)
-                                if ins_new is True:
-                                    ins_now = True
-                                if upd_new is True:
-                                    upd_now = True
-                                elif isinstance(upd_new, dict):
-                                    if upd_now is False:
-                                        upd_now = upd_new
-                                    else:
-                                        upd_now.update(upd_new)
-                                if del_new is True:
-                                    del_now = True
-                                table_dict[key] = (sel_now, ins_now, upd_now, del_now)
-                            else:
-                                table_dict[key] = (sel_new, ins_new, upd_new, del_new)
+                    cur = await conn.exec_sql(sql, role_row_ids)
+                    async for table_id, sel_new, ins_new, upd_new, del_new, ledger_row_id in cur:
+                        key = (table_id, ledger_row_id)  # ledger_row_id can be None
+                        sel_new = loads(sel_new)
+                        ins_new = loads(ins_new)
+                        upd_new = loads(upd_new)
+                        del_new = loads(del_new)
+                        if key in table_dict:
+                            sel_now, ins_now, upd_now, del_now = table_dict[key]
+                            if sel_new is True:
+                                sel_now = True
+                            elif isinstance(sel_new, dict):
+                                if sel_now is False:
+                                    sel_now = sel_new
+                                else:
+                                    sel_now.update(sel_new)
+                            if ins_new is True:
+                                ins_now = True
+                            if upd_new is True:
+                                upd_now = True
+                            elif isinstance(upd_new, dict):
+                                if upd_now is False:
+                                    upd_now = upd_new
+                                else:
+                                    upd_now.update(upd_new)
+                            if del_new is True:
+                                del_now = True
+                            table_dict[key] = (sel_now, ins_now, upd_now, del_now)
+                        else:
+                            table_dict[key] = (sel_new, ins_new, upd_new, del_new)
 
             user_table_perms[user_row_id][company] = table_perms
 
@@ -786,7 +753,8 @@ async def get_user(user_id):
     async with user_lock:
         global users
         if users is None:
-            users = await db.objects.get_db_object(cache_context, 'dir_users')
+            context = await get_new_context(1, True, '_sys')  # user_row_id, sys_admin, company
+            users = await db.objects.get_db_object(context, 'dir_users')
             await users.add_virtual('display_name')
         if isinstance(user_id, int):  # receive user_row_id, return display_name
             await users.select_row({'row_id': user_id})

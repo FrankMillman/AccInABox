@@ -185,7 +185,7 @@ async def get_db_table(context, db_company, table_name):
     # print('GET TABLE', table_name)
 
     if context is None:  # called from connection.check_sql_params() when evaluating `...`
-        context = db.cache.get_new_context(1, True, db_company)  # user_row_id, sys_admin, company
+        context = await db.cache.get_new_context(1, True, db_company)  # user_row_id, sys_admin, company
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
@@ -776,11 +776,11 @@ class DbObject:
                 fld = await self.getfld(dep_name)
                 fld.notify_recalc(field)
 
-        if col_defn.dflt_rule is not None:
+        if col_defn.dflt_val is not None:
+            field._orig = field._value = await field.get_dflt()
+        elif col_defn.dflt_rule is not None:
             field._value = await db.dflt_xml.get_db_dflt(field)
             field._orig = await db.dflt_xml.get_db_dflt(field, orig=True)
-        elif col_defn.dflt_val is not None:
-            field._orig = field._value = await field.get_dflt()
 
         if col_defn.sql is not None:
             self.select_cols.append(field)
@@ -2776,7 +2776,7 @@ class DbTable:
 
                 # set up sql on 'expandable' column - use 'not expandable' to detect leaf node
                 exp_col = self.col_dict['expandable']
-                exp_col.sql = f"CASE WHEN a.{type_colname} = '{level_types[-1][0]}' THEN 0 ELSE 1 END"
+                exp_col.sql = f"CASE WHEN a.{type_colname} = '{level_types[-1][0]}' THEN $False ELSE $True END"
                 await get_dependencies(exp_col)
 
                 # set up virt cols for each level
@@ -3013,7 +3013,7 @@ class DbTable:
             cur_company, cur_name = cursor_name.split('.')
         else:
             cur_company, cur_name = self.defn_company, cursor_name
-        ctx = db.cache.get_new_context(1, True, cur_company)
+        ctx = await db.cache.get_new_context(1, True, cur_company)
         db_cursors = await get_db_object(ctx, 'db_cursors')
         await db_cursors.select_row({'table_id': self.defn_tableid, 'cursor_name': cur_name})
         if not db_cursors.exists:
@@ -3157,18 +3157,18 @@ class MemTable(DbTable):
             alt_keys_2[-1].table_keys = alt_keys_2
 
         actions = table_defn.get('actions')
-        if actions is None:
-            self.actions = Actions([None]*len(Actions.names))
-        else:
-            row = [None] * len(Actions.names)
+        row = [None] * len(Actions.names)
+        if actions is not None:
             actions = loads(actions)
             for act_type, action in actions:
                 if act_type == 'upd_checks':
                     row[0] = dumps(action)
                 elif act_type == 'del_checks':
                     row[1] = dumps(action)
+                elif act_type == 'upd_on_save':
+                    row[4] = dumps(action)
                 # extend as necessary
-            self.actions = Actions(row)
+        self.actions = Actions(row)
 
         self.sub_types = OD()
         sub_types = table_defn.get('sub_types')

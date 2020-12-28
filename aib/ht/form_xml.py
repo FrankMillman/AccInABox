@@ -585,7 +585,7 @@ async def start_process(caller, xml):
         data_inputs[param_name] = value
 
     process = bp.bpm.ProcessRoot(caller.company, xml.get('name'), data_inputs=data_inputs)
-    context = db.cache.get_new_context(caller.context.user_row_id,
+    context = await db.cache.get_new_context(caller.context.user_row_id,
         caller.context.sys_admin, caller.context.company, id(process),
         caller.context.module_row_id, caller.context.ledger_row_id)
     await process.start_process(context)

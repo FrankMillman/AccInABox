@@ -61,7 +61,7 @@ class Report:
         else:
             reportdefn_company = self.company
 
-        ctx = db.cache.get_new_context(1, True, reportdefn_company)
+        ctx = await db.cache.get_new_context(1, True, reportdefn_company)
         report_defns = await db.objects.get_db_object(ctx, 'sys_report_defns')
         await report_defns.select_row({'report_name': self.report_name})
         if not report_defns.exists:

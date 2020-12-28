@@ -152,7 +152,7 @@ class HumanTask:
 
     async def start_task(self, session):
         form = ht.form.Form()
-        context = db.cache.get_new_context(session.user_row_id,
+        context = await db.cache.get_new_context(session.user_row_id,
             session.sys_admin, self.company, mem_id=id(form))
         await form._ainit_(context, session, self.form_name, data_inputs=self.data_inputs,
             callback=(self.on_task_completed,))

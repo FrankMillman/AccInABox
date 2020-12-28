@@ -254,7 +254,7 @@ class ResponseHandler:
             await response.send_headers()
             await response.write(reply)
             await response.write_eof()
-        elif self.reply is not None:  # if None do not reply - set by on_answer()
+        elif self.reply == []:  # if None do not reply - set by on_answer()
             response = Response(self.writer, 200)
             response.add_header('Content-type', 'text/html')
             await response.send_headers()
@@ -372,7 +372,7 @@ class ResponseHandler:
         menu_id, = args
         company, row_id = loads(menu_id)
 
-        ctx = db.cache.get_new_context(1, True, company)
+        ctx = await db.cache.get_new_context(1, True, company)
         menu_defns = await db.objects.get_db_object(ctx, 'sys_menu_defns')
         await menu_defns.select_row({'row_id': int(row_id)})
 
@@ -380,7 +380,7 @@ class ResponseHandler:
 
         if opt_type == 'grid':
             form = ht.form.Form()
-            context = db.cache.get_new_context(self.session.user_row_id,
+            context = await db.cache.get_new_context(self.session.user_row_id,
                 self.session.sys_admin, company, id(form),
                 await menu_defns.getval('module_row_id'),
                 await menu_defns.getval('ledger_row_id'))
@@ -388,7 +388,7 @@ class ResponseHandler:
                 grid_params=(await menu_defns.getval('table_name'), await menu_defns.getval('cursor_name')))
         elif opt_type == 'form':
             form = ht.form.Form()
-            context = db.cache.get_new_context(self.session.user_row_id,
+            context = await db.cache.get_new_context(self.session.user_row_id,
                 self.session.sys_admin, company, id(form),
                 await menu_defns.getval('module_row_id'),
                 await menu_defns.getval('ledger_row_id'))
@@ -397,7 +397,7 @@ class ResponseHandler:
             pass
         # elif opt_type == 'process':
         #     process = bp.bpm.ProcessRoot(company, await menu_defns.getval('process_id'))
-        #     context = db.cache.get_new_context(self.session.user_row_id,
+        #     context = await db.cache.get_new_context(self.session.user_row_id,
         #         self.session.sys_admin, company, id(process),
         #         await menu_defns.getval('module_row_id'),
         #         await menu_defns.getval('ledger_row_id'))
@@ -546,7 +546,7 @@ class ResponseHandler:
         form_name = 'login_form'
 
         form = ht.form.Form()
-        context = db.cache.get_new_context(self.session.user_row_id,
+        context = await db.cache.get_new_context(self.session.user_row_id,
             self.session.sys_admin, company, mem_id=id(form))
         await form._ainit_(context, self.session, form_name, callback=(self.session.on_login,))
 

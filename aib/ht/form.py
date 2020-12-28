@@ -142,13 +142,13 @@ class Form:
             else:
                 formdefn_company = self.company
 
-            ctx = db.cache.get_new_context(1, True, formdefn_company)
+            ctx = await db.cache.get_new_context(1, True, formdefn_company)
             form_defns = await db.objects.get_db_object(ctx, 'sys_form_defns')
             await form_defns.select_row({'form_name': self.form_name})
             if not form_defns.exists:
                 if formview_obj is not None:
                     if formview_obj.db_table.defn_company != formdefn_company:
-                        ctx = db.cache.get_new_context(1, True, formview_obj.db_table.defn_company)
+                        ctx = await db.cache.get_new_context(1, True, formview_obj.db_table.defn_company)
                         form_defns = await db.objects.get_db_object(ctx, 'sys_form_defns')
                         await form_defns.select_row({'form_name': self.form_name})
 

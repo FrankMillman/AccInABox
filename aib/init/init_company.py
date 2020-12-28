@@ -15,7 +15,7 @@ next_table_id = count(1)  # generate sequential numbers, starting from 1
 
 async def init_company(company, company_name):
 
-    context = db.cache.get_new_context(1, True, company)  # user_row_id, sys_admin, company
+    context = await db.cache.get_new_context(1, True, company)  # user_row_id, sys_admin, company
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         await conn.create_company(company)
@@ -246,6 +246,15 @@ async def setup_other_tables(context, conn):
         'gl_tran_jnl_det',
         'gl_jnl_subtran',
         'gl_totals',
+        'cb_ledger_params',
+        'cb_ledger_periods',
+        'cb_tran_rec',
+        'cb_tran_rec_det',
+        'cb_tran_pmt',
+        'cb_tran_pmt_det',
+        'cb_tran_bf',
+        'cb_totals',
+        'cb_comments',
         'sls_nsls_groups',
         'sls_nsls_codes',
         'sls_nsls_tax_codes',
@@ -306,15 +315,15 @@ async def setup_other_tables(context, conn):
         'ap_uex_bf',
         'ap_totals',
         'ap_supp_totals',
-        'cb_ledger_params',
-        'cb_ledger_periods',
-        'cb_tran_rec',
-        'cb_tran_rec_det',
-        'cb_tran_pmt',
-        'cb_tran_pmt_det',
-        'cb_tran_bf',
-        'cb_totals',
-        'cb_comments',
+        # 'cb_ledger_params',
+        # 'cb_ledger_periods',
+        # 'cb_tran_rec',
+        # 'cb_tran_rec_det',
+        # 'cb_tran_pmt',
+        # 'cb_tran_pmt_det',
+        # 'cb_tran_bf',
+        # 'cb_totals',
+        # 'cb_comments',
         'pch_ipch_subtran',
         'pch_ipch_subtran_tax',
         'pch_ipch_totals',
@@ -588,6 +597,7 @@ async def setup_forms(context, conn):
     await setup_form('ap_supp_bal')
     await setup_form('setup_npch_codes')
     await setup_form('ap_invoice')
+    await setup_form('ap_pmts_due')
     await setup_form('ap_balances')
     await setup_form('ap_ledger_summary')
     await setup_form('setup_prod_codes')

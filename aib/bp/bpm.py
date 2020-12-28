@@ -1425,14 +1425,16 @@ class rTask:
     def __init__(self, manager):
         self.manager = manager
         root_context = manager.process.root.context
-        self.context = db.cache.get_new_context(
-            root_context.user_row_id,
-            root_context.sys_admin,
-            root_context.company,
-            root_context.mem_id,
-            root_context.module_row_id,
-            root_context.ledger_row_id,
-            )
+        # is this used? [2020-12-28]
+        # if yes, must be changed to async, as get_new_context() requires 'await'
+        # self.context = db.cache.get_new_context(
+        #     root_context.user_row_id,
+        #     root_context.sys_admin,
+        #     root_context.company,
+        #     root_context.mem_id,
+        #     root_context.module_row_id,
+        #     root_context.ledger_row_id,
+        #     )
 
 class userTask(task):
     def __init__(self, process, elem):
