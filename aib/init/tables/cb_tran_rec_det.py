@@ -206,7 +206,7 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - sales transactions?',
     'col_head'   : 'Reverse sign?',
-    'sql'        : "'0'",
+    'sql'        : '$False',
     })
 virt.append ({
     'col_name'   : 'rev_sign_pch',
@@ -214,7 +214,7 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - purchase transactions?',
     'col_head'   : 'Reverse sign?',
-    'sql'        : "'1'",
+    'sql'        : '$True',
     })
 virt.append ({
     'col_name'   : 'rev_sign_gl',
@@ -222,7 +222,7 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - gl transactions?',
     'col_head'   : 'Reverse sign?',
-    'sql'        : "'1'",
+    'sql'        : '$True',
     })
 virt.append ({
     'col_name'   : 'display_descr',
@@ -294,7 +294,7 @@ virt.append ({
     'long_descr' : 'Tax inclusive',
     'col_head'   : 'Tax incl',
     'fkey'       : None,
-    'sql'        : "'1'",
+    'sql'        : '$True',
     })
 virt.append ({
     'col_name'   : 'cust_row_id',

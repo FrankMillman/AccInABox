@@ -251,10 +251,10 @@ virt.append ({
     'dflt_val'   : 'false',
     'sql'        : (
         "SELECT CASE "
-            "WHEN a.role_type IN ('0', '1', '2') THEN 1 ELSE "
+            "WHEN a.role_type IN ('0', '1', '2') THEN $True ELSE "
             "CASE WHEN EXISTS "
             "(SELECT * FROM {company}.acc_roles b WHERE b.parent_id = a.row_id) "
-            "THEN 1 ELSE 0 END "
+            "THEN $True ELSE $False END "
         "END"
         ),
     })

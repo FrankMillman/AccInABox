@@ -27,12 +27,12 @@ def customise(constants, DbConn, db_params):
     constants.table_created = (
         "SELECT CASE WHEN EXISTS (SELECT * FROM pg_tables "
         "WHERE schemaname = '{company}' and tablename = a.table_name) "
-        "THEN 1 ELSE 0 END"
+        "THEN $True ELSE $False END"
         )
     constants.view_created = (
         "SELECT CASE WHEN EXISTS (SELECT * FROM pg_views "
         "WHERE schemaname = '{company}' and viewname = a.view_name) "
-        "THEN 1 ELSE 0 END"
+        "THEN $True ELSE $False END"
         )
 
     DbConn.init = init
@@ -231,6 +231,8 @@ async def convert_sql(self, sql, params=None):
     # PostgreSQL sorts NULLs last, sqlite3 and Sql Server sort them first
     # this adds NULLS FIRST to each PostgreSQL ORDER BY clause for compatibility
     # if sorting in descending sequence, use NULLS LAST
+
+    sql = sql.replace('$True', 'true').replace('$False', 'false')
 
     if 'ORDER BY' not in sql.upper():
         return sql, params

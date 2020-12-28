@@ -205,7 +205,7 @@ virt.append ({
     'sql'        : (
         "a.npch_expensed_loc "
         "* "
-        "CASE WHEN a.subtran_row_id>subparent_row_id>rev_sign_pch = '1' THEN -1 ELSE 1 END"
+        "CASE WHEN a.subtran_row_id>subparent_row_id>rev_sign_pch = $True THEN -1 ELSE 1 END"
         ),
     })
 virt.append ({

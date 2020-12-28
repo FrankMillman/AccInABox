@@ -430,7 +430,7 @@ virt.append ({
     'short_descr': 'Table created?',
     'long_descr' : 'Has this table been created in the database?',
     'col_head'   : '',
-    'sql'        : '0',  # see actions.on_setup - create db_specific sql
+    'sql'        : '$False',  # see actions.on_setup - create db_specific sql
     })
 
 # cursor definitions

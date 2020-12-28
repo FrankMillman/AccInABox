@@ -253,7 +253,7 @@ virt.append ({
     'col_head'   : '',
     'sql'        : (
         "CASE WHEN EXISTS(SELECT * FROM {company}.ap_allocations b "
-        "WHERE b.tran_row_id = a.row_id) THEN 1 ELSE 0 END"
+        "WHERE b.tran_row_id = a.row_id) THEN $True ELSE $False END"
         ),
     })
 virt.append ({

@@ -607,7 +607,7 @@ virt.append ({
     'col_head'   : 'Alloc num',
     'sql'        : (
         "SELECT count(*) FROM {company}.ar_tran_alloc b "
-        "WHERE b.item_row_id = a.row_id AND b.posted = '1'"
+        "WHERE b.item_row_id = a.row_id AND b.posted = $True"
         )
     })
 virt.append ({

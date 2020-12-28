@@ -262,7 +262,7 @@ virt.append ({
     'short_descr': 'Expandable?',
     'long_descr' : 'Expandable? - Can be over-ridden at run-time in db.objects if levels added',
     'col_head'   : '',
-    'sql'        : "0",
+    'sql'        : '$False',
     })
 
 # cursor definitions

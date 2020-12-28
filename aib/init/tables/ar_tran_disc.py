@@ -363,7 +363,7 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - sales transactions?',
     'col_head'   : 'Reverse sign?',
-    'sql'        : "'1'",
+    'sql'        : '$True',
     })
 virt.append ({
     'col_name'   : 'tax_incl',
@@ -371,7 +371,7 @@ virt.append ({
     'short_descr': 'Tax inclusive',
     'long_descr' : 'Tax inclusive',
     'col_head'   : 'Tax incl',
-    'sql'        : "'1'",
+    'sql'        : '$True',
     })
 virt.append ({
     'col_name'   : 'item_row_id',

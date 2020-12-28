@@ -20,12 +20,12 @@ def customise(constants, DbConn, db_params):
     constants.table_created = (
         "SELECT CASE WHEN EXISTS (SELECT * FROM {company}.sqlite_master "
         "WHERE type = 'table' AND name = a.table_name) "
-        "THEN 1 ELSE 0 END"
+        "THEN $True ELSE $False END"
         )
     constants.view_created = (
         "SELECT CASE WHEN EXISTS (SELECT * FROM {company}.sqlite_master "
         "WHERE type = 'view' AND name = a.view_name) "
-        "THEN 1 ELSE 0 END"
+        "THEN $True ELSE $False END"
         )
 
     DbConn.init = init
@@ -272,6 +272,9 @@ async def attach_company(self, company):
             self.companies.add(company)
 
 async def convert_sql(self, sql, params=None):
+
+    sql = sql.replace('$True', '1').replace('$False', '0')
+
     if self.database != ':memory:':
         for company in db.cache.companies:
             if company not in self.companies:

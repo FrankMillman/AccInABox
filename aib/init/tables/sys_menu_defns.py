@@ -301,7 +301,7 @@ virt.append ({
     'short_descr': 'Expandable?',
     'long_descr' : 'Is this node expandable?',
     'col_head'   : '',
-    'sql'        : "SELECT CASE WHEN a.opt_type = 'menu' THEN 1 ELSE 0 END",
+    'sql'        : "SELECT CASE WHEN a.opt_type = 'menu' THEN $True ELSE $False END",
     })
 
 # cursor definitions

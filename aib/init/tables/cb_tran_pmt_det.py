@@ -16,16 +16,12 @@ table = {
             ['npch', 'Purchase of non-inventory item', 'pch_npch_subtran',
                 [  # return values
                     ['pmt_tran', 'tot_amt'],  # tgt_col, src_col
-                    # ['pmt_tran', 'tot_party'],
-                    # ['pmt_local', 'tot_local'],
                     ],
                 ['npch_code_id>descr'],  # display descr
                 ],
             # ['nsls', 'Refund of non-inventory item', 'cb_nsls_crn',
             #     [  # return values
             #         ['pmt_tran', 'tot_amt'],  # tgt_col, src_col
-            #         # ['pmt_tran', 'tot_party'],
-            #         # ['pmt_local', 'tot_local'],
             #         ],
             #     ['nsls_code_id>descr'],  # display descr
             #     ],
@@ -33,14 +29,15 @@ table = {
                 [  # return values
                     ['pmt_tran', 'chg_amount'],  # tgt_col, src_col
                     ],
-                ['cust_row_id>party_row_id>display_name'],  # display descr
+                # ['cust_row_id>party_row_id>display_name'],  # display descr
+                ['cust_id'],  # display descr
                 ],
-            # ['apmt', 'Ap payment', 'ap_subtran_pmt',
-            #     [  # return values
-            #         ['pmt_tran', 'apmt_amount'],  # tgt_col, src_col
-            #         ],
-            #     ['supp_id'],  # display descr
-            #     ],
+            ['apmt', 'Ap payment', 'ap_subtran_pmt',
+                [  # return values
+                    ['pmt_tran', 'apmt_amount'],  # tgt_col, src_col
+                    ],
+                ['supp_id'],  # display descr
+                ],
             ['gl', 'Post to g/l', 'gl_jnl_subtran',
                 [  # return values
                     ['pmt_tran', 'gl_amount'],  # tgt_col, src_col
@@ -222,7 +219,7 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - sales transactions?',
     'col_head'   : 'Reverse sign?',
-    'sql'        : "'1'",
+    'sql'        : '$True',
     })
 virt.append ({
     'col_name'   : 'rev_sign_pch',
@@ -230,7 +227,7 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - purchase transactions?',
     'col_head'   : 'Reverse sign?',
-    'sql'        : "'0'",
+    'sql'        : '$False',
     })
 virt.append ({
     'col_name'   : 'rev_sign_gl',
@@ -238,7 +235,7 @@ virt.append ({
     'short_descr': 'Reverse sign?',
     'long_descr' : 'Reverse sign - gl transactions?',
     'col_head'   : 'Reverse sign?',
-    'sql'        : "'0'",
+    'sql'        : '$False',
     })
 virt.append ({
     'col_name'   : 'display_descr',
@@ -310,7 +307,7 @@ virt.append ({
     'long_descr' : 'Tax inclusive',
     'col_head'   : 'Tax incl',
     'fkey'       : None,
-    'sql'        : "'1'",
+    'sql'        : '$True',
     })
 virt.append ({
     'col_name'   : 'cust_row_id',

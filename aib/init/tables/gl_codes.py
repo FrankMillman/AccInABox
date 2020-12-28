@@ -262,7 +262,7 @@ virt.append ({
                 "UNION SELECT gl_code_id from {company}.cb_ledger_params "
                 "UNION SELECT gl_code_id from {company}.in_ledger_params "
             ") AS t WHERE t.gl_code_id = a.row_id) "
-        "THEN 1 ELSE 0 END"
+        "THEN $True ELSE $False END"
         ),
     })
 

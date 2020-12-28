@@ -237,11 +237,7 @@ virt.append ({
     'short_descr': 'Current period?',
     'long_descr' : 'Current period?',
     'col_head'   : 'Curr?',
-    'sql'        : (
-        "CASE "
-            "WHEN a.state = 'current' THEN 1 ELSE 0 "
-        "END"
-        ),
+    'sql'        : "CASE WHEN a.state = 'current' THEN $True ELSE $False END",
     })
 virt.append ({
     'col_name'   : 'opening_date',

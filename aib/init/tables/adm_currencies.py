@@ -202,7 +202,7 @@ virt.append ({
     'sql'        : (
         "CASE WHEN a.row_id = "
         "(SELECT local_curr_id FROM {company}.adm_params) "
-        "THEN 1 ELSE 0 END"
+        "THEN $True ELSE $False END"
         ),
     })
 

@@ -470,7 +470,7 @@ virt.append ({
     'sql'        : (
         "a.qty "
         "* "
-        "CASE WHEN a.subparent_row_id>rev_sign_sls = '1' THEN -1 ELSE 1 END"
+        "CASE WHEN a.subparent_row_id>rev_sign_sls = $True THEN -1 ELSE 1 END"
         ),
     })
 virt.append ({
@@ -503,7 +503,7 @@ virt.append ({
     'sql'        : (
         "(a.net_amt / a.subparent_row_id>tran_exch_rate) "
         "* "
-        "CASE WHEN a.subparent_row_id>rev_sign_sls = '1' THEN -1 ELSE 1 END"
+        "CASE WHEN a.subparent_row_id>rev_sign_sls = $True THEN -1 ELSE 1 END"
         ),
     })
 virt.append ({
@@ -531,7 +531,7 @@ virt.append ({
     'sql'        : (
         "a.cost_local "
         "* "
-        "CASE WHEN a.subparent_row_id>rev_sign_sls = '1' THEN -1 ELSE 1 END"
+        "CASE WHEN a.subparent_row_id>rev_sign_sls = $True THEN -1 ELSE 1 END"
         ),
     })
 virt.append ({
@@ -559,7 +559,7 @@ virt.append ({
     'sql'        : (
         "a.cost_whouse "
         "* "
-        "CASE WHEN a.subparent_row_id>rev_sign_sls = '1' THEN -1 ELSE 1 END"
+        "CASE WHEN a.subparent_row_id>rev_sign_sls = $True THEN -1 ELSE 1 END"
         ),
     })
 

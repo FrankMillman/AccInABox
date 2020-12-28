@@ -335,7 +335,7 @@ virt.append ({
     'short_descr': 'View created?',
     'long_descr' : 'Has this view been created in the database?',
     'col_head'   : '',
-    'sql'        : '0',  # see actions.on_setup - create db_specific sql
+    'sql'        : '$False',  # see actions.on_setup - create db_specific sql
     })
 
 # cursor definitions

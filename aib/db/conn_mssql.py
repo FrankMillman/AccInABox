@@ -11,12 +11,12 @@ def customise(constants, DbConn, db_params):
     constants.table_created = (
         "SELECT CASE WHEN EXISTS (SELECT * FROM information_schema.tables "
         "WHERE table_schema = '{company}' and table_name = a.table_name) "
-        "THEN 1 ELSE 0 END"
+        "THEN $True ELSE $False END"
         )
     constants.view_created = (
         "SELECT CASE WHEN EXISTS (SELECT * FROM information_schema.views "
         "WHERE table_schema = '{company}' and table_name = a.view_name) "
-        "THEN 1 ELSE 0 END"
+        "THEN $True ELSE $False END"
         )
 
     DbConn.init = init
@@ -306,6 +306,9 @@ async def delete_row(self, db_obj, from_upd_on_save):
         await self.exec_cmd(sql, key_vals)
 
 async def convert_sql(self, sql, params=None):
+
+    sql = sql.replace('$True', 'CAST(1 AS BIT)').replace('$False', 'CAST(0 AS BIT)')
+
     # standard sql uses 'LIMIT 1' at end, Sql Server uses 'TOP 1' after SELECT
     while ' LIMIT ' in sql.upper():
         pos = sql.upper().find(' LIMIT ')

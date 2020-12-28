@@ -221,7 +221,7 @@ virt.append ({
     'sql'        : (
         "(a.tax_amt / a.subtran_row_id>subparent_row_id>tran_exch_rate) "
         "* "
-        "CASE WHEN a.subtran_row_id>subparent_row_id>rev_sign_pch = '1' THEN -1 ELSE 1 END"
+        "CASE WHEN a.subtran_row_id>subparent_row_id>rev_sign_pch = $True THEN -1 ELSE 1 END"
         ),
     })
 virt.append ({

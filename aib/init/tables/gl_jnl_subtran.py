@@ -343,7 +343,7 @@ virt.append ({
     'sql'        : (
         "(a.gl_amount / a.subparent_row_id>tran_row_id>tran_exch_rate) "
         "* "
-        "CASE WHEN a.subparent_row_id>rev_sign_gl = '1' THEN -1 ELSE 1 END"
+        "CASE WHEN a.subparent_row_id>rev_sign_gl = $True THEN -1 ELSE 1 END"
         ),
     })
 

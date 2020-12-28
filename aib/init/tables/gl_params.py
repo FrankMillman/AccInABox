@@ -151,7 +151,7 @@ virt.append ({
     'long_descr' : 'Have general ledger periods been set up?',
     'col_head'   : 'Gl per',
     'sql'        : (
-        "CASE WHEN EXISTS (SELECT * FROM {company}.gl_ledger_periods) THEN 1 ELSE 0 END"
+        "CASE WHEN EXISTS (SELECT * FROM {company}.gl_ledger_periods) THEN $True ELSE $False END"
         ),
     })
 
