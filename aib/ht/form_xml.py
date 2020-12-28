@@ -618,28 +618,10 @@ async def run_report(caller, xml):
     report_name = xml.get('name')
     report = rep.report.Report()
     await report._ainit_(caller.context, caller.session, report_name, data_inputs=data_inputs)
-
-    # set up pdf title, replace {...} with actual values
-    title = report.pdf_name
-    while '{' in title:
-        pos_1 = title.find('{')
-        pos_2 = title.find('}')
-        expr = title[pos_1+1: pos_2]
-        table_name, col_name = expr.split('.')
-        db_obj = caller.context.data_objects[table_name]
-        fld = await db_obj.getfld(col_name)
-        title = title[:pos_1] + await fld.val_to_str() + title[pos_2+1:]
-    pdf_name = f'{title}.pdf'
-
-    if pdf_name in caller.form.pdf_dict:
-        caller.form.pdf_dict[pdf_name].close()  # remove BytesIO object from memory
-
-    pdf_fd = await report.create_report(title)  # call report creator, returns BytesIO object
-    caller.form.pdf_dict[pdf_name] = pdf_fd
-
-    # ht.htc.pdf_dict[pdf_name] = pdf_fd  # pointer to pdf created
-    ht.htc.pdf_dict[pdf_name] = (caller.form.pdf_dict, pdf_name)
-    caller.session.responder.send_pdf(pdf_name)  # browser 'opens' pdf, ht.htc writes pdf
+    pdf_name, pdf_fd = await report.create_report()  # call report creator, returns BytesIO object
+    pdf_key = f'{caller.session.session_id}:{pdf_name}'
+    caller.session.pdf_dict[pdf_name] = pdf_fd  # pointer to pdf created
+    caller.session.responder.send_pdf(pdf_key)  # browser 'opens' pdf, ht.htc writes pdf
 
 async def find_row(caller, xml):
     grid_ref, row = caller.btn_args

@@ -182,9 +182,20 @@ class Report:
                     body = f"Required parameter '{name}' not supplied"
                     raise AibError(head=head, body=body)
 
-    async def create_report(self, title):
-        report_defn = self.report_defn
+    async def create_report(self):
+        # set up pdf title, replace {...} with actual values
+        title = self.pdf_name
+        while '{' in title:
+            pos_1 = title.find('{')
+            pos_2 = title.find('}')
+            expr = title[pos_1+1: pos_2]
+            table_name, col_name = expr.split('.')
+            db_obj = self.context.data_objects[table_name]
+            fld = await db_obj.getfld(col_name)
+            title = title[:pos_1] + await fld.val_to_str() + title[pos_2+1:]
+        pdf_name = f'{title}.pdf'
 
+        report_defn = self.report_defn
         page = report_defn.find('page')
         wd, ht = getattr(pagesizes, page.get('pagesize'))
         if page.get('landscape') == 'true':  # default to false
@@ -195,7 +206,6 @@ class Report:
         font = (fontname, int(fontsize))
 
         pdf_fd = io.BytesIO()
-
         try:
             # set up report definition
             blocks = []
@@ -218,7 +228,7 @@ class Report:
             # finalise
             c.save()
             pdf_fd.seek(0)  # rewind
-            return pdf_fd
+            return pdf_name, pdf_fd
 
         except AibError:
             pdf_fd.close()

@@ -29,7 +29,6 @@ from common import AibError
 from common import log, debug, log_db, db_log
 
 sessions = {}  # key=session_id, value=session instance
-pdf_dict = {}  # key=pdf_name, value=reference to pdf_fd generated
 
 #----------------------------------------------------------------------------
 
@@ -69,6 +68,7 @@ class Session:
 
         self.responder = None
         self.questions = {}
+        self.pdf_dict = {}  # key=pdf_name, value=reference to pdf_fd generated
 
         # start keep-alive timer
         self.tick = time.time()
@@ -720,31 +720,24 @@ async def handle_client(client_reader, client_writer):
     elif path.endswith('.pdf'):
         path = urllib.parse.unquote(path)
         pdf_key = path[1:]  # strip leading '/'
-        # try:
-        #     pdf_fd = pdf_dict.pop(pdf_key)  # pointer to created pdf - BytesIO object
-        #     response = Response(client_writer, 200)
-        #     response.add_header('Content-type', 'application/pdf')
-        #     await response.send_headers()
-        #     await response.write_file(pdf_fd)
-        #     pdf_fd.close()
-        # except KeyError:  # user tried to reload - fails because BytesIO object closed
-        #     response = Response(client_writer, 200)
-        #     response.add_header('Content-type', 'text/html')
-        #     await response.send_headers()
-        #     # await response.write('')
+        session_id, pdf_name = pdf_key.split(':', 1)
+        session = sessions[session_id]
         try:
-            form_pdf_dict, pdf_name = pdf_dict[pdf_key]
-            pdf_fd = form_pdf_dict[pdf_name]  # pointer to created pdf - BytesIO object
+            pdf_fd = session.pdf_dict.pop(pdf_name)  # pointer to created pdf - BytesIO object
             response = Response(client_writer, 200)
             response.add_header('Content-type', 'application/pdf')
             await response.send_headers()
             await response.write_file(pdf_fd)
             await response.write_eof()
-            pdf_fd.seek(0)  # in case user reloads
-        except KeyError:  # user closed form, then tried to reload pdf (!)
+            pdf_fd.close()  # remove BytesIO object from memory
+        except KeyError:  # user tried to reload page, but pdf has been removed
             response = Response(client_writer, 200)
             response.add_header('Content-type', 'text/html')
+            response.add_header('Transfer-Encoding', 'chunked')
             await response.send_headers()
+            await response.write(
+                '<h2 style="text-align:center;">No longer available - please close and reselect</h2>'
+                )
             await response.write_eof()
     elif path.startswith('/dev'):
         path = path[4:]

@@ -112,7 +112,6 @@ class Form:
         self.obj_dict = {}  # dict of objects for this form
         self.obj_id = itertools.count()  # seq id for objects for this form
         self.mem_tables = {}  # keep reference to restore when sub-form is closed
-        self.pdf_dict = {}  # keep reference to pdf's generated - close when form is closed
 
         if inline is not None:  # form defn is passed in as parameter
             form_defn = self.form_defn = inline
@@ -168,6 +167,8 @@ class Form:
             self.data_objects['grid_obj'] = grid_obj
             title = await grid_obj.setup_cursor_defn(cursor_name)
 
+        self.title = title
+
         try:
             input_params = form_defn.find('input_params')
             await self.setup_input_obj(input_params)
@@ -175,7 +176,7 @@ class Form:
             await self.setup_mem_objects(form_defn.find('mem_objects'))
             await self.setup_input_attr(input_params)
             # await self.setup_input_params(form_defn.find('input_params'))
-            await self.setup_form(form_defn, title)
+            await self.setup_form(form_defn)
         except AibError:
             del self.root.form_list[-1]
             if self.parent_form is None:
@@ -400,7 +401,7 @@ class Form:
             if not db_obj.exists:
                 fld._orig = value
 
-    async def setup_form(self, form_defn, title):
+    async def setup_form(self, form_defn):
 
         self.readonly = form_defn.get('readonly')
 
@@ -417,7 +418,7 @@ class Form:
         gui = []  # list of elements to send to client for rendering
         if self.parent_form is None:
             gui.append(('root', {'root_id': self.root.ref}))
-        gui.append(('form', {'title':title, 'form_id': self.ref}))
+        gui.append(('form', {'title':self.title, 'form_id': self.ref}))
 
         frame = Frame()
         frame_xml = form_defn.find('frame')
@@ -572,11 +573,6 @@ class Form:
                 # del frame.parent  # remove circular reference
 
                 # del frame.grids  # remove circular reference
-
-            for pdf_name in self.pdf_dict:
-                del ht.htc.pdf_dict[pdf_name]
-                self.pdf_dict[pdf_name].close()  # remove BytesIO object from memory
-                self.pdf_dict[pdf_name] = None  # force garbage collection
 
             # self.obj_dict = None
             # self.first_input = None
