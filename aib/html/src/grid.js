@@ -1390,8 +1390,9 @@ if (grid.header_row.length) {
       else if (pos === grid.frame.obj_list.length) {
         pos = 0;  // wrap to start
         };
-      if (grid.frame.obj_list[pos].offsetHeight > 0 && !grid.frame.obj_list[pos].display) {
-        setTimeout(function() {grid.frame.obj_list[pos].focus()}, 0);
+      var next_obj = grid.frame.obj_list[pos];
+      if (next_obj.offsetHeight > 0 && !next_obj.display && next_obj.tabIndex > -1) {
+        setTimeout(function() {next_obj.focus()}, 0);
         break;
         };
       pos += tabdir;  // tab = 1, shift+tab = -1

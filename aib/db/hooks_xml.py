@@ -10,6 +10,7 @@ import db.objects
 import db.create_table
 import db.cache
 import db.connection
+from common import AibError
 from evaluate_expr import eval_bool_expr
 
 async def table_hook(db_obj, elem):
@@ -41,6 +42,9 @@ async def pyfunc(db_obj, xml):
     module_name, func_name = func_name.rsplit('.', 1)
     module = importlib.import_module(module_name)
     await getattr(module, func_name)(db_obj, xml)
+
+async def aib_error(db_obj, xml):
+    raise AibError(head=xml.get('head'), body=xml.get('body'))
 
 async def create_company(db_obj, xml):
     # run init_company() as a background task

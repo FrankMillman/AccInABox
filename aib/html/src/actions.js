@@ -369,12 +369,21 @@ function append_tasks(args) {
     };
   };
 
-function show_pdf(args) {
-  var pdf_name = args;
-  // delay to allow onkeyup signal to be sent to correct window
-  setTimeout(function() {window.open(pdf_name, '_blank')}, 150);
-  };
- 
+  function show_pdf(pdf_name) {
+    // delay to allow onkeyup signal to be sent to correct window
+    setTimeout(function() {window.open(pdf_name, '_blank')}, 150);
+    };
+
+  function get_csv(csv_name) {
+    var link = document.createElement("a");
+    // If you don't know the name or want to use the webserver default, set name = ''
+    link.setAttribute('download', csv_name);
+    link.href = csv_name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    };
+       
 function exception(args) {
   traceback = args.join('<br>').replace(/ /g, '\xa0');  // replace all ' ' with &nbsp
   window.open('../error.html');  // it will read 'traceback' and display it

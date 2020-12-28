@@ -32,6 +32,13 @@ tool_selected = (
     '"/>'
     )
 
+tool_download = (
+    '<tool type="img" name="download" tip="Download as csv" '
+        'action="'
+        '&lt;download/&gt;'
+    '"/>'
+    )
+
 #-- button row building blocks ----------------------------------------------
 
 btn_ok = (
@@ -422,6 +429,7 @@ class Grid:  # template for grids
         f'{tool_nav}'
         f'{tool_insert}'
         f'{tool_delete}'
+        f'{tool_download}'
         '</toolbar>'
         )
 
@@ -464,6 +472,7 @@ class Grid_Setup(Grid):  # template for setup-type grids - added 'formview'
         f'{tool_nav}'
         f'{tool_insert}'
         f'{tool_delete}'
+        f'{tool_download}'
         '</toolbar>'
         )
 
@@ -477,6 +486,7 @@ class Grid_Lookup(Grid):  # template for lookup-type grids - added 'selected'
         f'{tool_nav}'
         f'{tool_insert}'
         f'{tool_delete}'
+        f'{tool_download}'
         '</toolbar>'
         )
 

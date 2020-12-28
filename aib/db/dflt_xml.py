@@ -285,7 +285,7 @@ async def on_save(fld, xml, debug):
     return fld.db_obj.context.in_db_save
 
 async def on_insert(fld, xml, debug):
-    return fld.db_obj.context.in_db_save and not fld.db_obj.exists
+    return fld.db_obj.context.in_db_save and (await fld.db_obj.getval('row_id') is None)
 
 async def on_post(fld, xml, debug):
     return fld.db_obj.context.in_db_post

@@ -1,4 +1,6 @@
 import asyncio
+import io
+import csv
 from collections import OrderedDict as OD
 from json import loads
 from lxml import etree
@@ -313,11 +315,17 @@ class GuiGrid:
         action = None
 
         header_cols = []
+        self.download_hdr = []
         for header_col in header_row:
             if header_col is None:
                 header_cols.append(None)
+                self.download_hdr.append(None)
             elif header_col.startswith("'"):
                 header_cols.append(('text', {'value': header_col[1:-1]}))
+                self.download_hdr.append(header_col[1:-1])
+            elif header_col  == '...':  # insert None for any 'optional' columns
+                header_cols.extend([None] * (len(gui_cols) - (len(header_row) - 1)))  #  -1 to adj for '...'
+                self.download_hdr.extend([None] * (len(gui_cols) - (len(header_row) - 1)))
             else:
                 obj_name, col_name = header_col.split('.')
                 fld = await self.data_objects[obj_name].getfld(col_name)
@@ -327,15 +335,20 @@ class GuiGrid:
                     self.parent, fld, readonly, skip, choices, lkup, pwd,
                     lng, height, label, action, header_cols)
                 fld.notify_form(gui_obj)
+                self.download_hdr.append(fld)
 
         footer_cols = []
+        self.download_ftr = []
         for footer_col in footer_row:
             if footer_col is None:
                 footer_cols.append(None)
+                self.download_ftr.append(None)
             elif footer_col.startswith("'"):
                 footer_cols.append(('text', {'value': footer_col[1:-1]}))
+                self.download_ftr.append(footer_col[1:-1])
             elif footer_col  == '...':  # insert None for any 'optional' columns
                 footer_cols.extend([None] * (len(gui_cols) - (len(footer_row) - 1)))  #  -1 to adj for '...'
+                self.download_ftr.extend([None] * (len(gui_cols) - (len(footer_row) - 1)))
             else:
                 obj_name, col_name = footer_col.split('.')
                 fld = await self.data_objects[obj_name].getfld(col_name)
@@ -345,6 +358,7 @@ class GuiGrid:
                     self.parent, fld, readonly, skip, choices, lkup, pwd,
                     lng, height, label, action, footer_cols)
                 fld.notify_form(gui_obj)
+                self.download_ftr.append(fld)
 
         gui.append(('grid',
             {'ref':self.ref, 'growable':self.growable,
@@ -1176,3 +1190,61 @@ class GuiGrid:
             await ht.form_xml.exec_xml(self, self.methods['on_req_close'])
         else:
             await self.parent.on_req_close()
+
+    async def download_grid(self):
+        # [TODO] include header/footer?  see ht.form_xml.download
+
+        # download in chunks of 50 rows - yield each chunk
+        CHUNK = 50
+        for start_row in range(0, self.num_rows, CHUNK):
+            csv_fd = io.StringIO()
+            csv_wr = csv.writer(csv_fd)
+            if start_row == 0:  # first chunk
+                csv_fd.write('\ufeff')  # utf-8 bom (to force Excel to read file as utf-8)
+                col_heads = []
+                for col in self.data_cols:
+                    fld = self.obj_list[col].fld
+                    col_heads.append(fld.col_defn.col_head)
+                csv_wr.writerow([col_heads[pos] for pos in self.grid_cols])
+
+                if self.download_hdr != []:
+                    header_cols = []
+                    for header_col in self.download_hdr:
+                        if header_col is None:
+                            header_cols.append(None)
+                        elif isinstance(header_col, db.object_fields.Field):
+                            header_cols.append(await header_col.getval())
+                        else:  # must be string
+                            header_cols.append(header_col)
+                    csv_wr.writerow(header_cols)
+
+            async for cursor_row in self.cursor.fetch_rows(start_row, start_row+CHUNK):
+                data_row = []
+                for i, pos in enumerate(self.data_cols):
+                    fld = self.obj_list[pos].fld
+                    value = cursor_row[i]
+                    if pos in self.scale_xref:
+                        scale = cursor_row[self.scale_xref[pos]]
+                        value = await fld.val_to_str(value, scale=scale)
+                    else:
+                        value = await fld.val_to_str(value)
+                        # for BOOL, could return str(value) - 'True'/'False' instead of '1'/'0'
+                        # if Y, create new method get_val_for_csv()
+                    data_row.append(value)
+                csv_wr.writerow([data_row[pos] for pos in self.grid_cols])
+
+            if self.num_rows - start_row <= CHUNK:  # all rows sent
+                if self.download_ftr != []:
+                    footer_cols = []
+                    for footer_col in self.download_ftr:
+                        if footer_col is None:
+                            footer_cols.append(None)
+                        elif isinstance(footer_col, db.object_fields.Field):
+                            footer_cols.append(await footer_col.getval())
+                        else:  # must be string
+                            footer_cols.append(footer_col)
+                    csv_wr.writerow(footer_cols)
+
+            csv_fd.seek(0)  # rewind
+            yield csv_fd
+            csv_fd.close()  # remove StringIO object from memory

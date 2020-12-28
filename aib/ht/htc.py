@@ -69,6 +69,7 @@ class Session:
         self.responder = None
         self.questions = {}
         self.pdf_dict = {}  # key=pdf_name, value=reference to pdf_fd generated
+        self.csv_dict = {}  # key=csv_name, value=reference to csv_fd generated
 
         # start keep-alive timer
         self.tick = time.time()
@@ -266,6 +267,9 @@ class ResponseHandler:
 
     def send_pdf(self, pdf_name):
         self.reply.append(('show_pdf', pdf_name))
+
+    def send_csv(self, csv_name):
+        self.reply.append(('get_csv', csv_name))
 
     def send_gui(self, gui):
         self.reply.append(('setup_form', gui))
@@ -634,29 +638,33 @@ class Response:
             write(hex(len(chunk))[2:].encode() + CRLF)
             write(chunk.encode() + CRLF)
             await self.writer.drain()
-        write(b'0\r\n\r\n')
-        await self.writer.drain()
+        # write(b'0\r\n\r\n')
+        # await self.writer.drain()
 
-    async def write_file(self, fd):
+    async def write_file(self, fd, is_str=False):
         CRLF = b'\r\n'
         write = self.writer.write
         while chunk := fd.read(CHUNK):
+            if is_str:  # e.g. csv downloads
+                chunk = chunk.encode('utf-8')
             write(hex(len(chunk))[2:].encode() + CRLF)
             write(chunk + CRLF)
             await self.writer.drain()
-        write(b'0\r\n\r\n')
-        await self.writer.drain()
+        # write(b'0\r\n\r\n')
+        # await self.writer.drain()
 
     async def write_eof(self):
+        self.writer.write(b'0\r\n\r\n')
+        await self.writer.drain()
         self.writer.close()
         await self.writer.wait_closed()
 
 async def handle_client(client_reader, client_writer):
 
     try:
-        req_line = await asyncio.wait_for(client_reader.readline(), timeout=2)
+        req_line = await asyncio.wait_for(client_reader.readline(), timeout=1)
     except asyncio.exceptions.TimeoutError:
-        print('timeout')
+        client_writer.close()
         return
 
     if not req_line:
@@ -717,6 +725,20 @@ async def handle_client(client_reader, client_writer):
             await responder.handle_response(session, (client_writer, messages))
         else:  # put it in the session queue to be handled next
             await session.request_queue.put((client_writer, messages))
+    elif path.endswith('.csv'):
+        path = urllib.parse.unquote(path)
+        csv_key = path[1:]  # strip leading '/'
+        session_id, csv_name = csv_key.split(':', 1)
+        session = sessions[session_id]
+        response = Response(client_writer, 200)
+        response.add_header('Content-type', 'application/octet-stream; charset=utf-8')
+        response.add_header('Transfer-Encoding', 'chunked')
+        response.add_header('Content-Disposition', f'attachment; filename="{csv_name}"')
+        await response.send_headers()
+        grid = session.csv_dict.pop(csv_name)  # grid to be used for download
+        async for chunk in grid.download_grid():
+            await response.write_file(chunk, is_str=True)
+        await response.write_eof()
     elif path.endswith('.pdf'):
         path = urllib.parse.unquote(path)
         pdf_key = path[1:]  # strip leading '/'

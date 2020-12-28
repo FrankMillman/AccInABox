@@ -366,6 +366,7 @@ function process_response(response_text) {
         case 'set_subtype': set_subtype(msg_args); break;
         case 'append_tasks': append_tasks(msg_args); break;
         case 'show_pdf': show_pdf(msg_args); break;
+        case 'get_csv': get_csv(msg_args); break;
         case 'exception': exception(msg_args); break;
         default: debug3('UNKNOWN ' + msg_type + ': ' + msg_args);
         };

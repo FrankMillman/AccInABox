@@ -590,6 +590,14 @@ async def start_process(caller, xml):
         caller.context.module_row_id, caller.context.ledger_row_id)
     await process.start_process(context)
 
+async def download(caller, xml):
+    # [TODO] send confirmation dialog - row_count, dflt filename, include header/footer?, ok/cancel
+
+    csv_name = f'{caller.form.title}.csv'  # caller must be a Grid object
+    csv_key = f'{caller.session.session_id}:{csv_name}'
+    caller.session.csv_dict[csv_name] = caller  # pointer to grid to use for download
+    caller.session.responder.send_csv(csv_key)  # browser 'opens' csv, ht.htc calls download_grid and writes csv
+
 async def run_report(caller, xml):
     data_inputs = {}  # input parameters to be passed to report
     for call_param in xml.find('call_params'):
