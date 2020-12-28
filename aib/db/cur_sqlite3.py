@@ -38,20 +38,13 @@ async def delete_row(self, row_no):
 async def _fetch_row(self, row_no):
     if self.debug:
         print('fetch row', row_no, 'tot =', self.num_rows)  #, 'rows =', self.rows)
-    row = self.rows[row_no]
-    self.row_data = [await self.db_obj.get_val_from_sql(col_name, dat)
-        for col_name, dat in zip(self.col_names, row)]
-    # if self.debug:
-    #     print(self.row_data)
+    self.row_data = self.rows[row_no]
 
 async def get_rows(self, from_row, to_row):
     if self.debug:
         print('fetch rows from {}-{}'.format(from_row, to_row))
     for row in self.rows[from_row:to_row]:
-        # yield row
-        # changed [2019-07-22] - use get_val_from_sql for consistency with cur_mssql
-        yield [await self.db_obj.get_val_from_sql(col_name, dat)
-            for col_name, dat in zip(self.col_names, row)]
+        yield row
 
 async def close(self):
     if self.cursor_active:

@@ -35,11 +35,7 @@ async def get_rows(self, from_row, to_row):
         if self.debug:
             print(sql)
         cur = await self.conn.exec_sql(sql)
-        # yield await cur.__anext__()
-        # changed [2019-07-22] - use get_val_from_sql to change datetime to date
-        row = await cur.__anext__()
-        yield [await self.db_obj.get_val_from_sql(col_name, dat)
-            for col_name, dat in zip(self.col_names, row)]
+        yield await cur.__anext__()
     self.cursor_pos = to_row - 1
 
 async def close(self):

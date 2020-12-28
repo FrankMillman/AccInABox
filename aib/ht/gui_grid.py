@@ -171,11 +171,11 @@ class GuiGrid:
         scale_ptr_dict = {}  # for each scale ptr, create scale column {scale_ptr: scale_col_pos}
         expand_col = 0  # expand first column unless over-ridden
         # cannot use next line due to lxml 'bug' [2020-01-31]
+        # for pos, col_defn in enumerate(columns):
         # we might append a new col_defn while processing 'columns'
         # if we are on the last col_defn at the time, lxml does not include the
         #   new col_defn in the iteration
         # solution - revert to old-fashioned method of using manually-controlled subscript
-        # for pos, col_defn in enumerate(columns):
         pos =  0
         while pos < len(columns):
             col_defn = columns[pos]
@@ -591,7 +591,7 @@ class GuiGrid:
             for i, pos in enumerate(self.data_cols):
                 fld = self.obj_list[pos].fld
                 value = cursor_row[i]
-                if pos in self.scale_xref:  # should we check for 'pos' or 'i'?
+                if pos in self.scale_xref:
                     scale = cursor_row[self.scale_xref[pos]]
                     value = await fld.val_to_str(value, scale=scale)
                 else:
@@ -635,8 +635,8 @@ class GuiGrid:
             data_row = []
             for i, pos in enumerate(self.data_cols):
                 fld = self.obj_list[pos].fld
-                value = await fld.get_val_from_sql(cursor_row[i])
-                if pos in self.scale_xref:  # should we check for 'pos' or 'i'?
+                value = cursor_row[i]
+                if pos in self.scale_xref:
                     scale = cursor_row[self.scale_xref[pos]]
                     value = await fld.val_to_str(value, scale=scale)
                 else:

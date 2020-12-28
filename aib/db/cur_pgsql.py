@@ -53,10 +53,7 @@ async def get_rows(self, from_row, to_row):
         print('cursor_pos = {}'.format(self.cursor_pos))
 
     async for row in await self.conn.exec_sql(sql):
-        # yield row
-        # changed [2019-07-22] - use get_val_from_sql for consistency with cur_mssql
-        yield [await self.db_obj.get_val_from_sql(col_name, dat)
-            for col_name, dat in zip(self.col_names, row)]
+        yield row
 
 async def close(self):
     if self.cursor_active:

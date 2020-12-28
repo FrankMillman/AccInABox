@@ -950,6 +950,12 @@ class Field:
         # if we get here, None is returned
 
     async def calculated(self):
+        # [TODO] there is a problem with this [2020-12-24]
+        # if part of the condition is a fld of the db_object itself, it should be
+        #   re-evaluated every time, as the value can change
+        # this only evaluates it once and caches the result
+        # possible solution - ensure that every reference in the condition is a 'dotted'
+        #   reference, so you cannot use a fld of the db_object as part of the condition
         if self._calculated is None:  # first time, and condition is not None
             self._calculated = await eval_bool_expr(self.col_defn.condition, self.db_obj, self)
         return self._calculated
@@ -1703,9 +1709,6 @@ class Boolean(Field):
         if self._prev is None:
             return ''
         return str(int(self._prev))
-
-    async def get_val_from_sql(self, value):
-        return bool(int(value))  # could be 1 or 0
 
     async def get_val_for_sql(self):
         return '1' if self._value else '0'

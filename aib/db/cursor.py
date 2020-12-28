@@ -192,14 +192,6 @@ class Cursor:
             if row >= first_row and row < last_row:
                 to_row += 1
 
-        # pos = from_row - 1
-        # async for row in self.get_rows(from_row, to_row):
-        #     pos += 1
-        #     if pos in self.new_rows:  # untested - the theory is that this will
-        #         yield self.new_rows[pos]  # replace the row read from the database
-        #     else:
-        #         yield row
-
         pos = from_row  # no enumerate for async
         async for row in self.get_rows(from_row, to_row):
             if pos in self.new_rows:  # untested - the theory is that this will
@@ -245,12 +237,7 @@ class Cursor:
             # python is 0-based, cursor is 1-based
             cur = await self.conn.exec_sql('fetch absolute {} from _aib'.format(row_no + 1))
         self.cursor_pos = row_no
-
-        # self.row_data = await cur.__anext__()
-        row = await cur.__anext__()
-        self.row_data = [await self.db_obj.get_val_from_sql(col_name, dat)
-            for col_name, dat in zip(self.col_names, row)]
-
+        self.row_data = await cur.__anext__()
         if self.debug:
             print('POS =', self.cursor_pos, ', DATA =', self.row_data)
 
