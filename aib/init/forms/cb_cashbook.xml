@@ -75,6 +75,7 @@
               <<select_from_view/>>
             "/>
           <tool type="nav"/>
+          <tool type="img" name="download" action="<<download/>>"/>
         </toolbar>
         <cur_columns>
           <cur_col col_name="tran_date" lng="80" readonly="true"/>

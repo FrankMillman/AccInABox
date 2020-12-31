@@ -231,7 +231,7 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : '{subparent_row_id>tran_date}',
-    'dflt_rule'   : None,
+    'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -400,8 +400,8 @@ virt.append ({
 virt.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
-    'short_descr': 'Currency id',
-    'long_descr' : 'Currency id',
+    'short_descr': 'Transaction currency id',
+    'long_descr' : 'Transaction currency id',
     'col_head'   : 'Currency id',
     'dflt_val'   : '{subparent_row_id>currency_id}',
     'sql'        : 'a.subparent_row_id>currency_id',
@@ -414,7 +414,7 @@ virt.append ({
     'col_head'   : 'Tran exch rate',
     'db_scale'   : 8,
     'dflt_val'   : '{subparent_row_id>tran_exch_rate}',
-    'sql'        : "a.subparent_row_id>tran_exch_rate",
+    'sql'        : 'a.subparent_row_id>tran_exch_rate',
     })
 virt.append ({
     'col_name'   : 'arec_local',
@@ -435,7 +435,7 @@ virt.append ({
     'sql'        : "a.arec_amount / a.tran_exch_rate",
     })
 virt.append ({
-    'col_name'   : 'arec_view_cust',
+    'col_name'   : 'rec_view_cust',
     'data_type'  : '$PTY',
     'short_descr': 'Receipt cust',
     'long_descr' : 'Receipt amount for ar_trans view in customer currency',
@@ -447,7 +447,7 @@ virt.append ({
     'sql'        : "0 - a.arec_cust",
     })
 virt.append ({
-    'col_name'   : 'arec_view_local',
+    'col_name'   : 'rec_view_local',
     'data_type'  : '$LCL',
     'short_descr': 'Receipt local',
     'long_descr' : 'Receipt amount for ar_trans view in local currency',
@@ -479,7 +479,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'discount_allowed',
-    'data_type'  : '$PTY',
+    'data_type'  : '$LCL',
     'short_descr': 'Discount allowed',
     'long_descr' : 'Discount allowed - local currency. Used in form ar_rec_day.',
     'col_head'   : 'Disc',
@@ -532,8 +532,7 @@ actions.append([
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['tran_row_id', 'row_id'],  # tgt_col, src_col
-                ['split_no', '0'],
+                ['split_no', '0'],  # tgt_col, src_col
                 ],
             [],  # aggregation
             [  # on post

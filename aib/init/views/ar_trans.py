@@ -114,7 +114,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_cust',
-    'source'     : ['inv_tot_cust', 'crn_view_cust', 'arec_view_cust', 'chg_cust', 'disc_view_cust'],
+    'source'     : ['inv_tot_cust', 'crn_view_cust', 'rec_view_cust', 'chg_cust', 'disc_view_cust'],
     'data_type'  : 'DEC',
     'short_descr': 'Transaction amount - cust',
     'long_descr' : 'Transaction amount - cust',
@@ -127,7 +127,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'source'     : ['inv_tot_local', 'crn_view_local', 'arec_view_local', 'chg_local', 'disc_view_local'],
+    'source'     : ['inv_tot_local', 'crn_view_local', 'rec_view_local', 'chg_local', 'disc_view_local'],
     'data_type'  : 'DEC',
     'short_descr': 'Transaction amount - local',
     'long_descr' : 'Transaction amount - local',

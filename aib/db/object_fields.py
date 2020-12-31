@@ -422,16 +422,6 @@ class Field:
                             errmsg = f'{self.table_name}.{col_name} - a value is required'
                             raise AibError(head=col_defn.short_descr, body=errmsg)
 
-        # if not from_init:
-        #     if self.ledger_col:  # check subledger matches ctx.mod_ledg_id if present
-        #         ctx_mod_id, ctx_ledg_id = getattr(db_obj.context, 'mod_ledg_id', (None, None))
-        #         if ctx_mod_id == db_obj.db_table.module_row_id:
-        #             if value != ctx_ledg_id:
-        #                 ledger_id = (await db.cache.get_mod_ledg_name(
-        #                     db_obj.company, (ctx_mod_id, ctx_ledg_id)))[2]
-        #                 raise AibError(head=self.table_name,
-        #                     body=f'Sub-ledger must be {ledger_id}')
-
         changed = await self.value_changed(value)
 
         if changed and validate and col_defn.col_type != 'virt':  # check for allow_amend
@@ -903,8 +893,7 @@ class Field:
         if self.constant is not None:
             return self.constant  # e.g. tran_type in ar_openitems
         if self.ledger_col:
-            # if self.db_obj.context.module_row_id == self.db_obj.db_table.module_row_id:
-            if await self.calculated():
+            if self.db_obj.context.module_row_id == self.db_obj.db_table.module_row_id:
                 return self.db_obj.context.ledger_row_id
         if not from_init and self.col_defn.dflt_rule is not None:
             return await db.dflt_xml.get_db_dflt(self)

@@ -4,7 +4,7 @@ view = {
     'module_id'     : 'ap',
     'short_descr'   : 'Ap transactions',
     'long_descr'    : 'Ap transactions',
-    'base_tables'   : ['ap_tran_inv', 'ap_tran_crn', 'ap_tran_pmt'],
+    'base_tables'   : ['ap_tran_inv', 'ap_tran_crn', 'ap_subtran_pmt'],
 
     'path_to_row'  : [
         'tran_type', {

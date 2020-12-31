@@ -368,7 +368,7 @@ cols.append ({
         ),
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'data_source': 'prog',
+    'data_source': 'calc',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,

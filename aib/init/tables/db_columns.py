@@ -321,9 +321,9 @@ cols.append ({
             ['proc', 'Updated from business process'],
             ['ret_sub', 'Returned from subtran'],
             ['ret_split', 'Returned from split source'],
+            ['ctx', 'Get ledger_row_id from context'],
             ['null_if', 'Null if condition else input'],
             ['dflt_if', 'Dflt if condition else input'],
-            ['ctx_if', 'Ctx if condition else input'],
         ],
     })
 cols.append ({
@@ -339,6 +339,9 @@ cols.append ({
         # 'If True, do not include in WSDL. '
         'Is a data value required depending on a condition?\n'
         'If data_source ends in \'_if\', condition is required, else it must be blank.\n'
+        'N.B. condition should not include a reference to a field in this object.\n'
+        '     It should be evaluated for each instance, but will only be evaluated once.\n'
+        '     [TODO] Add validation to prevent this from being included.\n'
         ),
     'col_head'   : 'Condition',
     'key_field'  : 'N',

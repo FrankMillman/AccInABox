@@ -218,7 +218,9 @@ class GuiCtrl:
                     #       WHERE b.prod_row_id = a.row_id AND b.ledger_row_id = ?)
 
                     # e.g. ar_tran_inv.cust_row_id has this fkey -
-                    #   ['ar_customers', 'row_id', 'ledger_id, cust_id', 'ledger_id, cust_id']
+                    #     ['ar_customers', 'row_id',
+                    #         'ledger_id, cust_id, location_id, function_id',
+                    #         'ledger_id, cust_id, location_id, function_id']
                     #   ledger_id is ar_tran_inv.cust_row_id>ledger_row_id>ledger_id
                     #   cust_id is ar_tran_inv.cust_row_id>party_row_id>party_id
                     #

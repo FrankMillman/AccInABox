@@ -98,7 +98,7 @@ async def eval_elem(elem, db_obj, fld=None, value=None):
             return await fld.get_prev()
         if elem == '$in_db_post':
             return db_obj.context.in_db_post
-        if elem.startswith('$module_row_id'):
+        if elem == '$module_row_id':
             return db_obj.db_table.module_row_id
     if elem == '[]':
         return []

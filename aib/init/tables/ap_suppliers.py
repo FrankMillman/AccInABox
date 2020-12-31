@@ -85,8 +85,8 @@ cols.append ({
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger',
     'key_field'  : 'A',
-    'data_source': 'ctx_if',
-    'condition'  : [['where', '', '$module_row_id', '=', '_ctx.module_row_id', '']],
+    'data_source': 'ctx',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -94,7 +94,16 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '{_param.ap_ledger_id}',
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'ledger_id',
+            'Cannot change ledger id',
+            [
+                ['check', '', '$value', '=', '_ctx.ledger_row_id', ''],
+                ['or', '', '$module_row_id', '!=', '_ctx.module_row_id', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['ap_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, 'ap_ledg'],
     'choices'    : None,
     })
@@ -253,9 +262,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'supp_cust_code',
     'data_type'  : 'TEXT',
-    'short_descr': 'Suppliers supplier code',
-    'long_descr' : 'Suppliers supplier code for this company',
-    'col_head'   : 'supplier code',
+    'short_descr': 'Suppliers customer code',
+    'long_descr' : 'Suppliers customer code for this company',
+    'col_head'   : 'Customer code',
     'key_field'  : 'N',
     'data_source': 'input',
     'condition'  : None,
@@ -497,19 +506,19 @@ virt.append ({
                     SUM(c.discount_supp) AS disc_alloc
                 FROM {company}.ap_allocations c
 
-                WHERE
-                    CASE
-                        WHEN c.tran_type = 'ap_alloc' THEN
-                            (SELECT d.row_id FROM ap_allocations d
-                                WHERE d.tran_type = c.tran_type AND
-                                    d.tran_row_id = c.tran_row_id AND
-                                    d.item_row_id =
-                                        (SELECT e.item_row_id FROM ap_tran_alloc e
-                                        WHERE e.row_id = c.tran_row_id))
-                        ELSE
-                            (SELECT d.row_id FROM ap_openitems d
-                                WHERE d.tran_type = c.tran_type AND d.tran_row_id = c.tran_row_id)
-                    END IS NOT NULL
+--              WHERE
+--                  CASE
+--                      WHEN c.tran_type = 'ap_alloc' THEN
+--                          (SELECT d.row_id FROM {company}.ap_allocations d
+--                              WHERE d.tran_type = c.tran_type AND
+--                                  d.tran_row_id = c.tran_row_id AND
+--                                  d.item_row_id =
+--                                      (SELECT e.item_row_id FROM {company}.ap_tran_alloc e
+--                                      WHERE e.row_id = c.tran_row_id))
+--                      ELSE
+--                          (SELECT d.row_id FROM {company}.ap_openitems d
+--                              WHERE d.tran_type = c.tran_type AND d.tran_row_id = c.tran_row_id)
+--                  END IS NOT NULL
 
                 GROUP BY c.item_row_id
                 ) AS alloc

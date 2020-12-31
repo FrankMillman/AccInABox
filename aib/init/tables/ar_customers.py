@@ -85,8 +85,8 @@ cols.append ({
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger',
     'key_field'  : 'A',
-    'data_source': 'ctx_if',
-    'condition'  : [['where', '', '$module_row_id', '=', '_ctx.module_row_id', '']],
+    'data_source': 'ctx',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -94,7 +94,16 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '{_param.ar_ledger_id}',
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'ledger_id',
+            'Cannot change ledger id',
+            [
+                ['check', '', '$value', '=', '_ctx.ledger_row_id', ''],
+                ['or', '', '$module_row_id', '!=', '_ctx.module_row_id', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['ar_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, 'ar_ledg'],
     'choices'    : None,
     })
@@ -598,28 +607,6 @@ virt.append ({
         ),
     })
 virt.append ({
-    'col_name'   : 'bal_cus_tot',
-    'data_type'  : '$PTY',
-    'short_descr': 'Total balance - cust',
-    'long_descr' : 'Total balance - cust',
-    'col_head'   : 'Tot bal cust',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'dflt_val'   : '0',
-    'sql'        : (
-        "COALESCE((SELECT SUM(c.tran_tot_cust) FROM ( "
-            "SELECT b.tran_tot_cust, ROW_NUMBER() OVER (PARTITION BY "
-                "b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
-                "ORDER BY b.tran_date DESC) row_num "
-            "FROM {company}.ar_cust_totals b "
-            "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {_ctx.bal_date_cust} "
-            ") as c "
-            "WHERE c.row_num = 1 "
-            "), 0)"
-        ),
-    })
-virt.append ({
     'col_name'   : 'balance_loc',
     'data_type'  : '$LCL',
     'short_descr': 'Balance - local',
@@ -640,28 +627,6 @@ virt.append ({
             ") as c "
             "WHERE c.row_num = 1 "
             ")"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'bal_loc_tot',
-    'data_type'  : '$LCL',
-    'short_descr': 'Total balance - local',
-    'long_descr' : 'Total balance - local',
-    'col_head'   : 'Tot bal loc',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'sql'        : (
-        "COALESCE((SELECT SUM(c.tran_tot_local) FROM ( "
-            "SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
-                "b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
-                "ORDER BY b.tran_date DESC) row_num "
-            "FROM {company}.ar_cust_totals b "
-            "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {_ctx.bal_date_cust} "
-            ") as c "
-            "WHERE c.row_num = 1 "
-            "), 0)"
         ),
     })
 virt.append ({
@@ -696,14 +661,14 @@ virt.append ({
                 WHERE
                     CASE
                         WHEN c.tran_type = 'ar_alloc' THEN
-                            (SELECT d.row_id FROM ar_allocations d
+                            (SELECT d.row_id FROM {company}.ar_allocations d
                                 WHERE d.tran_type = c.tran_type AND
                                     d.tran_row_id = c.tran_row_id AND
                                     d.item_row_id =
-                                        (SELECT e.item_row_id FROM ar_tran_alloc e
+                                        (SELECT e.item_row_id FROM {company}.ar_tran_alloc e
                                         WHERE e.row_id = c.tran_row_id))
                         ELSE
-                            (SELECT d.row_id FROM ar_openitems d
+                            (SELECT d.row_id FROM {company}.ar_openitems d
                                 WHERE d.tran_type = c.tran_type AND d.tran_row_id = c.tran_row_id)
                     END IS NOT NULL
 

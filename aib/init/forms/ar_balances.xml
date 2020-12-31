@@ -66,6 +66,7 @@
             <<req_formview/>>
             " shortcut="ctrl,Enter"/>
           <tool type="nav"/>
+          <tool type="img" name="download" action="<<download/>>"/>
         </toolbar>
         <grid_methods template="Grid">
           <method name="on_start_grid" action="

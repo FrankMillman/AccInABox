@@ -87,8 +87,8 @@ cols.append ({
     'long_descr' : 'Bank account row id',
     'col_head'   : 'Bank id',
     'key_field'  : 'A',
-    'data_source': 'ctx_if',
-    'condition'  : [['where', '', '$module_row_id', '=', '_ctx.module_row_id', '']],
+    'data_source': 'ctx',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -96,7 +96,16 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '{_param.cb_ledger_id}',
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'ledger_id',
+            'Cannot change ledger id',
+            [
+                ['check', '', '$value', '=', '_ctx.ledger_row_id', ''],
+                ['or', '', '$module_row_id', '!=', '_ctx.module_row_id', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['cb_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, None],
     'choices'    : None,
     })
@@ -329,7 +338,10 @@ cols.append ({
     'col_head'   : 'Amt paid cb',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.alt_amt_override', 'is', '$False', '']],
+    'condition'  : [
+        ['where', '', 'currency_id', '=', 'ledger_row_id>currency_id', ''],
+        ['or', '', '_ledger.alt_amt_override', 'is', '$False', ''],
+        ],
     'allow_null' : False,
     'allow_amend': [['where', '', '_ledger.alt_amt_override', 'is', '$True', '']],
     'max_len'    : 0,
@@ -337,13 +349,20 @@ cols.append ({
     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="amount"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-          '<op type="*"/>'
-          '<fld_val name="cb_exch_rate"/>'
-        '</expr>'
+        '<case>'
+          '<compare test="[[`if`, ``, `currency_id`, `=`, `ledger_row_id>currency_id`, ``]]">'
+            '<fld_val name="amount"/>'
+          '</compare>'
+          '<default>'
+            '<expr>'
+            '<fld_val name="amount"/>'
+            '<op type="/"/>'
+            '<fld_val name="tran_exch_rate"/>'
+            '<op type="*"/>'
+            '<fld_val name="cb_exch_rate"/>'
+            '</expr>'
+          '</default>'
+        '</case>'
         ),
     'col_checks' : [
         ['alt_amt_err', 'Outside valid range', [

@@ -85,8 +85,8 @@ cols.append ({
     'long_descr' : 'Bank account row id',
     'col_head'   : 'Bank id',
     'key_field'  : 'A',
-    'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_param.cb_ledger_id', 'is not', '$None', '']],
+    'data_source': 'ctx',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -94,7 +94,16 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '{_param.cb_ledger_id}',
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'ledger_id',
+            'Cannot change ledger id',
+            [
+                ['check', '', '$value', '=', '_ctx.ledger_row_id', ''],
+                ['or', '', '$module_row_id', '!=', '_ctx.module_row_id', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['cb_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, None],
     'choices'    : None,
     })
