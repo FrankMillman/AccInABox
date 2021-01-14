@@ -360,8 +360,10 @@ AibNum.prototype.convert_prev_cell_value = function(cell, prev_value) {
 function AibDate() {};
 AibDate.prototype = new AibCtrl();
 AibDate.prototype.after_got_focus = function(date) {
-  if (!date.amendable())
+  if (!date.amendable()) {
+    setInsertionPoint(date, 0, 0);
     return;
+    };
   if (date.valid) {
     date.value = this.date_to_string(date, date.current_value, date.input_format);
     date.pos = 0;  //date.blank.length;
@@ -583,12 +585,12 @@ AibDate.prototype.handle_digit = function(date, digit) {
     date.pos += 1;
   };
 AibDate.prototype.ondownkey = function(date, e) {
-  if (!date.amendable())
-    return;
   if ([' ', 'Tab', 'Escape', 'Enter', '\\'].includes(e.key))
     return true;
   if (e.ctrlKey || e.altKey)
     return true;
+  if (!date.amendable())
+    return false;
   if (e.key === 'Backspace') this.handle_bs(date)
   else if (e.key === 'Delete') this.handle_del(date)
   else if (e.key === 'ArrowLeft') this.handle_left(date)
@@ -805,14 +807,7 @@ AibDate.prototype.grid_after_cal = function(date, new_date) {
 ////////////////////
 function AibBool() {};
 AibBool.prototype = new AibCtrl();
-AibBool.prototype.got_focus = function(bool) {
-//  bool.has_focus = true;
-//  if (bool.mouse_down)
-//    return;  // will set focus from onclick()
-//  got_focus(bool);
-  };
 AibBool.prototype.after_got_focus = function(bool) {
-  // bool.style.border = '1px solid black';
   if (bool.frame.err_flag)
     bool.className = 'error_background'
   else if (!bool.amendable())
@@ -1535,12 +1530,6 @@ AibSpin.prototype.set_value_from_server = function(spin, value) {
 ////////////////////
 function AibSxml() {};
 AibSxml.prototype = new AibCtrl();
-AibSxml.prototype.got_focus = function(sxml) {
-//  sxml.has_focus = true;
-//  if (sxml.mouse_down)
-//    return;  // will set focus from onclick()
-//  got_focus(sxml);
-  };
 AibSxml.prototype.after_got_focus = function(sxml) {
   sxml.style.border = '1px solid black';
   if (sxml.frame.err_flag)
@@ -1657,15 +1646,11 @@ AibSxml.prototype.grid_popup_callback = function(cell, input, row) {
 ////////////////////
 function AibDummy() {};
 AibDummy.prototype = new AibCtrl();
-AibDummy.prototype.got_focus = function(dummy) {
-  if (dummy.frame.err_flag)
-    dummy.frame.form.tabdir = -1;  // dummy failed vld, set focus on prev field
-  };
 AibDummy.prototype.after_got_focus = function(dummy) {
   if (!(dummy.frame.form.current_focus === dummy) &&
       !(dummy.frame.form.setting_focus === dummy))
     return;  // focus reset by server
-  if (dummy.frame.err_flag)  // same as got_focus() above - duplication?
+  if (dummy.frame.err_flag)
     dummy.frame.form.tabdir = -1  // set focus on previous control
   var pos = dummy.pos + dummy.frame.form.tabdir;  // tab = 1, shift+tab = -1
   while (true) {
