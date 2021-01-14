@@ -10,7 +10,7 @@ import ht.form
 import ht.gui_grid
 import rep.report
 import bp.bpm
-from evaluate_expr import eval_bool_expr
+from evaluate_expr import eval_bool_expr, eval_elem
 from common import AibError, AibDenied
 from common import log, debug
 
@@ -78,6 +78,16 @@ async def init_obj(caller, xml):
                 src_val = await src_obj.getval(src_colname)
             init_vals[tgt] = src_val
         await db_obj.init(init_vals=init_vals)
+
+async def select_row(caller, xml):
+    obj_name = xml.get('obj_name')
+    db_obj = caller.data_objects[obj_name]
+    keys = xml.get('keys')
+    cols_vals = {}
+    for col_val in (_.strip() for _ in keys.split(',')):
+        col, val = col_val.split('=')
+        cols_vals[col] = await eval_elem(val, db_obj)
+    await db_obj.select_row(cols_vals)
 
 async def notify_obj_clean(caller, xml):
     # notify client that data_obj is now clean - called from template on_clean

@@ -477,7 +477,7 @@ class Form:
         return_params = OD()  # data to be returned on completion
         output_params = self.form_defn.find('output_params')
         if output_params is not None:
-            for output_param in output_params.iter('output_param'):
+            for output_param in output_params:
                 name = output_param.get('name')
                 param_type = output_param.get('type')
                 source = output_param.get('source')
@@ -690,7 +690,7 @@ class Frame:
                 # otherwise the forms are identical
                 if self.ctrl_grid is not None:
                     template = getattr(ht.templates, template_name)  # class
-                    xml = getattr(template, 'toolbar')  # class attribute
+                    xml = template.toolbar  # class attribute
                     xml = etree.fromstring(xml, parser=parser)
                     toolbar[:0] = xml[0:]  # insert template tools before any others
                     del toolbar.attrib['template']  # to prevent re-substitution
@@ -740,7 +740,7 @@ class Frame:
 
     async def setup_toolbar(self, toolbar, gui):
         tool_list = []
-        for tool in toolbar.iter('tool'):
+        for tool in toolbar:
             tool_type = tool.get('type')
             if tool_type == 'nav':
                 tool_attr = {'type': 'nav'}
@@ -863,7 +863,7 @@ class Frame:
                 if validations is not None:
                     validations = etree.fromstring(
                         f'<_>{validations}</_>', parser=parser)
-                    for vld in validations.iter('validation'):
+                    for vld in validations:
                         gui_obj.form_vlds.append((self, vld))
 
                 after = element.get('after')
@@ -924,7 +924,7 @@ class Frame:
                 if validation is not None:
                     validation = etree.fromstring(
                         f'<_>{validation}</_>', parser=parser)
-                    for vld in validation.iter('validation'):
+                    for vld in validation:
                         button.form_vlds.append(vld)
 
                 if subtype is not None:
@@ -997,7 +997,7 @@ class Frame:
                 if validation is not None:
                     validation = etree.fromstring(
                         f'<_>{validation}</_>', parser=parser)
-                    for vld in validation.iter('validation'):
+                    for vld in validation:
                         gui_obj.form_vlds.append(vld)
 
                 after = element.get('after')
@@ -1024,7 +1024,7 @@ class Frame:
         template_name = button_row.get('template')
         if template_name is not None:
             template = getattr(ht.templates, template_name)  # class
-            xml = getattr(template, 'button_row')  # class attribute
+            xml = template.button_row  # class attribute
             xml = etree.fromstring(
                 xml.replace('[obj_name]', self.main_obj_name or ''), parser=parser)
             button_row[:0] = xml[0:]  # insert template buttons before any others
@@ -1032,7 +1032,7 @@ class Frame:
         # store the *last* occurence of each button id
         # this allows a customised button to override a template button
         button_dict = OD()
-        for btn in button_row.iter('button'):
+        for btn in button_row:
             btn_id = btn.get('btn_id')
             button_dict[btn_id] = btn
 
@@ -1062,7 +1062,7 @@ class Frame:
         template_name = methods.get('template')
         if template_name is not None:
             template = getattr(ht.templates, template_name)  # class
-            xml = getattr(template, 'frame_methods')  # class attribute
+            xml = template.frame_methods  # class attribute
             xml = etree.fromstring(
                 xml.replace('[obj_name]', self.main_obj_name or ''), parser=parser)
             methods[:0] = xml[0:]  # insert template methods before any others
@@ -1070,7 +1070,7 @@ class Frame:
         # store the *last* occurence of each method name
         # this allows a customised method to override a template method
         method_dict = OD()
-        for method in methods.iter('method'):
+        for method in methods:
             method_name = method.get('name')
             method_dict[method_name] = method
         for method_name in method_dict:
