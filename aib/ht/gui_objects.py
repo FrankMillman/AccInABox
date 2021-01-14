@@ -434,7 +434,7 @@ class GuiDummy:  # dummy field to force validation of last real field
         self.parent = parent
         self.pwd = ''
         self.choices = None
-        self.must_validate = True
+        self.must_validate = False  # field following dummy will trigger validation
         self.form_vlds = []
         self.form_dflt = None
         self.before_input = None
