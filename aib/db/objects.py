@@ -939,40 +939,25 @@ class DbObject:
             await fld.setval(dat, display, validate=False, from_sql=True)
             fld._orig = fld._value
 
-            # don't think we need this [2018-05-09] - remove if no problems
-            # # at present [2016-07-04] the next block only seems to be used
-            # #   for ar_receipts.unallocated
-            # # try to find better solution and remove this!
-            # if fld._value is None:
-            #     if fld.col_defn.col_type == 'virt':
-            #         await fld.setval(await fld.get_dflt(from_init=True), display, validate=False)
+        row_id_fld = self.fields['row_id']
+        if row_id_fld.children:  # populate child values with row_id value
+            if self.sub_trans:  # if sub_trans, only populate active sub_tran
+                children = []
+                for subtran_col in self.sub_trans:
+                    subtran_val = await self.getval(subtran_col)
+                    subtran_obj = self.sub_trans[subtran_col][subtran_val][0]
+                    for child in row_id_fld.children:
+                        if child.db_obj is subtran_obj:
+                            children.append(child)
+                            break
+            else:
+                children = row_id_fld.children
+            row_id_val = await row_id_fld.getval()
+            for child in children:
+                child._value = row_id_val
+                if child.table_keys:  # if child has table_keys, read in the child row
+                    await child.read_row(row_id_val, display)
 
-            # this is already handled by fld.setval() [2018-12-20]
-            # if display:
-            #     for obj in fld.gui_obj:
-            #         await obj._redisplay()
-            #     for caller_ref in list(fld.gui_subtype.keyrefs()):
-            #         caller = caller_ref()
-            #         if caller is not None:
-            #             sub_colname = fld.gui_subtype[caller]
-            #             await caller.set_subtype(sub_colname, fld._value)
-
-            # # if fld has foreign_key which has changed, re-read foreign db_obj
-            # if fld.foreign_key:  # i.e. not None and not {}
-            #     foreign_key = await self.get_foreign_key(fld)
-            #     tgt_field = foreign_key['tgt_field']
-            #     if tgt_field._value != fld._value:
-            #         if fld._value is None:
-            #             await tgt_field.db_obj.init()
-            #         else:
-            #             await tgt_field.read_row(fld._value, display)
-            #         alt_src = foreign_key['alt_src']
-            #         for alt_src_fld in alt_src:
-            #             alt_src_fld._orig = alt_src_fld._value = (
-            #                 alt_src_fld.foreign_key['tgt_field']._value)
-            #             if display:
-            #                 for obj in alt_src_fld.gui_obj:
-            #                     await obj._redisplay()
 
         for after_read in self.db_table.actions.after_read:  # table hook
             await db.hooks_xml.table_hook(self, after_read)  # can raise AibError
@@ -1029,11 +1014,6 @@ class DbObject:
         self.active_subtype_flds = {}
 
         async def init_fld(fld):  # common function for core flds and active_subtype flds
-            # if fld.col_name in self.init_vals:
-            #     init_value = self.init_vals[fld.col_name]
-            #     await fld.setval(init_value, display=display, from_init=True)
-            # else:  # 'from_init=True' means eval dflt_val, but not dflt_rule
-            #     fld._value = await fld.get_dflt(from_init=True)
             if fld.fkey_parent is not None and not from_parent_init:
                 # if from_parent_init, fkey parent will have a value but it is bogus,
                 #   because the parent will be init'd next
@@ -1042,43 +1022,16 @@ class DbObject:
             elif fld.col_name in self.init_vals:
                 init_value = self.init_vals[fld.col_name]
                 validate=True
-            else:
-                init_value = await fld.get_dflt(from_init=True)
+            else:  # 'from_init=True' means check dflt_val, but not dflt_rule
+                init_value = await fld.get_dflt(from_init=True)  # if no dflt, will return None
                 validate=False
             await fld.setval(init_value, display=display, validate=validate, from_init=True)
-
-            # for child in fld.children:
-            #     child._value = fld._value  # added 2018-08-03 - ok?
 
             if self.exists:  # key_field in init_vals
                 self.init_vals = {}  # to prevent re-use on restore()
                 return
 
             fld._orig = fld._value
-
-            # if fld._value is not None:
-            #     if fld.col_name in self.sub_types:
-            #         self.active_subtypes[fld.col_name] = fld._value
-            #         subtype_flds = self.sub_types[fld.col_name][fld._value]
-            #         self.active_subtype_flds[fld.col_name] = subtype_flds
-            #         for sub_fld in subtype_flds:  # in case there is a value in init_vals
-            #             await init_fld(sub_fld)  # recursion
-            #     elif fld.col_name in self.sub_trans:
-            #         if self.sub_trans[fld.col_name][fld._value] is None:  # not set up
-            #             subtran_tblname = self.db_table.sub_trans[fld.col_name][fld._value][0]
-            #             await db.objects.get_db_object(self.context,
-            #                 subtran_tblname, parent=self)
-
-            # if fld.fkey_parent is not None:  # get value from parent
-            #     fld._value = fld.fkey_parent._value
-            #     if fld.col_defn.fkey[2] is not None:  # there is an alt src
-            #         if not fld.col_defn.fkey[6]:  # this is the true src
-            #             # get any alt values from parent
-            #             foreign_key = await self.get_foreign_key(fld)
-            #             for alt_src_fld in foreign_key['alt_src']:
-            #                 alt_tgt = alt_src_fld.foreign_key['tgt_field']
-            #                 alt_src_fld._value = alt_tgt._value
-            #     fld._orig = fld._value
 
         for fld in self.flds_to_update:  # excludes subtype and virtual fields
             await init_fld(fld)
@@ -1098,7 +1051,6 @@ class DbObject:
                     fld._value = await fld.get_dflt(from_init=True)
                     fld._orig = fld._value
             elif col_defn.sql.startswith("'"):
-                # fld._value = await fld.str_to_val(col_defn.sql[1:-1])
                 fld._value = await fld.check_val(col_defn.sql[1:-1])
                 fld._orig = fld._value
 

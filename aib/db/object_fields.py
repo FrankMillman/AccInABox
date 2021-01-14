@@ -406,7 +406,7 @@ class Field:
             # check that value is of the correct type - do a bit of type-casting
             value = await self.check_val(value)  # will raise AibError on error
 
-        if not from_init and (value is None or value == ''):
+        if not from_init and validate and (value is None or value == ''):
             if not col_defn.allow_null:
                 if self in db_obj.get_flds_to_update():  # ignore if not active subtype
                     errmsg = f'{self.table_name}.{col_name} - a value is required'
@@ -469,7 +469,8 @@ class Field:
                     body='Cannot amend sub_trans - cancel current sub_trans first')
             elif not db_obj.exists:
                 pass  # does not apply to new objects
-            elif self._value is None:
+            # elif self._value is None:
+            elif await self.getval() is None:
                 pass  # to cater for new 'user' column - allow first-time value
             else:
                 errmsg = f'{self.table_name}.{col_name}: amendment not allowed {self._value} -> {value}'
@@ -567,6 +568,8 @@ class Field:
                             all(db_obj.fields[_]._value is None for _ in altsrc_names[:altsrc_pos])
                             ):
                                 await tgt_field.db_obj.init()
+                                if await true_src.getval() is not None:  # if user back-tracks in form
+                                    await true_src.setval(None, validate=False)
                         await tgt_field.setval(value, display, validate=False)
                         value = await tgt_field.getval()  # to change (eg) 'a001' to 'A001'
                         if col_name == altsrc_names[-1]:  # if multi-part key, all parts are present
@@ -676,23 +679,6 @@ class Field:
 
         self._value = value
 
-        # update any child fields with the same value
-        # if the child has table_keys, there is a one-to-one relationship
-        #   with the parent e.g. db_tables>db_actions, or any sub_tran table
-        # if it is *not* a sub_tran table, read the child row to keep the two in sync
-        # if it *is* a sub_tran table, do not read the child row yet - there can
-        #   be more than one child, but only one can be 'active'
-        # we only know which one is active when the column containing the
-        #   identifier (usually called 'line_type') has a value
-        # therefore postpone trying to read the child until the identifier column
-        #   is populated - see 'if col_name in db_obj.sub_trans:' below
-        if not self.db_obj.sub_trans:
-            for child in self.children:
-                child._value = value
-                if value is not None:  # could be if from_init
-                    if child.table_keys:
-                        await child.read_row(value, display)
-
         if (self.table_keys and value is not None and not from_sql
                 and not db_obj.exists and self.table_keys[-1] is not self):
             # 1. if value is None, do not trigger read_row
@@ -747,18 +733,6 @@ class Field:
                     # creating sub_tran object triggers populating sub_trans on parent
                     await db.objects.get_db_object(db_obj.context,
                         subtran_tblname, parent=db_obj)
-                subtran_obj = db_obj.sub_trans[col_name][value][0]
-                # we have populated the sub_tran 'identifier' column
-                # now locate the subtran fkey field from row_id.children, and read the
-                #   subtran row using the value of row_id (which is the second part of a
-                #   2-part alternate key - the first part should already be present)
-                row_id = await db_obj.getfld('row_id')  # assume fkey always points to 'row_id'
-                row_id_val = await row_id.getval()
-                if row_id_val is not None:
-                    for child in row_id.children:
-                        if child.db_obj is subtran_obj:
-                            await child.read_row(row_id_val, display)
-                            break
 
         if from_init:
             return  # the rest are all gui-related - n/a if not changed or from_init
@@ -980,7 +954,7 @@ class Field:
             #           child._value = value
             #           if child.table_keys:
             #               await child.read_row(value, display)
-            #     to setval()
+            #     to db.objects.on_row_selected()
             #   adding
             #       for child in self.children:
             #           child._value = None
