@@ -846,6 +846,46 @@ class DbObject:
 
         await conn.release()
 
+    async def fetch_row_ids(self, where, order):
+        # fetch and return all row_ids for a given selection/sort criteria
+        # caller can use this to call select_row() using each row_id in turn
+        # the effect is similar to select_many() above, but it does not
+        #   require a separate connection
+        test = 'AND' if where else 'WHERE'
+        if not self.mem_obj and not self.view_obj:
+            where.append([test, '', 'deleted_id', '=', 0, ''])
+            test = 'AND'  # in case there is another one
+
+        if self.db_table.ledger_col is not None:
+            ledger_val = await self.getval(self.db_table.ledger_col)
+            if ledger_val is not None:
+                where.append(
+                    (test, '', self.db_table.ledger_col, '=', ledger_val, ''))
+                test = 'AND'  # in case there is another one
+            else:
+                if self.context.module_row_id == self.db_table.module_row_id:
+                    where.append((test, '', self.db_table.ledger_col,
+                        '=', self.context.ledger_row_id, ''))
+                    test = 'AND'  # in case there is another one
+
+        parent = self.parent
+        if parent is not None:
+            parent_val = await parent[1].getval()
+            if isinstance(parent_val, str):
+                parent_val = repr(parent_val)
+            where.append((test, '', parent[0], '=', parent_val, ''))
+
+        async with self.context.db_session.get_connection() as db_mem_conn:
+            if self.mem_obj:
+                conn = db_mem_conn.mem
+            else:
+                conn = db_mem_conn.db
+
+            col_names = ['row_id']
+            sql, params = await conn.build_select(self.context, self.db_table, col_names, where, order)
+
+            return await conn.fetchall(sql, params)
+
     async def select_row(self, keys, display=True, debug=False):
 
         where = []
@@ -1180,87 +1220,83 @@ class DbObject:
         for before_save in self.db_table.actions.before_save:
             await db.hooks_xml.table_hook(self, before_save)  # can raise AibError
 
-        if self.exists and not self.dirty:
+        if self.exists and not self.dirty:  # can be not_exists and not_dirty if init() with init_vals
             return  # nothing to save
 
+        async def do_save():
+            async with self.context.db_session.get_connection() as db_mem_conn:
+
+                self.context.db_session.after_commit.append(
+                    (self.after_save_committed, from_upd_on_save))
+                self.context.db_session.after_rollback.append(
+                    (self.after_save_rolledback, from_upd_on_save))
+
+                if self.mem_obj:
+                    conn = db_mem_conn.mem
+                else:
+                    conn = db_mem_conn.db
+
+                if self.db_table.sequence is not None:
+                    parent_changed = await self.increment_seq(conn)
+
+                await self.setup_defaults()  # can raise AibError if 'required' and no dflt_val
+
+                for descr, errmsg, upd_chk in self.db_table.actions.upd_checks:
+                    if not await eval_bool_expr(upd_chk, self):
+                        raise AibError(head=self.db_table.short_descr, body=errmsg)
+
+                if self.exists:  # update row
+                    await self.update(conn, from_upd_on_save)
+                else:  # insert row
+                    await self.insert(conn, from_upd_on_save)
+                    self.exists = True
+
+                if self.db_table.sequence is not None:
+                    if parent_changed:
+                        await self.check_tree(conn)
+
+                for subtran_colname in self.sub_trans:
+                    subtran_colval = await self.getval(subtran_colname)
+                    subtran_obj, return_vals = self.sub_trans[subtran_colname][subtran_colval]
+                    await subtran_obj.save()
+
+                if self.subtran_parent is not None:
+                    subtran_parent, return_vals = self.subtran_parent
+                    for tgt_fld, src_fld in return_vals:
+                        await tgt_fld.setval(await src_fld.getval(), display=True, validate=False)
+
+                if self.dirty:  # could have been updated in upd_on_save/post or from sub_tran
+                    await self.update(conn, from_upd_on_save=True)
+
+                if not from_upd_on_save:
+                    for after_save in self.db_table.actions.after_save:
+                        await db.hooks_xml.table_hook(self, after_save)
+
+        save_lock_acquired = False
         if not self.context.in_db_save:
             await save_lock.acquire()  # ensure only one 'save' active at a time
             self.context.in_db_save = True
+            save_lock_acquired = True
 
-        async with self.context.db_session.get_connection() as db_mem_conn:
-
-            self.context.db_session.after_commit.append(
-                (self.after_save_committed, from_upd_on_save))
-            self.context.db_session.after_rollback.append(
-                (self.after_save_rolledback, from_upd_on_save))
-
-            if self.mem_obj:
-                conn = db_mem_conn.mem
-            else:
-                conn = db_mem_conn.db
-
-            if self.db_table.sequence is not None:
-                parent_changed = await self.increment_seq(conn)
-
-            await self.setup_defaults()  # can raise AibError if 'required' and no dflt_val
-
-            for descr, errmsg, upd_chk in self.db_table.actions.upd_checks:
-                if not await eval_bool_expr(upd_chk, self):
-                    raise AibError(head=self.db_table.short_descr, body=errmsg)
-
-            if self.exists:  # update row
-                await self.update(conn, from_upd_on_save)
-            else:  # insert row
-                await self.insert(conn, from_upd_on_save)
-
-            if self.db_table.sequence is not None:
-                if parent_changed:
-                    await self.check_tree(conn)
-
-            for subtran_colname in self.sub_trans:
-                subtran_colval = await self.getval(subtran_colname)
-                subtran_obj, return_vals = self.sub_trans[subtran_colname][subtran_colval]
-                await subtran_obj.save()
-
-            if self.subtran_parent is not None:
-                subtran_parent, return_vals = self.subtran_parent
-                for tgt_fld, src_fld in return_vals:
-                    await tgt_fld.setval(await src_fld.getval(), display=True, validate=False)
-
-            if self.dirty:  # could have been updated in upd_on_save/post or from sub_tran
-                await self.update(conn, from_upd_on_save=True)
-        
-            if not from_upd_on_save:
-                for after_save in self.db_table.actions.after_save:
-                    await db.hooks_xml.table_hook(self, after_save)
+        try:  # no 'except' clause, but a 'finally' clause to release save_lock if applicable
+            await do_save()
+        finally:
+            if save_lock_acquired:
+                save_lock.release()
+                self.context.in_db_save = False
 
     async def after_save_rolledback(self, from_upd_on_save):
-
-        if self.context.in_db_save:
-            save_lock.release()
-            self.context.in_db_save = False
-
-        if self.context.in_db_post:
-            post_lock.release()
-            self.context.in_db_post = False
-
         self.dirty = True
+        if self.fields['row_id']._orig is None:  # insert failed
+            self.fields['row_id']._value = None
+            self.exists = False
 
     async def after_save_committed(self, from_upd_on_save):
 
         for after_commit in self.db_table.actions.after_commit:
             await db.hooks_xml.table_hook(self, after_commit)
 
-        if self.context.in_db_save:
-            save_lock.release()
-            self.context.in_db_save = False
-
-        if self.context.in_db_post:
-            post_lock.release()
-            self.context.in_db_post = False
-
         self.init_vals = {}  # to prevent re-use on restore()
-        self.exists = True  # do this last - only way to distinguish inserted/updated
 
         if not from_upd_on_save:  # must be after 'self.exists' for templates.on_clean_new
             for caller_ref in list(self.on_clean_func.keyrefs()):
@@ -1271,8 +1307,7 @@ class DbObject:
                         await ht.form_xml.exec_xml(caller, method)
 
         for fld in list(self.fields.values()):
-            # fld._orig = await fld.getval()
-            fld._orig = fld._value_  # if not evaluated yet, any need to evaluate now? [2018-11-07]
+            fld._orig = fld._value_
 
     async def setup_defaults(self):  # generate defaults for blank fields
         for fld in self.get_flds_to_update(row_id=False):  # core + active_subtype fields
@@ -1338,10 +1373,11 @@ class DbObject:
                 where.append((test, '', fld.col_name, '=', fld.get_val_for_where(), ''))
                 test = 'AND'  # in case more than one
             # don't think we need 'lock=True'  [2018-08-10]
-            # this all happens within def save(), which is protected by save_lock,
-            #   so it is not possible for any other connection to modify the database
-            #   until this update is complete - don't change unless 100% sure!
-            cur = await conn.full_select(self, cols_to_select, where=where, lock=True)
+            # this all happens within def save(), which is protected by save_lock, so it is not
+            #   possible for any other connection to modify the database until this update is complete
+            # changed [2021-01-13] - monitor [this is the only use of 'lock', so could remove altogether]
+            # cur = await conn.full_select(self, cols_to_select, where=where, lock=True)
+            cur = await conn.full_select(self, cols_to_select, where=where)
             row = await anext(cur)
             for col, dat in zip(cols_to_select, row):
                 fld = self.fields[col]
@@ -1830,92 +1866,24 @@ class DbObject:
                     )
             await db.hooks_xml.table_hook(self, before_post)
 
-        if not self.context.in_db_post:
-            await post_lock.acquire()  # ensure only one 'post' active at a time
-            self.context.in_db_post = True
+        if post_type == 'unpost':
+            for descr, errmsg, unpost_chk in self.db_table.actions.unpost_checks:
+                if not await eval_bool_expr(unpost_chk, self):
+                    raise AibError(head=self.db_table.short_descr, body=errmsg)
+        else:  # must be 'post'
+            for descr, errmsg, post_chk in self.db_table.actions.post_checks:
+                if not await eval_bool_expr(post_chk, self):
+                    raise AibError(head=self.db_table.short_descr, body=errmsg)
 
-        async with self.context.db_session.get_connection() as db_mem_conn:
-            if post_type == 'unpost':
-                for descr, errmsg, unpost_chk in self.db_table.actions.unpost_checks:
-                    if not await eval_bool_expr(unpost_chk, self):
-                        raise AibError(head=self.db_table.short_descr, body=errmsg)
-            else:  # must be 'post'
-                for descr, errmsg, post_chk in self.db_table.actions.post_checks:
-                    if not await eval_bool_expr(post_chk, self):
-                        raise AibError(head=self.db_table.short_descr, body=errmsg)
+        async def do_post():
 
-            if not posting_child:
-                if post_type == 'post':
-                    if await self.getval('posted'):
-                        raise AibError(head='Post {}'.format(self.table_name),
-                            body='Already posted')
-                    if self.parent:
-                        raise AibError(head='Post {}'.format(self.table_name),
-                            body='Cannot post child object - can only post parent')
-                    await self.setval('posted', True, validate=False)  # do this first - could be relevant
-                else:  # must be 'unpost'
-                    if not await self.getval('posted'):
-                        raise AibError(head='Unpost {}'.format(self.table_name),
-                            body='Not posted')
-                    if self.parent:
-                        raise AibError(head='Unpost {}'.format(self.table_name),
-                            body='Cannot unpost child object - can only unpost parent')
-                    await self.setval('posted', False, validate=False)  # do this first - could be relevant
-                # debatable - do we want an audit trail entry showing when it was posted?
-                # 'from_upd_on_save=True' means 'do not create audit trail'
-                # for now, create audit trail for 'unpost', not for 'post' [2016-10-04]
-                # a thought [2017-06-18]
-                # instead of setting 'posted' to True, create a new type of audit trail row
-                #   called 'post', update it with date/time/user_id of posting, and populate
-                #   'posted' with a reference to {table}_audit_xref
-                # implemented [2018-09-13] - without setting 'posted' to xref (chicken/egg)
-                #   also, 'posted' is bool, not int - though could change to int if required [2019-08-23]
-                # another thought [2018-05-04]
-                # is it possible to change a record and post it in one operation?
-                # if so, must preserve audit trail of changes
-                # maybe if 'dirty', save() before setting 'posted' = True
-                # for 'unpost', create new type 'unpost'
-                # implemented [2018-09-13]
-
-                # await self.save(from_upd_on_save=(post_type=='post'))
-                await self.save(from_upd_on_save=post_type)
-
-            if posting_child == 'subtran':
-                all_obj = single_source()  # only iterate once
-
-            elif posting_child:
-                if test is None:
-                    where = []
-                else:
-                    col_name, val = test
-                    where = [['WHERE', '', col_name, '=', repr(val), '']]
-                order = []
-                sequence = self.db_table.sequence
-                if sequence is not None:
-                    seq_col, groups, combo = sequence
-                    for group_col in groups:
-                        if group_col != src_col:  # else already filtered by this group
-                            order.append((group_col, False))
-                    order.append((seq_col, False))
-                all_obj = self.select_many(where=where, order=order)
-
-            else:
-                all_obj = single_source()  # only iterate once
-
-            if self.mem_obj:  # would we ever post a mem_obj ??
-                conn = db_mem_conn.mem
-            else:
-                conn = db_mem_conn.db
-            async for _ in all_obj:
-
+            async def post_obj(conn):
                 if self.sub_trans:
                     for subtran_colname in self.sub_trans:
                         subtran_colval = await self.getval(subtran_colname)
                         subtran_obj = self.sub_trans[subtran_colname][subtran_colval][0]
                         await subtran_obj.post(post_type, posting_child='subtran')
-
                 else:
-
                     # post/unpost any children first, recursively
                     for tgt_fkey in self.db_table.tgt_fkeys:
                         if tgt_fkey.is_child:
@@ -1925,11 +1893,6 @@ class DbObject:
                             else:  # child not set up - next line will set it up
                                 child = await get_db_object(
                                     self.context, tgt_fkey.src_tbl, parent=self)
-
-                            # next block added 2018-09-12
-                            # if child does not have upd_on_post, do not post child,
-                            #   *unless* child's child has upd_on_post
-                            # check recursively
                             if child.db_table.actions.upd_on_post:
                                 post_child = True
                             else:  # see if any children need posting
@@ -1962,7 +1925,71 @@ class DbObject:
 
                 if self.dirty:  # could be updated from setup_defaults or upd_on_post
                     await self.update(conn, from_upd_on_save=True)
-                    # self.dirty = False
+
+            async with self.context.db_session.get_connection() as db_mem_conn:
+                if not posting_child:
+                    if post_type == 'post':
+                        if await self.getval('posted'):
+                            raise AibError(head='Post {}'.format(self.table_name),
+                                body='Already posted')
+                        if self.parent:
+                            raise AibError(head='Post {}'.format(self.table_name),
+                                body='Cannot post child object - can only post parent')
+                        await self.setval('posted', True, validate=False)  # do this first - could be relevant
+                    else:  # must be 'unpost'
+                        if not await self.getval('posted'):
+                            raise AibError(head='Unpost {}'.format(self.table_name),
+                                body='Not posted')
+                        if self.parent:
+                            raise AibError(head='Unpost {}'.format(self.table_name),
+                                body='Cannot unpost child object - can only unpost parent')
+                        await self.setval('posted', False, validate=False)  # do this first - could be relevant
+                    await self.save(from_upd_on_save=post_type)  # audit trail is updated with post_type
+
+                if self.mem_obj:  # would we ever post a mem_obj ??
+                    conn = db_mem_conn.mem
+                else:
+                    conn = db_mem_conn.db
+
+                if posting_child is not True:  # main object or subtran - post db_obj as-is
+                    await post_obj(conn)
+                else:  # get row_ids of all children, select and post each one
+                    if test is None:
+                        where = []
+                    else:
+                        col_name, val = test
+                        where = [['WHERE', '', col_name, '=', repr(val), '']]
+                    order = []
+                    sequence = self.db_table.sequence
+                    if sequence is not None:
+                        seq_col, groups, combo = sequence
+                        for group_col in groups:
+                            if group_col != src_col:  # else already filtered by this group
+                                order.append((group_col, False))
+                        order.append((seq_col, False))
+                    # fetch_row_ids() works better here than select_many()
+                    # select_many() requires a separate connection
+                    # if creating and posting a batch of transactions within a single db transaction,
+                    #   select_many() cannot see child rows inserted but not yet committed
+                    # fetch_row_ids() does not require a separate connection, so it can
+                    #   see the child rows
+                    row_ids = await self.fetch_row_ids(where=where, order=order)
+                    for row_id, in row_ids:
+                        await self.init(init_vals={'row_id': row_id})
+                        await post_obj(conn)
+
+        post_lock_acquired = False
+        if not self.context.in_db_post:
+            await post_lock.acquire()  # ensure only one 'post' active at a time
+            self.context.in_db_post = True
+            post_lock_acquired = True
+
+        try:  # no 'except' clause, but a 'finally' clause to release post_lock if applicable
+            await do_post()
+        finally:
+            if post_lock_acquired:
+                post_lock.release()
+                self.context.in_db_post = False
 
         for after_post in self.db_table.actions.after_post:
             if self.context.in_db_post:
@@ -3203,12 +3230,13 @@ class MemTable(DbTable):
             ])
         self.col_list.append(col)
         self.col_dict[col.col_name] = col
-        col.table_name = self.table_name.split('__')[-1]
+        # changed [2021-01-08]
+        # if col is used in a JOIN, we get tgt_tablename fromm col.table_name, so it must be the full name
+        # if there are implications caused by this change, must find another solution to the above problem
+        # col.table_name = self.table_name.split('__')[-1]
+        col.table_name = self.table_name
 
         col.allow_amend = loads(col.allow_amend)
-        # removed [2020-10-08] - any problem?
-        # if col.allow_amend not in (False, True):
-        #     raise NotImplementedError
 
         if col.condition is not None:
             col.condition = loads(col.condition)
@@ -3520,7 +3548,7 @@ async def get_dependencies(col):
         p = 0
         while (q := sql[p:].find('a.')) > -1:
             if q > 0 and sql[p:][q-1] not in ' ,()-+[]\r\n':  # any others needed ??
-                p = q + 1
+                p += (q + 1)
                 continue  # e.g. ignore e.g. 'information_schema.tables'
             for r in range(p+q, lng):  # look for end of col name
                 if sql[r] in ' ,()-+[]\r\n':  # any others needed ??
@@ -3694,7 +3722,3 @@ class Column:
         return cln
 
 #-----------------------------------------------------------------------------
-
-async def single_source():
-    # dummy generator that allows only one async iteration
-    yield
