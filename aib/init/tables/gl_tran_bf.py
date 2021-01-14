@@ -105,8 +105,8 @@ cols.append ({
     'long_descr' : 'Location row id',
     'col_head'   : 'Location',
     'key_field'  : 'N',
-    'data_source': 'dflt_if',
-    'condition'  : [['where', '', 'gl_code_id>valid_loc_ids>expandable', 'is', '$False', '']],
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -118,6 +118,9 @@ cols.append ({
           '<compare test="[[`if`, ``, `gl_code_id>valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
             '<fld_val name="gl_code_id>valid_loc_ids"/>'
           '</compare>'
+          '<default>'
+            '<fld_val name="_param.dflt_loc_row_id"/>'
+          '</default>'
         '</case>'
         ),
     'col_checks' : [
@@ -139,8 +142,8 @@ cols.append ({
     'long_descr' : 'Function row id',
     'col_head'   : 'Function',
     'key_field'  : 'N',
-    'data_source': 'dflt_if',
-    'condition'  : [['where', '', 'gl_code_id>valid_fun_ids>expandable', 'is', '$False', '']],
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -152,6 +155,9 @@ cols.append ({
           '<compare test="[[`if`, ``, `gl_code_id>valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
             '<fld_val name="gl_code_id>valid_fun_ids"/>'
           '</compare>'
+          '<default>'
+            '<fld_val name="_param.dflt_fun_row_id"/>'
+          '</default>'
         '</case>'
         ),
     'col_checks' : [

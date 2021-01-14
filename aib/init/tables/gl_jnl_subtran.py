@@ -175,8 +175,8 @@ cols.append ({
     'long_descr' : 'Location row id',
     'col_head'   : 'Location',
     'key_field'  : 'N',
-    'data_source': 'dflt_if',
-    'condition'  : [['where', '', 'gl_code_id>valid_loc_ids>expandable', 'is', '$False', '']],
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -193,6 +193,9 @@ cols.append ({
           '</compare>'
           '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ap~`, ``]]">'
             '<fld_val name="subparent_row_id>tran_row_id>supp_row_id>location_row_id"/>'
+          '</compare>'
+          '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~cb~`, ``]]">'
+            '<fld_val name="subparent_row_id>tran_row_id>ledger_row_id>location_row_id"/>'
           '</compare>'
           '<default>'
             '<fld_val name="_param.dflt_loc_row_id"/>'
@@ -218,8 +221,8 @@ cols.append ({
     'long_descr' : 'Function row id',
     'col_head'   : 'Function',
     'key_field'  : 'N',
-    'data_source': 'dflt_if',
-    'condition'  : [['where', '', 'gl_code_id>valid_fun_ids>expandable', 'is', '$False', '']],
+    'data_source': 'input',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

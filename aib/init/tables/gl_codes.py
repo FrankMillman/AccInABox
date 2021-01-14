@@ -183,7 +183,7 @@ cols.append ({
           '</default>'
         '</case>'
         ),
-    'col_checks' : None,
+    'col_checks' : None,  # should validate that value is equal to or subset of group value
     'fkey'       : ['adm_locations', 'row_id', 'valid_locs', 'location_id', False, None],
     'choices'    : None,
     })
