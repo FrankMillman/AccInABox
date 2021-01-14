@@ -76,27 +76,6 @@
         </cur_sequence>
         <grid_methods template="Grid"/>
       </grid>
-
-<!--
-      <panel/>
-      <row/>
-      <col/>
-      <label value="Net amt:"/>
-      <col/>
-      <display obj_name="ap_inv" col_name="inv_net_amt" lng="90" align="right"/>
-
-      <row/>
-      <col/>
-      <label value="Tax amt:"/>
-      <col/>
-      <display obj_name="ap_inv" col_name="inv_tax_amt" lng="90" align="right"/>
-
-      <row/>
-      <col/>
-      <label value="Total amt:"/>
-      <col/>
-      <display obj_name="ap_inv" col_name="inv_tot_amt" lng="90" align="right"/>
--->
       <vbox_end/>
 
       <grid_frame main_object="ap_invdet">
@@ -121,79 +100,6 @@
             <subtran_body subtran_id="com"/>
           </subtran_frame>
 
-<!--
-            <subtype_body subtype_id="ipch">
-              <block/>
-              <panel/>
-              <if test="[[`if`, ``, `_param.in_ledger_id`, `is`, `$None`, ``]]"/>
-              <row/>
-              <col/>
-              <label value="Warehouse:"/>
-              <col/>
-              <input obj_name="ap_invdet" col_name="warehouse" lng="80"/>
-              <display obj_name="in_ledg" col_name="descr" lng="120"/>
-              <end_if/>
-              <row/>
-              <col/>
-              <label value="Prod code:"/>
-              <col/>
-              <input obj_name="ap_invdet" col_name="prod_code" lng="80"/>
-              <display obj_name="prod" col_name="descr" lng="150"/>
-              <row/>
-              <col/>
-              <label value="Quantity:"/>
-              <col/>
-              <input obj_name="ap_invdet" col_name="qty" lng="80"/>
-              <row/>
-              <col/>
-              <label value="Price:"/>
-              <col/>
-              <input obj_name="ap_invdet" col_name="price" lng="80"/>
-              <row/>
-              <col/>
-              <label value="Amount:"/>
-              <col/>
-              <input obj_name="ap_invdet" col_name="ipch_amount" lng="80"/>
-            </subtype_body>
-
-            <subtype_body subtype_id="npch">
-              <block/>
-              <panel/>
-              <row/>
-              <col/>
-              <label value="Expense code:"/>
-              <col/>
-              <input obj_name="ap_invdet" col_name="npch_code" lng="80"/>
-              <row/>
-              <col/>
-              <label value="Description:"/>
-              <col/>
-              <input obj_name="ap_invdet" col_name="npch_descr" lng="120"/>
-              <row/>
-              <col/>
-              <label value="Amount:"/>
-              <col/>
-              <input obj_name="ap_invdet" col_name="npch_amount" lng="80"/>
-            </subtype_body>
-
-            <subtype_body subtype_id="com">
-              <block/>
-              <panel/>
-              <row/>
-              <col/>
-              <label value="Comment code:"/>
-              <col/>
-              <input obj_name="ap_invdet" col_name="comment_code" lng="80"/>
-              <row/>
-              <col/>
-              <label value="Comment:"/>
-              <col/>
-              <input obj_name="ap_invdet" col_name="comment_text" lng="250" height="5"/>
-            </subtype_body>
-
-          </subtype_frame>
--->
-
         </body>
         <button_row template="Grid_Frame_Grid_RO"/>
         <frame_methods template="Grid_Frame_Grid_RO">
@@ -207,36 +113,6 @@
     </body>
     <button_row template="Transaction"/>
     <frame_methods template="Transaction">
-      <method name="on_start_frame" action="
-        <<!-- case>>
-          <<obj_exists obj_name=`ap_inv`>>
-          <</obj_exists>>
-          <<default>>
-            <<change_button>>
-              <<btn_enabled btn_id=`btn_post` state=`false`/>>
-            <</change_button>>
-            <<change_button>>
-              <<btn_enabled btn_id=`btn_close` state=`false`/>>
-            <</change_button>>
-            <<inline_form name=`inv_header`>>
-              <<on_return>>
-                <<return state=`cancelled`>>
-                  <<end_form state=`cancelled`/>>
-                <</return>>
-                <<return state=`completed`>>
-                  <<change_button>>
-                    <<btn_enabled btn_id=`btn_post` state=`true`/>>
-                  <</change_button>>
-                  <<change_button>>
-                    <<btn_enabled btn_id=`btn_close` state=`true`/>>
-                  <</change_button>>
-                  <<restart_frame/>>
-                <</return>>
-              <</on_return>>
-            <</inline_form>>
-          <</default>>
-        <</case -->>
-        "/>
       <method name="do_post" action="
         <<case>>
           <<compare test=`[['if', '', 'ap_inv.inv_tot_amt', '=', '0', '']]`>>
@@ -270,8 +146,7 @@
         <input obj_name="ap_inv" col_name="supp_id" lng="80"/>
         <display obj_name="ap_inv" col_name="supp_row_id>party_row_id>display_name" lng="160"/>
 
-        <if test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``],
-          [`and`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
+        <if test="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
 
         <row/>
         <col/>
@@ -279,8 +154,8 @@
         <col/>
         <input obj_name="ap_inv" col_name="location_id" lng="80" form_dflt="
           <<case>>
-            <<compare test=`[['if', '', '_ledger.multiple_locations', 'is', '$False', '']]`>>
-              <<fld_val name=`ap_inv.supp_row_id>loc_id_if_exists>location_id`/>>
+            <<compare test=`[['if', '', 'ap_inv.supp_row_id>dflt_loc_id', 'is not', '$None', '']]`>>
+              <<fld_val name=`ap_inv.supp_row_id>dflt_loc_id>location_id`/>>
             <</compare>>
           <</case>>
           "/>
@@ -288,8 +163,7 @@
 
         <end_if/>
 
-        <if test="[[`if`, ``, `_param.function_row_id`, `is`, `$None`, ``],
-          [`and`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
+        <if test="[[`if`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
 
         <row/>
         <col/>
@@ -297,8 +171,8 @@
         <col/>
         <input obj_name="ap_inv" col_name="function_id" lng="80" form_dflt="
           <<case>>
-            <<compare test=`[['if', '', '_ledger.multiple_functions', 'is', '$False', '']]`>>
-              <<fld_val name=`ap_inv.supp_row_id>fun_id_if_exists>function_id`/>>
+            <<compare test=`[['if', '', 'ap_inv.supp_row_id>dflt_fun_id', 'is not', '$None', '']]`>>
+              <<fld_val name=`ap_inv.supp_row_id>dflt_fun_id>function_id`/>>
             <</compare>>
           <</case>>
           "/>

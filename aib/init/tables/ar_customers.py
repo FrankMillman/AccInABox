@@ -144,21 +144,11 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare test="[[`if`, ``, `_param.location_row_id`, `is not`, `$None`, ``]]">'
-            '<fld_val name="_param.location_row_id"/>'
-          '</compare>'
           '<compare test="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
             '<fld_val name="_ledger.valid_loc_ids"/>'
           '</compare>'
           '<compare test="[[`if`, ``, `_ledger.multiple_locations`, `is`, `$False`, ``]]">'
-            '<case>'
-                '<compare test="[[`if`, ``, `loc_id_if_exists`, `=`, `-1`, ``]]">'
-                  '<literal value="$None"/>'
-                '</compare>'
-                '<default>'
-                  '<fld_val name="loc_id_if_exists"/>'
-                '</default>'
-            '</case>'
+            '<fld_val name="loc_id_if_exists"/>'
           '</compare>'
         '</case>'
         ),
@@ -175,7 +165,7 @@ cols.append ({
             'Account with a different location exists',
             [
                 ['check', '', '_ledger.multiple_locations', 'is', '$True', ''],
-                ['or', '', 'loc_id_if_exists', '=', '-1', ''],
+                ['or', '', 'loc_id_if_exists', 'is', '$None', ''],
                 ['or', '', '$value', '=', 'loc_id_if_exists', ''],
                 ],
             ],
@@ -200,21 +190,11 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare test="[[`if`, ``, `_param.function_row_id`, `is not`, `$None`, ``]]">'
-            '<fld_val name="_param.function_row_id"/>'
-          '</compare>'
           '<compare test="[[`if`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
             '<fld_val name="_ledger.valid_fun_ids"/>'
           '</compare>'
           '<compare test="[[`if`, ``, `_ledger.multiple_functions`, `is`, `$False`, ``]]">'
-            '<case>'
-                '<compare test="[[`if`, ``, `fun_id_if_exists`, `=`, `-1`, ``]]">'
-                  '<literal value="$None"/>'
-                '</compare>'
-                '<default>'
-                  '<fld_val name="fun_id_if_exists"/>'
-                '</default>'
-            '</case>'
+            '<fld_val name="fun_id_if_exists"/>'
           '</compare>'
         '</case>'
         ),
@@ -231,7 +211,7 @@ cols.append ({
             'Account with a different function exists',
             [
                 ['check', '', '_ledger.multiple_functions', 'is', '$True', ''],
-                ['or', '', 'fun_id_if_exists', '=', '-1', ''],
+                ['or', '', 'fun_id_if_exists', 'is', '$None', ''],
                 ['or', '', '$value', '=', 'fun_id_if_exists', ''],
                 ],
             ],
@@ -260,11 +240,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'cust_supp_code',
+    'col_name'   : 'cust_acc_num',
     'data_type'  : 'TEXT',
-    'short_descr': 'Customers supplier code',
-    'long_descr' : 'Customers supplier code for this company',
-    'col_head'   : 'Supplier code',
+    'short_descr': 'Customers account number',
+    'long_descr' : 'Customers account number for this company',
+    'col_head'   : 'Account number',
     'key_field'  : 'N',
     'data_source': 'input',
     'condition'  : None,
@@ -367,21 +347,49 @@ virt.append ({
     'col_name'   : 'loc_id_if_exists',
     'data_type'  : 'INT',
     'short_descr': 'Return location if exists',
-    'long_descr' : 'Return location row id if one exists, -1 if none exist, else None',
+    'long_descr' : (
+        'Return location row id if it exists, else null.\n'
+        'Only called if multiple_locations is False.\n'
+        'But once called, it will be included in select_cols.'
+        ),
     'col_head'   : 'Loc',
     'sql'        : (
-        "SELECT CASE "
-            "WHEN (SELECT COUNT(*) FROM {company}.ar_customers b "
+        "SELECT CASE WHEN "
+            "(SELECT COUNT(*) FROM "
+                "(SELECT DISTINCT b.location_row_id FROM {company}.ar_customers b "
                 "WHERE b.ledger_row_id = a.ledger_row_id AND "
-                "b.party_row_id = a.party_row_id AND b.deleted_id = 0) "
-            "= 0 THEN -1 "
-            "WHEN (SELECT COUNT(*) FROM {company}.ar_customers b "
-                "WHERE b.ledger_row_id = a.ledger_row_id AND "
-                "b.party_row_id = a.party_row_id AND b.deleted_id = 0) "
+                "b.party_row_id = a.party_row_id AND b.deleted_id = 0) AS x) "
             "= 1 THEN "
-                "(SELECT b.location_row_id FROM {company}.ar_customers b "
+            "(SELECT b.location_row_id FROM {company}.ar_customers b "
                 "WHERE b.ledger_row_id = a.ledger_row_id AND "
-                    "b.party_row_id = a.party_row_id AND b.deleted_id = 0) "
+                "b.party_row_id = a.party_row_id AND b.deleted_id = 0 LIMIT 1) "
+            "END"
+        )
+    })
+virt.append ({
+    'col_name'   : 'dflt_loc_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Return cust loc id if exists',
+    'long_descr' : (
+        'Return customer location row id if only one exists.\n'
+        'Called from various form definitions as form_dflt.'
+        ),
+    'col_head'   : 'Loc',
+    'fkey'       : ['adm_locations', 'row_id', None, None, False, None],
+    'sql'        : (
+        "SELECT CASE WHEN "
+            "(SELECT COUNT(*) FROM "
+                "(SELECT DISTINCT b.location_row_id FROM {company}.ar_customers b "
+                "JOIN {company}.ar_ledger_params c ON c.row_id = b.ledger_row_id "
+                "JOIN {company}.org_parties d ON d.row_id = b.party_row_id "
+                "WHERE c.ledger_id = a.ledger_id AND "
+                "d.party_id = a.cust_id AND b.deleted_id = 0) AS x) "
+            "= 1 THEN "
+            "(SELECT b.location_row_id FROM {company}.ar_customers b "
+                "JOIN {company}.ar_ledger_params c ON c.row_id = b.ledger_row_id "
+                "JOIN {company}.org_parties d ON d.row_id = b.party_row_id "
+                "WHERE c.ledger_id = a.ledger_id AND "
+                "d.party_id = a.cust_id AND b.deleted_id = 0 LIMIT 1) "
             "END"
         )
     })
@@ -389,21 +397,49 @@ virt.append ({
     'col_name'   : 'fun_id_if_exists',
     'data_type'  : 'INT',
     'short_descr': 'Return function if exists',
-    'long_descr' : 'Return function row id if one exists, -1 if none exist, else None',
+    'long_descr' : (
+        'Return function row id if it exists, else null.\n'
+        'Only called if multiple_functions is False.\n'
+        'But once called, it will be included in select_cols.'
+        ),
     'col_head'   : 'Fun',
     'sql'        : (
-        "SELECT CASE "
-            "WHEN (SELECT COUNT(*) FROM {company}.ar_customers b "
-                "WHERE b.ledger_row_id = a.ledger_row_id AND b.party_row_id = a.party_row_id "
-                "AND b.location_row_id = a.location_row_id AND b.deleted_id = 0) "
-            "= 0 THEN -1 "
-            "WHEN (SELECT COUNT(*) FROM {company}.ar_customers b "
-                "WHERE b.ledger_row_id = a.ledger_row_id AND b.party_row_id = a.party_row_id "
-                "AND b.location_row_id = a.location_row_id AND b.deleted_id = 0) "
+        "SELECT CASE WHEN "
+            "(SELECT COUNT(*) FROM "
+                "(SELECT DISTINCT b.function_row_id FROM {company}.ar_customers b "
+                "WHERE b.ledger_row_id = a.ledger_row_id AND "
+                "b.party_row_id = a.party_row_id AND b.deleted_id = 0) AS x) "
             "= 1 THEN "
-                "(SELECT b.function_row_id FROM {company}.ar_customers b "
-                "WHERE b.ledger_row_id = a.ledger_row_id AND b.party_row_id = a.party_row_id "
-                    "AND b.location_row_id = a.location_row_id AND b.deleted_id = 0) "
+            "(SELECT b.function_row_id FROM {company}.ar_customers b "
+                "WHERE b.ledger_row_id = a.ledger_row_id AND "
+                "b.party_row_id = a.party_row_id AND b.deleted_id = 0 LIMIT 1) "
+            "END"
+        )
+    })
+virt.append ({
+    'col_name'   : 'dflt_fun_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Return cust fun id if exists',
+    'long_descr' : (
+        'Return customer function row id if only one exists.\n'
+        'Called from various form definitions as form_dflt.'
+        ),
+    'col_head'   : 'Fun',
+    'fkey'       : ['adm_functions', 'row_id', None, None, False, None],
+    'sql'        : (
+        "SELECT CASE WHEN "
+            "(SELECT COUNT(*) FROM "
+                "(SELECT DISTINCT b.function_row_id FROM {company}.ar_customers b "
+                "JOIN {company}.ar_ledger_params c ON c.row_id = b.ledger_row_id "
+                "JOIN {company}.org_parties d ON d.row_id = b.party_row_id "
+                "WHERE c.ledger_id = a.ledger_id AND "
+                "d.party_id = a.cust_id AND b.deleted_id = 0) AS x) "
+            "= 1 THEN "
+            "(SELECT b.function_row_id FROM {company}.ar_customers b "
+                "JOIN {company}.ar_ledger_params c ON c.row_id = b.ledger_row_id "
+                "JOIN {company}.org_parties d ON d.row_id = b.party_row_id "
+                "WHERE c.ledger_id = a.ledger_id AND "
+                "d.party_id = a.cust_id AND b.deleted_id = 0 LIMIT 1) "
             "END"
         )
     })

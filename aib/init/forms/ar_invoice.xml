@@ -143,8 +143,7 @@
         <input obj_name="ar_inv" col_name="cust_id" lng="80"/>
         <display obj_name="ar_inv" col_name="cust_row_id>party_row_id>display_name" lng="160"/>
 
-        <if test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``],
-          [`and`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
+        <if test="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
 
         <row/>
         <col/>
@@ -152,8 +151,8 @@
         <col/>
         <input obj_name="ar_inv" col_name="location_id" lng="80" form_dflt="
           <<case>>
-            <<compare test=`[['if', '', '_ledger.multiple_locations', 'is', '$False', '']]`>>
-              <<fld_val name=`cust_row_id>loc_id_if_exists`/>>
+            <<compare test=`[['if', '', 'ar_inv.cust_row_id>dflt_loc_id', 'is not', '$None', '']]`>>
+              <<fld_val name=`ar_inv.cust_row_id>dflt_loc_id>location_id`/>>
             <</compare>>
           <</case>>
           "/>
@@ -161,8 +160,7 @@
 
         <end_if/>
 
-        <if test="[[`if`, ``, `_param.function_row_id`, `is`, `$None`, ``],
-          [`and`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
+        <if test="[[`if`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
 
         <row/>
         <col/>
@@ -170,8 +168,8 @@
         <col/>
         <input obj_name="ar_inv" col_name="function_id" lng="80" form_dflt="
           <<case>>
-            <<compare test=`[['if', '', '_ledger.multiple_functions', 'is', '$False', '']]`>>
-              <<fld_val name=`cust_row_id>fun_id_if_exists`/>>
+            <<compare test=`[['if', '', 'ar_inv.cust_row_id>dflt_fun_id', 'is not', '$None', '']]`>>
+              <<fld_val name=`ar_inv.cust_row_id>dflt_fun_id>function_id`/>>
             <</compare>>
           <</case>>
           "/>
