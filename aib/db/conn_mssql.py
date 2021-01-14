@@ -52,7 +52,7 @@ def init(self):
         database=self.database, trusted_connection='Yes')
     self.conn = conn
     self.servertype = 'mssql'
-    self.exception = (pyodbc.DatabaseError, pyodbc.IntegrityError)
+    self.exception = (pyodbc.Error, pyodbc.DatabaseError, pyodbc.IntegrityError)
 
 # async def add_lock(self, sql):
 #     words = sql.split()

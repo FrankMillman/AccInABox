@@ -911,6 +911,8 @@ class Conn:
             else:
                 tgt_company = db_table.data_company
             if tgt_company == '{mem}':
+                # if mem_obj is part of a form definition, get full table_name from db_table
+                tgt_tblname = context.data_objects[tgt_tblname].table_name
                 tgt_tbl = await db.objects.get_mem_table(
                     context, tgt_company, tgt_tblname)
             else:
