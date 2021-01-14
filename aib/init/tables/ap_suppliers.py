@@ -411,28 +411,6 @@ virt.append ({
         ),
     })
 virt.append ({
-    'col_name'   : 'bal_sup_tot',
-    'data_type'  : '$PTY',
-    'short_descr': 'Total balance - supp',
-    'long_descr' : 'Total balance - supp',
-    'col_head'   : 'Tot bal supp',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'dflt_val'   : '0',
-    'sql'        : (
-        "COALESCE((SELECT SUM(c.tran_tot_cust) FROM ( "
-            "SELECT b.tran_tot_supp, ROW_NUMBER() OVER (PARTITION BY "
-                "b.supp_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
-                "ORDER BY b.tran_date DESC) row_num "
-            "FROM {company}.ap_supp_totals b "
-            "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {_ctx.bal_date_supp} "
-            ") as c "
-            "WHERE c.row_num = 1 "
-            "), 0)"
-        ),
-    })
-virt.append ({
     'col_name'   : 'balance_loc',
     'data_type'  : '$LCL',
     'short_descr': 'Balance - local',
@@ -450,28 +428,6 @@ virt.append ({
             "WHERE b.deleted_id = 0 "
             "AND b.tran_date <= {_ctx.bal_date_supp} "
             "AND b.supp_row_id = a.row_id "
-            ") as c "
-            "WHERE c.row_num = 1 "
-            "), 0)"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'bal_loc_tot',
-    'data_type'  : '$LCL',
-    'short_descr': 'Total balance - local',
-    'long_descr' : 'Total balance - local',
-    'col_head'   : 'Tot bal loc',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'sql'        : (
-        "COALESCE((SELECT SUM(c.tran_tot_local) FROM ( "
-            "SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
-                "b.supp_row_id, b.location_row_id, b.function_row_id, b.source_code_id "
-                "ORDER BY b.tran_date DESC) row_num "
-            "FROM {company}.ap_supp_totals b "
-            "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {_ctx.bal_date_supp} "
             ") as c "
             "WHERE c.row_num = 1 "
             "), 0)"

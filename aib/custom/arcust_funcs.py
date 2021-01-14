@@ -218,27 +218,26 @@ async def show_ageing(caller, xml):
 
     await caller.start_grid('ar_items')
 
-"""
-async def get_data(caller, node_id):
-    var = caller.data_objects['var']
-
-    # return await var.getval('total_sales')
-
-    invdet = caller.data_objects['ar_invdet']
-    col_names = ['SUM(amount)']
-    where = []
-    where.append(('WHERE', '', 'tran_row_id>tran_date', '>', await var.getval('start_date'), ''))
-    where.append(('AND', '', 'tran_row_id>tran_date', '<=', await var.getval('end_date'), ''))
-
+async def setup_cust_tots(caller, xml):
+    var = caller.context.data_objects['var']
+    sql = (
+        "SELECT COALESCE((SELECT SUM(c.tran_tot_local) FROM ( "
+            "SELECT a.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
+                "a.cust_row_id, a.location_row_id, a.function_row_id, a.source_code_id "
+                "ORDER BY a.tran_date DESC) row_num "
+            "FROM {company}.ar_cust_totals a "
+            "JOIN {company}.ar_customers b ON b.row_id = a.cust_row_id "
+            "WHERE b.ledger_row_id = {_ctx.ledger_row_id} "
+            "AND a.deleted_id = 0 "
+            "AND a.tran_date <= {_ctx.bal_date_cust} "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            "), 0)"
+        )
     async with caller.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
-        cur = await conn.full_select(invdet, col_names, where=where)
-        total, = await cur.__anext__()
-
-    await var.setval('total_sales', total)
-
-    return await var.getval('total_sales')
-"""
+        async for bal_loc_tot, in await conn.exec_sql(sql, context=caller.context):
+            await var.setval('bal_loc_tot', bal_loc_tot)
 
 async def get_data(caller, node_id, node_total):
     var = caller.data_objects['var']

@@ -146,6 +146,27 @@ async def show_ageing(caller, xml):
 
     await caller.start_grid('ap_items')
 
+async def setup_supp_tots(caller, xml):
+    var = caller.context.data_objects['var']
+    sql = (
+        "SELECT COALESCE((SELECT SUM(c.tran_tot_local) FROM ( "
+            "SELECT a.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
+                "a.supp_row_id, a.location_row_id, a.function_row_id, a.source_code_id "
+                "ORDER BY a.tran_date DESC) row_num "
+            "FROM {company}.ap_supp_totals a "
+            "JOIN {company}.ap_suppliers b ON b.row_id = a.supp_row_id "
+            "WHERE b.ledger_row_id = {_ctx.ledger_row_id} "
+            "AND a.deleted_id = 0 "
+            "AND a.tran_date <= {_ctx.bal_date_supp} "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            "), 0)"
+        )
+    async with caller.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        async for bal_loc_tot, in await conn.exec_sql(sql, context=caller.context):
+            await var.setval('bal_loc_tot', bal_loc_tot)
+
 async def setup_mem_trans(caller, xml):
     # called from ap_ledger_summary.dummy after date selection
     company = caller.company

@@ -1,6 +1,7 @@
 <form name="ap_balances" title="Supplier balances" before_start_form="
   <<pyfunc name=`custom.date_funcs.setup_balance_date`/>>
   <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.bal_date_supp`/>>
+  <<pyfunc name=`custom.apsupp_funcs.setup_supp_tots`/>>
   ">
   <db_objects>
     <db_obj name="supp" table_name="ap_suppliers"/>
@@ -11,6 +12,9 @@
         long_descr="Settings, passed between main form and formview" allow_amend="true"/>
       <mem_col col_name="balance_date" data_type="DTE" short_descr="Balance date"
         long_descr="Balance at which date" allow_amend="true"/>
+      <mem_col col_name="bal_loc_tot" data_type="$LCL" short_descr="Total balance"
+        long_descr="Total balance" allow_amend="true"
+        db_scale="2" scale_ptr="_param.local_curr_id>scale"/>
     </mem_obj>
     <mem_obj name="balance_date_vars" descr="Variables for balance date">
       <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
@@ -48,6 +52,7 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.bal_date_supp`/>>
+                <<pyfunc name=`custom.apsupp_funcs.setup_supp_tots`/>>
                 <<restart_grid obj_name=`supp`/>>
               <</return>>
             <</on_return>>
@@ -55,7 +60,8 @@
         "/>
 
       <block/>
-      <grid data_object="supp" growable="false" cursor_name="supp_bal">
+      <grid data_object="supp" growable="false" cursor_name="supp_bal"
+          footer_row="[`'Total:'`, `...`, `var.bal_loc_tot`]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)" action="
             <<assign src=`balance_date_vars.settings` tgt=`var.settings`/>>
@@ -63,6 +69,7 @@
             <<req_formview/>>
             " shortcut="ctrl,Enter"/>
           <tool type="nav"/>
+          <tool type="img" name="download" action="<<download/>>"/>
         </toolbar>
         <grid_methods template="Grid">
           <method name="on_start_grid" action="
