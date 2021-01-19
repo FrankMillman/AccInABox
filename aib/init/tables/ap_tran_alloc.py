@@ -171,68 +171,13 @@ cols.append ({
 # virtual column definitions
 virt = []
 # virt.append ({
-#     'col_name'   : 'tran_type',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Transaction type',
-#     'long_descr' : 'Transaction type',
-#     'col_head'   : 'Tran type',
-#     'sql'        : "'ap_alloc'",
-#     })
-# virt.append ({
-#     'col_name'   : 'alloc_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Allocation row id',
-#     'long_descr' : 'Allocation row id',
-#     'col_head'   : 'Alloc id',
-#     # fkey causes recursion after additions to db.objects.setup_fkey() [2020-07-30]
-#     # ap_allocations.tran_row_id is an fkey to ap_tran_alloc
-#     # 'fkey'       : ['ap_allocations', 'row_id', None, None, False, None],
-#     'sql'        : (
-#         "SELECT b.row_id FROM {company}.ap_allocations b "
-#         "WHERE b.tran_type = 'ap_alloc' AND b.tran_row_id = a.row_id "
-#         "AND b.item_row_id = (SELECT b.row_id FROM {company}.ap_openitems b "
-#             "WHERE b.tran_type = a.item_row_id>tran_type AND b.tran_row_id = a.item_row_id>tran_row_id "
-#             "AND b.split_no = 0 AND b.deleted_id = 0) "
-#         ),
-#     })
-# virt.append ({
-#     'col_name'   : 'currency_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Transaction currency',
-#     'long_descr' : 'Currency used to enter transaction',
-#     'col_head'   : 'Currency',
-#     'db_scale'   : 0,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : '{item_row_id>tran_row_id>currency_id}',
-#     'sql'        : 'a.item_row_id>tran_row_id>currency_id',
-#     })
-virt.append ({
-    'col_name'   : 'supp_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Supplier row id',
-    'long_descr' : 'Supplier row id',
-    'col_head'   : 'Supp row_id',
-    'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
-    'sql'        : 'a.item_row_id>tran_row_id>supp_row_id'
-    })
-# virt.append ({
-#     'col_name'   : 'supp_tran_row_id',
+#     'col_name'   : 'supp_row_id',
 #     'data_type'  : 'INT',
 #     'short_descr': 'Supplier row id',
 #     'long_descr' : 'Supplier row id',
 #     'col_head'   : 'Supp row_id',
-#     'sql'        : 'a.item_row_id>tran_row_id>supp_row_id'
-#     })
-# virt.append ({
-#     'col_name'   : 'supp_exch_rate',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Supp exchange rate',
-#     'long_descr' : 'Exchange rate from transaction currency to supplier',
-#     'col_head'   : 'Rate supp',
-#     'db_scale'   : 8,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : '{item_row_id>tran_row_id>supp_exch_rate}',
-#     'sql'        : 'a.item_row_id>tran_row_id>supp_exch_rate',
+#     'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
+#     'sql'        : 'a.item_row_id>supp_row_id'
 #     })
 virt.append ({
     'col_name'   : 'tran_exch_rate',
@@ -242,8 +187,14 @@ virt.append ({
     'col_head'   : 'Rate tran',
     'db_scale'   : 8,
     'scale_ptr'  : None,
-    'dflt_val'   : '{item_row_id>tran_row_id>tran_exch_rate}',
-    'sql'        : 'a.item_row_id>tran_row_id>tran_exch_rate',
+    'dflt_rule'  : (
+        '<expr>'
+            '<fld_val name="item_row_id>amount_supp"/>'
+            '<op type="/"/>'
+            '<fld_val name="item_row_id>amount_local"/>'
+        '</expr>'
+        ),
+    'sql'        : 'a.item_row_id>amount_supp / a.item_row_id>amount_local',
     })
 virt.append ({
     'col_name'   : 'det_exists',
@@ -263,7 +214,7 @@ virt.append ({
     'long_descr' : 'Balance of transaction not allocated',
     'col_head'   : 'Unalloc',
     'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'scale_ptr'  : 'item_row_id>supp_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'sql'        : (
@@ -280,10 +231,10 @@ virt.append ({
 cursors = []
 cursors.append({
     'cursor_name': 'unposted_alloc',
-    'title': 'Unposted ar allocations',
+    'title': 'Unposted ap allocations',
     'columns': [
-        ['supp_row_id>party_row_id>party_id', 80, False, True],
-        ['supp_row_id>party_row_id>display_name', 160, True, True],
+        ['item_row_id>supp_row_id>party_row_id>party_id', 80, False, True],
+        ['item_row_id>supp_row_id>party_row_id>display_name', 160, True, True],
         ['tran_date', 80, False, True],
         ['item_row_id>tran_type', 60, False, True],
         ['item_row_id>tran_number', 80, False, True],
@@ -299,5 +250,57 @@ cursors.append({
 # actions
 actions = []
 actions.append([
-    'after_post', '<pyfunc name="custom.aptrans_funcs.create_disc_crn"/>'
+    'upd_on_post', [
+        [
+            'ap_allocations',
+            [  # condition
+                ['where', '', '_ctx.tot_alloc_supp', 'pyfunc', 'custom.aptrans_funcs.get_tot_alloc', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                # ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
+                ['item_row_id', 'item_row_id'],  # tgt_col, op, src_col
+                ],
+            [],  # aggregation
+            [  # on post
+                ['alloc_supp', '-', '_ctx.tot_alloc_supp'],  # tgt_col, op, src_col
+                ['alloc_local', '-', '_ctx.tot_alloc_local'],
+                ],
+            [],  # on unpost
+            ],
+        [
+            'ap_tran_disc',
+            [  # condition
+                ['where', '', '_ctx.tot_disc_supp', '!=', '0', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['supp_row_id', 'item_row_id>supp_row_id'],  # tgt_col, op, src_col
+                ],
+            [],  # aggregation
+            [  # on post
+                ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
+                ['tran_exch_rate', '=', 'tran_exch_rate'],
+                ['discount_supp', '=', '_ctx.tot_disc_supp'],
+                ['discount_local', '=', '_ctx.tot_disc_local'],
+                ['orig_item_id', '=', 'item_row_id'],
+                ],
+            [],  # on unpost
+            [  # return values
+                ['_ctx.disc_row_id', 'row_id'],  # tgt_col, src_col
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'before_post',
+        '<assign src="$None" tgt="_ctx.disc_row_id"/>'
+    ])
+actions.append([
+    'after_post',
+        '<case>'
+            '<compare test="[[`if`, ``, `_ctx.disc_row_id`, `is not`, `$None`, ``]]">'
+                '<pyfunc name="custom.aptrans_funcs.post_alloc_crn"/>'
+            '</compare>'
+        '</case>'
     ])

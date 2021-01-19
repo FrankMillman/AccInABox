@@ -1,5 +1,7 @@
 from datetime import date as dt, datetime as dtm, timedelta as td
+from decimal import Decimal as D
 from lxml import etree
+import asyncio
 
 import db.objects
 import db.cache
@@ -14,45 +16,105 @@ async def split_npch(db_obj, conn, return_vals):
         closing_date = adm_periods[period_no].closing_date
         eff_date = closing_date + td(1)
     else:
-        # [TO DO - implement multiple effective dates
+        # [TO DO] - implement multiple effective dates
         raise NotImplementedError
 
     yield (eff_date, await db_obj.getval('net_local'))
 
 async def setup_openitems(db_obj, conn, return_vals):
     # called as split_src func from ap_tran_inv.upd_on_post()
-    tran_date = await db_obj.getval('tran_date')
-    due_rule = await db_obj.getval('supp_row_id>due_rule')
-    if not due_rule:
-        due_rule = ['D', 30]  # default to '30 days'
-    term_type, day = due_rule
-    if term_type == 'D':  # days
-        due_date = tran_date + td(day)
-    elif term_type == 'M':  # day of month
-        tran_yy, tran_mm, tran_dd = tran_date.year, tran_date.month, tran_date.day
-        due_yy, due_mm, due_dd = tran_yy, tran_mm, day
-        if tran_dd > due_dd:  # due date already past, set to following month
-            due_mm += 1
-            if due_mm == 13:
-                due_mm = 1
-                due_yy += 1
-        while True:
-            try:
-                due_date = dt(due_yy, due_mm, due_dd)
-            except ValueError:
-                due_dd -= 1
-            else:
-                break
-    else:
-        raise NotImplementedError
+    # tran_date = await db_obj.getval('tran_date')
+    # due_rule = await db_obj.getval('supp_row_id>due_rule')
+    # if not due_rule:
+    #     due_rule = ['D', 30]  # default to '30 days'
+    # term_type, day = due_rule
+    # if term_type == 'D':  # days
+    #     due_date = tran_date + td(day)
+    # elif term_type == 'M':  # day of month
+    #     tran_yy, tran_mm, tran_dd = tran_date.year, tran_date.month, tran_date.day
+    #     due_yy, due_mm, due_dd = tran_yy, tran_mm, day
+    #     if tran_dd > due_dd:  # due date already past, set to following month
+    #         due_mm += 1
+    #         if due_mm == 13:
+    #             due_mm = 1
+    #             due_yy += 1
+    #     while True:
+    #         try:
+    #             due_date = dt(due_yy, due_mm, due_dd)
+    #         except ValueError:
+    #             due_dd -= 1
+    #         else:
+    #             break
+    # else:
+    #     raise NotImplementedError
 
-    yield (
-        0,
-        'inv',
-        due_date,
-        await db_obj.getval('inv_tot_supp'),
-        await db_obj.getval('inv_tot_local'),
-        )
+    tran_date = await db_obj.getval('tran_date')
+    terms_code = await db_obj.getfld('terms_code_id')
+    terms_obj = await terms_code.get_fk_object()
+    due_rule = await terms_obj.getval('due_rule')
+    if not due_rule:
+        due_rule = [1, 30, 'd']  # default to '30 days'
+    if await db_obj.getval('_ledger.discount_code_id') is None:
+        discount_rule = None
+    else:
+        discount_rule = await terms_obj.getval('discount_rule')
+    instalments, terms, term_type = due_rule
+    if instalments == 1:
+        if term_type == 'd':  # days
+            due_date = tran_date + td(terms)
+        elif term_type == 'p':  # periods
+            due_date = await db.cache.get_due_date(db_obj.company, tran_date, terms)
+        elif term_type == 'm':  # calendar day
+            tran_yy, tran_mm, tran_dd = tran_date.year, tran_date.month, tran_date.day
+            due_yy, due_mm, due_dd = tran_yy, tran_mm, terms
+            if tran_dd > due_dd:  # due date already past, set to following month
+                due_mm += 1
+                if due_mm == 13:
+                    due_mm = 1
+                    due_yy += 1
+            while True:
+                try:
+                    due_date = dt(due_yy, due_mm, due_dd)
+                except ValueError:
+                    due_dd -= 1
+                else:
+                    break
+        else:
+            raise NotImplementedError
+
+        if discount_rule:
+            percentage, terms, term_type = discount_rule
+            if term_type == 'd':
+                discount_date = tran_date + td(terms)
+            elif term_type == 'm':  # calendar day
+                tran_yy, tran_mm, tran_dd = tran_date.year, tran_date.month, tran_date.day
+                disc_yy, disc_mm, disc_dd = tran_yy, tran_mm, terms
+                if tran_dd > disc_dd:  # disc date already past, set to following month
+                    disc_mm += 1
+                    if disc_mm == 13:
+                        disc_mm = 1
+                        disc_yy += 1
+                while True:
+                    try:
+                        discount_date = dt(disc_yy, disc_mm, disc_dd)
+                    except ValueError:
+                        disc_dd -= 1
+                    else:
+                        break
+            discount_supp = (await db_obj.getval('inv_tot_supp') * D(percentage) / 100)
+        else:
+            discount_date = None
+            discount_supp = 0
+
+        yield (
+            0,
+            'inv',
+            due_date,
+            await db_obj.getval('inv_tot_supp'),
+            await db_obj.getval('inv_tot_local'),
+            discount_date,
+            discount_supp,
+            )
 
 async def check_ledg_per(caller, xml):
     # called from ap_ledg_per.on_start_row
@@ -76,88 +138,295 @@ async def check_ledg_per(caller, xml):
             await actions.setval('action', 'reopen')
             return
 
-async def setup_pmts_due_vars(caller, xml):
-    # called 'before_start_form' in ap_pmts_due.xml
-    context = caller.context
-    supp = context.data_objects['supp']
-    var = context.data_objects['var']
-    await var.setval('include_curr', await supp.getval('_ledger.currency_id') is None)
-    await var.setval('include_loc', await supp.getval('_ledger.valid_loc_ids>expandable') is True)
-    await var.setval('include_fun', await supp.getval('_ledger.valid_fun_ids>expandable') is True)
+async def get_tot_alloc(db_obj, fld, src):
+    # called from ap_tran_alloc/ap_subtran_pmt in 'condition' for upd_on_post 'ap_allocations'
+    # get total allocations for this transaction and save in 'context'
+    # used to create 'double-entry' allocation for item being allocated
+    row_id = await db_obj.getval('row_id')
+    if db_obj.table_name == 'ap_tran_alloc':
+        tran_type = 'ap_alloc'
+    elif db_obj.table_name == 'ap_subtran_pmt':
+        tran_type = 'ap_pmt'
+
+    sql = (
+        "SELECT SUM(alloc_supp) AS \"[REAL2]\", SUM(discount_supp) AS \"[REAL2]\", "
+        "SUM(alloc_local) AS \"[REAL2]\", SUM(discount_local) AS \"[REAL2]\" "
+        f"FROM {db_obj.company}.ap_allocations "
+        f"WHERE tran_type = {tran_type!r} AND tran_row_id = {row_id} AND deleted_id = 0"
+        )
+
+    async with db_obj.context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        async for alloc_supp, disc_supp, alloc_local, disc_local in await conn.exec_sql(sql):
+            db_obj.context.tot_alloc_supp = alloc_supp or 0
+            db_obj.context.tot_disc_supp = disc_supp or 0
+            db_obj.context.tot_alloc_local = alloc_local or 0
+            db_obj.context.tot_disc_local = disc_local or 0
+
+    return bool(alloc_supp)  # False if alloc_supp == 0, else True
 
 async def setup_pmts_due(caller, xml):
-    # called 'after_start_form' in ap_pmts_due.xml
+    # called after inline form 'batch_header' in ap_pmt_batch.xml
     context = caller.context
-    supp = context.data_objects['supp']
-    pmts_due = context.data_objects['pmts_due']
+    batch_hdr = context.data_objects['batch_hdr']
+    batch_det = context.data_objects['batch_det']
 
-    where = [('WHERE', '', 'bal_due_sup', '!=', 0, '')]
-    order = [('supp_id', False)]
+    sql = (
+        "SELECT a.supp_row_id, a.row_id, a.amount_supp - "
+        "COALESCE(alloc.tot_alloc, 0) - "
+        "CASE "
+            "WHEN a.discount_date IS NULL THEN 0 "
+            "WHEN a.discount_date < {_ctx.as_at_date} THEN 0 "
+            "ELSE a.discount_supp - COALESCE(alloc.disc_alloc, 0) "
+        "END AS \"[REAL2]\" "
+        "FROM {company}.ap_openitems a "
+        "LEFT JOIN {company}.ap_suppliers b ON b.row_id = a.supp_row_id "
+        "LEFT JOIN {company}.org_parties x ON x.row_id = b.party_row_id "
+        "LEFT JOIN {company}.adm_locations y ON y.row_id = b.location_row_id "
+        "LEFT JOIN {company}.adm_functions z ON z.row_id = b.function_row_id "
+        "LEFT JOIN (SELECT c.item_row_id, "
+            "SUM(c.alloc_supp + c.discount_supp) AS tot_alloc, "
+            "SUM(c.discount_supp) AS disc_alloc "
+            "FROM {company}.ap_allocations c "
+            "WHERE "
+                "CASE "
+                    "WHEN c.tran_type = 'ap_alloc' THEN "
+                        "(SELECT d.row_id FROM {company}.ap_allocations d "
+                            "WHERE d.tran_type = c.tran_type AND "
+                                "d.tran_row_id = c.tran_row_id AND "
+                                "d.item_row_id = "
+                                "(SELECT e.item_row_id FROM {company}.ap_tran_alloc e "
+                                    "WHERE e.row_id = c.tran_row_id)) "
+                    "ELSE "
+                        "(SELECT d.row_id FROM {company}.ap_openitems d "
+                            "WHERE d.tran_type = c.tran_type AND d.tran_row_id = c.tran_row_id) "
+                "END IS NOT NULL "
+            "GROUP BY c.item_row_id "
+            ") AS alloc "
+            "ON alloc.item_row_id = a.row_id "
+        "WHERE a.due_date <= {_ctx.as_at_date} AND a.deleted_id = 0 AND "
+            "b.ledger_row_id = {_ctx.ledger_row_id} AND "
+            "a.amount_supp - "
+                "COALESCE(alloc.tot_alloc, 0) - "
+                "CASE "
+                    "WHEN a.discount_date IS NULL THEN 0 "
+                    "WHEN a.discount_date < {_ctx.as_at_date} THEN 0 "
+                    "ELSE a.discount_supp - COALESCE(alloc.disc_alloc, 0) "
+                "END "
+            "!= 0 "
+        "ORDER BY x.party_id, y.parent_id, y.seq, z.parent_id, z.seq "
+        )
 
-    all_due = supp.select_many(where=where, order=order)
-    async for _ in all_due:
-        await pmts_due.init()
-        await pmts_due.setval('supp_row_id', await supp.getval('row_id'))
-        await pmts_due.setval('supp_id', await supp.getval('supp_id'))
-        await pmts_due.setval('party_name', await supp.getval('party_row_id>display_name'))
-        await pmts_due.setval('curr_symbol', await supp.getval('currency_id>symbol'))
-        await pmts_due.setval('location_id', await supp.getval('location_row_id>location_id'))
-        await pmts_due.setval('function_id', await supp.getval('function_row_id>function_id'))
-        await pmts_due.setval('bal_due_sup', await supp.getval('bal_due_sup'))
-        await pmts_due.setval('scale', await supp.getval('currency_id>scale'))
-        await pmts_due.save()
+    last_supp_row_id = None
+    due_tot = 0
+    allocations = []
 
-async def recalc_pmts_due(caller, xml):
-    # called after 'view/edit' in ap_pmts_due.xml
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        cur = await conn.exec_sql(sql, context=caller.context)
+        async for supp_row_id, item_row_id, due_amt in cur:
+            if not batch_hdr.exists:  # only save batch_hdr if any rows are selected
+                await batch_hdr.save()
+            if supp_row_id != last_supp_row_id:
+                if last_supp_row_id is not None:
+                    await batch_det.init()
+                    await batch_det.setval('supp_row_id', last_supp_row_id)
+                    await batch_det.setval('due_amt', due_tot)
+                    await batch_det.setval('allocations', allocations)
+                    await batch_det.save(from_upd_on_save=True)  # do not update audit trail
+                    due_tot = 0
+                    allocations = []
+                last_supp_row_id = supp_row_id
+            due_tot += due_amt
+            allocations.append((item_row_id, str(due_amt), 0))  # convert Decimal to str (shorter!)
+        if last_supp_row_id is not None:
+            await batch_det.init()
+            await batch_det.setval('supp_row_id', last_supp_row_id)
+            await batch_det.setval('due_amt', due_tot)
+            await batch_det.setval('allocations', allocations)
+            await batch_det.save(from_upd_on_save=True)  # do not update audit trail
+
+async def setup_items_due(caller, xml):
+    # called on 'view_edit' in ap_pmts_due.xml
     context = caller.context
-    supp = context.data_objects['supp']
-    pmts_due = context.data_objects['pmts_due']
-    supp_row_id = await pmts_due.getval('supp_row_id')
 
-    await supp.init(init_vals={'row_id': supp_row_id})
-    bal_due_sup = await supp.getval('bal_due_sup')
-    if bal_due_sup:
-        await pmts_due.setval('bal_due_sup', await supp.getval('bal_due_sup'))
-        await pmts_due.save()
-    else:
-        await pmts_due.delete()
+    batch_det = context.data_objects['batch_det']
+    items = context.data_objects['items']
+    items_due = context.data_objects['items_due']
+    await items_due.delete_all()
+
+    allocations = await batch_det.getval('allocations')
+    for item_row_id, due_amt, pmt_amt in allocations:
+        await items.init(init_vals={'row_id': item_row_id})
+        await items_due.init()
+        await items_due.setval('item_row_id', await items.getval('row_id'))
+        await items_due.setval('tran_type', await items.getval('tran_type'))
+        await items_due.setval('tran_number', await items.getval('tran_number'))
+        await items_due.setval('tran_date', await items.getval('tran_date'))
+        await items_due.setval('due_date', await items.getval('due_date'))
+        await items_due.setval('amount_supp', await items.getval('amount_supp'))
+        await items_due.setval('due_supp', due_amt)
+        await items_due.setval('pmt_supp', pmt_amt)
+        await items_due.save()
+
+async def auth_pmt(caller, xml):
+    # called after 'Authorised' selected from 'view_edit' in ap_batch_det.xml
+    context = caller.context
+    var = context.data_objects['var']
+    if not await var.getval('tot_pmt'):
+        return
+
+    allocations = []
+    pmt_amt = 0
+    items_due = context.data_objects['items_due']
+    all_items = items_due.select_many(where=[], order=[['row_id', False]])
+    async for _ in all_items:
+        allocations.append((
+            await items_due.getval('item_row_id'),
+            str(await items_due.getval('due_supp')),  # convert Decimal to str (shorter!)
+            str(await items_due.getval('pmt_supp')),
+            ))
+        pmt_amt += await items_due.getval('pmt_supp')
+
+    batch_det = context.data_objects['batch_det']
+    await batch_det.setval('pmt_amt', pmt_amt)
+    await batch_det.setval('allocations', allocations)
+    await batch_det.setval('authorised', True)
+    await batch_det.save(from_upd_on_save=True)  # do not update audit trail
 
 async def on_pmt_auth(caller, xml):
+    # called after 'batch_det.authorised' checkbox selected in ap_pmts_due.xml or from auth_all_pmts() below
     context = caller.context
-    pmts_due = context.data_objects['pmts_due']
-    items = context.data_objects['items']
-    pmt = context.data_objects['pmt']
-    alloc = context.data_objects['alloc']
+    batch_det = context.data_objects['batch_det']
+    if await batch_det.getval('authorised'):
+        auth = True
+    else:
+        auth = False
 
-    print(pmts_due)
-
-    await pmt.init(init_vals = {'supp_row_id': await pmts_due.getval('supp_row_id'),
-        'tran_date': context.as_at_date})
-    await pmt.save()
-
-    where = [
-        ('WHERE', '', 'supp_row_id', '=', await pmts_due.getval('supp_row_id'), ''),
-        ('AND', '', 'due_date', '<=', context.as_at_date, ''),
-        ('AND', '', 'due_supp', '!=', 0, ''),
-        ]
-
-    order = [('row_id', False)]
-
-    all_items = items.select_many(where=where, order=order)
-    async for _ in all_items:
-        await alloc.init()
-        await alloc.setval('item_row_id', await items.getval('row_id'))
-        await alloc.setval('alloc_supp', await items.getval('due_supp'))
-        await alloc.save()
+    pmt_amt = 0
+    allocations = await batch_det.getval('allocations')
+    for alloc in allocations:  # [item_row_id, due_amt, pmt_amt]
+        if auth:
+            alloc[2] = alloc[1]  # move due_amt to pmt_amt
+            pmt_amt += D(alloc[1])  # convert str back to Decimal
+        else:
+            alloc[2] = 0  # set pmt_amt to 0
+    await batch_det.setval('pmt_amt', pmt_amt)
+    await batch_det.setval('allocations', allocations)
+    await batch_det.save(from_upd_on_save=True)  # do not update audit trail
 
 async def auth_all_pmts(caller, xml):
-    grid = caller.grid_dict['pmts_due']
-    pmts_due = grid.db_obj
+    grid = caller.grid_dict['batch_det']
+    batch_det = grid.db_obj
 
-    for row_no in range(grid.num_rows):
-        await grid.start_row(row_no)
-        if await pmts_due.getval('auth') is False:
-            await pmts_due.setval('auth', True)
-            await pmts_due.save()
+    async with caller.context.db_session.get_connection():  # starts a transaction
+        for row_no in range(grid.num_rows):
+            await grid.start_row(row_no)
+            if await batch_det.getval('authorised') is False:
+                await batch_det.setval('authorised', True)
+                await on_pmt_auth(caller, xml)  # on_pmt_auth will call batch_det.save()
 
     await grid.start_grid()
+
+async def post_pmt_batch(caller, xml):
+    #     # run post_batch() as a background task
+    #     args = (caller, xml)
+    #     future = asyncio.create_task(post_batch(*args))
+    #     future.add_done_callback(batch_posted)
+
+    # # callback when batch posted - notify user (how?)
+    # def batch_posted(fut):
+    #     print(fut.result())
+    
+    # async def post_batch(caller, xml):
+    context = caller.context
+    batch_hdr = context.data_objects['batch_hdr']
+    batch_det = context.data_objects['batch_det']
+    tran_date = await batch_hdr.getval('tran_date')
+    if await batch_hdr.getval('_ledger.pmt_tran_source') == 'cb':
+        pmt_tran = 'cb'
+        module_row_id = await db.cache.get_mod_id(context.company, 'cb')
+        ledger_row_id = await batch_hdr.getval('pmt_cb_ledger_id')
+        post_ctx = await db.cache.get_new_context(context.user_row_id, context.sys_admin,
+            context.company, context.mem_id, module_row_id, ledger_row_id)
+        cb_pmt = await db.objects.get_db_object(post_ctx, 'cb_tran_pmt')
+        cb_det = await db.objects.get_db_object(post_ctx, 'cb_tran_pmt_det', parent=cb_pmt)
+        ap_sub = await db.objects.get_db_object(post_ctx, 'ap_subtran_pmt', parent=cb_det)
+        ap_alloc = await db.objects.get_db_object(post_ctx, 'ap_allocations', ap_sub)
+    elif await batch_hdr.getval('_ledger.pmt_tran_source') == 'ap':
+        pmt_tran = 'ap'
+        post_ctx = await db.cache.get_new_context(context.user_row_id, context.sys_admin,
+            context.company, context.mem_id, context.module_row_id, context.ledger_row_id)
+        ap_pmt = await db.objects.get_db_object(post_ctx, 'ap_tran_pmt')
+        ap_sub = await db.objects.get_db_object(post_ctx, 'ap_subtran_pmt', parent=ap_pmt)
+        ap_alloc = await db.objects.get_db_object(post_ctx, 'ap_allocations', ap_sub)
+
+    async with post_ctx.db_session.get_connection():  # starts a transaction
+
+        where = [
+            ('WHERE', '', 'batch_row_id', '=', await batch_hdr.getval('row_id'), ''),
+            ('AND', '', 'pmt_amt', '!=', 0, ''),
+            ]
+        order = [('row_id', False)]
+        all_dets = batch_det.select_many(where=where, order=order)
+        async for _ in all_dets:
+            if pmt_tran == 'cb':
+                await cb_pmt.init()
+                await cb_pmt.setval('tran_date', tran_date)
+                await cb_pmt.setval('payee', await batch_det.getval('supp_row_id>party_row_id>display_name'))
+                await cb_pmt.setval('amount', await batch_det.getval('pmt_amt'))
+                await cb_pmt.save()
+                await cb_det.init()
+                await cb_det.setval('line_type', 'apmt')
+                await ap_sub.setval('supp_row_id', await batch_det.getval('supp_row_id'))
+                await ap_sub.setval('apmt_amount', await batch_det.getval('pmt_amt'))
+                await cb_det.save()
+
+            else:  # must be 'ap'
+                await ap_pmt.init()
+                await ap_pmt.setval('supp_row_id', await batch_det.getval('supp_row_id'))
+                await ap_pmt.setval('tran_date', tran_date)
+                await ap_pmt.setval('pmt_amt', await batch_det.getval('pmt_amt'))
+                await ap_pmt.save()
+
+            for item_row_id, due_amt, pmt_amt in await batch_det.getval('allocations'):
+                pmt_amt = D(pmt_amt)  # convert str back to Decimal
+                if pmt_amt:
+                    await ap_alloc.init()
+                    await ap_alloc.setval('item_row_id', item_row_id)
+                    await ap_alloc.setval('alloc_supp', pmt_amt)
+                    await ap_alloc.save()
+
+            if pmt_tran == 'cb':
+                await cb_pmt.post()
+            else:  # must be 'ap'
+                await ap_pmt.post()
+
+        batch_hdr.context = post_ctx  # ugly!
+        await batch_hdr.setval('posted', True, validate=False)
+        await batch_hdr.save(from_upd_on_save='post')
+        batch_hdr.context = context
+
+    return f"Batch {await batch_hdr.getval('batch_number')} posted"
+
+async def post_disc_crn(db_obj, xml):
+    # called from ap_tran_pmt/cb_tran_pmt - after_post
+    # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
+    #    or create new column on ap_tran_rec/cb_tran_pmt 'crn_check_complete'?
+    #    any tran with 'posted' = True and 'crn_check_complete' = False must be re-run
+    context = db_obj.context
+    disc_objname = [x for x in context.data_objects if x.endswith('ap_tran_disc')][0]
+    disc = context.data_objects[disc_objname]
+    for row_id in context.disc_to_post:
+        await disc.setval('row_id', row_id)
+        await disc.post()
+
+async def post_alloc_crn(db_obj, xml):
+    # called from ap_tran_alloc - after_post
+    # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
+    #    or create new column on ap_tran_alloc 'crn_check_complete'?
+    #    any tran with 'posted' = True and 'crn_check_complete' = False must be re-run
+    context = db_obj.context
+    disc = context.data_objects[f'{id(db_obj)}.ap_tran_disc']
+    await disc.setval('row_id', context.disc_row_id)
+    await disc.post()

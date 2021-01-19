@@ -6,7 +6,6 @@
   <db_objects>
     <db_obj name="ap_supp" table_name="ap_suppliers" is_formview_obj="true"/>
     <db_obj name="ap_items" table_name="ap_openitems"/>
-    <db_obj name="party" table_name="org_parties" fkey="ap_supp.party_row_id"/>
     <db_obj name="currency" table_name="adm_currencies" fkey="ap_supp.currency_id"/>
     <db_obj name="ap_trans" table_name="ap_trans" view="true"/>
   </db_objects>
@@ -81,8 +80,8 @@
       <label value="Supplier Id:"/>
       <col/>
       <input obj_name="ap_supp" col_name="supp_id" lng="80" readonly="true" skip="true"/>
-      <display obj_name="party" col_name="display_name" lng="160"/>
-      <display obj_name="ap_supp" col_name="supp_cust_code" lng="160"/>
+      <display obj_name="ap_supp" col_name="party_row_id>display_name" lng="160"/>
+      <display obj_name="ap_supp" col_name="supp_acc_num" lng="160"/>
       <if test="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
       <row/>
       <col/>

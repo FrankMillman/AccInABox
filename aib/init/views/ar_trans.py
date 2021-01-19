@@ -36,7 +36,6 @@ cols = []
 cols.append ({
     'col_name'   : 'tran_type',
     'source'     : ["'ar_inv'", "'ar_crn'", "'ar_rec'", "'ar_chg'", "'ar_disc'"],
-    # 'source'     : ['tran_type', 'tran_type', 'tran_type', 'tran_type'],
     'data_type'  : 'TEXT',
     'short_descr': 'Tran type',
     'long_descr' : 'Transaction type',

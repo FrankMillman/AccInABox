@@ -80,26 +80,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'pmt_auth_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Payment auth id',
-#     'long_descr' : 'Payment authorisation id',
-#     'col_head'   : 'Pmt auth',
-#     'key_field'  : 'A',
-#     'data_source': 'input',
-#     'condition'  : None,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 0,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : None,
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : ['ap_tran_pmt', 'row_id', None, None, True, None],
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'source_code_id',
     'data_type'  : 'INT',
@@ -152,7 +132,7 @@ cols.append ({
     'long_descr' : 'Supplier row id. In theory, should check if statement period still open. Leave for now.',
     'col_head'   : 'Supplier',
     'key_field'  : 'N',
-    'data_source': 'repl',
+    'data_source': 'input',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
@@ -163,8 +143,14 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['alt_curr', 'Alternate currency not allowed', [
-            ['check', '', 'supp_row_id>currency_id', '=', 'subparent_row_id>currency_id', ''],
-            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+            ['check', '', 'supp_row_id>currency_id', '=', 'currency_id', ''],
+            ['or', '', '_ledger.alt_curr', 'is', '$True', ''],
+            ]],
+        ['pmt_source', 'Invalid payment source', [
+            ['check', '(', 'source_code', '=', "'ap_pmt_ap'", ''],
+            ['and', '', '_ledger.pmt_tran_source', '=', "'ap'", ')'],
+            ['or', '(', 'source_code', '=', "'ap_pmt_cb'", ''],
+            ['and', '', '_ledger.pmt_tran_source', '=', "'cb'", ')'],
             ]],
         ],
     'fkey'       : [
@@ -190,38 +176,45 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<on_post>'
-            '<expr>'
-              '<fld_val name="subparent_row_id>tran_number"/>'
-              '<op type="+"/>'
-              '<literal value="/"/>'
-              '<op type="+"/>'
-              '<string>'
-                '<expr>'
-                  '<fld_val name="subparent_row_id>line_no"/>'
-                  '<op type="+"/>'
-                  '<literal value="1"/>'
-                '</expr>'
-              '</string>'
-            '</expr>'
-          '</on_post>'
-          '<on_insert>'
-            '<expr>'
-              '<fld_val name="subparent_row_id>tran_number"/>'
-              '<op type="+"/>'
-              '<literal value="/"/>'
-              '<op type="+"/>'
-              '<string>'
-                '<expr>'
-                  '<fld_val name="subparent_row_id>line_no"/>'
-                  '<op type="+"/>'
-                  '<literal value="1"/>'
-                '</expr>'
-              '</string>'
-            '</expr>'
-          '</on_insert>'
+          '<compare test="[[`if`, ``, `source_code`, `=`, `~ap_pmt_ap~`, ``]]">'
+            '<fld_val name="subparent_row_id>tran_number"/>'
+          '</compare>'
           '<default>'
-            '<fld_val name="tran_number"/>'
+            '<case>'
+                '<on_post>'
+                    '<expr>'
+                    '<fld_val name="subparent_row_id>tran_number"/>'
+                    '<op type="+"/>'
+                    '<literal value="/"/>'
+                    '<op type="+"/>'
+                    '<string>'
+                        '<expr>'
+                        '<fld_val name="subparent_row_id>line_no"/>'
+                        '<op type="+"/>'
+                        '<literal value="1"/>'
+                        '</expr>'
+                    '</string>'
+                    '</expr>'
+                '</on_post>'
+                '<on_insert>'
+                    '<expr>'
+                    '<fld_val name="subparent_row_id>tran_number"/>'
+                    '<op type="+"/>'
+                    '<literal value="/"/>'
+                    '<op type="+"/>'
+                    '<string>'
+                        '<expr>'
+                        '<fld_val name="subparent_row_id>line_no"/>'
+                        '<op type="+"/>'
+                        '<literal value="1"/>'
+                        '</expr>'
+                    '</string>'
+                    '</expr>'
+                '</on_insert>'
+                '<default>'
+                    '<fld_val name="tran_number"/>'
+                '</default>'
+            '</case>'
           '</default>'
         '</case>'
         ),
@@ -276,8 +269,8 @@ cols.append ({
     'long_descr' : 'Exchange rate from supplier currency to local currency',
     'col_head'   : 'Rate supp',
     'key_field'  : 'N',
-    'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.alt_pmt_override', 'is', '$False', '']],
+    'data_source': 'calc',
+    'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -288,6 +281,9 @@ cols.append ({
         '<case>'
             '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
                 '<literal value="1"/>'
+            '</compare>'
+            '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `currency_id`, ``]]">'
+                '<fld_val name="tran_exch_rate"/>'
             '</compare>'
             '<default>'
                 '<expr>'
@@ -316,8 +312,8 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'subparent_row_id>currency_id>scale',
-    'dflt_val'   : None,
+    'scale_ptr'  : 'currency_id>scale',
+    'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -342,7 +338,7 @@ cols.append ({
         '<expr>'
           '<fld_val name="apmt_amount"/>'
           '<op type="/"/>'
-          '<fld_val name="subparent_row_id>tran_exch_rate"/>'
+          '<fld_val name="tran_exch_rate"/>'
           '<op type="*"/>'
           '<fld_val name="supp_exch_rate"/>'
         '</expr>'
@@ -352,39 +348,39 @@ cols.append ({
             ['check', '', '$value', '=', 'apmt_supp', ''],
             ['or', '', '_ledger.alt_pmt_perc', '=', '0', ''],
             ['or', '',
-                '(abs(($value / (apmt_amount / subparent_row_id>tran_exch_rate * supp_exch_rate))'
+                '(abs(($value / (apmt_amount / tran_exch_rate * supp_exch_rate))'
                 ' - 1) * 100)', '<=', '_ledger.alt_pmt_perc', ''],
             ]],
         ],
     'fkey'       : None,
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'apmt_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Payment local',
-    'long_descr' : 'Payment amount in local currency',
-    'col_head'   : 'Pmt local',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="apmt_amount"/>'
-          '<op type="/"/>'
-          '<fld_val name="subparent_row_id>tran_exch_rate"/>'
-        '</expr>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
+# cols.append ({
+#     'col_name'   : 'apmt_local',
+#     'data_type'  : '$LCL',
+#     'short_descr': 'Payment local',
+#     'long_descr' : 'Payment amount in local currency',
+#     'col_head'   : 'Pmt local',
+#     'key_field'  : 'N',
+#     'data_source': 'calc',
+#     'condition'  : None,
+#     'allow_null' : False,
+#     'allow_amend': False,
+#     'max_len'    : 0,
+#     'db_scale'   : 2,
+#     'scale_ptr'  : '_param.local_curr_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="apmt_amount"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
 cols.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
@@ -392,11 +388,10 @@ cols.append ({
     'long_descr' : (
         'Has transaction been posted? '
         'Could be derived using fkey, but denormalised to speed up ap_trans view.'
-        'ap_tran_pmt_det and cb_tran_pmt_det update this column when they are posted - see their on_post action.'
         ),
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'data_source': 'prog',
+    'data_source': 'calc',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
@@ -421,24 +416,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'tran_date',
-#     'data_type'  : 'DTE',
-#     'short_descr': 'Transaction date',
-#     'long_descr' : 'Transaction date',
-#     'col_head'   : 'Tran date',
-#     'dflt_val'   : '{subparent_row_id>tran_date}',
-#     'sql'        : "a.subparent_row_id>tran_date"
-#     })
-# virt.append ({
-#     'col_name'   : 'text',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Text',
-#     'long_descr' : 'Text',
-#     'col_head'   : 'Text',
-#     'dflt_val'   : '{subparent_row_id>text}',
-#     'sql'        : "a.subparent_row_id>text"
-#     })
 virt.append ({
     'col_name'   : 'item_row_id',
     'data_type'  : 'INT',
@@ -452,37 +429,6 @@ virt.append ({
         "AND b.split_no = 0 AND b.deleted_id = 0"
         ),
     })
-# virt.append ({
-#     'col_name'   : 'item_tran_type',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Open item tran type',
-#     'long_descr' : 'Open item tran type',
-#     'col_head'   : 'Tran type',
-#     'sql'        : "'ap_pmt'",
-#     })
-# virt.append ({
-#     'col_name'   : 'alloc_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Allocation row id',
-#     'long_descr' : 'Allocation row id',
-#     'col_head'   : 'Alloc id',
-#     'fkey'       : ['ap_allocations', 'row_id', None, None, False, None],
-#     'sql'        : (
-#         "SELECT b.row_id FROM {company}.ap_allocations b "
-#         "WHERE b.tran_type = 'ap_pmt' AND b.tran_row_id = a.row_id "
-#         "AND b.item_row_id = a.item_row_id"
-#         ),
-#     })
-virt.append ({
-    'col_name'   : 'tran_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Transaction exchange rate',
-    'long_descr' : 'Exchange rate from transaction currency to local currency',
-    'col_head'   : 'Rate tran',
-    'db_scale'   : 8,
-    'dflt_val'   : '{subparent_row_id>tran_exch_rate}',
-    'sql'        : "a.subparent_row_id>tran_exch_rate"
-    })
 virt.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
@@ -490,40 +436,41 @@ virt.append ({
     'long_descr' : 'Transaction currency id',
     'col_head'   : 'Currency id',
     'dflt_val'   : '{subparent_row_id>currency_id}',
-    'sql'        : "a.subparent_row_id>currency_id"
+    'sql'        : 'a.subparent_row_id>currency_id',
     })
-# virt.append ({
-#     'col_name'   : 'posted',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Posted?',
-#     'long_descr' : 'Has transaction been posted?',
-#     'col_head'   : 'Posted?',
-#     'dflt_val'   : '{subparent_row_id>posted}',
-#     'sql'        : "a.subparent_row_id>posted"
-#     })
-# virt.append ({
-#     'col_name'   : 'apmt_local',
-#     'data_type'  : '$LCL',
-#     'short_descr': 'Payment local',
-#     'long_descr' : 'Payment amount in local currency',
-#     'col_head'   : 'Pmt local',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#           '<fld_val name="apmt_amount"/>'
-#           '<op type="/"/>'
-#           '<fld_val name="tran_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'sql'        : "a.apmt_amount / a.tran_exch_rate",
-#     })
 virt.append ({
-    'col_name'   : 'apmt_trans_supp',
+    'col_name'   : 'tran_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Tran exchange rate',
+    'long_descr' : 'Exchange rate from transaction currency to local currency',
+    'col_head'   : 'Tran exch rate',
+    'db_scale'   : 8,
+    'dflt_val'   : '{subparent_row_id>tran_exch_rate}',
+    'sql'        : 'a.subparent_row_id>tran_exch_rate',
+    })
+virt.append ({
+    'col_name'   : 'apmt_local',
+    'data_type'  : '$LCL',
+    'short_descr': 'Payment local',
+    'long_descr' : 'Payment amount in local currency',
+    'col_head'   : 'Pmt local',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="apmt_amount"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+        '</expr>'
+        ),
+    'sql'        : "a.apmt_amount / a.tran_exch_rate",
+    })
+virt.append ({
+    'col_name'   : 'pmt_view_supp',
     'data_type'  : '$PTY',
     'short_descr': 'Payment supp',
-    'long_descr' : 'Payment amount for ap_trans in supplier currency',
+    'long_descr' : 'Payment amount for ap_trans view in supplier currency',
     'col_head'   : 'Pmt supp',
     'db_scale'   : 2,
     'scale_ptr'  : 'supp_row_id>currency_id>scale',
@@ -532,10 +479,10 @@ virt.append ({
     'sql'        : "0 - a.apmt_supp",
     })
 virt.append ({
-    'col_name'   : 'apmt_trans_local',
+    'col_name'   : 'pmt_view_local',
     'data_type'  : '$LCL',
     'short_descr': 'Payment local',
-    'long_descr' : 'Payment amount for ap_trans in local currency',
+    'long_descr' : 'Payment amount for ap_trans view in local currency',
     'col_head'   : 'Pmt local',
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -557,9 +504,8 @@ virt.append ({
         "a.apmt_supp "
         "- "
         "COALESCE(("
-            "SELECT SUM(b.alloc_supp) "
-            "FROM {company}.ap_subtran_pmt_alloc b "
-            "WHERE b.subtran_row_id = a.row_id AND b.deleted_id = 0"
+            "SELECT SUM(b.alloc_supp) FROM {company}.ap_allocations b "
+            "WHERE b.tran_type = 'ap_pmt' AND b.tran_row_id = a.row_id AND b.deleted_id = 0"
             "), 0)"
         ),
     })
@@ -586,31 +532,31 @@ cursors = []
 
 # actions
 actions = []
-actions.append([
-    'upd_on_save', [
-        [
-            'ap_subtran_pmt_alloc',
-            [  # condition
-                ['where', '', '_ledger.auto_alloc_oldest', 'is', '$True', ''],
-                ['and', '', 'posted', 'is', '$False', ''],
-                ],
+# actions.append([
+#     'upd_on_save', [
+#         [
+#             'ap_allocations',
+#             [  # condition
+#                 ['where', '', '_ledger.auto_alloc_oldest', 'is', '$True', ''],
+#                 ['and', '', '$in_db_post', 'is', '$False', ''],
+#                 ],
 
-            True,  # split source?
+#             True,  # split source?
 
-            'custom.artrans_funcs.alloc_oldest',  # function to populate table
+#             'custom.aptrans_funcs.alloc_oldest',  # function to populate table
 
-            [  # fkey to this table
-                ['subtran_row_id', 'row_id'],  # tgt_col, src_col
-                ],
+#             [  # fkey to this table
+#                 ['tran_row_id', 'row_id'],  # tgt_col, src_col
+#                 ],
 
-            ['item_row_id', 'alloc_supp'],  # fields to be updated
+#             ['item_row_id', 'alloc_supp'],  # fields to be updated
 
-            [],  # return values
+#             [],  # return values
 
-            [],  # check totals
-            ],
-        ],
-    ])
+#             [],  # check totals
+#             ],
+#         ],
+#     ])
 actions.append([
     'upd_on_post', [
         [
@@ -618,9 +564,7 @@ actions.append([
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['tran_type', "'ap_pmt'"],  # tgt_col, src_col
-                ['tran_row_id', 'row_id'],
-                ['split_no', '0'],
+                ['split_no', '0'],  # tgt_col, src_col
                 ],
             [],  # aggregation
             [  # on post
@@ -632,6 +576,47 @@ actions.append([
                 ['amount_local', '-', 'apmt_local'],
                 ],
             [],  # on unpost
+            [  # return values
+                ['item_row_id', 'row_id'],  # tgt_col, src_col
+                ],
+            ],
+        [
+            'ap_allocations',
+            [  # condition
+                ['where', '', '_ctx.tot_alloc_supp', 'pyfunc', 'custom.aptrans_funcs.get_tot_alloc', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['item_row_id', 'item_row_id'],  # tgt_col, op, src_col
+                ],
+            [],  # aggregation
+            [  # on post
+                ['alloc_supp', '-', '_ctx.tot_alloc_supp'],  # tgt_col, op, src_col
+                ['alloc_local', '-', '_ctx.tot_alloc_local'],
+                ],
+            [],  # on unpost
+            ],
+        [
+            'ap_tran_disc',
+            [  # condition
+                ['where', '', '_ctx.tot_disc_supp', '!=', '0', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['supp_row_id', 'supp_row_id'],  # tgt_col, op, src_col
+                ],
+            [],  # aggregation
+            [  # on post
+                ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
+                ['tran_exch_rate', '=', 'tran_exch_rate'],
+                ['discount_supp', '=', '_ctx.tot_disc_supp'],
+                ['discount_local', '=', '_ctx.tot_disc_local'],
+                ['orig_item_id', '=', 'item_row_id'],
+                ],
+            [],  # on unpost
+            [  # return values
+                ['_ctx.disc_row_id', 'row_id'],  # tgt_col, src_col
+                ],
             ],
         [
             'ap_totals',  # table name
@@ -641,7 +626,7 @@ actions.append([
                 ['ledger_row_id', 'supp_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code', "'ap_pmt_cb'"],
+                ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
@@ -659,7 +644,7 @@ actions.append([
                 ['supp_row_id', 'supp_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code', "'ap_pmt_cb'"],
+                ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
@@ -681,15 +666,28 @@ actions.append([
                 ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code', "'ap_pmt_cb'"],
+                ['source_code_id', 'source_code_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'apmt_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'apmt_local'],
+                ['tran_day', '+', 'apmt_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'apmt_local'],
                 ],
             [],  # on post
             [],  # on unpost
             ],
         ],
+    ])
+actions.append([
+    'after_update',
+        '<case>'
+            '<on_post>'
+                '<case>'
+                    '<compare test="[[`if`, ``, `_ctx.disc_row_id`, `is not`, `$None`, ``]]">'
+                        '<append src="_ctx.disc_row_id" tgt="_ctx.disc_to_post"/>'
+                        '<assign src="$None" tgt="_ctx.disc_row_id"/>'
+                    '</compare>'
+                '</case>'
+            '</on_post>'
+        '</case>'
     ])

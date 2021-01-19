@@ -101,7 +101,7 @@ cols.append ({
     'choices'    : [
             ['ap_crn', 'Credit note'],
             ['ap_pmt', 'Payment'],
-            # ['ap_disc', 'Discount'],
+            ['ap_disc', 'Discount'],
             ['ap_alloc', 'Allocation'],
         ],
     })
@@ -126,7 +126,7 @@ cols.append ({
         ['tran_type', [
             ['ap_crn', 'ap_tran_crn'],
             ['ap_pmt', 'ap_subtran_pmt'],
-            # ['ap_disc', 'ap_tran_disc'],
+            ['ap_disc', 'ap_tran_disc'],
             ['ap_alloc', 'ap_tran_alloc'],
             ]],
         'row_id', None, None, True, None],
@@ -218,32 +218,35 @@ cols.append ({
     'scale_ptr'  : 'tran_row_id>supp_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
+        '<!--'
+        'Calculated as follows -\n'
+        'If alloc_supp = alloc_supp.orig, no change, use existing value.\n'
+        'If item_row_id = tran_row_id>item_row_id, this is the double-entry allocation '
+            'generated programmatically on_post - use existing value, updated by on_post.\n'
+        'If discount_date is None or < tran_date, discount_supp = 0.\n'
+        'Else calculate discount allowed as follows.\n'
+        'Move tran_date to _ctx.as_at_date - this is needed by item_row_id>due_supp.\n'
+        'If alloc_supp >= item_row_id>due_supp, item is fully paid, allow item_row_id>os_disc_supp.\n'
+        'Else pro-rata item_row_id>os_disc_supp - divide by item_row_id>due_supp, multiply by alloc_supp.'
+        '-->'
         '<case>'
-            '<compare test="[[`if`, ``, `$exists`, `is`, `$True`, ``]]">'
+            '<compare test="[[`if`, ``, `alloc_supp`, `=`, `$alloc_supp$orig`, ``]]">'
                 '<fld_val name="discount_supp"/>'
-            '</compare>'
-            '<compare test="[[`if`, ``, `_ledger.discount_code_id`, `is`, `$None`, ``]]">'
-                '<literal value="0"/>'
             '</compare>'
             '<compare test="[[`if`, ``, `item_row_id`, `=`, `tran_row_id>item_row_id`, ``]]">'
                 '<fld_val name="discount_supp"/>'
             '</compare>'
-            '<compare test="[[`if`, ``, `tran_row_id>item_row_id>tran_type`, `=`, `~ap_disc~`, ``]]">'
-                '<literal value="0"/>'
-            '</compare>'
-            '<compare test="[[`if`, ``, `item_row_id>discount_date`, `is`, `$None`, ``]]">'
-                '<literal value="0"/>'
-            '</compare>'
-            '<compare test="[[`if`, ``, `tran_date`, `>`, `item_row_id>discount_date`, ``]]">'
+            '<compare test="['
+                    '[`if`, ``, `item_row_id>discount_date`, `is`, `$None`, ``],'
+                    '[`or`, ``, `item_row_id>discount_date`, `<`, `tran_date`, ``]'
+                    ']">'
                 '<literal value="0"/>'
             '</compare>'
             '<default>'
                 '<assign src="tran_date" tgt="_ctx.as_at_date"/>'
-                '<assign src="item_row_id>os_disc_supp" tgt="_ctx.os_disc_supp"/>'
-                '<assign src="item_row_id>due_supp" tgt="_ctx.due_supp"/>'
                 '<case>'
-                    '<compare test="[[`if`, ``, `alloc_supp`, `>=`, `_ctx.due_supp`, ``]]">'
-                        '<fld_val name="_ctx.os_disc_supp"/>'
+                    '<compare test="[[`if`, ``, `alloc_supp`, `>=`, `item_row_id>due_supp`, ``]]">'
+                        '<fld_val name="item_row_id>os_disc_supp"/>'
                     '</compare>'
                     '<default>'
                         '<expr>'
@@ -278,8 +281,15 @@ cols.append ({
     'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
+        '<!--'
+        'Calculated as follows -\n'
+        'If alloc_supp = alloc_supp.orig, no change, use existing value.\n'
+        'If item_row_id = tran_row_id>item_row_id, this is the double-entry allocation '
+            'generated programmatically on_post - use existing value, updated by on_post.\n'
+        'Else calculate by dividing alloc_supp by tran_row_id>tran_exch_rate.'
+        '-->'
         '<case>'
-            '<compare test="[[`if`, ``, `$exists`, `is`, `$True`, ``]]">'
+            '<compare test="[[`if`, ``, `alloc_supp`, `=`, `$alloc_supp$orig`, ``]]">'
                 '<fld_val name="alloc_local"/>'
             '</compare>'
             '<compare test="[[`if`, ``, `item_row_id`, `=`, `tran_row_id>item_row_id`, ``]]">'
@@ -314,11 +324,19 @@ cols.append ({
     'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
+        '<!--'
+        'Calculated as follows -\n'
+        'If alloc_supp = alloc_supp.orig, no change, use existing value.\n'
+        'If discount_supp = 0, then discount_local = 0.\n'
+        'If item_row_id = tran_row_id>item_row_id, this is the double-entry allocation '
+            'generated programmatically on_post - use existing value, updated by on_post.\n'
+        'Else calculate by dividing discount_supp by tran_row_id>tran_exch_rate.'
+        '-->'
         '<case>'
-            '<compare test="[[`if`, ``, `$exists`, `is`, `$True`, ``]]">'
+            '<compare test="[[`if`, ``, `alloc_supp`, `=`, `$alloc_supp$orig`, ``]]">'
                 '<fld_val name="discount_local"/>'
             '</compare>'
-            '<compare test="[[`if`, ``, `_ledger.discount_code_id`, `is`, `$None`, ``]]">'
+            '<compare test="[[`if`, ``, `discount_supp`, `=`, `0`, ``]]">'
                 '<literal value="0"/>'
             '</compare>'
             '<compare test="[[`if`, ``, `item_row_id`, `=`, `tran_row_id>item_row_id`, ``]]">'

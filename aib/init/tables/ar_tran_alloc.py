@@ -171,22 +171,14 @@ cols.append ({
 # virtual column definitions
 virt = []
 # virt.append ({
-#     'col_name'   : 'tran_type',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Transaction type',
-#     'long_descr' : 'Transaction type',
-#     'col_head'   : 'Tran type',
-#     'sql'        : "'ar_alloc'",
+#     'col_name'   : 'cust_row_id',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Customer row id',
+#     'long_descr' : 'Customer row id',
+#     'col_head'   : 'Cust row_id',
+#     'dflt_val'   : '{item_row_id>cust_row_id}',
+#     'sql'        : 'a.item_row_id>cust_row_id'
 #     })
-virt.append ({
-    'col_name'   : 'cust_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Customer row id',
-    'long_descr' : 'Customer row id',
-    'col_head'   : 'Cust row_id',
-    'dflt_val'   : '{item_row_id>cust_row_id}',
-    'sql'        : 'a.item_row_id>cust_row_id'
-    })
 virt.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
@@ -283,7 +275,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['cust_row_id', 'cust_row_id'],  # tgt_col, op, src_col
+                ['cust_row_id', 'item_row_id>cust_row_id'],  # tgt_col, op, src_col
                 ],
             [],  # aggregation
             [  # on post

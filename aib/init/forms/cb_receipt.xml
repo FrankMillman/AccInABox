@@ -51,7 +51,7 @@
 
       <block/>
       <grid data_object="cb_det" growable="true" num_grid_rows="5" readonly="true"
-          footer_row="[`'Total:'`, `cb_rec.amount_cb`]">
+          footer_row="[`'Total:'`, `cb_rec.amount_tran`]">
         <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="display_descr" lng="80"/>

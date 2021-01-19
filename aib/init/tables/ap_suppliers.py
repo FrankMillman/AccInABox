@@ -259,27 +259,27 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# due - ['D', n] for no of days after invoice date, ['M', n] for fixed day per month
-cols.append ({
-    'col_name'   : 'due_rule',
-    'data_type'  : 'JSON',
-    'short_descr': 'Payment due',
-    'long_descr' : 'Payment due rule',
-    'col_head'   : 'Due',
-    'key_field'  : 'N',
-    'data_source': 'input',
-    'condition'  : None,
-    'allow_null' : True,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
+# # due - ['D', n] for no of days after invoice date, ['M', n] for fixed day per month
+# cols.append ({
+#     'col_name'   : 'due_rule',
+#     'data_type'  : 'JSON',
+#     'short_descr': 'Payment due',
+#     'long_descr' : 'Payment due rule',
+#     'col_head'   : 'Due',
+#     'key_field'  : 'N',
+#     'data_source': 'input',
+#     'condition'  : None,
+#     'allow_null' : True,
+#     'allow_amend': True,
+#     'max_len'    : 0,
+#     'db_scale'   : 0,
+#     'scale_ptr'  : None,
+#     'dflt_val'   : None,
+#     'dflt_rule'  : None,
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
 cols.append ({
     'col_name'   : 'terms_code_id',
     'data_type'  : 'INT',

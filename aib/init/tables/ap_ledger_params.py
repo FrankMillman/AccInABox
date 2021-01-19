@@ -128,14 +128,12 @@ cols.append ({
     'data_source': 'null_if',
     'condition'  : [['where', '', '_param.gl_integration', 'is', '$False', '']],
     'allow_null' : True,  # null means 'not integrated to g/l'
-#   'allow_amend': True,  # can change from null to not-null to start integration
     'allow_amend': [['where', '', '$value', 'is', '$None', '']],
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    # 'col_checks' : None,
     'col_checks' : [
         [
             'gl_code',
@@ -151,7 +149,6 @@ cols.append ({
     'fkey'       : ['gl_codes', 'row_id', 'gl_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
-
 cols.append ({
     'col_name'   : 'valid_loc_ids',
     'data_type'  : 'INT',
@@ -223,7 +220,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-
 cols.append ({
     'col_name'   : 'valid_fun_ids',
     'data_type'  : 'INT',
@@ -295,8 +291,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-
-
 cols.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
@@ -332,6 +326,46 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : 'false',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'alt_pmt_override',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Allow payment override?',
+    'long_descr' : 'Allow payment in different currency to be overridden? Can control % with alt_pmt_perc.',
+    'col_head'   : 'Alt pmt oride?',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'false',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'alt_pmt_perc',
+    'data_type'  : 'DEC',
+    'short_descr': 'Max percent payment override',
+    'long_descr' : 'Maximum percent alt payment override compared with system exchange rate - 0 means no check',
+    'col_head'   : 'Alt pmt perc',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : None,
+    'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -418,6 +452,26 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'auto_pmt_batch_no',
+    'data_type'  : 'JSON',
+    'short_descr': 'Auto-generate pmt batch no?',
+    'long_descr' : 'Parameters to generate payment number. If blank, manual input',
+    'col_head'   : 'Auto pmt bch no?',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'auto_jnl_no',
     'data_type'  : 'JSON',
     'short_descr': 'Auto-generate journal no?',
@@ -435,6 +489,124 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'discount_code_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Discount code row id',
+    'long_descr' : 'Discount code row id. If blank, no discount allowed',
+    'col_head'   : 'Disc code',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['pch_npch_codes', 'row_id', 'discount_code', 'npch_code', False, 'nsls_codes'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'auto_disc_no',
+    'data_type'  : 'JSON',
+    'short_descr': 'Auto-generate discount no',
+    'long_descr' : 'Parameters to generate discount c/note number. Required if discount_code_id is present',
+    'col_head'   : 'Auto disc no',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : [
+        [
+            'disc_no',
+            'Parameter required if discount_code specified',
+            [
+                ['check', '(', 'discount_code_id', 'is', '$None', ''],
+                ['and', '', '$value', 'is', '$None', ')'],
+                ['or', '(', 'discount_code_id', 'is not', '$None', ''],
+                ['and', '', '$value', 'is not', '$None', ')'],
+                ],
+            ],
+        ],
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'pmt_tran_source',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Payment transactions source',
+    'long_descr' : (
+        'na: no payment transactions for this sub-ledger\n'
+        'ap: payments posted from ap_tran_pmt.\n'
+        'cb: payments posted from cb_tran_pmt.\n'
+        'Payment authorisation will generate appropriate unposted transaction.\n'
+        'If ap, and gl integration is specified, must provide gl code for payment double entry.\n'
+        ),
+    'col_head'   : 'Pmt src',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'na',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : [
+            ['na', 'No payment transactions'],
+            ['ap', 'Use ap module for payments'],
+            ['cb', 'Use cb module for payments'],
+        ],
+    })
+cols.append ({
+    'col_name'   : 'gl_pmt_code_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Gl a/c for payments',
+    'long_descr' : 'Gl a/c to use as double-entry for payments',
+    'col_head'   : 'Gl pmt code',
+    'key_field'  : 'N',
+    'data_source': 'null_if',
+    'condition'  : [
+        ['where', '', '_param.gl_integration', 'is', '$False', ''],
+        ['or', '', 'pmt_tran_source', '!=', "'ap'", ''],
+        ],
+    'allow_null' : True,  # null means 'not integrated to g/l'
+    'allow_amend': [['where', '', '$value', 'is', '$None', '']],
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : [
+        [
+            'gl_pmt_code',
+            'G/l code required if gl integration specified and payments posted from ap mmodule',
+            [
+                ['check', '(', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '(', 'pmt_tran_source', '=', "'ap'", ''],
+                ['and', '', '$value', 'is not', '$None', ')'],
+                ['or', '(', 'pmt_tran_source', '!=', "'ap'", ''],
+                ['and', '', '$value', 'is', '$None', '))'],
+                ['or', '(', '_param.gl_integration', 'is', '$False', ''],
+                ['and', '', '$value', 'is', '$None', ')'],
+                ],
+            ],
+        ],
+    'fkey'       : ['gl_codes', 'row_id', 'gl_pmt_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
 cols.append ({
@@ -457,14 +629,15 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# 1=last day of month [1, None]
-# 2=fixed day per month [2, dd] check dd <= 28
-# 3=last weekday of month [3, 0-6, min_days_to_end]
 cols.append ({
+    # 1=last day of month [1, None]  # not required - just set separate_stat_close to False
+    # 2=fixed day per month [2, dd]  # check dd <= 28
+    # 3=last weekday of month [3, 0-6, min_days_to_end]
+    # 4=manual input [4, None]
     'col_name'   : 'pmt_date',
     'data_type'  : 'JSON',
     'short_descr': 'Payment date parameter',
-    'long_descr' : 'Payment date parameter',
+    'long_descr' : 'Payment date parameter. Only applies if separate_pmt_close is True.',
     'col_head'   : 'Pmt date',
     'key_field'  : 'N',
     'data_source': 'input',
@@ -483,22 +656,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'module_id',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Module',
-#     'long_descr' : 'Module id',
-#     'col_head'   : '',
-#     'sql'        : "'ap'",
-#     })
-# virt.append ({
-#     'col_name'   : 'module_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Module row id',
-#     'long_descr' : 'Module row id',
-#     'col_head'   : '',
-#     'sql'        : "SELECT b.row_id FROM {company}.db_modules b WHERE b.module_id = 'ap'",
-#     })
 
 # cursor definitions
 cursors = []
@@ -516,6 +673,18 @@ cursors.append({
 
 # actions
 actions = []
+actions.append([
+    'upd_checks', [
+        [
+            'disc_params',
+            'Must set up auto discount number',
+            [
+                ['check', '', 'discount_code_id', 'is', '$None', ''],
+                ['or', '', 'auto_disc_no', 'is not', '$None', ''],
+                ],
+            ],
+        ],
+    ])
 actions.append([
     'after_insert', '<pyfunc name="db.cache.ledger_inserted"/>'
     ])

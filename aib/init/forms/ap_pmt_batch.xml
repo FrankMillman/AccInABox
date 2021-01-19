@@ -1,0 +1,323 @@
+<form name="ap_pmt_batch" title="Ap payments batch" after_start_form="
+    <<select_row obj_name=`batch_hdr` keys=`ledger_row_id=_ctx.ledger_row_id, posted=$False`/>>
+    <<case>>
+      <<obj_exists obj_name=`batch_hdr`>>
+        <<continue_form/>>
+      <</obj_exists>>      
+      <<default>>
+        <<inline_form name=`batch_header`>>
+          <<on_return>>
+            <<return state=`cancelled`>>
+              <<end_form state=`cancelled`/>>
+            <</return>>
+            <<return state=`completed`>>
+              <<assign src=`batch_hdr.tran_date` tgt=`_ctx.as_at_date`/>>
+              <<pyfunc name=`custom.aptrans_funcs.setup_pmts_due`/>>
+              <<case>>
+                <<obj_exists obj_name=`batch_hdr`>>
+                  <<continue_form/>>
+                <</obj_exists>>
+                <<default>>
+                  <<ask title=`Payment` enter=`Ok` escape=`Ok`
+                      question=`No invoices due for payment`>>
+                    <<response ans=`Ok`>>
+                    <</response>>
+                  <</ask>>
+                  <<end_form state=`cancelled`/>>
+                <</default>>
+              <</case>>
+            <</return>>
+          <</on_return>>
+        <</inline_form>>
+      <</default>>
+    <</case>>
+  ">
+  <db_objects>
+    <db_obj name="batch_hdr" table_name="ap_pmt_batch"/>
+    <db_obj name="batch_det" table_name="ap_pmt_batch_det" parent="batch_hdr"/>
+    <db_obj name="supp" table_name="ap_suppliers"/>
+    <db_obj name="items" table_name="ap_openitems"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="var" descr="Form variables">
+      <mem_col col_name="tot_due" data_type="$PTY" short_descr="Total due"
+        long_descr="Total due, for display in view_edit" allow_amend="true" dflt_val="0"
+        db_scale="2" scale_ptr="scale"/>
+      <mem_col col_name="tot_pmt" data_type="$PTY" short_descr="Total payment"
+        long_descr="Total payment, for display in view_edit" allow_amend="true" dflt_val="0"
+        db_scale="2" scale_ptr="scale"/>
+      <mem_col col_name="scale" data_type="INT" short_descr="Scale"
+        long_descr="Scale"/>
+    </mem_obj>
+    <mem_obj name="items_due" descr="In-memory table for items due" parent="var"
+        actions="[[`upd_on_save`, [[`_parent`, null, false, [],
+          [[`tot_due`, `+`, `due_supp`], [`tot_pmt`, `+`, `pmt_supp`]], [], [], []]]]]">
+      <mem_col col_name="parent_id" data_type="INT" short_descr="Parent id"
+        long_descr="Parent id" col_head="Id" key_field="A"
+        fkey="[`{mem}.var`, `row_id`, null, null, true, null]"/>
+      <mem_col col_name="item_row_id" data_type="INT" short_descr="Item row id"
+        long_descr="Item row id" key_field="A"/>
+      <mem_col col_name="tran_type" data_type="TEXT" short_descr="Tran type"
+        long_descr="Tran type" col_head="Type"/>
+      <mem_col col_name="tran_number" data_type="TEXT" short_descr="Tran number"
+        long_descr="Tran number" col_head="Number"/>
+      <mem_col col_name="tran_date" data_type="DTE" short_descr="Tran date"
+        long_descr="Tran date" col_head="Date"/>
+      <mem_col col_name="due_date" data_type="DTE" short_descr="Due date"
+        long_descr="Due date" col_head="Due"/>
+      <mem_col col_name="amount_supp" data_type="$PTY" short_descr="Amount supp"
+        long_descr="Amount - supplier curr" col_head="Amount" db_scale="2" scale_ptr="parent_id>scale"/>
+      <mem_col col_name="due_supp" data_type="$PTY" short_descr="Due supp"
+        long_descr="Amount due - supplier curr" col_head="Due" db_scale="2" scale_ptr="parent_id>scale"/>
+      <mem_col col_name="pmt_supp" data_type="$PTY" short_descr="Payment supp"
+        long_descr="Amount to pay" col_head="Pay" allow_amend="true" db_scale="2" scale_ptr="parent_id>scale"
+        col_checks="[[`check_due`, `Cannot exceed amount due`, [[`check`, ``, `$value`, `<<=`, `due_supp`, ``]]]]"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params/>
+  <output_params/>
+  <frame main_object="batch_hdr">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Batch no:"/>
+      <col/>
+      <input obj_name="batch_hdr" col_name="batch_number" lng="80" readonly="true"/>
+      <col/>
+      <label value="Due date:"/>
+      <col/>
+      <input obj_name="batch_hdr" col_name="tran_date" lng="84" readonly="true"/>
+
+      <block/>
+      <grid data_object="batch_det" growable="false" num_grid_rows="10"
+          footer_row="[`'Total:'`, `...`, `batch_hdr.due_tot`, null, `batch_hdr.pmt_tot`]">
+        <toolbar>
+          <tool type="img" name="formview" tip="View/edit details (Ctrl+Enter)"
+            shortcut="ctrl,Enter" action="
+              <<start_row/>>
+              <<assign src=`0` tgt=`var.tot_due`/>>
+              <<assign src=`0` tgt=`var.tot_pmt`/>>
+              <<assign src=`batch_det.supp_row_id>currency_id>scale` tgt=`var.scale`/>>
+              <<save_obj obj_name=`var`/>>
+              <<pyfunc name=`custom.aptrans_funcs.setup_items_due`/>>
+              <<inline_form name=`view_edit`>>
+                <<on_return>>
+                  <<return state=`cancelled`>>
+                  <</return>>
+                  <<return state=`completed`>>
+                    <<pyfunc name=`custom.aptrans_funcs.auth_pmt`/>>
+                    <<restart_grid obj_name=`batch_det` start_col=`row_id` start_val=`{batch_det.row_id}`/>>
+                  <</return>>
+                <</on_return>>
+              <</inline_form>>
+              "/>
+          <tool type="nav"/>
+          <tool type="img" name="download" tip="" action="<<download/>>"/>
+        </toolbar>
+        <cur_columns>
+          <cur_col col_name="supp_row_id>supp_id" lng="80" readonly="true"/>
+          <cur_col col_name="supp_row_id>party_row_id>display_name" lng="150" readonly="true"/>
+          <cur_col col_name="supp_row_id>supp_acc_num" lng="150" readonly="true"/>
+          <cur_col col_name="supp_row_id>currency_id>symbol" lng="40" readonly="true"
+          if="[[`if`, ``, `_ledger.currency_id`, `is`, `$None`, ``]]"/>
+          <cur_col col_name="supp_row_id>location_id" lng="60" readonly="true"
+          if="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
+          <cur_col col_name="supp_row_id>function_id" lng="60" readonly="true"
+          if="[[`if`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
+          <cur_col col_name="due_amt" lng="100" readonly="true"/>
+          <cur_col col_name="authorised" lng="60" after="
+            <<pyfunc name=`custom.aptrans_funcs.on_pmt_auth`/>>
+            <<restart_grid obj_name=`batch_det` start_col=`row_id` start_val=`{batch_det.row_id}`/>>
+            "/>
+          <cur_col col_name="pmt_amt" lng="100" readonly="true"/>
+        </cur_columns>
+        <cur_filter>
+        </cur_filter>
+        <cur_sequence>
+          <cur_seq col_name="row_id"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+    </body>
+    <button_row>
+      <button btn_id="auth_all" btn_label="Authorise all" btn_enabled="true"
+        btn_validate="true" btn_default="false" action="<<pyfunc name=`custom.aptrans_funcs.auth_all_pmts`/>>"/>
+      <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
+        btn_validate="true" btn_default="false" lng="60" action="<<parent_req_close/>>"/>
+      <button btn_id="btn_post" btn_label="Post" btn_enabled="true"
+        btn_validate="true" btn_default="true" lng="60" action="
+        <<case>>
+          <<compare test=`[['if', '', 'batch_hdr.pmt_tot', '=', '0', '']]`>>
+            <<ask title=`Payment` enter=`Ok` escape=`Ok`
+                question=`No payments authorised - nothing to post`>>
+              <<response ans=`Ok`>>
+              <</response>>
+            <</ask>>
+          <</compare>>
+          <<default>>
+            <<!--pyfunc name=`custom.aptrans_funcs.post_pmt_batch`/>>
+            <<parent_req_close/-->>
+            <<inline_form name=`post_batch`>>
+              <<on_return>>
+                <<return state=`cancelled`>>
+                <</return>>
+                <<return state=`completed`>>
+                  <<parent_req_close/>>
+                <</return>>
+              <</on_return>>
+            <</inline_form>>
+          <</default>>
+        <</case>>
+        "/>
+    </button_row>
+
+    <frame_methods>
+      <!--method name="do_post" action="
+        <<case>>
+          <<compare test=`[['if', '', 'batch_hdr.pmt_tot', '=', '0', '']]`>>
+            <<ask title=`Payment` enter=`Ok` escape=`Ok`
+                question=`No payments authorised - nothing to post`>>
+              <<response ans=`Ok`>>
+              <</response>>
+            <</ask>>
+          <</compare>>
+          <<default>>
+            <<pyfunc name=`custom.aptrans_funcs.post_pmt_batch`/>>
+            <<parent_req_close/>>
+          <</default>>
+        <</case>>
+        "/-->
+    </frame_methods>
+  </frame>
+  <inline_form name="batch_header" title="Batch header">
+    <frame main_object="batch_hdr">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+
+        <if test="[[`if`, ``, `_ledger.auto_pmt_batch_no`, `is`, `$None`, ``]]"/>
+        <row/>
+        <col/>
+        <label value="Batch no:"/>
+        <col/>
+        <input obj_name="batch_hdr" col_name="batch_number" lng="80" validation="
+            <<validation>>
+              <<case>>
+                <<obj_exists obj_name=`batch_hdr`>>
+                  <<error head=`Batch` body=`Batch number already exists`/>>
+                <</obj_exists>>
+              <</case>>
+            <</validation>>
+          "/>
+        <end_if/>
+
+        <row/>
+        <col/>
+        <label value="Due date:"/>
+        <col/>
+        <input obj_name="batch_hdr" col_name="tran_date" lng="84" form_dflt="
+          <<pyfunc name=`custom.date_funcs.get_due_date`/>>
+          "/>
+      </body>
+      <button_row>
+        <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
+          btn_validate="true" btn_default="true" action="
+            <<end_form state=`completed`/>>
+          "/>
+        <button btn_id="btn_can" btn_label="Cancel" lng="60" btn_enabled="true"
+          btn_validate="false" btn_default="false" action="
+            <<end_form state=`cancelled`/>>
+          "/>
+      </button_row>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<end_form state=`cancelled`/>>
+        "/>
+        <method name="on_req_close" action="
+          <<end_form state=`cancelled`/>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+  <inline_form name="view_edit" title="View/edit details of payment">
+    <frame main_object="items_due">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <label value="Supplier id:"/>
+        <col/>
+        <input obj_name="batch_det" col_name="supp_row_id>supp_id" lng="80" readonly="true"/>
+        <block/>
+        <grid data_object="items_due" growable="false" num_grid_rows="10"
+          footer_row="[null, `'Total'`, null, null, null, `var.tot_due`, `var.tot_pmt`]">
+          <toolbar>
+            <tool type="nav"/>
+          </toolbar>
+          <cur_columns>
+            <cur_col col_name="tran_type" lng="6" readonly="true"/>
+            <cur_col col_name="tran_number" lng="100" readonly="true"/>
+            <cur_col col_name="tran_date" lng="80" readonly="true"/>
+            <cur_col col_name="due_date" lng="80" readonly="true"/>
+            <cur_col col_name="amount_supp" lng="100" readonly="true"/>
+            <cur_col col_name="due_supp" lng="100" readonly="true"/>
+            <cur_col col_name="pmt_supp" lng="100"/>
+          </cur_columns>
+          <cur_filter/>
+          <cur_sequence/>
+          <grid_methods template="Grid"/>
+        </grid>
+      </body>
+      <button_row>
+        <button btn_id="btn_can" btn_label="Cancel" lng="80" btn_enabled="true"
+          btn_validate="false" action="
+            <<end_form state=`cancelled`/>>
+          "/>
+        <button btn_id="btn_ok" btn_label="Authorise" lng="80" btn_enabled="true"
+          btn_validate="true" btn_default="true" action="
+            <<end_form state=`completed`/>>
+          "/>
+      </button_row>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<end_form state=`cancelled`/>>
+        "/>
+        <method name="on_req_close" action="
+          <<end_form state=`cancelled`/>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+  <inline_form name="post_batch" title="Post batch">
+    <frame>
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+        <row/>
+        <col/>
+        <text value="Posting batch - please wait ..."/>
+        <dummy after="
+          <<pyfunc name=`custom.aptrans_funcs.post_pmt_batch`/>>
+          <<change_button>>
+            <<btn_enabled btn_id=`btn_ok` state=`true`/>>
+          <</change_button>>
+          "/>
+      </body>
+      <button_row>
+        <button btn_id="btn_ok" btn_label="Ok" btn_enabled="false"
+          btn_validate="true" btn_default="true" action="
+            <<end_form state=`completed`/>>
+          "/>
+      </button_row>
+      <frame_methods>
+      </frame_methods>
+    </frame>
+  </inline_form>
+</form>

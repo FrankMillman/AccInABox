@@ -119,7 +119,7 @@ cols.append ({
         ['source_code', [
             ['npch_ap_inv', 'ap_tran_inv_det'],
             ['npch_ap_crn', 'ap_tran_crn_det'],
-            # ['npch_ap_disc', 'ap_tran_disc_det'],
+            ['npch_ap_disc', 'ap_tran_disc'],
             ['npch_cb_inv', 'cb_tran_pmt_det'],
             ['npch_cb_crn', 'cb_tran_rec_det'],
             ['npch_ap_uexbf', 'ap_uex_bf'],

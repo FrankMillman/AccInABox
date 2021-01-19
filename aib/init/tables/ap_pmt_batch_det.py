@@ -1,12 +1,12 @@
 # table definition
 table = {
-    'table_name'    : 'ap_terms_codes',
+    'table_name'    : 'ap_pmt_batch_det',
     'module_id'     : 'ap',
-    'short_descr'   : 'Terms codes',
-    'long_descr'    : 'Terms codes',
+    'short_descr'   : 'Ap details of payments',
+    'long_descr'    : 'Ap details of payments by due date',
     'sub_types'     : None,
     'sub_trans'     : None,
-    'sequence'      : ['seq', [], None],
+    'sequence'      : ['line_no', ['batch_row_id'], None],
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
@@ -79,52 +79,32 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'terms_code',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Terms code',
-    'long_descr' : 'Terms code',
-    'col_head'   : 'Code',
+    'col_name'   : 'batch_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Batch row id',
+    'long_descr' : 'Payment batch row id',
+    'col_head'   : 'Batch id',
     'key_field'  : 'A',
-    'data_source': 'input',
+    'data_source': 'par_id',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
-    'max_len'    : 15,
+    'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : None,
+    'fkey'       : ['ap_pmt_batch', 'row_id', None, None, True, None],
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'descr',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Description',
-    'long_descr' : 'Description',
-    'col_head'   : 'Description',
-    'key_field'  : 'N',
-    'data_source': 'input',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 30,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'seq',
+    'col_name'   : 'line_no',
     'data_type'  : 'INT',
-    'short_descr': 'Sequence',
-    'long_descr' : 'Sequence',
+    'short_descr': 'Line number',
+    'long_descr' : 'Line number',
     'col_head'   : 'Seq',
-    'key_field'  : 'N',
+    'key_field'  : 'A',
     'data_source': 'seq',
     'condition'  : None,
     'allow_null' : False,
@@ -138,20 +118,68 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# discount - [disc perc (dec), terms (int), type(P=periods/D=days/M=calendar day)]
 cols.append ({
-    'col_name'   : 'discount_rule',
-    'data_type'  : 'JSON',
-    'short_descr': 'Discount',
-    'long_descr' : 'Discount rule',
-    'col_head'   : 'Discount',
+    'col_name'   : 'supp_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Supplier row id',
+    'long_descr' : 'Supplier row id',
+    'col_head'   : 'Supplier',
     'key_field'  : 'N',
-    'data_source': 'input',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    # 'col_checks' : [
+    #     [
+    #         'supp_curr_id',
+    #         'Supplier currency id does not match batch currency id',
+    #         [
+    #             ['check', '', 'supp_row_id_id>currency_id', '=', 'batch_row_id>currency_id', ''],
+    #             ],
+    #         ],
+    #     ],
+    'col_checks' : None,
+    'fkey'       : ['ap_suppliers', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'due_amt',
+    'data_type'  : '$TRN',
+    'short_descr': 'Due amount',
+    'long_descr' : 'Due amount in supplier currency',
+    'col_head'   : 'Due amt',
+    'key_field'  : 'N',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'batch_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'authorised',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Authorised',
+    'long_descr' : 'Authorised for payment',
+    'col_head'   : 'Auth',
+    'key_field'  : 'N',
+    'data_source': 'prog',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
-    'db_scale'   : 0,
+    'db_scale'   : 2,
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
@@ -159,36 +187,34 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# due - [instalments (int), terms (int), type(P=periods/D=days/M=calendar day)]
 cols.append ({
-    'col_name'   : 'due_rule',
-    'data_type'  : 'JSON',
-    'short_descr': 'Payment due',
-    'long_descr' : 'Payment due rule',
-    'col_head'   : 'Due',
+    'col_name'   : 'pmt_amt',
+    'data_type'  : '$TRN',
+    'short_descr': 'Payment amount',
+    'long_descr' : 'Payment amount in supplier currency',
+    'col_head'   : 'Pmt amt',
     'key_field'  : 'N',
-    'data_source': 'input',
+    'data_source': 'prog',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'batch_row_id>currency_id>scale',
+    'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
-# arrears - [interest rate (dec), terms (int), type(P=periods/D=days/M=calendar day)]
 cols.append ({
-    'col_name'   : 'arrears_rule',
+    'col_name'   : 'allocations',
     'data_type'  : 'JSON',
-    'short_descr': 'Arrears',
-    'long_descr' : 'Arrears rule',
-    'col_head'   : 'Arrears',
+    'short_descr': 'Allocations',
+    'long_descr' : 'Payment allocations - item_row_id, due_amount, payment_amount',
+    'col_head'   : 'Alloc',
     'key_field'  : 'N',
-    'data_source': 'input',
+    'data_source': 'prog',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': True,
@@ -208,17 +234,22 @@ virt = []
 # cursor definitions
 cursors = []
 
-cursors.append({
-    'cursor_name': 'terms_codes',
-    'title': 'Maintain ap terms codes',
-    'columns': [
-        ['terms_code', 80, False, False],
-        ['descr', 200, True, False],
-        ],
-    'filter': [],
-    'sequence': [['seq', False]],
-    'formview_name': 'setup_ap_terms_codes',
-    })
-
 # actions
 actions = []
+actions.append([
+    'upd_on_save', [
+        [
+            '_parent',
+            None,  # condition
+            False,  # split source?
+            [],  # key fields
+            [  # aggregation
+                ['due_tot', '+', 'due_amt'],  # tgt_col, op, src_col
+                ['pmt_tot', '+', 'pmt_amt'],
+                ],
+            [],  # on insert
+            [],  # on update
+            [],  # on delete
+            ],
+        ],
+    ])

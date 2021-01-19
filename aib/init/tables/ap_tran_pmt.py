@@ -9,17 +9,13 @@ table = {
     'sequence'      : None,
     'tree_params'   : None,
     'roll_params'   : None,
-    'indexes'       : [
-        # ['appmt_tran_num', [['supp_row_id', False], ['tran_number', False]], None, True],  # do we need this?
-        ['appmt_supp_date', [['supp_row_id', False], ['tran_date', False]], None, False],
-        ],
+    # 'indexes'       : [['appmt_supp_date', [['supp_row_id', False], ['tran_date', False]], None, False]],
+    'indexes'       : None,
     'ledger_col'    : 'supp_row_id>ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
     }
-
-# add column to move state from 'provisional' to 'authorised'? 'paid' is indicated by 'posted'
 
 # column definitions
 cols = []
@@ -115,20 +111,29 @@ cols.append ({
     'key_field'  : 'A',
     'data_source': 'dflt_if',
     'condition'  : [['where', '', '_ledger.auto_pmt_no', 'is not', '$None', '']],
-    'allow_null' : True,
+    'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : (
-        # if no 'rules', use manual input, else
-        #   on insert, use temp
-        #   on post, if posted from cb, use tran_number / line_number
-        #           else use auto_pmt_no
         '<case>'
+          '<on_post>'
+            '<case>'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="_ledger.auto_pmt_no"/>'
+              '</compare>'
+              '<default>'
+                '<fld_val name="tran_number"/>'
+              '</default>'
+            '</case>'
+          '</on_post>'
           '<on_insert>'
             '<case>'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="_ledger.auto_temp_no"/>'
+              '</compare>'
               '<compare test="[[`if`, ``, `_ledger.auto_pmt_no`, `is not`, `$None`, ``]]">'
                 '<auto_gen args="_ledger.auto_pmt_no"/>'
               '</compare>'
@@ -246,41 +251,6 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'supp_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Supp exchange rate',
-    'long_descr' : 'Exchange rate from supplier currency to local',
-    'col_head'   : 'Rate supp',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 8,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-              '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
-                '<literal value="1"/>'
-            '</compare>'
-            '<default>'
-                '<exch_rate>'
-                    '<fld_val name="supp_row_id>currency_id"/>'
-                    '<fld_val name="tran_date"/>'
-                '</exch_rate>'
-            '<compare test="[[`if`, ``, `supp_row_id>currency_id`, `=`, `currency_id`, ``]]">'
-                '<fld_val name="tran_exch_rate"/>'
-            '</compare>'
-            '</default>'
-        '</case>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'pmt_amt',
     'data_type'  : '$TRN',
     'short_descr': 'Payment amount',
@@ -296,60 +266,6 @@ cols.append ({
     'scale_ptr'  : 'currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pmt_supp',
-    'data_type'  : '$PTY',
-    'short_descr': 'Payment supp',
-    'long_descr' : 'Payment amount in supplier currency',
-    'col_head'   : 'Pmt supp',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<fld_val name="pmt_amt"/>'
-            '<op type="/"/>'
-            '<fld_val name="tran_exch_rate"/>'
-            '<op type="*"/>'
-            '<fld_val name="supp_exch_rate"/>'
-        '</expr>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'pmt_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Payment net local',
-    'long_descr' : 'Payment net amount in local currency',
-    'col_head'   : 'Pmt net local',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<fld_val name="pmt_amt"/>'
-            '<op type="/"/>'
-            '<fld_val name="tran_exch_rate"/>'
-        '</expr>'
-        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -397,30 +313,6 @@ virt.append ({
         "SELECT count(*) FROM {company}.adm_periods b "
         "WHERE b.closing_date < a.tran_date"
         ),
-    })
-virt.append ({
-    'col_name'   : 'pmt_view_supp',
-    'data_type'  : '$PTY',
-    'short_descr': 'Amount for ap_trans - supp',
-    'long_descr' : 'Receipt amount for ar_trans view in supplier currency',
-    'col_head'   : 'Tot amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : "0 - a.pmt_supp"
-    })
-virt.append ({
-    'col_name'   : 'pmt_view_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Amount for ap_trans - local',
-    'long_descr' : 'Receipt amount for ap_trans view in local currency',
-    'col_head'   : 'Tot amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : "0 - a.pmt_local"
     })
 # virt.append ({
 #     'col_name'   : 'unallocated',
@@ -494,117 +386,25 @@ actions.append([
             [],  # aggregation
             [  # on insert
                 ['supp_row_id', '=', 'supp_row_id'],  # tgt_col, op, src_col
-                ['arec_amount', '=', 'amount'],
+                ['apmt_amount', '=', 'pmt_amt'],
                 ],
             [  # on update
-                ['arec_amount', '=', 'amount'],  # tgt_col, op, src_col
+                ['apmt_amount', '=', 'pmt_amt'],  # tgt_col, op, src_col
                 ],
             [],  # on delete
             ],
         ],
     ])
 actions.append([
-    'upd_on_post', [
-        [
-            'ap_openitems',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['tran_row_id', 'row_id'],  # tgt_col, src_col
-                ['item_type', "'pmt'"],
-                ['due_date', 'tran_date'],
-                ],
-            [],  # aggregation
-            [  # on post
-                ['amount_supp', '=', 'pmt_supp'],  # tgt_col, op, src_col
-                ['amount_local', '=', 'pmt_local'],
-                ],
-            [],  # on unpost
-            ],
-        [
-            'ap_allocations',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['tran_row_id', 'row_id'],  # tgt_col, src_col
-                ['item_row_id', 'ap_trans_items.row_id'],
-                ],
-            [],  # aggregation
-            [  # on post
-                ['alloc_supp', '-', 'alloc_supp'],  # tgt_col, src_col
-                ['alloc_local', '-', 'alloc_local'],
-                ],
-            [],  # on unpost
-            ],
-        [
-            'ap_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['ledger_row_id', 'supp_row_id>ledger_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'supp_row_id>location_row_id'],
-                ['function_row_id', 'supp_row_id>function_row_id'],
-                ['tran_date', 'tran_date'],
-                ],
-            [  # aggregation
-                ['pmt_net_day', '+', 'pmt_local'],  # tgt_col, op, src_col
-                ['pmt_dsc_day', '+', 'discount_local'],
-#               ['pmt_dtx_day', '+', 'pmt_dtx_local'],
-                ['pmt_exch_day', '+', 'exch_diff'],
-                ['pmt_net_tot', '+', 'pmt_local'],
-                ['pmt_dsc_tot', '+', 'discount_local'],
-#               ['pmt_dtx_tot', '+', 'pmt_dtx_local'],
-                ['pmt_exch_tot', '+', 'exch_diff'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'ap_supp_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['supp_row_id', 'supp_row_id'],  # tgt_col, src_col
-                ['tran_date', 'tran_date'],
-                ],
-            [  # aggregation
-                ['pmt_net_day_cus', '-', 'pmt_supp'],  # tgt_col, op, src_col
-                ['pmt_dsc_day_cus', '+', 'discount_supp'],
-#               ['pmt_dtx_day_cus', '+', 'pmt_dtx_local'],
-                ['pmt_net_tot_cus', '+', 'pmt_supp'],
-                ['pmt_dsc_tot_cus', '+', 'discount_supp'],
-#               ['pmt_dtx_tot_cus', '+', 'pmt_dtx_supp'],
-                ['pmt_net_day_loc', '+', 'pmt_local'],
-                ['pmt_dsc_day_loc', '+', 'discount_local'],
-#               ['pmt_dtx_day_loc', '+', 'pmt_dtx_local'],
-                ['pmt_exch_day_loc', '+', 'exch_diff'],
-                ['pmt_net_tot_loc', '+', 'pmt_local'],
-                ['pmt_dsc_tot_loc', '+', 'discount_local'],
-#               ['pmt_dtx_tot_loc', '+', 'pmt_dtx_local'],
-                ['pmt_exch_tot_loc', '+', 'exch_diff'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'supp_row_id>location_row_id'],
-                ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code', "'ap_pmt'"],
-                ['tran_date', 'tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'pmt_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'pmt_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        ],
+    'before_post',
+        '<assign src="[]" tgt="_ctx.disc_to_post"/>'
+        '<assign src="$None" tgt="_ctx.disc_row_id"/>'
+    ])
+actions.append([
+    'after_post',
+        '<case>'
+            '<compare test="[[`if`, ``, `_ctx.disc_to_post`, `!=`, `[]`, ``]]">'
+                '<pyfunc name="custom.aptrans_funcs.post_disc_crn"/>'
+            '</compare>'
+        '</case>'
     ])

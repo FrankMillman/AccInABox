@@ -149,7 +149,6 @@ cols.append ({
     'fkey'       : ['gl_codes', 'row_id', 'gl_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
-
 cols.append ({
     'col_name'   : 'valid_loc_ids',
     'data_type'  : 'INT',
@@ -221,7 +220,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-
 cols.append ({
     'col_name'   : 'valid_fun_ids',
     'data_type'  : 'INT',
@@ -293,7 +291,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-
 cols.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
@@ -498,7 +495,7 @@ cols.append ({
     'col_name'   : 'auto_disc_no',
     'data_type'  : 'JSON',
     'short_descr': 'Auto-generate discount no',
-    'long_descr' : 'Parameters to generate discount c/note number. If blank, no discount allowed',
+    'long_descr' : 'Parameters to generate discount c/note number. Required if discount_code_id is present',
     'col_head'   : 'Auto disc no',
     'key_field'  : 'N',
     'data_source': 'input',
@@ -510,7 +507,18 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'disc_no',
+            'Parameter required if discount_code specified',
+            [
+                ['check', '(', 'discount_code_id', 'is', '$None', ''],
+                ['and', '', '$value', 'is', '$None', ')'],
+                ['or', '(', 'discount_code_id', 'is not', '$None', ''],
+                ['and', '', '$value', 'is not', '$None', ')'],
+                ],
+            ],
+        ],
     'fkey'       : None,
     'choices'    : None,
     })
@@ -532,6 +540,72 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'rec_tran_source',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Receipt transactions source',
+    'long_descr' : (
+        'na: no receipt transactions for this sub-ledger\n'
+        'ar: receipts posted from ar_tran_rec.\n'
+        'cb: receipts posted from cb_tran_rec.\n'
+        'If ar, and gl integration is specified, must provide gl code for receipt double entry.\n'
+        ),
+    'col_head'   : 'Rec src',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'na',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : [
+            ['na', 'No receipt transactions'],
+            ['ar', 'Use ar module for receipts'],
+            ['cb', 'Use cb module for receipts'],
+        ],
+    })
+cols.append ({
+    'col_name'   : 'gl_rec_code_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Gl a/c for receipts',
+    'long_descr' : 'Gl a/c to use as double-entry for receipts',
+    'col_head'   : 'Gl rec code',
+    'key_field'  : 'N',
+    'data_source': 'null_if',
+    'condition'  : [
+        ['where', '', '_param.gl_integration', 'is', '$False', ''],
+        ['or', '', 'rec_tran_source', '!=', "'ar'", ''],
+        ],
+    'allow_null' : True,  # null means 'not integrated to g/l'
+    'allow_amend': [['where', '', '$value', 'is', '$None', '']],
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : [
+        [
+            'gl_rec_code',
+            'G/l code required if gl integration specified and receipts posted from ar mmodule',
+            [
+                ['check', '(', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '(', 'rec_tran_source', '=', "'ar'", ''],
+                ['and', '', '$value', 'is not', '$None', ')'],
+                ['or', '(', 'rec_tran_source', '!=', "'ar'", ''],
+                ['and', '', '$value', 'is', '$None', '))'],
+                ['or', '(', '_param.gl_integration', 'is', '$False', ''],
+                ['and', '', '$value', 'is', '$None', ')'],
+                ],
+            ],
+        ],
+    'fkey'       : ['gl_codes', 'row_id', 'gl_pmt_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
 cols.append ({
@@ -562,7 +636,7 @@ cols.append ({
     'col_name'   : 'stmt_date',
     'data_type'  : 'JSON',
     'short_descr': 'Statement date parameter',
-    'long_descr' : 'Statement date parameter. Only applies if separate_stat_close is True',
+    'long_descr' : 'Statement date parameter. Only applies if separate_stat_close is True.',
     'col_head'   : 'Stmt date',
     'key_field'  : 'N',
     'data_source': 'input',
@@ -601,22 +675,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'module_id',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Module',
-#     'long_descr' : 'Module id',
-#     'col_head'   : '',
-#     'sql'        : "'ar'",
-#     })
-# virt.append ({
-#     'col_name'   : 'module_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Module row id',
-#     'long_descr' : 'Module row id',
-#     'col_head'   : '',
-#     'sql'        : "SELECT b.row_id FROM {company}.db_modules b WHERE b.module_id = 'ar'",
-#     })
 
 # cursor definitions
 cursors = []

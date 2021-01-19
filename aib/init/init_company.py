@@ -307,23 +307,17 @@ async def setup_other_tables(context, conn):
         'ap_tran_inv_det',
         'ap_tran_crn',
         'ap_tran_crn_det',
+        'ap_pmt_batch',
+        'ap_pmt_batch_det',
         'ap_tran_pmt',
         'ap_subtran_pmt',
+        'ap_tran_disc',
         'ap_tran_alloc',
         'ap_tran_bf',
         'ap_tran_bf_det',
         'ap_uex_bf',
         'ap_totals',
         'ap_supp_totals',
-        # 'cb_ledger_params',
-        # 'cb_ledger_periods',
-        # 'cb_tran_rec',
-        # 'cb_tran_rec_det',
-        # 'cb_tran_pmt',
-        # 'cb_tran_pmt_det',
-        # 'cb_tran_bf',
-        # 'cb_totals',
-        # 'cb_comments',
         'pch_ipch_subtran',
         'pch_ipch_subtran_tax',
         'pch_ipch_totals',
@@ -597,7 +591,7 @@ async def setup_forms(context, conn):
     await setup_form('ap_supp_bal')
     await setup_form('setup_npch_codes')
     await setup_form('ap_invoice')
-    await setup_form('ap_pmts_due')
+    await setup_form('ap_pmt_batch')
     await setup_form('ap_balances')
     await setup_form('ap_ledger_summary')
     await setup_form('setup_prod_codes')
@@ -781,7 +775,7 @@ async def setup_menus(context, conn, company_name):
         ['Period end procedure', 'form', 'ar_ledger_periods'],
         ]]
 
-    ap_menu =['Accounts payable', 'menu', 'ap', [
+    ap_menu = ['Accounts payable', 'menu', 'ap', [
         ['AP setup', 'menu', 'ap', [
             ['Ledger parameters', 'form', 'ap_params'],
             ['Suppliers', 'grid', 'ap_suppliers', 'supp'],
@@ -793,8 +787,9 @@ async def setup_menus(context, conn, company_name):
             ['Review unposted invoices', 'grid', 'ap_tran_inv', 'unposted_inv'],
             ['Review unposted payments', 'grid', 'ap_tran_pmt', 'unposted_pmt'],
             ]],
-        ['Ap payments', 'menu', 'ap', [
-            ['AP payments due', 'form', 'ap_pmts_due'],
+        ['Ap payments batch processing', 'menu', 'ap', [
+            ['Set up payment batch', 'form', 'ap_pmt_batch'],
+            ['Generate remittance advices', 'grid', 'ap_pmt_batch', 'unposted_bch'],
             ]],
         ['Ap enquiries', 'menu', 'ap', [
             ['AP balances', 'form', 'ap_balances'],
@@ -805,7 +800,7 @@ async def setup_menus(context, conn, company_name):
         ['Period end procedure', 'form', 'ap_ledger_periods'],
         ]]
 
-    in_menu =['Inventory', 'menu', 'in', [
+    in_menu = ['Inventory', 'menu', 'in', [
         ['Warehouse setup', 'menu', 'in', [
             ['Warehouse parameters', 'form', 'in_params'],
             ]],

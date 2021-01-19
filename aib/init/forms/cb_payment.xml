@@ -9,8 +9,8 @@
     <db_obj name="ipch" table_name="pch_ipch_subtran" parent="cb_det"/>
     <db_obj name="npch" table_name="pch_npch_subtran" parent="cb_det"/>
     <db_obj name="achg" table_name="ar_subtran_chg" parent="cb_det"/>
-    <!-- <db_obj name="ar_pmt" table_name="ar_subtran_pmt" parent="cb_det"/> -->
-    <!-- <db_obj name="ar_pmt_alloc" table_name="ar_subtran_pmt_alloc" parent="ar_pmt"/> -->
+    <db_obj name="ap_subpmt" table_name="ap_subtran_pmt" parent="cb_det"/>
+    <db_obj name="ap_allocations" table_name="ap_allocations" parent="ap_subpmt"/>
     <db_obj name="gl" table_name="gl_jnl_subtran" parent="cb_det"/>
     <db_obj name="com" table_name="cb_comments" parent="cb_det"/>
   </db_objects>
@@ -52,7 +52,7 @@
 
       <block/>
       <grid data_object="cb_det" growable="true" num_grid_rows="5" readonly="true"
-          footer_row="[`'Total:'`, `cb_pmt.amount_cb`]">
+          footer_row="[`'Total:'`, `cb_pmt.amount_tran`]">
         <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="display_descr" lng="80"/>

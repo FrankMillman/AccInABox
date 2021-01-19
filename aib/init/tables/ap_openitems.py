@@ -104,6 +104,7 @@ cols.append ({
             ['ap_inv', 'Invoice'],
             ['ap_crn', 'Credit note'],
             ['ap_pmt', 'Payment'],
+            ['ap_disc', 'Discount'],
             ['ap_bf', 'Bal b/f'],
         ],
     })
@@ -128,7 +129,8 @@ cols.append ({
         ['tran_type', [
             ['ap_inv', 'ap_tran_inv'],
             ['ap_crn', 'ap_tran_crn'],
-            ['ap_pmt', 'ap_tran_pmt'],
+            ['ap_pmt', 'ap_subtran_pmt'],
+            ['ap_disc', 'ap_tran_disc'],
             ['ap_bf', 'ap_tran_bf_det'],
             ]],
         'row_id', None, None, True, None],
@@ -362,7 +364,10 @@ virt.append ({
     'col_name'   : 'balance_supp',
     'data_type'  : '$PTY',
     'short_descr': 'Balance',
-    'long_descr' : 'Balance outstanding - supplier currency',
+    'long_descr' : (
+        'Balance outstanding - supplier currency. '
+        'Used in cursor ap_tran_alloc.unposted_alloc. '
+        ),
     'col_head'   : 'Balance',
     'db_scale'   : 2,
     'scale_ptr'  : 'supp_row_id>currency_id>scale',
@@ -479,6 +484,40 @@ virt.append ({
                     "END IS NOT NULL "
             "), 0)"
         )
+    })
+virt.append ({
+    'col_name'   : 'os_disc_supp',
+    'data_type'  : '$PTY',
+    'short_descr': 'O/s discount - supp curr',
+    'long_descr' : (
+        'Outstanding discount - supplier currency. '
+        'It is used in ap_allocations.discount_supp to calculate the discount allowable.'
+        ),
+    'col_head'   : 'Os disc supp',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        "SELECT a.discount_supp "
+        "- "
+        "COALESCE(("
+            "SELECT SUM(b.discount_supp) "
+            "FROM {company}.ap_allocations b "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
+                "CASE "
+                    "WHEN b.tran_type = 'ap_alloc' THEN "
+                        "(SELECT row_id FROM {company}.ap_allocations c "
+                            "WHERE c.tran_type = b.tran_type AND "
+                                "c.tran_row_id = b.tran_row_id AND "
+                                "c.item_row_id = "
+                                    "(SELECT d.item_row_id FROM {company}.ap_tran_alloc d "
+                                    "WHERE d.row_id = b.tran_row_id)) "
+                    "ELSE "
+                        "(SELECT row_id FROM {company}.ap_openitems c "
+                            "WHERE c.tran_type = b.tran_type AND c.tran_row_id = b.tran_row_id) "
+                "END IS NOT NULL "
+            "), 0) "
+        ),
     })
 virt.append ({
     'col_name'   : 'due_supp',

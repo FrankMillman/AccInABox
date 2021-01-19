@@ -138,11 +138,7 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# discount - [disc perc (dec), terms (int), type(periods/days)]
-
-# instead of 'periods', could use calendar months, with 'day' = trandate_day or fixed day
-#   e.g. 2M=2 months, trandate; 2M1=2 months, 1st of each month; 2ML=2 months, last of each month;
-
+# discount - [disc perc (dec), terms (int), type(P=periods/D=days/M=calendar day)]
 cols.append ({
     'col_name'   : 'discount_rule',
     'data_type'  : 'JSON',
@@ -163,7 +159,7 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# due - [instalments (int), terms (int), type(periods/days)]
+# due - [instalments (int), terms (int), type(P=periods/D=days/M=calendar day)]
 cols.append ({
     'col_name'   : 'due_rule',
     'data_type'  : 'JSON',
@@ -184,7 +180,7 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# arrears - [interest rate (dec), terms (int), type(periods/days)]
+# arrears - [interest rate (dec), terms (int), type(P=periods/D=days/M=calendar day)]
 cols.append ({
     'col_name'   : 'arrears_rule',
     'data_type'  : 'JSON',

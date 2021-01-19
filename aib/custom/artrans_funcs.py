@@ -17,30 +17,13 @@ async def split_nsls(db_obj, conn, return_vals):
         closing_date = adm_periods[period_no].closing_date
         eff_date = closing_date + td(1)
     else:
-        # [TO DO - implement multiple effective dates
+        # [TO DO] - implement multiple effective dates
         raise NotImplementedError
 
     yield (eff_date, await db_obj.getval('net_local'))
 
 async def setup_openitems(db_obj, conn, return_vals):
     # called as split_src func from ar_tran_inv.upd_on_post()
-
-    # if True, we are capturing b/f balances
-    # this assumes that there will be one item for each due date
-    if getattr(db_obj.context, 'bf', False):
-        due_date = await db_obj.children[0].children[0].getval('due_date')
-        discount_date = None
-        discount_cust = 0
-        yield (
-            0,
-            'inv',
-            due_date,
-            await db_obj.getval('inv_tot_cust'),
-            await db_obj.getval('inv_tot_local'),
-            discount_date,
-            discount_cust,
-            )
-        return
 
     tran_date = await db_obj.getval('tran_date')
     terms_code = await db_obj.getfld('terms_code_id')
@@ -58,6 +41,21 @@ async def setup_openitems(db_obj, conn, return_vals):
             due_date = tran_date + td(terms)
         elif term_type == 'p':  # periods
             due_date = await db.cache.get_due_date(db_obj.company, tran_date, terms)
+        elif term_type == 'm':  # calendar day
+            tran_yy, tran_mm, tran_dd = tran_date.year, tran_date.month, tran_date.day
+            due_yy, due_mm, due_dd = tran_yy, tran_mm, terms
+            if tran_dd > due_dd:  # due date already past, set to following month
+                due_mm += 1
+                if due_mm == 13:
+                    due_mm = 1
+                    due_yy += 1
+            while True:
+                try:
+                    due_date = dt(due_yy, due_mm, due_dd)
+                except ValueError:
+                    due_dd -= 1
+                else:
+                    break
         else:
             raise NotImplementedError
 
@@ -65,6 +63,21 @@ async def setup_openitems(db_obj, conn, return_vals):
             percentage, terms, term_type = discount_rule
             if term_type == 'd':
                 discount_date = tran_date + td(terms)
+            elif term_type == 'm':  # calendar day
+                tran_yy, tran_mm, tran_dd = tran_date.year, tran_date.month, tran_date.day
+                disc_yy, disc_mm, disc_dd = tran_yy, tran_mm, terms
+                if tran_dd > disc_dd:  # disc date already past, set to following month
+                    disc_mm += 1
+                    if disc_mm == 13:
+                        disc_mm = 1
+                        disc_yy += 1
+                while True:
+                    try:
+                        discount_date = dt(disc_yy, disc_mm, disc_dd)
+                    except ValueError:
+                        disc_dd -= 1
+                    else:
+                        break
             discount_cust = (await db_obj.getval('inv_tot_cust') * D(percentage) / 100)
         else:
             discount_date = None

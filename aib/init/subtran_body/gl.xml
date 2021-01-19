@@ -7,6 +7,20 @@
   <col/>
   <input obj_name="gl" col_name="gl_code" lng="80"/>
   <display obj_name="gl" col_name="gl_code_id>descr" lng="120"/>
+
+  <row/>
+  <col/>
+  <label value="Location Id:"/>
+  <col/>
+  <input obj_name="gl" col_name="location_id" lng="80" form_dflt="
+    <<case>>
+      <<compare test=`[['if', '', 'gl_code_id>valid_loc_ids>expandable', 'is', '$False', '']]`>>
+        <<fld_val name=`gl_code_id>valid_loc_ids>location_id`/>>
+      <</compare>>
+    <</case>>
+    "/>
+  <display obj_name="gl" col_name="location_row_id>descr" lng="160"/>
+
   <row/>
   <col/>
   <label value="Text:"/>

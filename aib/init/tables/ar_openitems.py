@@ -369,7 +369,6 @@ virt.append ({
     'short_descr': 'Balance',
     'long_descr' : (
         'Balance outstanding - customer currency. '
-        'Used in ar_cust_funcs.get_aged_bal, which is called from form ar_cust_bal. '
         'Used in cursor ar_tran_alloc.unposted_alloc. '
         ),
     'col_head'   : 'Balance',

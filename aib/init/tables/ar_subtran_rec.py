@@ -142,10 +142,17 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : [
-        ['alt_curr', 'Customer currency does not match', [
+        ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', 'cust_row_id>currency_id', '=', 'currency_id', ''],
-            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+            ['or', '', '_ledger.alt_curr', 'is', '$True', ''],
             ]],
+        ['rec_source', 'Invalid receipt source', [
+            ['check', '(', 'source_code', '=', "'ar_rec_ar'", ''],
+            ['and', '', '_ledger.rec_tran_source', '=', "'ar'", ')'],
+            ['or', '(', 'source_code', '=', "'ar_rec_cb'", ''],
+            ['and', '', '_ledger.rec_tran_source', '=', "'cb'", ')'],
+            ]],
+
         ],
     'fkey'       : [
         'ar_customers', 'row_id', 'ledger_id, cust_id, location_id, function_id',
