@@ -23,30 +23,6 @@ async def split_npch(db_obj, conn, return_vals):
 
 async def setup_openitems(db_obj, conn, return_vals):
     # called as split_src func from ap_tran_inv.upd_on_post()
-    # tran_date = await db_obj.getval('tran_date')
-    # due_rule = await db_obj.getval('supp_row_id>due_rule')
-    # if not due_rule:
-    #     due_rule = ['D', 30]  # default to '30 days'
-    # term_type, day = due_rule
-    # if term_type == 'D':  # days
-    #     due_date = tran_date + td(day)
-    # elif term_type == 'M':  # day of month
-    #     tran_yy, tran_mm, tran_dd = tran_date.year, tran_date.month, tran_date.day
-    #     due_yy, due_mm, due_dd = tran_yy, tran_mm, day
-    #     if tran_dd > due_dd:  # due date already past, set to following month
-    #         due_mm += 1
-    #         if due_mm == 13:
-    #             due_mm = 1
-    #             due_yy += 1
-    #     while True:
-    #         try:
-    #             due_date = dt(due_yy, due_mm, due_dd)
-    #         except ValueError:
-    #             due_dd -= 1
-    #         else:
-    #             break
-    # else:
-    #     raise NotImplementedError
 
     tran_date = await db_obj.getval('tran_date')
     terms_code = await db_obj.getfld('terms_code_id')
@@ -259,7 +235,7 @@ async def setup_items_due(caller, xml):
     for item_row_id, due_amt, pmt_amt in allocations:
         await items.init(init_vals={'row_id': item_row_id})
         await items_due.init()
-        await items_due.setval('item_row_id', await items.getval('row_id'))
+        await items_due.setval('item_row_id', item_row_id)
         await items_due.setval('tran_type', await items.getval('tran_type'))
         await items_due.setval('tran_number', await items.getval('tran_number'))
         await items_due.setval('tran_date', await items.getval('tran_date'))

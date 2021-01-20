@@ -121,7 +121,7 @@ cols.append ({
 cols.append ({
     'col_name'   : 'amount_cb',
     'source'     : ['view_cb', 'view_cb'],
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Amount - cb curr',
     'long_descr' : 'Amount in cash book currency',
     'col_head'   : 'Amount cb',
@@ -134,7 +134,7 @@ cols.append ({
 cols.append ({
     'col_name'   : 'amount_local',
     'source'     : ['view_local', 'view_local'],
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Amount - local curr',
     'long_descr' : 'Amount in local currency',
     'col_head'   : 'Amount loc',
@@ -149,7 +149,7 @@ cols.append ({
 virt = []
 virt.append ({
     'col_name'   : 'balance_cb',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Balance - cb currency',
     'long_descr' : 'Running balance - cash book currency',
     'col_head'   : 'Bal cb',
@@ -160,7 +160,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'balance_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Balance - local currency',
     'long_descr' : 'Running balance - local currency',
     'col_head'   : 'Bal local',
@@ -171,7 +171,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'op_bal_cb',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Opening bal - cb currency',
     'long_descr' : 'Opening balance - cash book currency',
     'col_head'   : 'Op bal cb',
@@ -194,7 +194,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'cl_bal_cb',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Closing bal - cb currency',
     'long_descr' : 'Closing balance - cash book currency',
     'col_head'   : 'Cl bal cb',
@@ -217,7 +217,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'tot_cb',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Tran total - cb currency',
     'long_descr' : 'Transaction total - cash book currency',
     'col_head'   : 'Total cb',
@@ -229,6 +229,24 @@ virt.append ({
             "WHERE c.ledger_row_id = {_ctx.ledger_row_id} "
             "AND c.tran_date BETWEEN {_ctx.start_date} AND {_ctx.end_date}), 0)"
         )
+    })
+virt.append ({
+    'col_name'   : 'cb_rec',
+    'data_type'  : '$PTY',
+    'short_descr': 'Receipts - cb currency',
+    'long_descr' : 'Receipts - cash book currency',
+    'col_head'   : 'Receipts',
+    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
+    'sql'        : "CASE WHEN a.tran_type = 'cb_rec' THEN a.amount_cb END",
+    })
+virt.append ({
+    'col_name'   : 'cb_pmt',
+    'data_type'  : '$PTY',
+    'short_descr': 'Payments - cb currency',
+    'long_descr' : 'Payments - cash book currency',
+    'col_head'   : 'Payments',
+    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
+    'sql'        : "CASE WHEN a.tran_type = 'cb_pmt' THEN a.amount_cb END",
     })
 
 # cursor definitions

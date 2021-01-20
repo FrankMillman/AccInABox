@@ -66,9 +66,9 @@
         "/>
 
       <block/>
-      <grid data_object="cb_trans" growable="false" num_grid_rows="8"
-          header_row="[`date_range_vars.start_date`, `'Bal b/f'`, null, null, `tran_vars.op_bal`]"
-          footer_row="[`date_range_vars.end_date`, `'Bal c/f'`, null, null, `tran_vars.cl_bal`]">
+      <grid data_object="cb_trans" growable="false" num_grid_rows="8" readonly="true"
+          header_row="[`date_range_vars.start_date`, `'Bal b/f'`, `...`, `tran_vars.op_bal`]"
+          footer_row="[`date_range_vars.end_date`, `'Bal c/f'`, `...`, `tran_vars.cl_bal`]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,Enter" action="
@@ -78,11 +78,13 @@
           <tool type="img" name="download" action="<<download/>>"/>
         </toolbar>
         <cur_columns>
-          <cur_col col_name="tran_date" lng="80" readonly="true"/>
-          <cur_col col_name="tran_type" lng="80" readonly="true"/>
-          <cur_col col_name="tran_number" lng="100" readonly="true"/>
-          <cur_col col_name="amount_cb" lng="80" readonly="true"/>
-          <cur_col col_name="balance_cb" lng="80" readonly="true"/>
+          <cur_col col_name="tran_date" lng="80"/>
+          <cur_col col_name="tran_type" lng="80"/>
+          <cur_col col_name="tran_number" lng="100"/>
+          <cur_col col_name="text" lng="200"/>
+          <cur_col col_name="cb_rec" lng="80"/>
+          <cur_col col_name="cb_pmt" lng="80"/>
+          <cur_col col_name="balance_cb" lng="80"/>
         </cur_columns>
         <cur_filter>
           <cur_fil test="WHERE" lbr="" col_name="ledger_row_id"

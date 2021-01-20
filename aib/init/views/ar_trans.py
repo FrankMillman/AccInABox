@@ -114,7 +114,7 @@ cols.append ({
 cols.append ({
     'col_name'   : 'amount_cust',
     'source'     : ['inv_tot_cust', 'crn_view_cust', 'rec_view_cust', 'chg_cust', 'disc_view_cust'],
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Transaction amount - cust',
     'long_descr' : 'Transaction amount - cust',
     'col_head'   : 'Amt cust',
@@ -127,7 +127,7 @@ cols.append ({
 cols.append ({
     'col_name'   : 'amount_local',
     'source'     : ['inv_tot_local', 'crn_view_local', 'rec_view_local', 'chg_local', 'disc_view_local'],
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Transaction amount - local',
     'long_descr' : 'Transaction amount - local',
     'col_head'   : 'Amt local',
@@ -142,25 +142,25 @@ cols.append ({
 virt = []
 virt.append ({
     'col_name'   : 'debit_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Debit - customer currency',
     'long_descr' : 'Debit amount - customer currency',
     'col_head'   : 'Debit',
     'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'sql'        : "CASE WHEN a.amount_cust >= 0 THEN a.amount_cust ELSE NULL END",
+    'sql'        : "CASE WHEN a.amount_cust >= 0 THEN a.amount_cust END",
     })
 virt.append ({
     'col_name'   : 'credit_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Credit - customer currency',
     'long_descr' : 'Credit amount - customer currency',
     'col_head'   : 'Credit',
     'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'sql'        : "CASE WHEN a.amount_cust < 0 THEN 0 - a.amount_cust ELSE NULL END",
+    'sql'        : "CASE WHEN a.amount_cust < 0 THEN 0 - a.amount_cust END",
     })
 virt.append ({
     'col_name'   : 'balance_cust',
-    'data_type'  : 'DEC',
+    'data_type'  : '$PTY',
     'short_descr': 'Balance - customer currency',
     'long_descr' : 'Running balance - customer currency',
     'col_head'   : 'Bal cust',
@@ -171,7 +171,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'balance_local',
-    'data_type'  : 'DEC',
+    'data_type'  : '$LCL',
     'short_descr': 'Balance - local currency',
     'long_descr' : 'Running balance - local currency',
     'col_head'   : 'Bal local',
