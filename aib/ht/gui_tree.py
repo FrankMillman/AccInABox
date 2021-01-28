@@ -156,9 +156,8 @@ class GuiTreeCommon:
                 cte = conn.tree_select(
                     company_id=self.parent.company,
                     table_name=group.table_name,
-                    link_col=self.group_parent_id,
-                    start_col=self.group_parent_id,
-                    start_value=None,
+                    parent_col=self.group_parent_id,
+                    seq_col=self.group_seq,
                     )
                 sql = (cte +
                     "SELECT row_id, {}, {}, {}, "
@@ -240,9 +239,8 @@ class GuiTreeCommon:
                 cte = conn.tree_select(
                     company_id=self.parent.company,
                     table_name=member.table_name,
-                    link_col=self.member_parent_id,
-                    start_col=self.member_parent_id,
-                    start_value=None,
+                    parent_col=self.member_parent_id,
+                    seq_col=self.member_seq,
                     )
                 sql = (cte +
                     "SELECT row_id, {}, {}, {}, "

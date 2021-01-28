@@ -566,8 +566,9 @@ def create_index(self, company_id, table_name, index):
 def get_lower_colname(self, col_name, alias):
     return f'{alias}._{col_name}'
 
-def tree_select(self, company_id, table_name, link_col, start_col, start_value,
-        filter=None, sort=False, up=False, group=0):
+def tree_select(self, company_id, table_name, parent_col, seq_col,
+        start_value=None, filter=None, sort=False, up=False, group=0):
+
     select_1 = "*, 0 as _level"
     if sort:
         select_1 += ", CAST(row_id as NVARCHAR) AS _path"
@@ -591,42 +592,40 @@ def tree_select(self, company_id, table_name, link_col, start_col, start_value,
                     op = 'IS'
                 elif op == '!=':
                     op = 'IS NOT'
-            where_1 += ' {} {}{} {} {}{}'.format(
-                test, lbr, col_name, op, expr, rbr)
-            where_2 += ' {} {}_tree2.{} {} {}{}'.format(
-                test, lbr, col_name, op, expr, rbr)
+            where_1 += f' {test} {lbr} {col_name} {op} {expr} {rbr}'
+            where_2 += f' {test} {lbr} _tree2.{col_name} {op} {expr} {rbr}'
         test = ' AND'
 
     if sort:
         select_2 += ", CAST(_tree._path + ',' + CAST(_tree2.row_id AS NVARCHAR) as NVARCHAR)"
-        select_2 += ", CAST(_tree._key + dbo.zfill(_tree2.seq, 4) as NVARCHAR)"
+        select_2 += f", CAST(_tree._key + dbo.zfill(_tree2.{seq_col}, 4) as NVARCHAR)"
     if group:
         select_2 += (
-            ", CASE WHEN _tree._level < {} THEN "
-            "_tree2.row_id ELSE _tree._group_id END".format(group))
+            f", CASE WHEN _tree._level < {group} THEN _tree2.row_id ELSE _tree._group_id END"
+            )
         select_2 += (
-            ", CASE WHEN _tree._level < {} THEN "
-            "CAST(_tree._group_key + dbo.zfill(_tree2.seq, 4) as NVARCHAR) "
-            "ELSE _tree._group_key END".format(group))
+            f", CASE WHEN _tree._level < {group} THEN "
+            f"CAST(_tree._group_key + dbo.zfill(_tree2.{seq_col}, 4) as NVARCHAR) "
+            "ELSE _tree._group_key END"
+            )
     if up:
-        where_2 += "{} _tree.{} = _tree2.row_id".format(test, link_col)
+        where_2 += f"{test} _tree.{parent_col} = _tree2.row_id"
     else:
-        where_2 += "{} _tree.row_id = _tree2.{}".format(test, link_col)
+        where_2 += f"{test} _tree.row_id = _tree2.{parent_col}"
 
     if start_value is None:
-        where_1 += "{} {} IS NULL".format(test, start_col)
+        where_1 += f"{test} {parent_col} IS NULL"
     else:
-        where_1 += "{} {} = {}".format(test, start_col, start_value)
+        where_1 += f"{test} {parent_col} = {start_value}"
 
     cte = (
         "WITH _tree AS ("
-          "SELECT {0} "
-          "FROM {1}.{2} {3} "
-          "UNION ALL "
-          "SELECT {4} "
-          "FROM _tree, {1}.{2} _tree2 "
-          "{5}) "
-        .format(select_1, company_id, table_name, where_1, select_2, where_2))
+          f"SELECT {select_1} "
+          f"FROM {company_id}.{table_name} {where_1} "
+          f"UNION ALL "
+          f"SELECT {select_2} "
+          f"FROM _tree, {company_id}.{table_name} AS _tree2 {where_2}) "
+        )
     return cte
 
 def get_view_names(self, company_id, view_names):

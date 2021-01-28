@@ -301,9 +301,8 @@ async def ledger_inserted(db_obj, xml):
     cte = conn.tree_select(
         company_id=company,
         table_name='sys_menu_defns',
-        link_col='parent_id',
-        start_col='parent_id',
-        start_value=None,
+        parent_col='parent_id',
+        seq_col='seq',
         filter=[
             ['WHERE', '', 'module_row_id', '=',module_row_id, ''],
             ['AND', '', 'deleted_id', '=', -1, ''],
@@ -313,7 +312,7 @@ async def ledger_inserted(db_obj, xml):
     sql = (cte +
         "SELECT row_id, parent_id, descr, opt_type, table_name, "
             "cursor_name, form_name FROM _tree "
-        "ORDER BY _key, parent_id, seq"
+        "ORDER BY _key"
         )
     async for row in await conn.exec_sql(sql):
         row_id, parent_id, descr, opt_type, table_name, cursor_name, form_name = row
@@ -566,8 +565,7 @@ async def get_next(db_obj, key):
     async with genno_lock:
         genno = await db.objects.get_db_object(db_obj.context, 'db_genno')
         await genno.setval('gkey', key)
-        curr_no = await genno.getval('number')
-        next_no = curr_no + 1
+        next_no = await genno.getval('number') + 1
         await genno.setval('number', next_no)
         await genno.save(from_upd_on_save=True)  # suppress updating audit trail
     return next_no

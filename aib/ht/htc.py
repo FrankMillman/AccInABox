@@ -112,7 +112,7 @@ class Session:
         del sessions[self.session_id]
 
     async def on_login(self, session, state, return_params):
-        # callback from login_form - see get_login() below
+        # callback from login_form - see on_get_login() below
         if state != 'completed':
             self.responder.send_close_program()
             del self.dir_user
@@ -156,16 +156,15 @@ class Session:
                 cte = conn.tree_select(
                     company_id=company,
                     table_name='sys_menu_defns',
-                    link_col='parent_id',
-                    start_col='parent_id',
-                    start_value=None,
+                    parent_col='parent_id',
+                    seq_col='seq',
                     filter=[['WHERE', '', 'deleted_id', '=', 0, '']],
                     sort=True,
                     )
                 sql = (cte +
                     "SELECT row_id, parent_id, descr, opt_type FROM _tree "
-                    'WHERE parent_id IS NOT NULL '
-                    "ORDER BY _key, parent_id, seq"
+                    "WHERE parent_id IS NOT NULL "
+                    "ORDER BY _key"
                     )
                 async for opt in await conn.exec_sql(sql):
                     row_id, parent_id, descr, opt_type = opt
