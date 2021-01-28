@@ -567,6 +567,7 @@ async def setup_forms(context, conn):
     await setup_form('setup_ap_terms_codes')
     await setup_form('setup_locations')
     await setup_form('setup_functions')
+    await setup_form('setup_gl_codes')
     await setup_form('setup_party')
     await setup_form('setup_arcust')
     await setup_form('ar_cust_bal')
@@ -702,6 +703,7 @@ async def setup_menus(context, conn, company_name):
         ['General ledger', 'menu', 'gl', [
             ['Setup', 'menu', 'gl', [
                 ['G/L parameters', 'form', 'gl_params'],
+                ['G/L codes', 'form', 'setup_gl_codes'],
                 ]],
             ['Gl transactions', 'menu', 'gl', [
                 ]],

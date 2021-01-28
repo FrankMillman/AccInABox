@@ -1,0 +1,167 @@
+<form name="setup_gl_codes" title="Setup general ledger codes">
+
+  <db_objects>
+    <db_obj name="gl_group" table_name="gl_groups"/>
+    <db_obj name="gl_code" table_name="gl_codes"/>
+  </db_objects>
+  <mem_objects/>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="gl_code">
+    <toolbar/>
+    <body>
+      <block/>
+      <tree_combo group_name="gl_group" member_name="gl_code"
+        lng="250" height="350" toolbar="true"/>
+      <tree_frame main_object="gl_group" combo_type="group">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Code:"/>
+          <col/>
+          <input obj_name="gl_group" col_name="gl_group" lng="80"/>
+          <row/>
+          <col/>
+          <label value="Description:"/>
+          <col/>
+          <input obj_name="gl_group" col_name="descr" lng="120"/>
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame"/>
+      </tree_frame>
+      <tree_frame main_object="gl_code" combo_type="member">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Code:"/>
+          <col/>
+          <input obj_name="gl_code" col_name="gl_code" lng="80"/>
+          <row/>
+          <col/>
+          <label value="Description:"/>
+          <col/>
+          <input obj_name="gl_code" col_name="descr" lng="120"/>
+          <row/>
+          <col/>
+          <label value="G/l code:"/>
+          <col/>
+          <input obj_name="gl_code" col_name="gl_code" lng="80"/>
+
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame"/>
+      </tree_frame>
+
+<!--
+      <tree data_object="gl_code" lng="250" height="350" toolbar="true"/>
+      <tree_frame main_object="gl_code">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Type:"/>
+          <col/>
+          <input obj_name="gl_code" col_name="code_type" radio="true"/>
+          <block/>
+          <subtype_frame subtype_obj="gl_code" subtype_col="code_type" lng="150">
+
+            <subtype_body subtype_id="group">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Code:"/>
+              <col/>
+              <input obj_name="gl_code" col_name="gl_code" lng="80"/>
+              <row/>
+              <col/>
+              <label value="Description:"/>
+              <col/>
+              <input obj_name="gl_code" col_name="descr" lng="120"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="code">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Code:"/>
+              <col/>
+              <input obj_name="gl_code" col_name="gl_code" lng="80"/>
+              <row/>
+              <col/>
+              <label value="Description:"/>
+              <col/>
+              <input obj_name="gl_code" col_name="descr" lng="120"/>
+              <row/>
+              <col/>
+              <label value="G/l code:"/>
+              <col/>
+              <input obj_name="gl_code" col_name="gl_code" lng="80"/>
+
+              <if test="[[`if`, ``, `_param.eff_date_nsls`, `is`, `$True`, ``]]"/>
+              <row/>
+              <col/>
+              <label value="Allow change effective date?"/>
+              <col/>
+              <input obj_name="gl_code" col_name="chg_eff_date" lng="130"/>
+              <row/>
+              <col/>
+              <label value="Unearned gl code:"/>
+              <col/>
+              <input obj_name="gl_code" col_name="unearned_gl_code" lng="80"/>
+              <end_if/>
+
+              <if test="[[`if`, ``, `_param.tax_cat_id`, `is not`, `$None`, ``]]"/>
+              <block/>
+              <grid data_object="mem_tax_codes" growable="false" num_grid_rows="3">
+                <toolbar/>
+                <cur_columns>
+                  <cur_col col_name="tax_cat" lng="80" readonly="true"/>
+                  <cur_col col_name="tax_code" lng="80" expand="true"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence/>
+                <grid_methods template="Grid"/>
+              </grid>
+              <end_if/>
+
+            </subtype_body>
+
+          </subtype_frame>
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame">
+          <method name="on_start_frame" action="
+            <<pyfunc name=`custom.tax_funcs.on_start_frame`
+              master_obj=`gl_code` taxcode_obj=`tax_code`/>>
+          "/>
+          <method name="after_save" action="
+            <<pyfunc name=`custom.tax_funcs.save_tax_codes`
+              master_obj=`gl_code` taxcode_obj=`tax_code` master_id=`gl_row_id`/>>
+          "/>
+        </frame_methods>
+      </tree_frame>
+-->
+    </body>
+    <button_row/>
+    <frame_methods>
+      <method name="on_req_close" action="
+        <<end_form state=`cancelled`/>>
+      "/>
+      <method name="on_req_cancel" action="
+        <<end_form state=`cancelled`/>>
+      "/>
+    </frame_methods>
+  </frame>
+</form>
