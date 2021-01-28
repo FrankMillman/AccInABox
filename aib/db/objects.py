@@ -2764,26 +2764,50 @@ class DbTable:
 
                 # set up sql on 'expandable' column - use 'not expandable' to detect leaf node
                 exp_col = self.col_dict['expandable']
-                exp_col.sql = f"CASE WHEN a.{type_colname} = '{level_types[-1][0]}' THEN $False ELSE $True END"
+                exp_col.sql = (
+                    "CASE "
+                        f"WHEN a.{type_colname} IS NULL THEN NULL "
+                        f"WHEN a.{type_colname} = '{level_types[-1][0]}' THEN $False "
+                        "ELSE $True "
+                    "END"
+                    )
                 await get_dependencies(exp_col)
 
+                num_levels = len(level_types)
                 # set up virt cols for each level
-                for pos, (level_type, level_descr) in enumerate(reversed(level_types)):
+                for level in range(num_levels):
 
-                    if pos == 0:
-                        sql = f'a.row_id'
-                    elif pos == 1:
-                        sql = (
-                            f"SELECT b.row_id FROM {data_company}.{table_name} b "
-                            "WHERE b.row_id = a.parent_id"
-                            )
-                    elif pos == 2:
-                        sql = (
-                            f"SELECT c.row_id FROM {data_company}.{table_name} c, {data_company}.{table_name} b "
-                            "WHERE b.row_id = a.parent_id AND c.row_id = b.parent_id"
-                            )
-                    # elif pos == 3:  # can add sql for further levels if required
+                    sql = []
+                    sql.append("SELECT CASE ")
+                    if level == 0:
+                        if num_levels > 2:
+                            sql.append(f"WHEN a.{type_colname} = '{level_types[2][0]}' THEN ")
+                            sql.append("(SELECT c.row_id ")
+                            sql.append(f"FROM {data_company}.{table_name} c, {data_company}.{table_name} b ")
+                            sql.append("WHERE c.row_id = b.parent_id AND b.row_id = a.parent_id) ")
+                        if num_levels > 1:
+                            sql.append(f"WHEN a.{type_colname} = '{level_types[1][0]}' THEN ")
+                            sql.append("(SELECT b.row_id ")
+                            sql.append(f"FROM {data_company}.{table_name} b ")
+                            sql.append("WHERE b.row_id = a.parent_id) ")
+                        sql.append(f"WHEN a.{type_colname} = '{level_types[0][0]}' ")
+                        sql.append("THEN a.row_id END")
+                    elif level == 1:
+                        if num_levels > 2:
+                            sql.append(f"WHEN a.{type_colname} = '{level_types[2][0]}' THEN ")
+                            sql.append("(SELECT b.row_id ")
+                            sql.append(f"FROM {data_company}.{table_name} b ")
+                            sql.append("WHERE b.row_id = a.parent_id) ")
+                        sql.append(f"WHEN a.{type_colname} = '{level_types[1][0]}' ")
+                        sql.append("THEN a.row_id END")
+                    elif level == 2:
+                        sql.append(f"WHEN a.{type_colname} = '{level_types[2][0]}' ")
+                        sql.append("THEN a.row_id END")
+                    # elif level == 3:  # can add sql for further levels if required
 
+                    sql = ''.join(sql)
+
+                    level_type, level_descr = level_types[level]
                     col = Column([
                         len(self.col_list),    # col_id
                         self.table_name,       # table_id

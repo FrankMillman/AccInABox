@@ -157,7 +157,7 @@ cols.append ({
             'location_code',
             'Invalid location',
             [
-                ['check', '', '$value', 'pyfunc', 'db.checks.valid_loc_id', ''],
+                ['check', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,ledger_row_id', ''],
                 ],
             ],
         [
@@ -203,7 +203,7 @@ cols.append ({
             'function_code',
             'Invalid function',
             [
-                ['check', '', '$value', 'pyfunc', 'db.checks.valid_fun_id', ''],
+                ['check', '', '$value', 'pyfunc', 'db.checks.valid_fun_id,ledger_row_id', ''],
                 ],
             ],
         [

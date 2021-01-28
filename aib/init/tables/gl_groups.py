@@ -211,7 +211,17 @@ cols.append ({
           '</default>'
         '</case>'
         ),
-    'col_checks' : None,  # should validate that value is equal to or subset of parent value
+    'col_checks' : [
+        [
+            'location_code',
+            'Must be a valid gl location',
+            [
+                ['check', '', 'parent_id', 'is', '$None', ''],
+                ['or', '', '$value', '=', 'parent_id>valid_loc_ids', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,parent_id', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['adm_locations', 'row_id', 'valid_locs', 'location_id', False, None],
     'choices'    : None,
     })
@@ -240,7 +250,17 @@ cols.append ({
           '</default>'
         '</case>'
         ),
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'function_code',
+            'Must be a valid gl function',
+            [
+                ['check', '', 'parent_id', 'is', '$None', ''],
+                ['or', '', '$value', '=', 'parent_id>valid_fun_ids', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_fun_id,parent_id', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['adm_functions', 'row_id', 'valid_funs', 'function_id', False, None],
     'choices'    : None,
     })

@@ -176,8 +176,12 @@ cols.append ({
           '<compare test="[[`if`, ``, `_param.location_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.location_row_id"/>'
           '</compare>'
-          '<compare test="[[`if`, ``, `gl_code_id>valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
-            '<fld_val name="gl_code_id>valid_loc_ids"/>'
+          '<compare test="[[`if`, ``, `gl_code_id`, `is not`, `$None`, ``]]">'
+            '<case>'
+              '<compare test="[[`if`, ``, `gl_code_id>valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
+                '<fld_val name="gl_code_id>valid_loc_ids"/>'
+              '</compare>'
+            '</case>'
           '</compare>'
           '<default>'
             '<fld_val name="_param.dflt_loc_row_id"/>'
@@ -190,7 +194,7 @@ cols.append ({
             'Invalid location',
             [
                 ['check', '', '_param.gl_integration', 'is', '$False', ''],
-                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,gl_code_id', ''],
                 ],
             ],
         ],
@@ -217,8 +221,12 @@ cols.append ({
           '<compare test="[[`if`, ``, `_param.function_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.function_row_id"/>'
           '</compare>'
-          '<compare test="[[`if`, ``, `gl_code_id>valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
-            '<fld_val name="gl_code_id>valid_fun_ids"/>'
+          '<compare test="[[`if`, ``, `gl_code_id`, `is not`, `$None`, ``]]">'
+            '<case>'
+              '<compare test="[[`if`, ``, `gl_code_id>valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
+                '<fld_val name="gl_code_id>valid_fun_ids"/>'
+              '</compare>'
+            '</case>'
           '</compare>'
           '<default>'
             '<fld_val name="_param.dflt_fun_row_id"/>'
@@ -231,7 +239,7 @@ cols.append ({
             'Invalid function',
             [
                 ['check', '', '_param.gl_integration', 'is', '$False', ''],
-                ['or', '', '$value', 'pyfunc', 'db.checks.valid_fun_id', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_fun_id,gl_code_id', ''],
                 ],
             ],
         ],

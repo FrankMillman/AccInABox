@@ -70,22 +70,70 @@ async def check_parent_id(db_obj, fld, parent_id):
     return True
 
 async def valid_loc_id(db_obj, fld, src_val):
-    # valid_locs can come from gl_codes, nsls_codes, npch_codes
+    # there are a number of columns with an fkey reference to adm_locations
+    # the fkey is validated in the normal way
 
-    if db_obj.table_name in ('ar_customers', 'ap_suppliers'):
-        ctrl_fld = 'ledger_row_id'
-    elif 'nsls' in db_obj.table_name:
-        ctrl_fld = 'nsls_code_id'
-    elif 'npch' in db_obj.table_name:
-        ctrl_fld = 'npch_code_id'
-    else:
-        ctrl_fld = 'gl_code_id'
+    # some of these columns have the name 'valid_loc_ids'
+    # the validation for these differs - usually, if a referenced table has tree_params with
+    #   fixed levels, the fkey must reference a 'leaf' node, but if the col_name is 'valid_loc_ids'
+    #   (hardcoded - bad!) the fkey can reference any level
 
-    # valid_loc is a row in adm_locations - could be at any level
+    # the purpose of these columns is to allow an additional validation for 'downstream'
+    #   location_ids - not only must they correctly reference adm_locations, they must
+    #   also be equal to or a subset of the location_id referenced by 'valid_loc_ids'
+
+    # examples -
+    #   ar_ledger_params uses 'valid_loc_ids' to control 'location_id' in ar_customers
+    #   ap_ledger_params uses 'valid_loc_ids' to control 'location_id' in ap_suppliers
+    #   sls_nsls_codes uses 'valid_loc_ids' to control 'location_id' in sls_nsls_subtran
+    #   pch_npch_codes uses 'valid_loc_ids' to control 'location_id' in pch_npch_subtran
+    #   gl_groups uses 'valid_loc_ids' to control 'location_id' in gl_codes
+    #   gl_codes uses 'valid_loc_ids' to control 'location_id' in several tables if gl_integration is True
+
+    # each of these 'downstream' columns has a col_check which calls this function
+    # they pass as an argument the column name to be used to perform the validation
+    # examples -
+    #   ar_customers passes 'ledger_row_id' as an argument
+    #   sls_nsls_subtran passes 'nsls_code_id' as an argument
+    #   the various 'gl' tables pass 'gl_code_id' as an argument
+
+    # this function takes the argument and retrieves the value of 'valid_loc_ids'
+    # if the value equals the value of 'location_id' being validated here, no
+    #   further checks are required ('location_id' has already been validated
+    #   as being a 'leaf' node, so this will only be true if 'valid_loc_ids'
+    #   is also a 'leaf' node)
+
+    # else it selects the row from adm_locations and gets its 'location_type'
+    # each fixed level has its own location_type
+    # virtual columns have been set up to retrieve the value of each of
+    #   the fixed levels for every row
+
+    # example -
+    #   adm_locations could have fixed levels of 'root', 'prov', 'town'
+    #   row_id  location    location_type  parent  'root'  'prov'  'town'
+    #     1     all         root             -        1       -       -
+    #     5     gauteng     prov             1        1       5       -
+    #     6     w cape      prov             1        1       6       -
+    #     8     pretoria    town             5        1       5       8
+    #     12    benoni      town             5        1       5       12
+    #     15    knysna      town             6        1       6       16
+    #   ar_ledger_params could have 'valid_loc_ids' of 5, meaning all customer
+    #      location_ids must be in gauteng province
+    #   steps to validate a customer location_id (say 12) -
+    #      get ar_ledger_params valid_loc_ids - 5 (A)
+    #      get location type for location_id 5 - 'prov'
+    #      get value of 'prov' for location_id 12 - 5 (B)
+    #      validate that (A) = (B)
+
+    ctrl_fld = db_obj.context.pyfunc_args  # args taken from col_checks in col_defn
+
     valid_loc_fld = await db_obj.getfld(f'{ctrl_fld}>valid_loc_ids')
-    valid_loc_fkey = await valid_loc_fld.db_obj.get_foreign_key(valid_loc_fld)
-    valid_loc = valid_loc_fkey['tgt_field'].db_obj
-    await valid_loc.setval('row_id', await valid_loc_fld.getval())
+
+    if src_val == valid_loc_fld._value:
+        return True
+
+    valid_loc = await valid_loc_fld.get_fk_object()
+    await valid_loc.setval('row_id', valid_loc_fld._value)
     
     # 'type' of level is found in row.location_type
     valid_loc_type = await valid_loc.getval('location_type')
@@ -95,28 +143,20 @@ async def valid_loc_id(db_obj, fld, src_val):
     #   and returns that level's row id
     this_loc_type_id = await db_obj.getval(f'{fld.col_name}>{valid_loc_type}')
 
-    return this_loc_type_id == await valid_loc.getval('row_id')
+    return this_loc_type_id == valid_loc_fld._value
 
 async def valid_fun_id(db_obj, fld, src_val):
-    # valid_funs can come from gl_codes, nsls_codes, npch_codes
-    # valid_funs can also come from in_prod_groups
+    # see notes above in valid_loc_id() - all references to 'locations' apply equally to 'functions'
 
-    if db_obj.table_name in ('ar_customers', 'ap_suppliers'):
-        ctrl_fld = 'ledger_row_id'
-    elif db_obj.table_name == 'in_prod_classes':
-        ctrl_fld = 'gl_sales_id'
-    elif 'nsls' in db_obj.table_name:
-        ctrl_fld = 'nsls_code_id'
-    elif 'npch' in db_obj.table_name:
-        ctrl_fld = 'npch_code_id'
-    else:
-        ctrl_fld = 'gl_code_id'
+    ctrl_fld = db_obj.context.pyfunc_args  # args taken from col_checks in col_defn
 
-    # valid_fun is a row in adm_functions - could be at any level
     valid_fun_fld = await db_obj.getfld(f'{ctrl_fld}>valid_fun_ids')
-    valid_fun_fkey = await valid_fun_fld.db_obj.get_foreign_key(valid_fun_fld)
-    valid_fun = valid_fun_fkey['tgt_field'].db_obj
-    await valid_fun.setval('row_id', await valid_fun_fld.getval())
+
+    if src_val == valid_fun_fld._value:
+        return True
+
+    valid_fun = await valid_fun_fld.get_fk_object()
+    await valid_fun.setval('row_id', valid_fun_fld._value)
     
     # 'type' of level is found in row.function_type
     valid_fun_type = await valid_fun.getval('function_type')
@@ -126,7 +166,7 @@ async def valid_fun_id(db_obj, fld, src_val):
     #   and returns that level's row id
     this_fun_type_id = await db_obj.getval(f'{fld.col_name}>{valid_fun_type}')
 
-    return this_fun_type_id == await valid_fun.getval('row_id')
+    return this_fun_type_id == valid_fun_fld._value
 
 async def check_not_null(db_obj, fld, value):
     # called from db_columns.upd_checks

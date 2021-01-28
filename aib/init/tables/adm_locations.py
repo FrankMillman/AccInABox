@@ -123,7 +123,15 @@ cols.append ({
     'col_name'   : 'location_type',
     'data_type'  : 'TEXT',
     'short_descr': 'Type of location code',
-    'long_descr' : 'Type of location code',
+    'long_descr' : (
+        "Type of location code.\n"
+        "If fixed levels are defined for this table (see tree_params),\n"
+        "  user must specify a 'type column', and define a 'type code' for each level.\n"
+        "This is the type column where the type codes are stored.\n"
+        "At run-time, tree_params is inspected, and if fixed levels are detected,\n"
+        "  'choices' for this column is populated with valid codes which is then\n"
+        "  used for validation."
+        ),
     'col_head'   : 'Type',
     'key_field'  : 'N',
     'data_source': 'input',

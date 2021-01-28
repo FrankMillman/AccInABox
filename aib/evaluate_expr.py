@@ -132,7 +132,11 @@ async def eval_bool(src, chk, tgt, db_obj, fld, value):
             if fld is None:  # called from db.objects
                 fld = await db_obj.getfld(src)  # src is the field name to check
             src_val = await eval_elem(src, db_obj, fld, value)
-        func_name = tgt
+        if ',' in tgt:
+            func_name, args = tgt.split(',', 1)
+            db_obj.context.pyfunc_args = args
+        else:
+            func_name = tgt
         module_name, func_name = func_name.rsplit('.', 1)
         module = importlib.import_module(module_name)
         result = await getattr(module, func_name)(db_obj, fld, src_val)

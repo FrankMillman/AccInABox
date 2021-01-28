@@ -144,7 +144,15 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'ctrl_acc',
+            'Control account - no posting allowed',
+            [
+                ['check', '', 'gl_code_id>ctrl_acc', 'is', '$False', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['gl_codes', 'row_id', 'gl_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
     })
@@ -207,7 +215,7 @@ cols.append ({
             'location_code',
             'Invalid location',
             [
-                ['check', '', '$value', 'pyfunc', 'db.checks.valid_loc_id', ''],
+                ['check', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,gl_code_id', ''],
                 ],
             ],
         ],
@@ -250,7 +258,7 @@ cols.append ({
             'function_code',
             'Invalid function',
             [
-                ['check', '', '$value', 'pyfunc', 'db.checks.valid_fun_id', ''],
+                ['check', '', '$value', 'pyfunc', 'db.checks.valid_fun_id,gl_code_id', ''],
                 ],
             ],
         ],

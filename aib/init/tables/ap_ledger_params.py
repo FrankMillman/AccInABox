@@ -153,7 +153,13 @@ cols.append ({
     'col_name'   : 'valid_loc_ids',
     'data_type'  : 'INT',
     'short_descr': 'Valid location ids',
-    'long_descr' : 'Valid location ids - if leaf, use this one; if not must be child of this one',
+    'long_descr' : (
+        'Valid location ids\n.'
+        'Used to validate location id of each supplier.\n'
+        'If \'all\', can use any location, if a leaf node, must use this location,\n'
+        '  else must be subset of this one.\n'
+        'Validation - if gl integration, must be subset of gl_code_id>valid_loc_ids.'
+        ),
     'col_head'   : 'Valid locations',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
@@ -184,7 +190,7 @@ cols.append ({
             [
                 ['check', '', '_param.gl_integration', 'is', '$False', ''],
                 ['or', '', '$value', '=', 'gl_code_id>valid_loc_ids', ''],
-                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,gl_code_id', ''],
                 ],
             ],
         ],
@@ -224,7 +230,13 @@ cols.append ({
     'col_name'   : 'valid_fun_ids',
     'data_type'  : 'INT',
     'short_descr': 'Valid function ids',
-    'long_descr' : 'Valid function ids - if leaf, use this one; if not must be child of this one',
+    'long_descr' : (
+        'Valid function ids\n.'
+        'Used to validate function id of each supplier.\n'
+        'If \'all\', can use any function, if a leaf node, must use this function,\n'
+        '  else must be subset of this one.\n'
+        'Validation - if gl integration, must be subset of gl_code_id>valid_fun_ids.'
+        ),
     'col_head'   : 'Valid functions',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
@@ -255,7 +267,7 @@ cols.append ({
             [
                 ['check', '', '_param.gl_integration', 'is', '$False', ''],
                 ['or', '', '$value', '=', 'gl_code_id>valid_fun_ids', ''],
-                ['or', '', '$value', 'pyfunc', 'db.checks.valid_fun_id', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_fun_id,gl_code_id', ''],
                 ],
             ],
         ],
