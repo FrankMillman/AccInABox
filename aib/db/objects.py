@@ -766,7 +766,7 @@ class DbObject:
         field = db.object_fields.DATA_TYPES[col_defn.data_type]()
         await field._ainit_(self, col_defn)
         self.fields[col_defn.col_name] = field
-        self.virtual_flds.append((col_defn, field))
+        self.virtual_flds.append(field)
 
         for dep_name in col_defn.dependencies:
             if dep_name.startswith('_ctx'):
@@ -781,6 +781,8 @@ class DbObject:
         elif col_defn.dflt_rule is not None:
             field._value = await db.dflt_xml.get_db_dflt(field)
             field._orig = await db.dflt_xml.get_db_dflt(field, orig=True)
+
+        field._init = field._orig
 
         if col_defn.sql is not None:
             self.select_cols.append(field)
@@ -910,6 +912,8 @@ class DbObject:
             if not self.dirty:
                 if where == self.where:
                     for fld in self.fields.values():
+                        if fld._orig  != fld._value_:  # do we get here?
+                            breakpoint()  # if not, remove this block
                         fld._orig = await fld.getval()  # in case set to None before select
                     return  # row not changed since last select
         self.where = where
@@ -977,7 +981,7 @@ class DbObject:
 
             fld.must_be_evaluated = False
             await fld.setval(dat, display, validate=False, from_sql=True)
-            fld._orig = fld._value
+            fld._init = fld._orig = fld._value
 
         row_id_fld = self.fields['row_id']
         if row_id_fld.children:  # populate child values with row_id value
@@ -1083,16 +1087,17 @@ class DbObject:
                 if fld.col_name in self.init_vals:  # there is an init_val
                     await init_fld(fld)  # was excluded above, so init now
 
-        for col_defn, fld in self.virtual_flds:
+        for fld in self.virtual_flds:
+            col_defn = fld.col_defn
             if col_defn.dflt_val is not None:
                 if col_defn.dflt_val.startswith('{') and '>' in col_defn.dflt_val:
                     pass  # will return None - might overwrite value
                 else:
                     fld._value = await fld.get_dflt(from_init=True)
-                    fld._orig = fld._value
+                    fld._init = fld._orig = fld._value
             elif col_defn.sql.startswith("'"):
                 fld._value = await fld.check_val(col_defn.sql[1:-1])
-                fld._orig = fld._value
+                fld._init = fld._orig = fld._value
 
         for fld in self.fields.values():
             if display:
@@ -1220,7 +1225,7 @@ class DbObject:
         for before_save in self.db_table.actions.before_save:
             await db.hooks_xml.table_hook(self, before_save)  # can raise AibError
 
-        if self.exists and not self.dirty:  # can be not_exists and not_dirty if init() with init_vals
+        if self.exists and not self.dirty:  # can be not exists and not dirty if init() with init_vals
             return  # nothing to save
 
         async def do_save():
@@ -1272,6 +1277,9 @@ class DbObject:
                     for after_save in self.db_table.actions.after_save:
                         await db.hooks_xml.table_hook(self, after_save)
 
+                for fld in self.fields.values():
+                    fld._orig = fld._value_
+
         save_lock_acquired = False
         if not self.context.in_db_save:
             await save_lock.acquire()  # ensure only one 'save' active at a time
@@ -1286,28 +1294,29 @@ class DbObject:
                 self.context.in_db_save = False
 
     async def after_save_rolledback(self, from_upd_on_save):
-        self.dirty = True
-        if self.fields['row_id']._orig is None:  # insert failed
+        for fld in self.fields.values():
+            fld._orig = fld._init
+        if self.fields['row_id']._init is None:  # insert rolled back
             self.fields['row_id']._value = None
             self.exists = False
+        self.dirty = True  # don't know for sure - can be not dirty if init() with init_vals
 
     async def after_save_committed(self, from_upd_on_save):
-
         for after_commit in self.db_table.actions.after_commit:
             await db.hooks_xml.table_hook(self, after_commit)
 
         self.init_vals = {}  # to prevent re-use on restore()
 
-        if not from_upd_on_save:  # must be after 'self.exists' for templates.on_clean_new
+        for fld in self.fields.values():
+            fld._init = fld._value_
+
+        if not from_upd_on_save:
             for caller_ref in list(self.on_clean_func.keyrefs()):
                 caller = caller_ref()
                 if caller is not None:
                     if not caller.form.closed:
                         method = self.on_clean_func[caller]
                         await ht.form_xml.exec_xml(caller, method)
-
-        for fld in list(self.fields.values()):
-            fld._orig = fld._value_
 
     async def setup_defaults(self):  # generate defaults for blank fields
         for fld in self.get_flds_to_update(row_id=False):  # core + active_subtype fields

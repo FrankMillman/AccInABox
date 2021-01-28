@@ -101,7 +101,8 @@ class Field:
 
         self._value_ = None  # used by 'property' for '_value' - see at end
         self._value = await self.get_dflt(from_init=True)  # eval dflt_val, but not dflt_rule
-        self._orig = self._value
+        self._orig = self._value  # updated after init(), row_selected(), and save()
+        self._init = self._value  # used to reset _orig on ROLLBACK, updated after COMMIT
         self._prev = None
 
         """
@@ -635,7 +636,6 @@ class Field:
                                     #   either bottom fixed level or any sub-level
                                     # wait for live situation to occur, then investigate thoroughly [2020-07-30]
                                     valid_types.append(sublevel_type[0])
-                                # this_type = await fld.foreign_key['tgt_field'].db_obj.getval(type_colname)
                                 this_type = await tgt_field.db_obj.getval(type_colname)
                                 if this_type not in valid_types:
                                     raise AibError(head=f'{self.table_name}.{self.col_name}',
@@ -1643,9 +1643,14 @@ class Boolean(Field):
         raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     async def check_val(self, value):
+        if value in (None, ''):  # added [2021-01-26]
+            if self.col_defn.allow_null:  # don't know if this is correct
+                return None
+            else:
+                return False
         if value in (True, 1, '1', 'True', 'true', 't'):
             return True
-        if value in (False, 0, '0', None, '', 'False', 'false', 'f'):
+        if value in (False, 0, '0', 'False', 'false', 'f'):
             return False
         errmsg = f'{self.table_name}.{self.col_name} {value!r} - not a valid boolean value'
         raise AibError(head=self.col_defn.short_descr, body=errmsg)
@@ -1673,8 +1678,9 @@ class Boolean(Field):
             return ''
         return str(int(self._prev))
 
-    async def get_val_for_sql(self):
-        return '1' if self._value else '0'
+    # removed [2021-01-21] - True/False should be handled correctly by all databases
+    # async def get_val_for_sql(self):
+    #     return '1' if self._value else '0'
 
     async def get_val_for_xml(self):
         if self._value is None:
