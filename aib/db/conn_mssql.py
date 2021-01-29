@@ -103,7 +103,7 @@ async def form_sql(self, columns, tablenames, where_clause='',
         group_clause='', order_clause='', limit=0, offset=0, lock=False):
     if offset:
         sql = 'SELECT {} FROM ('.format(columns)
-        sql += ('SELECT {}, ROW_NUMBER() OVER ({}) as _rowno '
+        sql += ('SELECT {}, ROW_NUMBER() OVER ({}) AS _rowno '
             .format(columns, order_clause))
         sql += 'FROM {}'.format(tablenames)
         if where_clause:
@@ -566,17 +566,57 @@ def create_index(self, company_id, table_name, index):
 def get_lower_colname(self, col_name, alias):
     return f'{alias}._{col_name}'
 
-def tree_select(self, company_id, table_name, parent_col, seq_col,
-        start_value=None, filter=None, sort=False, up=False, group=0):
+def tree_select(self, company_id, table_name, tree_params, level=None,
+        start_value=None, filter=None, sort=False, up=False):
 
-    select_1 = "*, 0 as _level"
-    if sort:
-        select_1 += ", CAST(row_id as NVARCHAR) AS _path"
-        select_1 += ", CAST('' as NVARCHAR) AS _key"
-    if group:
-        select_1 += ", row_id AS _group_id"
-        select_1 += ", CAST('' as NVARCHAR) AS _group_key"
+    group, col_names, fixed_levels = tree_params
+    code, descr, parent_id, seq = col_names
+    if fixed_levels is not None:
+        type_colname, level_types, sublevel_type = fixed_levels
+
+    select_1 = "*, 0 AS _level"
     select_2 = "_tree2.*, _tree._level+1"
+
+    if sort:
+        select_1 += ", CAST(row_id AS NVARCHAR) AS _path"
+        select_1 += ", CAST('' AS NVARCHAR) AS _key"
+        if level is not None:
+            select_2 += (
+                f", CASE WHEN _tree._level < {level} THEN "
+                    "CAST(_tree._path + ',' + CAST(_tree2.row_id AS NVARCHAR) AS NVARCHAR) "
+                    "ELSE _tree._path END"
+                )
+            select_2 += (
+                f", CASE WHEN _tree._level < {level} THEN "
+                    f"CAST(_tree._key + dbo.zfill(_tree2.{seq}, 4) AS NVARCHAR) "
+                    "ELSE _tree._key END"
+                )
+        else:
+            select_2 += ", CAST(_tree._path + ',' + CAST(_tree2.row_id AS NVARCHAR) AS NVARCHAR)"
+            select_2 += f", CAST(_tree._key + dbo.zfill(_tree2.{seq}, 4) AS NVARCHAR)"
+
+    if fixed_levels is not None:
+        select_1 += f", {code} AS {level_types[0][0]}"
+        select_2 += f", _tree.{level_types[0][0]}"
+        if len(level_types) == 2:
+            select_1 += (
+                f", CAST(NULL AS NVARCHAR) AS {level_types[1][0]}"
+                )
+            select_2 += (
+                f", CASE WHEN _tree2.{type_colname} = {level_types[1][0]!r} THEN CAST(_tree2.{code} AS NVARCHAR) "
+                    f"ELSE CAST(_tree.{level_types[1][0]} AS NVARCHAR) END"
+                )
+        elif len(level_types) == 3:
+            select_1 += (
+                f", CAST(NULL AS NVARCHAR) AS {level_types[1][0]}"
+                f", CAST(NULL AS NVARCHAR) AS {level_types[2][0]}"
+                )
+            select_2 += (
+                f", CASE WHEN _tree2.{type_colname} = {level_types[1][0]!r} THEN CAST(_tree2.{code} AS NVARCHAR) "
+                    f"ELSE CAST(_tree.{level_types[1][0]} AS NVARCHAR) END"
+                f", CASE WHEN _tree2.{type_colname} = {level_types[2][0]!r} THEN CAST(_tree2.{code} AS NVARCHAR) "
+                    f"ELSE CAST(NULL AS NVARCHAR) END"
+                )
 
     if filter is None:
         where_1 = ''
@@ -596,27 +636,15 @@ def tree_select(self, company_id, table_name, parent_col, seq_col,
             where_2 += f' {test} {lbr} _tree2.{col_name} {op} {expr} {rbr}'
         test = ' AND'
 
-    if sort:
-        select_2 += ", CAST(_tree._path + ',' + CAST(_tree2.row_id AS NVARCHAR) as NVARCHAR)"
-        select_2 += f", CAST(_tree._key + dbo.zfill(_tree2.{seq_col}, 4) as NVARCHAR)"
-    if group:
-        select_2 += (
-            f", CASE WHEN _tree._level < {group} THEN _tree2.row_id ELSE _tree._group_id END"
-            )
-        select_2 += (
-            f", CASE WHEN _tree._level < {group} THEN "
-            f"CAST(_tree._group_key + dbo.zfill(_tree2.{seq_col}, 4) as NVARCHAR) "
-            "ELSE _tree._group_key END"
-            )
     if up:
-        where_2 += f"{test} _tree.{parent_col} = _tree2.row_id"
+        where_2 += f"{test} _tree.{parent_id} = _tree2.row_id"
     else:
-        where_2 += f"{test} _tree.row_id = _tree2.{parent_col}"
+        where_2 += f"{test} _tree.row_id = _tree2.{parent_id}"
 
     if start_value is None:
-        where_1 += f"{test} {parent_col} IS NULL"
+        where_1 += f"{test} {parent_id} IS NULL"
     else:
-        where_1 += f"{test} {parent_col} = {start_value}"
+        where_1 += f"{test} {parent_id} = {start_value}"
 
     cte = (
         "WITH _tree AS ("

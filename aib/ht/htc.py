@@ -156,8 +156,7 @@ class Session:
                 cte = conn.tree_select(
                     company_id=company,
                     table_name='sys_menu_defns',
-                    parent_col='parent_id',
-                    seq_col='seq',
+                    tree_params=[None, ['row_id', 'descr', 'parent_id', 'seq'], None],
                     filter=[['WHERE', '', 'deleted_id', '=', 0, '']],
                     sort=True,
                     )

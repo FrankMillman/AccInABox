@@ -515,17 +515,53 @@ def create_index(self, company_id, table_name, index):
 def get_lower_colname(self, col_name, alias):
     return f'LOWER({alias}.{col_name})'
 
-def tree_select(self, company_id, table_name, parent_col, seq_col,
-        start_value=None, filter=None, sort=False, up=False, group=0):
+def tree_select(self, company_id, table_name, tree_params, level=None,
+        start_value=None, filter=None, sort=False, up=False):
 
-    select_1 = "*, 0 as _level"
-    if sort:
-        select_1 += ", cast(row_id as varchar) as _path"
-        select_1 += ", '' AS _key"
-    if group:
-        select_1 += ", row_id AS _group_id"
-        select_1 += ", '' AS _group_key"
+    group, col_names, fixed_levels = tree_params
+    code, descr, parent_id, seq = col_names
+    if fixed_levels is not None:
+        type_colname, level_types, sublevel_type = fixed_levels
+
+    select_1 = "*, 0 AS _level"
     select_2 = "_tree2.*, _tree._level+1"
+    if sort:
+        select_1 += ", CAST(row_id AS VARCHAR) AS _path"
+        select_1 += ", '' AS _key"
+        if level is not None:
+            select_2 += (
+                f", CASE WHEN _tree._level < {level} THEN "
+                "_tree._path || ',' || CAST(_tree2.row_id AS VARCHAR) ELSE _tree._path END"
+                )
+            select_2 += (
+                f", CASE WHEN _tree._level < {level} THEN _tree._key||zfill(_tree2.{seq}, 4) ELSE _tree._key END"
+                )
+        else:
+            select_2 += ", _tree._path || ',' || CAST(_tree2.row_id AS VARCHAR)"
+            select_2 += f", _tree._key || zfill(_tree2.{seq}, 4)"
+
+    if fixed_levels is not None:
+        select_1 += f", {code} AS {level_types[0][0]}"
+        select_2 += f", _tree.{level_types[0][0]}"
+        if len(level_types) == 2:
+            select_1 += (
+                f", CAST(NULL AS VARCHAR) AS {level_types[1][0]}"
+                )
+            select_2 += (
+                f", CASE WHEN _tree2.{type_colname} = {level_types[1][0]!r} THEN _tree2.{code} "
+                    f"ELSE _tree.{level_types[1][0]} END"
+                )
+        elif len(level_types) == 3:
+            select_1 += (
+                f", CAST(NULL AS VARCHAR) AS {level_types[1][0]}"
+                f", CAST(NULL AS VARCHAR) AS {level_types[2][0]}"
+                )
+            select_2 += (
+                f", CASE WHEN _tree2.{type_colname} = {level_types[1][0]!r} THEN _tree2.{code} "
+                    f"ELSE _tree.{level_types[1][0]} END"
+                f", CASE WHEN _tree2.{type_colname} = {level_types[2][0]!r} THEN _tree2.{code} "
+                    f"ELSE NULL END"
+                )
 
     if filter is None:
         where_1 = ''
@@ -545,27 +581,15 @@ def tree_select(self, company_id, table_name, parent_col, seq_col,
             where_2 += f' {test} {lbr} _tree2.{col_name} {op} {expr} {rbr}'
         test = ' AND'
 
-    if sort:
-        select_2 += ", _tree._path || ',' || CAST(_tree2.row_id AS VARCHAR)"
-        select_2 += f", _tree._key || zfill(_tree2.{seq_col}, 4)"
-    if group:
-        select_2 += (
-            f", CASE WHEN _tree._level < {group} THEN _tree2.row_id ELSE _tree._group_id END"
-            )
-        select_2 += (
-            f", CASE WHEN _tree._level < {group} THEN "
-            f"_tree._group_key || zfill(_tree2.{seq_col}, 4) "
-            "ELSE _tree._group_key END"
-            )
     if up:
-        where_2 += f"{test} _tree.{parent_col} = _tree2.row_id"
+        where_2 += f"{test} _tree.{parent_id} = _tree2.row_id"
     else:
-        where_2 += f"{test} _tree.row_id = _tree2.{parent_col}"
+        where_2 += f"{test} _tree.row_id = _tree2.{parent_id}"
 
     if start_value is None:
-        where_1 += f"{test} {parent_col} IS NULL"
+        where_1 += f"{test} {parent_id} IS NULL"
     else:
-        where_1 += f"{test} {parent_col} = {start_value}"
+        where_1 += f"{test} {parent_id} = {start_value}"
 
     cte = (
         "WITH RECURSIVE _tree AS ("
