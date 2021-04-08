@@ -16,6 +16,8 @@ table = {
     'read_only'     : False,
     }
 
+# add columns for uom & scale, plus tax_code table, to share between all prod_codes per class?
+
 # column definitions
 cols = []
 cols.append ({
@@ -218,7 +220,7 @@ cols.append ({
           '<compare test="[[`if`, ``, `_param.function_row_id`, `is not`, `$None`, ``]]">'
             '<fld_val name="_param.function_row_id"/>'
           '</compare>'
-          '<compare test="[[`if`, ``, `gl_sales_id>valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
+          '<compare test="[[`if`, ``, `gl_sales_id>valid_fun_ids>is_leaf`, `is`, `$True`, ``]]">'
             '<fld_val name="gl_sales_id>valid_fun_ids"/>'
           '</compare>'
           '<default>'

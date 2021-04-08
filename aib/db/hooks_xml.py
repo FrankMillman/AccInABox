@@ -73,7 +73,7 @@ async def reset_table_defn(db_obj, xml):
     # table definition has changed - delete from 'tables_open' to force re-instantiation
     company = db_obj.company
     table_name = await db_obj.getval('table_name')
-    table_key = company.lower() + '.' + table_name.lower()
+    table_key = (company.lower(), table_name.lower())
     if table_key in db.objects.tables_open:
         del db.objects.tables_open[table_key]
 

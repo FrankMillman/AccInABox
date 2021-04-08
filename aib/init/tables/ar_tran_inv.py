@@ -344,7 +344,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['sls_sales_persons', 'row_id', 'sales_person', 'sales_person', False, 'sales_persons'],
+    'fkey'       : ['adm_sales_persons', 'row_id', 'sales_person', 'sales_person', False, 'sales_persons'],
     'choices'    : None,
     })
 cols.append ({

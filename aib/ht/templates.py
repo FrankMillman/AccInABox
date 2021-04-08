@@ -403,6 +403,7 @@ class Query_Form:  # template for query-type forms
     toolbar = (
         '<toolbar>'
         f'{tool_nav}'
+        f'{tool_download}'
         '</toolbar>'
         )
 

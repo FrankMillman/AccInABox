@@ -1,6 +1,6 @@
 # table definition
 table = {
-    'table_name'    : 'in_prod_tax_codes',
+    'table_name'    : 'in_prod_tax_codes',  # or common tax code per prod_class?
     'module_id'     : 'in',
     'short_descr'   : 'Product tax codes',
     'long_descr'    : 'Product tax codes - must we distinguish between sales tax and purchase tax?',

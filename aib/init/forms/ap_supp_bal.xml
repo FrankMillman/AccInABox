@@ -82,7 +82,7 @@
       <input obj_name="ap_supp" col_name="supp_id" lng="80" readonly="true" skip="true"/>
       <display obj_name="ap_supp" col_name="party_row_id>display_name" lng="160"/>
       <display obj_name="ap_supp" col_name="supp_acc_num" lng="160"/>
-      <if test="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
+      <if test="[[`if`, ``, `_ledger.valid_loc_ids>is_leaf`, `is`, `$False`, ``]]"/>
       <row/>
       <col/>
       <label value="Location:"/>
@@ -90,7 +90,7 @@
       <input obj_name="ap_supp" col_name="location_id" lng="80" readonly="true" skip="true"/>
       <display obj_name="ap_supp" col_name="location_id>descr" lng="120"/>
       <end_if/>
-      <if test="[[`if`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
+      <if test="[[`if`, ``, `_ledger.valid_fun_ids>is_leaf`, `is`, `$False`, ``]]"/>
       <row/>
       <col/>
       <label value="Function:"/>
@@ -209,6 +209,7 @@
       <grid data_object="ap_items" growable="false" num_grid_rows="6" auto_start="false">
         <toolbar>
           <tool type="nav"/>
+          <tool type="img" name="download" action="<<download/>>"/>
         </toolbar>
         <cur_columns>
           <cur_col col_name="tran_number" lng="80" readonly="true"/>
@@ -272,19 +273,21 @@
 
       <block/>
       <grid data_object="ap_trans" growable="false" num_grid_rows="8"
-          header_row="[`date_range_vars.start_date`, `'Bal b/f'`, null, null, `tran_vars.op_bal`]"
-          footer_row="[`date_range_vars.end_date`, `'Bal c/f'`, null, null, `tran_vars.cl_bal`]">
+          header_row="[`date_range_vars.start_date`, `'Bal b/f'`, `...`, `tran_vars.op_bal`]"
+          footer_row="[`date_range_vars.end_date`, `'Bal c/f'`, `...`, `tran_vars.cl_bal`]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,Enter" action="
               <<select_from_view/>>
             "/>
           <tool type="nav"/>
+          <tool type="img" name="download" action="<<download/>>"/>
         </toolbar>
         <cur_columns>
           <cur_col col_name="tran_date" lng="80" readonly="true"/>
           <cur_col col_name="tran_type" lng="80" readonly="true"/>
           <cur_col col_name="tran_number" lng="100" readonly="true"/>
+          <cur_col col_name="text" lng="160" readonly="true"/>
           <cur_col col_name="amount_supp" lng="80" readonly="true"/>
           <cur_col col_name="balance_supp" lng="80" readonly="true"/>
         </cur_columns>

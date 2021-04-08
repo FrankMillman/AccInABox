@@ -27,7 +27,7 @@
         <display obj_name="ar_rec" col_name="cust_row_id>party_row_id>display_name" lng="160"/>
 
         <if test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``],
-          [`and`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
+          [`and`, ``, `_ledger.valid_loc_ids>is_leaf`, `is`, `$False`, ``]]"/>
 
         <row/>
         <col/>
@@ -45,7 +45,7 @@
         <end_if/>
 
         <if test="[[`if`, ``, `_param.function_row_id`, `is`, `$None`, ``],
-          [`and`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
+          [`and`, ``, `_ledger.valid_fun_ids>is_leaf`, `is`, `$False`, ``]]"/>
 
         <row/>
         <col/>

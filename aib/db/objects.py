@@ -8,7 +8,6 @@ This module contains classes that represent the following database objects -
 from json import loads, dumps
 import operator
 from lxml.etree import fromstring, tostring
-from datetime import datetime
 import weakref
 from weakref import WeakKeyDictionary as WKD
 from collections import OrderedDict as OD
@@ -33,7 +32,7 @@ import ht
 from evaluate_expr import eval_bool_expr, eval_elem
 from common import AibError, AibDenied
 from common import log_db, db_log
-from common import find_occurrence
+from common import find_occurrence, deserialise
 
 # parent/child setup [2016-08-18]
 #
@@ -60,11 +59,7 @@ from common import find_occurrence
 # N.B. very debatable if we should use 'tables_open' at all [2016-09-18]
 #      with a long-running server, every table in the database could be opened!
 #      maybe store a 'last_accessed' timestamp, and remove if not used in (say) 30 min
-#
-#      also, mem_tables are identified by their context id, so they cannot live beyond
-#      the life of their context. So as soon as the context goes out of scope, they
-#      should be removed from 'tables_open'
-#
+
 tables_open = {}
 
 # db_fkeys columns
@@ -206,7 +201,6 @@ async def get_db_table(context, db_company, table_name):
                 print(f'"{next_row}"')
                 raise AibError(head=f'Select {db_company}.{table_name}',
                     body='More than one row found')
-                # should never happen - table_name is primary key
 
     # defn_tableid is the row_id of the entry in db_tables
     # if defn_company is not None, we read in the actual definition from
@@ -1488,7 +1482,7 @@ class DbObject:
                                 f"(SELECT * FROM {self.company}.{tgt_fkey.src_tbl} "
                                 f"WHERE {tgt_fkey.src_col} = {await self.getval(tgt_fkey.tgt_col)!r} "
                                 "AND deleted_id = 0) "
-                            "THEN 1 ELSE 0 END"
+                            "THEN $True ELSE $False END"
                             )
                         cur = await conn.exec_sql(sql)
                         reference_exists, = await cur.__anext__()
@@ -2636,7 +2630,7 @@ class DbTable:
         self.constants = db_constants
 
         self.sequence = None if sequence is None else loads(sequence)
-        self.tree_params = None if tree_params is None else loads(tree_params)
+        self.tree_params = None if tree_params is None else deserialise(tree_params)
         self.roll_params = None if roll_params is None else loads(roll_params)
         self.ledger_col = ledger_col
         self.defn_company = defn_company
@@ -2740,20 +2734,6 @@ class DbTable:
             group, col_names, levels = self.tree_params
             if levels is not None:
                 code, descr, parent_id, seq = col_names
-                type_colname, level_types, sublevel_type = levels
-                # if fixed_levels are defined, these are the parameters -
-                #   each level will have a 'type' code - a 'type' column must exist to store the code
-                #   a list of tuples, where each element represents a level - [0] = 'root'
-                #     each tuple consists of (code, descr)
-                #   sublevel_type - if non-fixed levels are allowed below the bottom fixed level,
-                #     this will contain a tuple of (code, descr) - all sublevels will share this code
-                #   if they are not allowed, sublevel_type must be None
-
-                # set up 'choices' on the 'type' column with all valid types
-                type_col = self.col_dict[type_colname]
-                type_col.choices = OD(level_types)
-                if sublevel_type is not None:  # must be a tuple of (code, descr)
-                    type_col.choices.update([(sublevel_type)])
 
                 # set up 'col_checks' on the 'parent_id' column to ensure level is valid
                 parent_col = self.col_dict[col_names[2]]
@@ -2762,62 +2742,121 @@ class DbTable:
                         [['check', '', '$value', 'pyfunc', 'db.checks.check_parent_id', '']]]
                     )
 
-                # set up sql on 'expandable' column - use 'not expandable' to detect leaf node
-                exp_col = self.col_dict['expandable']
-                exp_col.sql = (
-                    "CASE "
-                        f"WHEN a.{type_colname} IS NULL THEN NULL "
-                        f"WHEN a.{type_colname} = '{level_types[-1][0]}' THEN $False "
-                        "ELSE $True "
-                    "END"
-                    )
-                await get_dependencies(exp_col)
+                type_colname, level_types, sublevel_type = levels
+                # if fixed_levels are defined, these are the parameters -
+                #   each level will have a 'type' code - a 'type' column must exist to store the code
+                #   a list of tuples, where each element represents a level - [0] = 'root'
+                #     each tuple consists of (code, descr)
 
-                num_levels = len(level_types)
-                # set up virt cols for each level
-                for level in range(num_levels):
+                # [this is not used at present, and may be removed altogether - 2021-02-17]
+                #   sublevel_type - if non-fixed levels are allowed below the bottom fixed level,
+                #     this will contain a tuple of (code, descr) - all sublevels will share this code
+                #   if they are not allowed, sublevel_type must be None
 
+                # nsls/npch_groups are a special case (more could be added later)
+                # there can be > 1 sub-ledger, each with its own level_types
+                # there is a column called 'ledger_row_id' to distinguish each sub-ledger
+                # there must be a 'root' row for the entire tree - this is given a ledger_row_id of None
+                #   (ledger_row_id is an fkey to ledger_params, allow_null is True)
+                # level_types is a dictionary, where the key is the ledger_row_id and the
+                #   value is the level_types for that sub-ledger
+                # on creation, level_types looks like {None: [['root', 'Root']]}
+                # as sub-ledgers are added, this is expanded as necessary
+
+                # set up sql on 'is_leaf' column
+                leaf_col = self.col_dict['is_leaf']
+                # set up 'choices' for following step
+                type_choices = {}
+                if isinstance(level_types, dict):
+                    leaf_sql = []
+                    leaf_sql.append("CASE")
+                    leaf_sql.append(f"WHEN a.{type_colname} IS NULL THEN NULL")
+                    for ledger_row_id, dict_level_types in level_types.items():
+                        if len(level_types) == 1:  # no sub-ledgers set up
+                            leaf_sql.append(f"WHEN a.{ledger_col} IS NULL")
+                            leaf_sql.append("THEN $True")
+                        elif ledger_row_id is not None:
+                            leaf_sql.append(f"WHEN a.{ledger_col} = {ledger_row_id}")
+                            leaf_sql.append(f"AND a.{type_colname} = '{dict_level_types[-1][0]}'")
+                            leaf_sql.append("THEN $True")
+                        type_choices.update(dict_level_types)
+                    leaf_sql.append("ELSE $False")
+                    leaf_sql.append("END")
+                    leaf_col.sql = ' '.join(leaf_sql)
+                else:
+                    leaf_col.sql = (
+                        "CASE "
+                            f"WHEN a.{type_colname} IS NULL THEN NULL "
+                            f"WHEN a.{type_colname} = '{level_types[-1][0]}' THEN $True "
+                            "ELSE $False "
+                        "END"
+                        )
+                    type_choices.update(level_types)
+                await get_dependencies(leaf_col)
+
+                type_col = self.col_dict[type_colname]
+                type_col.choices = type_choices
+
+                if not isinstance(level_types, dict):
+                    level_types = {0: level_types}  # dummy ledger_row_id of 0
+
+                xxx = {}
+                for ledger_row_id, dict_level_types in level_types.items():
+                    if ledger_row_id is None:
+                        continue
+                    if None in level_types:
+                        dict_level_types = level_types[None] + dict_level_types
+                    num_levels = len(dict_level_types)
+                    for level in range(num_levels):
+                        level_type, level_descr = dict_level_types[level]
+                        if level_type not in xxx:
+                            xxx[level_type] = [level_descr, []]
+                        if level == 0:
+                            if num_levels > 2:
+                                xxx[level_type][1].append((dict_level_types[2][0], ledger_row_id, 2))
+                            if num_levels > 1:
+                                xxx[level_type][1].append((dict_level_types[1][0], ledger_row_id, 1))
+                            xxx[level_type][1].append((dict_level_types[0][0], 0, 0))
+                        if level == 1:
+                            if num_levels > 2:
+                                xxx[level_type][1].append((dict_level_types[2][0], ledger_row_id, 1))
+                            xxx[level_type][1].append((dict_level_types[1][0], ledger_row_id, 0))
+                        if level == 2:
+                            xxx[level_type][1].append((dict_level_types[2][0], ledger_row_id, 0))
+
+                for col_name in xxx:
+                    level_descr, levels = xxx[col_name]
                     sql = []
-                    sql.append("SELECT CASE ")
-                    if level == 0:
-                        if num_levels > 2:
-                            sql.append(f"WHEN a.{type_colname} = '{level_types[2][0]}' THEN ")
-                            sql.append("(SELECT c.row_id ")
-                            sql.append(f"FROM {data_company}.{table_name} c, {data_company}.{table_name} b ")
-                            sql.append("WHERE c.row_id = b.parent_id AND b.row_id = a.parent_id) ")
-                        if num_levels > 1:
-                            sql.append(f"WHEN a.{type_colname} = '{level_types[1][0]}' THEN ")
-                            sql.append("(SELECT b.row_id ")
-                            sql.append(f"FROM {data_company}.{table_name} b ")
-                            sql.append("WHERE b.row_id = a.parent_id) ")
-                        sql.append(f"WHEN a.{type_colname} = '{level_types[0][0]}' ")
-                        sql.append("THEN a.row_id END")
-                    elif level == 1:
-                        if num_levels > 2:
-                            sql.append(f"WHEN a.{type_colname} = '{level_types[2][0]}' THEN ")
-                            sql.append("(SELECT b.row_id ")
-                            sql.append(f"FROM {data_company}.{table_name} b ")
-                            sql.append("WHERE b.row_id = a.parent_id) ")
-                        sql.append(f"WHEN a.{type_colname} = '{level_types[1][0]}' ")
-                        sql.append("THEN a.row_id END")
-                    elif level == 2:
-                        sql.append(f"WHEN a.{type_colname} = '{level_types[2][0]}' ")
-                        sql.append("THEN a.row_id END")
-                    # elif level == 3:  # can add sql for further levels if required
+                    sql.append("SELECT CASE")
+                    for level_type, ledger_row_id, level in levels:
+                        sql.append(f"WHEN a.{type_colname} = '{level_type}'")
+                        if ledger_row_id != 0:
+                            sql.append(f"AND a.{ledger_col} = {ledger_row_id}")
+                        sql.append("THEN")
+                        if level == 2:
+                            sql.append("(SELECT c.row_id")
+                            sql.append(f"FROM {data_company}.{table_name} c, {data_company}.{table_name} b")
+                            sql.append("WHERE c.row_id = b.parent_id AND b.row_id = a.parent_id)")
+                        elif level == 1:
+                            sql.append("(SELECT b.row_id")
+                            sql.append(f"FROM {data_company}.{table_name} b")
+                            sql.append("WHERE b.row_id = a.parent_id)")
+                        elif level == 0:
+                            sql.append("a.row_id")
+                    sql.append("END")
 
-                    sql = ''.join(sql)
+                    sql = ' '.join(sql)
 
-                    level_type, level_descr = level_types[level]
                     col = Column([
                         len(self.col_list),    # col_id
                         self.table_name,       # table_id
-                        level_type,            # col_name
+                        col_name,              # col_name
                         'virt',                # col_type
                         len(self.col_list),    # seq
                         'INT',                 # data_type
                         level_descr,           # short_descr
                         level_descr,           # long_descr
-                        level_type,            # col_head
+                        col_name,              # col_head
                         'N',                   # key_field
                         'calc',                # data_source
                         None,                  # condition

@@ -28,7 +28,7 @@
       <label value="Supplier Id:"/>
       <col/>
       <input obj_name="ap_inv" col_name="supp_id" lng="80" readonly="true" skip="true"/>
-      <display obj_name="ap_inv" col_name="supp_row_id>party_row_id>display_name" lng="160"/>
+      <display obj_name="ap_inv" col_name="supp_row_id>party_row_id>display_name" lng="200"/>
 
       <col/>
       <label value="Invoice no:"/>
@@ -144,9 +144,9 @@
         <label value="Supplier Id:"/>
         <col/>
         <input obj_name="ap_inv" col_name="supp_id" lng="80"/>
-        <display obj_name="ap_inv" col_name="supp_row_id>party_row_id>display_name" lng="160"/>
+        <display obj_name="ap_inv" col_name="supp_row_id>party_row_id>display_name" lng="200"/>
 
-        <if test="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
+        <if test="[[`if`, ``, `_ledger.valid_loc_ids>is_leaf`, `is`, `$False`, ``]]"/>
 
         <row/>
         <col/>
@@ -163,7 +163,7 @@
 
         <end_if/>
 
-        <if test="[[`if`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
+        <if test="[[`if`, ``, `_ledger.valid_fun_ids>is_leaf`, `is`, `$False`, ``]]"/>
 
         <row/>
         <col/>
@@ -190,11 +190,13 @@
             <</validation>>
           "/>
 
+        <if test="[[`if`, ``, `_ledger.auto_inv_no`, `is`, `$None`, ``]]"/>
         <row/>
         <col/>
         <label value="Invoice no:"/>
         <col/>
         <input obj_name="ap_inv" col_name="tran_number" lng="80"/>
+        <end_if/>
 
         <row/>
         <col/>

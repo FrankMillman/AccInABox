@@ -9,7 +9,7 @@ import db.cache
 from common import AibError, AibDenied
 
 async def split_nsls(db_obj, conn, return_vals):
-    # called as split_src func from sls_nsls_subtran.upd_on_save() for sls_nsls_subtran_uea
+    # called as split_src func from nsls_subtran.upd_on_save() for nsls_subtran_uea
     eff_date_param = await db_obj.getval('nsls_code_id>chg_eff_date')
     if eff_date_param == '1':  # 1st day of following month
         period_no = await db_obj.getval('subparent_row_id>period_row_id')
@@ -485,7 +485,7 @@ async def posted_check(caller, params):
             if table_name != table_names[-1]:
                 sql += ' UNION ALL '
 
-        sql += ') THEN 1 ELSE 0 END'
+        sql += ') THEN $True ELSE $False END'
 
         cur = await conn.exec_sql(sql, params)
         exists, = await cur.__anext__()

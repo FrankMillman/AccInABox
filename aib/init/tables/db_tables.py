@@ -453,5 +453,5 @@ actions.append([
     'on_setup', '<pyfunc name="custom.table_setup.setup_table_created"/>'
     ])
 actions.append([
-    'after_commit', '<reset_table_defn/>'
+    'after_update', '<reset_table_defn/>'
     ])

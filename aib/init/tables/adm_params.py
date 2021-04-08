@@ -201,46 +201,46 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'eff_date_nsls',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Change effective date - nsls?',
-    'long_descr' : 'Allow change of effective date - non-inventory sales?',
-    'col_head'   : 'Eff date nsls',
-    'key_field'  : 'N',
-    'data_source': 'input',
-    'condition'  : None,
-    'allow_null' : True,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : 'false',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'eff_date_npch',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Change effective date - npch?',
-    'long_descr' : 'Allow change of effective date - non-inventory purchases?',
-    'col_head'   : 'Eff date npch',
-    'key_field'  : 'N',
-    'data_source': 'input',
-    'condition'  : None,
-    'allow_null' : True,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : 'false',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
+# cols.append ({
+#     'col_name'   : 'eff_date_nsls',
+#     'data_type'  : 'BOOL',
+#     'short_descr': 'Change effective date - nsls?',
+#     'long_descr' : 'Allow change of effective date - non-inventory sales?',
+#     'col_head'   : 'Eff date nsls',
+#     'key_field'  : 'N',
+#     'data_source': 'input',
+#     'condition'  : None,
+#     'allow_null' : True,
+#     'allow_amend': True,
+#     'max_len'    : 0,
+#     'db_scale'   : 0,
+#     'scale_ptr'  : None,
+#     'dflt_val'   : 'false',
+#     'dflt_rule'  : None,
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
+# cols.append ({
+#     'col_name'   : 'eff_date_npch',
+#     'data_type'  : 'BOOL',
+#     'short_descr': 'Change effective date - npch?',
+#     'long_descr' : 'Allow change of effective date - non-inventory purchases?',
+#     'col_head'   : 'Eff date npch',
+#     'key_field'  : 'N',
+#     'data_source': 'input',
+#     'condition'  : None,
+#     'allow_null' : True,
+#     'allow_amend': True,
+#     'max_len'    : 0,
+#     'db_scale'   : 0,
+#     'scale_ptr'  : None,
+#     'dflt_val'   : 'false',
+#     'dflt_rule'  : None,
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
 cols.append ({
     'col_name'   : 'allow_alloc_rec',
     'data_type'  : 'BOOL',
@@ -401,34 +401,6 @@ virt.append ({
         ),
     })
 virt.append ({
-    'col_name'   : 'nsls_group_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Nsls group',
-    'long_descr' : 'Return nsls group row id if there is only one, else None',
-    'col_head'   : 'Nsls grp',
-    'sql'        : (
-        "CASE "
-            "WHEN (SELECT COUNT(*) FROM {company}.sls_nsls_groups "
-                "WHERE deleted_id = 0) = 1 THEN "
-                "(SELECT row_id FROM {company}.sls_nsls_groups WHERE deleted_id = 0) "
-        "END"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'npch_group_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Npch group',
-    'long_descr' : 'Return npch group row id if there is only one, else None',
-    'col_head'   : 'Npch grp',
-    'sql'        : (
-        "CASE "
-            "WHEN (SELECT COUNT(*) FROM {company}.pch_npch_groups "
-                "WHERE deleted_id = 0) = 1 THEN "
-                "(SELECT row_id FROM {company}.pch_npch_groups WHERE deleted_id = 0) "
-        "END"
-        ),
-    })
-virt.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
     'short_descr': 'Currency',
@@ -509,6 +481,34 @@ virt.append ({
             "WHEN (SELECT COUNT(*) FROM {company}.adm_tax_cats "
                 "WHERE deleted_id = 0) = 1 THEN "
                 "(SELECT row_id FROM {company}.adm_tax_cats WHERE deleted_id = 0) "
+        "END"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'nsls_ledger_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Nsls ledger',
+    'long_descr' : 'Return nsls ledger id if there is only one, else None',
+    'col_head'   : 'Nsls ledger',
+    'sql'        : (
+        "CASE "
+            "WHEN (SELECT COUNT(*) FROM {company}.nsls_ledger_params "
+                "WHERE deleted_id = 0) = 1 THEN "
+                "(SELECT row_id FROM {company}.nsls_ledger_params WHERE deleted_id = 0) "
+        "END"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'npch_ledger_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Npch ledger',
+    'long_descr' : 'Return npch ledger id if there is only one, else None',
+    'col_head'   : 'Npch ledger',
+    'sql'        : (
+        "CASE "
+            "WHEN (SELECT COUNT(*) FROM {company}.npch_ledger_params "
+                "WHERE deleted_id = 0) = 1 THEN "
+                "(SELECT row_id FROM {company}.npch_ledger_params WHERE deleted_id = 0) "
         "END"
         ),
     })

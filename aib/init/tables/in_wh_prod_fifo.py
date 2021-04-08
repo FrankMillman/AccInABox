@@ -117,7 +117,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['pch_ipch_subtran', 'row_id', None, None, False, None],
+    'fkey'       : ['pch_subtran', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({

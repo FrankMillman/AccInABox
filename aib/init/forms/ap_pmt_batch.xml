@@ -124,9 +124,9 @@
           <cur_col col_name="supp_row_id>currency_id>symbol" lng="40" readonly="true"
           if="[[`if`, ``, `_ledger.currency_id`, `is`, `$None`, ``]]"/>
           <cur_col col_name="supp_row_id>location_id" lng="60" readonly="true"
-          if="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
+          if="[[`if`, ``, `_ledger.valid_loc_ids>is_leaf`, `is`, `$False`, ``]]"/>
           <cur_col col_name="supp_row_id>function_id" lng="60" readonly="true"
-          if="[[`if`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
+          if="[[`if`, ``, `_ledger.valid_fun_ids>is_leaf`, `is`, `$False`, ``]]"/>
           <cur_col col_name="due_amt" lng="100" readonly="true"/>
           <cur_col col_name="authorised" lng="60" after="
             <<pyfunc name=`custom.aptrans_funcs.on_pmt_auth`/>>

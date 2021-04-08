@@ -227,8 +227,8 @@ async def ledger_updated(db_obj, xml):
         module_row_id = db_obj.db_table.module_row_id
         if module_row_id in ledger_params[company]:
             ledger_row_id = await db_obj.getval('row_id')
-            if ledger_row_id in ledger_params[company][module_row_id]:
-                async with ledg_param_lock:
+            async with ledg_param_lock:
+                if ledger_row_id in ledger_params[company][module_row_id]:
                     del ledger_params[company][module_row_id][ledger_row_id]  # force re-build on next call to get
 
 # callback on change of gl_params.actions.after_commit
@@ -333,6 +333,55 @@ async def ledger_inserted(db_obj, xml):
         await menu.setval('module_row_id', module_row_id)
         await menu.setval('ledger_row_id', ledger_row_id)
         await menu.save()
+
+    if module_id == 'nsls':  # set up top-level 'group'
+        context = db_obj.context
+        # context._ledger_row_id = ledger_row_id
+
+        sls_table = await db.objects.get_db_object(context, 'db_tables')
+        await sls_table.setval('table_name', 'nsls_groups')
+        tree_params = await sls_table.getval('tree_params')
+        group, col_names, levels = tree_params
+        type_colname, level_types, sublevel_type = levels
+        level_types[ledger_row_id] = [['ledg', 'Ledger']]
+        await sls_table.setval('tree_params', tree_params)
+        await sls_table.save()
+        table_key = (context.company.lower(), 'nsls_groups')
+        if table_key in db.objects.tables_open:
+            db_table = db.objects.tables_open[table_key]
+            db_table.tree_params = tree_params
+
+        sls_group = await db.objects.get_db_object(context, 'nsls_groups')
+        await sls_group.setval('ledger_row_id', ledger_row_id)
+        await sls_group.setval('nsls_group', ledger_id)
+        await sls_group.setval('descr', f'All {ledger_id} codes')
+        await sls_group.setval('group_type', 'ledg')
+        await sls_group.setval('parent', 'all')
+        await sls_group.save()
+    elif module_id == 'npch':  # set up top-level 'group'
+        context = db_obj.context
+        context._ledger_row_id = ledger_row_id
+
+        pch_table = await db.objects.get_db_object(context, 'db_tables')
+        await pch_table.setval('table_name', 'npch_groups')
+        tree_params = await pch_table.getval('tree_params')
+        group, col_names, levels = tree_params
+        type_colname, level_types, sublevel_type = levels
+        level_types[ledger_row_id] = [['ledg', 'Ledger']]
+        await pch_table.setval('tree_params', tree_params)
+        await pch_table.save()
+        table_key = (context.company.lower(), 'npch_groups')
+        if table_key in db.objects.tables_open:
+            db_table = db.objects.tables_open[table_key]
+            db_table.tree_params = tree_params
+
+        pch_group = await db.objects.get_db_object(context, 'npch_groups')
+        await pch_group.setval('ledger_row_id', await db_obj.getval('row_id'))
+        await pch_group.setval('npch_group', ledger_id)
+        await pch_group.setval('descr', f'All {ledger_id} codes')
+        await pch_group.setval('group_type', 'ledg')
+        await pch_group.setval('parent', 'all')
+        await pch_group.save()
 
 # callback to update menu on client if changed
 # called from various {mod}_ledger_new.xml on_close_form

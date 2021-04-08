@@ -257,7 +257,7 @@ cols.append ({
     'col_name'   : 'disc_net_amt',
     'data_type'  : '$TRN',
     'short_descr': 'Discount net amount',
-    'long_descr' : 'Discount net amount in transaction currency - updated from sls_nsls_subtran',
+    'long_descr' : 'Discount net amount in transaction currency - updated from nsls_subtran',
     'col_head'   : 'Disc net amt',
     'key_field'  : 'N',
     'data_source': 'ret_sub',
@@ -277,7 +277,7 @@ cols.append ({
     'col_name'   : 'disc_tax_amt',
     'data_type'  : '$TRN',
     'short_descr': 'Discount tax amount',
-    'long_descr' : 'Discount tax amount in transaction currency - updated from sls_nsls_subtran',
+    'long_descr' : 'Discount tax amount in transaction currency - updated from nsls_subtran',
     'col_head'   : 'Disc tax amt',
     'key_field'  : 'N',
     'data_source': 'ret_sub',
@@ -297,7 +297,7 @@ cols.append ({
     'col_name'   : 'disc_tax_local',
     'data_type'  : '$LCL',
     'short_descr': 'Cr note tax local',
-    'long_descr' : 'Cr note tax amount in local currency - updated from sls_nsls_subtran',
+    'long_descr' : 'Cr note tax amount in local currency - updated from nsls_subtran',
     'col_head'   : 'Disc tax local',
     'key_field'  : 'N',
     'data_source': 'ret_sub',
@@ -482,7 +482,7 @@ actions = []
 actions.append([
     'upd_on_save', [
         [
-            'sls_nsls_subtran',  # table name
+            'nsls_subtran',  # table name
             None,  # condition
             False,  # split source?
             [],  # key fields

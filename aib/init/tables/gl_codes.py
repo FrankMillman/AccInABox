@@ -216,6 +216,26 @@ cols.append ({
     'fkey'       : ['adm_functions', 'row_id', 'valid_funs', 'function_id', False, None],
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'ctrl_acc',
+    'data_type'  : 'JSON',
+    'short_descr': 'Control account',
+    'long_descr' : 'If this code is a control account, [module_row_id, ledger_row_id, bal/tot/uea/uex]',
+    'col_head'   : 'Ctrl',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': [['where', '', '$value', 'is', '$None', '']],
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 # cols.append ({
 #     'col_name'   : 'category',
 #     'data_type'  : 'TEXT',
@@ -248,23 +268,31 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'ctrl_acc',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Control account?',
-    'long_descr' : 'Is this code a control account code?',
-    'col_head'   : '',
-    'sql'        : (
-        "SELECT CASE WHEN EXISTS "
-            "(SELECT * FROM ("
-                "SELECT gl_code_id from {company}.ar_ledger_params "
-                "UNION SELECT gl_code_id from {company}.ap_ledger_params "
-                "UNION SELECT gl_code_id from {company}.cb_ledger_params "
-                "UNION SELECT gl_code_id from {company}.in_ledger_params "
-            ") AS t WHERE t.gl_code_id = a.row_id) "
-        "THEN $True ELSE $False END"
-        ),
-    })
+# virt.append ({
+#     'col_name'   : 'ctrl_acc',
+#     'data_type'  : 'BOOL',
+#     'short_descr': 'Control account?',
+#     'long_descr' : 'Is this code a control account code?',
+#     'col_head'   : '',
+#     'sql'        : (
+#         "SELECT CASE WHEN EXISTS "
+#             "(SELECT * FROM ("
+#                 "SELECT gl_code_id from {company}.ar_ledger_params "
+#                 # "UNION SELECT gl_rec_code_id AS gl_code_id from {company}.ar_ledger_params "
+#                 "UNION SELECT gl_code_id from {company}.ap_ledger_params "
+#                 # "UNION SELECT gl_pmt_code_id AS gl_code_id from {company}.ap_ledger_params "
+#                 "UNION SELECT gl_code_id from {company}.cb_ledger_params "
+#                 "UNION SELECT gl_code_id from {company}.in_ledger_params "
+#                 "UNION SELECT gl_code_id from {company}.nsls_ledger_params "
+#                 "UNION SELECT gl_code_id from {company}.npch_ledger_params "
+#                 # "UNION SELECT uea_gl_code_id AS gl_code_id from {company}.nsls_codes "
+#                 #     "WHERE uea_gl_code_id IS NOT NULL "
+#                 # "UNION SELECT uex_gl_code_id AS gl_code_id from {company}.npch_codes "
+#                 #     "WHERE uex_gl_code_id IS NOT NULL "
+#             ") AS codes WHERE codes.gl_code_id = a.row_id) "
+#         "THEN $True ELSE $False END"
+#         ),
+#     })
 
 # cursor definitions
 cursors = []

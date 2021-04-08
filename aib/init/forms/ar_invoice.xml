@@ -143,7 +143,7 @@
         <input obj_name="ar_inv" col_name="cust_id" lng="80"/>
         <display obj_name="ar_inv" col_name="cust_row_id>party_row_id>display_name" lng="160"/>
 
-        <if test="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$True`, ``]]"/>
+        <if test="[[`if`, ``, `_ledger.valid_loc_ids>is_leaf`, `is`, `$False`, ``]]"/>
 
         <row/>
         <col/>
@@ -160,7 +160,7 @@
 
         <end_if/>
 
-        <if test="[[`if`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$True`, ``]]"/>
+        <if test="[[`if`, ``, `_ledger.valid_fun_ids>is_leaf`, `is`, `$False`, ``]]"/>
 
         <row/>
         <col/>

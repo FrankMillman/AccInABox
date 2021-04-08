@@ -284,7 +284,7 @@ virt = []
 #     'long_descr' : 'If table is empty, this is the first row',
 #     'col_head'   : '',
 #     'sql'        : "SELECT CASE WHEN EXISTS(SELECT * FROM {company}.sys_menu_defns WHERE deleted_id = 0) "
-#                    "THEN 0 ELSE 1 END",
+#                    "THEN $False ELSE $True END",
 #     })
 virt.append ({
     'col_name'   : 'children',
@@ -296,12 +296,12 @@ virt.append ({
                    "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
     })
 virt.append ({
-    'col_name'   : 'expandable',
+    'col_name'   : 'is_leaf',
     'data_type'  : 'BOOL',
-    'short_descr': 'Expandable?',
-    'long_descr' : 'Is this node expandable?',
+    'short_descr': 'Is leaf node?',
+    'long_descr' : 'Is this node a leaf node?',
     'col_head'   : '',
-    'sql'        : "SELECT CASE WHEN a.opt_type = 'menu' THEN $True ELSE $False END",
+    'sql'        : "SELECT CASE WHEN a.opt_type = 'menu' THEN $False ELSE $True END",
     })
 
 # cursor definitions

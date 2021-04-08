@@ -264,6 +264,26 @@ cols.append ({
     'fkey'       : ['adm_functions', 'row_id', 'valid_funs', 'function_id', False, None],
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'link_to_subledg',
+    'data_type'  : 'JSON',
+    'short_descr': 'Link to nsls/npch sub-ledger',
+    'long_descr' : 'Link to nsls/npch sub-ledger',
+    'col_head'   : 'Link to nsls/npch sub-ledger',
+    'key_field'  : 'N',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []
@@ -277,12 +297,12 @@ virt.append ({
                    "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
     })
 virt.append ({
-    'col_name'   : 'expandable',
+    'col_name'   : 'is_leaf',
     'data_type'  : 'BOOL',
-    'short_descr': 'Expandable?',
-    'long_descr' : 'Expandable? - Can be over-ridden at run-time in db.objects if levels added',
+    'short_descr': 'Is leaf node?',
+    'long_descr' : 'Is this node a leaf node? Over-ridden at run-time in db.objects if levels added.',
     'col_head'   : '',
-    'sql'        : '$False',
+    'sql'        : '$True',
     })
 
 # cursor definitions

@@ -219,7 +219,7 @@ cols.append ({
             'Multiple locations not allowed',
             [
                 ['check', '', '$value', 'is', '$False', ''],
-                ['or', '', 'valid_loc_ids>expandable', 'is', '$True', ''],
+                ['or', '', 'valid_loc_ids>is_leaf', 'is', '$False', ''],
                 ],
             ],
         ],
@@ -296,7 +296,7 @@ cols.append ({
             'Multiple functions not allowed',
             [
                 ['check', '', '$value', 'is', '$False', ''],
-                ['or', '', 'valid_fun_ids>expandable', 'is', '$True', ''],
+                ['or', '', 'valid_fun_ids>is_leaf', 'is', '$False', ''],
                 ],
             ],
         ],
@@ -500,7 +500,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['sls_nsls_codes', 'row_id', 'discount_code', 'nsls_code', False, 'nsls_codes'],
+    'fkey'       : ['nsls_codes', 'row_id', 'disc_ledg, disc_code', 'ledger_id, nsls_code', False, 'nsls_codes'],
     'choices'    : None,
     })
 cols.append ({
@@ -717,7 +717,14 @@ actions.append([
         ],
     ])
 actions.append([
-    'after_insert', '<pyfunc name="db.cache.ledger_inserted"/>'
+    'after_insert',(
+        '<pyfunc name="db.cache.ledger_inserted"/>'
+        '<case>'
+            '<compare test="[[`check`, ``, `_param.gl_integration`, `is`, `$True`, ``]]">'
+                '<pyfunc name="custom.gl_funcs.setup_ctrl"/>'
+            '</compare>'
+        '</case>'
+        )
     ])
 actions.append([
     'after_commit', '<pyfunc name="db.cache.ledger_updated"/>'

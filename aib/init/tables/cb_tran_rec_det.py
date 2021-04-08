@@ -7,13 +7,13 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['isls', 'Sale of inventory item', 'sls_isls_subtran',
+            ['isls', 'Sale of inventory item', 'sls_subtran',
                 [  # return values
                     ['rec_tran', 'tot_amt'],  # tgt_col, src_col
                     ],
                 ['wh_prod_row_id>prod_row_id>prod_code'],  # display descr
                 ],
-            ['nsls', 'Sale of non-inventory item', 'sls_nsls_subtran',
+            ['nsls', 'Sale of non-inventory item', 'nsls_subtran',
                 [  # return values
                     ['rec_tran', 'tot_amt'],  # tgt_col, src_col
                     ],

@@ -236,7 +236,7 @@ async def nexist(db_obj, fld, src_val, tgt_val):
         f'SELECT CASE WHEN EXISTS('
         f'SELECT * FROM {db_obj.company}.{tgt_tbl} '
         f'WHERE {tgt_col} = {db_obj.db_table.constants.param_style}'
-        f') THEN 1 ELSE 0 END'
+        f') THEN $True ELSE $False END'
         )
     params = (src_val,)
 

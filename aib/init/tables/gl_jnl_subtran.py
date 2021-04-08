@@ -149,7 +149,7 @@ cols.append ({
             'ctrl_acc',
             'Control account - no posting allowed',
             [
-                ['check', '', 'gl_code_id>ctrl_acc', 'is', '$False', ''],
+                ['check', '', 'gl_code_id>ctrl_acc', 'is', '$None', ''],
                 ],
             ],
         ],
@@ -193,7 +193,7 @@ cols.append ({
     'dflt_val'   : '{_param.location_row_id}',
     'dflt_rule'  : (
         '<case>'
-          '<compare test="[[`if`, ``, `gl_code_id>valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
+          '<compare test="[[`if`, ``, `gl_code_id>valid_loc_ids>is_leaf`, `is`, `$True`, ``]]">'
             '<fld_val name="gl_code_id>valid_loc_ids"/>'
           '</compare>'
           '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ar~`, ``]]">'
@@ -239,7 +239,7 @@ cols.append ({
     'dflt_val'   : '{_param.function_row_id}',
     'dflt_rule'  : (
         '<case>'
-          '<compare test="[[`if`, ``, `gl_code_id>valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
+          '<compare test="[[`if`, ``, `gl_code_id>valid_fun_ids>is_leaf`, `is`, `$True`, ``]]">'
             '<fld_val name="gl_code_id>valid_fun_ids"/>'
           '</compare>'
           '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ar~`, ``]]">'

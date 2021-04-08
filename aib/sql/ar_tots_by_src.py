@@ -1,10 +1,10 @@
-def get_sql(cte, params, company, conn, ledger_id):
+def get_sql(cte, params, company, conn, ledger_row_id):
 
     common = f"""
             (
             SELECT a.source_code_id, SUM(a.tran_tot) AS cl_tot FROM 
                 (
-                SELECT source_code_id, tran_date, tran_tot, 
+                SELECT source_code_id, tran_tot, 
                 ROW_NUMBER() OVER (PARTITION BY ledger_row_id, location_row_id, 
                 function_row_id, source_code_id 
                 ORDER BY tran_date DESC) row_num 
@@ -18,7 +18,7 @@ def get_sql(cte, params, company, conn, ledger_id):
             (
             SELECT a.source_code_id, SUM(a.tran_tot) AS op_tot FROM 
                 (
-                SELECT source_code_id, tran_date, tran_tot, 
+                SELECT source_code_id, tran_tot, 
                 ROW_NUMBER() OVER (PARTITION BY ledger_row_id, location_row_id, 
                 function_row_id, source_code_id 
                 ORDER BY tran_date DESC) row_num 
@@ -46,7 +46,7 @@ def get_sql(cte, params, company, conn, ledger_id):
             ELSE 0 END)
         """
     chg = """
-        SUM(CASE WHEN b.source_code = 'ar_chg' THEN
+        SUM(CASE WHEN b.source_code in ('ar_chg_cb', 'ar_chg_ap') THEN
             COALESCE(cl_bal.cl_tot, 0) - COALESCE(op_bal.op_tot, 0)
             ELSE 0 END)
         """
@@ -56,7 +56,7 @@ def get_sql(cte, params, company, conn, ledger_id):
             ELSE 0 END)
         """
     rec = """
-        SUM(CASE WHEN b.source_code = 'ar_rec' THEN
+        SUM(CASE WHEN b.source_code in ('ar_rec_cb', 'ar_rec_ar') THEN
             COALESCE(cl_bal.cl_tot, 0) - COALESCE(op_bal.op_tot, 0)
             ELSE 0 END)
         """
@@ -85,7 +85,7 @@ def get_sql(cte, params, company, conn, ledger_id):
             FROM dates
             ORDER BY dates.op_date
             """
-        params += (ledger_id, ledger_id) * 8
+        params += (ledger_row_id, ledger_row_id) * 8
     elif conn.servertype == 'pgsql':
         sql = cte + f"""
             SELECT 
@@ -110,7 +110,7 @@ def get_sql(cte, params, company, conn, ledger_id):
             ON true
             ORDER BY dates.op_date
             """
-        params += (ledger_id, ledger_id)
+        params += (ledger_row_id, ledger_row_id)
     elif conn.servertype == 'mssql':
         sql = cte + f"""
             SELECT 
@@ -134,8 +134,8 @@ def get_sql(cte, params, company, conn, ledger_id):
                 ) AS a
             ORDER BY dates.op_date
             """
-        params += (ledger_id, ledger_id)
+        params += (ledger_row_id, ledger_row_id)
 
-    fmt = '{:%d-%m} - {:%d-%m} : {:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}'
+    fmt = '{:%d-%m}/{:%d-%m} : {:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}'
 
     return sql, params, fmt

@@ -8,7 +8,7 @@ async def get_sql(cte, params, company, conn, locations):
                 ROW_NUMBER() OVER (PARTITION BY a.nsls_code_id, a.location_row_id, 
                 a.function_row_id, a.source_code_id 
                 ORDER BY a.tran_date DESC) row_num 
-                FROM {company}.sls_nsls_totals a
+                FROM {company}.nsls_totals a
                 JOIN {company}.adm_locations b ON b.row_id = a.location_row_id
                 WHERE a.deleted_id = 0 AND a.tran_date <= dates.cl_date
                 ) AS a 
@@ -23,7 +23,7 @@ async def get_sql(cte, params, company, conn, locations):
                 ROW_NUMBER() OVER (PARTITION BY a.nsls_code_id, a.location_row_id, 
                 a.function_row_id, a.source_code_id 
                 ORDER BY a.tran_date DESC) row_num 
-                FROM {company}.sls_nsls_totals a
+                FROM {company}.nsls_totals a
                 JOIN {company}.adm_locations b ON b.row_id = a.location_row_id
                 WHERE a.deleted_id = 0 AND a.tran_date < dates.op_date
                 ) AS a 
@@ -91,6 +91,6 @@ async def get_sql(cte, params, company, conn, locations):
             ORDER BY dates.op_date
             """
 
-    fmt = f"{{:%d-%m}} - {{:%d-%m}} : {'{:>12.2f}' * len(locations)}{{:>12.2f}}"
+    fmt = f"{{:%d-%m}}/{{:%d-%m}} : {'{:>10.2f}' * len(locations)}{{:>12.2f}}"
 
     return sql, params, fmt

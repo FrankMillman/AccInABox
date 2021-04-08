@@ -235,6 +235,32 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'balance',
+    'data_type'  : '$LCL',
+    'short_descr': 'Running balance',
+    'long_descr' : 'Running balance',
+    'col_head'   : 'Balance',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        """
+        (SELECT SUM(c.tran_tot) FROM (
+            SELECT b.tran_tot, ROW_NUMBER() OVER (PARTITION BY
+                b.gl_code_id, b.location_row_id, b.function_row_id, b.source_code_id
+                ORDER BY b.tran_date DESC) row_num
+            FROM {company}.gl_totals b
+            WHERE b.deleted_id = 0
+            AND b.gl_code_id = a.gl_code_id
+            AND b.location_row_id = a.location_row_id
+            AND b.function_row_id = a.function_row_id
+            ) as c
+            WHERE c.row_num = 1
+            )
+        """
+        ),
+    })
 
 # cursor definitions
 cursors = []

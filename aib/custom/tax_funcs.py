@@ -152,24 +152,24 @@ async def calc_tax(db_obj, conn, return_vals):
             db_obj.company, split_name, table_defn=etree.fromstring(split_defn))
     split_obj = db_obj.context.data_objects[split_name]
 
-    if 'isls' in db_obj.table_name:
+    if db_obj.table_name == 'sls_subtran':
         tax_code_table = 'in_prod_tax_codes'
         tax_code_key = 'prod_row_id'
         tax_code_src = 'wh_prod_row_id>prod_row_id'
         inv_amt = await db_obj.getval('isls_amount')
-    elif 'nsls' in db_obj.table_name:
-        tax_code_table = 'sls_nsls_tax_codes'
-        tax_code_key = 'nsls_row_id'
+    elif db_obj.table_name == 'nsls_subtran':
+        tax_code_table = 'nsls_tax_codes'
+        tax_code_key = 'nsls_code_id'
         tax_code_src = 'nsls_code_id'
         inv_amt = await db_obj.getval('nsls_amount')
-    elif 'ipch' in db_obj.table_name:
+    elif db_obj.table_name == 'pch_subtran':
         tax_code_table = 'in_prod_tax_codes'
         tax_code_key = 'prod_row_id'
         tax_code_src = 'wh_prod_row_id>prod_row_id'
         inv_amt = await db_obj.getval('ipch_amount')
-    elif 'npch' in db_obj.table_name:
-        tax_code_table = 'pch_npch_tax_codes'
-        tax_code_key = 'npch_row_id'
+    elif db_obj.table_name == 'npch_subtran':
+        tax_code_table = 'npch_tax_codes'
+        tax_code_key = 'npch_code_id'
         tax_code_src = 'npch_code_id'
         inv_amt = await db_obj.getval('npch_amount')
     else:

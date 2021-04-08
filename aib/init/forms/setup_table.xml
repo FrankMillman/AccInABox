@@ -52,6 +52,8 @@
         long_descr="Description column name" allow_amend="true"/>
       <mem_col col_name="parent" data_type="TEXT" short_descr="Parent column name"
         long_descr="Parent column name" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="seq" data_type="TEXT" short_descr="Sequence column name"
+        long_descr="Sequence column name" allow_null="true" allow_amend="true"/>
       <mem_col col_name="level_1" data_type="TEXT" short_descr="Level 1"
         long_descr="Level 1" allow_null="true" allow_amend="true"/>
       <mem_col col_name="level_2" data_type="TEXT" short_descr="Level 2"
@@ -530,6 +532,11 @@
         <input obj_name="tree_params" col_name="parent" lng="200"/>
         <row/>
         <col/>
+        <label value="Sequence:"/>
+        <col/>
+        <input obj_name="tree_params" col_name="seq" lng="200"/>
+        <row/>
+        <col/>
         <label value="Level 1:"/>
         <col/>
         <input obj_name="tree_params" col_name="level_1" lng="200"/>
@@ -683,8 +690,8 @@
         <grid data_object="source_keys" growable="false" num_grid_rows="6">
           <toolbar template="Grid" title="References:"/>
           <cur_columns>
-            <cur_col col_name="src_col" lng="100" readonly="true"/>
-            <cur_col col_name="tgt_tbl" lng="100" readonly="true"/>
+            <cur_col col_name="src_col" lng="150" readonly="true"/>
+            <cur_col col_name="tgt_tbl" lng="150" readonly="true"/>
             <cur_col col_name="tgt_col" lng="100" readonly="true"/>
             <cur_col col_name="alt_src" lng="100" readonly="true"/>
             <cur_col col_name="alt_tgt" lng="100" readonly="true"/>
@@ -699,8 +706,8 @@
         <grid data_object="target_keys" growable="false" num_grid_rows="6">
           <toolbar template="Grid" title="Referenced by:"/>
           <cur_columns>
-            <cur_col col_name="src_tbl" lng="100" readonly="true"/>
-            <cur_col col_name="src_col" lng="100" readonly="true"/>
+            <cur_col col_name="src_tbl" lng="150" readonly="true"/>
+            <cur_col col_name="src_col" lng="150" readonly="true"/>
             <cur_col col_name="tgt_col" lng="100" readonly="true"/>
             <cur_col col_name="child" lng="80" readonly="true"/>
           </cur_columns>

@@ -200,12 +200,12 @@ virt.append ({
                    "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
     })
 virt.append ({
-    'col_name'   : 'expandable',
+    'col_name'   : 'is_leaf',
     'data_type'  : 'BOOL',
-    'short_descr': 'Expandable?',
-    'long_descr' : 'Expandable? - Can be over-ridden at run-time in db.objects if levels added',
+    'short_descr': 'Is leaf node?',
+    'long_descr' : 'Is this node a leaf node? Over-ridden at run-time in db.objects if levels added.',
     'col_head'   : '',
-    'sql'        : '$False',
+    'sql'        : '$True',
     })
 
 

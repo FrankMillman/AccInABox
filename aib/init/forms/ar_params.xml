@@ -22,12 +22,12 @@
 
       <block/>
       <panel/>
-      <if test="[[`if`, ``, `_param.location_id`, `is`, `$None`, ``]]"/>
+      <if test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``]]"/>
       <row/>
       <col/>
       <label value="Location"/>
       <col/>
-      <input obj_name="ledger" col_name="location" lng="60"/>
+      <input obj_name="ledger" col_name="valid_locs" lng="60"/>
       <end_if/>
       <if test="[[`if`, ``, `_param.currency_id`, `is`, `$None`, ``]]"/>
       <row/>
@@ -36,13 +36,13 @@
       <col/>
       <input obj_name="ledger" col_name="currency" lng="60"/>
       <end_if/>
-      <if test="[[`if`, ``, `_param.separate_stat_close`, `is`, `$True`, ``]]"/>
+      <!--if test="[[`if`, ``, `_param.separate_stat_close`, `is`, `$True`, ``]]"/>
       <row/>
       <col/>
       <label value="Statement date parameter:"/>
       <col/>
       <input obj_name="ledger" col_name="stmt_date" lng="84"/>
-      <end_if/>
+      <end_if/-->
       <row/>
       <col/>
       <label value="Alternative currencies?"/>

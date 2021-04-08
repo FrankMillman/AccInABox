@@ -532,36 +532,13 @@ cursors = []
 
 # actions
 actions = []
-# actions.append([
-#     'upd_on_save', [
-#         [
-#             'ap_allocations',
-#             [  # condition
-#                 ['where', '', '_ledger.auto_alloc_oldest', 'is', '$True', ''],
-#                 ['and', '', '$in_db_post', 'is', '$False', ''],
-#                 ],
-
-#             True,  # split source?
-
-#             'custom.aptrans_funcs.alloc_oldest',  # function to populate table
-
-#             [  # fkey to this table
-#                 ['tran_row_id', 'row_id'],  # tgt_col, src_col
-#                 ],
-
-#             ['item_row_id', 'alloc_supp'],  # fields to be updated
-
-#             [],  # return values
-
-#             [],  # check totals
-#             ],
-#         ],
-#     ])
 actions.append([
     'upd_on_post', [
         [
             'ap_openitems',  # table name
-            None,  # condition
+            [  # condition
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ],
             False,  # split source?
             [  # key fields
                 ['split_no', '0'],  # tgt_col, src_col
@@ -583,7 +560,8 @@ actions.append([
         [
             'ap_allocations',
             [  # condition
-                ['where', '', '_ctx.tot_alloc_supp', 'pyfunc', 'custom.aptrans_funcs.get_tot_alloc', ''],
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['and', '', '_ctx.tot_alloc_supp', 'pyfunc', 'custom.aptrans_funcs.get_tot_alloc', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -599,7 +577,8 @@ actions.append([
         [
             'ap_tran_disc',
             [  # condition
-                ['where', '', '_ctx.tot_disc_supp', '!=', '0', ''],
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['and', '', '_ctx.tot_disc_supp', '!=', '0', ''],
                 ],
             False,  # split source?
             [  # key fields

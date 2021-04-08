@@ -135,7 +135,7 @@ cols.append ({
     'col_head'   : 'Loc',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.valid_loc_ids>expandable', 'is', '$False', '']],
+    'condition'  : [['where', '', '_ledger.valid_loc_ids>is_leaf', 'is', '$True', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -144,7 +144,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare test="[[`if`, ``, `_ledger.valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
+          '<compare test="[[`if`, ``, `_ledger.valid_loc_ids>is_leaf`, `is`, `$True`, ``]]">'
             '<fld_val name="_ledger.valid_loc_ids"/>'
           '</compare>'
           '<compare test="[[`if`, ``, `_ledger.multiple_locations`, `is`, `$False`, ``]]">'
@@ -181,7 +181,7 @@ cols.append ({
     'col_head'   : 'Fun',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.valid_fun_ids>expandable', 'is', '$False', '']],
+    'condition'  : [['where', '', '_ledger.valid_fun_ids>is_leaf', 'is', '$True', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -190,7 +190,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare test="[[`if`, ``, `_ledger.valid_fun_ids>expandable`, `is`, `$False`, ``]]">'
+          '<compare test="[[`if`, ``, `_ledger.valid_fun_ids>is_leaf`, `is`, `$True`, ``]]">'
             '<fld_val name="_ledger.valid_fun_ids"/>'
           '</compare>'
           '<compare test="[[`if`, ``, `_ledger.multiple_functions`, `is`, `$False`, ``]]">'
@@ -726,10 +726,10 @@ cursors.append({
             ['if', '', '_ledger.currency_id', 'is', '$None', '']
             ]],
         ['location_row_id>location_id', 60, False, True, [
-            ['if', '', '_ledger.valid_loc_ids>expandable', 'is', '$True', '']
+            ['if', '', '_ledger.valid_loc_ids>is_leaf', 'is', '$Falsee', '']
             ]],
         ['function_row_id>function_id', 60, False, True, [
-            ['if', '', '_ledger.valid_fun_ids>expandable', 'is', '$True', '']
+            ['if', '', '_ledger.valid_fun_ids>is_leaf', 'is', '$False', '']
             ]],
         ],
     'filter': [],
@@ -746,10 +746,10 @@ cursors.append({
             ['if', '', '_ledger.currency_id', 'is', '$None', '']
             ]],
         ['location_row_id>location_id', 60, False, True, [
-            ['if', '', '_ledger.valid_loc_ids>expandable', 'is', '$True', '']
+            ['if', '', '_ledger.valid_loc_ids>is_leaf', 'is', '$False', '']
             ]],
         ['function_row_id>function_id', 60, False, True, [
-            ['if', '', '_ledger.valid_fun_ids>expandable', 'is', '$True', '']
+            ['if', '', '_ledger.valid_fun_ids>is_leaf', 'is', '$False', '']
             ]],
         ['balance_cus', 100, False, True],
         ['balance_loc', 100, False, True],
@@ -768,10 +768,10 @@ cursors.append({
             ['if', '', '_ledger.currency_id', 'is', '$None', '']
             ]],
         ['location_row_id>location_id', 60, False, True, [
-            ['if', '', '_ledger.valid_loc_ids>expandable', 'is', '$True', '']
+            ['if', '', '_ledger.valid_loc_ids>is_leaf', 'is', '$False', '']
             ]],
         ['function_row_id>function_id', 60, False, True, [
-            ['if', '', '_ledger.valid_fun_ids>expandable', 'is', '$True', '']
+            ['if', '', '_ledger.valid_fun_ids>is_leaf', 'is', '$False', '']
             ]],
         ['balance', 100, False, True],
         ],

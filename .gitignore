@@ -17,6 +17,7 @@ aib/init/processes/testing
 aib/schemas/testing
 aib/imports/
 aib/ssl/
+aib/test_reports/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

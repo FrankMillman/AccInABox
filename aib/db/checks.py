@@ -5,10 +5,15 @@ async def check_parent_id(db_obj, fld, parent_id):
     # called as col_check from various 'parent_id' fields
     # the col_check is set up dynamically in db.objects.DbTable() by parsing tree_params
 
-    sql = f"""
-        SELECT CASE WHEN EXISTS(SELECT * FROM {db_obj.company}.{db_obj.table_name}
-        WHERE deleted_id = 0) THEN 1 ELSE 0 END
-        """
+    ledger_col = db_obj.db_table.ledger_col
+    if ledger_col is not None:
+        ledger_row_id = await db_obj.getval(ledger_col)
+
+    sql = (
+        f'SELECT CASE WHEN EXISTS(SELECT * FROM {db_obj.company}.{db_obj.table_name} '
+        'WHERE deleted_id = 0) THEN $True ELSE $False END'
+        )
+
     async with db_obj.context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         cur = await conn.exec_sql(sql)
@@ -31,6 +36,9 @@ async def check_parent_id(db_obj, fld, parent_id):
         return True  # no validation required
 
     type_colname, level_types, sublevel_type = levels
+    if ledger_col is not None:  # sub-ledgers have their own groups
+        level_types = level_types[None] + level_types[ledger_row_id]
+
     type_one_level_up = None  # root has no parent
     this_type = await db_obj.getval(type_colname)
     for level_code, level_descr in level_types:
@@ -71,7 +79,7 @@ async def check_parent_id(db_obj, fld, parent_id):
 
 async def valid_loc_id(db_obj, fld, src_val):
     # there are a number of columns with an fkey reference to adm_locations
-    # the fkey is validated in the normal way
+    # the fkey is validated in the normal way - it must exist on adm_locations
 
     # some of these columns have the name 'valid_loc_ids'
     # the validation for these differs - usually, if a referenced table has tree_params with
@@ -85,8 +93,8 @@ async def valid_loc_id(db_obj, fld, src_val):
     # examples -
     #   ar_ledger_params uses 'valid_loc_ids' to control 'location_id' in ar_customers
     #   ap_ledger_params uses 'valid_loc_ids' to control 'location_id' in ap_suppliers
-    #   sls_nsls_codes uses 'valid_loc_ids' to control 'location_id' in sls_nsls_subtran
-    #   pch_npch_codes uses 'valid_loc_ids' to control 'location_id' in pch_npch_subtran
+    #   nsls_codes uses 'valid_loc_ids' to control 'location_id' in nsls_subtran
+    #   npch_codes uses 'valid_loc_ids' to control 'location_id' in npch_subtran
     #   gl_groups uses 'valid_loc_ids' to control 'location_id' in gl_codes
     #   gl_codes uses 'valid_loc_ids' to control 'location_id' in several tables if gl_integration is True
 
@@ -94,7 +102,7 @@ async def valid_loc_id(db_obj, fld, src_val):
     # they pass as an argument the column name to be used to perform the validation
     # examples -
     #   ar_customers passes 'ledger_row_id' as an argument
-    #   sls_nsls_subtran passes 'nsls_code_id' as an argument
+    #   nsls_subtran passes 'nsls_code_id' as an argument
     #   the various 'gl' tables pass 'gl_code_id' as an argument
 
     # this function takes the argument and retrieves the value of 'valid_loc_ids'
@@ -116,7 +124,7 @@ async def valid_loc_id(db_obj, fld, src_val):
     #     6     w cape      prov             1        1       6       -
     #     8     pretoria    town             5        1       5       8
     #     12    benoni      town             5        1       5       12
-    #     15    knysna      town             6        1       6       16
+    #     15    knysna      town             6        1       6       15
     #   ar_ledger_params could have 'valid_loc_ids' of 5, meaning all customer
     #      location_ids must be in gauteng province
     #   steps to validate a customer location_id (say 12) -
@@ -182,7 +190,7 @@ async def check_not_null(db_obj, fld, value):
     sql = (
         'SELECT CASE WHEN EXISTS'
             '(SELECT * FROM {}.{} WHERE {} IS NULL) '
-        'THEN 1 ELSE 0 END'
+        'THEN $True ELSE $False END'
         .format(db_obj.company, await db_obj.getval('table_name'), await db_obj.getval('col_name'))
         )
     async with db_obj.context.db_session.get_connection() as db_mem_conn:

@@ -128,7 +128,7 @@ cols.append ({
     #         ['cb_pmt', 'cb_tran_pmt_isls'],
     #         ]],
     #     'row_id', None, None, True, None],
-    'fkey'       : ['sls_isls_subtran', 'row_id', None, None, True, None],
+    'fkey'       : ['sls_subtran', 'row_id', None, None, True, None],
     'choices'    : None,
     })
 cols.append ({

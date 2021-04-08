@@ -615,33 +615,20 @@ actions.append([
     'upd_on_post', [
         [
             'ap_openitems',  # table name
-            None,  # condition
+            [  # condition
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ],
 
             True,  # split source?
 
-            'due_dates',  # in-memory object name
-            'List of due dates',  # in-memory object description
-            '<mem_obj>'  # in-memory object definition
-                '<mem_col col_name="due_date" data_type="DTE" short_descr="Due date" '
-                  'long_descr="Due date"/>'
-                '<mem_col col_name="item_type" data_type="TEXT" short_descr="Type" '
-                  'long_descr="Type"/>'
-                '<mem_col col_name="due_supp" data_type="DEC" short_descr="Amount due - supplier" '
-                  'long_descr="Amount due - supplier currency" db_scale="2"/>'
-                '<mem_col col_name="due_local" data_type="DEC" short_descr="Amount due - local" '
-                  'long_descr="Amount due - local currency" db_scale="2"/>'
-            '</mem_obj>',
+            'custom.aptrans_funcs.setup_openitems',  # function to populate table
 
             [  # fkey to this table
                 ['tran_row_id', 'row_id'],  # tgt_col, src_col
                 ],
 
-            [  # fields to update
-                ['item_type', 'due_dates.item_type'],  # tgt_col, src_col
-                ['due_date', 'due_dates.due_date'],
-                ['amount_supp', 'due_dates.due_supp'],
-                ['amount_local', 'due_dates.due_local'],
-                ],
+            ['split_no', 'item_type', 'due_date', 'amount_supp', 'amount_local',
+                'discount_date', 'discount_supp'],  # fields to be updated
 
             [],  # return values
 
@@ -649,9 +636,6 @@ actions.append([
                 ['crn_tot_supp', 'amount_supp'],  # src_col == sum(tgt_col)
                 ['crn_tot_local', 'amount_local']
                 ],
-
-            'custom.aptrans_funcs.setup_openitems',  # function to populate table
-
             ],
 
         [

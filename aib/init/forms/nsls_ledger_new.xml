@@ -1,0 +1,39 @@
+<form name="nsls_ledger_new" title="Set up new nsls ledger" on_close_form="
+  <<pyfunc name=`db.cache.menu_updated`/>>
+  ">
+  <db_objects>
+    <db_obj name="ledger" table_name="nsls_ledger_params"/>
+  </db_objects>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="ledger">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Ledger id:"/>
+      <col/>
+      <input obj_name="ledger" col_name="ledger_id" lng="160" validation="
+        <<validation>>
+          <<case>>
+            <<obj_exists obj_name=`ledger`>>
+              <<init_obj obj_name=`ledger`/>>
+              <<error head=`Parameter` body=`Already exists`/>>
+            <</obj_exists>>
+          <</case>>
+        <</validation>>
+        "/>
+      <row/>
+      <col/>
+      <label value="Description"/>
+      <col/>
+      <input obj_name="ledger" col_name="descr" lng="160"/>
+
+    </body>
+    <button_row template="Setup_Form_Single"/>
+    <frame_methods template="Setup_Form_Single"/>
+  </frame>
+</form>

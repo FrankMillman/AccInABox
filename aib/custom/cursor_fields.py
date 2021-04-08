@@ -1,7 +1,7 @@
 from lxml import etree
 
 # the following are used to map var columns to xml element attributes
-cur_column_cols = ('col_name', 'lng', 'expand', 'readonly', 'skip', 'reverse',
+cur_column_cols = ('col_name', 'lng', 'expand', 'readonly', 'skip',
     'before', 'dflt_val', 'validation', 'after')
 cur_filter_cols = ('test', 'lbr', 'col_name', 'op', 'expr', 'rbr')
 cur_sequence_cols = ('col_name', 'descending')
@@ -159,7 +159,7 @@ async def dump_cur_flds_xml(caller, xml):
     async for _ in all_cols:
         col_xml = etree.SubElement(columns_xml, 'cur_col')
         for col in cur_column_cols:
-            set_if_not_none(col_xml, cur_col, col)
+            await set_if_not_none(col_xml, cur_col, col)
     await cur_vars.setval('cur_columns_xml', columns_xml)
 
     filter_xml = etree.Element('cur_filter')
@@ -167,7 +167,7 @@ async def dump_cur_flds_xml(caller, xml):
     async for _ in all_filter:
         fil_xml = etree.SubElement(filter_xml, 'cur_fil')
         for col in cur_filter_cols:
-            set_if_not_none(fil_xml, cur_fil, col)
+            await set_if_not_none(fil_xml, cur_fil, col)
     await cur_vars.setval('cur_filter_xml', filter_xml)
 
     sequence_xml = etree.Element('cur_sequence')
@@ -175,11 +175,11 @@ async def dump_cur_flds_xml(caller, xml):
     async for _ in all_seq:
         seq_xml = etree.SubElement(sequence_xml, 'cur_seq')
         for col in cur_sequence_cols:
-            set_if_not_none(seq_xml, cur_seq, col)
+            await set_if_not_none(seq_xml, cur_seq, col)
     await cur_vars.setval('cur_sequence_xml', sequence_xml)
 
-def set_if_not_none(elem_xml, db_obj, col_name):
+async def set_if_not_none(elem_xml, db_obj, col_name):
     # create attribute on xml element, but only if not None or default
-    xml_val = db_obj.get_val_for_xml(col_name)  # returns None if None or equal to default
+    xml_val = await db_obj.get_val_for_xml(col_name)  # returns None if None or equal to default
     if xml_val is not None:
         elem_xml.set(col_name, xml_val)

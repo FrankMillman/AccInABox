@@ -166,7 +166,7 @@ cols.append ({
           '</compare>'
           '<compare test="[[`if`, ``, `gl_code_id`, `is not`, `$None`, ``]]">'
             '<case>'
-              '<compare test="[[`if`, ``, `gl_code_id>valid_loc_ids>expandable`, `is`, `$False`, ``]]">'
+              '<compare test="[[`if`, ``, `gl_code_id>valid_loc_ids>is_leaf`, `is`, `$True`, ``]]">'
                 '<fld_val name="gl_code_id>valid_loc_ids"/>'
               '</compare>'
             '</case>'
@@ -193,7 +193,7 @@ cols.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
     'short_descr': 'Currency id',
-    'long_descr' : 'Currency id - if specified, all suppliers will share this currency',
+    'long_descr' : 'Currency id - if specified, all transactions will share this currency',
     'col_head'   : 'Curr',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
@@ -296,7 +296,14 @@ cursors.append({
 # actions
 actions = []
 actions.append([
-    'after_insert', '<pyfunc name="db.cache.ledger_inserted"/>'
+    'after_insert',(
+        '<pyfunc name="db.cache.ledger_inserted"/>'
+        '<case>'
+            '<compare test="[[`check`, ``, `_param.gl_integration`, `is`, `$True`, ``]]">'
+                '<pyfunc name="custom.gl_funcs.setup_ctrl"/>'
+            '</compare>'
+        '</case>'
+        )
     ])
 actions.append([
     'after_commit', '<pyfunc name="db.cache.ledger_updated"/>'

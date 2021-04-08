@@ -219,7 +219,7 @@ cols.append ({
             'Multiple locations not allowed',
             [
                 ['check', '', '$value', 'is', '$False', ''],
-                ['or', '', 'valid_loc_ids>expandable', 'is', '$True', ''],
+                ['or', '', 'valid_loc_ids>is_leaf', 'is', '$False', ''],
                 ],
             ],
         ],
@@ -296,7 +296,7 @@ cols.append ({
             'Multiple functions not allowed',
             [
                 ['check', '', '$value', 'is', '$False', ''],
-                ['or', '', 'valid_fun_ids>expandable', 'is', '$True', ''],
+                ['or', '', 'valid_fun_ids>is_leaf', 'is', '$False', ''],
                 ],
             ],
         ],
@@ -378,6 +378,26 @@ cols.append ({
     'db_scale'   : 2,
     'scale_ptr'  : None,
     'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'open_items',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Track outstanding items?',
+    'long_descr' : 'Track outstanding open items?',
+    'col_head'   : 'Open items?',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'false',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -520,7 +540,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['pch_npch_codes', 'row_id', 'discount_code', 'npch_code', False, 'nsls_codes'],
+    'fkey'       : ['npch_codes', 'row_id', 'disc_ledg, disc_code', 'ledger_id, npch_code', False, 'npch_codes'],
     'choices'    : None,
     })
 cols.append ({
@@ -698,7 +718,14 @@ actions.append([
         ],
     ])
 actions.append([
-    'after_insert', '<pyfunc name="db.cache.ledger_inserted"/>'
+    'after_insert',(
+        '<pyfunc name="db.cache.ledger_inserted"/>'
+        '<case>'
+            '<compare test="[[`check`, ``, `_param.gl_integration`, `is`, `$True`, ``]]">'
+                '<pyfunc name="custom.gl_funcs.setup_ctrl"/>'
+            '</compare>'
+        '</case>'
+        )
     ])
 actions.append([
     'after_commit', '<pyfunc name="db.cache.ledger_updated"/>'

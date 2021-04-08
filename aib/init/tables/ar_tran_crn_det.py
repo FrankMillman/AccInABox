@@ -7,7 +7,7 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['isls', 'Inventory item', 'sls_isls_subtran',
+            ['isls', 'Inventory item', 'sls_subtran',
                 [  # return values
                     ['crn_net_amt', 'net_amt'],  # tgt_col, src_col
                     ['crn_tax_amt', 'tax_amt'],
@@ -15,7 +15,7 @@ table = {
                     ],
                 ['wh_prod_row_id>prod_row_id>prod_code'],
                 ],
-            ['nsls', 'Non-inventory item', 'sls_nsls_subtran',
+            ['nsls', 'Non-inventory item', 'nsls_subtran',
                 [  # return values
                     ['crn_net_amt', 'net_amt'],  # tgt_col, src_col
                     ['crn_tax_amt', 'tax_amt'],

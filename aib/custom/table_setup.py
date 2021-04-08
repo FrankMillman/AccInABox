@@ -150,18 +150,20 @@ async def load_tree_params(caller, xml):
     init_vals = {}
     tree_params = await tbl.getval('tree_params')
     if tree_params is not None:
-        group, (code, descr, parent), levels = tree_params
+        group, (code, descr, parent, seq), levels = tree_params
         init_vals['group_parent'] = group
         init_vals['code'] = code
         init_vals['descr'] = descr
         init_vals['parent'] = parent
-        for pos, level in enumerate(levels):
-            if pos == 0:
-                init_vals['level_1'] = level
-            elif pos == 1:
-                init_vals['level_2'] = level
-            elif pos == 2:
-                init_vals['level_3'] = level
+        init_vals['seq'] = seq
+        if levels is not None:
+            for pos, level in enumerate(levels):
+                if pos == 0:
+                    init_vals['level_1'] = level
+                elif pos == 1:
+                    init_vals['level_2'] = level
+                elif pos == 2:
+                    init_vals['level_3'] = level
     await param_obj.init(init_vals=init_vals)
 
 async def dump_tree_params(caller, xml):
@@ -176,6 +178,7 @@ async def dump_tree_params(caller, xml):
         member_params = [code]
         member_params.append(await param_obj.getval('descr'))
         member_params.append(await param_obj.getval('parent'))
+        member_params.append(await param_obj.getval('seq'))
         tree_params.append(member_params)
         levels = []
         if await param_obj.getval('level_1') is not None:
@@ -184,7 +187,7 @@ async def dump_tree_params(caller, xml):
                 levels.append(await param_obj.getval('level_2'))
                 if await param_obj.getval('level_3') is not None:
                     levels.append(await param_obj.getval('level_3'))
-        tree_params.append(levels)
+        tree_params.append(levels or None)
 
     await tbl.setval('tree_params', tree_params)
 

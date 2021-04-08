@@ -112,15 +112,41 @@ cols.append ({
     'long_descr' : 'Invoice number',
     'col_head'   : 'Inv no',
     'key_field'  : 'A',
-    'data_source': 'input',
-    'condition'  : None,
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.auto_inv_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 15,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'dflt_rule'  : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<on_post>'
+            '<case>'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="_ledger.auto_inv_no"/>'
+              '</compare>'
+              '<default>'
+                '<fld_val name="tran_number"/>'
+              '</default>'
+            '</case>'
+          '</on_post>'
+          '<on_insert>'
+            '<case>'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="_ledger.auto_temp_no"/>'
+              '</compare>'
+              '<compare test="[[`if`, ``, `_ledger.auto_inv_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="_ledger.auto_inv_no"/>'
+              '</compare>'
+            '</case>'
+          '</on_insert>'
+          '<default>'
+            '<fld_val name="tran_number"/>'
+          '</default>'
+        '</case>'
+        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -589,7 +615,9 @@ actions.append([
     'upd_on_post', [
         [
             'ap_openitems',  # table name
-            [],  # condition
+            [  # condition
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ],
             True,  # split source?
 
             'custom.aptrans_funcs.setup_openitems',  # function to populate table

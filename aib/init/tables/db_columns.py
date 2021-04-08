@@ -628,5 +628,5 @@ actions.append([
         )
     ])
 actions.append([
-    'after_commit', '<reset_table_defn/>'
+    'after_update', '<reset_table_defn/>'
     ])

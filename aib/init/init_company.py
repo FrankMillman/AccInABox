@@ -103,7 +103,9 @@ async def setup_modules(context, conn, company_name):
         ('ap', 'Creditors'),
         ('in', 'Inventory'),
         ('sls', 'Sales'),
+        ('nsls', 'Non-inventory sales'),
         ('pch', 'Purchases'),
+        ('npch', 'Non-inventory purchases'),
         ('pos', 'Point of sale'),
         ]
 
@@ -255,13 +257,15 @@ async def setup_other_tables(context, conn):
         'cb_tran_bf',
         'cb_totals',
         'cb_comments',
-        'sls_nsls_groups',
-        'sls_nsls_codes',
-        'sls_nsls_tax_codes',
-        'sls_sales_persons',
-        'pch_npch_groups',
-        'pch_npch_codes',
-        'pch_npch_tax_codes',
+        'nsls_ledger_params',
+        'nsls_groups',
+        'nsls_codes',
+        'nsls_tax_codes',
+        'adm_sales_persons',
+        'npch_ledger_params',
+        'npch_groups',
+        'npch_codes',
+        'npch_tax_codes',
         'ar_ledger_params',
         'ar_ledger_periods',
         'ar_terms_codes',
@@ -318,31 +322,31 @@ async def setup_other_tables(context, conn):
         'ap_uex_bf',
         'ap_totals',
         'ap_supp_totals',
-        'pch_ipch_subtran',
-        'pch_ipch_subtran_tax',
-        'pch_ipch_totals',
-        'pch_ipch_class_totals',
-        'pch_ipch_supp_totals',
-        'pch_npch_subtran',
-        'pch_npch_subtran_tax',
-        'pch_npch_subtran_uex',
-        'pch_npch_totals',
-        'pch_npch_uex_totals',
-        'pch_npch_supp_totals',
-        'pch_npch_supp_uex_totals',
+        'pch_subtran',
+        'pch_subtran_tax',
+        'pch_totals',
+        'pch_class_totals',
+        'pch_supp_totals',
+        'npch_subtran',
+        'npch_subtran_tax',
+        'npch_subtran_uex',
+        'npch_totals',
+        'npch_uex_totals',
+        'npch_supp_totals',
+        'npch_supp_uex_totals',
         'pch_tax_totals',
-        'sls_isls_subtran',
-        'sls_isls_subtran_tax',
-        'sls_isls_totals',
-        'sls_isls_class_totals',
-        'sls_isls_cust_totals',
-        'sls_nsls_subtran',
-        'sls_nsls_subtran_tax',
-        'sls_nsls_subtran_uea',
-        'sls_nsls_totals',
-        'sls_nsls_uea_totals',
-        'sls_nsls_cust_totals',
-        'sls_nsls_cust_uea_totals',
+        'sls_subtran',
+        'sls_subtran_tax',
+        'sls_totals',
+        'sls_class_totals',
+        'sls_cust_totals',
+        'nsls_subtran',
+        'nsls_subtran_tax',
+        'nsls_subtran_uea',
+        'nsls_totals',
+        'nsls_uea_totals',
+        'nsls_cust_totals',
+        'nsls_cust_uea_totals',
         'sls_tax_totals',
         'sls_sell_prices',
         'in_wh_prod_unposted',
@@ -600,9 +604,11 @@ async def setup_forms(context, conn):
     await setup_form('cb_receipt')
     await setup_form('cb_payment')
     await setup_form('cb_ledger_summary')
-    await setup_form('setup_orec_codes')
-    await setup_form('setup_opmt_codes')
+    # await setup_form('setup_orec_codes')
+    # await setup_form('setup_opmt_codes')
     await setup_form('cb_cashbook')
+    await setup_form('nsls_ledger_new')
+    await setup_form('npch_ledger_new')
 
 async def setup_reports(context, conn):
     # schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
@@ -695,6 +701,7 @@ async def setup_menus(context, conn, company_name):
             ['Maintain functions', 'form', 'setup_functions'],
             ['Maintain currency codes', 'form', 'setup_currencies'],
             ['Maintain tax codes', 'form', 'setup_tax_codes'],
+            ['Sales persons', 'grid', 'adm_sales_persons', 'sales_persons'],
             ]],
         ['Organisations', 'menu', 'org', [
             ['Maintain parties', 'grid', 'org_parties', 'parties'],
@@ -717,14 +724,18 @@ async def setup_menus(context, conn, company_name):
         ['Sales administration', 'menu', 'sls', [
             ['Setup', 'menu', 'sls', [
                 ['Sales codes', 'form', 'setup_nsls_codes'],
-                ['Sales persons', 'grid', 'sls_sales_persons', 'sales_persons'],
                 ]],
             ]],
         ['Purchases administration', 'menu', 'pch', [
-            ['Setup', 'menu', 'pch', [
-                ['Product codes', 'form', 'setup_prod_codes'],
+            ['Setup', 'menu', 'npch', [
                 ['Expense codes', 'form', 'setup_npch_codes'],
                 ]],
+            ]],
+        ['Non-inventory sales admin', 'menu', 'nsls', [
+            ['Add new nsls ledger', 'form', 'nsls_ledger_new'],
+            ]],
+        ['Non-inventory purchases admin', 'menu', 'npch', [
+            ['Add new npch ledger', 'form', 'npch_ledger_new'],
             ]],
         ['Accounts receivable', 'menu', 'ar', [
             ['Add new ar ledger', 'form', 'ar_ledger_new'],
@@ -733,6 +744,9 @@ async def setup_menus(context, conn, company_name):
             ['Add new ap ledger', 'form', 'ap_ledger_new'],
             ]],
         ['Inventory', 'menu', 'in', [
+            ['Setup', 'menu', 'pch', [
+                ['Product codes', 'form', 'setup_prod_codes'],
+                ]],
             ['Add new warehouse', 'form', 'in_ledger_new'],
             ]],
         ]]
@@ -809,6 +823,20 @@ async def setup_menus(context, conn, company_name):
         ['Period end procedure', 'form', 'in_ledger_periods'],
         ]]
 
+    nsls_menu = ['Non-inventory sales', 'menu', 'nsls', [
+        ['Setup', 'menu', 'nsls', [
+            ['Parameters', 'form', 'nsls_params'],
+            ['Sales codes', 'form', 'setup_nsls_codes'],
+            ]],
+        ]]
+
+    npch_menu = ['Non-inventory purchases', 'menu', 'npch', [
+        ['Setup', 'menu', 'npch', [
+            ['Parameters', 'form', 'npch_params'],
+            ['Expense codes', 'form', 'setup_npch_codes'],
+            ]],
+        ]]
+
     async def parse_menu(menu_opt, parent_id, module_id=None):
         descr = menu_opt[0]
         opt_type = menu_opt[1]
@@ -830,6 +858,8 @@ async def setup_menus(context, conn, company_name):
     await parse_menu(ar_menu, None)
     await parse_menu(ap_menu, None)
     await parse_menu(in_menu, None)
+    await parse_menu(nsls_menu, None)
+    await parse_menu(npch_menu, None)
 
     # set deleted_id on ledger template menus so they do not get selected when displaying menu
     await conn.exec_cmd(
@@ -868,13 +898,13 @@ async def setup_init_data(context, conn, company_name):
     await prod_group.setval('group_type', 'root')
     await prod_group.save()
 
-    sls_group = await db.objects.get_db_object(context, 'sls_nsls_groups')
+    sls_group = await db.objects.get_db_object(context, 'nsls_groups')
     await sls_group.setval('nsls_group', 'all')
     await sls_group.setval('descr', 'All sales codes')
     await sls_group.setval('group_type', 'root')
     await sls_group.save()
 
-    pch_group = await db.objects.get_db_object(context, 'pch_npch_groups')
+    pch_group = await db.objects.get_db_object(context, 'npch_groups')
     await pch_group.setval('npch_group', 'all')
     await pch_group.setval('descr', 'All expense codes')
     await pch_group.setval('group_type', 'root')

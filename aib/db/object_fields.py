@@ -25,6 +25,7 @@ from ht.validation_xml import check_vld
 
 from evaluate_expr import eval_bool_expr
 from common import AibError, AibDenied
+from common import deserialise
 
 # db_fkeys columns
 (FK_TARGET_TABLE
@@ -625,11 +626,15 @@ class Field:
                     if tree_params is not None:
                         group, col_names, levels = tree_params
                         if levels is not None:  # fixed levels defined
-                            if col_name in ('valid_loc_ids', 'valid_fun_ids'):  # hardcoded - BAD
+                            if col_name in ('valid_loc_ids', 'valid_fun_ids', 'link_to_gl_grp'):  # hardcoded - BAD
                                 pass  # these can be for any level, not just leaf
                             else:
                                 code, descr, parent_id, seq = col_names
                                 type_colname, level_types, sublevel_type = levels
+                                if isinstance(level_types, dict):  # sub-ledgers have their own groups
+                                    ledger_col = db_obj.db_table.ledger_col
+                                    ledger_row_id = await db_obj.getval(ledger_col)
+                                    level_types = level_types[ledger_row_id]
                                 valid_types = [level_types[-1][0]]  # 'code' portion of bottom level
                                 if sublevel_type is not None:
                                     # not elegant! - if sublevels allowed, parent type can be
@@ -1052,58 +1057,92 @@ class Json(Text):
         #   we would not be able to detect if it was changed
         return deepcopy(self._value)
 
-    def serialise(self, value):
-        # simple serialiser to handle date objects
-        # if any are found, they will be converted into a string using repr -
-        #   'datetime.date(y, m, d)'
-        # ditto for Decimal objects
-        return dumps(value, default=repr)
+    # def serialise(self, value):
+    #     # simple serialiser to handle date objects
+    #     # if any are found, they will be converted into a string using repr -
+    #     #   'datetime.date(y, m, d)'
+    #     # ditto for Decimal objects
+    #     return dumps(value, default=repr)
 
-    def deserialise(self, value):
-        # simple deserialiser to handle date objects
-        # assumes that any string starting with 'datetime.date(' is a date object
-        # also handles Decimal objects - string starting with 'Decimal('
-        def deserialise_list(value):
-            for pos, val in enumerate(value):
-                if isinstance(val, str):
-                    if val.startswith('datetime.date('):
-                        value[pos] = dt(*map(int, val[14:-1].split(',')))
-                    elif val.startswith('Decimal('):
-                        value[pos] = D(val[9:-2])
-                elif isinstance(val, list):
-                    deserialise_list(val)
-                elif isinstance(val, dict):
-                    deserialise_dict(val)
-        def deserialise_dict(value):
-            for key, val in value.items():
-                if isinstance(val, str):
-                    if val.startswith('datetime.date('):
-                        value[key] = dt(*map(int, val[14:-1].split(',')))
-                    elif val.startswith('Decimal('):
-                        value[key] = D(val[9:-2])
-                elif isinstance(val, list):
-                    deserialise_list(val)
-                elif isinstance(val, dict):
-                    deserialise_dict(val)
-        value = loads(value)
-        if isinstance(value, list):
-            deserialise_list(value)
-        elif isinstance(value, dict):
-            deserialise_dict(value)
-        return value
+    # def deserialise(self, value):
+    #     # simple deserialiser to handle date objects
+    #     # assumes that any string starting with 'datetime.date(' is a date object
+    #     # also handles Decimal objects - string starting with 'Decimal('
+    #     def deserialise_list(value):
+    #         # for pos, val in enumerate(value):
+    #         #     if isinstance(val, str):
+    #         #         if val.startswith('datetime.date('):
+    #         #             value[pos] = dt(*map(int, val[14:-1].split(',')))
+    #         #         elif val.startswith('Decimal('):
+    #         #             value[pos] = D(val[9:-2])
+    #         #     elif isinstance(val, list):
+    #         #         deserialise_list(val)
+    #         #     elif isinstance(val, dict):
+    #         #         deserialise_dict(val)
+    #         new_val = []
+    #         for val in value:
+    #             if isinstance(val, str):
+    #                 if val.startswith('datetime.date('):
+    #                     new_val.append(dt(*map(int, val[14:-1].split(','))))
+    #                 elif val.startswith('Decimal('):
+    #                     new_val.append(D(val[9:-2]))
+    #                 else:
+    #                     new_val.append(val)
+    #             elif isinstance(val, list):
+    #                 new_val.append(deserialise_list(val))
+    #             elif isinstance(val, dict):
+    #                 new_val.append(deserialise_dict(val))
+    #             else:  # e.g. None
+    #                 new_val.append(val)
+    #         return new_val
+    #     def deserialise_dict(value):
+    #         # for key, val in value.items():
+    #         #     if isinstance(val, str):
+    #         #         if val.startswith('datetime.date('):
+    #         #             value[key] = dt(*map(int, val[14:-1].split(',')))
+    #         #         elif val.startswith('Decimal('):
+    #         #             value[key] = D(val[9:-2])
+    #         #     elif isinstance(val, list):
+    #         #         deserialise_list(val)
+    #         #     elif isinstance(val, dict):
+    #         #         deserialise_dict(val)
+    #         new_val = {}
+    #         for key, val in value.items():
+    #             if key.isdigit():  # JSON converts integer keys to strings
+    #                 key = int(key)  # this *assumes* that all 'integer' strings should be converted back
+    #             if isinstance(val, str):
+    #                 if val.startswith('datetime.date('):
+    #                     new_val[key] = dt(*map(int, val[14:-1].split(',')))
+    #                 elif val.startswith('Decimal('):
+    #                     new_val[key] = D(val[9:-2])
+    #                 else:
+    #                     new_val[key] = val
+    #             elif isinstance(val, list):
+    #                 new_val[key] = deserialise_list(val)
+    #             elif isinstance(val, dict):
+    #                 new_val[key] = deserialise_dict(val)
+    #             else:  # e.g. None
+    #                 new_val[key] = val
+    #         return new_val
+    #     value = loads(value)
+    #     if isinstance(value, list):
+    #         value = deserialise_list(value)
+    #     elif isinstance(value, dict):
+    #         value = deserialise_dict(value)
+    #     return value
 
     async def get_dflt(self, from_init=False):
         dflt_val = await Field.get_dflt(self, from_init)
         if dflt_val is None:
             return None
-        return self.deserialise(dflt_val)
+        return deserialise(dflt_val)
 
     async def check_val(self, value):
         if value is None:
             return None
         if isinstance(value, (str)):  # allow valid JSON-dumped string e.g. '{}'
             try:
-                return self.deserialise(value)
+                return deserialise(value)
             except ValueError:
                 errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Json string'
                 raise AibError(head=self.col_defn.short_descr, body=errmsg)
@@ -1118,7 +1157,7 @@ class Json(Text):
             return None
         else:
             try:
-                return self.deserialise(value)
+                return deserialise(value)
             except ValueError:
                 errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Json string'
                 raise AibError(head=self.col_defn.short_descr, body=errmsg)
@@ -1132,31 +1171,34 @@ class Json(Text):
             value = await self.getval()
         if value is None:
             return ''
-        return self.serialise(value)
+        # return self.serialise(value)
+        return dumps(value, default=repr)
 
     async def get_val_for_sql(self):
-        return None if self._value is None else self.serialise(self._value)
+        # return None if self._value is None else self.serialise(self._value)
+        return None if self._value is None else dumps(self._value, default=repr)
 
     async def get_val_for_xml(self):
         if self._value is None:
             return None
-        value = self.serialise(self._value)
+        # value = self.serialise(self._value)
+        value = dumps(self._value, default=repr)
         if value == self.col_defn.dflt_val:
             return None
         return value
 
     async def get_val_from_sql(self, value):
-        return None if value is None else self.deserialise(value)
+        return None if value is None else deserialise(value)
 
     async def get_val_from_xml(self, value):
         if value is None:
             value = self.col_defn.dflt_val
-        return None if value is None else self.deserialise(value)
+        return None if value is None else deserialise(value)
 
     def concurrency_check(self):
         if self._curr_val is None:
             return self._orig is None
-        return self.deserialise(self._curr_val) == self._orig
+        return deserialise(self._curr_val) == self._orig
 
 class Xml(Text):
     parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
