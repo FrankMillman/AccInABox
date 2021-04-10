@@ -98,8 +98,7 @@ class GuiTreeCommon:
                 '</mem_obj>'
                 )
             self.data_objects['_mem_combo'] = await db.objects.get_mem_object(
-                self.parent.form.context, self.parent.company,
-                '_mem_combo', table_defn=etree.fromstring(combo_defn))
+                self.parent.form.context, '_mem_combo', table_defn=etree.fromstring(combo_defn))
         self.db_obj = self.data_objects['_mem_combo']
 
         await self.db_obj.delete_all()

@@ -5,7 +5,7 @@ async def before_start_form(caller, xml):
     # called from setup_roles 'before_start_form'
 
     # get an alias to tbl_view that is independent of gui to avoid triggering methods
-    tbl_view_setup = await db.objects.get_mem_object(caller.context, caller.company, 'tbl_view')
+    tbl_view_setup = await db.objects.get_mem_object(caller.context, 'tbl_view')
     # save reference for use below
     caller.data_objects['tbl_view_setup'] = tbl_view_setup
 

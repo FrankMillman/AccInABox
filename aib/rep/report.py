@@ -1,5 +1,4 @@
 import __main__
-import os
 import gzip
 import io
 from lxml import etree
@@ -20,30 +19,6 @@ import db.cache
 import rep.rep_xml
 from common import AibError
 from common import log, debug
-
-def log_func(func):
-    def wrapper(*args, **kwargs):
-        if debug:
-            log.write('*{}.{}({}, {})\n\n'.format(
-                func.__module__, func.__name__,
-                ', '.join(str(arg) for arg in args),
-                kwargs))
-        return func(*args, **kwargs)
-    return wrapper
-
-#----------------------------------------------------------------------------
-
-from common import delwatcher_set
-class delwatcher:
-    def __init__(self, obj):
-        self.id = ('report', obj.report_name, id(obj))
-        # print('***', *self.id, 'created ***')
-        delwatcher_set.add(self.id)
-    def __del__(self):
-        # print('***', *self.id, 'deleted ***')
-        delwatcher_set.remove(self.id)
-
-#----------------------------------------------------------------------------
 
 class Report:
     async def _ainit_(self, context, session, report_name, data_inputs=None):
@@ -149,7 +124,7 @@ class Report:
                     self.company, full_name, clone_from, parent=db_parent)
             else:
                 db_obj = await db.objects.get_mem_object(self.context,
-                    self.company, full_name, parent=db_parent, table_defn=obj_xml)
+                    full_name, parent=db_parent, table_defn=obj_xml)
             module_id = obj_xml.get('module_id')
             if module_id is not None:
                 db_obj.db_table.module_row_id = await db.cache.get_mod_id(

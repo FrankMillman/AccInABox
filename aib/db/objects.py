@@ -121,19 +121,19 @@ async def get_fkey_object(context, table_name, src_obj, src_colname):
             body=f'{src_colname} is not a foreign key for {table_name}')
     return fk_object
 
-async def get_mem_object(context, company, table_name, parent=None, table_defn=None):
+async def get_mem_object(context, table_name, parent=None, table_defn=None):
     if table_name in context.data_objects:
         # assume we want a reference to an existing table
         # must retrieve the full table name from the existing table
         table_name = context.data_objects[table_name].table_name
 
-    mem_table = await get_mem_table(context, company, table_name, table_defn)
+    mem_table = await get_mem_table(context, table_name, table_defn)
 
     mem_obj = MemObject()
-    await mem_obj._ainit_(context, company, mem_table, parent)
+    await mem_obj._ainit_(context, mem_table, parent)
     return mem_obj
 
-async def get_mem_table(context, company, table_name, table_defn=None):
+async def get_mem_table(context, table_name, table_defn=None):
     # if table_defn is not None, the caller wants to set up the table
     # if it is None, the caller wants an alias of an existing table
 
@@ -148,7 +148,7 @@ async def get_mem_table(context, company, table_name, table_defn=None):
 
     if table_name not in context.mem_tables_open:
         mem_table = MemTable()
-        await mem_table._ainit_(context, company, table_name, table_defn)
+        await mem_table._ainit_(context, table_name, table_defn)
         context.mem_tables_open[table_name] = mem_table
 
     return context.mem_tables_open[table_name]
@@ -557,7 +557,7 @@ class DbObject:
         for col_defn in self.db_table.col_list:
             if col_defn.col_name in self.fields:  # else virtual field not set up
                 field = self.fields[col_defn.col_name]
-                descr.append('{}={!r};'.format(field.col_name, field._value_))
+                descr.append('{}={!s};'.format(field.col_name, field._value_))
         return ' '.join(descr)
 
     async def _str(self):  # async version - must be called manually
@@ -907,8 +907,8 @@ class DbObject:
                 if where == self.where:
                     for fld in self.fields.values():
                         if fld._orig  != fld._value_:  # do we get here?
-                            breakpoint()  # if not, remove this block
-                        fld._orig = await fld.getval()  # in case set to None before select
+                            # fld._orig = await fld.getval()  # in case set to None before select
+                            fld._init = fld._orig = fld._value_  # virtual fld added after select?
                     return  # row not changed since last select
         self.where = where
 
@@ -2563,8 +2563,8 @@ class MemObject(DbObject):
     exactly the same as a database :class:`~db.objects.Column` object.
     """
 
-    async def _ainit_(self, context, company, db_table, parent):
-        await DbObject._ainit_(self, context, company, db_table, parent, mem_obj=True)
+    async def _ainit_(self, context, db_table, parent):
+        await DbObject._ainit_(self, context, context.company, db_table, parent, mem_obj=True)
         self.mem_parent = parent
         self.cursor_defn = db_table.cursor_defn
 
@@ -3082,9 +3082,9 @@ class DbTable:
 #-----------------------------------------------------------------------------
 
 class MemTable(DbTable):
-    async def _ainit_(self, context, company, table_name, table_defn):
+    async def _ainit_(self, context, table_name, table_defn):
         self.defn_tableid = self.table_name = table_name
-        self.data_company = company
+        self.data_company = context.company
         self.module_row_id = None  # can be over-ridden by form_defn
         self.short_descr = table_name
         self.constants = mem_constants
@@ -3157,7 +3157,7 @@ class MemTable(DbTable):
             None,      # choices
             None,      # sql
             )
-        col = await self.add_mem_column(context, company, col_flds)
+        col = await self.add_mem_column(context, col_flds)
         self.primary_keys.append(col)
 
         for col_defn in table_defn.iter('mem_col'):
@@ -3180,11 +3180,11 @@ class MemTable(DbTable):
                 col_defn.get('dflt_rule'),
                 col_defn.get('col_checks'),
                 None if col_defn.get('fkey') is None else
-                    col_defn.get('fkey').replace('{company}', company),
+                    col_defn.get('fkey').replace('{company}', context.company),
                 col_defn.get('choices'),
                 col_defn.get('sql')
                 )
-            col = await self.add_mem_column(context, company, col_flds)
+            col = await self.add_mem_column(context, col_flds)
 
             if col.key_field == 'A':
                 alt_keys.append(col)
@@ -3262,7 +3262,7 @@ class MemTable(DbTable):
 
         self.src_fkeys = self.tgt_fkeys = ()  # empty tuple
 
-    async def add_mem_column(self, context, company, col_flds):
+    async def add_mem_column(self, context, col_flds):
         """
         Create a :class:`~db.objects.Column` object from the arguments provided.
         """
@@ -3322,7 +3322,7 @@ class MemTable(DbTable):
             col.dflt_rule = fromstring('<_>{}</_>'.format(col.dflt_rule))
 
         if col.fkey is not None:
-            await setup_fkey(self, context, company, col)
+            await setup_fkey(self, context, context.company, col)
 
         if col.choices is not None:
             col.choices = OD(loads(col.choices))

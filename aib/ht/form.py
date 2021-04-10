@@ -357,7 +357,7 @@ class Form:
                     self.company, path_name, clone_from, parent=db_parent)
             else:
                 db_obj = await db.objects.get_mem_object(self.context,
-                    self.company, path_name, parent=db_parent, table_defn=obj_xml)
+                    path_name, parent=db_parent, table_defn=obj_xml)
             module_id = obj_xml.get('module_id')
             if module_id is not None:
                 db_obj.db_table.module_row_id = await db.cache.get_mod_id(

@@ -6,8 +6,7 @@ async def before_start_form(caller, xml):
     comp = caller.data_objects['company']
 
     # get an alias to user_comp_view that is independent of gui to avoid triggering methods
-    user_comp_setup = await db.objects.get_mem_object(
-        caller.context, caller.company, 'user_comp_view')
+    user_comp_setup = await db.objects.get_mem_object(caller.context, 'user_comp_view')
     # save reference for use below
     caller.data_objects['user_comp_setup'] = user_comp_setup
 

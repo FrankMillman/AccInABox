@@ -235,7 +235,7 @@ class Field:
                 tgt_company = self.db_obj.company
             if tgt_company == '{mem}':
                 tgt_object = await db.objects.get_mem_object(self.db_obj.context,
-                    self.db_obj.company, tgt_table_name, parent=parent_obj)
+                    tgt_table_name, parent=parent_obj)
             else:
                 tgt_table = await db.objects.get_db_table(self.db_obj.context,
                     tgt_company, tgt_table_name)

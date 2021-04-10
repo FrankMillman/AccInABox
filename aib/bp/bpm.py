@@ -309,7 +309,7 @@ class ProcessRoot:
                     company, obj_name, clone_from, parent=db_parent)
             else:
                 mem_obj = await db.objects.get_mem_object(self.context,
-                    company, obj_name, parent=db_parent, table_defn=obj_xml)
+                    obj_name, parent=db_parent, table_defn=obj_xml)
             module_id = obj_xml.get('module_id')
             if module_id is not None:
                 mem_obj.db_table.module_row_id = await db.cache.get_mod_id(

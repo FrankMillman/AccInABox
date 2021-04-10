@@ -15,14 +15,12 @@ async def before_start_form(caller, xml):
         await addr_types.save()   
 
     # get an alias to mem_addr that is independent of gui to avoid triggering methods
-    mem_addr_setup = await db.objects.get_mem_object(caller.context, caller.company, 'mem_addr',
-        parent=party)
+    mem_addr_setup = await db.objects.get_mem_object(caller.context, 'mem_addr', parent=party)
     # save reference for use below
     caller.data_objects['mem_addr_setup'] = mem_addr_setup
 
     # get an alias to mem_msg that is independent of gui to avoid triggering methods
-    mem_msg_setup = await db.objects.get_mem_object(caller.context, caller.company, 'mem_msg',
-        parent=party)
+    mem_msg_setup = await db.objects.get_mem_object(caller.context, 'mem_msg', parent=party)
     # save reference for use below
     caller.data_objects['mem_msg_setup'] = mem_msg_setup
 
@@ -36,12 +34,12 @@ async def before_start_form(caller, xml):
         await mem_msg_types.save()
 
     # get an alias to mem_phone that is independent of gui to avoid triggering methods
-    mem_phone_setup = await db.objects.get_mem_object(caller.context, caller.company, 'mem_phone')
+    mem_phone_setup = await db.objects.get_mem_object(caller.context, 'mem_phone')
     # save reference for use below
     caller.data_objects['mem_phone_setup'] = mem_phone_setup
 
     # get an alias to mem_contact that is independent of gui to avoid triggering methods
-    mem_contact_setup = await db.objects.get_mem_object(caller.context, caller.company, 'mem_contact')
+    mem_contact_setup = await db.objects.get_mem_object(caller.context, 'mem_contact')
     # save reference for use below
     caller.data_objects['mem_contact_setup'] = mem_contact_setup
 

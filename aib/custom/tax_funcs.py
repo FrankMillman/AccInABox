@@ -15,8 +15,7 @@ async def before_start_form(caller, xml):
             '</mem_obj>'
             )
         caller.data_objects['tax_cats'] = await db.objects.get_mem_object(
-            caller.context, caller.company, 'tax_cats',
-            table_defn=etree.fromstring(tax_cat_defn))
+            caller.context, 'tax_cats', table_defn=etree.fromstring(tax_cat_defn))
     tax_cat = caller.data_objects['tax_cats']
 
     if 'tax_codes' not in caller.data_objects:
@@ -33,7 +32,7 @@ async def before_start_form(caller, xml):
             '</mem_obj>'
             ).replace('`', '&quot;')
         caller.data_objects['tax_codes'] = await db.objects.get_mem_object(
-            caller.context, caller.company, 'tax_codes',
+            caller.context, 'tax_codes',
             parent=tax_cat, table_defn=etree.fromstring(tax_code_defn))
     tax_code = caller.data_objects['tax_codes']
 
@@ -149,7 +148,7 @@ async def calc_tax(db_obj, conn, return_vals):
     split_name = 'mem_tax_split'
     if split_name not in db_obj.context.data_objects:
         db_obj.context.data_objects[split_name] = await db.objects.get_mem_object(db_obj.context,
-            db_obj.company, split_name, table_defn=etree.fromstring(split_defn))
+            split_name, table_defn=etree.fromstring(split_defn))
     split_obj = db_obj.context.data_objects[split_name]
 
     if db_obj.table_name == 'sls_subtran':
