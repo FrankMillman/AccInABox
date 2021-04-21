@@ -12,6 +12,7 @@ table = {
                 []],
             ['form', 'form', ['descr', 'module_row_id', 'ledger_row_id', 'form_name'], []],
             ['report', 'Report', ['descr', 'module_row_id', 'ledger_row_id'], []],
+            ['finrpt', 'Fin report', ['descr', 'module_row_id', 'ledger_row_id', 'form_name'], []],
             ]],
         ],
     'sub_trans'     : None,
@@ -294,6 +295,14 @@ virt.append ({
     'col_head'   : '',
     'sql'        : "SELECT count(*) FROM {company}.sys_menu_defns b "
                    "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
+    })
+virt.append ({
+    'col_name'   : 'expandable',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Expandable?',
+    'long_descr' : 'Is this node expandable?',
+    'col_head'   : '',
+    'sql'        : "SELECT CASE WHEN a.opt_type = 'menu' THEN $True ELSE $False END",
     })
 virt.append ({
     'col_name'   : 'is_leaf',

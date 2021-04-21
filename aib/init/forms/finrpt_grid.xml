@@ -1,0 +1,18 @@
+<form name="finrpt_grid" title="Grid for Financial Report">
+  <db_objects/>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="grid_obj">
+    <toolbar/>
+    <body>
+      <block/>
+      <grid data_object="grid_obj" num_grid_rows="20">
+        <toolbar template="Grid_Finrpt"/>
+        <grid_methods template="Grid"/>
+      </grid>
+    </body>
+    <button_row/>
+    <frame_methods/>
+  </frame>
+</form>

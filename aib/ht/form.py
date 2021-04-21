@@ -160,12 +160,16 @@ class Form:
 
         title = title.replace('{comp_name}', db.cache.companies[self.company])
 
-        if grid_params is not None:  # passed in if setup_grid
+        if grid_params is not None:
             table_name, cursor_name = grid_params
-            grid_obj = await db.objects.get_db_object(
-                self.context, table_name)
-            self.data_objects['grid_obj'] = grid_obj
-            title = await grid_obj.setup_cursor_defn(cursor_name)
+            if cursor_name is None:  # finrpt passed in from rep.finrpt
+                grid_obj = self.data_objects['grid_obj']
+                title = 'Fin report'
+            else:  # passed in from menu_defn if setup_grid
+                grid_obj = await db.objects.get_db_object(
+                    self.context, table_name)
+                self.data_objects['grid_obj'] = grid_obj
+                title = await grid_obj.setup_cursor_defn(cursor_name)
 
         self.title = title
 

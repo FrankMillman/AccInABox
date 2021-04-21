@@ -76,10 +76,10 @@ async def dump_tristates(caller, xml):
     db_cols = caller.data_objects['db_cols']
     var = caller.data_objects['var']
 
-    var_allow_amend = var.getval('allow_amend')
-    if await var_allow_amend == 'false':
+    var_allow_amend = await var.getval('allow_amend')
+    if var_allow_amend == 'false':
         allow_amend = False
-    elif await var_allow_amend == 'true':
+    elif var_allow_amend == 'true':
         allow_amend = True
     else:
         amend = caller.data_objects['amend']

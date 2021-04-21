@@ -1,21 +1,21 @@
 from json import loads
 
 from common import AibError
-from db.connection import db_constants
+from db.connection import db_constants as dbc
 
 #-----------------------------------------------------------------------------
 
 async def create_table(conn, company_id, table_name, return_sql=False):
     cur = await conn.exec_sql(
         "SELECT * FROM {}.db_tables WHERE table_name = {}"
-        .format(company_id, db_constants.param_style), (table_name,))
+        .format(company_id, dbc.param_style), (table_name,))
     table_defn = await cur.__anext__()
 
     if table_defn[DEFN_COMP] is not None:
         defn_comp = table_defn[DEFN_COMP]
         cur = await conn.exec_sql(
             "SELECT * FROM {}.db_tables WHERE table_name = {}"
-            .format(defn_comp, db_constants.param_style), (table_name,))
+            .format(defn_comp, dbc.param_style), (table_name,))
         table_defn = await cur.__anext__()
     else:
         defn_comp = company_id
@@ -24,7 +24,7 @@ async def create_table(conn, company_id, table_name, return_sql=False):
         "SELECT a.* FROM {}.db_columns a, {}.db_tables b WHERE b.table_name = {} "
         "AND a.table_id = b.row_id AND a.col_type != 'virt' "
         "AND a.deleted_id = 0 ORDER BY a.col_type, a.seq"
-        .format(defn_comp, defn_comp, db_constants.param_style), (table_name,))
+        .format(defn_comp, defn_comp, dbc.param_style), (table_name,))
     db_columns = []
     async for row in cur:
         db_columns.append(row)

@@ -5,7 +5,7 @@ from json import loads, dumps
 from lxml import etree
 from itertools import count
 
-from db.connection import db_constants
+from db.connection import db_constants as dbc
 import db.create_table
 import db.create_view
 import db.objects
@@ -26,6 +26,7 @@ async def init_company(company, company_name):
         await setup_views(context, conn)  # database views for company
         await setup_forms(context, conn)
         await setup_reports(context, conn)
+        await setup_finrpts(context, conn)
         await setup_processes(context, conn)
         await setup_menus(context, conn, company_name)
         # 'commit' happens here
@@ -80,13 +81,13 @@ async def setup_modules(context, conn, company_name):
     sql_1 = (
         "INSERT INTO {}.db_modules "
         "(created_id, module_id, descr, seq) "
-        "VALUES ({})".format(context.company, ', '.join([db_constants.param_style]*4))
+        "VALUES ({})".format(context.company, ', '.join([dbc.param_style]*4))
         )
 
     sql_2 = (
         "INSERT INTO {}.db_modules_audit_xref "
         "(data_row_id, user_row_id, date_time, type) "
-        "VALUES ({})".format(context.company, ', '.join([db_constants.param_style]*4))
+        "VALUES ({})".format(context.company, ', '.join([dbc.param_style]*4))
         )
 
     modules = [
@@ -121,7 +122,7 @@ async def setup_db_metadata(context, conn, table_name):
     sql = (
         "INSERT INTO {}.db_tables "
         "(created_id, table_name, module_row_id, seq, short_descr, defn_company, read_only) "
-        "VALUES ({})".format(context.company, ', '.join([db_constants.param_style] * 7))
+        "VALUES ({})".format(context.company, ', '.join([dbc.param_style] * 7))
         )
 
     table_id = next(next_table_id)
@@ -140,7 +141,7 @@ async def setup_db_metadata(context, conn, table_name):
     sql = (
         "INSERT INTO {}.db_tables_audit_xref "
         "(data_row_id, user_row_id, date_time, type) VALUES ({})"
-        .format(context.company, ', '.join([db_constants.param_style] * 4))
+        .format(context.company, ', '.join([dbc.param_style] * 4))
         )
     params = [table_id, context.user_row_id, conn.timestamp, 'add']
     await conn.exec_cmd(sql, params)
@@ -155,7 +156,7 @@ async def setup_dir_tables(context, conn):
             "INSERT INTO {}.db_tables "
             "(created_id, table_name, module_row_id, seq, short_descr, "
             "defn_company, data_company, read_only) "
-            "VALUES ({})".format(context.company, ', '.join([db_constants.param_style] * 8))
+            "VALUES ({})".format(context.company, ', '.join([dbc.param_style] * 8))
             )
 
         table_id = next(next_table_id)
@@ -175,7 +176,7 @@ async def setup_dir_tables(context, conn):
         sql = (
             "INSERT INTO {}.db_tables_audit_xref "
             "(data_row_id, user_row_id, date_time, type) VALUES ({})"
-            .format(context.company, ', '.join([db_constants.param_style] * 4))
+            .format(context.company, ', '.join([dbc.param_style] * 4))
             )
         params = [table_id, context.user_row_id, conn.timestamp, 'add']
         await conn.exec_cmd(sql, params)
@@ -197,6 +198,7 @@ async def setup_sys_tables(context, conn):
         'acc_users_roles',
         'sys_form_defns',
         'sys_report_defns',
+        'sys_finrpt_defns',
         'sys_proc_defns',
         'sys_menu_defns',
         ]
@@ -636,6 +638,29 @@ async def setup_reports(context, conn):
 
     await setup_report('ar_statement')
 
+async def setup_finrpts(context, conn):
+    finrpt_defn = await db.objects.get_db_object(context, 'sys_finrpt_defns')
+
+    async def setup_finrpt(report_name):
+
+        rpt = importlib.import_module('.fin_reports.{}'.format(report_name), 'init')
+
+        await finrpt_defn.init()
+        await finrpt_defn.setval('report_name', rpt.report_name)
+        await finrpt_defn.setval('descr', rpt.report_name)
+        await finrpt_defn.setval('table_name', rpt.table_name)
+        await finrpt_defn.setval('date_params', rpt.date_params)
+        await finrpt_defn.setval('tot_col_name', rpt.tot_col_name)
+        await finrpt_defn.setval('group_params', rpt.groups)
+        await finrpt_defn.setval('column_params', rpt.columns)
+        await finrpt_defn.setval('pivot_on', rpt.pivot_on)
+        await finrpt_defn.save()
+
+    await setup_finrpt('ar_by_src')
+    await setup_finrpt('ar_pivot_src')
+    await setup_finrpt('int_by_loc')
+    await setup_finrpt('int_pivot_loc')
+
 async def setup_processes(context, conn):
     parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
     schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
@@ -678,6 +703,8 @@ async def setup_menus(context, conn, company_name):
             await db_obj.setval('cursor_name', cursor_name)
         elif opt_type == 'form':
             await db_obj.setval('form_name', form_name)
+        elif opt_type == 'finrpt':
+            await db_obj.setval('form_name', form_name)
         await db_obj.save()
         return await db_obj.getval('row_id')
 
@@ -715,6 +742,8 @@ async def setup_menus(context, conn, company_name):
             ['Gl transactions', 'menu', 'gl', [
                 ]],
             ['Gl reports', 'menu', 'gl', [
+                ['Int by loc', 'finrpt', 'int_by_loc'],
+                ['Int pivot loc', 'finrpt', 'int_pivot_loc'],
                 ]],
             ['Period end procedure', 'form', 'gl_ledger_periods'],
             ]],
@@ -787,6 +816,8 @@ async def setup_menus(context, conn, company_name):
             ]],
         ['Ar reports', 'menu', 'ar', [
             ['Ledger summary', 'form', 'ar_ledger_summary'],
+            ['Ar by src', 'finrpt', 'ar_by_src'],
+            ['Ar pivot src', 'finrpt', 'ar_pivot_src'],
             ]],
         ['Period end procedure', 'form', 'ar_ledger_periods'],
         ]]
@@ -849,6 +880,8 @@ async def setup_menus(context, conn, company_name):
             await setup_menu(descr, parent_id, opt_type, module_id=module_id, table_name=menu_opt[2],
                 cursor_name=menu_opt[3])
         elif opt_type == 'form':
+            await setup_menu(descr, parent_id, opt_type, module_id=module_id, form_name=menu_opt[2])
+        elif opt_type == 'finrpt':
             await setup_menu(descr, parent_id, opt_type, module_id=module_id, form_name=menu_opt[2])
 
     ledger_row_id = None

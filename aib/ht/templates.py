@@ -479,6 +479,16 @@ class Grid_Setup(Grid):  # template for setup-type grids - added 'formview'
 
 #----------------------------------------------------------------------------
 
+class Grid_Finrpt(Grid):  # template for setup-type grids - added 'formview'
+    toolbar = (
+        '<toolbar>'
+        f'{tool_nav}'
+        f'{tool_download}'
+        '</toolbar>'
+        )
+
+#----------------------------------------------------------------------------
+
 class Grid_Lookup(Grid):  # template for lookup-type grids - added 'selected'
     toolbar = (
         '<toolbar>'

@@ -439,7 +439,7 @@ async def setup_tran_day_per(caller, xml):
         conn = db_mem_conn.db
 
         from sql.cte_date_list import get_cte
-        cte, params = get_cte(conn, start_date, end_date)
+        cte, params = get_cte(conn, start_date, end_date, step=1)
         from sql.ar_tots_src_day import get_sql
         sql, params, fmt = get_sql(cte, params, company, conn, caller.context.ledger_row_id, srcs)
 

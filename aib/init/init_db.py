@@ -6,7 +6,7 @@ from json import dumps, loads
 from lxml import etree
 from collections import OrderedDict as OD
 
-from db.connection import db_constants
+from db.connection import db_constants as dbc
 import db.create_table
 import db.objects
 import db.cache
@@ -86,13 +86,13 @@ async def setup_modules(conn, company, company_name):
     sql_1 = (
         "INSERT INTO {}.db_modules "
         "(created_id, module_id, descr, seq) "
-        "VALUES ({})".format(company, ', '.join([db_constants.param_style]*4))
+        "VALUES ({})".format(company, ', '.join([dbc.param_style]*4))
         )
 
     sql_2 = (
         "INSERT INTO {}.db_modules_audit_xref "
         "(data_row_id, user_row_id, date_time, type) "
-        "VALUES ({})".format(company, ', '.join([db_constants.param_style]*4))
+        "VALUES ({})".format(company, ', '.join([dbc.param_style]*4))
         )
 
     modules = [
@@ -118,7 +118,7 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
         "(created_id, table_name, module_row_id, seq, short_descr, long_descr, sub_types, "
         "sub_trans, sequence, tree_params, roll_params, indexes, ledger_col, "
         "defn_company, data_company, read_only) VALUES ({})"
-        .format(company, ', '.join([db_constants.param_style]*16))
+        .format(company, ', '.join([dbc.param_style]*16))
         )
     params = [
         table_id,  # created_id
@@ -143,7 +143,7 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
     sql = (
         "INSERT INTO {}.db_tables_audit_xref "
         "(data_row_id, user_row_id, date_time, type) "
-        "VALUES ({})".format(company, ', '.join([db_constants.param_style] * 4))
+        "VALUES ({})".format(company, ', '.join([dbc.param_style] * 4))
         )
     params = [table_id, USER_ROW_ID, conn.timestamp, 'add']
     await conn.exec_cmd(sql, params)
@@ -153,7 +153,7 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
         "(created_id, table_id, col_name, col_type, seq, data_type, short_descr, "
         "long_descr, col_head, key_field, data_source, condition, allow_null, allow_amend, "
         "max_len, db_scale, scale_ptr, dflt_val, dflt_rule, col_checks, fkey, choices) "
-        "VALUES ({})".format(company, ', '.join([db_constants.param_style] * 22))
+        "VALUES ({})".format(company, ', '.join([dbc.param_style] * 22))
         )
     cols = module.cols
     params = []
@@ -189,7 +189,7 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
     sql = (
         "INSERT INTO {}.db_columns_audit_xref "
         "(data_row_id, user_row_id, date_time, type) "
-        "VALUES ({})".format(company, ', '.join([db_constants.param_style] * 4))
+        "VALUES ({})".format(company, ', '.join([dbc.param_style] * 4))
         )
     params = []
     for seq, col in enumerate(cols):
@@ -207,7 +207,7 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
             "short_descr, long_descr, col_head, key_field, data_source, condition, "
             "allow_null, allow_amend, max_len, db_scale, scale_ptr, dflt_val, "
             "dflt_rule, col_checks, fkey, choices, sql) "
-            "VALUES ({})".format(company, ', '.join([db_constants.param_style] * 23))
+            "VALUES ({})".format(company, ', '.join([dbc.param_style] * 23))
             )
         params = []
         for seq, col in enumerate(cols):
@@ -243,7 +243,7 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
         sql = (
             "INSERT INTO {}.db_columns_audit_xref "
             "(data_row_id, user_row_id, date_time, type) "
-            "VALUES ({})".format(company, ', '.join([db_constants.param_style] * 4))
+            "VALUES ({})".format(company, ', '.join([dbc.param_style] * 4))
             )
         params = []
         for seq, col in enumerate(cols):
@@ -269,6 +269,7 @@ async def setup_other_tables(context, conn):
         'dir_users_companies',
         'sys_form_defns',
         'sys_report_defns',
+        'sys_finrpt_defns',
         'sys_proc_defns',
         'sys_menu_defns',
         'acc_roles',
@@ -424,6 +425,7 @@ async def setup_forms(context):
         await form_defn.save()
 
     await setup_form('setup_grid')
+    await setup_form('finrpt_grid')
     await setup_form('grid_lookup')
     await setup_form('tree_lookup')
     await setup_form('login_form')
@@ -519,7 +521,7 @@ async def setup_data(context, conn, company_name):
     # await dir_comp.save()
 
     # use SQL instead of above, to avoid table_hook 'create_company'
-    param_style = db_constants.param_style
+    param_style = dbc.param_style
     sql = (
         "INSERT INTO _sys.dir_companies (company_id, company_name) "
         "VALUES ({0}, {0})"
