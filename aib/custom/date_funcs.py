@@ -227,7 +227,6 @@ async def setup_choices(caller, xml):
     if settings is None:  # first time - set up defaults
         ledger_periods = await db.cache.get_ledger_periods(caller.company,
             caller.context.module_row_id, caller.context.ledger_row_id)
-        # current_period = ledger_periods['curr']
         current_period = ledger_periods.current_period
         fld = await var.getfld('start_period')
         fld.col_defn.choices = choice_opening
@@ -415,15 +414,6 @@ async def check_tran_date(db_obj, fld, value):
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
     period_row_id = bisect_left([_.closing_date for _ in adm_periods], value)
 
-    # if True, we are capturing b/f balances
-    # not correct that it must be prior to start of financial calendar
-    #   - could be adding new sub-ledger to existing system
-    # needs more thought [2020-07-02]
-    if getattr(db_obj.context, 'bf', False):
-        if period_row_id != 0:  # date is <= first period (and first period is dummy)
-            raise AibError(head='Transaction date', body='Date must be prior to start of financial calendar')
-        return True
-
     if period_row_id == 0:  # date is <= first period (and first period is dummy)
         raise AibError(head='Transaction date', body='Date prior to start of financial calendar')
     if period_row_id == len(adm_periods):  # date is > last period
@@ -434,18 +424,18 @@ async def check_tran_date(db_obj, fld, value):
     # next 2 lines should always work [2018-10-03]
     # only works if cust_row_is is entered before tran_date - this may change [2019-02-09]
     module_row_id = db_obj.db_table.module_row_id
-    ledger_row_id = await db_obj.getval(db_obj.db_table.ledger_col)
+    ledger_col = db_obj.db_table.ledger_col
+    if ledger_col is None:  # module = 'gl'
+        ledger_row_id = None
+    else:
+        ledger_row_id = await db_obj.getval(ledger_col)
     ledger_periods = await db.cache.get_ledger_periods(db_obj.company, module_row_id, ledger_row_id)
     if ledger_periods == {}:
         raise AibError(head='Transaction date', body='Ledger periods not set up')
 
     if period_row_id not in ledger_periods:
-        # if period_row_id == ledger_periods['curr'] + 1:  # create new open period
         if period_row_id == ledger_periods.current_period + 1:  # create new open period
-            # module_row_id, ledger_row_id = db_obj.context.mod_ledg_id
             module_id = (await db.cache.get_mod_id(db_obj.company, db_obj.db_table.module_row_id))
-            # ledger_period = await db.objects.get_db_object(db.cache.cache_context,
-            #     '{}_ledger_periods'.format(module_id))
             ledger_period = await db.objects.get_db_object(db_obj.context, f'{module_id}_ledger_periods')
             await ledger_period.init(init_vals={
                 'ledger_row_id': ledger_row_id,
@@ -475,9 +465,6 @@ async def check_tran_date(db_obj, fld, value):
 
 async def check_stat_date(db_obj, fld, value):
     # called as col_check from tran_date
-
-    if getattr(db_obj.context, 'bf', False):
-        return True
 
     module_row_id = db_obj.db_table.module_row_id
     ledger_row_id = await db_obj.getval(db_obj.db_table.ledger_col)
@@ -530,10 +517,7 @@ async def check_wh_date(db_obj, fld, ledger_row_id):
         raise AibError(head=fld.col_defn.short_descr, body='Warehouse period not set up')
 
     if period_row_id not in ledger_periods:
-        # if period_row_id == ledger_periods['curr'] + 1:  # create new open period
         if period_row_id == ledger_periods.current_period + 1:  # create new open period
-            # ledger_period = await db.objects.get_db_object(
-            #     db.cache.cache_context, 'in_ledger_periods')
             context = await db.cache.get_new_context(1, True, db_obj.company)
             ledger_period = await db.objects.get_db_object(context, 'in_ledger_periods')
             await ledger_period.init(init_vals={

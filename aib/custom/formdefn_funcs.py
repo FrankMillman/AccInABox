@@ -317,7 +317,7 @@ async def dump_db_obj(caller, xml):
 memobj_cols = ('name', 'descr', 'parent', 'sequence', 'sub_types', 'tree_params',
     'actions', 'clone_from')
 memcol_cols = ('col_name', 'col_type', 'data_type', 'short_descr', 'long_descr', 
-    'col_head', 'key_field', 'calculated', 'allow_null', 'allow_amend', 'max_len',
+    'col_head', 'key_field', 'data_source', 'condition', 'allow_null', 'allow_amend', 'max_len',
     'db_scale', 'scale_ptr', 'dflt_val', 'dflt_rule', 'col_checks', 'fkey', 'choices', 'sql')
 
 async def load_mem_obj(caller, xml):
