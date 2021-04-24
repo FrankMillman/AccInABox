@@ -13,7 +13,7 @@ table = {
         ['qty_tot', 'pchs_tot']  # fields to roll
         ],
     'indexes'       : [
-        ['ipch_supp_cover', [
+        ['pch_supp_cover', [
             ['prod_code_id', False],
             ['supp_row_id', False],
             ['location_row_id', False],

@@ -94,7 +94,7 @@ async def setup_openitems(db_obj, conn, return_vals):
             )
 
 async def setup_inv_alloc(db_obj, conn, return_vals):
-    # called as split_src func from sls_isls_subtran.upd_on_save()
+    # called as split_src func from sls_subtran.upd_on_save()
     # return values - cost_whouse, cost_local
     tot_to_allocate = await db_obj.getval('qty')
 

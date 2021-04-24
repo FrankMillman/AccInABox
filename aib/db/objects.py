@@ -683,8 +683,8 @@ class DbObject:
             elif obj_name.startswith('subtran:'):
                 # this is used to value for a 'display_col' in a subtran
                 # it is set up in DbTable.get_sub_trans() below
-                # e.g. 'subtran:line_type=isls'
-                # use 'line_type' to get the subcol_name, 'isls' to get the subcol_val,
+                # e.g. 'subtran:line_type=sls'
+                # use 'line_type' to get the subcol_name, 'sls' to get the subcol_val,
                 #   then loook for the db_obj in self.sub_trans
                 subcol_name, subcol_val = obj_name[8:].split('=')
                 db_obj = self.sub_trans[subcol_name][subcol_val][0]

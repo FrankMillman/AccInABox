@@ -13,7 +13,7 @@ table = {
         ['qty_tot', 'sales_tot', 'cos_tot']  # fields to roll
         ],
     'indexes'       : [
-        ['isls_class_tots_cover', [
+        ['sls_class_tots_cover', [
             ['prod_class_id', False],
             ['location_row_id', False],
             ['function_row_id', False],

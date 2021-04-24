@@ -1,0 +1,33 @@
+<subtype_body subtype_id="sls">
+  <block/>
+  <panel/>
+  <if test="[[`if`, ``, `_param.in_ledger_id`, `is`, `$None`, ``]]"/>
+  <row/>
+  <col/>
+  <label value="Warehouse:"/>
+  <col/>
+  <input obj_name="sls" col_name="ledger_id" lng="80"/>
+  <display obj_name="sls" col_name="wh_prod_row_id>ledger_row_id>descr" lng="120"/>
+  <end_if/>
+  <row/>
+  <col/>
+  <label value="Prod code:"/>
+  <col/>
+  <input obj_name="sls" col_name="prod_code" lng="80"/>
+  <display obj_name="sls" col_name="wh_prod_row_id>prod_row_id>descr" lng="150"/>
+  <row/>
+  <col/>
+  <label value="Quantity:"/>
+  <col/>
+  <input obj_name="sls" col_name="qty" lng="80"/>
+  <row/>
+  <col/>
+  <label value="Price:"/>
+  <col/>
+  <input obj_name="sls" col_name="price" lng="80"/>
+  <row/>
+  <col/>
+  <label value="Amount:"/>
+  <col/>
+  <input obj_name="sls" col_name="sls_amount" lng="80"/>
+</subtype_body>

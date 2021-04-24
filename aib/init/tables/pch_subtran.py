@@ -117,10 +117,10 @@ cols.append ({
     'col_checks' : None,
     'fkey'       : [
         ['source_code', [
-            ['ipch_ap_inv', 'ap_tran_inv_det'],
-            ['ipch_ap_crn', 'ap_tran_crn_det'],
-            ['ipch_cb_inv', 'cb_tran_pmt_det'],
-            ['ipch_cb_crn', 'cb_tran_rec_det'],
+            ['pch_ap_inv', 'ap_tran_inv_det'],
+            ['pch_ap_crn', 'ap_tran_crn_det'],
+            ['pch_cb_inv', 'cb_tran_pmt_det'],
+            ['pch_cb_crn', 'cb_tran_rec_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -192,7 +192,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'ipch_amount',
+    'col_name'   : 'pch_amount',
     'data_type'  : '$TRN',
     'short_descr': 'Inv amount',
     'long_descr' : 'Inv amount in transaction currency',

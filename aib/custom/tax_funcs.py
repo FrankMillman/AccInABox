@@ -155,7 +155,7 @@ async def calc_tax(db_obj, conn, return_vals):
         tax_code_table = 'in_prod_tax_codes'
         tax_code_key = 'prod_row_id'
         tax_code_src = 'wh_prod_row_id>prod_row_id'
-        inv_amt = await db_obj.getval('isls_amount')
+        inv_amt = await db_obj.getval('sls_amount')
     elif db_obj.table_name == 'nsls_subtran':
         tax_code_table = 'nsls_tax_codes'
         tax_code_key = 'nsls_code_id'
@@ -165,7 +165,7 @@ async def calc_tax(db_obj, conn, return_vals):
         tax_code_table = 'in_prod_tax_codes'
         tax_code_key = 'prod_row_id'
         tax_code_src = 'wh_prod_row_id>prod_row_id'
-        inv_amt = await db_obj.getval('ipch_amount')
+        inv_amt = await db_obj.getval('pch_amount')
     elif db_obj.table_name == 'npch_subtran':
         tax_code_table = 'npch_tax_codes'
         tax_code_key = 'npch_code_id'

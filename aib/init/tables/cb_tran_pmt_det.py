@@ -7,7 +7,7 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['ipch', 'Purchase of inventory item', 'pch_subtran',
+            ['pch', 'Purchase of inventory item', 'pch_subtran',
                 [  # return values
                     ['pmt_tran', 'tot_amt'],  # tgt_col, src_col
                     ],

@@ -117,10 +117,10 @@ cols.append ({
     'col_checks' : None,
     'fkey'       : [
         ['source_code', [
-            ['isls_ar_inv', 'ar_tran_inv_det'],
-            ['isls_ar_crn', 'ar_tran_crn_det'],
-            ['isls_cb_inv', 'cb_tran_rec_det'],
-            ['isls_cb_crn', 'cb_tran_pmt_det'],
+            ['sls_ar_inv', 'ar_tran_inv_det'],
+            ['sls_ar_crn', 'ar_tran_crn_det'],
+            ['sls_cb_inv', 'cb_tran_rec_det'],
+            ['sls_cb_crn', 'cb_tran_pmt_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -206,7 +206,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'isls_amount',
+    'col_name'   : 'sls_amount',
     'data_type'  : '$TRN',
     'short_descr': 'Inv amount',
     'long_descr' : 'Inv amount in transaction currency',

@@ -6,8 +6,8 @@
   <db_objects>
     <db_obj name="cb_rec" table_name="cb_tran_rec" is_formview_obj="true"/>
     <db_obj name="cb_det" table_name="cb_tran_rec_det" parent="cb_rec"/>
-    <db_obj name="isls" table_name="sls_isls_subtran" parent="cb_det"/>
-    <db_obj name="nsls" table_name="sls_nsls_subtran" parent="cb_det"/>
+    <db_obj name="sls" table_name="sls_subtran" parent="cb_det"/>
+    <db_obj name="nsls" table_name="nsls_subtran" parent="cb_det"/>
     <db_obj name="ar_subrec" table_name="ar_subtran_rec" parent="cb_det"/>
     <db_obj name="ar_allocations" table_name="ar_allocations" parent="ar_subrec"/>
     <db_obj name="gl" table_name="gl_jnl_subtran" parent="cb_det"/>
@@ -76,7 +76,7 @@
             "/>
           <block/>
           <subtran_frame subtran_obj="cb_det" subtran_col="line_type">
-            <subtran_body subtran_id="isls"/>
+            <subtran_body subtran_id="sls"/>
             <subtran_body subtran_id="nsls"/>
             <subtran_body subtran_id="arec"/>
             <subtran_body subtran_id="gl"/>

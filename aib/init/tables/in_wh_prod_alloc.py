@@ -120,14 +120,6 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    # 'fkey'       : [
-    #     ['tran_type', [
-    #         ['ar_inv', 'ar_tran_inv_isls'],
-    #         ['cb_rec', 'cb_tran_rec_isls'],
-    #         ['ar_crn', 'ar_tran_crn_isls'],
-    #         ['cb_pmt', 'cb_tran_pmt_isls'],
-    #         ]],
-    #     'row_id', None, None, True, None],
     'fkey'       : ['sls_subtran', 'row_id', None, None, True, None],
     'choices'    : None,
     })

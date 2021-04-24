@@ -6,8 +6,8 @@
   <db_objects>
     <db_obj name="ar_inv" table_name="ar_tran_inv" is_formview_obj="true"/>
     <db_obj name="ar_invdet" table_name="ar_tran_inv_det" parent="ar_inv"/>
-    <db_obj name="isls" table_name="sls_isls_subtran" parent="ar_invdet"/>
-    <db_obj name="nsls" table_name="sls_nsls_subtran" parent="ar_invdet"/>
+    <db_obj name="sls" table_name="sls_subtran" parent="ar_invdet"/>
+    <db_obj name="nsls" table_name="nsls_subtran" parent="ar_invdet"/>
     <db_obj name="com" table_name="ar_comments" parent="ar_invdet"/>
   </db_objects>
 
@@ -93,7 +93,7 @@
 
           <block/>
           <subtran_frame subtran_obj="ar_invdet" subtran_col="line_type">
-            <subtran_body subtran_id="isls"/>
+            <subtran_body subtran_id="sls"/>
             <subtran_body subtran_id="nsls"/>
             <subtran_body subtran_id="com"/>
           </subtran_frame>

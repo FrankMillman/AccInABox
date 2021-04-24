@@ -298,7 +298,7 @@ async def ledger_inserted(db_obj, xml):
     conn = await db.connection._get_connection()
 
     company = db_obj.company
-    cte = conn.tree_select(
+    cte = await conn.tree_select(
         context=db_obj.context,
         table_name='sys_menu_defns',
         filter=[

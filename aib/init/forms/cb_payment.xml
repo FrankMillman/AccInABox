@@ -6,8 +6,8 @@
   <db_objects>
     <db_obj name="cb_pmt" table_name="cb_tran_pmt" is_formview_obj="true"/>
     <db_obj name="cb_det" table_name="cb_tran_pmt_det" parent="cb_pmt"/>
-    <db_obj name="ipch" table_name="pch_ipch_subtran" parent="cb_det"/>
-    <db_obj name="npch" table_name="pch_npch_subtran" parent="cb_det"/>
+    <db_obj name="pch" table_name="pch_subtran" parent="cb_det"/>
+    <db_obj name="npch" table_name="npch_subtran" parent="cb_det"/>
     <db_obj name="achg" table_name="ar_subtran_chg" parent="cb_det"/>
     <db_obj name="ap_subpmt" table_name="ap_subtran_pmt" parent="cb_det"/>
     <db_obj name="ap_allocations" table_name="ap_allocations" parent="ap_subpmt"/>
@@ -77,9 +77,8 @@
             "/>
           <block/>
           <subtran_frame subtran_obj="cb_det" subtran_col="line_type">
-            <subtran_body subtran_id="ipch"/>
+            <subtran_body subtran_id="pch"/>
             <subtran_body subtran_id="npch"/>
-            <!-- <subtran_body subtran_id="apmt"/> -->
             <subtran_body subtran_id="ar_chg"/>
             <subtran_body subtran_id="gl"/>
             <subtran_body subtran_id="com"/>

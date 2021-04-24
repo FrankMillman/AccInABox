@@ -201,10 +201,10 @@ class GuiCtrl:
                     lkup_filter = 'a.{} = ?'.format(alt_tgt.col_name)
 
                 else:
-                    # e.g. sls_isls_subinv.wh_prod_row_id has this fkey -
+                    # e.g. sls_subtran.wh_prod_row_id has this fkey -
                     #   ['inv_wh_prod', 'row_id', 'ledger_id, prod_code', 'ledger_id, prod_code']
-                    #   ledger_id is sls_isls_subinv>inv_wh_prod>inv_ledger_params.ledger_id
-                    #   prod_code is sls_isls_subinv>inv_wh_prod>inv_prod_codes.prod_code
+                    #   ledger_id is sls_subtran>inv_wh_prod>inv_ledger_params.ledger_id
+                    #   prod_code is sls_subtran>inv_wh_prod>inv_prod_codes.prod_code
                     #
                     # alttgt_obj is inv_wh_prod, tgt_obj is inv_prod_codes
                     # so we follow the 'else' clause and end up here 
