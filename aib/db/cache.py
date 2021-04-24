@@ -299,9 +299,8 @@ async def ledger_inserted(db_obj, xml):
 
     company = db_obj.company
     cte = conn.tree_select(
-        company_id=company,
+        context=db_obj.context,
         table_name='sys_menu_defns',
-        tree_params=[None, ['row_id', 'descr', 'parent_id', 'seq'], None],
         filter=[
             ['WHERE', '', 'module_row_id', '=',module_row_id, ''],
             ['AND', '', 'deleted_id', '=', -1, ''],
@@ -573,14 +572,17 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
             else:
                 sub_date = 'null'
                 sub_state = 'null'
-            sql = (
-                f'SELECT period_row_id, state, {sub_date}, {sub_state} '
-                f'FROM {company}.{module_id}_ledger_periods '
-                f'WHERE ledger_row_id = {conn.constants.param_style} AND deleted_id = 0 '
-                f'ORDER BY period_row_id'
-                )
-            params = [ledger_row_id]
-            async for period_row_id, state, sub_date, sub_state in await conn.exec_sql(sql, params):
+            sql = []
+            params = []
+            sql.append(f'SELECT period_row_id, state, {sub_date}, {sub_state}')
+            sql.append(f'FROM {company}.{module_id}_ledger_periods')
+            sql.append(f'WHERE deleted_id = 0')
+            if ledger_row_id is not None:  # else module_id = 'gl'
+                sql.append(f'AND ledger_row_id = {conn.constants.param_style}')
+                params.append(ledger_row_id)
+            sql.append(f'ORDER BY period_row_id')
+            async for period_row_id, state, sub_date, sub_state in await conn.exec_sql(
+                    ' '.join(sql), params):
                 period_data = SN(state=state)
                 if module_id == 'ar':
                     period_data.statement_date = sub_date

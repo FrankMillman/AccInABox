@@ -152,10 +152,9 @@ class GuiTreeCommon:
                         self.parent.company, group.table_name, group_where)
                     )
             else:
-                cte = conn.tree_select(
-                    company_id=self.parent.company,
+                cte = await conn.tree_select(
+                    context=self.parent.context,
                     table_name=group.table_name,
-                    tree_params=group.db_table.tree_params,
                     )
                 sql = (cte +
                     "SELECT row_id, {}, {}, {}, "
@@ -234,10 +233,9 @@ class GuiTreeCommon:
                     member.context, member.db_table, col_names, where, order)
 
             else:
-                cte = conn.tree_select(
-                    company_id=self.parent.company,
+                cte = await conn.tree_select(
+                    context=self.parent.context,
                     table_name=member.table_name,
-                    tree_params=member.db_table.tree_params,
                     )
                 sql = (cte +
                     "SELECT row_id, {}, {}, {}, "

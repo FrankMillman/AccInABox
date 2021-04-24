@@ -247,8 +247,14 @@ class GuiCtrl:
                             alt_tgt.col_name,
                             ))
 
-                # place filter in tgt_obj.context - it will be picked up in ht.gui_grid.start_grid
-                tgt_obj.context.lkup_filter = (lkup_filter, await alt_tgt.getval())
+                col_val = await alt_tgt.getval()
+                if col_val is None:
+                    # if looking up nsls/npch_codes, ledger_id has not been selected yet
+                    # do not apply a filter, allow user to choose ledger_id from tree lookup
+                    pass
+                else:
+                    # place filter in tgt_obj.context - it will be picked up in ht.gui_grid.start_grid
+                    tgt_obj.context.lkup_filter = (lkup_filter, col_val)
 
         if tgt_obj.db_table.tree_params:
             form_name = '_sys.tree_lookup'

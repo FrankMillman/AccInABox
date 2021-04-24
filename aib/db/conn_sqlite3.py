@@ -526,22 +526,22 @@ def convert_dflt(self, string, data_type):
 def create_functions(self):
     pass
 
-async def create_company(self, company_id):
+async def create_company(self, company):
     # if directory does not exist, sqlite3 will create it
-    await self.attach_company(company_id)
+    await self.attach_company(company)
     # next 2 lines added 2016-11-24
     # sqlite3 no longer permits 'attaching' while inside a transaction
     # we do try to attach _sys while creating a new company, so this
     #   fixes that problem
     # but it is not a true fix - the problem is sure to raise its head
     #   again at some point :-(
-    if company_id != '_sys':
+    if company != '_sys':
         await self.attach_company('_sys')
 
 def create_primary_key(self, pkeys):
     return f", PRIMARY KEY ({', '.join(pkeys)})"
 
-def create_foreign_key(self, company_id, fkeys):
+def create_foreign_key(self, company, fkeys):
     foreign_key = ''
     for (src_col, tgt_table, tgt_col, del_cascade) in fkeys:
         if '.' not in tgt_table:  # sqlite3 does not support remote fkeys
@@ -550,21 +550,21 @@ def create_foreign_key(self, company_id, fkeys):
                 ' ON DELETE CASCADE' if del_cascade else '')
     return foreign_key
 
-def create_alt_index(self, company_id, table_name, ndx_cols, a_or_b):
+def create_alt_index(self, company, table_name, ndx_cols, a_or_b):
     ndx_cols = [f"{'LOWER(' + col_name + ')' if col_type == 'TEXT' else col_name}"
         for col_name, col_type in ndx_cols]
     ndx_cols = ', '.join(ndx_cols)
     if a_or_b == 'a':
-        ndx_name = f'{company_id}._{table_name}'
+        ndx_name = f'{company}._{table_name}'
     else:  # must be 'b'
-        ndx_name = f'{company_id}._{table_name}_b'
+        ndx_name = f'{company}._{table_name}_b'
     filter = 'WHERE deleted_id = 0'
     return ([
         f'CREATE UNIQUE INDEX {ndx_name} '
         f'ON {table_name} ({ndx_cols}) {filter}'
         ])
 
-def create_index(self, company_id, table_name, index):
+def create_index(self, company, table_name, index):
     ndx_name, ndx_cols, filter, unique = index
     ndx_cols = ', '.join(f'{col_name}{"" if sort_desc is False else " DESC"}' for col_name, sort_desc in ndx_cols)
     if filter is None:
@@ -573,20 +573,26 @@ def create_index(self, company_id, table_name, index):
         filter += ' AND deleted_id = 0'
     unique = 'UNIQUE ' if unique else ''
     return (
-        f'CREATE {unique}INDEX {company_id}.{ndx_name} '
+        f'CREATE {unique}INDEX {company}.{ndx_name} '
         f'ON {table_name} ({ndx_cols}) {filter}'
         )
 
 def get_lower_colname(self, col_name, alias):
     return f'LOWER({alias}.{col_name})'
 
-def tree_select(self, company_id, table_name, tree_params, level=None,
+async def tree_select(self, context, table_name, level=None,
         start_value=None, filter=None, sort=False, up=False):
+
+    company = context.company
+    db_table = await db.objects.get_db_table(context, company, table_name)
+    tree_params = db_table.tree_params
 
     group, col_names, fixed_levels = tree_params
     code, descr, parent_id, seq = col_names
     if fixed_levels is not None:
         type_colname, level_types, sublevel_type = fixed_levels
+        if db_table.ledger_col is not None:  # if sub-ledgers, level_types is a dict keyed on ledger_row_id
+            level_types = level_types[context.ledger_row_id]
 
     select_1 = "*, 0 AS _level"
     select_2 = "_tree2.*, _tree._level+1"
@@ -659,15 +665,15 @@ def tree_select(self, company_id, table_name, tree_params, level=None,
     cte = (
         "WITH RECURSIVE _tree AS ("
           f"SELECT {select_1} "
-          f"FROM {company_id}.{table_name} {where_1} "
+          f"FROM {company}.{table_name} {where_1} "
           f"UNION ALL "
           f"SELECT {select_2} "
-          f"FROM _tree, {company_id}.{table_name} AS _tree2 {where_2}) "
+          f"FROM _tree, {company}.{table_name} AS _tree2 {where_2}) "
         )
     return cte
 
-def get_view_names(self, company_id, view_names):
-    return view_names.replace(f'{company_id}.', '')
+def get_view_names(self, company, view_names):
+    return view_names.replace(f'{company}.', '')
 
 def escape_string(self):
     # in a LIKE clause, literals '%' and '_' must be escaped with (e.g.) '\'

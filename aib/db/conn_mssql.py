@@ -515,31 +515,31 @@ def create_functions(self):
     #         "END "
     #       )
 
-async def create_company(self, company_id):
-    await self.exec_cmd('CREATE SCHEMA {}'.format(company_id))
+async def create_company(self, company):
+    await self.exec_cmd('CREATE SCHEMA {}'.format(company))
 
 def create_primary_key(self, pkeys):
     return f", PRIMARY KEY NONCLUSTERED ({', '.join(pkeys)})"
 
-def create_foreign_key(self, company_id, fkeys):
+def create_foreign_key(self, company, fkeys):
     foreign_key = ''
     for (src_col, tgt_table, tgt_col, del_cascade) in fkeys:
         if '.' in tgt_table:
             tgt_company, tgt_table = tgt_table.split('.')
         else:
-            tgt_company = company_id
+            tgt_company = company
         foreign_key += ', FOREIGN KEY ({}) REFERENCES {}.{} ({}){}'.format(
             src_col, tgt_company, tgt_table, tgt_col,
             ' ON DELETE CASCADE' if del_cascade else '')
     return foreign_key
 
-def create_alt_index(self, company_id, table_name, ndx_cols, a_or_b):
+def create_alt_index(self, company, table_name, ndx_cols, a_or_b):
     sql_list = []
     cols_to_index = []
     for col_name, data_type in ndx_cols:
         if data_type == 'TEXT':
             sql_list.append(
-                f'ALTER TABLE {company_id}.{table_name} ADD _{col_name} AS LOWER({col_name})')
+                f'ALTER TABLE {company}.{table_name} ADD _{col_name} AS LOWER({col_name})')
             cols_to_index.append(f'_{col_name}')
         else:
             cols_to_index.append(col_name)
@@ -547,10 +547,10 @@ def create_alt_index(self, company_id, table_name, ndx_cols, a_or_b):
         ndx_name = f'_{table_name}'
     else:  # must be 'b'
         ndx_name = f'_{table_name}_b'
-    sql_list.append(f"CREATE INDEX {ndx_name} ON {company_id}.{table_name} ({', '.join(cols_to_index)})")
+    sql_list.append(f"CREATE INDEX {ndx_name} ON {company}.{table_name} ({', '.join(cols_to_index)})")
     return sql_list
 
-def create_index(self, company_id, table_name, index):
+def create_index(self, company, table_name, index):
     ndx_name, ndx_cols, filter, unique = index
     if filter is None:
         filter = 'WHERE deleted_id = 0'
@@ -560,19 +560,25 @@ def create_index(self, company_id, table_name, index):
     unique = 'UNIQUE ' if unique else ''
     return (
         f'CREATE {unique}INDEX {ndx_name} '
-        f'ON {company_id}.{table_name} ({ndx_cols}) {filter}'
+        f'ON {company}.{table_name} ({ndx_cols}) {filter}'
         )
 
 def get_lower_colname(self, col_name, alias):
     return f'{alias}._{col_name}'
 
-def tree_select(self, company_id, table_name, tree_params, level=None,
+async def tree_select(self, context, table_name, level=None,
         start_value=None, filter=None, sort=False, up=False):
+
+    company = context.company
+    db_table = await db.objects.get_db_table(context, company, table_name)
+    tree_params = db_table.tree_params
 
     group, col_names, fixed_levels = tree_params
     code, descr, parent_id, seq = col_names
     if fixed_levels is not None:
         type_colname, level_types, sublevel_type = fixed_levels
+        if db_table.ledger_col is not None:  # if sub-ledgers, level_types is a dict keyed on ledger_row_id
+            level_types = level_types[context.ledger_row_id]
 
     select_1 = "*, 0 AS _level"
     select_2 = "_tree2.*, _tree._level+1"
@@ -649,14 +655,14 @@ def tree_select(self, company_id, table_name, tree_params, level=None,
     cte = (
         "WITH _tree AS ("
           f"SELECT {select_1} "
-          f"FROM {company_id}.{table_name} {where_1} "
+          f"FROM {company}.{table_name} {where_1} "
           f"UNION ALL "
           f"SELECT {select_2} "
-          f"FROM _tree, {company_id}.{table_name} AS _tree2 {where_2}) "
+          f"FROM _tree, {company}.{table_name} AS _tree2 {where_2}) "
         )
     return cte
 
-def get_view_names(self, company_id, view_names):
+def get_view_names(self, company, view_names):
     return view_names
 
 def escape_string(self):

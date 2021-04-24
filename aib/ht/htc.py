@@ -154,10 +154,10 @@ class Session:
                     dumps((company, 1)),  # root row_id is always 1
                     root_id, comp_name, True))
 
-                cte = conn.tree_select(
-                    company_id=company,
+                ctx = await db.cache.get_new_context(1, True, company)
+                cte = await conn.tree_select(
+                    context=ctx,
                     table_name='sys_menu_defns',
-                    tree_params=[None, ['row_id', 'descr', 'parent_id', 'seq'], None],
                     filter=[['WHERE', '', 'deleted_id', '=', 0, '']],
                     sort=True,
                     )
