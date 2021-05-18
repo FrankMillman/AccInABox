@@ -8,7 +8,7 @@
     <db_obj name="cb_det" table_name="cb_tran_pmt_det" parent="cb_pmt"/>
     <db_obj name="pch" table_name="pch_subtran" parent="cb_det"/>
     <db_obj name="npch" table_name="npch_subtran" parent="cb_det"/>
-    <db_obj name="achg" table_name="ar_subtran_chg" parent="cb_det"/>
+    <db_obj name="arjnl" table_name="ar_subtran_jnl" parent="cb_det"/>
     <db_obj name="ap_subpmt" table_name="ap_subtran_pmt" parent="cb_det"/>
     <db_obj name="ap_allocations" table_name="ap_allocations" parent="ap_subpmt"/>
     <db_obj name="gl" table_name="gl_jnl_subtran" parent="cb_det"/>
@@ -79,7 +79,7 @@
           <subtran_frame subtran_obj="cb_det" subtran_col="line_type">
             <subtran_body subtran_id="pch"/>
             <subtran_body subtran_id="npch"/>
-            <subtran_body subtran_id="ar_chg"/>
+            <subtran_body subtran_id="ar_jnl"/>
             <subtran_body subtran_id="gl"/>
             <subtran_body subtran_id="com"/>
           </subtran_frame>

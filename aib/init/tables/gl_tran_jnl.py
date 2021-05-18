@@ -240,6 +240,24 @@ virt = []
 #     'sql'        : "'gl_jnl'",
 #     })
 virt.append ({
+    'col_name'   : 'trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Tran type row id',
+    'long_descr' : 'Tran type row id',
+    'col_head'   : 'Tran type row id',
+    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'gl_jnl'",
+    })
+virt.append ({
+    'col_name'   : 'tran_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Transaction exchange rate',
+    'long_descr' : 'Exchange rate from transaction currency to local',
+    'col_head'   : 'Rate tran',
+    'db_scale'   : 8,
+    'scale_ptr'  : None,
+    'sql'        : "1",
+    })
+virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction period',

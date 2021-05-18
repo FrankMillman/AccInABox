@@ -216,14 +216,34 @@ cols.append ({
     'fkey'       : ['adm_functions', 'row_id', 'valid_funs', 'function_id', False, None],
     'choices'    : None,
     })
+# cols.append ({
+#     'col_name'   : 'ctrl_acc',
+#     'data_type'  : 'JSON',
+#     'short_descr': 'Control account',
+#     'long_descr' : 'If this code is a control account, [module_row_id, ledger_row_id, bal/tot/uea/uex]',
+#     'col_head'   : 'Ctrl',
+#     'key_field'  : 'N',
+#     'data_source': 'input',
+#     'condition'  : None,
+#     'allow_null' : True,
+#     'allow_amend': [['where', '', '$value', 'is', '$None', '']],
+#     'max_len'    : 0,
+#     'db_scale'   : 0,
+#     'scale_ptr'  : None,
+#     'dflt_val'   : None,
+#     'dflt_rule'  : None,
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
 cols.append ({
-    'col_name'   : 'ctrl_acc',
-    'data_type'  : 'JSON',
-    'short_descr': 'Control account',
-    'long_descr' : 'If this code is a control account, [module_row_id, ledger_row_id, bal/tot/uea/uex]',
-    'col_head'   : 'Ctrl',
+    'col_name'   : 'ctrl_mod_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Control account - module id',
+    'long_descr' : 'Control account - module id',
+    'col_head'   : 'Ctrl mod id',
     'key_field'  : 'N',
-    'data_source': 'input',
+    'data_source': 'prog',
     'condition'  : None,
     'allow_null' : True,
     'allow_amend': [['where', '', '$value', 'is', '$None', '']],
@@ -233,8 +253,74 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : None,
+    'fkey'       : ['db_modules', 'row_id', 'ctrl_mod_id', 'module_id', False, None],
     'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'ctrl_ledg_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Control account - ledger id',
+    'long_descr' : 'Control account - ledger id',
+    'col_head'   : 'Ctrl ledg id',
+    'key_field'  : 'N',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': [['where', '', '$value', 'is', '$None', '']],
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : [
+        ['check_ctrl_ledg', 'Control account - invalid ledger id', [
+            ['check', '(', 'ctrl_mod_row_id', 'is', '$None', ''],
+            ['and', '', '$value', 'is', '$None', ')'],
+            ['or', '(', 'ctrl_mod_row_id', 'is not', '$None', ''],
+            ['and', '', '$value', 'is not', '$None', ')'],
+            ]],
+        ],
+    'fkey'       : [
+        ['ctrl_mod_id', [
+            ['cb', 'cb_ledger_params'],
+            ['ar', 'ar_ledger_params'],
+            ['ap', 'ap_ledger_params'],
+            ['nsls', 'nsls_ledger_params'],
+            ['npch', 'npch_ledger_params'],
+            ]],
+        'row_id', 'ctrl_ledg_id', 'ledger_id', False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'ctrl_acc_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Control account - type',
+    'long_descr' : 'Control account type - bal/uea/uex',
+    'col_head'   : 'Ctrl type',
+    'key_field'  : 'N',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': [['where', '', '$value', 'is', '$None', '']],
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : [
+        ['check_ctrl_type', 'Control account - invalid type', [
+            ['check', '(', 'ctrl_mod_row_id', 'is', '$None', ''],
+            ['and', '', '$value', 'is', '$None', ')'],
+            ['or', '(', 'ctrl_mod_row_id', 'is not', '$None', ''],
+            ['and', '', '$value', 'is not', '$None', ')'],
+            ]],
+        ],
+    'fkey'       : None,
+    'choices'    : [
+        ('bal', 'Balance'),
+        ('uea', 'Unearned'),
+        ('uex', 'Unexpensed'),
+        ],
     })
 # cols.append ({
 #     'col_name'   : 'category',
@@ -309,3 +395,19 @@ cursors.append({
 
 # actions
 actions = []
+actions.append([
+    'upd_checks', [
+        [
+            'check_ctrl_acc',
+            'Control account - missing parameter',
+            [
+                ['check', '(', 'ctrl_mod_row_id', 'is', '$None', ''],
+                ['and', '', 'ctrl_ledg_row_id', 'is', '$None', ''],
+                ['and', '', 'ctrl_acc_type', 'is', '$None', ')'],
+                ['or', '(', 'ctrl_mod_row_id', 'is not', '$None', ''],
+                ['and', '', 'ctrl_ledg_row_id', 'is not', '$None', ''],
+                ['and', '', 'ctrl_acc_type', 'is not', '$None', ')'],
+                ],
+            ],
+        ],
+    ])

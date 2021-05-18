@@ -448,6 +448,22 @@ virt.append ({
     'sql'        : "'cb_pmt'",
     })
 virt.append ({
+    'col_name'   : 'module_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Module row id',
+    'long_descr' : 'Module row id',
+    'col_head'   : 'Module row id',
+    'sql'        : "SELECT row_id FROM {company}.db_modules WHERE module_id = 'cb'",
+    })
+virt.append ({
+    'col_name'   : 'trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Tran type row id',
+    'long_descr' : 'Tran type row id',
+    'col_head'   : 'Tran type row id',
+    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'cb_pmt'",
+    })
+virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction period',
@@ -549,7 +565,9 @@ actions.append([
                 ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'ledger_row_id>location_row_id'],
                 ['function_row_id', 'ledger_row_id>function_row_id'],
-                ['source_code', "'cb_pmt'"],
+                ['src_trantype_row_id', 'trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
@@ -571,7 +589,9 @@ actions.append([
                 ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'ledger_row_id>location_row_id'],
                 ['function_row_id', 'ledger_row_id>function_row_id'],
-                ['source_code', "'cb_pmt'"],
+                ['src_trantype_row_id', 'trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation

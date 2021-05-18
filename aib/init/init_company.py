@@ -235,6 +235,7 @@ async def setup_other_tables(context, conn):
         'adm_tax_cats',
         'adm_tax_codes',
         'adm_tax_rates',
+        'adm_tran_types',
         'adm_params',
         'org_msg_types',
         'org_parties',
@@ -242,13 +243,13 @@ async def setup_other_tables(context, conn):
         'org_messaging',
         'org_phone_nos',
         'org_contacts',
-        'gl_params',
+        'gl_ledger_params',
         'gl_ledger_periods',
         'gl_source_codes',
         'gl_tran_bf',
         'gl_tran_jnl',
         'gl_tran_jnl_det',
-        'gl_jnl_subtran',
+        'gl_subtran_jnl',
         'gl_totals',
         'cb_ledger_params',
         'cb_ledger_periods',
@@ -256,6 +257,7 @@ async def setup_other_tables(context, conn):
         'cb_tran_rec_det',
         'cb_tran_pmt',
         'cb_tran_pmt_det',
+        'cb_tran_tfr',
         'cb_tran_bf',
         'cb_totals',
         'cb_comments',
@@ -293,9 +295,11 @@ async def setup_other_tables(context, conn):
         'ar_tran_inv_det',
         'ar_tran_crn',
         'ar_tran_crn_det',
+        'ar_tran_jnl',
+        'ar_tran_jnl_det',
         'ar_tran_rec',
         'ar_subtran_rec',
-        'ar_subtran_chg',
+        'ar_subtran_jnl',
         'ar_tran_disc',
         'ar_tran_alloc',
         'ar_tran_bf',
@@ -313,10 +317,13 @@ async def setup_other_tables(context, conn):
         'ap_tran_inv_det',
         'ap_tran_crn',
         'ap_tran_crn_det',
+        'ap_tran_jnl',
+        'ap_tran_jnl_det',
         'ap_pmt_batch',
         'ap_pmt_batch_det',
         'ap_tran_pmt',
         'ap_subtran_pmt',
+        'ap_subtran_jnl',
         'ap_tran_disc',
         'ap_tran_alloc',
         'ap_tran_bf',
@@ -586,8 +593,8 @@ async def setup_forms(context, conn):
     await setup_form('ar_ledger_summary')
     await setup_form('ar_inv_day_per')
     await setup_form('ar_inv_day')
-    await setup_form('ar_chg_day_per')
-    await setup_form('ar_chg_day')
+    await setup_form('ar_jnl_day_per')
+    await setup_form('ar_jnl_day')
     await setup_form('ar_rec_day_per')
     await setup_form('ar_rec_day')
     await setup_form('ar_disc_day_per')
@@ -654,12 +661,15 @@ async def setup_finrpts(context, conn):
         await finrpt_defn.setval('group_params', rpt.groups)
         await finrpt_defn.setval('column_params', rpt.columns)
         await finrpt_defn.setval('pivot_on', rpt.pivot_on)
+        await finrpt_defn.setval('cashflow_params', rpt.cashflow_params)
         await finrpt_defn.save()
 
+    await setup_finrpt('tb_by_int')
     await setup_finrpt('ar_by_src')
     await setup_finrpt('ar_pivot_src')
     await setup_finrpt('int_by_loc')
     await setup_finrpt('int_pivot_loc')
+    await setup_finrpt('cb_cash_flow')
 
 async def setup_processes(context, conn):
     parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
@@ -742,8 +752,10 @@ async def setup_menus(context, conn, company_name):
             ['Gl transactions', 'menu', 'gl', [
                 ]],
             ['Gl reports', 'menu', 'gl', [
+                ['Trial balance', 'finrpt', 'tb_by_int'],
                 ['Int by loc', 'finrpt', 'int_by_loc'],
                 ['Int pivot loc', 'finrpt', 'int_pivot_loc'],
+                ['Cash flow', 'finrpt', 'cb_cash_flow'],
                 ]],
             ['Period end procedure', 'form', 'gl_ledger_periods'],
             ]],
@@ -917,6 +929,10 @@ async def setup_init_data(context, conn, company_name):
     await adm_fun.setval('function_type', 'root')
     await adm_fun.save()
 
+    gl_ledger_params = await db.objects.get_db_object(context, 'gl_ledger_params')
+    await gl_ledger_params.setval('row_id', 1)
+    await gl_ledger_params.save()
+
     gl_group = await db.objects.get_db_object(context, 'gl_groups')
     await gl_group.setval('gl_group', 'all')
     await gl_group.setval('descr', 'All groups')
@@ -960,3 +976,49 @@ async def setup_init_data(context, conn, company_name):
         await acc_role.setval('parent_id', 1)
         await acc_role.setval('module_row_id', await db_module.getval('row_id'))
         await acc_role.save()
+
+    tran_types = []
+    tran_types.append(('gl_jnl', 'Gl journal', 'gl', 'gl_tran_jnl'))
+    # tran_types.append(('gl_subjnl', 'Gl subtran journal', 'gl', 'gl_subtran_jnl'))
+    tran_types.append(('gl_bf', 'Gl b/f balance', 'gl', 'gl_tran_bf'))
+    tran_types.append(('cb_rec', 'Cb receipt', 'cb', 'cb_tran_rec'))
+    tran_types.append(('cb_pmt', 'Cb payment', 'cb', 'cb_tran_pmt'))
+    tran_types.append(('cb_tfr', 'Cb tansfer', 'cb', 'cb_tran_tfr'))
+    tran_types.append(('cb_bf', 'Cb b/f balance', 'cb', 'cb_tran_bf'))
+    tran_types.append(('ar_inv', 'Ar invoice', 'ar', 'ar_tran_inv'))
+    tran_types.append(('ar_crn', 'Ar cr note', 'ar', 'ar_tran_crn'))
+    tran_types.append(('ar_jnl', 'Ar journal', 'ar', 'ar_tran_jnl'))
+    tran_types.append(('ar_rec', 'Ar receipt', 'ar', 'ar_tran_rec'))
+    tran_types.append(('ar_disc', 'Ar discount', 'ar', 'ar_tran_disc'))
+    tran_types.append(('ar_subrec', 'Ar subtran receipt', 'ar', 'ar_subtran_rec'))
+    tran_types.append(('ar_subjnl', 'Ar subtran journal', 'ar', 'ar_subtran_jnl'))
+    tran_types.append(('ar_bf', 'Ar b/f balance', 'ar', 'ar_tran_bf'))
+    tran_types.append(('ar_uea_bf', 'Ar b/f unearned', 'ar', 'ar_uea_bf'))
+    tran_types.append(('ap_inv', 'Ap invoice', 'ap', 'ap_tran_inv'))
+    tran_types.append(('ap_crn', 'Ap cr note', 'ap', 'ap_tran_crn'))
+    tran_types.append(('ap_jnl', 'Ap journal', 'ap', 'ap_tran_jnl'))
+    tran_types.append(('ap_pmt', 'Ap payment', 'ap', 'ap_tran_pmt'))
+    tran_types.append(('ap_disc', 'Ap discount', 'ap', 'ap_tran_disc'))
+    tran_types.append(('ap_subpmt', 'Ap subtran payment', 'ap', 'ap_subtran_pmt'))
+    tran_types.append(('ap_subjnl', 'Ap subtran journal', 'ap', 'ap_subtran_jnl'))
+    tran_types.append(('ap_bf', 'Ap b/f balance', 'ap', 'ap_tran_bf'))
+    tran_types.append(('ap_uex_bf', 'Ap b/f unexpensed', 'ap', 'ap_uex_bf'))
+    tran_types.append(('sls', 'Sales', 'sls', 'sls_subtran'))
+    tran_types.append(('sls_tax', 'Sales tax', 'sls', 'sls_subtran_tax'))
+    tran_types.append(('nsls', 'Non-inv sales', 'sls', 'nsls_subtran'))
+    tran_types.append(('nsls_tax', 'Non-inv sales tax', 'sls', 'nsls_subtran_tax'))
+    tran_types.append(('nsls_ear', 'Non-inv sales earned', 'sls', 'nsls_subtran_uea'))
+    tran_types.append(('pch', 'Purchases', 'pch', 'pch_subtran'))
+    tran_types.append(('pch_tax', 'Purchases tax', 'pch', 'pch_subtran_tax'))
+    tran_types.append(('npch', 'Non-inv purchases', 'pch', 'npch_subtran'))
+    tran_types.append(('npch_tax', 'Non-inv purchases tax', 'pch', 'npch_subtran_tax'))
+    tran_types.append(('npch_exp', 'Non-inv purchases expensed', 'pch', 'npch_subtran_uex'))
+
+    tran_type = await db.objects.get_db_object(context, 'adm_tran_types')
+    for ttype, descr, module_id, table_name in tran_types:
+        await tran_type.init()
+        await tran_type.setval('tran_type', ttype)
+        await tran_type.setval('descr', descr)
+        await tran_type.setval('module_id', module_id)
+        await tran_type.setval('table_name', table_name)
+        await tran_type.save()

@@ -79,11 +79,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'source_code_id',
+    'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Source code id',
-    'long_descr' : 'Source code id',
-    'col_head'   : 'Source code',
+    'short_descr': 'Transaction type id',
+    'long_descr' : 'Transaction type id',
+    'col_head'   : 'Tran type',
     'key_field'  : 'A',
     'data_source': 'par_con',
     'condition'  : None,
@@ -95,7 +95,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
+    'fkey'       : ['adm_tran_types', 'row_id', 'tran_type', 'tran_type', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -116,11 +116,11 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : [
-        ['source_code', [
-            ['pch_ap_inv', 'ap_tran_inv_det'],
-            ['pch_ap_crn', 'ap_tran_crn_det'],
-            ['pch_cb_inv', 'cb_tran_pmt_det'],
-            ['pch_cb_crn', 'cb_tran_rec_det'],
+        ['tran_type', [
+            ['ap_inv', 'ap_tran_inv_det'],
+            ['ap_crn', 'ap_tran_crn_det'],
+            ['cb_pmt', 'cb_tran_pmt_det'],
+            ['cb_rec', 'cb_tran_rec_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -548,7 +548,9 @@ actions.append([
             [  # key fields
                 ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['prod_row_id', 'wh_prod_row_id>prod_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'pch'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -569,7 +571,9 @@ actions.append([
             [  # key fields
                 ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['class_row_id', 'wh_prod_row_id>prod_row_id>class_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'pch'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -594,7 +598,9 @@ actions.append([
                 ['supp_row_id', 'subparent_row_id>supp_row_id'],
                 ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
                 ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'pch'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -616,7 +622,9 @@ actions.append([
                 ['gl_code_id', 'wh_prod_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
                 ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'pch'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation

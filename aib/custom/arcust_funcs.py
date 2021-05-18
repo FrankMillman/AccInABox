@@ -106,7 +106,8 @@ async def get_aged_bal(caller, xml):
         SELECT
         (SELECT SUM(c.tran_tot_cust) FROM ( 
             SELECT b.tran_tot_cust, ROW_NUMBER() OVER (PARTITION BY 
-                b.cust_row_id, b.location_row_id, b.function_row_id, b.source_code_id 
+                b.cust_row_id, b.location_row_id, b.function_row_id, 
+                b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id
                 ORDER BY b.tran_date DESC) row_num 
             FROM {company}.ar_cust_totals b 
             WHERE b.deleted_id = 0 

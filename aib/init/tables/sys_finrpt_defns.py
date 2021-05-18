@@ -238,6 +238,26 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'cashflow_params',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Cash flow params',
+    'long_descr' : 'Cash flow params - None, $all, or cashbook_id',
+    'col_head'   : 'Cash flow',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []

@@ -79,11 +79,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'source_code_id',
+    'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Source code id',
-    'long_descr' : 'Source code id',
-    'col_head'   : 'Source code',
+    'short_descr': 'Transaction type id',
+    'long_descr' : 'Transaction type id',
+    'col_head'   : 'Tran type',
     'key_field'  : 'A',
     'data_source': 'par_con',
     'condition'  : None,
@@ -95,7 +95,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
+    'fkey'       : ['adm_tran_types', 'row_id', 'tran_type', 'tran_type', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -116,13 +116,13 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : [
-        ['source_code', [
-            ['nsls_ar_inv', 'ar_tran_inv_det'],
-            ['nsls_ar_crn', 'ar_tran_crn_det'],
-            ['nsls_ar_disc', 'ar_tran_disc'],
-            ['nsls_cb_inv', 'cb_tran_rec_det'],
-            ['nsls_cb_crn', 'cb_tran_pmt_det'],
-            ['nsls_ar_ueabf', 'ar_uea_bf'],
+        ['tran_type', [
+            ['ar_inv', 'ar_tran_inv_det'],
+            ['ar_crn', 'ar_tran_crn_det'],
+            ['ar_disc', 'ar_tran_disc'],
+            ['cb_rec', 'cb_tran_rec_det'],
+            ['cb_pmt', 'cb_tran_pmt_det'],
+            ['ar_uea_bf', 'ar_uea_bf'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -439,7 +439,7 @@ actions.append([
         [
             'nsls_subtran_tax',
             [  # condition
-                ['where', '', 'source_code', '!=', "'nsls_ar_ueabf'", ''],
+                ['where', '', 'tran_type', '!=', "'ar_ueabf'", ''],
                 ['and', '', 'nsls_code_id>any_tax_codes', 'is', '$True', ''],
                 ],
 
@@ -496,7 +496,9 @@ actions.append([
                 ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'nsls'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -516,7 +518,9 @@ actions.append([
                 ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'nsls'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -538,7 +542,9 @@ actions.append([
                 ['cust_row_id', 'subparent_row_id>cust_row_id'],
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'nsls'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -560,7 +566,9 @@ actions.append([
                 ['cust_row_id', 'subparent_row_id>cust_row_id'],
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'nsls'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -581,7 +589,9 @@ actions.append([
                 ['gl_code_id', 'nsls_code_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'nsls'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -602,7 +612,9 @@ actions.append([
                 ['gl_code_id', 'nsls_code_id>ledger_row_id>uea_gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'nsls'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation

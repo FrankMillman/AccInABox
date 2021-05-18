@@ -81,11 +81,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'source_code_id',
+    'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Source code id',
-    'long_descr' : 'Source code id',
-    'col_head'   : 'Source code',
+    'short_descr': 'Transaction type id',
+    'long_descr' : 'Transaction type id',
+    'col_head'   : 'Tran type',
     'key_field'  : 'A',
     'data_source': 'par_con',
     'condition'  : None,
@@ -97,7 +97,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
+    'fkey'       : ['adm_tran_types', 'row_id', 'tran_type', 'tran_type', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -118,9 +118,9 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : [
-        ['source_code', [
-            ['ap_pmt_ap', 'ap_tran_pmt'],
-            ['ap_pmt_cb', 'cb_tran_pmt_det'],
+        ['tran_type', [
+            ['ap_pmt', 'ap_tran_pmt'],
+            ['cb_pmt', 'cb_tran_pmt_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -147,9 +147,9 @@ cols.append ({
             ['or', '', '_ledger.alt_curr', 'is', '$True', ''],
             ]],
         ['pmt_source', 'Invalid payment source', [
-            ['check', '(', 'source_code', '=', "'ap_pmt_ap'", ''],
+            ['check', '(', 'tran_type', '=', "'ap_pmt'", ''],
             ['and', '', '_ledger.pmt_tran_source', '=', "'ap'", ')'],
-            ['or', '(', 'source_code', '=', "'ap_pmt_cb'", ''],
+            ['or', '(', 'tran_type', '=', "'cb_pmt'", ''],
             ['and', '', '_ledger.pmt_tran_source', '=', "'cb'", ')'],
             ]],
         ],
@@ -176,7 +176,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare test="[[`if`, ``, `source_code`, `=`, `~ap_pmt_ap~`, ``]]">'
+          '<compare test="[[`if`, ``, `tran_type`, `=`, `~ap_pmt~`, ``]]">'
             '<fld_val name="subparent_row_id>tran_number"/>'
           '</compare>'
           '<default>'
@@ -605,7 +605,9 @@ actions.append([
                 ['ledger_row_id', 'supp_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'ap_subpmt'"],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
@@ -623,7 +625,9 @@ actions.append([
                 ['supp_row_id', 'supp_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'ap_subpmt'"],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
@@ -645,12 +649,37 @@ actions.append([
                 ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'ap_subpmt'"],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '+', 'apmt_local'],  # tgt_col, op, src_col
                 ['tran_tot', '+', 'apmt_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'supp_row_id>ledger_row_id>pmt_tran_source', '=', "'ap'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_pmt_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'supp_row_id>location_row_id'],
+                ['function_row_id', 'supp_row_id>function_row_id'],
+                ['src_tran_type', "'ap_pmt'"],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'apmt_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'apmt_local'],
                 ],
             [],  # on post
             [],  # on unpost

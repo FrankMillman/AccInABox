@@ -79,11 +79,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'source_code_id',
+    'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Source code id',
-    'long_descr' : 'Source code id',
-    'col_head'   : 'Source code',
+    'short_descr': 'Transaction type id',
+    'long_descr' : 'Transaction type id',
+    'col_head'   : 'Tran type',
     'key_field'  : 'A',
     'data_source': 'par_con',
     'condition'  : None,
@@ -95,7 +95,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
+    'fkey'       : ['adm_tran_types', 'row_id', 'tran_type', 'tran_type', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -116,13 +116,13 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : [
-        ['source_code', [
-            ['npch_ap_inv', 'ap_tran_inv_det'],
-            ['npch_ap_crn', 'ap_tran_crn_det'],
-            ['npch_ap_disc', 'ap_tran_disc'],
-            ['npch_cb_inv', 'cb_tran_pmt_det'],
-            ['npch_cb_crn', 'cb_tran_rec_det'],
-            ['npch_ap_uexbf', 'ap_uex_bf'],
+        ['tran_type', [
+            ['ap_inv', 'ap_tran_inv_det'],
+            ['ap_crn', 'ap_tran_crn_det'],
+            ['ap_disc', 'ap_tran_disc'],
+            ['cb_pmt', 'cb_tran_pmt_det'],
+            ['cb_rec', 'cb_tran_rec_det'],
+            ['ap_uex_bf', 'ap_uex_bf'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -439,7 +439,7 @@ actions.append([
         [
             'npch_subtran_tax',
             [  # condition
-                ['where', '', 'source_code', '!=', "'npch_ap_uexbf'", ''],
+                ['where', '', 'tran_type', '!=', "'ap_uexbf'", ''],
                 ['and', '', 'npch_code_id>any_tax_codes', 'is', '$True', ''],
                 ],
 
@@ -496,7 +496,9 @@ actions.append([
                 ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'npch'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -516,7 +518,9 @@ actions.append([
                 ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'npch'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -538,7 +542,9 @@ actions.append([
                 ['supp_row_id', 'subparent_row_id>supp_row_id'],
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'npch'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -560,7 +566,9 @@ actions.append([
                 ['supp_row_id', 'subparent_row_id>supp_row_id'],
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'npch'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -581,7 +589,9 @@ actions.append([
                 ['gl_code_id', 'npch_code_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'npch'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -602,7 +612,9 @@ actions.append([
                 ['gl_code_id', 'npch_code_id>ledger_row_id>uex_gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'npch'"],
+                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation

@@ -1,0 +1,55 @@
+<subtype_body subtype_id="ap_jnl">
+  <block/>
+  <panel/>
+
+  <if test="[[`if`, ``, `apjnl.ledger_id`, `is`, `$None`, ``]]"/>
+<row/>
+  <col/>
+  <label value="Ledger id:"/>
+  <col/>
+  <input obj_name="apjnl" col_name="ledger_id" lng="84"/>
+  <end_if/>
+
+  <row/>
+  <col/>
+  <label value="Supplier Id:"/>
+  <col/>
+  <input obj_name="apjnl" col_name="supp_id" lng="84" after="
+    <<!--  show exch_rate and jnl_supp if alt_curr - enable jnl_supp if override allowed -->>
+    <<!--
+    <<assign src=`apjnl.tran_date` tgt=`_ctx.as_at_date`/>>
+    <<assign src=`'apjnl'` tgt=`_ctx.tran_type`/>>
+    <<assign src=`apjnl.row_id` tgt=`_ctx.tran_row_id`/>>
+    <<assign src=`apjnl.item_row_id` tgt=`_ctx.item_row_id`/>>
+    -->>
+    "/>
+  <display obj_name="apjnl" col_name="supp_row_id>party_row_id>display_name" lng="120"/>
+
+  <row/>
+  <col/>
+  <label value="Description:"/>
+  <col/>
+  <input obj_name="apjnl" col_name="text" lng="160"/>
+
+  <row/>
+  <col/>
+  <label value="Charge amount:"/>
+  <col/>
+  <display obj_name="apjnl" col_name="currency_id>symbol" lng="10"/>
+  <input obj_name="apjnl" col_name="jnl_amount" lng="84"/>
+
+  <!-- this does not work well - if > 1 ledger, alt_curr is $None when form is created -->
+  <if test="[[`if`, ``, `apjnl.supp_row_id>ledger_row_id>alt_curr`, `is`, `$True`, ``]]"/>
+
+  <row/>
+  <col/>
+  <label value="@"/>
+  <display obj_name="apjnl" col_name="supp_exch_rate" lng="100"/>
+  <label value="="/>
+  <col/>
+  <display obj_name="apjnl" col_name="supp_row_id>currency_id>symbol" lng="10"/>
+  <input obj_name="apjnl" col_name="jnl_supp" lng="84"/>
+
+  <end_if/>
+
+</subtype_body>

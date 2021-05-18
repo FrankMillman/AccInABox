@@ -37,19 +37,40 @@ groups.append([
     False,  # include zeros
     ])
 
+cashflow_params = None
 pivot_on = ('src', None)
+
 columns = [
     ['op_date', 'op_date', 'Op date', 'DTE', 85, None],
     ['cl_date', 'cl_date', 'Cl date', 'DTE', 85, None],
     ['op_bal', 'op_bal', 'B/f', 'DEC', 100, '*'],
-    ['inv', 'cl_bal - op_bal', 'Inv', 'DEC', 100, "src_code IN ('ar_inv_net', 'ar_inv_tax')"],
-    ['crn', 'cl_bal - op_bal', 'Crn', 'DEC', 100, "src_code IN ('ar_crn_net', 'ar_crn_tax')"],
-    ['chg', 'cl_bal - op_bal', 'Chg', 'DEC', 100, "src_code IN ('ar_chg_ap', 'ar_chg_cb')"],
-    ['jnl', 'cl_bal - op_bal', 'Jnl', 'DEC', 100, "src_code IN ('ar_jnl')"],
-    ['rec', 'cl_bal - op_bal', 'Rec', 'DEC', 100, "src_code IN ('ar_rec_ar', 'ar_rec_cb')"],
-    ['disc', 'cl_bal - op_bal', 'Disc', 'DEC', 100, "src_code IN ('ar_disc_net', 'ar_disc_tax')"],
+    # ['inv', 'cl_bal - op_bal', 'Inv', 'DEC', 100, "src_code IN ('ar_inv_net', 'ar_inv_tax')"],
+    # ['crn', 'cl_bal - op_bal', 'Crn', 'DEC', 100, "src_code IN ('ar_crn_net', 'ar_crn_tax')"],
+    # ['chg', 'cl_bal - op_bal', 'Chg', 'DEC', 100, "src_code IN ('ar_chg_ap', 'ar_chg_cb')"],
+    # ['jnl', 'cl_bal - op_bal', 'Jnl', 'DEC', 100, "src_code IN ('ar_jnl')"],
+    # ['rec', 'cl_bal - op_bal', 'Rec', 'DEC', 100, "src_code IN ('ar_rec_ar', 'ar_rec_cb')"],
+    # ['disc', 'cl_bal - op_bal', 'Disc', 'DEC', 100, "src_code IN ('ar_disc_net', 'ar_disc_tax')"],
+    ['inv', 'cl_bal - op_bal', 'Inv', 'DEC', 100, "src_type = 'ar_inv'"],
+    ['crn', 'cl_bal - op_bal', 'Crn', 'DEC', 100, "src_type = 'ar_crn'"],
+    ['jnl', 'cl_bal - op_bal', 'Jnl', 'DEC', 100, "src_type = 'ar_jnl'"],
+    ['tgt', 'cl_bal - op_bal', 'Tgt', 'DEC', 100, "src_type = 'ar_subjnl'"],
+    ['rec', 'cl_bal - op_bal', 'Rec', 'DEC', 100, "src_type = 'ar_subrec'"],
+    ['disc', 'cl_bal - op_bal', 'Disc', 'DEC', 100, "src_type = 'ar_disc'"],
     ['cl_bal', 'cl_bal', 'C/f', 'DEC', 100, '*'],
     ]
+
+"""
+tran_type = src_trantype_row_id>tran_type
+
+new_test = {
+    'inv': 'tran_type = ar_inv',
+    'crn': 'tran_type = ar_crn',
+    'disc': 'tran_type = ar_disc',
+    'rec': 'tran_type = ar_subrec',
+    'jnl': 'tran_type = ar_jnl',
+    'tgt': 'tran_type = ar_subjnl',
+    }
+"""
 
 # columns = [
 #     ['op_date', 'op_date', 'Op date', 'DTE'],
@@ -59,7 +80,3 @@ columns = [
 #     ['mvmt', 'cl_bal - op_bal', 'Mvmt', 'DEC'],
 #     ['cl_bal', 'cl_bal', 'Cl bal', 'DEC'],
 #     ]
-
-fmt = '{!s:<12}{!s:<12}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}{:>12.2f}'
-tot_row = ['Total', '', 0, 0, 0, 0, 0, 0, 0, 0]
-tot_cols = []

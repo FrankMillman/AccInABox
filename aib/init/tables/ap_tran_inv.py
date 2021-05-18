@@ -456,6 +456,46 @@ virt.append ({
     'sql'        : "'ap_inv'",
     })
 virt.append ({
+    'col_name'   : 'module_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Module row id',
+    'long_descr' : 'Module row id',
+    'col_head'   : 'Module row id',
+    'sql'        : "SELECT row_id FROM {company}.db_modules WHERE module_id = 'ap'",
+    })
+virt.append ({
+    'col_name'   : 'trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Tran type row id',
+    'long_descr' : 'Tran type row id',
+    'col_head'   : 'Tran type row id',
+    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'ap_inv'",
+    })
+virt.append ({
+    'col_name'   : 'ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Ledger row id',
+    'long_descr' : 'Ledger row id',
+    'col_head'   : 'Ledger',
+    'sql'        : 'a.supp_row_id>ledger_row_id',
+    })
+virt.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
+    'sql'        : 'a.supp_row_id>location_row_id',
+    })
+virt.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
+    'sql'        : 'a.supp_row_id>function_row_id',
+    })
+virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Transaction period',
@@ -642,35 +682,17 @@ actions.append([
             [],  # condition
             False,  # split source?
             [  # key fields
-                ['ledger_row_id', 'supp_row_id>ledger_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'supp_row_id>location_row_id'],
-                ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code', "'ap_inv_net'"],
+                ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['src_trantype_row_id', 'trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'inv_net_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'inv_net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'ap_totals',  # table name
-            [  # condition
-                ['where', '', 'inv_tax_local', '!=', '0', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['ledger_row_id', 'supp_row_id>ledger_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'supp_row_id>location_row_id'],
-                ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code', "'ap_inv_tax'"],
-                ['tran_date', 'tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'inv_tax_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'inv_tax_local'],
+                ['tran_day', '+', 'inv_tot_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'inv_tot_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -681,38 +703,18 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['supp_row_id', 'supp_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'supp_row_id>location_row_id'],
-                ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code', "'ap_inv_net'"],
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['src_trantype_row_id', 'trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_supp', '+', 'inv_net_supp'],  # tgt_col, op, src_col
-                ['tran_tot_supp', '+', 'inv_net_supp'],
-                ['tran_day_local', '+', 'inv_net_local'],
-                ['tran_tot_local', '+', 'inv_net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'ap_supp_totals',  # table name
-            [  # condition
-                ['where', '', 'inv_tax_local', '!=', '0', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['supp_row_id', 'supp_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'supp_row_id>location_row_id'],
-                ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code', "'ap_inv_tax'"],
-                ['tran_date', 'tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day_supp', '+', 'inv_tax_supp'],  # tgt_col, op, src_col
-                ['tran_tot_supp', '+', 'inv_tax_supp'],
-                ['tran_day_local', '+', 'inv_tax_local'],
-                ['tran_tot_local', '+', 'inv_tax_local'],
+                ['tran_day_supp', '+', 'inv_tot_supp'],  # tgt_col, op, src_col
+                ['tran_tot_supp', '+', 'inv_tot_supp'],
+                ['tran_day_local', '+', 'inv_tot_local'],
+                ['tran_tot_local', '+', 'inv_tot_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -724,36 +726,17 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'supp_row_id>location_row_id'],
-                ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code', "'ap_inv_net'"],
+                ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['src_trantype_row_id', 'trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'inv_net_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'inv_net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ['and', '', 'inv_tax_local', '!=', '0', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'supp_row_id>location_row_id'],
-                ['function_row_id', 'supp_row_id>function_row_id'],
-                ['source_code', "'ap_inv_tax'"],
-                ['tran_date', 'tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '-', 'inv_tax_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'inv_tax_local'],
+                ['tran_day', '-', 'inv_tot_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'inv_tot_local'],
                 ],
             [],  # on post
             [],  # on unpost

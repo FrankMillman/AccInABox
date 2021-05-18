@@ -715,6 +715,15 @@ actions.append([
                 ['or', '', 'auto_disc_no', 'is not', '$None', ''],
                 ],
             ],
+        [
+            'gl_pmt_code',
+            'Must set up gl code for payments',
+            [
+                ['check', '', '_param.gl_integration', 'is', '$False', ''],
+                ['or', '', 'pmt_tran_source', '!=', "'ap'", ''],
+                ['or', '', 'gl_pmt_code_id', 'is not', '$None', ''],
+                ],
+            ],
         ],
     ])
 actions.append([

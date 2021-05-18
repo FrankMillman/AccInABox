@@ -239,6 +239,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Tran type row id',
+    'long_descr' : 'Tran type row id',
+    'col_head'   : 'Tran type row id',
+    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'gl_bf'",
+    })
 
 # cursor definitions
 cursors = []
@@ -255,7 +263,10 @@ actions.append([
                 ['gl_code_id', 'gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['source_code', "'gl_bf'"],
+                # ['source_code', "'gl_bf'"],
+                ['src_trantype_row_id', 'trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', '1'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation

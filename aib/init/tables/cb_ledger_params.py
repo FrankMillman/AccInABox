@@ -386,6 +386,26 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'auto_tfr_no',
+    'data_type'  : 'JSON',
+    'short_descr': 'Auto-generate transfer no?',
+    'long_descr' : 'Parameters to generate transfer number. If blank, manual input',
+    'col_head'   : 'Auto tfr no?',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 
 # bank code/name
 # branch code/name

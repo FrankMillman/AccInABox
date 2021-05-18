@@ -1,5 +1,7 @@
 import pyodbc
 
+import db.objects
+
 def customise(constants, DbConn, db_params):
     # add db-specific methods to DbConn class
 

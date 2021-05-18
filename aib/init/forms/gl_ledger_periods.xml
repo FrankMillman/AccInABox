@@ -1,9 +1,10 @@
 <form name="gl_ledger_periods" title="General ledger periods" before_start_form="
   <<assign src=`'gl_per'` tgt=`_ctx.cursor_name`/>>
+  <<assign src=`_ctx.current_period` tgt=`var.current_period`/>>
   ">
 
   <db_objects>
-    <db_obj name="adm_period" table_name="adm_periods"/>
+    <!--db_obj name="adm_period" table_name="adm_periods"/-->
     <db_obj name="ledg_per" table_name="gl_ledger_periods"/>
   </db_objects>
   <mem_objects>

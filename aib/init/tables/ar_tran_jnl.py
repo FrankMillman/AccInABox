@@ -1,0 +1,518 @@
+# table definition
+table = {
+    'table_name'    : 'ar_tran_jnl',
+    'module_id'     : 'ar',
+    'short_descr'   : 'Ar journals',
+    'long_descr'    : 'Ar journals',
+    'sub_types'     : None,
+    'sub_trans'     : None,
+    'sequence'      : None,
+    'tree_params'   : None,
+    'roll_params'   : None,
+    'indexes'       : [
+        ['arjnl_cust_date', [['cust_row_id', False], ['tran_date', False]], None, False],
+        ['arjnl_unposted', [['tran_date', False]], "WHERE posted = '0'", False],
+        ],
+    'ledger_col'    : 'cust_row_id>ledger_row_id',
+    'defn_company'  : None,
+    'data_company'  : None,
+    'read_only'     : False,
+    }
+
+# column definitions
+cols = []
+cols.append ({
+    'col_name'   : 'row_id',
+    'data_type'  : 'AUTO',
+    'short_descr': 'Row id',
+    'long_descr' : 'Row id',
+    'col_head'   : 'Row',
+    'key_field'  : 'Y',
+    'data_source': 'gen',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'created_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Created id',
+    'long_descr' : 'Created row id',
+    'col_head'   : 'Created',
+    'key_field'  : 'N',
+    'data_source': 'gen',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'deleted_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Deleted id',
+    'long_descr' : 'Deleted row id',
+    'col_head'   : 'Deleted',
+    'key_field'  : 'N',
+    'data_source': 'gen',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'cust_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Customer row id',
+    'long_descr' : 'Customer row id. In theory, should check if statement period still open. Leave for now.',
+    'col_head'   : 'Customer',
+    'key_field'  : 'A',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : [
+        'ar_customers', 'row_id', 'ledger_id, cust_id, location_id, function_id',
+        'ledger_id, cust_id, location_id, function_id', False, 'cust_bal_2'
+        ],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Journal number',
+    'long_descr' : 'Journal number',
+    'col_head'   : 'Jnl no',
+    'key_field'  : 'A',
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.auto_jnl_no', 'is not', '$None', '']],
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 15,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<on_post>'
+            '<case>'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="_ledger.auto_jnl_no"/>'
+              '</compare>'
+              '<default>'
+                '<fld_val name="tran_number"/>'
+              '</default>'
+            '</case>'
+          '</on_post>'
+          '<on_insert>'
+            '<case>'
+              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="_ledger.auto_temp_no"/>'
+              '</compare>'
+              '<compare test="[[`if`, ``, `_ledger.auto_jnl_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="_ledger.auto_jnl_no"/>'
+              '</compare>'
+            '</case>'
+          '</on_insert>'
+          '<default>'
+            '<fld_val name="tran_number"/>'
+          '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Transaction date',
+    'long_descr' : 'Transaction date',
+    'col_head'   : 'Date',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    # 'allow_amend': False,
+    'allow_amend': [['where', '', 'posted', 'is', '$False', '']],
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : [
+        ['per_date', 'Period not open', [
+            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+            ]],
+        ['stat_date', 'Statement period not open', [
+            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
+            ]],
+        ],
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text',
+    'long_descr' : 'Line of text to appear on reports',
+    'col_head'   : 'Text',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'Journal',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'currency_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Transaction currency',
+    'long_descr' : 'Currency used to enter transaction',
+    'col_head'   : 'Currency',
+    'key_field'  : 'N',
+    'data_source': 'dflt_if',
+    'condition'  : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{cust_row_id>currency_id}',
+    'dflt_rule'  : None,
+    'col_checks' : [
+        ['alt_curr', 'Alternate currency not allowed', [
+            ['check', '', '$value', '=', 'cust_row_id>currency_id', ''],
+            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+            ]],
+        ],
+    'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Transaction exchange rate',
+    'long_descr' : 'Exchange rate from transaction currency to local',
+    'col_head'   : 'Rate tran',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 8,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<compare test="[[`if`, ``, `currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+                '<literal value="1"/>'
+            '</compare>'
+            '<default>'
+                '<exch_rate>'
+                    '<fld_val name="currency_id"/>'
+                    '<fld_val name="tran_date"/>'
+                '</exch_rate>'
+            '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'jnl_amt',
+    'data_type'  : '$TRN',
+    'short_descr': 'Journal amount',
+    'long_descr' : 'Journal amount in transaction currency',
+    'col_head'   : 'Jnl amt',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'posted',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Posted?',
+    'long_descr' : 'Has transaction been posted?',
+    'col_head'   : 'Posted?',
+    'key_field'  : 'N',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'false',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'jnl_det_amt',
+    'data_type'  : '$TRN',
+    'short_descr': 'Journal det amount',
+    'long_descr' : 'Journal det amount in tran currency - updated from ar_tran_jnl_det',
+    'col_head'   : 'Jnl det amt',
+    'key_field'  : 'N',
+    'data_source': 'aggr',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'jnl_det_local',
+    'data_type'  : '$LCL',
+    'short_descr': 'Journal det local',
+    'long_descr' : 'Journal det amount in local currency - updated from ar_tran_jnl_det',
+    'col_head'   : 'Jnl det local',
+    'key_field'  : 'N',
+    'data_source': 'aggr',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+
+# virtual column definitions
+virt = []
+virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type - used in gui to ask "Post another?"',
+    'col_head'   : 'Tran type',
+    'dflt_rule'  : '<trantype_row_id tran_type="ar_jnl"/>',
+    'sql'        : "'ar_jnl'",
+    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'ar_jnl'",
+    })
+virt.append ({
+    'col_name'   : 'module_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Module row id',
+    'long_descr' : 'Module row id',
+    'col_head'   : 'Module row id',
+    'dflt_rule'  : '<module_row_id module_id="ar"/>',
+    'sql'        : "SELECT row_id FROM {company}.db_modules WHERE module_id = 'ar'",
+    })
+virt.append ({
+    'col_name'   : 'ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Ledger row id',
+    'long_descr' : 'Ledger row id',
+    'col_head'   : 'Ledger',
+    'sql'        : 'a.cust_row_id>ledger_row_id',
+    })
+virt.append ({
+    'col_name'   : 'tran_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Tran row id',
+    'long_descr' : 'Tran row id',
+    'col_head'   : 'Tran row id',
+    'sql'        : "a.row_id",
+    })
+virt.append ({
+    'col_name'   : 'period_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Transaction period',
+    'long_descr' : 'Transaction period',
+    'col_head'   : 'Period',
+# need to execute this when SELECTing, but don't need to recalc if a.tran_date changed
+# no way to distinguish at present, so leave for now
+    'sql'        : (
+        "SELECT count(*) FROM {company}.adm_periods b "
+        "WHERE b.closing_date < a.tran_date"
+        ),
+    })
+
+# cursor definitions
+cursors = []
+cursors.append({
+    'cursor_name': 'unposted_jnl',
+    'title': 'Unposted ar journals',
+    'columns': [
+        ['tran_number', 100, False, True],
+        # ['cust_row_id>party_row_id>party_id', 80, False, True],
+        # ['cust_row_id>party_row_id>display_name', 160, True, True],
+        ['tran_date', 80, False, True],
+        ['jnl_amt', 100, False, True],
+        ],
+    'filter': [
+        ['where', '', 'posted', '=', "'0'", ''],
+        ],
+    'sequence': [['tran_number', False]],
+    'formview_name': 'ar_journal',
+    })
+
+# actions
+actions = []
+actions.append([
+    'upd_checks', [
+        [
+            'recheck_date',
+            'Period is closed',
+            [
+                ['check', '', '$exists', 'is', '$True', ''],
+                ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'post_checks', [
+        [
+            'check_totals',
+            'Total amount does not equal total of line items',
+            [
+                ['check', '', 'jnl_amount', '=', 'jnl_det_amt', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'upd_on_post', [
+        [
+            'ar_openitems',  # table name
+            None,  # condition
+            False,  # split source?
+            [  # key fields
+                ['tran_row_id', 'row_id'],  # tgt_col, src_col
+                ['split_no', '0'],
+                ],
+            [],  # aggregation
+            [  # on post
+                ['item_type', '=', "'jnl'"],  # tgt_col, op, src_col
+                ['due_date', '=', 'tran_date'],
+                ['cust_row_id', '=', 'cust_row_id'],
+                ['tran_date', '=', 'tran_date'],
+                ['amount_cust', '-', 'jnl_amount'],
+                ['amount_local', '-', 'jnl_det_local'],
+                ],
+            [],  # on unpost
+            [  # return values
+                ['item_row_id', 'row_id'],  # tgt_col, src_col
+                ],
+            ],
+
+        [
+            'ar_totals',  # table name
+            [],  # condition
+            False,  # split source?
+            [  # key fields
+                ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_jnl'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'jnl_det_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'jnl_det_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'ar_cust_totals',  # table name
+            [],  # condition
+            False,  # split source?
+            [  # key fields
+                ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_jnl'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day_cust', '+', 'jnl_det_amt'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '+', 'jnl_det_amt'],
+                ['tran_day_local', '+', 'jnl_det_local'],
+                ['tran_tot_local', '+', 'jnl_det_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['source_code', "'ar_jnl'"],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '-', 'jnl_det_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'jnl_det_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        ],
+    ])

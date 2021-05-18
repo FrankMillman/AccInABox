@@ -255,7 +255,9 @@ actions.append([
                 ['tax_code_id', 'tax_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'tax_code_id>tax_cat_id>location_row_id'],
                 ['function_row_id', 'tax_code_id>tax_cat_id>function_row_id'],
-                ['source_code', 'tax_source_code'],
+                ['src_tran_type', "'sls_tax'"],
+                ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subtran_row_id>subparent_row_id>tran_date'],
                 ],
             [  # aggregation
@@ -277,7 +279,9 @@ actions.append([
                 ['gl_code_id', 'tax_code_id>tax_cat_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'tax_code_id>tax_cat_id>location_row_id'],
                 ['function_row_id', 'tax_code_id>tax_cat_id>function_row_id'],
-                ['source_code', 'tax_source_code'],
+                ['src_tran_type', "'sls_tax'"],
+                ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subtran_row_id>subparent_row_id>tran_date'],
                 ],
             [  # aggregation

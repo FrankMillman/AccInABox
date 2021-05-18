@@ -17,7 +17,9 @@ table = {
             ['ledger_row_id', False],
             ['location_row_id', False],
             ['function_row_id', False],
-            ['source_code_id', False],
+            ['src_trantype_row_id', False],
+            ['orig_trantype_row_id', False],
+            ['orig_ledger_row_id', False],
             ['tran_date', True],
             ['tran_day', False],
             ['tran_tot', False],
@@ -152,11 +154,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'source_code_id',
+    'col_name'   : 'src_trantype_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Source code id',
-    'long_descr' : 'Source code row id',
-    'col_head'   : 'Code id',
+    'short_descr': 'Source - tran type row id',
+    'long_descr' : 'Source - tran type row id',
+    'col_head'   : 'Src type',
     'key_field'  : 'A',
     'data_source': 'prog',
     'condition'  : None,
@@ -168,7 +170,54 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
+    'fkey'       : ['adm_tran_types', 'row_id', 'src_tran_type', 'tran_type', False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'orig_trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Original tran type row id',
+    'long_descr' : 'Original tran type row id',
+    'col_head'   : 'Orig type',
+    'key_field'  : 'A',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['adm_tran_types', 'row_id', 'orig_tran_type', 'tran_type', False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'orig_ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Original ledger row id',
+    'long_descr' : 'Original ledger row id',
+    'col_head'   : 'Orig ledg',
+    'key_field'  : 'A',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : [
+        ['orig_trantype_row_id>module_row_id>module_id', [
+            ['gl', 'gl_ledger_params'],
+            ['cb', 'cb_ledger_params'],
+            ['ar', 'ar_ledger_params'],
+            ['ap', 'ap_ledger_params'],
+            ]],
+        'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -247,7 +296,8 @@ virt.append ({
         """
         (SELECT SUM(c.tran_tot) FROM (
             SELECT b.tran_tot, ROW_NUMBER() OVER (PARTITION BY
-                b.ledger_row_id, b.location_row_id, b.function_row_id, b.source_code_id
+                b.ledger_row_id, b.location_row_id, b.function_row_id,
+                b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id
                 ORDER BY b.tran_date DESC) row_num
             FROM {company}.ar_totals b
             WHERE b.deleted_id = 0

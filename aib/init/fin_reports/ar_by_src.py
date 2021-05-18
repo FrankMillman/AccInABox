@@ -21,12 +21,13 @@ groups.append([
     False,  # include zeros
     ])
 
+cashflow_params = None
 pivot_on = None
 
 columns = [
     ['op_date', 'op_date', 'Op date', 'DTE', 85, None],
     ['cl_date', 'cl_date', 'Cl date', 'DTE', 85, None],
-    ['src_code', 'src_code', 'Source', 'TEXT', 80, None],
+    ['src_type', 'src_type', 'Source', 'TEXT', 80, None],
     ['op_bal', 'op_bal', 'Op bal', 'DEC', 100, None],
     ['mvmt', 'cl_bal - op_bal', 'Mvmt', 'DEC', 100, None],
     ['cl_bal', 'cl_bal', 'Cl bal', 'DEC', 100, None],

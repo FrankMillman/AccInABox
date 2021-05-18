@@ -714,6 +714,15 @@ actions.append([
                 ['or', '', 'auto_disc_no', 'is not', '$None', ''],
                 ],
             ],
+        [
+            'gl_rec_code',
+            'Must set up gl code for receipts',
+            [
+                ['check', '', '_param.gl_integration', 'is', '$False', ''],
+                ['or', '', 'rec_tran_source', '!=', "'ar'", ''],
+                ['or', '', 'gl_rec_code_id', 'is not', '$None', ''],
+                ],
+            ],
         ],
     ])
 actions.append([

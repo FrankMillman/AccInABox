@@ -875,7 +875,7 @@ class Field:
             if self.db_obj.context.module_row_id == self.db_obj.db_table.module_row_id:
                 return self.db_obj.context.ledger_row_id
         if not from_init and self.col_defn.dflt_rule is not None:
-            return await db.dflt_xml.get_db_dflt(self)
+            return await self.check_val(await db.dflt_xml.get_db_dflt(self))
         dflt_val = self.col_defn.dflt_val
         if dflt_val is not None:
             if dflt_val.startswith('{'):

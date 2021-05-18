@@ -479,11 +479,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'after_commit',
+    'col_name'   : 'after_post',
     'data_type'  : 'SXML',
-    'short_descr': 'After commit',
-    'long_descr' : 'Actions to be taken after update is committed',
-    'col_head'   : 'After commit',
+    'short_descr': 'After post',
+    'long_descr' : 'Actions to be taken after transaction is posted',
+    'col_head'   : 'After post',
     'key_field'  : 'N',
     'data_source': 'input',
     'condition'  : None,
@@ -499,11 +499,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'after_post',
+    'col_name'   : 'after_commit',
     'data_type'  : 'SXML',
-    'short_descr': 'After post',
-    'long_descr' : 'Actions to be taken after transaction is posted',
-    'col_head'   : 'After post',
+    'short_descr': 'After commit',
+    'long_descr' : 'Actions to be taken after update is committed',
+    'col_head'   : 'After commit',
     'key_field'  : 'N',
     'data_source': 'input',
     'condition'  : None,

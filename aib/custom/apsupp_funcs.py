@@ -34,7 +34,8 @@ async def get_aged_bal(caller, xml):
         SELECT
         (SELECT SUM(c.tran_tot_supp) FROM ( 
             SELECT b.tran_tot_supp, ROW_NUMBER() OVER (PARTITION BY 
-                b.supp_row_id, b.location_row_id, b.function_row_id, b.source_code_id 
+                b.supp_row_id, b.location_row_id, b.function_row_id,
+                b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id
                 ORDER BY b.tran_date DESC) row_num 
             FROM {company}.ap_supp_totals b 
             WHERE b.deleted_id = 0 
@@ -204,7 +205,7 @@ async def setup_mem_trans(caller, xml):
             await mem_totals.setval('disc', disc)
             await mem_totals.setval('cl_bal', cl_bal)
             await mem_totals.save()
-
+g
 async def setup_tran_day_per(caller, xml):
     # called from various ap_[tran]_day_per.before_start_form
     company = caller.company

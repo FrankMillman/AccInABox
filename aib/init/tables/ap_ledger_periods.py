@@ -166,9 +166,9 @@ cols.append ({
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-            ['open', 'Payment period open'],
-            ['closing', 'Payment period-end started'],
-            ['closed', 'Payment period closed'],
+            ['open', 'Pmnt period open'],
+            ['closing', 'Pmnt per-end started'],
+            ['closed', 'Pmnt period closed'],
         ],
     })
 cols.append ({
@@ -291,7 +291,7 @@ cursors.append({
     'columns': [
         ['period_row_id', 10, True, True],
         ['closing_date', 100, False, True],
-        ['state', 60, False, True],
+        ['state', 100, False, True],
         ],
     'filter': [],
     'sequence': [['row_id', False]],
@@ -303,9 +303,9 @@ cursors.append({
     'columns': [
         ['period_row_id', 10, True, True],
         ['payment_date', 100, False, True],
-        ['payment_state', 60, False, True],
+        ['payment_state', 100, False, True],
         ['closing_date', 100, False, True],
-        ['state', 60, False, True],
+        ['state', 100, False, True],
         ],
     'filter': [],
     'sequence': [['row_id', False]],

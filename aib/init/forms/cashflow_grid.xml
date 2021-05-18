@@ -1,0 +1,33 @@
+<form name="cashflow_grid" title="Grid for Cash Flow Report">
+  <db_objects/>
+  <mem_objects>
+    <mem_obj name="cashflow_vars" descr="Variables">
+      <mem_col col_name="op_bal" data_type="DEC" short_descr="Opening balance"
+        long_descr="Opening balance" col_head="B/F" allow_amend="true"
+        db_scale="2" scale_ptr="_param.local_curr_id>scale"/>
+      <mem_col col_name="cl_bal" data_type="DEC" short_descr="Closing balance"
+        long_descr="Closing balance" col_head="C/F" allow_amend="true"
+        db_scale="2" scale_ptr="_param.local_curr_id>scale"/>
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Date from"
+        long_descr="From which date" allow_amend="true"/>
+      <mem_col col_name="end_date" data_type="DTE" short_descr="Date to"
+        long_descr="To which date" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params/>
+  <output_params/>
+  <frame main_object="grid_obj">
+    <toolbar/>
+    <body>
+      <block/>
+      <grid data_object="grid_obj" num_grid_rows="20"
+          header_row="[`cashflow_vars.start_date`, `'Bal b/f'`, `...`, `cashflow_vars.op_bal`]"
+          footer_row="[`cashflow_vars.end_date`, `'Bal c/f'`, `...`, `cashflow_vars.cl_bal`]">
+        <toolbar template="Grid_Finrpt"/>
+        <grid_methods template="Grid"/>
+      </grid>
+    </body>
+    <button_row/>
+    <frame_methods/>
+  </frame>
+</form>

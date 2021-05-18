@@ -35,16 +35,13 @@ groups.append([
     False,  # include zero bals
     ])
 
+cashflow_params = None
 pivot_on = ('loc', 'loc_prop')
-pivot_cols = [
-    ['*loc_prop', 'SUM(tran_tot)', 'loc_prop'],
-    ['*', 'SUM(tran_tot)', 'Total'],
-    ]
 
 columns = [
     ['code_maj', 'code_maj', 'Maj', 'TEXT', 40, None],
     ['code_int', 'code_int', 'Int', 'TEXT', 70, None],
-    ['loc_prop', 'tran_tot', 'loc_prop', 'DEC', 80, 'loc_prop'],
+    ['loc_prop', 'tran_tot', None, 'DEC', 80, 'loc_prop'],
     ['total', 'tran_tot', 'Total', 'DEC', 100, '*'],
     ]
 

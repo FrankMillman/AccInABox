@@ -81,11 +81,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'source_code_id',
+    'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Source code id',
-    'long_descr' : 'Source code id',
-    'col_head'   : 'Source code',
+    'short_descr': 'Transaction type id',
+    'long_descr' : 'Transaction type id',
+    'col_head'   : 'Tran type',
     'key_field'  : 'A',
     'data_source': 'par_con',
     'condition'  : None,
@@ -97,7 +97,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['gl_source_codes', 'row_id', 'source_code', 'source_code', False, None],
+    'fkey'       : ['adm_tran_types', 'row_id', 'tran_type', 'tran_type', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -118,9 +118,9 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : [
-        ['source_code', [
-            ['ar_rec_ar', 'ar_tran_rec'],
-            ['ar_rec_cb', 'cb_tran_rec_det'],
+        ['tran_type', [
+            ['ar_rec', 'ar_tran_rec'],
+            ['cb_rec', 'cb_tran_rec_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -147,9 +147,9 @@ cols.append ({
             ['or', '', '_ledger.alt_curr', 'is', '$True', ''],
             ]],
         ['rec_source', 'Invalid receipt source', [
-            ['check', '(', 'source_code', '=', "'ar_rec_ar'", ''],
+            ['check', '(', 'tran_type', '=', "'ar_rec'", ''],
             ['and', '', '_ledger.rec_tran_source', '=', "'ar'", ')'],
-            ['or', '(', 'source_code', '=', "'ar_rec_cb'", ''],
+            ['or', '(', 'tran_type', '=', "'cb_rec'", ''],
             ['and', '', '_ledger.rec_tran_source', '=', "'cb'", ')'],
             ]],
 
@@ -177,7 +177,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare test="[[`if`, ``, `source_code`, `=`, `~ar_rec_ar~`, ``]]">'
+          '<compare test="[[`if`, ``, `tran_type`, `=`, `~ar_rec~`, ``]]">'
             '<fld_val name="subparent_row_id>tran_number"/>'
           '</compare>'
           '<default>'
@@ -601,7 +601,9 @@ actions.append([
                 ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'ar_subrec'"],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
@@ -619,7 +621,9 @@ actions.append([
                 ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'ar_subrec'"],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
@@ -641,12 +645,37 @@ actions.append([
                 ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code_id', 'source_code_id'],
+                ['src_tran_type', "'ar_subrec'"],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
                 ['tran_day', '-', 'arec_local'],  # tgt_col, op, src_col
                 ['tran_tot', '-', 'arec_local'],
+                ],
+            [],  # on post
+            [],  # on unpost
+            ],
+        [
+            'gl_totals',  # table name
+            [  # condition
+                ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                ['and', '', 'cust_row_id>ledger_row_id>rec_tran_source', '=', "'ar'", ''],
+                ],
+            False,  # split source?
+            [  # key fields
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_rec_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'cust_row_id>location_row_id'],
+                ['function_row_id', 'cust_row_id>function_row_id'],
+                ['src_tran_type', "'ar_rec'"],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                ['tran_date', 'tran_date'],
+                ],
+            [  # aggregation
+                ['tran_day', '+', 'arec_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'arec_local'],
                 ],
             [],  # on post
             [],  # on unpost

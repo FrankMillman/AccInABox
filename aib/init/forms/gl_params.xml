@@ -39,7 +39,7 @@
       <col/>
       <input obj_name="params" col_name="auto_temp_no" lng="250"/>
 
-      <if test="[[`if`, ``, `_param.gl_per_setup`, `is`, `$False`, ``]]"/>
+      <if test="[[`if`, ``, `params.gl_per_setup`, `is`, `$False`, ``]]"/>
       <block/>
       <panel/>
       <row/>

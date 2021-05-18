@@ -4,7 +4,7 @@ view = {
     'module_id'     : 'cb',
     'short_descr'   : 'Cb transactions',
     'long_descr'    : 'Cb transactions',
-    'base_tables'   : ['cb_tran_rec', 'cb_tran_pmt'],
+    'base_tables'   : ['cb_tran_rec', 'cb_tran_pmt', 'cb_tran_tfr', 'cb_tran_tfr'],
 
     'path_to_row'  : [
         'tran_type', {
@@ -29,7 +29,7 @@ view = {
 cols = []
 cols.append ({
     'col_name'   : 'tran_type',
-    'source'     : ["'cb_rec'", "'cb_pmt'"],
+    'source'     : ["'cb_rec'", "'cb_pmt'", "'tfr_out'", "'tfr_in'"],
     'data_type'  : 'TEXT',
     'short_descr': 'Tran type',
     'long_descr' : 'Transaction type',
@@ -42,7 +42,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tran_row_id',
-    'source'     : ['row_id', 'row_id'],
+    'source'     : ['row_id', 'row_id', 'row_id', 'row_id'],
     'data_type'  : 'INT',
     'short_descr': 'Transaction id',
     'long_descr' : 'Transaction row id',
@@ -55,7 +55,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'ledger_row_id',
-    'source'     : ['ledger_row_id', 'ledger_row_id'],
+    'source'     : ['ledger_row_id', 'ledger_row_id', 'ledger_row_id', 'tgt_ledg_row_id'],
     'data_type'  : 'INT',
     'short_descr': 'Account row id',
     'long_descr' : 'Bank account row id',
@@ -68,7 +68,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tran_number',
-    'source'     : ['tran_number', 'tran_number'],
+    'source'     : ['tran_number', 'tran_number', 'tran_number', 'tran_number'],
     'data_type'  : 'TEXT',
     'short_descr': 'Transaction number',
     'long_descr' : 'Transaction number',
@@ -81,7 +81,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tran_date',
-    'source'     : ['tran_date', 'tran_date'],
+    'source'     : ['tran_date', 'tran_date', 'tran_date', 'tran_date'],
     'data_type'  : 'DTE',
     'short_descr': 'Transaction date',
     'long_descr' : 'Transaction date',
@@ -94,7 +94,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'party',
-    'source'     : ['payer', 'payee'],
+    'source'     : ['payer', 'payee', 'src_party', 'tgt_party'],
     'data_type'  : 'TEXT',
     'short_descr': 'Payer/payee',
     'long_descr' : 'Payer/payee',
@@ -107,7 +107,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'text',
-    'source'     : ['text', 'text'],
+    'source'     : ['text', 'text', 'src_text', 'tgt_text'],
     'data_type'  : 'TEXT',
     'short_descr': 'Text',
     'long_descr' : 'One line of text to appear on reports',
@@ -120,7 +120,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_cb',
-    'source'     : ['view_cb', 'view_cb'],
+    'source'     : ['view_cb', 'view_cb', 'view_src_cb', 'view_tgt_cb'],
     'data_type'  : '$PTY',
     'short_descr': 'Amount - cb curr',
     'long_descr' : 'Amount in cash book currency',
@@ -133,7 +133,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'source'     : ['view_local', 'view_local'],
+    'source'     : ['view_local', 'view_local', 'view_src_local', 'view_tgt_local'],
     'data_type'  : '$LCL',
     'short_descr': 'Amount - local curr',
     'long_descr' : 'Amount in local currency',
@@ -180,7 +180,8 @@ virt.append ({
         """
         COALESCE((SELECT SUM(b.tran_tot_cb) FROM (
             SELECT c.tran_tot_cb, ROW_NUMBER() OVER (PARTITION BY
-                c.ledger_row_id, c.location_row_id, c.function_row_id, c.source_code_id
+                c.ledger_row_id, c.location_row_id, c.function_row_id,
+                c.src_trantype_row_id, c.orig_trantype_row_id, c.orig_ledger_row_id
                 ORDER BY c.tran_date DESC) row_num
             FROM {company}.cb_totals c
             WHERE c.ledger_row_id = {_ctx.ledger_row_id} 
@@ -203,7 +204,8 @@ virt.append ({
         """
         COALESCE((SELECT SUM(b.tran_tot_cb) FROM (
             SELECT c.tran_tot_cb, ROW_NUMBER() OVER (PARTITION BY
-                c.ledger_row_id, c.location_row_id, c.function_row_id, c.source_code_id
+                c.ledger_row_id, c.location_row_id, c.function_row_id,
+                c.src_trantype_row_id, c.orig_trantype_row_id, c.orig_ledger_row_id
                 ORDER BY c.tran_date DESC) row_num
             FROM {company}.cb_totals c
             WHERE c.ledger_row_id = {_ctx.ledger_row_id} 
@@ -237,7 +239,12 @@ virt.append ({
     'long_descr' : 'Receipts - cash book currency',
     'col_head'   : 'Receipts',
     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
-    'sql'        : "CASE WHEN a.tran_type = 'cb_rec' THEN a.amount_cb END",
+    'sql'        : (
+        "CASE "
+            "WHEN a.tran_type = 'cb_rec' THEN a.amount_cb "
+            "WHEN a.tran_type = 'tfr_in' THEN a.amount_cb "
+        "END"
+        ),
     })
 virt.append ({
     'col_name'   : 'cb_pmt',
@@ -246,7 +253,12 @@ virt.append ({
     'long_descr' : 'Payments - cash book currency',
     'col_head'   : 'Payments',
     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
-    'sql'        : "CASE WHEN a.tran_type = 'cb_pmt' THEN a.amount_cb END",
+    'sql'        : (
+        "CASE "
+            "WHEN a.tran_type = 'cb_pmt' THEN a.amount_cb "
+            "WHEN a.tran_type = 'tfr_out' THEN a.amount_cb "
+        "END"
+        ),
     })
 
 # cursor definitions

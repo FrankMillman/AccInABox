@@ -19,15 +19,15 @@ table = {
                     ],
                 ['npch_code_id>descr'],  # display descr
                 ],
-            # ['nsls', 'Refund of non-inventory item', 'cb_nsls_crn',
+            # ['nsls', 'Refund of non-inventory item', 'nsls_subtran',
             #     [  # return values
             #         ['pmt_tran', 'tot_amt'],  # tgt_col, src_col
             #         ],
             #     ['nsls_code_id>descr'],  # display descr
             #     ],
-            ['archg', 'Charge to customer', 'ar_subtran_chg',
+            ['arjnl', 'Ar journal', 'ar_subtran_jnl',
                 [  # return values
-                    ['pmt_tran', 'chg_amount'],  # tgt_col, src_col
+                    ['pmt_tran', 'jnl_amount'],  # tgt_col, src_col
                     ],
                 # ['cust_row_id>party_row_id>display_name'],  # display descr
                 ['cust_id'],  # display descr
@@ -38,7 +38,7 @@ table = {
                     ],
                 ['supp_id'],  # display descr
                 ],
-            ['gl', 'Post to g/l', 'gl_jnl_subtran',
+            ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values
                     ['pmt_tran', 'gl_amount'],  # tgt_col, src_col
                     ],
@@ -206,12 +206,44 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Tran type',
+    'sql'        : "'cb_pmt'",
+    })
+virt.append ({
     'col_name'   : 'module_id',
     'data_type'  : 'TEXT',
     'short_descr': 'Module id',
     'long_descr' : 'Module id',
     'col_head'   : 'Module',
     'sql'        : "'cb'",
+    })
+# virt.append ({
+#     'col_name'   : 'module_row_id',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Module row id',
+#     'long_descr' : 'Module row id',
+#     'col_head'   : 'Module row id',
+#     'sql'        : 'a.tran_row_id>module_row_id',
+#     })
+virt.append ({
+    'col_name'   : 'trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Tran type row id',
+    'long_descr' : 'Tran type row id',
+    'col_head'   : 'Tran type row id',
+    'sql'        : 'a.tran_row_id>trantype_row_id',
+    })
+virt.append ({
+    'col_name'   : 'ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Ledger row id',
+    'long_descr' : 'Ledger row id',
+    'col_head'   : 'Ledger',
+    'sql'        : 'a.tran_row_id>ledger_row_id',
     })
 virt.append ({
     'col_name'   : 'rev_sign_sls',

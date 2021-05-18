@@ -229,6 +229,38 @@ virt.append ({
     'sql'        : "'ap'",
     })
 virt.append ({
+    'col_name'   : 'trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Tran type row id',
+    'long_descr' : 'Tran type row id',
+    'col_head'   : 'Tran type row id',
+    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'ap_uex_bf'",
+    })
+virt.append ({
+    'col_name'   : 'ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Ledger row id',
+    'long_descr' : 'Ledger row id',
+    'col_head'   : 'Ledger',
+    'sql'        : 'a.supp_row_id>ledger_row_id',
+    })
+virt.append ({
+    'col_name'   : 'location_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
+    'sql'        : 'a.supp_row_id>location_row_id',
+    })
+virt.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
+    'sql'        : 'a.supp_row_id>function_row_id',
+    })
+virt.append ({
     'col_name'   : 'rev_sign_pch',
     'data_type'  : 'BOOL',
     'short_descr': 'Reverse sign?',

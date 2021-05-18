@@ -23,6 +23,12 @@ table = {
                     ],
                 ['nsls_code_id>descr'],
                 ],
+            ['gl', 'Post to g/l', 'gl_subtran_jnl',
+                [  # return values
+                    ['inv_net_amt', 'gl_amount'],  # tgt_col, src_col
+                    ],
+                ['gl_code'],  # display descr
+                ],
             ['com', 'Comment', 'ar_comments',
                 [],  # return values
                 ['text'],
@@ -234,6 +240,22 @@ virt.append ({
     'long_descr' : 'Module id',
     'col_head'   : 'Module',
     'sql'        : "'ar'",
+    })
+virt.append ({
+    'col_name'   : 'trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Tran type row id',
+    'long_descr' : 'Tran type row id',
+    'col_head'   : 'Tran type row id',
+    'sql'        : 'a.tran_row_id>trantype_row_id',
+    })
+virt.append ({
+    'col_name'   : 'ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Ledger row id',
+    'long_descr' : 'Ledger row id',
+    'col_head'   : 'Ledger',
+    'sql'        : 'a.tran_row_id>cust_row_id>ledger_row_id',
     })
 virt.append ({
     'col_name'   : 'rev_sign_sls',

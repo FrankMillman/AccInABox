@@ -34,6 +34,7 @@ groups.append([
     True,  # include zero bals
     ])
 
+cashflow_params = None
 pivot_on = None
 
 columns = [

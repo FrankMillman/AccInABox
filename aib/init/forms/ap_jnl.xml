@@ -1,0 +1,240 @@
+<form name="ap_jnl" title="Supplier journal" before_start_form="
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_jnl` action=`lock`/>>
+  " on_close_form="
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_jnl` action=`unlock`/>>
+  ">
+  <db_objects>
+    <db_obj name="ap_jnl" table_name="ap_tran_inv" is_formview_obj="true"/>
+    <db_obj name="ap_jnldet" table_name="ap_tran_inv_det" parent="ap_jnl"/>
+    <db_obj name="achg" table_name="ar_subtran_chg" parent="ap_jnldet"/>
+    <db_obj name="gl" table_name="gl_jnl_subtran" parent="ap_jnldet"/>
+    <db_obj name="com" table_name="ap_comments" parent="ap_jnldet"/>
+  </db_objects>
+
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="ap_jnl">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+
+      <row/>
+      <col/>
+      <label value="Supplier Id:"/>
+      <col/>
+      <input obj_name="ap_jnl" col_name="supp_id" lng="80" readonly="true" skip="true"/>
+      <display obj_name="ap_jnl" col_name="supp_row_id>party_row_id>display_name" lng="200"/>
+
+      <col/>
+      <label value="Invoice no:"/>
+      <col/>
+      <input obj_name="ap_jnl" col_name="tran_number" lng="80" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Invoice date:"/>
+      <col/>
+      <input obj_name="ap_jnl" col_name="tran_date" lng="84" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Text:"/>
+      <col/>
+      <input obj_name="ap_jnl" col_name="text" lng="250" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Amount:"/>
+      <col/>
+      <input obj_name="ap_jnl" col_name="inv_amount" lng="120" skip="true"/>
+
+      <col/>
+      <label value="Invoice total:"/>
+      <col/>
+      <display obj_name="ap_jnl" col_name="currency_id>symbol" lng="10"/>
+      <display obj_name="ap_jnl" col_name="inv_tot_amt" lng="100"/>
+
+      <block/>
+      <vbox/>
+      <grid data_object="ap_jnldet" growable="true" num_grid_rows="5" readonly="true"
+          footer_row="[`'Total:'`, `ap_jnl.inv_net_amt`, `ap_jnl.inv_tax_amt`, `ap_jnl.inv_tot_amt`]">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="display_descr" lng="80"/>
+          <cur_col col_name="inv_net_amt" lng="80"/>
+          <cur_col col_name="inv_tax_amt" lng="80"/>
+          <cur_col col_name="inv_tot_amt" lng="80"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="line_no"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <vbox_end/>
+
+      <grid_frame main_object="ap_jnldet">
+        <toolbar/>
+        <body>
+
+          <block/>
+          <panel/>
+
+          <row/>
+          <col/>
+          <input obj_name="ap_jnldet" col_name="line_type" form_dflt="
+            <<prev_value/>>
+            "/>
+
+          <block/>
+          <subtran_frame subtran_obj="ap_jnldet" subtran_col="line_type">
+            <subtran_body subtran_id="pch"/>
+            <subtran_body subtran_id="npch"/>
+            <subtran_body subtran_id="ar_chg"/>
+            <subtran_body subtran_id="gl"/>
+            <subtran_body subtran_id="com"/>
+          </subtran_frame>
+
+        </body>
+        <button_row template="Grid_Frame_Grid_RO"/>
+        <frame_methods template="Grid_Frame_Grid_RO">
+          <method name="after_save" action="
+            <<recalc obj_name=`ap_jnl` col_name=`inv_tot_amt`/>>
+            "/>
+        </frame_methods>
+
+      </grid_frame>
+
+    </body>
+    <button_row template="Transaction"/>
+    <frame_methods template="Transaction">
+      <method name="do_post" action="
+        <<case>>
+          <<compare test=`[['if', '', 'ap_jnl.inv_tot_amt', '=', '0', '']]`>>
+            <<ask title=`Invoice` enter=`No` escape=`No`
+                question=`No detail lines - sure you want to post?`>>
+              <<response ans=`No`>>
+              <</response>>
+              <<response ans=`Yes`>>
+                <<post_obj obj_name=`ap_jnl`/>>
+              <</response>>
+            <</ask>>
+          <</compare>>
+          <<default>>
+            <<post_obj obj_name=`ap_jnl`/>>
+          <</default>>
+        <</case>>
+        "/>
+    </frame_methods>
+  </frame>
+  <inline_form name="tran_header" title="Invoice header">
+    <frame main_object="ap_jnl">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+
+        <row/>
+        <col/>
+        <label value="Supplier Id:"/>
+        <col/>
+        <input obj_name="ap_jnl" col_name="supp_id" lng="80"/>
+        <display obj_name="ap_jnl" col_name="supp_row_id>party_row_id>display_name" lng="200"/>
+
+        <if test="[[`if`, ``, `_ledger.valid_loc_ids>is_leaf`, `is`, `$False`, ``]]"/>
+
+        <row/>
+        <col/>
+        <label value="Location Id:"/>
+        <col/>
+        <input obj_name="ap_jnl" col_name="location_id" lng="80" form_dflt="
+          <<case>>
+            <<compare test=`[['if', '', 'ap_jnl.supp_row_id>dflt_loc_id', 'is not', '$None', '']]`>>
+              <<fld_val name=`ap_jnl.supp_row_id>dflt_loc_id>location_id`/>>
+            <</compare>>
+          <</case>>
+          "/>
+        <display obj_name="ap_jnl" col_name="supp_row_id>location_id>descr" lng="160"/>
+
+        <end_if/>
+
+        <if test="[[`if`, ``, `_ledger.valid_fun_ids>is_leaf`, `is`, `$False`, ``]]"/>
+
+        <row/>
+        <col/>
+        <label value="Function Id:"/>
+        <col/>
+        <input obj_name="ap_jnl" col_name="function_id" lng="80" form_dflt="
+          <<case>>
+            <<compare test=`[['if', '', 'ap_jnl.supp_row_id>dflt_fun_id', 'is not', '$None', '']]`>>
+              <<fld_val name=`ap_jnl.supp_row_id>dflt_fun_id>function_id`/>>
+            <</compare>>
+          <</case>>
+          "/>
+        <display obj_name="ap_jnl" col_name="supp_row_id>function_id>descr" lng="160"/>
+
+        <end_if/>
+
+        <dummy validation="
+            <<validation>>
+              <<case>>
+                <<compare test=`[['if', '', 'ap_jnl.supp_row_id', 'is', '$None', '']]`>>
+                  <<error head=`Supplier` body=`Supplier does not exist`/>>
+                <</compare>>
+              <</case>>
+            <</validation>>
+          "/>
+
+        <if test="[[`if`, ``, `_ledger.auto_inv_no`, `is`, `$None`, ``]]"/>
+        <row/>
+        <col/>
+        <label value="Invoice no:"/>
+        <col/>
+        <input obj_name="ap_jnl" col_name="tran_number" lng="80"/>
+        <end_if/>
+
+        <row/>
+        <col/>
+        <label value="Invoice date:"/>
+        <col/>
+        <input obj_name="ap_jnl" col_name="tran_date" lng="84" form_dflt="
+          <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
+          "/>
+
+<!--
+        <row/>
+        <col/>
+        <label value="Terms code:"/>
+        <col/>
+        <input obj_name="ap_jnl" col_name="terms_code" lng="60"/>
+        <display obj_name="ap_jnl" col_name="terms_code_id>descr" lng="140"/>
+
+        <row/>
+        <col/>
+        <label value="Tax inclusive?"/>
+        <col/>
+        <input obj_name="ap_jnl" col_name="tax_incl"/>
+-->
+
+        <row/>
+        <col/>
+        <label value="Amount:"/>
+        <col/>
+        <input obj_name="ap_jnl" col_name="inv_amount" lng="120"/>
+
+        <row/>
+        <col/>
+        <label value="Text:"/>
+        <col/>
+        <input obj_name="ap_jnl" col_name="text" lng="250" form_dflt="<<prev_value/>>"/>
+
+      </body>
+
+      <button_row template="Transaction_Header"/>
+      <frame_methods template="Transaction_Header"/>
+    </frame>
+  </inline_form>
+</form>

@@ -7,11 +7,17 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['gl', 'Gl transaction', 'gl_jnl_subtran',
+            ['gl', 'Gl transaction', 'gl_subtran_jnl',
                 [  # return values
                     ['jnl_amt', 'gl_local'],  # tgt_col, src_col
                     ],
                 ['gl_code'],  # display descr
+                ],
+            ['arjnl', 'Charge to customer', 'ar_subtran_jnl',
+                [  # return values
+                    ['inv_net_amt', 'jnl_amount'],  # tgt_col, src_col
+                    ],
+                ['cust_row_id>party_row_id>display_name'],  # display descr
                 ],
             ]],
         ],
@@ -141,7 +147,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'jnl',
+    'dflt_val'   : 'gl',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -179,6 +185,22 @@ virt = []
 #     'dflt_val'   : 'gl_jnl',
 #     'sql'        : "'gl_jnl'",
 #     })
+virt.append ({
+    'col_name'   : 'trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Tran type row id',
+    'long_descr' : 'Tran type row id',
+    'col_head'   : 'Tran type row id',
+    'sql'        : 'a.tran_row_id>trantype_row_id',
+    })
+virt.append ({
+    'col_name'   : 'ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Ledger row id',
+    'long_descr' : 'Ledger row id',
+    'col_head'   : 'Ledger row id',
+    'sql'        : "1",
+    })
 virt.append ({
     'col_name'   : 'rev_sign_gl',
     'data_type'  : 'BOOL',

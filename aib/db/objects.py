@@ -151,6 +151,10 @@ async def get_mem_table(context, table_name, table_defn=None):
         await mem_table._ainit_(context, table_name, table_defn)
         context.mem_tables_open[table_name] = mem_table
 
+        # this can only be done after setup completed, else risk of recursion
+        for col in [col_defn for col_defn in mem_table.col_list if col_defn.fkey is not None]:
+            await setup_fkey(mem_table, context, context.company, col)
+
     return context.mem_tables_open[table_name]
 
 async def get_clone_object(context, company, table_name, clone_from, parent=None):
@@ -248,6 +252,10 @@ async def get_db_table(context, db_company, table_name):
 
     tables_open[table_key] = db_table
 
+    # this can only be done after setup completed, else risk of recursion
+    for col in [col_defn for col_defn in db_table.col_list if col_defn.fkey is not None]:
+        await setup_fkey(db_table, context, defn_company, col)
+
     return db_table
 
 async def get_view_object(context, view_name):
@@ -332,6 +340,11 @@ async def get_db_view(context, db_company, view_name):
     db_view = DbView()
     await db_view._ainit_(context, orig_viewid, view_id, view_name, module_row_id,
         short_descr, path_to_row, sequence, ledger_col, defn_company, data_company)
+
+    # this can only be done after setup completed, else risk of recursion
+    for col in [col_defn for col_defn in db_view.col_list if col_defn.fkey is not None]:
+        await setup_fkey(db_view, context, defn_company, col)
+
     return db_view
 
 #----------------------------------------------------------------------------
@@ -362,8 +375,7 @@ class DbObject:
         # print('INIT', db_table.table_name, None if parent is None else parent.table_name)
 
         self.context = context
-        # self.company = context.company
-        self.company = db_table.data_company  # do we need defn_company as well?
+        self.company = company
         self.db_table = db_table
         self.table_name = db_table.table_name
         self.mem_parent = None
@@ -770,11 +782,11 @@ class DbObject:
                 fld = await self.getfld(dep_name)
                 fld.notify_recalc(field)
 
-        if col_defn.dflt_val is not None:
+        if col_defn.dflt_rule is not None:
+            field._value = await field.check_val(await db.dflt_xml.get_db_dflt(field))
+            field._orig = await field.check_val(await db.dflt_xml.get_db_dflt(field, orig=True))
+        elif col_defn.dflt_val is not None:
             field._orig = field._value = await field.get_dflt()
-        elif col_defn.dflt_rule is not None:
-            field._value = await db.dflt_xml.get_db_dflt(field)
-            field._orig = await db.dflt_xml.get_db_dflt(field, orig=True)
 
         field._init = field._orig
 
@@ -1089,7 +1101,7 @@ class DbObject:
                 else:
                     fld._value = await fld.get_dflt(from_init=True)
                     fld._init = fld._orig = fld._value
-            elif col_defn.sql.startswith("'"):
+            elif col_defn.sql is not None and col_defn.sql.startswith("'"):
                 fld._value = await fld.check_val(col_defn.sql[1:-1])
                 fld._init = fld._orig = fld._value
 
@@ -1662,8 +1674,9 @@ class DbObject:
                 tgt_fld = await tgt_obj.getfld(tgt_col)
                 if tgt_fld.col_defn.col_type == 'alt':
                     await tgt_fld.setval(src_val, validate=True)
-                    tgt_col = tgt_fld.foreign_key['true_src'].col_name
-                    src_val = tgt_fld.foreign_key['true_src']._value
+                    foreign_key = await tgt_obj.get_foreign_key(tgt_fld)
+                    tgt_col = foreign_key['true_src'].col_name
+                    src_val = foreign_key['true_src']._value
                 else:
                     await tgt_fld.setval(src_val, validate=False)
                 if roll_params is not None:
@@ -2039,8 +2052,9 @@ class DbObject:
                 tgt_fld = await tgt_obj.getfld(tgt_col)
                 if tgt_fld.col_defn.col_type == 'alt':
                     await tgt_fld.setval(src_val, validate=True)
-                    tgt_col = tgt_fld.foreign_key['true_src'].col_name
-                    src_val = tgt_fld.foreign_key['true_src']._value
+                    foreign_key = await tgt_obj.get_foreign_key(tgt_fld)
+                    tgt_col = foreign_key['true_src'].col_name
+                    src_val = foreign_key['true_src']._value
                 else:
                     await tgt_fld.setval(src_val, validate=False)
                 if roll_params is not None:
@@ -2175,7 +2189,7 @@ class DbObject:
         #   the same table as menu definitions
         #
         # the only 'combo' situation we have is 'db_modules', which is used as a
-        #   grouping for db_tables, sys_menus, acc_roles, db_tran_types, etc
+        #   grouping for db_tables, sys_menus, acc_roles, etc
         #
         # it would not be practical to allow an interspersed tree here, as all the
         #   other tables would be affected and it would be difficult to maintain
@@ -2691,8 +2705,9 @@ class DbTable:
                 if col.dflt_rule is not None:
                     col.dflt_rule = fromstring(f'<_>{col.dflt_rule}</_>')
 
-                if col.fkey is not None:
-                    await setup_fkey(self, context, defn_company, col)
+                # this can only be done after setup completed, else risk of recursion
+                # if col.fkey is not None:
+                #     await setup_fkey(self, context, defn_company, col)
 
                 if col.choices is not None:
                     col.choices = OD(loads(col.choices))
@@ -3321,8 +3336,9 @@ class MemTable(DbTable):
         if col.dflt_rule is not None:
             col.dflt_rule = fromstring('<_>{}</_>'.format(col.dflt_rule))
 
-        if col.fkey is not None:
-            await setup_fkey(self, context, context.company, col)
+        # this can only be done after setup completed, else risk of recursion
+        # if col.fkey is not None:
+        #     await setup_fkey(self, context, context.company, col)
 
         if col.choices is not None:
             col.choices = OD(loads(col.choices))
@@ -3485,8 +3501,9 @@ class DbView:
 
                 col.col_checks = []
 
-                if col.fkey is not None:
-                    await setup_fkey(self, context, defn_company, col)
+                # this can only be done after setup completed, else risk of recursion
+                # if col.fkey is not None:
+                #     await setup_fkey(self, context, defn_company, col)
 
                 col.allow_null = bool(col.allow_null)  # sqlite3 returns 0/1
 
@@ -3675,7 +3692,6 @@ async def setup_fkey(db_table, context, company, col):
 
     # set up alt_src/alt_tgt
     tgt_table_name = col.fkey[FK_TARGET_TABLE]
-    # assert isinstance(tgt_table_name, str)  # disallow a 'complex' fkey with alt_src
     if '.' in tgt_table_name:  # target table is in another company
         tgt_company, tgt_table_name = tgt_table_name.split('.')
     else:
@@ -3695,10 +3711,10 @@ async def setup_fkey(db_table, context, company, col):
     alttgt_name = col.fkey[FK_ALT_TARGET]
     alt_cursor = col.fkey[FK_CURSOR]
 
-    for altsrc_name, alttgt_name in zip(
+    for alt_pos, (altsrc_name, alttgt_name) in enumerate(zip(
             (_.strip() for _ in altsrc_name.split(',')),
             (_.strip() for _ in alttgt_name.split(',')),
-            ):
+            )):
 
         assert altsrc_name not in db_table.col_dict, (
             f'{altsrc_name} exists in {db_table.table_name}')
@@ -3713,10 +3729,9 @@ async def setup_fkey(db_table, context, company, col):
         altsrc_coldefn.seq = -1
         altsrc_coldefn.long_descr = col.long_descr
         altsrc_coldefn.key_field = col.key_field  # to allow data change without perms check
+        altsrc_coldefn.condition = col.condition
         altsrc_coldefn.allow_null = col.allow_null
         altsrc_coldefn.allow_amend = col.allow_amend
-        # altsrc_coldefn.calculated = col.calculated
-        altsrc_coldefn.condition = col.condition
         altsrc_coldefn.dflt_val = None  # if applicable, set on self, not alt_src
         altsrc_coldefn.dflt_rule = None  # if applicable, set on self, not alt_src
         altsrc_coldefn.fkey = [
@@ -3731,8 +3746,10 @@ async def setup_fkey(db_table, context, company, col):
 
         altsrc_coldefn.col_checks = []  # if applicable, check on self, not alt_src
         altsrc_coldefn.table_keys = []
-        db_table.col_list.append(altsrc_coldefn)
-        db_table.col_dict[altsrc_coldefn.col_name] = altsrc_coldefn
+        # db_table.col_list.append(altsrc_coldefn)
+        pos = db_table.col_list.index(col)
+        db_table.col_list.insert(pos + alt_pos + 1, altsrc_coldefn)  # insert after true_src
+        db_table.col_dict[altsrc_name] = altsrc_coldefn
 
 #----------------------------------------------------------------------------
 

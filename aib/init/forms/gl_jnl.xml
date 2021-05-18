@@ -1,0 +1,127 @@
+<form name="gl_jnl" title="Gl journal" before_start_form="
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`gl_jnl` action=`lock`/>>
+  " on_close_form="
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`gl_jnl` action=`unlock`/>>
+  ">
+  <db_objects>
+    <db_obj name="gl_jnl" table_name="gl_tran_jnl" is_formview_obj="true"/>
+    <db_obj name="gl_det" table_name="gl_tran_jnl_det" parent="gl_jnl"/>
+    <db_obj name="gl" table_name="gl_jnl_subtran" parent="gl_det"/>
+    <db_obj name="achg" table_name="ar_subtran_chg" parent="ap_invdet"/>
+  </db_objects>
+
+  <mem_objects>
+  </mem_objects>
+
+  <input_params/>
+  <output_params/>
+  <frame main_object="gl_jnl">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+
+      <row/>
+      <col/>
+      <label value="Journal no:"/>
+      <col/>
+      <input obj_name="gl_jnl" col_name="tran_number" lng="80" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Date:"/>
+      <col/>
+      <input obj_name="gl_jnl" col_name="tran_date" lng="84" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Text:"/>
+      <col/>
+      <input obj_name="gl_jnl" col_name="text" lng="200" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Narrative:"/>
+      <col/>
+      <input obj_name="gl_jnl" col_name="narrative" lng="200" height="5" readonly="true" skip="true"/>
+
+      <block/>
+      <grid data_object="gl_det" growable="true" num_grid_rows="5" readonly="true"
+          footer_row="[`'Total:'`, `gl_jnl.tot_amount`]">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="display_descr" lng="80"/>
+          <cur_col col_name="jnl_amt" lng="120"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="line_no"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <grid_frame main_object="gl_det">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <input obj_name="gl_det" col_name="line_type" radio="false" form_dflt="'gl'"/>
+          <block/>
+          <subtran_frame subtran_obj="gl_det" subtran_col="line_type">
+            <subtran_body subtran_id="gl"/>
+            <subtran_body subtran_id="ar_chg"/>
+          </subtran_frame>
+        </body>
+        <button_row template="Grid_Frame_Grid_RO"/>
+        <frame_methods template="Grid_Frame_Grid_RO"/>
+
+      </grid_frame>
+
+    </body>
+    <button_row template="Transaction"/>
+    <frame_methods template="Transaction"/>
+  </frame>
+  <inline_form name="tran_header" title="Journal header">
+    <frame main_object="gl_jnl">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+
+       <if test="[[`if`, ``, `_ledger.auto_jnl_no`, `is`, `$None`, ``]]"/>
+        <row/>
+        <col/>
+        <label value="Journal no:"/>
+        <col/>
+        <input obj_name="gl_jnl" col_name="tran_number" lng="80"/>
+        <end_if/>
+
+        <row/>
+        <col/>
+        <label value="Date:"/>
+        <col/>
+        <input obj_name="gl_jnl" col_name="tran_date" lng="84" form_dflt="
+          <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
+          "/>
+
+        <row/>
+        <col/>
+        <label value="Text:"/>
+        <col/>
+        <input obj_name="gl_jnl" col_name="text" lng="200"/>
+
+        <row/>
+        <col/>
+        <label value="Narrative:"/>
+        <col/>
+        <input obj_name="gl_jnl" col_name="narrative" lng="200" height="5"/>
+
+      </body>
+
+      <button_row template="Transaction_Header"/>
+      <frame_methods template="Transaction_Header"/>
+    </frame>
+  </inline_form>
+</form>

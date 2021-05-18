@@ -23,13 +23,13 @@ table = {
                     ],
                 ['npch_code_id>descr'],  # display descr
                 ],
-            ['archg', 'Charge to customer', 'ar_subtran_chg',
+            ['arjnl', 'Ar journal', 'ar_subtran_jnl',
                 [  # return values
-                    ['inv_net_amt', 'chg_amount'],  # tgt_col, src_col
+                    ['inv_net_amt', 'jnl_amount'],  # tgt_col, src_col
                     ],
                 ['cust_row_id>party_row_id>display_name'],  # display descr
                 ],
-            ['gl', 'Post to g/l', 'gl_jnl_subtran',
+            ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values
                     ['inv_net_amt', 'gl_amount'],  # tgt_col, src_col
                     ],
@@ -246,6 +246,22 @@ virt.append ({
     'long_descr' : 'Module id',
     'col_head'   : 'Module',
     'sql'        : "'ap'",
+    })
+virt.append ({
+    'col_name'   : 'trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Tran type row id',
+    'long_descr' : 'Tran type row id',
+    'col_head'   : 'Tran type row id',
+    'sql'        : 'a.tran_row_id>trantype_row_id',
+    })
+virt.append ({
+    'col_name'   : 'ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Ledger row id',
+    'long_descr' : 'Ledger row id',
+    'col_head'   : 'Ledger',
+    'sql'        : 'a.tran_row_id>ledger_row_id',
     })
 virt.append ({
     'col_name'   : 'rev_sign_pch',
