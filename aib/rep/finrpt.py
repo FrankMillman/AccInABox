@@ -56,9 +56,29 @@ Report defn has the following features -
 
 7.  Cash flow report
     Only works for 'from_to'-style report - any others required?
-    Must specify single cashbook (ledger_id) or all cashbooks combined ('$all').
-    Report selects all data where the originating transaction is the specified cashbook(s).
-    If not '$all', report also selects any transfers-in from other cashbooks.
+    Must specify single cashbook (ledg) or all cashbooks combined ('$all').
+
+    To identify postings *posted from* one or all cashbooks -
+        orig_trantype_row_id>module_row_id>module_id = 'cb'
+        orig_ledger_row_id>ledger_id = [ledg]
+    To identify postings *originating from* one or all cashbooks -
+        gl_code_id>ctrl_mod_row_id>module_id = 'cb'
+        gl_code_id>ctrl_ledg_row_id>ledger_id = [ledg]
+
+    Report selects all data where the transaction is posted from the specified cashbook(s).
+    If not '$all', report uses UNION ALL to select any transfers-in from other cashbooks.
+
+    To select data -
+        all cashbooks -
+            orig_mod = 'cb' AND COALESCE(ctrl_mod, '') != 'cb'
+        single cashbook -
+            orig_mod = 'cb' AND orig_ledg = [ledg]
+                AND (COALESCE(ctrl_mod, '') != 'cb' OR COALESCE(ctrl_ledg, '') != [ledg])
+
+    To select transfers in (only applies to single cashbook) -
+            ctrl_mod = 'cb' AND ctrl_ledg = [ledg]  # don't need COALESCE for '='
+                AND (orig_mod != 'cb' OR orig_ledg != [ledg])
+
     Validation: cl_bal - op_bal = sum of cashflow report (will raise AssertionError if false).
     [TODO] - use dedicated form_defn showing op_bal, cashflow, cl_bal
 
@@ -970,21 +990,13 @@ class FinReport:
             sql_params.extend(self.sql_params)
 
             if self.cflow_param is not None and self.cflow_param != '$all':
-                part_sql.append(
-                    f"AND (COALESCE(ctrl_mod.module_id, '') != {dbc.param_style}"
-                    )
+                part_sql.append(f"AND (COALESCE(ctrl_mod.module_id, '') != {dbc.param_style}")
                 sql_params.append('cb')
-                part_sql.append(
-                    f"OR COALESCE(ctrl_ledg.ledger_id, '') != {dbc.param_style})"
-                    )
+                part_sql.append(f"OR COALESCE(ctrl_ledg.ledger_id, '') != {dbc.param_style})")
                 sql_params.append(self.cflow_param)
-                part_sql.append(
-                    f"AND orig_mod.module_id = {dbc.param_style}"
-                    )
+                part_sql.append(f"AND orig_mod.module_id = {dbc.param_style}")
                 sql_params.append('cb')
-                part_sql.append(
-                    f"AND orig_ledg.ledger_id = {dbc.param_style}"
-                    )
+                part_sql.append(f"AND orig_ledg.ledger_id = {dbc.param_style}")
                 sql_params.append(self.cflow_param)
 
                 part_sql.append('UNION ALL')
@@ -1005,21 +1017,13 @@ class FinReport:
                 part_sql.extend(self.sql_where)
                 sql_params.extend(self.sql_params)
 
-                part_sql.append(
-                    f"AND ctrl_mod.module_id = {dbc.param_style}"
-                    )
+                part_sql.append(f"AND ctrl_mod.module_id = {dbc.param_style}")
                 sql_params.append('cb')
-                part_sql.append(
-                    f"AND ctrl_ledg.ledger_id = {dbc.param_style}"
-                    )
+                part_sql.append(f"AND ctrl_ledg.ledger_id = {dbc.param_style}")
                 sql_params.append(self.cflow_param)
-                part_sql.append(
-                    f"AND (COALESCE(orig_mod.module_id, '') != {dbc.param_style}"
-                    )
+                part_sql.append(f"AND (orig_mod.module_id != {dbc.param_style}")
                 sql_params.append('cb')
-                part_sql.append(
-                    f"OR COALESCE(orig_ledg.ledger_id, '') != {dbc.param_style})"
-                    )
+                part_sql.append(f"OR orig_ledg.ledger_id != {dbc.param_style})")
                 sql_params.append(self.cflow_param)
 
         part_sql.append(f') bal')
