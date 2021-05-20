@@ -188,7 +188,7 @@ cols.append ({
     'data_source': 'input',
     'condition'  : None,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
@@ -256,21 +256,36 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'jnl_amt',
-    'data_type'  : '$TRN',
-    'short_descr': 'Journal amount',
-    'long_descr' : 'Journal amount in transaction currency',
-    'col_head'   : 'Jnl amt',
+    'col_name'   : 'cust_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Cust exchange rate',
+    'long_descr' : 'Exchange rate from customer currency to local',
+    'col_head'   : 'Rate cust',
     'key_field'  : 'N',
-    'data_source': 'input',
+    'data_source': 'calc',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
-    'db_scale'   : 2,
-    'scale_ptr'  : 'currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
+    'db_scale'   : 8,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<compare test="[[`if`, ``, `cust_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
+                '<literal value="1"/>'
+            '</compare>'
+            '<compare test="[[`if`, ``, `cust_row_id>currency_id`, `=`, `currency_id`, ``]]">'
+                '<fld_val name="tran_exch_rate"/>'
+            '</compare>'
+            '<default>'
+                '<exch_rate>'
+                    '<fld_val name="cust_row_id>currency_id"/>'
+                    '<fld_val name="tran_date"/>'
+                '</exch_rate>'
+            '</default>'
+        '</case>'
+        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -296,11 +311,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'jnl_det_amt',
+    'col_name'   : 'jnl_amt',
     'data_type'  : '$TRN',
-    'short_descr': 'Journal det amount',
-    'long_descr' : 'Journal det amount in tran currency - updated from ar_tran_jnl_det',
-    'col_head'   : 'Jnl det amt',
+    'short_descr': 'Journal amount',
+    'long_descr' : 'Journal amount in tran currency - updated from ar_tran_jnl_det',
+    'col_head'   : 'Jnl amt',
     'key_field'  : 'N',
     'data_source': 'aggr',
     'condition'  : None,
@@ -316,11 +331,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'jnl_det_local',
+    'col_name'   : 'jnl_local',
     'data_type'  : '$LCL',
-    'short_descr': 'Journal det local',
-    'long_descr' : 'Journal det amount in local currency - updated from ar_tran_jnl_det',
-    'col_head'   : 'Jnl det local',
+    'short_descr': 'Journal local',
+    'long_descr' : 'Journal amount in local currency - updated from ar_tran_jnl_det',
+    'col_head'   : 'Jnl local',
     'key_field'  : 'N',
     'data_source': 'aggr',
     'condition'  : None,
@@ -344,19 +359,24 @@ virt.append ({
     'short_descr': 'Transaction type',
     'long_descr' : 'Transaction type - used in gui to ask "Post another?"',
     'col_head'   : 'Tran type',
-    'dflt_rule'  : '<trantype_row_id tran_type="ar_jnl"/>',
     'sql'        : "'ar_jnl'",
-    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'ar_jnl'",
     })
 virt.append ({
-    'col_name'   : 'module_row_id',
+    'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Module row id',
-    'long_descr' : 'Module row id',
-    'col_head'   : 'Module row id',
-    'dflt_rule'  : '<module_row_id module_id="ar"/>',
-    'sql'        : "SELECT row_id FROM {company}.db_modules WHERE module_id = 'ar'",
+    'short_descr': 'Tran type row id',
+    'long_descr' : 'Tran type row id',
+    'col_head'   : 'Tran type row id',
+    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'ar_jnl'",
     })
+# virt.append ({
+#     'col_name'   : 'module_row_id',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Module row id',
+#     'long_descr' : 'Module row id',
+#     'col_head'   : 'Module row id',
+#     'sql'        : "SELECT row_id FROM {company}.db_modules WHERE module_id = 'ar'",
+#     })
 virt.append ({
     'col_name'   : 'ledger_row_id',
     'data_type'  : 'INT',
@@ -366,12 +386,20 @@ virt.append ({
     'sql'        : 'a.cust_row_id>ledger_row_id',
     })
 virt.append ({
-    'col_name'   : 'tran_row_id',
+    'col_name'   : 'location_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Tran row id',
-    'long_descr' : 'Tran row id',
-    'col_head'   : 'Tran row id',
-    'sql'        : "a.row_id",
+    'short_descr': 'Location row id',
+    'long_descr' : 'Location row id',
+    'col_head'   : 'Location',
+    'sql'        : 'a.cust_row_id>location_row_id',
+    })
+virt.append ({
+    'col_name'   : 'function_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Function row id',
+    'long_descr' : 'Function row id',
+    'col_head'   : 'Function',
+    'sql'        : 'a.cust_row_id>function_row_id',
     })
 virt.append ({
     'col_name'   : 'period_row_id',
@@ -384,6 +412,28 @@ virt.append ({
     'sql'        : (
         "SELECT count(*) FROM {company}.adm_periods b "
         "WHERE b.closing_date < a.tran_date"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'jnl_cust',
+    'data_type'  : '$PTY',
+    'short_descr': 'Jnl amount cust',
+    'long_descr' : 'Jnl amount in customer currency',
+    'col_head'   : 'Jnl cust',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="jnl_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="cust_exch_rate"/>'
+        '</expr>'
+        ),
+    'sql'        : (
+        "a.jnl_amt / a.tran_exch_rate * a.cust_exch_rate"
         ),
     })
 
@@ -421,21 +471,12 @@ actions.append([
         ],
     ])
 actions.append([
-    'post_checks', [
-        [
-            'check_totals',
-            'Total amount does not equal total of line items',
-            [
-                ['check', '', 'jnl_amount', '=', 'jnl_det_amt', ''],
-                ],
-            ],
-        ],
-    ])
-actions.append([
     'upd_on_post', [
         [
             'ar_openitems',  # table name
-            None,  # condition
+            [  # condition
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ],
             False,  # split source?
             [  # key fields
                 ['tran_row_id', 'row_id'],  # tgt_col, src_col
@@ -447,13 +488,13 @@ actions.append([
                 ['due_date', '=', 'tran_date'],
                 ['cust_row_id', '=', 'cust_row_id'],
                 ['tran_date', '=', 'tran_date'],
-                ['amount_cust', '-', 'jnl_amount'],
-                ['amount_local', '-', 'jnl_det_local'],
+                ['amount_cust', '-', 'jnl_amt'],
+                ['amount_local', '-', 'jnl_local'],
                 ],
             [],  # on unpost
-            [  # return values
-                ['item_row_id', 'row_id'],  # tgt_col, src_col
-                ],
+            # [  # return values
+            #     ['item_row_id', 'row_id'],  # tgt_col, src_col
+            #     ],
             ],
 
         [
@@ -461,15 +502,17 @@ actions.append([
             [],  # condition
             False,  # split source?
             [  # key fields
-                ['ledger_row_id', 'cust_row_id>ledger_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'cust_row_id>location_row_id'],
-                ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code', "'ar_jnl'"],
+                ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['src_trantype_row_id', 'trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'jnl_det_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'jnl_det_local'],
+                ['tran_day', '+', 'jnl_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'jnl_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -480,16 +523,18 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'cust_row_id>location_row_id'],
-                ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code', "'ar_jnl'"],
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['src_trantype_row_id', 'trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cust', '+', 'jnl_det_amt'],  # tgt_col, op, src_col
-                ['tran_tot_cust', '+', 'jnl_det_amt'],
-                ['tran_day_local', '+', 'jnl_det_local'],
-                ['tran_tot_local', '+', 'jnl_det_local'],
+                ['tran_day_cust', '+', 'jnl_amt'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '+', 'jnl_amt'],
+                ['tran_day_local', '+', 'jnl_local'],
+                ['tran_tot_local', '+', 'jnl_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -501,15 +546,17 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'cust_row_id>location_row_id'],
-                ['function_row_id', 'cust_row_id>function_row_id'],
-                ['source_code', "'ar_jnl'"],
+                ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                ['location_row_id', 'location_row_id'],
+                ['function_row_id', 'function_row_id'],
+                ['src_trantype_row_id', 'trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'jnl_det_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'jnl_det_local'],
+                ['tran_day', '-', 'jnl_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'jnl_local'],
                 ],
             [],  # on post
             [],  # on unpost

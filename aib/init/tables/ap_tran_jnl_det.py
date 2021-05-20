@@ -13,6 +13,12 @@ table = {
                     ],
                 ['cust_row_id>party_row_id>display_name'],  # display descr
                 ],
+            ['npch', 'Non-inventory item', 'npch_subtran',
+                [  # return values
+                    ['jnl_amt', 'tot_amt'],  # tgt_col, src_col
+                    ],
+                ['npch_code_id>descr'],  # display descr
+                ],
             ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values
                     ['jnl_amt', 'gl_amount'],  # tgt_col, src_col
@@ -189,6 +195,22 @@ virt.append ({
     'sql'        : "'ap'",
     })
 virt.append ({
+    'col_name'   : 'trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Tran type row id',
+    'long_descr' : 'Tran type row id',
+    'col_head'   : 'Tran type row id',
+    'sql'        : 'a.tran_row_id>trantype_row_id',
+    })
+virt.append ({
+    'col_name'   : 'ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Ledger row id',
+    'long_descr' : 'Ledger row id',
+    'col_head'   : 'Ledger',
+    'sql'        : 'a.tran_row_id>supp_row_id>ledger_row_id',
+    })
+virt.append ({
     'col_name'   : 'rev_sign_pch',
     'data_type'  : 'BOOL',
     'short_descr': 'Reverse sign?',
@@ -284,8 +306,7 @@ virt.append ({
     'long_descr' : 'Tax inclusive',
     'col_head'   : 'Tax incl',
     'fkey'       : None,
-    'dflt_val'   : '{tran_row_id>tax_incl}',
-    'sql'        : 'a.tran_row_id>tax_incl',
+    'sql'        : '$True',
     })
 virt.append ({
     'col_name'   : 'posted',
@@ -328,8 +349,8 @@ actions.append([
             False,  # split source?
             [],  # key fields
             [  # aggregation
-                ['jnl_det_amt', '+', 'jnl_amt'],  # tgt_col, op, src_col
-                ['jnl_det_local', '+', 'jnl_amt_local'],
+                ['jnl_amt', '+', 'jnl_amt'],  # tgt_col, op, src_col
+                ['jnl_local', '+', 'jnl_amt_local'],
                 ],
             [],  # on insert
             [],  # on update

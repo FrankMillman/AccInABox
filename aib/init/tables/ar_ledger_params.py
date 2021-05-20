@@ -384,6 +384,26 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'open_items',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Track outstanding items?',
+    'long_descr' : 'Track outstanding open items?',
+    'col_head'   : 'Open items?',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : 'false',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'auto_temp_no',
     'data_type'  : 'JSON',
     'short_descr': 'Auto-generate temp no?',

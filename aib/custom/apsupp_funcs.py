@@ -152,7 +152,8 @@ async def setup_supp_tots(caller, xml):
     sql = (
         "SELECT COALESCE((SELECT SUM(c.tran_tot_local) FROM ( "
             "SELECT a.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
-                "a.supp_row_id, a.location_row_id, a.function_row_id, a.source_code_id "
+                "a.supp_row_id, a.location_row_id, a.function_row_id, "
+                "a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id "
                 "ORDER BY a.tran_date DESC) row_num "
             "FROM {company}.ap_supp_totals a "
             "JOIN {company}.ap_suppliers b ON b.row_id = a.supp_row_id "
@@ -205,7 +206,7 @@ async def setup_mem_trans(caller, xml):
             await mem_totals.setval('disc', disc)
             await mem_totals.setval('cl_bal', cl_bal)
             await mem_totals.save()
-g
+
 async def setup_tran_day_per(caller, xml):
     # called from various ap_[tran]_day_per.before_start_form
     company = caller.company

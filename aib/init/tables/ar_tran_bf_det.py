@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
-    'ledger_col'    : None,
+    'ledger_col'    : 'tran_row_id>cust_row_id>ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -118,25 +118,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'cust_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Customer row id',
-#     'long_descr' : 'Customer row id',
-#     'col_head'   : 'Customer',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 0,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : '{tran_row_id>cust_row_id}',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : ['ar_customers', 'row_id', None, None, False, None],
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'tran_number',
     'data_type'  : 'TEXT',
@@ -225,56 +206,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'cust_exch_rate',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Cust exchange rate',
-#     'long_descr' : 'Exchange rate from customer currency to local',
-#     'col_head'   : 'Rate cust',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 8,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : None,
-#     'dflt_rule'  : (
-#         '<case>'
-#             '<compare test="[[`if`, ``, `cust_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
-#                 '<literal value="1"/>'
-#             '</compare>'
-#             '<default>'
-#                 '<exch_rate>'
-#                     '<fld_val name="cust_row_id>currency_id"/>'
-#                     '<fld_val name="tran_date"/>'
-#                 '</exch_rate>'
-#             '</default>'
-#         '</case>'
-#         ),
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
-# cols.append ({
-#     'col_name'   : 'tran_exch_rate',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Transaction exchange rate',
-#     'long_descr' : 'Exchange rate from transaction currency to local',
-#     'col_head'   : 'Rate tran',
-#     'key_field'  : 'N',
-#     'calculated' : True,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 8,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : '{cust_exch_rate}',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'bf_cust',
     'data_type'  : '$PTY',
@@ -352,7 +283,9 @@ actions.append([
     'upd_on_post', [
         [
             'ar_openitems',  # table name
-            [],  # condition
+            [  # condition
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ],
             False,  # split source?
             [  # key fields
                 ['tran_row_id', 'row_id'],  # tgt_col, src_col

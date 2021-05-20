@@ -655,7 +655,9 @@ actions.append([
     'upd_on_post', [
         [
             'ar_openitems',  # table name
-            [],  # condition
+            [  # condition
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ],
 
             True,  # split source?
 

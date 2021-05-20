@@ -522,7 +522,9 @@ actions.append([
     'upd_on_post', [
         [
             'ap_openitems',  # table name
-            None,  # condition
+            [  # condition
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ],
             False,  # split source?
             [  # key fields
                 ['tran_row_id', 'row_id'],  # tgt_col, src_col

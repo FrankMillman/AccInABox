@@ -4,7 +4,10 @@ view = {
     'module_id'     : 'ar',
     'short_descr'   : 'Ar transactions',
     'long_descr'    : 'Ar transactions',
-    'base_tables'   : ['ar_tran_inv', 'ar_tran_crn', 'ar_subtran_rec', 'ar_subtran_jnl', 'ar_tran_disc'],
+    'base_tables'   : [
+        'ar_tran_inv', 'ar_tran_crn', 'ar_tran_jnl',
+        'ar_subtran_jnl', 'ar_subtran_rec', 'ar_tran_disc'
+        ],
 
     'path_to_row'  : [
         'tran_type', {
@@ -13,10 +16,12 @@ view = {
                 ('ar_tran_inv', 'row_id', 'tran_row_id', 'ar_inv_view'),
             'ar_crn':
                 ('ar_tran_crn', 'row_id', 'tran_row_id', 'ar_crn_view'),
-            'ar_rec':
-                ('ar_subtran_rec', 'row_id', 'tran_row_id', 'ar_rec_view'),
             'ar_jnl':
                 ('ar_tran_jnl', 'row_id', 'tran_row_id', 'ar_jnl_view'),
+            'ar_tgt':
+                ('ar_subtran_jnl', 'row_id', 'tran_row_id', 'ar_jnl_view'),
+            'ar_rec':
+                ('ar_subtran_rec', 'row_id', 'tran_row_id', 'ar_rec_view'),
             'ar_disc':
                 ('ar_tran_disc', 'row_id', 'tran_row_id', 'ar_disc_view'),
             'ar_tgt':
@@ -37,7 +42,7 @@ view = {
 cols = []
 cols.append ({
     'col_name'   : 'tran_type',
-    'source'     : ["'ar_inv'", "'ar_crn'", "'ar_rec'", "'ar_jnl'", "'ar_disc'"],
+    'source'     : ["'ar_inv'", "'ar_crn'", "'ar_jnl'", "'ar_tgt'", "'ar_rec'", "'ar_disc'"],
     'data_type'  : 'TEXT',
     'short_descr': 'Tran type',
     'long_descr' : 'Transaction type',
@@ -50,7 +55,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tran_row_id',
-    'source'     : ['row_id', 'row_id', 'row_id', 'row_id', 'row_id'],
+    'source'     : ['row_id', 'row_id', 'row_id', 'row_id', 'row_id', 'row_id'],
     'data_type'  : 'INT',
     'short_descr': 'Transaction id',
     'long_descr' : 'Transaction row id',
@@ -63,7 +68,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tran_number',
-    'source'     : ['tran_number', 'tran_number', 'tran_number', 'tran_number', 'tran_number'],
+    'source'     : ['tran_number', 'tran_number', 'tran_number', 'tran_number', 'tran_number', 'tran_number'],
     'data_type'  : 'TEXT',
     'short_descr': 'Transaction number',
     'long_descr' : 'Transaction number',
@@ -76,7 +81,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'cust_row_id',
-    'source'     : ['cust_row_id', 'cust_row_id', 'cust_row_id', 'cust_row_id', 'cust_row_id'],
+    'source'     : ['cust_row_id', 'cust_row_id', 'cust_row_id', 'cust_row_id', 'cust_row_id', 'cust_row_id'],
     'data_type'  : 'INT',
     'short_descr': 'Customer row id',
     'long_descr' : 'Customer row id',
@@ -89,7 +94,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tran_date',
-    'source'     : ['tran_date', 'tran_date', 'tran_date', 'tran_date', 'tran_date'],
+    'source'     : ['tran_date', 'tran_date', 'tran_date', 'tran_date', 'tran_date', 'tran_date'],
     'data_type'  : 'DTE',
     'short_descr': 'Transaction date',
     'long_descr' : 'Transaction date',
@@ -102,7 +107,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'text',
-    'source'     : ['text', 'text', 'text', 'text', 'text'],
+    'source'     : ['text', 'text', 'text', 'text', 'text', 'text'],
     'data_type'  : 'TEXT',
     'short_descr': 'Text',
     'long_descr' : 'One line of text to appear on reports',
@@ -115,7 +120,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_cust',
-    'source'     : ['inv_tot_cust', 'crn_view_cust', 'rec_view_cust', 'jnl_cust', 'disc_view_cust'],
+    'source'     : ['inv_tot_cust', 'crn_view_cust', 'jnl_cust', 'jnl_cust', 'rec_view_cust', 'disc_view_cust'],
     'data_type'  : '$PTY',
     'short_descr': 'Transaction amount - cust',
     'long_descr' : 'Transaction amount - cust',
@@ -128,7 +133,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'source'     : ['inv_tot_local', 'crn_view_local', 'rec_view_local', 'jnl_local', 'disc_view_local'],
+    'source'     : ['inv_tot_local', 'crn_view_local', 'jnl_local', 'jnl_local', 'rec_view_local', 'disc_view_local'],
     'data_type'  : '$LCL',
     'short_descr': 'Transaction amount - local',
     'long_descr' : 'Transaction amount - local',

@@ -1941,6 +1941,9 @@ class DbObject:
 
                 if self.dirty:  # could be updated from setup_defaults or upd_on_post
                     await self.update(conn, from_upd_on_save=True)
+                elif posting_child:  # force 'after_update' even if no update required [ugly!]
+                    for after_update in self.db_table.actions.after_update:
+                        await db.hooks_xml.table_hook(self, after_update)
 
             async with self.context.db_session.get_connection() as db_mem_conn:
                 if not posting_child:

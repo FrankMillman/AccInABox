@@ -120,6 +120,7 @@ cols.append ({
     'fkey'       : [
         ['tran_type', [
             ['ap_inv', 'ap_tran_inv_det'],
+            ['ap_jnl', 'ap_tran_jnl_det'],
             ['cb_pmt', 'cb_tran_pmt_det'],
             ]],
         'row_id', None, None, True, None],
@@ -151,62 +152,6 @@ cols.append ({
         'ar_customers', 'row_id', 'ledger_id, cust_id, location_id, function_id',
         'ledger_id, cust_id, location_id, function_id', False, 'cust_bal_2'
         ],
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tran_number',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Tran number',
-    'long_descr' : 'Transaction number',
-    'col_head'   : 'Tran no',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 15,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-          '<on_post>'
-            '<expr>'
-              '<fld_val name="subparent_row_id>tran_number"/>'
-              '<op type="+"/>'
-              '<literal value="/"/>'
-              '<op type="+"/>'
-              '<string>'
-                '<expr>'
-                  '<fld_val name="subparent_row_id>line_no"/>'
-                  '<op type="+"/>'
-                  '<literal value="1"/>'
-                '</expr>'
-              '</string>'
-            '</expr>'
-          '</on_post>'
-          '<on_insert>'
-            '<expr>'
-              '<fld_val name="subparent_row_id>tran_number"/>'
-              '<op type="+"/>'
-              '<literal value="/"/>'
-              '<op type="+"/>'
-              '<string>'
-                '<expr>'
-                  '<fld_val name="subparent_row_id>line_no"/>'
-                  '<op type="+"/>'
-                  '<literal value="1"/>'
-                '</expr>'
-              '</string>'
-            '</expr>'
-          '</on_insert>'
-          '<default>'
-            '<fld_val name="tran_number"/>'
-          '</default>'
-        '</case>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
@@ -264,26 +209,6 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date. Could be derived using fkey, but denormalised to speed up ar_trans view',
-    'col_head'   : 'Date',
-    'key_field'  : 'N',
-    'data_source': 'repl',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : '{subparent_row_id>tran_date}',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'jnl_amount',
     'data_type'  : '$TRN',
     'short_descr': 'Journal amount',
@@ -303,42 +228,36 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Posted?',
-    'long_descr' : (
-        'Has transaction been posted? '
-        'Could be derived using fkey, but denormalised to speed up ar_trans view.'
-        'ap_tran_inv_det and cb_tran_pmt_det update this column when they are posted - see their on_post action.'
-        ),
-    'col_head'   : 'Posted?',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-            '<on_post>'
-                '<literal value="$True"/>'
-            '</on_post>'
-            '<default>'
-                '<literal value="$False"/>'
-            '</default>'
-        '</case>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Receipt number',
+    'long_descr' : 'Receipt number',
+    'col_head'   : 'Rec no',
+    'dflt_val'   : '{subparent_row_id>tran_number}',
+    'sql'        : 'a.subparent_row_id>tran_number'
+    })
+virt.append ({
+    'col_name'   : 'tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Transaction date',
+    'long_descr' : 'Transaction date',
+    'col_head'   : 'Tran date',
+    'dflt_val'   : '{subparent_row_id>tran_date}',
+    'sql'        : "a.subparent_row_id>tran_date"
+    })
+virt.append ({
+    'col_name'   : 'posted',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Posted?',
+    'long_descr' : 'Has transaction been posted?',
+    'col_head'   : 'Posted?',
+    'dflt_val'   : '{subparent_row_id>posted}',
+    'sql'        : "a.subparent_row_id>posted"
+    })
 virt.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
@@ -407,7 +326,9 @@ actions.append([
     'upd_on_post', [
         [
             'ar_openitems',  # table name
-            None,  # condition
+            [  # condition
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ],
             False,  # split source?
             [  # key fields
                 ['tran_row_id', 'row_id'],  # tgt_col, src_col

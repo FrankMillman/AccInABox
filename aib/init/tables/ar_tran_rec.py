@@ -347,14 +347,14 @@ virt.append ({
     'col_head'   : 'Function',
     'sql'        : 'a.cust_row_id>function_row_id',
     })
-virt.append ({
-    'col_name'   : 'tran_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Tran row id',
-    'long_descr' : 'Tran row id',
-    'col_head'   : 'Tran row id',
-    'sql'        : "a.row_id",
-    })
+# virt.append ({
+#     'col_name'   : 'tran_row_id',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Tran row id',
+#     'long_descr' : 'Tran row id',
+#     'col_head'   : 'Tran row id',
+#     'sql'        : "a.row_id",
+#     })
 virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',

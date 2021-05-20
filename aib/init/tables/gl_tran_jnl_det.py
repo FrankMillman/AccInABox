@@ -234,6 +234,15 @@ virt.append ({
     'dflt_val'   : '{tran_row_id>text}',
     'sql'        : "a.tran_row_id>text"
     })
+virt.append ({
+    'col_name'   : 'posted',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Posted?',
+    'long_descr' : 'Has transaction been posted?',
+    'col_head'   : 'Posted?',
+    'dflt_val'   : '{tran_row_id>posted}',
+    'sql'        : "a.tran_row_id>posted"
+    })
 
 # cursor definitions
 cursors = []

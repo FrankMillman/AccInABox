@@ -119,6 +119,7 @@ cols.append ({
         ['tran_type', [
             ['ap_inv', 'ap_tran_inv_det'],
             ['ap_crn', 'ap_tran_crn_det'],
+            ['ap_jnl', 'ap_tran_jnl_det'],
             ['ap_disc', 'ap_tran_disc'],
             ['cb_pmt', 'cb_tran_pmt_det'],
             ['cb_rec', 'cb_tran_rec_det'],

@@ -224,7 +224,8 @@ async def setup_cust_tots(caller, xml):
     sql = (
         "SELECT COALESCE((SELECT SUM(c.tran_tot_local) FROM ( "
             "SELECT a.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
-                "a.cust_row_id, a.location_row_id, a.function_row_id, a.source_code_id "
+                "a.cust_row_id, a.location_row_id, a.function_row_id, "
+                "a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id "
                 "ORDER BY a.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals a "
             "JOIN {company}.ar_customers b ON b.row_id = a.cust_row_id "
