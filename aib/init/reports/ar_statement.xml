@@ -39,9 +39,11 @@
       <block x1="15" y1="40" x2="320" y2="136" border="0.5" font="Courier 10">
         <panel>
           <field x="10" y="16" name="ar_cust.party_row_id>display_name"/>
+<!--
           <field x="10" y="31" name="org_addr.box_no"/>
           <field x="10" y="46" name="org_addr.post_office"/>
           <field x="10" y="61" name="org_addr.post_code"/>
+-->
         </panel>
       </block>
       <block x1="325" y1="40" x2="-16" y2="136" border="0.5" font="Courier 10">
@@ -63,7 +65,7 @@
           <cur_cols vert="0.5" ul="0" bkg="((1, 1, 1), (0.95, 0.95, 0.95))">
             <cur_col col_name="tran_date" wd="80" align="centre"/>
             <cur_col col_name="tran_type" wd="60"/>
-            <cur_col col_name="tran_number" wd="80"/>
+            <cur_col col_name="tran_number" wd="85"/>
             <cur_col col_name="text" wd="-1"/>
             <!-- cur_col col_name="debit_cust" wd="80" align="right"/>
             <cur_col col_name="credit_cust" wd="80" align="right"/ -->
@@ -86,7 +88,7 @@
           <grid_methods template="Grid">
             <method name="on_start_grid" action="
               <<action>>
-                <<assign src=`'post'` tgt=`org_addr.address_type`/>>
+                <<!--assign src=`'post'` tgt=`org_addr.address_type`/-->>
                 <<assign src=`var.start_date` tgt=`_ctx.tran_start_date`/>>
                 <<assign src=`var.end_date` tgt=`_ctx.tran_end_date`/>>
                 <<get_op_cl_bal args=`ar_cust, op_bal_cust, cl_bal_cust, tot_cust`/>>

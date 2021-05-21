@@ -577,7 +577,7 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
             sql.append(f'SELECT period_row_id, state, {sub_date}, {sub_state}')
             sql.append(f'FROM {company}.{module_id}_ledger_periods')
             sql.append(f'WHERE deleted_id = 0')
-            if ledger_row_id is not None:  # else module_id = 'gl'
+            if module_id != 'gl':
                 sql.append(f'AND ledger_row_id = {conn.constants.param_style}')
                 params.append(ledger_row_id)
             sql.append(f'ORDER BY period_row_id')

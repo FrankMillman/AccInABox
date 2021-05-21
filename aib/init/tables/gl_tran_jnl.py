@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
-    'ledger_col'    : None,
+    'ledger_col'    : 'ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -81,9 +81,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'tran_number',
     'data_type'  : 'TEXT',
-    'short_descr': 'Receipt number',
-    'long_descr' : 'Receipt number',
-    'col_head'   : 'Rec no',
+    'short_descr': 'Journal number',
+    'long_descr' : 'Journal number',
+    'col_head'   : 'Jnl no',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
     'condition'  : [['where', '', '_ledger.auto_jnl_no', 'is not', '$None', '']],
@@ -231,14 +231,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'tran_type',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Transaction type',
-#     'long_descr' : 'Transaction type',
-#     'col_head'   : 'Tran type',
-#     'sql'        : "'gl_jnl'",
-#     })
+virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Tran type',
+    'sql'        : "'gl_jnl'",
+    })
 virt.append ({
     'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
@@ -246,6 +246,14 @@ virt.append ({
     'long_descr' : 'Tran type row id',
     'col_head'   : 'Tran type row id',
     'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'gl_jnl'",
+    })
+virt.append ({
+    'col_name'   : 'ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Ledger row id',
+    'long_descr' : 'Ledger row id',
+    'col_head'   : 'Ledger row id',
+    'sql'        : "'1'",
     })
 virt.append ({
     'col_name'   : 'tran_exch_rate',

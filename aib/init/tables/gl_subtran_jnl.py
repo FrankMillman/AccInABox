@@ -12,7 +12,7 @@ table = {
     'indexes'       : [
         ['gl_subjnl_code', [['gl_code_id', False]], None, False],
         ],
-    'ledger_col'    : None,
+    'ledger_col'    : 'ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -292,6 +292,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Ledger row id',
+    'long_descr' : 'Ledger row id',
+    'col_head'   : 'Ledger row id',
+    'sql'        : "'1'",
+    })
 virt.append ({
     'col_name'   : 'tran_number',
     'data_type'  : 'TEXT',

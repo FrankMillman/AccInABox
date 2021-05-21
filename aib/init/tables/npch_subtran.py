@@ -123,6 +123,7 @@ cols.append ({
             ['ap_disc', 'ap_tran_disc'],
             ['cb_pmt', 'cb_tran_pmt_det'],
             ['cb_rec', 'cb_tran_rec_det'],
+            ['gl_jnl', 'gl_tran_jnl_det'],
             ['ap_uex_bf', 'ap_uex_bf'],
             ]],
         'row_id', None, None, True, None],
