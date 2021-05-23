@@ -9,7 +9,7 @@
     <db_obj name="pch" table_name="pch_subtran" parent="ap_invdet"/>
     <db_obj name="npch" table_name="npch_subtran" parent="ap_invdet"/>
     <db_obj name="arjnl" table_name="ar_subtran_jnl" parent="ap_invdet"/>
-    <db_obj name="gl" table_name="gl_jnl_subtran" parent="ap_invdet"/>
+    <db_obj name="gl" table_name="gl_subtran_jnl" parent="ap_invdet"/>
     <db_obj name="com" table_name="ap_comments" parent="ap_invdet"/>
   </db_objects>
 

@@ -14,8 +14,8 @@ function create_tree(container, frame, page, toolbar){
   tree.add_tree_data = function(tree_data, hide_root) {
     for (var j=0, lng=tree_data.length; j<lng; j++) {
       var arg = tree_data[j];
-      var node_id=arg[0], parent_id=arg[1], text=arg[2], expandable=arg[3];
-      tree.add_node(parent_id, node_id, expandable, text, (j===0));
+      var node_id=arg[0], parent_id=arg[1], text=arg[2], is_leaf=arg[3];
+      tree.add_node(parent_id, node_id, is_leaf, text, (j===0));
       };
     tree.hide_root = hide_root;
     tree.write();
@@ -203,7 +203,7 @@ function create_tree(container, frame, page, toolbar){
       case 'ArrowDown':
         this.handle_down(); return false; break;
       case 'Enter':
-        if (this.select_any || !this.active_node.expandable) {
+        if (this.select_any || this.active_node.is_leaf) {
           //debug('enter ' + this.active_node.text + ' ' + this.active_node.node_id);
           node = this.active_node;
           setTimeout(function() {tree.onselected(node)}, 0);
@@ -265,7 +265,7 @@ function create_tree(container, frame, page, toolbar){
 
   tree.handle_right = function() {
     var active_node = this.active_node;
-    if (active_node.expandable) {
+    if (!active_node.is_leaf) {
       if (!active_node.expanded) {
         if (active_node.nodes.length) {
           active_node.expanded = true;
@@ -462,7 +462,7 @@ function create_tree(container, frame, page, toolbar){
     tree.write();
     };
 
-  tree.update_node = function(node_id, text, expandable) {
+  tree.update_node = function(node_id, text, is_leaf) {
     var node = tree.active_node;
     if (node.node_id === -1) {
       node.node_id = node_id;
@@ -474,7 +474,7 @@ function create_tree(container, frame, page, toolbar){
       return;
       };
     node.text = text;
-    node.expandable = expandable;
+    node.is_leaf = is_leaf;
     tree.write();
     };
 
@@ -495,7 +495,7 @@ function create_tree(container, frame, page, toolbar){
       tree.active_node = node.parent.nodes[seq-1]
     else
       tree.active_node = node.parent;
-    if (tree.active_node.expandable)
+    if (!tree.active_node.is_leaf)
       if (!tree.active_node.nodes.length)
         tree.active_node.expanded = false;
     tree.write();
@@ -504,7 +504,7 @@ function create_tree(container, frame, page, toolbar){
     this.onactive(tree.active_node);
     };
 
-  tree.add_node = function(parent_id, node_id, expandable, text, is_root, seq){
+  tree.add_node = function(parent_id, node_id, is_leaf, text, is_root, seq){
     var node = document.createElement('div');
     if (is_root)
       var parent = tree;
@@ -513,7 +513,7 @@ function create_tree(container, frame, page, toolbar){
     tree.node_dict[node_id] = node;
     node.parent = parent;
     node.node_id = node_id;
-    node.expandable = expandable;  // 'branch' or 'leaf'
+    node.is_leaf = is_leaf;  // 'branch' or 'leaf'
     node.text = text;
     node.nodes = [];
     node.expanded = false;
@@ -541,7 +541,7 @@ function create_tree(container, frame, page, toolbar){
 
       var node_span = document.createElement('span');
       node.appendChild(node_span);
-      if (node.expandable) {
+      if (!node.is_leaf) {
 
         var canvas = document.createElement('div');
         canvas.style[cssFloat] = 'left';
@@ -600,14 +600,14 @@ function create_tree(container, frame, page, toolbar){
         tree.active_node.text_span.style.background = node.style.background;
         node.text_span.style.color = 'lightcyan';
         node.text_span.style.background = 'darkblue';
-        //if (node.expandable) {
+        //if (!node.is_leaf) {
         //  if (!node.expanded) {
         //    node.expanded = true;
         //    tree.write();
         //    }
         //  }
         //else {
-        if (tree.select_any || !node.expandable)
+        if (tree.select_any || node.is_leaf)
           tree.onselected(node);
         if (node !== tree.active_node) {
           tree.active_node = node;
@@ -685,8 +685,8 @@ function create_tree_report(container, frame, page){
   tree.add_tree_data = function(tree_data, hide_root) {
     for (var j=0, lng=tree_data.length; j<lng; j++) {
       var arg = tree_data[j];
-      var node_id=arg[0], parent_id=arg[1], text=arg[2], amount=arg[3], expandable=arg[4];
-      tree.add_node(parent_id, node_id, expandable, text, amount);
+      var node_id=arg[0], parent_id=arg[1], text=arg[2], amount=arg[3], is_leaf=arg[4];
+      tree.add_node(parent_id, node_id, is_leaf, text, amount);
       };
     tree.hide_root = hide_root;
     tree.write();
@@ -777,7 +777,7 @@ function create_tree_report(container, frame, page){
 
   tree.handle_right = function() {
     var active_node = this.active_node;
-    if (active_node.expandable) {
+    if (!active_node.is_leaf) {
       if (!active_node.expanded) {
         if (active_node.nodes.length) {
           active_node.expanded = true;
@@ -887,7 +887,7 @@ function create_tree_report(container, frame, page){
     this.onactive(active_node);
     };
 
-  tree.add_node = function(parent_id, node_id, expandable, text, amount, seq){
+  tree.add_node = function(parent_id, node_id, is_leaf, text, amount, seq){
     var node = document.createElement('div');
     if (tree.nodes.length === 0)
       var parent = tree;
@@ -896,7 +896,7 @@ function create_tree_report(container, frame, page){
     tree.node_dict[node_id] = node;
     node.parent = parent;
     node.node_id = node_id;
-    node.expandable = expandable;  // 'branch' or 'leaf'
+    node.is_leaf = is_leaf;  // 'branch' or 'leaf'
     node.text = text;
     node.amount = amount;
     node.nodes = [];
@@ -925,7 +925,7 @@ function create_tree_report(container, frame, page){
 
       var node_span = document.createElement('span');
       node.appendChild(node_span);
-      if (node.expandable) {
+      if (!node.is_leaf) {
 
         var canvas = document.createElement('div');
         canvas.style[cssFloat] = 'left';
@@ -1001,14 +1001,14 @@ function create_tree_report(container, frame, page){
         tree.active_node.text_span.style.background = node.style.background;
         node.text_span.style.color = 'lightcyan';
         node.text_span.style.background = 'darkblue';
-        //if (node.expandable) {
+        //if (!node.is_leaf) {
         //  if (!node.expanded) {
         //    node.expanded = true;
         //    tree.write();
         //    }
         //  }
         //else {
-        if (tree.select_any || !node.expandable)
+        if (tree.select_any || node.is_leaf)
           tree.onselected(node);
         if (node !== tree.active_node) {
           tree.active_node = node;
@@ -1026,7 +1026,7 @@ function create_tree_report(container, frame, page){
           node.nodes[i].write(tree);
       };
 
-  tree.update_node = function(node_id, text, expandable) {
+  tree.update_node = function(node_id, text, is_leaf) {
     var node = tree.active_node;
     if (node.node_id === -1) {
       node.node_id = node_id;
@@ -1038,7 +1038,7 @@ function create_tree_report(container, frame, page){
       return;
       };
     node.text = text;
-    node.expandable = expandable;
+    node.is_leaf = is_leaf;
     tree.write();
     };
 

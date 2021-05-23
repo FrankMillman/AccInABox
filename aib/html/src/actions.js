@@ -319,9 +319,9 @@ function insert_node(args) {
   };
 
 function update_node(args) {
-  var tree_ref=args[0], node_id=args[1], text=args[2], expandable=args[3];
+  var tree_ref=args[0], node_id=args[1], text=args[2], is_leaf=args[3];
   var tree = get_obj(tree_ref);
-  tree.update_node(node_id, text, expandable);
+  tree.update_node(node_id, text, is_leaf);
   };
 
 function delete_node(args) {
@@ -383,7 +383,7 @@ function append_tasks(args) {
     link.click();
     link.remove();
     };
-       
+
 function exception(args) {
   traceback = args.join('<br>').replace(/ /g, '\xa0');  // replace all ' ' with &nbsp
   window.open('../error.html');  // it will read 'traceback' and display it

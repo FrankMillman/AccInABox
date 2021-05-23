@@ -14,8 +14,8 @@ function start_menu(args) {
   menu = create_tree(menu_div, frame, null, toolbar);
 //  for (var i=0, l=args.length; i<l; i++) {
 //    var arg = args[i];
-//    var node_id=arg[0], parent_id=arg[1], text=arg[2], expandable=arg[3];
-//    menu.add_node(parent_id, node_id, expandable, text, (i===0));
+//    var node_id=arg[0], parent_id=arg[1], text=arg[2], is_leaf=arg[3];
+//    menu.add_node(parent_id, node_id, is_leaf, text, (i===0));
 //    };
   menu.add_tree_data(args, hide_root);
   menu.onselected = function(node) {

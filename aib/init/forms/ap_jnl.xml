@@ -6,8 +6,8 @@
   <db_objects>
     <db_obj name="ap_jnl" table_name="ap_tran_inv" is_formview_obj="true"/>
     <db_obj name="ap_jnldet" table_name="ap_tran_inv_det" parent="ap_jnl"/>
-    <db_obj name="achg" table_name="ar_subtran_chg" parent="ap_jnldet"/>
-    <db_obj name="gl" table_name="gl_jnl_subtran" parent="ap_jnldet"/>
+    <db_obj name="ar_jnl" table_name="ar_subtran_jnl" parent="ap_jnldet"/>
+    <db_obj name="gl" table_name="gl_subtran_jnl" parent="ap_jnldet"/>
     <db_obj name="com" table_name="ap_comments" parent="ap_jnldet"/>
   </db_objects>
 

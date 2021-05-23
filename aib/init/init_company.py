@@ -581,6 +581,7 @@ async def setup_forms(context, conn):
     await setup_form('setup_locations')
     await setup_form('setup_functions')
     await setup_form('setup_gl_codes')
+    await setup_form('gl_jnl')
     await setup_form('setup_party')
     await setup_form('setup_arcust')
     await setup_form('ar_cust_bal')
@@ -613,8 +614,6 @@ async def setup_forms(context, conn):
     await setup_form('cb_receipt')
     await setup_form('cb_payment')
     await setup_form('cb_ledger_summary')
-    # await setup_form('setup_orec_codes')
-    # await setup_form('setup_opmt_codes')
     await setup_form('cb_cashbook')
     await setup_form('nsls_ledger_new')
     await setup_form('npch_ledger_new')
@@ -707,7 +706,10 @@ async def setup_menus(context, conn, company_name):
         await db_obj.setval('parent_id', parent_id)
         await db_obj.setval('opt_type', opt_type)
         await db_obj.setval('module_id', module_id)
-        await db_obj.setval('ledger_row_id', ledger_row_id)
+        if module_id == 'gl':  # not pretty!
+            await db_obj.setval('ledger_row_id', 1)
+        else:
+            await db_obj.setval('ledger_row_id', ledger_row_id)
         if opt_type == 'grid':
             await db_obj.setval('table_name', table_name)
             await db_obj.setval('cursor_name', cursor_name)
@@ -750,6 +752,7 @@ async def setup_menus(context, conn, company_name):
                 ['G/L codes', 'form', 'setup_gl_codes'],
                 ]],
             ['Gl transactions', 'menu', 'gl', [
+                ['Capture journal', 'form', 'gl_jnl'],
                 ]],
             ['Gl reports', 'menu', 'gl', [
                 ['Trial balance', 'finrpt', 'tb_by_int'],

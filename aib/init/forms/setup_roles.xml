@@ -168,7 +168,7 @@
               <input obj_name="role" col_name="descr" lng="150"/>
               <col/>
               <label value="Sub roles?"/>
-              <input obj_name="role" col_name="expandable"/>
+              <input obj_name="role" col_name="is_leaf"/>
 
               <block/>
               <grid data_object="tbl_view" growable="false" num_grid_rows="16">

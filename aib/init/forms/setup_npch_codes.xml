@@ -3,8 +3,8 @@
   ">
 
   <db_objects>
-    <db_obj name="npch_code" table_name="pch_npch_codes"/>
-    <db_obj name="tax_code" table_name="pch_npch_tax_codes" parent="npch_code"/>
+    <db_obj name="npch_code" table_name="npch_codes"/>
+    <db_obj name="tax_code" table_name="npch_tax_codes" parent="npch_code"/>
   </db_objects>
   <mem_objects>
     <mem_obj name="mem_tax_codes" descr="Tax codes" parent="npch_code">

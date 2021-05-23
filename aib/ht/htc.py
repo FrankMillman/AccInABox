@@ -144,7 +144,7 @@ class Session:
 
         client_menu = []  # build menu to send to client
         root_id = '_root'
-        client_menu.append((root_id, None, 'root', True))
+        client_menu.append((root_id, None, 'root', False))
         async with db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
             for company, comp_admin, comp_name in await self.select_companies(conn):
@@ -152,7 +152,7 @@ class Session:
                 comp_menu = []
                 comp_menu.append((
                     dumps((company, 1)),  # root row_id is always 1
-                    root_id, comp_name, True))
+                    root_id, comp_name, False))
 
                 ctx = await db.cache.get_new_context(1, True, company)
                 cte = await conn.tree_select(
@@ -168,11 +168,11 @@ class Session:
                     )
                 async for opt in await conn.exec_sql(sql):
                     row_id, parent_id, descr, opt_type = opt
-                    expandable = (opt_type in ('root', 'menu'))
+                    is_leaf = not (opt_type in ('root', 'menu'))
                     comp_menu.append((
                         dumps((company, row_id)),  # node_id
                         dumps((company, parent_id)),  # parent_id
-                        descr, expandable))
+                        descr, is_leaf))
 
                 if len(comp_menu) > 1:
                     client_menu += comp_menu
@@ -345,9 +345,9 @@ class ResponseHandler:
         self.reply.append(('insert_node',
             (tree_ref, parent_id, seq, node_id)))
 
-    def send_update_node(self, tree_ref, node_id, text, expandable):
+    def send_update_node(self, tree_ref, node_id, text, is_leaf):
         self.reply.append(('update_node',
-            (tree_ref, node_id, text, expandable)))
+            (tree_ref, node_id, text, is_leaf)))
 
     def send_delete_node(self, tree_ref, node_id):
         self.reply.append(('delete_node', (tree_ref, node_id)))

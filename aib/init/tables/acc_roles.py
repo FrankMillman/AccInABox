@@ -243,18 +243,18 @@ virt.append ({
     'sql'        : "SELECT count(*) FROM {company}.acc_roles b WHERE b.parent_id = a.row_id",
     })
 virt.append ({
-    'col_name'   : 'expandable',
+    'col_name'   : 'is_leaf',
     'data_type'  : 'BOOL',
     'short_descr': 'Allow sub_roles?',
-    'long_descr' : 'Can this role have other roles reporting to it?',
+    'long_descr' : 'If false, this role can have other roles reporting to it',
     'col_head'   : 'Sub_roles?',
-    'dflt_val'   : 'false',
+    'dflt_val'   : 'true',
     'sql'        : (
         "SELECT CASE "
-            "WHEN a.role_type IN ('0', '1', '2') THEN $True ELSE "
+            "WHEN a.role_type IN ('0', '1', '2') THEN $False ELSE "
             "CASE WHEN EXISTS "
             "(SELECT * FROM {company}.acc_roles b WHERE b.parent_id = a.row_id) "
-            "THEN $True ELSE $False END "
+            "THEN $False ELSE $True END "
         "END"
         ),
     })

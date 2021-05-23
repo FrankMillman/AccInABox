@@ -297,14 +297,6 @@ virt.append ({
                    "WHERE b.parent_id = a.row_id AND b.deleted_id = 0",
     })
 virt.append ({
-    'col_name'   : 'expandable',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Expandable?',
-    'long_descr' : 'Is this node expandable?',
-    'col_head'   : '',
-    'sql'        : "SELECT CASE WHEN a.opt_type = 'menu' THEN $True ELSE $False END",
-    })
-virt.append ({
     'col_name'   : 'is_leaf',
     'data_type'  : 'BOOL',
     'short_descr': 'Is leaf node?',

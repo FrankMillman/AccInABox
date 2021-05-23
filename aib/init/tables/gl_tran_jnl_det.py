@@ -13,20 +13,13 @@ table = {
                     ],
                 ['gl_code'],  # display descr
                 ],
-            # ['arjnl', 'Charge to customer', 'ar_subtran_jnl',
-            #     [  # return values
-            #         ['inv_net_amt', 'jnl_amount'],  # tgt_col, src_col
-            #         ],
-            #     ['cust_row_id>party_row_id>display_name'],  # display descr
-            #     ],
-            # ]],
-            ['nsls', 'Non-inventory item', 'nsls_subtran',
+            ['nsls', 'Non-inv income', 'nsls_subtran',
                 [  # return values
                     ['jnl_amt', 'tot_amt'],  # tgt_col, src_col
                     ],
                 ['nsls_code_id>descr'],  # display descr
                 ],
-            ['npch', 'Non-inventory item', 'npch_subtran',
+            ['npch', 'Non-inv expense', 'npch_subtran',
                 [  # return values
                     ['jnl_amt', 'tot_amt'],  # tgt_col, src_col
                     ],

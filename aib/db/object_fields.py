@@ -754,7 +754,7 @@ class Field:
                 #   1. if 'virt' field is changed, do not set db_obj to 'dirty'
                 #   2. unless 'validate' is True, in which case field was probably
                 #        changed by user - do set db_obj to 'dirty'
-                #      e.g. acc.roles.expandable
+                #      e.g. acc.roles.is_leaf
                 #   3. 'probably' is not rigorous - monitor and try to tighten up
                 db_obj.dirty = True
                 if display:

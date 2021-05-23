@@ -10,7 +10,7 @@
     <db_obj name="nsls" table_name="nsls_subtran" parent="cb_det"/>
     <db_obj name="ar_subrec" table_name="ar_subtran_rec" parent="cb_det"/>
     <db_obj name="ar_allocations" table_name="ar_allocations" parent="ar_subrec"/>
-    <db_obj name="gl" table_name="gl_jnl_subtran" parent="cb_det"/>
+    <db_obj name="gl" table_name="gl_subtran_jnl" parent="cb_det"/>
     <db_obj name="com" table_name="cb_comments" parent="cb_det"/>
   </db_objects>
 

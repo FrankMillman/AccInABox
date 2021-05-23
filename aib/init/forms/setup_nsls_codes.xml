@@ -3,9 +3,9 @@
   ">
 
   <db_objects>
-    <db_obj name="nsls_group" table_name="sls_nsls_groups"/>
-    <db_obj name="nsls_code" table_name="sls_nsls_codes"/>
-    <db_obj name="tax_code" table_name="sls_nsls_tax_codes" parent="nsls_code"/>
+    <db_obj name="nsls_group" table_name="nsls_groups"/>
+    <db_obj name="nsls_code" table_name="nsls_codes"/>
+    <db_obj name="tax_code" table_name="nsls_tax_codes" parent="nsls_code"/>
   </db_objects>
   <mem_objects>
     <mem_obj name="mem_tax_codes" descr="Tax codes" parent="nsls_code">

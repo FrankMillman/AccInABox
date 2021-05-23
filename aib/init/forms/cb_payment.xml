@@ -11,7 +11,7 @@
     <db_obj name="arjnl" table_name="ar_subtran_jnl" parent="cb_det"/>
     <db_obj name="ap_subpmt" table_name="ap_subtran_pmt" parent="cb_det"/>
     <db_obj name="ap_allocations" table_name="ap_allocations" parent="ap_subpmt"/>
-    <db_obj name="gl" table_name="gl_jnl_subtran" parent="cb_det"/>
+    <db_obj name="gl" table_name="gl_subtran_jnl" parent="cb_det"/>
     <db_obj name="com" table_name="cb_comments" parent="cb_det"/>
   </db_objects>
 

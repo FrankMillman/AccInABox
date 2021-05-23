@@ -1,11 +1,52 @@
 <subtype_body subtype_id="nsls">
   <block/>
   <panel/>
+
+  <if test="[[`if`, ``, `_param.nsls_ledger_id`, `is`, `$None`, ``]]"/>
+  <row/>
+  <col/>
+  <label value="Income ledg:"/>
+  <col/>
+  <input obj_name="nsls" col_name="ledger_id" lng="80"/>
+  <display obj_name="nsls" col_name="ledger_id>ledger_row_id>descr" lng="160"/>
+  <end_if/>
+
   <row/>
   <col/>
   <label value="Sales code:"/>
   <col/>
   <input obj_name="nsls" col_name="nsls_code" lng="80"/>
+
+  <if test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``]]"/>
+  <row/>
+  <col/>
+  <label value="Location Id:"/>
+  <col/>
+  <input obj_name="nsls" col_name="location_id" lng="80" form_dflt="
+    <<case>>
+      <<compare test=`[['if', '', 'nsls.location_row_id', 'is not', '$None', '']]`>>
+        <<fld_val name=`nsls.location_row_id>location_id`/>>
+      <</compare>>
+    <</case>>
+    "/>
+  <display obj_name="nsls" col_name="location_id>descr" lng="160"/>
+  <end_if/>
+
+  <if test="[[`if`, ``, `_param.function_row_id`, `is`, `$None`, ``]]"/>
+  <row/>
+  <col/>
+  <label value="Function Id:"/>
+  <col/>
+  <input obj_name="nsls" col_name="function_id" lng="80" form_dflt="
+    <<case>>
+      <<compare test=`[['if', '', 'nsls.function_row_id', 'is not', '$None', '']]`>>
+        <<fld_val name=`nsls.function_row_id>function_id`/>>
+      <</compare>>
+    <</case>>
+    "/>
+  <display obj_name="nsls" col_name="function_id>descr" lng="160"/>
+  <end_if/>
+
   <row/>
   <col/>
   <label value="Text:"/>

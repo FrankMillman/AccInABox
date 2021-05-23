@@ -104,7 +104,7 @@ cols.append ({
                 ],
             ],
         ],
-    'fkey'       : ['nsls_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, 'nsls_ledg'],
+    'fkey'       : ['nsls_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, 'nsls'],
     'choices'    : None,
     })
 cols.append ({

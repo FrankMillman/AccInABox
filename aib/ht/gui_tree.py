@@ -93,8 +93,8 @@ class GuiTreeCommon:
                     'long_descr="Level - zero is root" col_head="" key_field="N" allow_amend="true"/>'
                   '<mem_col col_name="seq" data_type="INT" short_descr="Sequence" '
                     'long_descr="Sequence" col_head="" key_field="N" allow_amend="true"/>'
-                  '<mem_col col_name="expandable" data_type="BOOL" short_descr="Expandable" '
-                    'long_descr="Expandable" col_head="" key_field="N" allow_amend="true"/>'
+                  '<mem_col col_name="is_leaf" data_type="BOOL" short_descr="Is leaf?" '
+                    'long_descr="Is leaf?" col_head="" key_field="N" allow_amend="true"/>'
                 '</mem_obj>'
                 )
             self.data_objects['_mem_combo'] = await db.objects.get_mem_object(
@@ -124,6 +124,15 @@ class GuiTreeCommon:
         else:
             member_where = ' WHERE deleted_id = 0'
 
+        # this has to be hard-coded :-(  [2021-05-22]
+        # if looking up nsls/npch_codes, and ledger_row_id is not None,
+        #   use that ledger_row_id as a filter when selecting nsls/npch_groups
+        if member.table_name in ('nsls_codes', 'npch_codes'):
+            if group.table_name in ('nsls_groups', 'npch_groups'):
+                ledger_row_id = await member.getval('ledger_row_id')
+                if ledger_row_id is not None:
+                    group_where += f' AND ledger_row_id = {ledger_row_id}'
+
         async with db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
 
@@ -139,7 +148,7 @@ class GuiTreeCommon:
                 await self.db_obj.setval('parent_id', None)
                 await self.db_obj.setval('level', 0)
                 await self.db_obj.setval('seq', 0)
-                await self.db_obj.setval('expandable', True)
+                await self.db_obj.setval('is_leaf', False)
                 await self.db_obj.save()
 
                 self.group_levels += 1
@@ -164,7 +173,7 @@ class GuiTreeCommon:
                     self.group_parent_id, self.group_seq, group_where, self.group_seq)
                     )
 
-            # expandable?
+            # expandable?  [the opposite of 'is_leaf']
             # if number of levels is fixed (i.e. not zero), levels higher than
             #   bottom level are expandable, the bottom level is not
             # if number of levels is variable (i.e. zero), a level is always
@@ -198,7 +207,7 @@ class GuiTreeCommon:
                 await self.db_obj.setval('parent_id', parent_id)
                 await self.db_obj.setval('level', _level)
                 await self.db_obj.setval('seq', seq)
-                await self.db_obj.setval('expandable', True)
+                await self.db_obj.setval('is_leaf', False)
                 await self.db_obj.save()
 
             if self.member_levels == 1:
@@ -267,16 +276,15 @@ class GuiTreeCommon:
                 parent_id = await self.db_obj.getval('row_id')
 
                 if self.member_levels == 1:
-                    expandable = False
+                    is_leaf = True
                 elif _level == (self.member_levels - 1):
-                    expandable = False
+                    is_leaf = True
                 elif not self.member_levels:
                     await member.init(display=False, init_vals={'row_id': data_row_id})
-                    expandable = await member.getval('expandable')
+                    is_leaf = await member.getval('is_leaf')
                 else:
-                    # expandable = bool(await member.getval('children'))
-                    expandable = False
-                # print(code, self.member_levels, _level, expandable)
+                    is_leaf = False
+                # print(code, self.member_levels, _level, is_leaf)
 
                 await self.db_obj.init(display=False)
                 await self.db_obj.setval('type', 'member')
@@ -288,7 +296,7 @@ class GuiTreeCommon:
                 await self.db_obj.setval('parent_id', parent_id)
                 await self.db_obj.setval('level', _level)
                 await self.db_obj.setval('seq', seq)
-                await self.db_obj.setval('expandable', expandable)
+                await self.db_obj.setval('is_leaf', is_leaf)
                 await self.db_obj.save()
 
         # at present, we select and upload all the rows in the table
@@ -303,7 +311,7 @@ class GuiTreeCommon:
             conn = db_mem_conn.mem
             sql = (
                 "SELECT row_id, parent_id, "
-                "descr, expandable FROM {} "
+                "descr, is_leaf FROM {} "
                 "ORDER BY parent_id, seq"
                 .format(self.db_obj.table_name)
                 )
@@ -329,7 +337,7 @@ class GuiTreeCommon:
                 conn = db_mem_conn.mem
             else:
                 conn = db_mem_conn.db
-            select_cols = ['row_id', parent_id, descr, 'expandable']
+            select_cols = ['row_id', parent_id, descr, 'is_leaf']
 
             where = []
             test = 'WHERE'
@@ -456,7 +464,7 @@ class GuiTree(GuiTreeCommon):
             self.ref,  # tree_ref
             await self.db_obj.getval('row_id'),  # node_id
             await self.db_obj.getval('descr'),  # text
-            await self.db_obj.getval('expandable')
+            await self.db_obj.getval('is_leaf')
             )
         self.node_inserted = False
         self.insert_params = {}
@@ -566,12 +574,12 @@ class GuiTreeCombo(GuiTreeCommon):
                     new_node_type = 'member_root'
                 else:
                     new_node_type = 'group'
-            elif 'expandable' in self.group.db_table.col_dict:
-                expandable = await self.group.getfld('expandable')
-                if await expandable.getval():
-                    new_node_type = 'group'
-                else:
+            elif 'is_leaf' in self.group.db_table.col_dict:
+                is_leaf = await self.group.getfld('is_leaf')
+                if await is_leaf.getval():
                     new_node_type = 'member_root'
+                else:
+                    new_node_type = 'group'
             else:
                 if node_type == 'member':  # as entered by user
                     new_node_type = 'member_root'
@@ -652,25 +660,14 @@ class GuiTreeCombo(GuiTreeCommon):
             code = await self.member.getval(self.member_code)
             text = await self.member.getval(self.member_descr)
 
-            # if await self.member.getval('children'):  # check if expandable
-            #     expandable = True
-            # elif not self.member_levels:
-            #     expandable = await self.member.getval('expandable')
-            # elif self.member_levels == 1:
-            #     expandable = False
-            # elif await self.db_obj.getval('level') == (self.member_levels - 1):
-            #     expandable = False
-            # else:
-            #     expandable = True
-
             if self.member_levels == 1:
-                expandable = False
+                is_leaf = True
             elif await self.db_obj.getval('level') == (self.member_levels - 1):
-                expandable = False
+                is_leaf = True
             elif not self.member_levels:
-                expandable = await self.member.getval('expandable')
+                is_leaf = await self.member.getval('is_leaf')
             else:
-                expandable = False
+                is_leaf = True
 
         else:
 
@@ -682,16 +679,16 @@ class GuiTreeCombo(GuiTreeCommon):
                 data_parent_id = None
             code = await self.group.getval(self.group_code)
             text = await self.group.getval(self.group_descr)
-            expandable = True
+            is_leaf = True
         await self.db_obj.setval('data_row_id', data_row_id)
         await self.db_obj.setval('data_group_id', data_group_id)
         await self.db_obj.setval('data_parent_id', data_parent_id)
         await self.db_obj.setval('code', code)
         await self.db_obj.setval('descr', text)
-        await self.db_obj.setval('expandable', expandable)
+        await self.db_obj.setval('is_leaf', is_leaf)
         await self.db_obj.save()
         node_id = await self.db_obj.getval('row_id')
-        self.session.responder.send_update_node(self.ref, node_id, text, expandable)
+        self.session.responder.send_update_node(self.ref, node_id, text, is_leaf)
         self.node_inserted = False
         self.insert_params = {}
 
@@ -802,12 +799,12 @@ class GuiTreeReport(GuiTreeCommon):
     async def start_tree(self):
 
         data = await self.module.get_data(self.parent, None, 0)
-        root, text, amount, expandable = data
-        tree_data = [(root, None, text, amount, expandable)]
+        root, text, amount, is_leaf = data
+        tree_data = [(root, None, text, amount, is_leaf)]
 
         data = await self.module.get_data(self.parent, root, amount)
-        for node_id, text, amount, expandable in data:
-            tree_data.append((node_id, root, text, amount, expandable))
+        for node_id, text, amount, is_leaf in data:
+            tree_data.append((node_id, root, text, amount, is_leaf))
 
         hide_root = False
         self.session.responder.send_tree_data(self.ref, tree_data, hide_root)
@@ -818,8 +815,8 @@ class GuiTreeReport(GuiTreeCommon):
         
         tree_data = []
         data = await self.module.get_data(self.parent, parent_id, amount)
-        for node_id, text, amount, expandable in data:
-            tree_data.append((node_id, parent_id, text, amount, expandable))
+        for node_id, text, amount, is_leaf in data:
+            tree_data.append((node_id, parent_id, text, amount, is_leaf))
 
         hide_root = False
         self.session.responder.send_tree_data(self.ref, tree_data, hide_root)
