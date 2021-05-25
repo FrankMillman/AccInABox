@@ -52,6 +52,7 @@ function setup_form(args) {
         form.root = root;
         form.root_id = root_id;
         form.form_id = form_id;
+        form.readonly = elem_args.readonly;
 
         form.disable_count = 0;
         form.obj_dict = {};
@@ -206,7 +207,11 @@ function setup_form(args) {
             //   'Enter' for new lines
             if (ignore_enter)
               return;
+            if (form.readonly)
+              return;
             if (form.active_frame.active_button === undefined)
+              return;
+            if (form.active_frame.active_button.readonly)
               return;
             // if user holds down Enter key, testing click_from_kbd
             //   prevents clicked() from being called multiple times

@@ -2,7 +2,7 @@
   <block/>
   <panel/>
 
-  <if test="[[`if`, ``, `ap_subpmt.ledger_id`, `is`, `$None`, ``]]"/>
+  <if test="[[`if`, ``, `_param.ap_ledger_id`, `is`, `$None`, ``]]"/>
   <row/>
   <col/>
   <label value="Ledger id:"/>
@@ -26,6 +26,46 @@
     <</case>>
     "/>
   <display obj_name="ap_subpmt" col_name="supp_row_id>party_row_id>display_name" lng="120"/>
+
+  <if test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``]]"/>
+  <row/>
+  <col/>
+  <label value="Location Id:"/>
+  <col/>
+  <input obj_name="ap_subpmt" col_name="location_id" lng="80" form_dflt="
+    <<case>>
+      <<compare test=`[['if', '', 'ap_subpmt.supp_row_id>dflt_loc_id', 'is not', '$None', '']]`>>
+        <<fld_val name=`ap_subpmt.supp_row_id>dflt_loc_id>location_id`/>>
+      <</compare>>
+    <</case>>
+    "/>
+  <display obj_name="ap_subpmt" col_name="supp_row_id>location_id>descr" lng="160"/>
+  <end_if/>
+
+  <if test="[[`if`, ``, `_param.function_row_id`, `is`, `$None`, ``]]"/>
+  <row/>
+  <col/>
+  <label value="Function Id:"/>
+  <col/>
+  <input obj_name="ap_subpmt" col_name="function_id" lng="80" form_dflt="
+    <<case>>
+      <<compare test=`[['if', '', 'ap_subpmt.supp_row_id>dflt_fun_id', 'is not', '$None', '']]`>>
+        <<fld_val name=`ap_subpmt.supp_row_id>dflt_fun_id>function_id`/>>
+      <</compare>>
+    <</case>>
+    "/>
+  <display obj_name="ap_subpmt" col_name="supp_row_id>function_id>descr" lng="160"/>
+  <end_if/>
+
+  <dummy validation="
+      <<validation>>
+        <<case>>
+          <<compare test=`[['if', '', 'ap_subpmt.supp_row_id', 'is', '$None', '']]`>>
+            <<error head=`Supplier` body=`Supplier does not exist`/>>
+          <</compare>>
+        <</case>>
+      <</validation>>
+    "/>
 
   <row/>
   <col/>

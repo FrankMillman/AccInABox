@@ -1,18 +1,28 @@
 <form name="cb_payment" title="Cash book payment" before_start_form="
-  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_pmt` action=`lock`/>>
+  <<case>>
+    <<is_readonly/>>
+    <<default>>
+      <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_pmt` action=`lock`/>>
+    <</default>>
+  <</case>>
   " on_close_form="
-  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_pmt` action=`unlock`/>>
+  <<case>>
+    <<is_readonly/>>
+    <<default>>
+      <<pyfunc name=`db.cache.set_tran_lock` obj_name=`cb_pmt` action=`unlock`/>>
+    <</default>>
+  <</case>>
   ">
   <db_objects>
     <db_obj name="cb_pmt" table_name="cb_tran_pmt" is_formview_obj="true"/>
-    <db_obj name="cb_det" table_name="cb_tran_pmt_det" parent="cb_pmt"/>
-    <db_obj name="pch" table_name="pch_subtran" parent="cb_det"/>
-    <db_obj name="npch" table_name="npch_subtran" parent="cb_det"/>
-    <db_obj name="arjnl" table_name="ar_subtran_jnl" parent="cb_det"/>
-    <db_obj name="ap_subpmt" table_name="ap_subtran_pmt" parent="cb_det"/>
+    <db_obj name="cb_pmt_det" table_name="cb_tran_pmt_det" parent="cb_pmt"/>
+    <db_obj name="pch" table_name="pch_subtran" parent="cb_pmt_det"/>
+    <db_obj name="npch" table_name="npch_subtran" parent="cb_pmt_det"/>
+    <db_obj name="arjnl" table_name="ar_subtran_jnl" parent="cb_pmt_det"/>
+    <db_obj name="ap_subpmt" table_name="ap_subtran_pmt" parent="cb_pmt_det"/>
     <db_obj name="ap_allocations" table_name="ap_allocations" parent="ap_subpmt"/>
-    <db_obj name="gl" table_name="gl_subtran_jnl" parent="cb_det"/>
-    <db_obj name="com" table_name="cb_comments" parent="cb_det"/>
+    <db_obj name="gl" table_name="gl_subtran_jnl" parent="cb_pmt_det"/>
+    <db_obj name="com" table_name="cb_comments" parent="cb_pmt_det"/>
   </db_objects>
 
   <mem_objects>
@@ -51,7 +61,7 @@
       <input obj_name="cb_pmt" col_name="amount" lng="100" readonly="true" skip="true"/>
 
       <block/>
-      <grid data_object="cb_det" growable="true" num_grid_rows="5" readonly="true"
+      <grid data_object="cb_pmt_det" growable="true" num_grid_rows="5" readonly="true"
           footer_row="[`'Total:'`, `cb_pmt.amount_tran`]">
         <toolbar template="Grid"/>
         <cur_columns>
@@ -65,18 +75,18 @@
         <grid_methods template="Grid"/>
       </grid>
 
-      <grid_frame main_object="cb_det">
+      <grid_frame main_object="cb_pmt_det">
         <toolbar/>
         <body>
           <block/>
           <panel/>
           <row/>
           <col/>
-          <input obj_name="cb_det" col_name="line_type" radio="false" form_dflt="
+          <input obj_name="cb_pmt_det" col_name="line_type" radio="false" form_dflt="
             <<prev_value/>>
             "/>
           <block/>
-          <subtran_frame subtran_obj="cb_det" subtran_col="line_type">
+          <subtran_frame subtran_obj="cb_pmt_det" subtran_col="line_type">
             <subtran_body subtran_id="pch"/>
             <subtran_body subtran_id="npch"/>
             <subtran_body subtran_id="ar_jnl"/>

@@ -268,6 +268,7 @@ function create_input(frame, page, json_elem, label) {
 
   input.onkeydown = function(e) {
     if (input.frame.form.disable_count) return false;
+    if (input.frame.form.readonly && !(e.key === 'Tab' || e.ctrlKey)) return false;
     // if (!e) e=window.event;
     if (e.ctrlKey && (e.key === 'F' || e.key === 'f') && (input.lkup !== undefined)) {
       input.lkup();
@@ -392,6 +393,8 @@ function create_input(frame, page, json_elem, label) {
 
   input.set_readonly = function(state) {
     // debug3(input.ref + ' readonly');
+	if (input.frame.form.readonly)
+	  return;
     this.readonly = state;
     if (this.label)
       if (state)
@@ -1189,7 +1192,8 @@ function create_button(frame, json_elem) {
   button.title = button.help_msg;
   button.mouse_down = false;
   button.has_focus = false;
-  button.readonly = false;
+  // button.readonly = false;
+  button.readonly = json_elem.readonly;  // set in form defn
   button.after_focus = null;
 
   button.onmousedown = function() {button.mouse_down = true};
@@ -1198,7 +1202,7 @@ function create_button(frame, json_elem) {
   button.onfocus = function() {
     if (button.frame.form.disable_count) return false;
     //debug3(button.label.data + ' on focus');
-    if (button.readonly)
+    if (button.readonly || button.frame.form.readonly)
       button.style.background = button.bg_disabled;
     else
       button.style.background = button.bg_focus;
@@ -1267,6 +1271,7 @@ function create_button(frame, json_elem) {
 
   button.onclick = function() {
     if (button.frame.form.disable_count) return;
+    if (button.frame.form.readonly) return;
     // removed - 2020-11-24 - there may be a pending event to enable the button
     // if (button.readonly) {
     //   button.frame.form.current_focus.focus();
@@ -1328,6 +1333,8 @@ function create_button(frame, json_elem) {
     };
 
   button.set_readonly = function(state) {
+	if (button.frame.form.readonly)
+	  return;
     button.readonly = state;
     if (state) {
       button.style.color = 'darkgrey';  //'#b8b8b8';

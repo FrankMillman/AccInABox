@@ -10,9 +10,9 @@ view = {
         'tran_type', {
             'cb_rec':
                 # tgt_tbl, tgt_row_id, src_row_id, formview_name
-                ('cb_tran_rec', 'row_id', 'tran_row_id', 'cb_rec_view'),
+                ('cb_tran_rec', 'row_id', 'tran_row_id', 'cb_receipt'),
             'cb_pmt':
-                ('cb_tran_pmt', 'row_id', 'tran_row_id', 'cb_pmt_view'),
+                ('cb_tran_pmt', 'row_id', 'tran_row_id', 'cb_payment'),
             }],
 
     'filter'        : [

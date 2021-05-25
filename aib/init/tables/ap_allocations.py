@@ -100,7 +100,7 @@ cols.append ({
     'fkey'       : None,
     'choices'    : [
             ['ap_crn', 'Credit note'],
-            ['ap_pmt', 'Payment'],
+            ['ap_subpmt', 'Payment'],
             ['ap_disc', 'Discount'],
             ['ap_alloc', 'Allocation'],
         ],
@@ -125,7 +125,7 @@ cols.append ({
     'fkey'       : [
         ['tran_type', [
             ['ap_crn', 'ap_tran_crn'],
-            ['ap_pmt', 'ap_subtran_pmt'],
+            ['ap_subpmt', 'ap_subtran_pmt'],
             ['ap_disc', 'ap_tran_disc'],
             ['ap_alloc', 'ap_tran_alloc'],
             ]],

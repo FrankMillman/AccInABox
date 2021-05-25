@@ -13,19 +13,17 @@ view = {
         'tran_type', {
             'ar_inv':
                 # tgt_tbl, tgt_row_id, src_row_id, formview_name
-                ('ar_tran_inv', 'row_id', 'tran_row_id', 'ar_inv_view'),
+                ('ar_tran_inv', 'row_id', 'tran_row_id', 'ar_invoice'),
             'ar_crn':
-                ('ar_tran_crn', 'row_id', 'tran_row_id', 'ar_crn_view'),
+                ('ar_tran_crn', 'row_id', 'tran_row_id', 'ar_crnote'),
             'ar_jnl':
-                ('ar_tran_jnl', 'row_id', 'tran_row_id', 'ar_jnl_view'),
+                ('ar_tran_jnl', 'row_id', 'tran_row_id', 'ar_jnl'),
             'ar_tgt':
-                ('ar_subtran_jnl', 'row_id', 'tran_row_id', 'ar_jnl_view'),
+                ('ar_subtran_jnl', 'row_id', 'tran_row_id', 'sub_arjnl'),
             'ar_rec':
-                ('ar_subtran_rec', 'row_id', 'tran_row_id', 'ar_rec_view'),
+                ('ar_subtran_rec', 'row_id', 'tran_row_id', 'sub_arec'),
             'ar_disc':
-                ('ar_tran_disc', 'row_id', 'tran_row_id', 'ar_disc_view'),
-            'ar_tgt':
-                ('ar_subtran_jnl', 'row_id', 'tran_row_id', 'ar_tgt_view'),
+                ('ar_tran_disc', 'row_id', 'tran_row_id', 'ar_disc'),
             }],
 
     'filter'        : [

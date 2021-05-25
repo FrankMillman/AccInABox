@@ -587,7 +587,6 @@ async def setup_forms(context, conn):
     await setup_form('ar_cust_bal')
     await setup_form('ar_balances')
     await setup_form('ar_invoice')
-    await setup_form('ar_inv_view')
     await setup_form('ar_receipt')
     await setup_form('ar_alloc_item')
     await setup_form('ar_alloc')

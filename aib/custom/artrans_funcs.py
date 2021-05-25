@@ -177,7 +177,7 @@ async def get_tot_alloc(db_obj, fld, src):
     if db_obj.table_name == 'ar_tran_alloc':
         tran_type = 'ar_alloc'
     elif db_obj.table_name == 'ar_subtran_rec':
-        tran_type = 'ar_rec'
+        tran_type = 'ar_subrec'
 
     sql = (
         'SELECT SUM(alloc_cust) AS "[REAL2]", SUM(discount_cust) AS "[REAL2]", '

@@ -13,17 +13,17 @@ view = {
         'tran_type', {
             'ap_inv':
                 # tgt_tbl, tgt_row_id, src_row_id, formview_name
-                ('ap_tran_inv', 'row_id', 'tran_row_id', 'ap_inv_view'),
+                ('ap_tran_inv', 'row_id', 'tran_row_id', 'ap_invoice'),
             'ap_crn':
-                ('ap_tran_crn', 'row_id', 'tran_row_id', 'ap_crn_view'),
+                ('ap_tran_crn', 'row_id', 'tran_row_id', 'ap_crnote'),
             'ap_jnl':
-                ('ap_tran_jnl', 'row_id', 'tran_row_id', 'ap_jnl_view'),
+                ('ap_tran_jnl', 'row_id', 'tran_row_id', 'ap_journal'),
             'ap_tgt':
                 ('ap_subtran_jnl', 'row_id', 'tran_row_id', 'ap_tgt_view'),
             'ap_pmt':
-                ('ap_subtran_pmt', 'row_id', 'tran_row_id', 'ap_pmt_view'),
+                ('ap_subtran_pmt', 'row_id', 'tran_row_id', 'ap_subpmt'),
             'ap_disc':
-                ('ap_tran_disc', 'row_id', 'tran_row_id', 'ap_disc_view'),
+                ('ap_tran_disc', 'row_id', 'tran_row_id', 'ap_disc'),
             }],
 
     'filter'        : [

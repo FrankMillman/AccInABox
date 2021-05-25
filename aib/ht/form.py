@@ -1,15 +1,12 @@
 import __main__
 import os
-import gzip
 from lxml import etree
 parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
-import operator
 from random import randint
 import itertools
 from collections import OrderedDict as OD
 from types import SimpleNamespace as SN
-from json import loads, dumps
-import asyncio
+from json import loads
 
 import logging
 logger = logging.getLogger(__name__)
@@ -79,6 +76,7 @@ class Form:
             inline=None,        # inline form part of form definition
             grid_params=None,   # passed in from menu option if setup_grid
             formview_obj=None,  # supplied if formview or lookdown selected
+            readonly=False,     # if True, entire form is set to 'readonly'
             ):
 
         self.context = context
@@ -87,6 +85,7 @@ class Form:
         self.callback = callback
         self.ctrl_grid = ctrl_grid
         self.inline = inline
+        self.readonly = readonly
         self.closed = False
 
         self._del = delwatcher(self)
@@ -407,8 +406,6 @@ class Form:
 
     async def setup_form(self, form_defn):
 
-        self.readonly = form_defn.get('readonly')
-
         before_start_form = form_defn.get('before_start_form')
         if before_start_form is not None:
             action = etree.fromstring(f'<_>{before_start_form}</_>', parser=parser)
@@ -422,7 +419,7 @@ class Form:
         gui = []  # list of elements to send to client for rendering
         if self.parent_form is None:
             gui.append(('root', {'root_id': self.root.ref}))
-        gui.append(('form', {'title':self.title, 'form_id': self.ref}))
+        gui.append(('form', {'title':self.title, 'form_id': self.ref, 'readonly': self.readonly}))
 
         frame = Frame()
         frame_xml = form_defn.find('frame')
@@ -561,11 +558,11 @@ class Form:
                 # for db_obj in frame.on_delete_set:
                 #     db_obj.remove_delete_func(frame)
 
-                # for subtype in frame.subtype_records:
-                #     obj_name, col_name = subtype.split('.')
-                #     db_obj = self.data_objects[obj_name]
-                #     subtype_fld = db_obj.fields[col_name]
-                #     subtype_fld.gui_subtype = None
+                for subtype in frame.subtype_records:
+                    obj_name, col_name = subtype.split('.')
+                    db_obj = self.data_objects[obj_name]
+                    subtype_fld = db_obj.fields[col_name]
+                    subtype_fld.gui_subtype.clear()
 
                 for grid in frame.grids:
                     await grid.db_obj.close_cursor()
@@ -807,7 +804,6 @@ class Frame:
                 obj_name = element.get('obj_name')
                 col_name = element.get('col_name')
                 fld = await self.data_objects[obj_name].getfld(col_name)
-
                 readonly = self.form.readonly or (element.get('readonly') == 'true')
                 skip = (element.get('skip') == 'true')
                 lng = element.get('lng')
@@ -914,6 +910,7 @@ class Frame:
             elif element.tag == 'button':
                 btn_label = element.get('btn_label')
                 lng = element.get('lng')
+                readonly = self.form.readonly or (element.get('readonly') == 'true')
                 enabled = (element.get('btn_enabled') == 'true')
                 must_validate = (element.get('btn_validate') == 'true')
                 default = (element.get('btn_default') == 'true')
@@ -921,7 +918,7 @@ class Frame:
                 action = etree.fromstring(
                     f'<_>{element.get("action")}</_>', parser=parser)
                 button = ht.gui_objects.GuiButton(self, gui, btn_label, lng,
-                    enabled, must_validate, default, help_msg, action)
+                    readonly, enabled, must_validate, default, help_msg, action)
                 self.btn_dict[element.get('btn_id')] = button
 
                 validation = element.get('validation')
@@ -1049,6 +1046,7 @@ class Frame:
             btn = button_dict[btn_id]
             btn_label = btn.get('btn_label')
             lng = btn.get('lng')
+            readonly = self.form.readonly
             enabled = (btn.get('btn_enabled') == 'true')
             must_validate = (btn.get('btn_validate') == 'true')
             default = (btn.get('btn_default') == 'true')
@@ -1056,7 +1054,7 @@ class Frame:
             action = etree.fromstring(
                 f'<_>{btn.get("action")}</_>', parser=parser)
             button = ht.gui_objects.GuiButton(self, button_list, btn_label,
-                lng, enabled, must_validate, default, help_msg, action)
+                lng, readonly, enabled, must_validate, default, help_msg, action)
             self.btn_dict[btn_id] = button
 
         gui.append(('button_row', button_list))
@@ -1439,6 +1437,8 @@ class Frame:
             if grid.data_changed():
                 return True
         if self.db_obj is None:
+            return False
+        if self.form.readonly:
             return False
         if debug:
             log.write(f'CHANGED? {self.ref} {self.db_obj.dirty} {self.temp_data}\n\n')

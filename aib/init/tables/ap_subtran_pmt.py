@@ -558,7 +558,7 @@ actions.append([
                 ['gl_code_id', 'supp_row_id>ledger_row_id>gl_pmt_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
-                ['src_tran_type', "'ap_pmt'"],
+                ['src_tran_type', "'ap_subpmt'"],
                 ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'tran_date'],

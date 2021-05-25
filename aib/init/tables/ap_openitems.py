@@ -103,9 +103,9 @@ cols.append ({
     'choices'    : [
             ['ap_inv', 'Invoice'],
             ['ap_crn', 'Credit note'],
-            ['ap_pmt', 'Payment'],
+            ['ap_subpmt', 'Payment'],
             ['ap_jnl', 'Journal (source)'],
-            ['ap_tgt', 'Journal (target)'],
+            ['ap_subjnl', 'Journal (target)'],
             ['ap_disc', 'Discount'],
             ['ap_bf', 'Bal b/f'],
         ],
@@ -131,9 +131,9 @@ cols.append ({
         ['tran_type', [
             ['ap_inv', 'ap_tran_inv'],
             ['ap_crn', 'ap_tran_crn'],
-            ['ap_pmt', 'ap_subtran_pmt'],
+            ['ap_subpmt', 'ap_subtran_pmt'],
             ['ap_jnl', 'ap_tran_jnl'],
-            ['ap_tgt', 'ap_subtran_jnl'],
+            ['ap_subjnl', 'ap_subtran_jnl'],
             ['ap_disc', 'ap_tran_disc'],
             ['ap_bf', 'ap_tran_bf_det'],
             ]],

@@ -1,7 +1,7 @@
 """
 This is the Human Task Client module.
 
-It starts an http server. Then it listens for client connections over http.
+It starts an https server. Then it listens for client connections over https.
 """
 
 import os

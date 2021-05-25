@@ -8,7 +8,6 @@ import gzip
 from decimal import Decimal as D, Context, DecimalException, Inexact
 from datetime import date as dt, datetime as dtm, timedelta as td
 import weakref
-from weakref import WeakKeyDictionary as WKD
 from json import loads, dumps
 from hashlib import pbkdf2_hmac as kdf
 from secrets import token_bytes
@@ -71,7 +70,7 @@ class Field:
         self.table_name = col_defn.table_name
         self.col_name = col_defn.col_name
         self.gui_obj = ()  # gui_objects to be notified of changes
-        self.gui_subtype = WKD()  # if set by form, notify gui on change
+        self.gui_subtype = weakref.WeakKeyDictionary()  # if set by form, notify gui on change
         self.flds_to_recalc = ()  # change to WeakSet if any exist
         self.sequence = False  # if over-ridden in db.objects._ainit(), display as seq+1
         self.fkey_parent = None

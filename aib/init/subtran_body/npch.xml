@@ -16,6 +16,7 @@
   <label value="Expense code:"/>
   <col/>
   <input obj_name="npch" col_name="npch_code" lng="80"/>
+  <display obj_name="npch" col_name="npch_code_id>descr" lng="160"/>
 
   <if test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``]]"/>
   <row/>

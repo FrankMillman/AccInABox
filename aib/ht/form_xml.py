@@ -234,7 +234,7 @@ async def select_from_view(grid, xml):
 
     sub_form = ht.form.Form()
     await sub_form._ainit_(grid.form.context, grid.session, form_name,
-        formview_obj=base_obj, parent_form=grid.parent.form)
+        formview_obj=base_obj, parent_form=grid.parent.form, readonly=True)
 
 async def grid_req_insert_row(grid, xml):
     row, = grid.btn_args
@@ -656,6 +656,9 @@ async def has_temp_data(caller, xml):
     # if user enters data on the first field and presses Enter, checking
     #   temp_data allows us to detect this and assume they want to 'save'
     return bool(caller.temp_data)
+
+async def is_readonly(caller, xml):
+    return caller.form.readonly
 
 async def posted(caller, xml):
     obj_name = xml.get('obj_name')

@@ -100,7 +100,7 @@ cols.append ({
     'fkey'       : None,
     'choices'    : [
             ['ar_crn', 'Credit note'],
-            ['ar_rec', 'Receipt'],
+            ['ar_subrec', 'Receipt'],
             ['ar_disc', 'Discount'],
             ['ar_alloc', 'Allocation'],
         ],
@@ -125,7 +125,7 @@ cols.append ({
     'fkey'       : [
         ['tran_type', [
             ['ar_crn', 'ar_tran_crn'],
-            ['ar_rec', 'ar_subtran_rec'],
+            ['ar_subrec', 'ar_subtran_rec'],
             ['ar_disc', 'ar_tran_disc'],
             ['ar_alloc', 'ar_tran_alloc'],
             ]],

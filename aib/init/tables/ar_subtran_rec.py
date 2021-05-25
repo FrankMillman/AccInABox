@@ -285,7 +285,7 @@ virt.append ({
     'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
     'sql'        : (
         "SELECT b.row_id FROM {company}.ar_openitems b "
-        "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id "
+        "WHERE b.tran_type = 'ar_subrec' AND b.tran_row_id = a.row_id "
         "AND b.split_no = 0 AND b.deleted_id = 0"
         ),
     })
@@ -582,7 +582,7 @@ actions.append([
                 ['gl_code_id', 'cust_row_id>ledger_row_id>gl_rec_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'cust_row_id>location_row_id'],
                 ['function_row_id', 'cust_row_id>function_row_id'],
-                ['src_tran_type', "'ar_rec'"],
+                ['src_tran_type', "'ar_subrec'"],
                 ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'tran_date'],

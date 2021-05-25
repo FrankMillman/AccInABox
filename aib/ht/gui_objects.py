@@ -470,13 +470,13 @@ class GuiDummy:  # dummy field to force validation of last real field
             await ht.form_xml.after_input(self)
 
 class GuiButton:
-    def __init__(self, parent, gui, btn_label, lng, enabled,
+    def __init__(self, parent, gui, btn_label, lng, readonly, enabled,
             must_validate, default, help_msg, action):
         self.parent = parent
         self.hidden = False  # for 'subtype' gui objects
         self.form_vlds = []
         self.action = action
-        self.readonly = True
+        self.readonly = readonly
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
         self.pos = pos
@@ -492,7 +492,7 @@ class GuiButton:
         self.label = btn_label
         self.show = True
         gui.append(('button', {'label':self.label, 'lng':lng, 'ref':self.ref,
-            'enabled':self.enabled, 'default':self.default, 'help_msg':help_msg}))
+            'readonly':self.readonly, 'enabled':self.enabled, 'default':self.default, 'help_msg':help_msg}))
 
     def __str__(self):
         return "{} Button: '{}'".format(self.ref, self.label)

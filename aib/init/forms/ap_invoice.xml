@@ -1,7 +1,17 @@
 <form name="ap_invoice" title="Supplier invoice" before_start_form="
-  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_inv` action=`lock`/>>
+  <<case>>
+    <<is_readonly/>>
+    <<default>>
+      <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_inv` action=`lock`/>>
+    <</default>>
+  <</case>>
   " on_close_form="
-  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_inv` action=`unlock`/>>
+    <<case>>
+    <<is_readonly/>>
+    <<default>>
+      <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_inv` action=`unlock`/>>
+    <</default>>
+  <</case>>
   ">
   <db_objects>
     <db_obj name="ap_inv" table_name="ap_tran_inv" is_formview_obj="true"/>
@@ -33,7 +43,7 @@
       <col/>
       <label value="Invoice no:"/>
       <col/>
-      <input obj_name="ap_inv" col_name="tran_number" lng="80" skip="true"/>
+      <input obj_name="ap_inv" col_name="tran_number" lng="100" skip="true"/>
 
       <row/>
       <col/>
@@ -147,7 +157,6 @@
         <display obj_name="ap_inv" col_name="supp_row_id>party_row_id>display_name" lng="200"/>
 
         <if test="[[`if`, ``, `_ledger.valid_loc_ids>is_leaf`, `is`, `$False`, ``]]"/>
-
         <row/>
         <col/>
         <label value="Location Id:"/>
@@ -160,11 +169,9 @@
           <</case>>
           "/>
         <display obj_name="ap_inv" col_name="supp_row_id>location_id>descr" lng="160"/>
-
         <end_if/>
 
         <if test="[[`if`, ``, `_ledger.valid_fun_ids>is_leaf`, `is`, `$False`, ``]]"/>
-
         <row/>
         <col/>
         <label value="Function Id:"/>
@@ -177,7 +184,6 @@
           <</case>>
           "/>
         <display obj_name="ap_inv" col_name="supp_row_id>function_id>descr" lng="160"/>
-
         <end_if/>
 
         <dummy validation="
@@ -195,7 +201,7 @@
         <col/>
         <label value="Invoice no:"/>
         <col/>
-        <input obj_name="ap_inv" col_name="tran_number" lng="80"/>
+        <input obj_name="ap_inv" col_name="tran_number" lng="100"/>
         <end_if/>
 
         <row/>

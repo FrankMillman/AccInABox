@@ -989,24 +989,25 @@ class DbObject:
             await fld.setval(dat, display, validate=False, from_sql=True)
             fld._init = fld._orig = fld._value
 
-        row_id_fld = self.fields['row_id']
-        if row_id_fld.children:  # populate child values with row_id value
-            if self.sub_trans:  # if sub_trans, only populate active sub_tran
-                children = []
-                for subtran_col in self.sub_trans:
-                    subtran_val = await self.getval(subtran_col)
-                    subtran_obj = self.sub_trans[subtran_col][subtran_val][0]
-                    for child in row_id_fld.children:
-                        if child.db_obj is subtran_obj:
-                            children.append(child)
-                            break
-            else:
-                children = row_id_fld.children
-            row_id_val = await row_id_fld.getval()
-            for child in children:
-                child._value = row_id_val
-                if child.table_keys:  # if child has table_keys, read in the child row
-                    await child.read_row(row_id_val, display)
+        if not self.view_obj:  # 'view' does not have 'row_id'
+            row_id_fld = self.fields['row_id']
+            if row_id_fld.children:  # populate child values with row_id value
+                if self.sub_trans:  # if sub_trans, only populate active sub_tran
+                    children = []
+                    for subtran_col in self.sub_trans:
+                        subtran_val = await self.getval(subtran_col)
+                        subtran_obj = self.sub_trans[subtran_col][subtran_val][0]
+                        for child in row_id_fld.children:
+                            if child.db_obj is subtran_obj:
+                                children.append(child)
+                                break
+                else:
+                    children = row_id_fld.children
+                row_id_val = await row_id_fld.getval()
+                for child in children:
+                    child._value = row_id_val
+                    if child.table_keys:  # if child has table_keys, read in the child row
+                        await child.read_row(row_id_val, display)
 
 
         for after_read in self.db_table.actions.after_read:  # table hook
@@ -3017,27 +3018,22 @@ class DbTable:
                                 if conn.tablenames.endswith(' a'):  # simple SELECT
                                     conn.tablenames = conn.tablenames[:-2] + ' b'
                                 else:  # complex SELECT with JOINS
-                                    conn.tablenames = conn.tablenames.replace(' a.', ' b.')
-                                    conn.tablenames = conn.tablenames.replace(' a ', ' b ')
+                                    # conn.tablenames = conn.tablenames.replace(' a.', ' b.')
+                                    # conn.tablenames = conn.tablenames.replace(' a ', ' b ')
+                                    conn.tablenames = conn.tablenames.replace(
+                                        ' a.', ' b.').replace(' a ', ' b ')
 
-                                # # next line is hard-coded for now [2018-12-30]
-                                # # it depends on a virtual field called tran_type returning the value
-                                # # the value could be stored as a parameter in 'sub_tran' on the
-                                # #   table definition if more flexibility required
-                                # tran_type = self.col_dict['tran_type'].sql
-
-                                # display_elems = f" {self.constants.concat} ".join(sql_elem)
-                                # display_sql += (
-                                #     f"(SELECT {display_elems} FROM {conn.tablenames} "
-                                #     f"WHERE b.tran_type = {tran_type} "
-                                #     "AND b.subparent_row_id = a.row_id "
-                                #     "AND b.deleted_id = 0)"
-                                #     )
+                                # next line is hard-coded for now [2018-12-30]
+                                # it depends on a virtual field called trantype_row_id returning the value
+                                # the value could be stored as a parameter in 'sub_tran' on the
+                                #   table definition if more flexibility required
+                                trantype_row_id = self.col_dict['trantype_row_id'].sql
 
                                 display_elems = f" {self.constants.concat} ".join(sql_elem)
                                 display_sql += (
                                     f"(SELECT {display_elems} FROM {conn.tablenames} "
-                                    "WHERE b.subparent_row_id = a.row_id "
+                                    f"WHERE b.trantype_row_id = {trantype_row_id} "
+                                    "AND b.subparent_row_id = a.row_id "
                                     "AND b.deleted_id = 0)"
                                     )
                                 disp_col_defn.sql_a_cols.append('row_id')

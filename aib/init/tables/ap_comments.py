@@ -79,10 +79,10 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
+    'col_name'   : 'trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Transaction type id',
+    'long_descr' : 'Transaction type id',
     'col_head'   : 'Tran type',
     'key_field'  : 'A',
     'data_source': 'par_con',
@@ -95,11 +95,8 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : [
-            ['ap_inv', 'Invoice'],
-            ['ap_crn', 'Credit note'],
-        ],
+    'fkey'       : ['adm_tran_types', 'row_id', 'tran_type', 'tran_type', False, None],
+    'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'subparent_row_id',
