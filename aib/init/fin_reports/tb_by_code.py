@@ -1,4 +1,4 @@
-report_name = 'tb_by_int'
+report_name = 'tb_by_code'
 table_name = 'gl_totals'
 
 date_params = [
@@ -13,7 +13,7 @@ groups = []
 
 groups.append([
     'code',  # dim
-    'int',   # grp_name
+    'code',  # grp_name
     [],      # filter
     False,   # include zero bals
     ])
@@ -24,5 +24,6 @@ pivot_on = None
 columns = [
     ['code_maj', 'code_maj', 'Maj', 'TEXT', 80, None],
     ['code_int', 'code_int', 'Int', 'TEXT', 80, None],
+    ['code_code', 'code_code', 'Code', 'TEXT', 80, None],
     ['tran_tot', 'tran_tot', 'Total', 'DEC', 100, None],
     ]

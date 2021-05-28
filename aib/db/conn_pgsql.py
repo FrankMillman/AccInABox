@@ -515,19 +515,14 @@ def create_index(self, company, table_name, index):
 def get_lower_colname(self, col_name, alias):
     return f'LOWER({alias}.{col_name})'
 
-async def tree_select(self, context, table_name, level=None,
+async def tree_select(self, context, table_name, tree_params, level=None,
         start_value=None, filter=None, sort=False, up=False):
 
     company = context.company
-    db_table = await db.objects.get_db_table(context, company, table_name)
-    tree_params = db_table.tree_params
-
     group, col_names, fixed_levels = tree_params
     code, descr, parent_id, seq = col_names
     if fixed_levels is not None:
         type_colname, level_types, sublevel_type = fixed_levels
-        if db_table.ledger_col is not None:  # if sub-ledgers, level_types is a dict keyed on ledger_row_id
-            level_types = level_types[context.ledger_row_id]
 
     select_1 = "*, 0 AS _level"
     select_2 = "_tree2.*, _tree._level+1"

@@ -158,6 +158,7 @@ class Session:
                 cte = await conn.tree_select(
                     context=ctx,
                     table_name='sys_menu_defns',
+                    tree_params = [None, ['row_id', 'descr', 'parent_id', 'seq'], None],
                     filter=[['WHERE', '', 'deleted_id', '=', 0, '']],
                     sort=True,
                     )

@@ -130,6 +130,8 @@ class GuiTreeCommon:
         if member.table_name in ('nsls_codes', 'npch_codes'):
             if group.table_name in ('nsls_groups', 'npch_groups'):
                 ledger_row_id = await member.getval('ledger_row_id')
+                if ledger_row_id is None:
+                    ledger_row_id = self.form
                 if ledger_row_id is not None:
                     group_where += f' AND ledger_row_id = {ledger_row_id}'
 
@@ -161,9 +163,21 @@ class GuiTreeCommon:
                         self.parent.company, group.table_name, group_where)
                     )
             else:
+                tree_params = group.db_table.tree_params
+                group_parent, group_col_names, group_levels = tree_params
+
+                if group_levels is not None:
+                    type_colname, level_types, sublevel_type = group_levels
+                    if group.db_table.ledger_col is not None:  # if sub-ledgers, level_types is a dict keyed on ledger_row_id
+                        ledger_row_id = await member.getval('ledger_row_id')
+                        level_types = level_types[ledger_row_id]
+                        group_levels = type_colname, level_types, sublevel_type
+                        tree_params = group_parent, group_col_names, group_levels
+
                 cte = await conn.tree_select(
                     context=self.parent.context,
                     table_name=group.table_name,
+                    tree_params=tree_params,
                     )
                 sql = (cte +
                     "SELECT row_id, {}, {}, {}, "
@@ -228,6 +242,15 @@ class GuiTreeCommon:
                     where = []
 
                 test = 'AND' if where else 'WHERE'
+                if member.table_name in ('nsls_codes', 'npch_codes'):
+                    if group.table_name in ('nsls_groups', 'npch_groups'):
+                        ledger_row_id = await member.getval('ledger_row_id')
+                        if ledger_row_id is None:
+                            ledger_row_id = self.parent.context.ledger_row_id
+                        if ledger_row_id is not None:
+                            where.append((test, '', 'ledger_row_id', '=', ledger_row_id, ''))
+
+                test = 'AND' if where else 'WHERE'
                 if hasattr(self.db_obj.context, 'lkup_filter'):  # see ht.gui_objects.on_req_lookup
                     filter_text, col_val = self.db_obj.context.lkup_filter
                     del self.db_obj.context.lkup_filter
@@ -242,9 +265,12 @@ class GuiTreeCommon:
                     member.context, member.db_table, col_names, where, order)
 
             else:
+                tree_params = member.db_table.tree_params
+                # member_group_id, member_col_names, member_levels = tree_params
                 cte = await conn.tree_select(
                     context=self.parent.context,
                     table_name=member.table_name,
+                    tree_params=tree_params,
                     )
                 sql = (cte +
                     "SELECT row_id, {}, {}, {}, "

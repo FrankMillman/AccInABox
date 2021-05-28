@@ -587,6 +587,7 @@ async def setup_forms(context, conn):
     await setup_form('ar_cust_bal')
     await setup_form('ar_balances')
     await setup_form('ar_invoice')
+    await setup_form('ar_journal')
     await setup_form('ar_receipt')
     await setup_form('ar_alloc_item')
     await setup_form('ar_alloc')
@@ -605,6 +606,7 @@ async def setup_forms(context, conn):
     await setup_form('ap_supp_bal')
     await setup_form('setup_npch_codes')
     await setup_form('ap_invoice')
+    await setup_form('ap_journal')
     await setup_form('ap_pmt_batch')
     await setup_form('ap_balances')
     await setup_form('ap_ledger_summary')
@@ -774,10 +776,10 @@ async def setup_menus(context, conn, company_name):
                 ['Expense codes', 'form', 'setup_npch_codes'],
                 ]],
             ]],
-        ['Non-inventory sales admin', 'menu', 'nsls', [
+        ['Non-inventory income', 'menu', 'nsls', [
             ['Add new nsls ledger', 'form', 'nsls_ledger_new'],
             ]],
-        ['Non-inventory purchases admin', 'menu', 'npch', [
+        ['Non-inventory expenses', 'menu', 'npch', [
             ['Add new npch ledger', 'form', 'npch_ledger_new'],
             ]],
         ['Accounts receivable', 'menu', 'ar', [
@@ -819,6 +821,7 @@ async def setup_menus(context, conn, company_name):
             ]],
         ['Ar transactions', 'menu', 'ar', [
             ['Capture invoice', 'form', 'ar_invoice'],
+            ['Capture journal', 'form', 'ar_journal'],
             ['Capture receipt', 'form', 'ar_receipt'],
             ['Allocate transaction', 'grid', 'ar_openitems', 'unallocated'],
             ['Review unposted invoices', 'grid', 'ar_tran_inv', 'unposted_inv'],
@@ -844,6 +847,7 @@ async def setup_menus(context, conn, company_name):
             ]],
         ['AP transactions', 'menu', 'ap', [
             ['Capture invoice', 'form', 'ap_invoice'],
+            ['Capture journal', 'form', 'ap_journal'],
             ['Capture payment', 'form', 'ap_payment'],
             ['Review unposted invoices', 'grid', 'ap_tran_inv', 'unposted_inv'],
             ['Review unposted payments', 'grid', 'ap_tran_pmt', 'unposted_pmt'],
@@ -871,7 +875,7 @@ async def setup_menus(context, conn, company_name):
     nsls_menu = ['Non-inventory sales', 'menu', 'nsls', [
         ['Setup', 'menu', 'nsls', [
             ['Parameters', 'form', 'nsls_params'],
-            ['Sales codes', 'form', 'setup_nsls_codes'],
+            ['Income codes', 'form', 'setup_nsls_codes'],
             ]],
         ]]
 

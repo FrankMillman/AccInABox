@@ -1,0 +1,209 @@
+<form name="ar_journal" title="Customer journal" before_start_form="
+  <<case>>
+    <<is_readonly/>>
+    <<default>>
+      <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_jnl` action=`lock`/>>
+    <</default>>
+  <</case>>
+  " on_close_form="
+  <<case>>
+    <<is_readonly/>>
+    <<default>>
+      <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_jnl` action=`unlock`/>>
+    <</default>>
+  <</case>>
+  ">
+  <db_objects>
+    <db_obj name="ar_jnl" table_name="ar_tran_jnl" is_formview_obj="true"/>
+    <db_obj name="ar_jnldet" table_name="ar_tran_jnl_det" parent="ar_jnl"/>
+    <db_obj name="npch" table_name="npch_subtran" parent="ar_jnldet"/>
+    <db_obj name="apjnl" table_name="ap_subtran_jnl" parent="ar_jnldet"/>
+    <db_obj name="gl" table_name="gl_subtran_jnl" parent="ar_jnldet"/>
+    <db_obj name="com" table_name="ar_comments" parent="ar_jnldet"/>
+  </db_objects>
+
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="ar_jnl">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+
+      <row/>
+      <col/>
+      <label value="Customer Id:"/>
+      <col/>
+      <input obj_name="ar_jnl" col_name="cust_id" lng="80" readonly="true" skip="true"/>
+      <display obj_name="ar_jnl" col_name="cust_row_id>party_row_id>display_name" lng="200"/>
+
+      <col/>
+      <label value="Journal no:"/>
+      <col/>
+      <input obj_name="ar_jnl" col_name="tran_number" lng="80" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Journal date:"/>
+      <col/>
+      <input obj_name="ar_jnl" col_name="tran_date" lng="84" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Text:"/>
+      <col/>
+      <input obj_name="ar_jnl" col_name="text" lng="250" skip="true"/>
+
+      <block/>
+      <vbox/>
+      <grid data_object="ar_jnldet" growable="true" num_grid_rows="5" readonly="true"
+          footer_row="[`'Total:'`, `ar_jnl.jnl_amt`]">
+        <toolbar template="Grid"/>
+        <cur_columns>
+          <cur_col col_name="display_descr" lng="80"/>
+          <cur_col col_name="jnl_amt" lng="80"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="line_no"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      <vbox_end/>
+
+      <grid_frame main_object="ar_jnldet">
+        <toolbar/>
+        <body>
+
+          <block/>
+          <panel/>
+
+          <row/>
+          <col/>
+          <input obj_name="ar_jnldet" col_name="line_type" form_dflt="<<prev_value/>>"/>
+
+          <block/>
+          <subtran_frame subtran_obj="ar_jnldet" subtran_col="line_type">
+            <subtran_body subtran_id="npch"/>
+            <subtran_body subtran_id="ap_jnl"/>
+            <subtran_body subtran_id="gl"/>
+            <subtran_body subtran_id="com"/>
+          </subtran_frame>
+
+        </body>
+        <button_row template="Grid_Frame_Grid_RO"/>
+        <frame_methods template="Grid_Frame_Grid_RO"/>
+
+      </grid_frame>
+
+    </body>
+    <button_row template="Transaction"/>
+    <frame_methods template="Transaction">
+      <method name="do_post" action="
+        <<case>>
+          <<compare test=`[['if', '', 'ar_jnl.jnl_amt', '=', '0', '']]`>>
+            <<ask title=`Journal` enter=`No` escape=`No`
+                question=`No detail lines - sure you want to post?`>>
+              <<response ans=`No`>>
+              <</response>>
+              <<response ans=`Yes`>>
+                <<post_obj obj_name=`ar_jnl`/>>
+              <</response>>
+            <</ask>>
+          <</compare>>
+          <<default>>
+            <<post_obj obj_name=`ar_jnl`/>>
+          <</default>>
+        <</case>>
+        "/>
+    </frame_methods>
+  </frame>
+  <inline_form name="tran_header" title="Journal header">
+    <frame main_object="ar_jnl">
+      <toolbar/>
+      <body>
+        <block/>
+        <panel/>
+
+        <row/>
+        <col/>
+        <label value="Customer Id:"/>
+        <col/>
+        <input obj_name="ar_jnl" col_name="cust_id" lng="80"/>
+        <display obj_name="ar_jnl" col_name="cust_row_id>party_row_id>display_name" lng="200"/>
+
+        <if test="[[`if`, ``, `_ledger.valid_loc_ids>is_leaf`, `is`, `$False`, ``]]"/>
+
+        <row/>
+        <col/>
+        <label value="Location Id:"/>
+        <col/>
+        <input obj_name="ar_jnl" col_name="location_id" lng="80" form_dflt="
+          <<case>>
+            <<compare test=`[['if', '', 'ar_jnl.cust_row_id>dflt_loc_id', 'is not', '$None', '']]`>>
+              <<fld_val name=`ar_jnl.cust_row_id>dflt_loc_id>location_id`/>>
+            <</compare>>
+          <</case>>
+          "/>
+        <display obj_name="ar_jnl" col_name="cust_row_id>location_id>descr" lng="160"/>
+
+        <end_if/>
+
+        <if test="[[`if`, ``, `_ledger.valid_fun_ids>is_leaf`, `is`, `$False`, ``]]"/>
+
+        <row/>
+        <col/>
+        <label value="Function Id:"/>
+        <col/>
+        <input obj_name="ar_jnl" col_name="function_id" lng="80" form_dflt="
+          <<case>>
+            <<compare test=`[['if', '', 'ar_jnl.cust_row_id>dflt_fun_id', 'is not', '$None', '']]`>>
+              <<fld_val name=`ar_jnl.cust_row_id>dflt_fun_id>function_id`/>>
+            <</compare>>
+          <</case>>
+          "/>
+        <display obj_name="ar_jnl" col_name="cust_row_id>function_id>descr" lng="160"/>
+
+        <end_if/>
+
+        <dummy validation="
+            <<validation>>
+              <<case>>
+                <<compare test=`[['if', '', 'ar_jnl.cust_row_id', 'is', '$None', '']]`>>
+                  <<error head=`Customer` body=`Customer does not exist`/>>
+                <</compare>>
+              <</case>>
+            <</validation>>
+          "/>
+
+        <if test="[[`if`, ``, `_ledger.auto_jnl_no`, `is`, `$None`, ``]]"/>
+        <row/>
+        <col/>
+        <label value="Journal no:"/>
+        <col/>
+        <input obj_name="ar_jnl" col_name="tran_number" lng="80"/>
+        <end_if/>
+
+        <row/>
+        <col/>
+        <label value="Journal date:"/>
+        <col/>
+        <input obj_name="ar_jnl" col_name="tran_date" lng="84" form_dflt="
+          <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
+          "/>
+
+        <row/>
+        <col/>
+        <label value="Text:"/>
+        <col/>
+        <input obj_name="ar`_jnl" col_name="text" lng="250" form_dflt="<<prev_value/>>"/>
+
+      </body>
+
+      <button_row template="Transaction_Header"/>
+      <frame_methods template="Transaction_Header"/>
+    </frame>
+  </inline_form>
+</form>

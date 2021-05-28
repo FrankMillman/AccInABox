@@ -301,6 +301,7 @@ async def ledger_inserted(db_obj, xml):
     cte = await conn.tree_select(
         context=db_obj.context,
         table_name='sys_menu_defns',
+        tree_params = [None, ['row_id', 'descr', 'parent_id', 'seq'], None],
         filter=[
             ['WHERE', '', 'module_row_id', '=',module_row_id, ''],
             ['AND', '', 'deleted_id', '=', -1, ''],

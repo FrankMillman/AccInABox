@@ -61,23 +61,23 @@
           <label value="Description:"/>
           <col/>
           <input obj_name="nsls_code" col_name="descr" lng="120"/>
-          <row/>
+          <!-- <row/>
           <col/>
           <label value="G/l code:"/>
           <col/>
-          <input obj_name="nsls_code" col_name="gl_code" lng="80"/>
+          <input obj_name="nsls_code" col_name="gl_code" lng="80"/> -->
 
-          <if test="[[`if`, ``, `_param.eff_date_nsls`, `is`, `$True`, ``]]"/>
+          <if test="[[`if`, ``, `_ledger.allow_eff_date`, `is`, `$True`, ``]]"/>
           <row/>
           <col/>
           <label value="Allow change effective date?"/>
           <col/>
           <input obj_name="nsls_code" col_name="chg_eff_date" lng="130"/>
-          <row/>
+          <!-- <row/>
           <col/>
           <label value="Unearned gl code:"/>
           <col/>
-          <input obj_name="nsls_code" col_name="uea_gl_code" lng="80"/>
+          <input obj_name="nsls_code" col_name="uea_gl_code" lng="80"/> -->
           <end_if/>
 
           <if test="[[`if`, ``, `_param.tax_cat_id`, `is not`, `$None`, ``]]"/>

@@ -377,6 +377,8 @@ class FinReport:
             elif date_subtype == 'fin_per':
                 fin_yr, fin_per = date_values  # a tuple
                 rows = await sql_fin_per(self.context, fin_yr, fin_per)
+            elif date_subtype == 'curr_cl_date':
+                rows = await sql_curr_cl_date(self.context)
             elif date_subtype == 'curr_yr':
                 rows = await sql_curr_yr(self.context)
             elif date_subtype == 'last_n':
@@ -387,7 +389,7 @@ class FinReport:
             if date_subtype == 'literal':
                 return [dt.fromisoformat(_) for _ in date_values]
             else:
-                return [_[1] for _ in rows]
+                return rows
         elif date_type == 'from_to':
             if date_subtype == 'literal':
                 return [(dt.fromisoformat(op_dt), dt.fromisoformat(cl_dt)) for op_dt, cl_dt in date_values]
@@ -443,7 +445,6 @@ class FinReport:
             # but because we filter on ledger_row_id, it is effectively the new 'root'
 
         levels = [_[0] for _ in level_types]  # strip descr
-        assert grp_name in levels, f'{grp_name} not in {levels}'
 
         # set up join for lowest level - create join to 'code' table
         type = levels[-1]
@@ -455,6 +456,8 @@ class FinReport:
         # set up level data for other levels
         for type in reversed(levels[1:-1]):  # ignore 'root' and 'leaf'
             level_data[type] = (code, seq)
+
+        assert grp_name in level_data, f'{grp_name} not in {[x for x in level_data]}'
 
         if self.db_table.table_name == 'gl_totals' and self.cflow_param is None:  # check for link to nsls/npch
             grp_obj = await db.objects.get_db_object(context, 'gl_groups')
@@ -1374,6 +1377,27 @@ async def sql_fin_per(context, fin_yr, fin_per):
         conn = db_mem_conn.db
         rows = await conn.fetchall(' '.join(sql), params)
     return rows
+
+async def sql_curr_cl_date(context):
+    company = context.company
+    sql = []
+    params = []
+    sql.append('SELECT')
+    sql.append('a.closing_date AS cl_date')
+    sql.append(f'FROM {company}.adm_periods a')
+    sql.append('WHERE a.row_id =')
+    sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
+    sql.append(f'WHERE state = {dbc.param_style}')
+    params.append('current')
+    if context.module_id != 'gl':
+        sql.append(f'AND ledger_row_id = {dbc.param_style}')
+        params.append(context.ledger_row_id)
+    sql.append(')')
+
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        rows = await conn.fetchall(' '.join(sql), params)
+    return rows[0]
 
 async def sql_curr_yr(context):
     company = context.company

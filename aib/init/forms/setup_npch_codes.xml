@@ -1,8 +1,9 @@
-<form name="setup_npch_codes" title="Setup expense codes" before_start_form="
+<form name="setup_npch_codes" title="Setup other expense codes" before_start_form="
   <<pyfunc name=`custom.tax_funcs.before_start_form`/>>
   ">
 
   <db_objects>
+    <db_obj name="npch_group" table_name="npch_groups"/>
     <db_obj name="npch_code" table_name="npch_codes"/>
     <db_obj name="tax_code" table_name="npch_tax_codes" parent="npch_code"/>
   </db_objects>
@@ -24,6 +25,89 @@
     <toolbar/>
     <body>
       <block/>
+      <tree_combo group_name="npch_group" member_name="npch_code"
+        lng="250" height="350" toolbar="true"/>
+      <tree_frame main_object="npch_group" combo_type="group">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Code:"/>
+          <col/>
+          <input obj_name="npch_group" col_name="npch_group" lng="80"/>
+          <row/>
+          <col/>
+          <label value="Description:"/>
+          <col/>
+          <input obj_name="npch_group" col_name="descr" lng="120"/>
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame"/>
+      </tree_frame>
+      <tree_frame main_object="npch_code" combo_type="member">
+        <toolbar/>
+        <body>
+          <block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Code:"/>
+          <col/>
+          <input obj_name="npch_code" col_name="npch_code" lng="80"/>
+          <row/>
+          <col/>
+          <label value="Description:"/>
+          <col/>
+          <input obj_name="npch_code" col_name="descr" lng="120"/>
+          <!-- <row/>
+          <col/>
+          <label value="G/l code:"/>
+          <col/>
+          <input obj_name="npch_code" col_name="gl_code" lng="80"/> -->
+
+          <if test="[[`if`, ``, `_ledger.allow_eff_date`, `is`, `$True`, ``]]"/>
+          <row/>
+          <col/>
+          <label value="Allow change effective date?"/>
+          <col/>
+          <input obj_name="npch_code" col_name="chg_eff_date" lng="130"/>
+          <!-- <row/>
+          <col/>
+          <label value="Unearned gl code:"/>
+          <col/>
+          <input obj_name="npch_code" col_name="uea_gl_code" lng="80"/> -->
+          <end_if/>
+
+          <if test="[[`if`, ``, `_param.tax_cat_id`, `is not`, `$None`, ``]]"/>
+          <block/>
+          <grid data_object="mem_tax_codes" growable="false" num_grid_rows="3">
+            <toolbar/>
+            <cur_columns>
+              <cur_col col_name="tax_cat" lng="80" readonly="true"/>
+              <cur_col col_name="tax_code" lng="80" expand="true"/>
+            </cur_columns>
+            <cur_filter/>
+            <cur_sequence/>
+            <grid_methods template="Grid"/>
+          </grid>
+          <end_if/>
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame">
+          <method name="on_start_frame" action="
+            <<pyfunc name=`custom.tax_funcs.on_start_frame`
+              master_obj=`npch_code` taxcode_obj=`tax_code`/>>
+          "/>
+          <method name="after_save" action="
+            <<pyfunc name=`custom.tax_funcs.save_tax_codes`
+              master_obj=`npch_code` taxcode_obj=`tax_code` master_id=`npch_row_id`/>>
+          "/>
+        </frame_methods>
+      </tree_frame>
+
+<!--
       <tree data_object="npch_code" lng="250" height="350" toolbar="true"/>
       <tree_frame main_object="npch_code">
         <toolbar/>
@@ -77,7 +161,7 @@
               <col/>
               <label value="Allow change effective date?"/>
               <col/>
-              <input obj_name="npch_code" col_name="chg_eff_date"/>
+              <input obj_name="npch_code" col_name="chg_eff_date" lng="130"/>
               <row/>
               <col/>
               <label value="Unearned gl code:"/>
@@ -115,6 +199,7 @@
           "/>
         </frame_methods>
       </tree_frame>
+-->
     </body>
     <button_row/>
     <frame_methods>
