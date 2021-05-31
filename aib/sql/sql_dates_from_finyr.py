@@ -6,6 +6,6 @@ def get_sql(company, conn, fin_yr):
         SELECT op_date AS "[DATE]", cl_date AS "[DATE]" from dates
         """
 
-    fmt = '{:%d-%m} - {:%d-%m}'
+    fmt = '{:%d-%m-%Y} - {:%d-%m-%Y}'
 
     return sql, params, fmt

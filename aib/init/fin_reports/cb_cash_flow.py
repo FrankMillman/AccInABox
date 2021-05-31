@@ -11,10 +11,7 @@ date_params = [
         ],
     ]
 
-tot_col_name = 'tran_day'
-
 groups = []
-
 groups.append([
     'code',  # dim
     'int',   # grp_name
@@ -31,8 +28,6 @@ groups.append([
 # cashflow_params = None
 # cashflow_params = 'absa_curr'
 cashflow_params = '$all'
-
-pivot_on = None
 
 """
 orig_mod = orig_trantype_row_id>module_row_id

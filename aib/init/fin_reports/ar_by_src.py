@@ -10,19 +10,13 @@ date_params = [
         ],
     ]
 
-tot_col_name = 'tran_tot'
-
 groups = []
-
 groups.append([
     'src',  # dim
     'src',  # grp_name
     [],     # filter
     False,  # include zeros
     ])
-
-cashflow_params = None
-pivot_on = None
 
 columns = [
     ['op_date', 'op_date', 'Op date', 'DTE', 85, None],
@@ -32,7 +26,3 @@ columns = [
     ['mvmt', 'cl_bal - op_bal', 'Mvmt', 'DEC', 100, None],
     ['cl_bal', 'cl_bal', 'Cl bal', 'DEC', 100, None],
     ]
-
-fmt = '{!s:<12}{!s:<12}{:<12}{:>12.2f}{:>12.2f}{:>12.2f}'
-tot_row = ['Total', '', '', 0, 0, 0]
-tot_cols = [-3, -2, -1]

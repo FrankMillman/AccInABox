@@ -7,19 +7,13 @@ date_params = [
     None,            # date_values
     ]
 
-tot_col_name = 'tran_tot'
-
 groups = []
-
 groups.append([
     'code',  # dim
     'code',  # grp_name
     [],      # filter
     False,   # include zero bals
     ])
-
-cashflow_params = None
-pivot_on = None
 
 columns = [
     ['code_maj', 'code_maj', 'Maj', 'TEXT', 80, None],

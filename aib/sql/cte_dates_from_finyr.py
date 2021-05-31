@@ -24,7 +24,8 @@ def get_cte(company, conn, fin_yr):
 
     """
     select
-        dateadd((select b.closing_date from adm_periods b where b.row_id = a.row_id - 1), 1) as op_date,
+--        dateadd((select b.closing_date from adm_periods b where b.row_id = a.row_id - 1), 1) as op_date,
+        date((select b.closing_date from adm_periods b where b.row_id = a.row_id - 1), '_1 day') as op_date,
         a.closing_date as cl_date
     from adm_periods a
     where

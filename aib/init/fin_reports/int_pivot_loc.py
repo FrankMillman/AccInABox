@@ -9,14 +9,10 @@ date_params = [
         ],
     ]
 
-tot_col_name = 'tran_day'
-
 groups = []
-
 groups.append([
     'code',  # dim
     'int',   # grp_name
-#   [],      # filter
     [        # filter
         ['AND', '(', 'maj', '=', "'inc'", ''],
         ['OR', '', 'maj', '=', "'exp'", ')'],
@@ -27,7 +23,6 @@ groups.append([
 groups.append([
     'loc',   # dim
     'prop',  # grp_name
-#   [],      # filter
     [        # filter
         ['AND', '', 'type', '=', "'PROP'", ''],
         ['AND', '', 'prop', '!=', "'TSK'", ''],
@@ -35,7 +30,6 @@ groups.append([
     False,  # include zero bals
     ])
 
-cashflow_params = None
 pivot_on = ('loc', 'loc_prop')
 
 columns = [
@@ -44,7 +38,3 @@ columns = [
     ['loc_prop', 'tran_tot', None, 'DEC', 80, 'loc_prop'],
     ['total', 'tran_tot', 'Total', 'DEC', 100, '*'],
     ]
-
-fmt = '{:<12}{:<12}{:<12}{:>12.2f}'
-tot_row = ['Total', '', '', 0]
-tot_cols = [-1]

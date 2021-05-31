@@ -10,7 +10,7 @@ import db.objects
 import db.cache
 import ht.form
 from db.connection import db_constants as dbc
-from evaluate_expr import eval_bool_expr
+from evaluate_expr import eval_bool_expr, eval_elem
 from common import AibError
 from common import log, debug
 
@@ -158,9 +158,10 @@ class FinReport:
         self.dates = await self.setup_dates(await report_defn.getval('date_params'))
         if not self.dates:
             raise AibError(head=report_name, body='No rows found for specified dates')
-        self.tot_col_name = await report_defn.getval('tot_col_name')
+        self.expand_subledg = await report_defn.getval('expand_subledg')
         self.pivot_on = await report_defn.getval('pivot_on')
-        columns = await report_defn.getval('column_params')
+        columns = await report_defn.getval('columns')
+        calc_cols = await report_defn.getval('calc_cols') or []
         group_params = await report_defn.getval('group_params')
         self.cflow_param = await report_defn.getval('cashflow_params')
 
@@ -274,7 +275,7 @@ class FinReport:
                     elif pivot_grp == 'cl_date':
                         pivot_pos = 1
                     pivot_rows = [_[pivot_pos] for _ in self.dates]
-                else:  # assume dim is loc/fun - pivot_sql generated in setup_loc_fun()
+                else:  # pivot_sql generated in setup_...() below
                     pivot_sql = ' '.join(self.pivot_sql)
                     async with context.db_session.get_connection() as db_mem_conn:
                         conn = db_mem_conn.db
@@ -315,6 +316,17 @@ class FinReport:
                     f'<mem_col col_name="{col_name}" data_type="{data_type}" short_descr="{col_head}" '
                     f'long_descr="{col_head}" col_head="{col_head}"/>'
                     )
+        for col_name, expr, col_head, data_type, lng in calc_cols:
+            if data_type == 'DEC':
+                memobj_defn.append(
+                    f'<mem_col col_name="{col_name}" data_type="{data_type}" short_descr="{col_head}" '
+                    f'long_descr="{col_head}" col_head="{col_head}" db_scale="2"/>'
+                    )
+            else:
+                memobj_defn.append(
+                    f'<mem_col col_name="{col_name}" data_type="{data_type}" short_descr="{col_head}" '
+                    f'long_descr="{col_head}" col_head="{col_head}"/>'
+                    )
         memobj_defn.append('</mem_obj>')
         mem_obj = await db.objects.get_mem_object(context,
             memobj_name, table_defn=etree.fromstring(''.join(memobj_defn)))
@@ -331,6 +343,14 @@ class FinReport:
                 True,  # readonly
                 ))
             expand = False
+        for col in calc_cols:
+            cursor_cols.append((
+                'cur_col',  # type - reqd by ht.gui_grid
+                col[0],  # col_name
+                col[4],  # lng
+                expand,
+                True,  # readonly
+                ))
         mem_obj.cursor_defn = [
             cursor_cols,
             [],  # filter
@@ -347,6 +367,16 @@ class FinReport:
                 await mem_obj.init()
                 for col, dat in zip(columns, row):
                     await mem_obj.setval(col[0], dat)
+
+                for calc_col in calc_cols:
+                    col_name = calc_col[0]
+                    col_val = await eval_elem(calc_col[1], mem_obj)
+                    await mem_obj.setval(col_name, col_val)
+                # val = await eval_elem('(curr - prev)', mem_obj)
+                # print(val)
+                # val = await eval_elem('((curr - prev) * 100 / prev)', mem_obj)
+                # print(val)
+
                 await mem_obj.save()
                 if self.cflow_param is not None:
                     tot += await mem_obj.getval('tran_tot')
@@ -386,16 +416,19 @@ class FinReport:
                 rows = await sql_fin_yr(self.context, n)
 
         if date_type == 'as_at':
+            self.tot_col_name = 'tran_tot'
             if date_subtype == 'literal':
                 return [dt.fromisoformat(_) for _ in date_values]
             else:
                 return rows
         elif date_type == 'from_to':
+            self.tot_col_name = 'tran_day'
             if date_subtype == 'literal':
                 return [(dt.fromisoformat(op_dt), dt.fromisoformat(cl_dt)) for op_dt, cl_dt in date_values]
             else:
                 return rows
         elif date_type == 'bf_cf':
+            self.tot_col_name = 'tran_tot'
             if date_subtype == 'literal':
                 return [(dt.fromisoformat(op_dt), dt.fromisoformat(cl_dt)) for op_dt, cl_dt in date_values]
             else:
@@ -459,7 +492,11 @@ class FinReport:
 
         assert grp_name in level_data, f'{grp_name} not in {[x for x in level_data]}'
 
-        if self.db_table.table_name == 'gl_totals' and self.cflow_param is None:  # check for link to nsls/npch
+        if (
+                self.expand_subledg
+                and self.db_table.table_name == 'gl_totals'
+                and self.cflow_param is None
+                ):  # check for link to nsls/npch
             grp_obj = await db.objects.get_db_object(context, 'gl_groups')
             where = [['WHERE', '', 'link_to_subledg', 'IS NOT', None, '']]
             all_grp = grp_obj.select_many(where=where, order=[])
@@ -501,6 +538,12 @@ class FinReport:
                 else:  # if no filter, include all sub_ledgers
                     self.links_to_subledg.append(link_obj)
 
+        if self.pivot_on is not None:
+            pivot_dim, pivot_grp = self.pivot_on
+            if pivot_dim == 'code' and pivot_grp is not None:
+                await self.setup_code_pivot(company,
+                    type_colname, levels, level_data, grp_name, parent_id, filter, pivot_grp)
+
         if self.links_to_subledg:
             if include_zeros:
                 await self.setup_code_cte(context, company,
@@ -519,6 +562,42 @@ class FinReport:
             else:
                 await self.setup_code_sql_without_cte(context, company,
                     group_table_name, levels, level_data, grp_name, parent_id, filter)
+
+    async def setup_code_pivot(self, company, type_colname, levels, level_data,
+            grp_name, parent_id, filter, pivot_grp):
+        toplevel_type = levels[1]
+        order_by = []
+        self.pivot_sql.append(f'SELECT {pivot_grp} FROM (')
+        self.pivot_sql.append(f'SELECT')
+        self.pivot_sql.append(f'code_{toplevel_type}.row_id AS code_{toplevel_type}_id')
+        for lvl, (col_name, seq_name) in reversed(level_data.items()):
+            self.pivot_sql.append(f', code_{lvl}.{col_name} AS code_{lvl}')
+            self.pivot_sql.append(f', code_{lvl}.{seq_name} AS code_{lvl}_{seq_name}')
+            order_by.append(f'code_{lvl}_{seq_name}')
+            if lvl == grp_name:
+                break
+        self.pivot_sql.append(f'FROM {company}.gl_groups code_{toplevel_type}')
+        prev_type = f'code_{toplevel_type}'
+        for type in levels[2:]:  # ignore 'root' and 'toplevel'
+            if prev_type == pivot_grp:
+                break
+            self.pivot_sql.append(
+                f'JOIN {company}.gl_groups code_{type} ON code_{type}.{parent_id} = {prev_type}.row_id'
+                )
+            prev_type = f'code_{type}'
+        self.pivot_sql.append(f'WHERE code_{toplevel_type}.{type_colname} = {dbc.param_style}')
+        self.pivot_params.append(toplevel_type)
+
+        for (test, lbr, level, op, expr, rbr) in filter:
+            self.pivot_sql.append(
+                f'{test} {lbr}code_{level}.{level_data[level][0]} {op} {dbc.param_style}{rbr}'
+                )
+            if expr.startswith("'"):  # literal string
+                expr = expr[1:-1]
+            self.pivot_params.append(expr)
+
+        self.pivot_sql.append(') _')
+        self.pivot_sql.append('ORDER BY ' + ', '.join(order_by))
 
     async def setup_code_cte(self, context, company,
             group_table_name, type_colname, levels, level_data, grp_name, parent_id, filter):
@@ -682,7 +761,7 @@ class FinReport:
         if self.pivot_on is not None:
             pivot_dim, pivot_grp = self.pivot_on
             if pivot_dim == prefix and pivot_grp is not None:
-                await self.setup_lf_pivot(context, company, table_name,
+                await self.setup_lf_pivot(company, table_name,
                     prefix, type_colname, levels, level_data, grp_name, parent_id, filter, pivot_grp)
 
         if include_zeros:
@@ -694,28 +773,30 @@ class FinReport:
             await self.setup_lf_sql_without_cte(context, company, table_name,
                 prefix, levels, level_data, grp_name, parent_id, filter)
 
-    async def setup_lf_pivot(self, context, company, table_name,
+    async def setup_lf_pivot(self, company, table_name,
             prefix, type_colname, levels, level_data, grp_name, parent_id, filter, pivot_grp):
-        leaf_type = levels[-1]
+        toplevel_type = levels[1]
         order_by = []
         self.pivot_sql.append(f'SELECT {pivot_grp} FROM (')
         self.pivot_sql.append(f'SELECT')
-        self.pivot_sql.append(f'{prefix}_{leaf_type}.row_id AS {prefix}_{leaf_type}_id')
+        self.pivot_sql.append(f'{prefix}_{toplevel_type}.row_id AS {prefix}_{toplevel_type}_id')
         for lvl, (col_name, seq_name) in reversed(level_data.items()):
             self.pivot_sql.append(f', {prefix}_{lvl}.{col_name} AS {prefix}_{lvl}')
             self.pivot_sql.append(f', {prefix}_{lvl}.{seq_name} AS {prefix}_{lvl}_{seq_name}')
             order_by.append(f'{prefix}_{lvl}_{seq_name}')
             if lvl == grp_name:
                 break
-        self.pivot_sql.append(f'FROM {company}.{table_name} {prefix}_{leaf_type}')
-        prev_type = f'{prefix}_{leaf_type}'
-        for type in reversed(levels[1:-1]):  # ignore 'root' and 'leaf'
+        self.pivot_sql.append(f'FROM {company}.{table_name} {prefix}_{toplevel_type}')
+        prev_type = f'{prefix}_{toplevel_type}'
+        for type in levels[2:]:  # ignore 'root' and 'toplevel'
+            if prev_type == pivot_grp:
+                break
             self.pivot_sql.append(
-                f'JOIN {company}.{table_name} {prefix}_{type} ON {prefix}_{type}.row_id = {prev_type}.{parent_id}'
+                f'JOIN {company}.{table_name} {prefix}_{type} ON {prefix}_{type}.{parent_id} = {prev_type}.row_id'
                 )
             prev_type = f'{prefix}_{type}'
-        self.pivot_sql.append(f'WHERE {prefix}_{leaf_type}.{type_colname} = {dbc.param_style}')
-        self.pivot_params.append(leaf_type)
+        self.pivot_sql.append(f'WHERE {prefix}_{toplevel_type}.{type_colname} = {dbc.param_style}')
+        self.pivot_params.append(toplevel_type)
 
         for (test, lbr, level, op, expr, rbr) in filter:
             self.pivot_sql.append(
@@ -1317,7 +1398,8 @@ class FinReport:
                 for ob in self.order_by:
                     if ob.split('_')[0] != pivot_dim:
                         order_by.append(ob)
-                sql.append(f"ORDER BY {', '.join(_ for _ in order_by)}")
+                if order_by:
+                    sql.append(f"ORDER BY {', '.join(_ for _ in order_by)}")
 
         return (' '.join(sql), sql_params)
 
@@ -1416,7 +1498,7 @@ async def sql_curr_yr(context):
     sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
     sql.append(f'WHERE state = {dbc.param_style}')
     params.append('current')
-    if context.ledger_row_id is not None:
+    if context.module_id != 'gl':
         sql.append(f'AND ledger_row_id = {dbc.param_style}')
         params.append(context.ledger_row_id)
     sql.append(')')

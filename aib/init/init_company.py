@@ -657,18 +657,27 @@ async def setup_finrpts(context, conn):
         await finrpt_defn.setval('descr', rpt.report_name)
         await finrpt_defn.setval('table_name', rpt.table_name)
         await finrpt_defn.setval('date_params', rpt.date_params)
-        await finrpt_defn.setval('tot_col_name', rpt.tot_col_name)
         await finrpt_defn.setval('group_params', rpt.groups)
-        await finrpt_defn.setval('column_params', rpt.columns)
-        await finrpt_defn.setval('pivot_on', rpt.pivot_on)
-        await finrpt_defn.setval('cashflow_params', rpt.cashflow_params)
+        await finrpt_defn.setval('columns', rpt.columns)
+        if hasattr(rpt, 'calc_cols'):
+            await finrpt_defn.setval('calc_cols', rpt.calc_cols)
+        if hasattr(rpt, 'expand_subledg'):
+            await finrpt_defn.setval('expand_subledg', rpt.expand_subledg)
+        if hasattr(rpt, 'pivot_on'):
+            await finrpt_defn.setval('pivot_on', rpt.pivot_on)
+        if hasattr(rpt, 'cashflow_params'):
+            await finrpt_defn.setval('cashflow_params', rpt.cashflow_params)
         await finrpt_defn.save()
 
+    await setup_finrpt('tb_by_maj')
     await setup_finrpt('tb_by_int')
+    await setup_finrpt('tb_by_code')
+    await setup_finrpt('tb_pivot_maj')
     await setup_finrpt('ar_by_src')
     await setup_finrpt('ar_pivot_src')
     await setup_finrpt('int_by_loc')
     await setup_finrpt('int_pivot_loc')
+    await setup_finrpt('int_pivot_date')
     await setup_finrpt('cb_cash_flow')
 
 async def setup_processes(context, conn):
@@ -756,9 +765,13 @@ async def setup_menus(context, conn, company_name):
                 ['Capture journal', 'form', 'gl_jnl'],
                 ]],
             ['Gl reports', 'menu', 'gl', [
-                ['Trial balance', 'finrpt', 'tb_by_int'],
+                ['Trial balance', 'finrpt', 'tb_by_code'],
+                ['Trial balance by int', 'finrpt', 'tb_by_int'],
+                ['Trial balance by maj', 'finrpt', 'tb_by_maj'],
+                ['Trial balance pivot maj', 'finrpt', 'tb_pivot_maj'],
                 ['Int by loc', 'finrpt', 'int_by_loc'],
                 ['Int pivot loc', 'finrpt', 'int_pivot_loc'],
+                ['Int pivot date', 'finrpt', 'int_pivot_date'],
                 ['Cash flow', 'finrpt', 'cb_cash_flow'],
                 ]],
             ['Period end procedure', 'form', 'gl_ledger_periods'],

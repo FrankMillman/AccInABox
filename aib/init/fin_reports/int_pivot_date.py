@@ -15,10 +15,7 @@ date_params = [
     None,       # date_values
     ]
 
-tot_col_name = 'tran_day'
-
 groups = []
-
 groups.append([
     'code',  # dim
     'int',   # grp_name
@@ -30,7 +27,7 @@ groups.append([
     True,  # include zero bals
     ])
 
-cashflow_params = None
+expand_subledg = True
 pivot_on = ('date', 'cl_date')
 
 columns = [
