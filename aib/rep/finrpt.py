@@ -15,9 +15,9 @@ from common import AibError
 from common import log, debug
 
 """
-Read in a financial report definition from sys_finrpt_defns.
+Read in a financial report definition from gl_finrpt_defns.
 Generate the SQL to be executed.
-Create a mem table 'finrpt_memobj' with a field for each column in the report.
+Create a mem table 'finrpt_obj' with a field for each column in the report.
 Execute the SQL, write each row into the mem table.
 Call the form defn '_sys.finrpt_grid' to display the result.
 
@@ -30,11 +30,12 @@ Report defn has the following features -
         location (or any higher level user-defined in adm_locations)
         function (or any higher level user-defined in adm_functions)
         source code
+        date
 
 3.  Report type -
         'as_at - balance at specified date
-        'from_to' - totals within a range of start date/end date
-        'bf_cf' - opening and closing balance at op date/cl date (movement calculated by cf_bal - op_bal)
+        'from_to' - totals within a range of from date/to date
+        'bf_cf' - opening and closing balance at op date/cl date (movement calculated by cl_bal - op_bal)
 
     Dates can be selected in a variety of ways, taken from financial calendar or literal dates
 
@@ -89,7 +90,7 @@ General format of SQL generated -
         to select any 'transfers in'.
 
     For 'as_at', select the balance from 'tran_tot' where tran_date <= bal_date using 'PARTITION BY'.
-    For 'from_to', select SUM(tran_day) from the start date to the end date.
+    For 'from_to', select SUM(tran_day) where tran_date between from_date and to_date.
     For 'bf_cf', select the cl_bal from 'tran_tot' where tran_date <= cl_date, using 'PARTITION BY'.
     Then use LEFT JOIN to select the op_bal from 'tran_tot' where tran_date < op_date, using 'PARTITION BY'.
 
@@ -116,10 +117,11 @@ General format of SQL generated -
 
 
 class FinReport:
-    async def _ainit_(self, context, session, report_name):
+    async def _ainit_(self, report_defn, session, date_params=None, location_id=None, function_id=None):
 
-        self.context = context
+        self.context = context = report_defn.context
         company = context.company
+        param = dbc.param_style
 
         self.sql_joins = []
         self.sql_cols = []
@@ -130,14 +132,9 @@ class FinReport:
         self.group_by = []
         self.pivot_group_by = []
         self.order_by = []
+        self.cf_join_bf = []
         self.links_to_subledg = []
         self.ctes = []
-
-        report_defn = await db.objects.get_db_object(context, 'sys_finrpt_defns')
-        await report_defn.select_row({'report_name': report_name})
-        if not report_defn.exists:
-            await context.close()
-            raise AibError(head=f'Report {report_name}', body='Report does not exist')
 
         table_name = await report_defn.getval('table_name')
         db_table = self.db_table = await db.objects.get_db_table(context, company, table_name)
@@ -149,15 +146,21 @@ class FinReport:
                 self.sql_joins.append(
                     f'JOIN {company}.{tgt_table} tgt ON tgt.row_id = a.{src}'
                     )
-                self.sql_where.append(f'AND tgt.{tgt} = {dbc.param_style}')
+                self.sql_where.append(f'AND tgt.{tgt} = {param}')
                 self.sql_params.append(context.ledger_row_id)
             else:
-                self.sql_where.append(f'AND a.{db_table.ledger_col} = {dbc.param_style}')
+                self.sql_where.append(f'AND a.{db_table.ledger_col} = {param}')
                 self.sql_params.append(context.ledger_row_id)
 
-        self.dates = await self.setup_dates(await report_defn.getval('date_params'))
-        if not self.dates:
-            raise AibError(head=report_name, body='No rows found for specified dates')
+        report_type = await report_defn.getval('report_type')
+        if report_type == 'as_at':
+            self.tot_col_name = 'tran_tot'
+        elif report_type == 'from_to':
+            self.tot_col_name = 'tran_day'
+        elif report_type == 'bf_cf':
+            self.tot_col_name = 'tran_tot'
+
+        include_zeros = await report_defn.getval('include_zeros')
         self.expand_subledg = await report_defn.getval('expand_subledg')
         self.pivot_on = await report_defn.getval('pivot_on')
         columns = await report_defn.getval('columns')
@@ -172,23 +175,67 @@ class FinReport:
         #      [n]sls_cust[_uea]_totals and [n]pch_supp[_uex]_totals have 2 codes
         #      this will need special handling - how??
 
-        for (dim, grp_name, filter, include_zeros) in group_params:
-            if dim == 'code':
-                await self.setup_grp_code(grp_name, filter, include_zeros)
+        self.dates = None
+        for (dim, args) in group_params:
+            if dim == 'date':
+                self.dates = await self.setup_dates(report_type, args, date_params)
+                if not self.dates:
+                    raise AibError(
+                        head=await report_defn.getval('report_name'),
+                        body='No rows found for specified dates.'
+                        )
+            elif dim == 'code':
+                await self.setup_grp_code(args, include_zeros)
             elif dim == 'loc':
-                await self.setup_loc_fun('loc', grp_name, filter, include_zeros)
+                await self.setup_loc_fun('loc', args, include_zeros)
             elif dim == 'fun':
-                await self.setup_loc_fun('fun', grp_name, filter, include_zeros)
+                await self.setup_loc_fun('fun', args, include_zeros)
             elif dim == 'src':
-                await self.setup_source(grp_name, filter, include_zeros)
+                await self.setup_source(args)
 
-        if self.combo_cols:  # indicates that a 'cte' has been generated for 'include_zeros = True'
-            if self.date_type == 'as_at':
+        if location_id is not None:  # select single location
+            db_table = await db.objects.get_db_table(context, company, 'adm_locations')
+            tree_params = db_table.tree_params
+            group, col_names, levels = tree_params
+            type_colname, level_types, sublevel_type = levels
+            leaf_node = level_types[-1][0]
+            args = [leaf_node, [['AND', '', leaf_node, '=', repr(location_id), '']]]
+            await self.setup_loc_fun('loc', args, include_zeros, single=True)
+
+        if function_id is not None:  # select single function
+            db_table = await db.objects.get_db_table(context, company, 'adm_functions')
+            tree_params = db_table.tree_params
+            group, col_names, levels = tree_params
+            type_colname, level_types, sublevel_type = levels
+            leaf_node = level_types[-1][0]
+            args = [leaf_node, [['AND', '', leaf_node, '=', repr(function_id), '']], False]
+            await self.setup_loc_fun('fun', args, single=True)
+
+        if self.dates is None:  # 'dates' not in group_params - assume 'single date'
+            if date_params is not None:  # tuple of (start_date, end_date)
+                self.dates = [date_params]  # must be a list
+            else:  # no parameters provided
+                self.dates = await sql_curr_per(self.context)
+            if self.pivot_on is not None and self.pivot_on[0] != 'date':
+                if report_type == 'as_at':
+                    self.pivot_group_by.append('bal_date')
+                elif report_type == 'from_to':
+                    self.pivot_group_by.append('from_date')
+                    self.pivot_group_by.append('to_date')
+                elif report_type == 'bf_cf':
+                    self.pivot_group_by.append('op_date')
+                    self.pivot_group_by.append('cl_date')
+
+        if report_type == 'as_at':
+            self.dates = [x[1] for x in self.dates]  # only need closing date
+
+        if self.ctes:  # a 'cte' has been generated for 'include_zeros = True'
+            if report_type == 'as_at':
                 self.combo_cols.append('bal_date')
-            elif self.date_type == 'from_to':
-                self.combo_cols.append('op_date')
-                self.combo_cols.append('cl_date')
-            elif self.date_type == 'bf_cf':
+            elif report_type == 'from_to':
+                self.combo_cols.append('from_date')
+                self.combo_cols.append('to_date')
+            elif report_type == 'bf_cf':
                 self.combo_cols.append('op_date')
                 self.combo_cols.append('cl_date')
             self.combo_cols.append('tran_tot')
@@ -212,11 +259,11 @@ class FinReport:
 
             if self.cflow_param == '$all':
                 self.sql_where.append(
-                    f"AND COALESCE(ctrl_mod.module_id, '') != {dbc.param_style}"
+                    f"AND COALESCE(ctrl_mod.module_id, '') != {param}"
                     )
                 self.sql_params.append('cb')
                 self.sql_where.append(
-                    f"AND orig_mod.module_id = {dbc.param_style}"
+                    f"AND orig_mod.module_id = {param}"
                     )
                 self.sql_params.append('cb')
             else:
@@ -237,10 +284,10 @@ class FinReport:
             cflow_sql.append(f'ORDER BY a.tran_date DESC) row_num FROM {company}.cb_totals a')
             if self.cflow_param != '$all':
                 cflow_sql.append(f'JOIN {company}.cb_ledger_params ledg ON ledg.row_id = a.ledger_row_id')
-            cflow_sql.append(f'WHERE a.deleted_id = 0 AND a.tran_date < {dbc.param_style}')
+            cflow_sql.append(f'WHERE a.deleted_id = 0 AND a.tran_date < {param}')
             cflow_params.append(self.dates[0][0])
             if self.cflow_param != '$all':
-                cflow_sql.append(f'AND ledg.ledger_id = {dbc.param_style}')
+                cflow_sql.append(f'AND ledg.ledger_id = {param}')
                 cflow_params.append(self.cflow_param)
             cflow_sql.append(') tot WHERE row_num = 1) bf')
             cflow_sql.append(', (')
@@ -251,10 +298,10 @@ class FinReport:
             cflow_sql.append(f'ORDER BY a.tran_date DESC) row_num FROM {company}.cb_totals a')
             if self.cflow_param != '$all':
                 cflow_sql.append(f'JOIN {company}.cb_ledger_params ledg ON ledg.row_id = a.ledger_row_id')
-            cflow_sql.append(f'WHERE a.deleted_id = 0 AND a.tran_date <= {dbc.param_style}')
+            cflow_sql.append(f'WHERE a.deleted_id = 0 AND a.tran_date <= {param}')
             cflow_params.append(self.dates[0][1])
             if self.cflow_param != '$all':
-                cflow_sql.append(f'AND ledg.ledger_id = {dbc.param_style}')
+                cflow_sql.append(f'AND ledg.ledger_id = {param}')
                 cflow_params.append(self.cflow_param)
             cflow_sql.append(') tot WHERE row_num = 1) cf')
 
@@ -268,11 +315,9 @@ class FinReport:
             pivot_dim, pivot_grp = self.pivot_on
             if pivot_grp is not None:  # must generate pivot columns
                 if pivot_dim == 'date':
-                    if pivot_grp == 'bal_date':
+                    if pivot_grp in ('bal_date', 'op_date', 'from_date'):
                         pivot_pos = 0
-                    elif pivot_grp == 'op_date':
-                        pivot_pos = 0
-                    elif pivot_grp == 'cl_date':
+                    elif pivot_grp in ('cl_date', 'to_date'):
                         pivot_pos = 1
                     pivot_rows = [_[pivot_pos] for _ in self.dates]
                 else:  # pivot_sql generated in setup_...() below
@@ -283,29 +328,28 @@ class FinReport:
                 pivot_cols = []
                 for pos, col in enumerate(columns):
                     if col[0] == pivot_grp:  # this is the 'placeholder' column for 'all pivot cols'
-                        for pivot_row in pivot_rows:
+                        for pivot_no, pivot_val in enumerate(pivot_rows):
                             pivot_col = col[:]  # make a copy
+                            pivot_col[0] = f'pivot_{pivot_no}'  # col_name
                             if pivot_dim == 'date':
-                                pivot_col[0] = 'D_' + str(pivot_row).replace('-', '_')  # col_name
-                                pivot_col[2] = pivot_row.strftime(col[2])  # col_head
-                            else:  # assume dim is loc/fun
-                                pivot_col[0] = pivot_row.replace('-', '_')  # col_name
-                                pivot_col[2] = pivot_row  # col_head
-                            pivot_col[5] = f"{pivot_grp} = {dbc.param_style}"
-                            pivot_params.append(pivot_row)
+                                pivot_col[2] = pivot_val.strftime(col[2])  # col_head
+                            else:
+                                pivot_col[2] = pivot_val  # col_head
+                            pivot_col[5] = f'{pivot_grp} = {param}'  # used in CASE WHEN ... in gen_sql()
+                            pivot_params.append(pivot_val)
                             pivot_cols.append(pivot_col)
                         break
                 columns[pos:pos+1] = pivot_cols  # replace placeholder col with actual cols
 
-        sql, params = self.gen_sql(columns, pivot_params)
+        sql, params = self.gen_sql(report_type, columns, pivot_params)
         # print(sql)
         # print(params)
         # input()
 
-        memobj_name = 'finrpt_memobj'
         memobj_defn = []
-        memobj_defn.append('<mem_obj name="finrpt_memobj">')
-        for col_name, col_sql, col_head, data_type, lng, pvt in columns:
+        memobj_defn.append('<mem_obj name="finrpt_obj">')
+
+        for col_name, col_sql, col_head, data_type, lng, pvt, tot in columns:
             if data_type == 'DEC':
                 memobj_defn.append(
                     f'<mem_col col_name="{col_name}" data_type="{data_type}" short_descr="{col_head}" '
@@ -316,6 +360,7 @@ class FinReport:
                     f'<mem_col col_name="{col_name}" data_type="{data_type}" short_descr="{col_head}" '
                     f'long_descr="{col_head}" col_head="{col_head}"/>'
                     )
+
         for col_name, expr, col_head, data_type, lng in calc_cols:
             if data_type == 'DEC':
                 memobj_defn.append(
@@ -327,10 +372,35 @@ class FinReport:
                     f'<mem_col col_name="{col_name}" data_type="{data_type}" short_descr="{col_head}" '
                     f'long_descr="{col_head}" col_head="{col_head}"/>'
                     )
+
         memobj_defn.append('</mem_obj>')
         mem_obj = await db.objects.get_mem_object(context,
-            memobj_name, table_defn=etree.fromstring(''.join(memobj_defn)))
-        context.data_objects['grid_obj'] = mem_obj
+            'finrpt_obj', table_defn=etree.fromstring(''.join(memobj_defn)))
+        context.data_objects['finrpt_obj'] = mem_obj
+
+        tots_footer = []
+        tot_cols = [col[6] for col in columns]
+        if any(tot is True for tot in tot_cols):
+            tots_dict = {}
+            tots_defn = []
+            tots_defn.append('<mem_obj name="finrpt_totals">')
+            for pos, tot in enumerate(tot_cols):
+                if tot is True:
+                    col_name = columns[pos][0]
+                    tots_defn.append(
+                        f'<mem_col col_name="{col_name}" data_type="DEC" short_descr="{col_name}" '
+                        f'long_descr="{col_name}" col_head="{col_name}" db_scale="2"/>'
+                        )
+                    tots_footer.append(f'finrpt_totals.{col_name}')
+                    tots_dict[col_name] = 0
+                elif tot is False:
+                    tots_footer.append(None)
+                else:
+                    tots_footer.append(repr(tot))  # string to appear on footer row
+            tots_defn.append('</mem_obj>')
+            tots_obj = await db.objects.get_mem_object(context,
+                'finrpt_totals', table_defn=etree.fromstring(''.join(tots_defn)))
+            context.data_objects['finrpt_totals'] = tots_obj
 
         cursor_cols = []
         expand = True  # set first col to 'expand', then set expand = False
@@ -358,7 +428,6 @@ class FinReport:
             None,  # formview_name
             ]
 
-        # need option to define 'total' fields - accumulate totals while saving
         if self.cflow_param is not None:
             tot = 0
         async with context.db_session.get_connection() as db_mem_conn:
@@ -367,74 +436,72 @@ class FinReport:
                 await mem_obj.init()
                 for col, dat in zip(columns, row):
                     await mem_obj.setval(col[0], dat)
+                    if col[6] is True:  # build total
+                        tots_dict[col[0]] += dat
 
                 for calc_col in calc_cols:
                     col_name = calc_col[0]
                     col_val = await eval_elem(calc_col[1], mem_obj)
                     await mem_obj.setval(col_name, col_val)
-                # val = await eval_elem('(curr - prev)', mem_obj)
-                # print(val)
-                # val = await eval_elem('((curr - prev) * 100 / prev)', mem_obj)
-                # print(val)
 
                 await mem_obj.save()
                 if self.cflow_param is not None:
                     tot += await mem_obj.getval('tran_tot')
+
+        if any(tot is True for tot in tot_cols):
+            for tot_colname, tot_value in tots_dict.items():
+                await tots_obj.setval(tot_colname, tot_value)
+
         if self.cflow_param is not None:
             assert op_bal - tot == cl_bal
 
         form = ht.form.Form()
         await form._ainit_(context, session, '_sys.finrpt_grid',
-            grid_params=(memobj_name, None))
+            grid_params=('finrpt_obj', tots_footer))
 
-    async def setup_dates(self, date_params):
-        # company = self.context.company
-        date_type, date_subtype, date_values = date_params
-        self.date_type = date_type
+        # remove reference to mem_obj
+        del context.data_objects['finrpt_obj']
+        # remove reference to mem_table - will be dropped from in-memory database
+        del context.mem_tables_open['finrpt_obj']
+        if any(tot is True for tot in tot_cols):
+            del context.data_objects['finrpt_totals']
+            del context.mem_tables_open['finrpt_totals']
 
-        # if not 'literal' -
-        #   fin_yr: dates for each period in fin_yr; args: fin_yr
-        #   fin_per: each day for period; args: fin_yr, fin_per
-        #   curr_yr: dates for all periods with year_no = current_period.year_no; args: None
-        #   last_n: dates for last n periods starting with current_period-1; args: n
-        #   curr_per_v_prev_per: current_period-1, current_period-2; args: None
-        #   curr_per_v_prev_yr: current_period-1, same period prev yr; args: None
+    async def setup_dates(self, report_type, args, date_params):
+        date_type, date_seq, sub_args = args
+        if date_type == 'fin_yr':
+            rows = await sql_fin_yr(self.context, date_seq, sub_args, date_params)
+        elif date_type == 'date_range':
+            rows = await sql_date_range(self.context, date_seq, sub_args, date_params)
+        elif date_type == 'last_n_per':
+            rows = await sql_last_n_per(self.context, date_seq, sub_args, date_params)
+        elif date_type == 'last_n_days':
+            rows = await sql_last_n_days(self.context, date_seq, sub_args, date_params)
 
-        if date_subtype != 'literal':
-            if date_subtype == 'fin_yr':
-                fin_yr = date_values
-                rows = await sql_fin_yr(self.context, fin_yr)
-            elif date_subtype == 'fin_per':
-                fin_yr, fin_per = date_values  # a tuple
-                rows = await sql_fin_per(self.context, fin_yr, fin_per)
-            elif date_subtype == 'curr_cl_date':
-                rows = await sql_curr_cl_date(self.context)
-            elif date_subtype == 'curr_yr':
-                rows = await sql_curr_yr(self.context)
-            elif date_subtype == 'last_n':
-                n = date_values
-                rows = await sql_fin_yr(self.context, n)
+        if self.pivot_on is None:
+            if report_type == 'as_at':
+                self.order_by.append(f"bal_date{' DESC' if date_seq == 'd' else ''}")
+            elif report_type == 'from_to':
+                self.order_by.append(f"from_date{' DESC' if date_seq == 'd' else ''}")
+            elif report_type == 'bf_cf':
+                self.order_by.append(f"op_date{' DESC' if date_seq == 'd' else ''}")
+        elif self.pivot_on[0] != 'date':
+            if report_type == 'as_at':
+                self.order_by.append(f"bal_date{' DESC' if date_seq == 'd' else ''}")
+                self.pivot_group_by.append('bal_date')
+            elif report_type == 'from_to':
+                self.order_by.append(f"from_date{' DESC' if date_seq == 'd' else ''}")
+                self.pivot_group_by.append('from_date')
+                self.pivot_group_by.append('to_date')
+            elif report_type == 'bf_cf':
+                self.order_by.append(f"op_date{' DESC' if date_seq == 'd' else ''}")
+                self.pivot_group_by.append('op_date')
+                self.pivot_group_by.append('cl_date')
 
-        if date_type == 'as_at':
-            self.tot_col_name = 'tran_tot'
-            if date_subtype == 'literal':
-                return [dt.fromisoformat(_) for _ in date_values]
-            else:
-                return rows
-        elif date_type == 'from_to':
-            self.tot_col_name = 'tran_day'
-            if date_subtype == 'literal':
-                return [(dt.fromisoformat(op_dt), dt.fromisoformat(cl_dt)) for op_dt, cl_dt in date_values]
-            else:
-                return rows
-        elif date_type == 'bf_cf':
-            self.tot_col_name = 'tran_tot'
-            if date_subtype == 'literal':
-                return [(dt.fromisoformat(op_dt), dt.fromisoformat(cl_dt)) for op_dt, cl_dt in date_values]
-            else:
-                return rows
+        return rows
 
-    async def setup_grp_code(self, grp_name, filter, include_zeros):
+    async def setup_grp_code(self, args, include_zeros):
+        grp_name, filter = args
         context = self.context
         company = context.company
 
@@ -544,6 +611,12 @@ class FinReport:
                 await self.setup_code_pivot(company,
                     type_colname, levels, level_data, grp_name, parent_id, filter, pivot_grp)
 
+        for lvl, (col_name, seq_name) in reversed(level_data.items()):
+            self.combo_cols.append(f'code_{lvl}')
+            self.combo_cols.append(f'code_{lvl}_{seq_name}')
+            if lvl == grp_name:
+                break
+
         if self.links_to_subledg:
             if include_zeros:
                 await self.setup_code_cte(context, company,
@@ -611,11 +684,13 @@ class FinReport:
         for lvl, (col_name, seq_name) in reversed(level_data.items()):
             cte.append(f', code_{lvl}.{col_name} AS code_{lvl}')
             cte.append(f', code_{lvl}.{seq_name} AS code_{lvl}_{seq_name}')
-            if self.pivot_on is not None:
-                if self.pivot_on[0] != 'code':
-                    self.pivot_group_by.append(f'code_{lvl}')
-                    self.pivot_group_by.append(f'code_{lvl}_{seq_name}')
-            self.order_by.append(f'code_{lvl}_{seq_name}')
+            if self.pivot_on is None:
+                self.order_by.append(f'code_{lvl}_{seq_name}')
+            elif self.pivot_on[0] != 'code':
+                self.pivot_group_by.append(f'code_{lvl}')
+                self.pivot_group_by.append(f'code_{lvl}_{seq_name}')
+                self.order_by.append(f'code_{lvl}_{seq_name}')
+            self.cf_join_bf.append(f'code_{lvl}_{seq_name}')
             if lvl == grp_name:
                 break
         cte.append(f'FROM {company}.{group_table_name} code_{leaf_type}')
@@ -683,11 +758,11 @@ class FinReport:
         self.part_cols.append(f'code_{leaf_type}.row_id AS code_{leaf_type}_id')
         self.group_by.append(f'codes.code_{leaf_type}_id')
 
-        for lvl, (col_name, seq_name) in reversed(level_data.items()):
-            self.combo_cols.append(f'code_{lvl}')
-            self.combo_cols.append(f'code_{lvl}_{seq_name}')
-            if lvl == grp_name:
-                break
+        # for lvl, (col_name, seq_name) in reversed(level_data.items()):
+        #     self.combo_cols.append(f'code_{lvl}')
+        #     self.combo_cols.append(f'code_{lvl}_{seq_name}')
+        #     if lvl == grp_name:
+        #         break
 
     async def setup_code_sql_without_cte(self, context, company,
             group_table_name, levels, level_data, grp_name, parent_id, filter):
@@ -706,11 +781,13 @@ class FinReport:
             self.part_cols.append(f'code_{lvl}.{seq_name} AS code_{lvl}_{seq_name}')
             self.group_by.append(f'code_{lvl}')
             self.group_by.append(f'code_{lvl}_{seq_name}')
-            if self.pivot_on is not None:
-                if self.pivot_on[0] != 'code':
-                    self.pivot_group_by.append(f'code_{lvl}')
-                    self.pivot_group_by.append(f'code_{lvl}_{seq_name}')
-            self.order_by.append(f'code_{lvl}_{seq_name}')
+            if self.pivot_on is None:
+                self.order_by.append(f'code_{lvl}_{seq_name}')
+            elif self.pivot_on[0] != 'code':
+                self.pivot_group_by.append(f'code_{lvl}')
+                self.pivot_group_by.append(f'code_{lvl}_{seq_name}')
+                self.order_by.append(f'code_{lvl}_{seq_name}')
+            self.cf_join_bf.append(f'code_{lvl}_{seq_name}')
             if lvl == grp_name:
                 break
 
@@ -724,7 +801,8 @@ class FinReport:
             self.sql_where.append(f'AND {link_obj.seq_col} != {dbc.param_style}')
             self.sql_params.append(link_obj.group_seq)
 
-    async def setup_loc_fun(self, prefix, grp_name, filter, include_zeros):
+    async def setup_loc_fun(self, prefix, args, include_zeros, single=False):
+        grp_name, filter = args
         context = self.context
         company = context.company
 
@@ -758,11 +836,25 @@ class FinReport:
         for type in reversed(levels[1:-1]):  # ignore 'root' and 'leaf'
             level_data[type] = (code, seq)
 
+        if single:  # only used to select single loc/fun - no grouping/sorting required
+            for (test, lbr, level, op, expr, rbr) in filter:
+                self.sql_where.append(f'{test} {lbr}{prefix}_{level}.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
+                if expr.startswith("'"):  # literal string
+                    expr = expr[1:-1]
+                self.sql_params.append(expr)
+            return
+
         if self.pivot_on is not None:
             pivot_dim, pivot_grp = self.pivot_on
             if pivot_dim == prefix and pivot_grp is not None:
                 await self.setup_lf_pivot(company, table_name,
                     prefix, type_colname, levels, level_data, grp_name, parent_id, filter, pivot_grp)
+
+        for lvl, (col_name, seq_name) in reversed(level_data.items()):
+            self.combo_cols.append(f'{prefix}_{lvl}')
+            self.combo_cols.append(f'{prefix}_{lvl}_{seq_name}')
+            if lvl == grp_name:
+                break
 
         if include_zeros:
             await self.setup_lf_cte(context, company, table_name,
@@ -819,11 +911,13 @@ class FinReport:
         for lvl, (col_name, seq_name) in reversed(level_data.items()):
             cte.append(f', {prefix}_{lvl}.{col_name} AS {prefix}_{lvl}')
             cte.append(f', {prefix}_{lvl}.{seq_name} AS {prefix}_{lvl}_{seq_name}')
-            if self.pivot_on is not None:
-                if self.pivot_on[0] != prefix:
-                    self.pivot_group_by.append(f'{prefix}_{lvl}')
-                    self.pivot_group_by.append(f'{prefix}_{lvl}_{seq_name}')
-            self.order_by.append(f'{prefix}_{lvl}_{seq_name}')
+            if self.pivot_on is None:
+                self.order_by.append(f'{prefix}_{lvl}_{seq_name}')
+            elif self.pivot_on[0] != prefix:
+                self.pivot_group_by.append(f'{prefix}_{lvl}')
+                self.pivot_group_by.append(f'{prefix}_{lvl}_{seq_name}')
+                self.order_by.append(f'{prefix}_{lvl}_{seq_name}')
+            self.cf_join_bf.append(f'{prefix}_{lvl}_{seq_name}')
             if lvl == grp_name:
                 break
         cte.append(f'FROM {company}.{table_name} {prefix}_{leaf_type}')
@@ -856,11 +950,11 @@ class FinReport:
         self.part_cols.append(f'{prefix}_{leaf_type}.row_id AS {prefix}_{leaf_type}_id')
         self.group_by.append(f'{prefix}.{prefix}_{leaf_type}_id')
 
-        for lvl, (col_name, seq_name) in reversed(level_data.items()):
-            self.combo_cols.append(f'{prefix}_{lvl}')
-            self.combo_cols.append(f'{prefix}_{lvl}_{seq_name}')
-            if lvl == grp_name:
-                break
+        # for lvl, (col_name, seq_name) in reversed(level_data.items()):
+        #     self.combo_cols.append(f'{prefix}_{lvl}')
+        #     self.combo_cols.append(f'{prefix}_{lvl}_{seq_name}')
+        #     if lvl == grp_name:
+        #         break
 
     async def setup_lf_sql_without_cte(self, context, company, table_name,
             prefix, levels, level_data, grp_name, parent_id, filter):
@@ -879,11 +973,13 @@ class FinReport:
             self.part_cols.append(f'{prefix}_{lvl}.{seq_name} AS {prefix}_{lvl}_{seq_name}')
             self.group_by.append(f'{prefix}_{lvl}')
             self.group_by.append(f'{prefix}_{lvl}_{seq_name}')
-            if self.pivot_on is not None:
-                if self.pivot_on[0] != prefix:
-                    self.pivot_group_by.append(f'{prefix}_{lvl}')
-                    self.pivot_group_by.append(f'{prefix}_{lvl}_{seq_name}')
-            self.order_by.append(f'{prefix}_{lvl}_{seq_name}')
+            if self.pivot_on is None:
+                self.order_by.append(f'{prefix}_{lvl}_{seq_name}')
+            elif self.pivot_on[0] != prefix:
+                self.pivot_group_by.append(f'{prefix}_{lvl}')
+                self.pivot_group_by.append(f'{prefix}_{lvl}_{seq_name}')
+                self.order_by.append(f'{prefix}_{lvl}_{seq_name}')
+            self.cf_join_bf.append(f'{prefix}_{lvl}_{seq_name}')
             if lvl == grp_name:
                 break
 
@@ -893,7 +989,8 @@ class FinReport:
                 expr = expr[1:-1]
             self.sql_params.append(expr)
 
-    async def setup_source(self, grp_name, filter, include_zeros):
+    async def setup_source(self, args):
+        grp_name, filter = args
         company = self.context.company
 
         self.sql_joins.append(f'JOIN {company}.adm_tran_types src ON src.row_id = a.src_trantype_row_id')
@@ -901,11 +998,13 @@ class FinReport:
         self.part_cols.append('src.row_id AS src_id')
         self.group_by.append('src_type')
         self.group_by.append('src_id')
-        if self.pivot_on is not None:
-            if self.pivot_on[0] != 'src':
-                self.pivot_group_by.append('src_type')
-                self.pivot_group_by.append('src_id')
-        self.order_by.append('src_id')
+        if self.pivot_on is None:
+            self.order_by.append('src_id')
+        elif self.pivot_on[0] != 'src':
+            self.pivot_group_by.append('src_type')
+            self.pivot_group_by.append('src_id')
+            self.order_by.append('src_id')
+        self.cf_join_bf.append('src_id')
 
         for (test, lbr, col_name, op, expr, rbr) in filter:
             self.sql_where.append(f'{test} {lbr}src.{col_name} {op} {dbc.param_style}{rbr}')
@@ -955,7 +1054,7 @@ class FinReport:
                 'a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id'
                 )
             part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
-            part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a ")
+            part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
             for join in self.sql_joins:
                 part_sql.append(join.replace('gl', link_obj.module_id))
             part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(dbc.param_style))
@@ -1005,17 +1104,17 @@ class FinReport:
 
         return part_sql
 
-    def gen_from_to(self, op_date, cl_date, sql_params, link_obj):
+    def gen_from_to(self, from_date, to_date, sql_params, link_obj):
         company = self.context.company
         table_name = self.db_table.table_name
 
         part_sql = []
         part_sql.append('COALESCE(SUM(tran_tot), 0) AS tran_tot')
 
-        part_sql.append(f', {dbc.param_style} AS op_date')
-        sql_params.append(op_date)
-        part_sql.append(f', {dbc.param_style} AS cl_date')
-        sql_params.append(cl_date)
+        part_sql.append(f', {dbc.param_style} AS from_date')
+        sql_params.append(from_date)
+        part_sql.append(f', {dbc.param_style} AS to_date')
+        sql_params.append(to_date)
 
         if self.group_by:
             part_sql.append(f", {', '.join(self.group_by)}")
@@ -1041,15 +1140,15 @@ class FinReport:
                 part_cols.append(part_col)
             if part_cols:
                 part_sql.append(f", {', '.join(part_cols)}")
-            part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a ")
+            part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
             for join in self.sql_joins:
                 part_sql.append(join.replace('gl', link_obj.module_id))
             part_sql.append(
                 'WHERE a.deleted_id = {0} AND a.tran_date BETWEEN {0} AND {0}'.format(dbc.param_style)
                 )
             sql_params.append(0)
-            sql_params.append(op_date)
-            sql_params.append(cl_date)
+            sql_params.append(from_date)
+            sql_params.append(to_date)
             for pos, where in enumerate(self.sql_where):
                 if 'code_' not in where:  # omit 'code' filter, include other filters
                     part_sql.append(where)
@@ -1067,8 +1166,8 @@ class FinReport:
                 'WHERE a.deleted_id = {0} AND a.tran_date BETWEEN {0} AND {0}'.format(dbc.param_style)
                 )
             sql_params.append(0)
-            sql_params.append(op_date)
-            sql_params.append(cl_date)
+            sql_params.append(from_date)
+            sql_params.append(to_date)
 
             part_sql.extend(self.sql_where)
             sql_params.extend(self.sql_params)
@@ -1095,8 +1194,8 @@ class FinReport:
                     'WHERE a.deleted_id = {0} AND a.tran_date BETWEEN {0} AND {0}'.format(dbc.param_style)
                     )
                 sql_params.append(0)
-                sql_params.append(op_date)
-                sql_params.append(cl_date)
+                sql_params.append(from_date)
+                sql_params.append(to_date)
 
                 part_sql.extend(self.sql_where)
                 sql_params.extend(self.sql_params)
@@ -1166,7 +1265,7 @@ class FinReport:
                 'a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id'
                 )
             part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
-            part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a ")
+            part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
             for join in self.sql_joins:
                 part_sql.append(join.replace('gl', link_obj.module_id))
             part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(dbc.param_style))
@@ -1240,7 +1339,7 @@ class FinReport:
                 'a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id'
                 )
             part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
-            part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a ")
+            part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
             for join in self.sql_joins:
                 part_sql.append(join.replace('gl', link_obj.module_id))
             part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date < {0}'.format(dbc.param_style))
@@ -1290,13 +1389,13 @@ class FinReport:
 
         part_sql.append(f') bf')
         on_clause = 'ON'
-        for order in self.order_by:
-            part_sql.append(f'{on_clause} bf.{order} = cf.{order}')
+        for join in self.cf_join_bf:
+            part_sql.append(f'{on_clause} bf.{join} = cf.{join}')
             on_clause = 'AND'
 
         return part_sql
 
-    def gen_sql_body(self, sql, sql_params, date_param, link_obj=None):
+    def gen_sql_body(self, report_type, sql, sql_params, date_param, link_obj=None):
 
         if self.ctes:
             sql.append('SELECT')
@@ -1312,13 +1411,13 @@ class FinReport:
 
         sql.append('SELECT')
 
-        if self.date_type == 'as_at':
+        if report_type == 'as_at':
             bal_date = date_param
             sql += self.gen_as_at(bal_date, sql_params, link_obj)
-        elif self.date_type == 'from_to':
-            op_date, cl_date = date_param
-            sql += self.gen_from_to(op_date, cl_date, sql_params, link_obj)
-        elif self.date_type == 'bf_cf':
+        elif report_type == 'from_to':
+            from_date, to_date = date_param
+            sql += self.gen_from_to(from_date, to_date, sql_params, link_obj)
+        elif report_type == 'bf_cf':
             op_date, cl_date = date_param
             sql += self.gen_bf_cf(op_date, cl_date, sql_params, link_obj)
 
@@ -1333,7 +1432,7 @@ class FinReport:
                 sql.append(f'{on_clause} codes.type = {dbc.param_style}')
                 sql_params.append(link_val)
 
-    def gen_sql(self, columns, pivot_params):
+    def gen_sql(self, report_type, columns, pivot_params):
         sql = []
         sql_params = []
 
@@ -1350,7 +1449,7 @@ class FinReport:
         sql.append('SELECT')
         # sql.append(', '.join(f'{_[1]} AS "{_[2]}"' for _ in columns))
         sql_cols = []
-        for col_name, col_sql, col_head, data_type, lng, pvt in columns:
+        for col_name, col_sql, col_head, data_type, lng, pvt, tot in columns:
             if pvt is None:
                 sql_cols.append(f'{col_sql} AS "{col_head}"')
             elif pvt == '*':
@@ -1366,140 +1465,185 @@ class FinReport:
             if pos > 0:  # more than one self.dates
                 sql.append('UNION ALL')
 
-            self.gen_sql_body(sql, sql_params, date_param)
+            self.gen_sql_body(report_type, sql, sql_params, date_param)
 
             for link_obj in self.links_to_subledg:  # if any
                 sql.append('UNION ALL')
-                self.gen_sql_body(sql, sql_params, date_param, link_obj)
+                self.gen_sql_body(report_type, sql, sql_params, date_param, link_obj)
 
-        if pos > 0:  # more than 1 self.dates
-            if self.pivot_on is None or self.pivot_on[0] != 'date':
-                if self.date_type == 'as_at':
-                    self.order_by.insert(0, 'bal_date')
-                    if self.pivot_on is not None:
-                        self.pivot_group_by.insert(0, 'bal_date')
-                else:
-                    self.order_by.insert(0, 'op_date')
-                    if self.pivot_on is not None:
-                        self.pivot_group_by.insert(0, 'cl_date')
-                        self.pivot_group_by.insert(0, 'op_date')
+        # if pos > 0:  # more than 1 self.dates
+        #     if self.pivot_on is None or self.pivot_on[0] != 'date':
+        #         if report_type == 'as_at':
+        #             self.order_by.insert(0, f"bal_date{' DESC' if self.date_seq == 'd' else ''}")
+        #             if self.pivot_on is not None:
+        #                 self.pivot_group_by.insert(0, 'bal_date')
+        #         elif report_type == 'from_to':
+        #             self.order_by.insert(0, f"from_date{' DESC' if self.date_seq == 'd' else ''}")
+        #             if self.pivot_on is not None:
+        #                 self.pivot_group_by.insert(0, 'from_date')
+        #                 self.pivot_group_by.insert(0, 'to_date')
+        #         elif report_type == 'bf_cf':
+        #             self.order_by.insert(0, f"op_date{' DESC' if self.date_seq == 'd' else ''}")
+        #             if self.pivot_on is not None:
+        #                 self.pivot_group_by.insert(0, 'op_date')
+        #                 self.pivot_group_by.insert(0, 'cl_date')
 
         sql.append(') dum2')
 
         if self.pivot_group_by:
             sql.append(f"GROUP BY {', '.join(_ for _ in self.pivot_group_by)}")
 
+        # if self.order_by:
+        #     if self.pivot_on is None:
+        #         sql.append(f"ORDER BY {', '.join(_ for _ in self.order_by)}")
+        #     else:
+        #         pivot_dim = self.pivot_on[0]
+        #         order_by = []
+        #         for ob in self.order_by:
+        #             if ob.split('_')[0] != pivot_dim:
+        #                 order_by.append(ob)
+        #         if order_by:
+        #             sql.append(f"ORDER BY {', '.join(_ for _ in order_by)}")
+
         if self.order_by:
-            if self.pivot_on is None:
-                sql.append(f"ORDER BY {', '.join(_ for _ in self.order_by)}")
-            else:
-                pivot_dim = self.pivot_on[0]
-                order_by = []
-                for ob in self.order_by:
-                    if ob.split('_')[0] != pivot_dim:
-                        order_by.append(ob)
-                if order_by:
-                    sql.append(f"ORDER BY {', '.join(_ for _ in order_by)}")
+            sql.append(f"ORDER BY {', '.join(_ for _ in self.order_by)}")
 
         return (' '.join(sql), sql_params)
 
-async def sql_fin_yr(context, fin_yr):
+async def sql_fin_yr(context, date_seq, sub_args, date_params):
     company = context.company
+    param = dbc.param_style
+
+    if date_params is not None:
+        fin_yr = date_params
+    else:
+        sql = []
+        params = []
+        sql.append(f'SELECT row_id FROM {company}.adm_yearends')
+        sql.append('WHERE period_row_id >=')
+        sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
+        sql.append(f'WHERE state = {param}')
+        params.append('current')
+        if context.module_id != 'gl':
+            sql.append(f'AND ledger_row_id = {param}')
+            params.append(context.ledger_row_id)
+        sql.append(')')
+        sql.append('ORDER BY row_id LIMIT 1')
+
+        async with context.db_session.get_connection() as db_mem_conn:
+            conn = db_mem_conn.db
+            cur = await conn.exec_sql(' '.join(sql), params)
+            fin_yr, = await cur.__anext__()
+
     sql = []
     params = []
-    sql.append('WITH dates AS (')
     sql.append('SELECT')
-    sql.append(f'{dbc.func_prefix}date_add(b.closing_date, 1) AS op_date,')
-    sql.append('a.closing_date AS cl_date')
+    sql.append(f'{dbc.func_prefix}date_add(b.closing_date, 1) AS "op_date [DATE]",')
+    sql.append('a.closing_date AS "cl_date [DATE]"')
     sql.append(f'FROM {company}.adm_periods a')
     sql.append(f'JOIN {company}.adm_periods b ON b.row_id = a.row_id - 1')
-    sql.append('WHERE')
-    sql.append(f'(SELECT c.row_id FROM {company}.adm_yearends c')
+    sql.append(f'WHERE (SELECT c.row_id FROM {company}.adm_yearends c')
     sql.append('WHERE c.period_row_id >= a.row_id ORDER BY c.row_id LIMIT 1)')
-    sql.append(f'= {dbc.param_style}')
+    sql.append(f'= {param}')
     params.append(fin_yr)
-    sql.append(')')
-    sql.append('SELECT op_date, cl_date')
+    order_by = ' DESC' if date_seq == 'd' else ''
+    sql.append(f'ORDER BY "op_date [DATE]"{order_by}')
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         rows = await conn.fetchall(' '.join(sql), params)
     return rows
 
-async def sql_fin_per(context, fin_yr, fin_per):
+async def sql_date_range(context, date_seq, sub_args, date_params):
+
     company = context.company
+    param = dbc.param_style
+
+    if date_params is not None:
+        op_date, cl_date = date_params
+    else:
+        sql = []
+        params = []
+        sql.append('SELECT')
+        sql.append(f'{dbc.func_prefix}date_add(b.closing_date, 1) AS op_date,')
+        sql.append('a.closing_date AS cl_date')
+        sql.append(f'FROM {company}.adm_periods a')
+        sql.append(f'JOIN {company}.adm_periods b ON b.row_id = a.row_id - 1')
+        sql.append('WHERE a.row_id =')
+        sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
+        sql.append(f'WHERE state = {param}')
+        params.append('current')
+        if context.module_id != 'gl':
+            sql.append(f'AND ledger_row_id = {param}')
+            params.append(context.ledger_row_id)
+        sql.append(')')
+
+        async with context.db_session.get_connection() as db_mem_conn:
+            conn = db_mem_conn.db
+            cur = await conn.exec_sql(' '.join(sql), params)
+            op_date, cl_date = await cur.__anext__()
+
     sql = []
     params = []
     sql.append('WITH RECURSIVE dates AS (')
-    sql.append('SELECT')
-    sql.append(f'{dbc.func_prefix}date_add(b.closing_date, 1) AS op_date,')
-    sql.append(f'{dbc.func_prefix}date_add(b.closing_date, 1) AS cl_date,')
-    sql.append('a.closing_date AS closing_date')
-    sql.append(f'FROM {company}.adm_periods a')
-    sql.append(f'JOIN {company}.adm_periods b ON b.row_id = a.row_id - 1')
-    sql.append('WHERE')
-    sql.append(f'(SELECT c.row_id FROM {company}.adm_yearends c')
-    sql.append('WHERE c.period_row_id >= a.row_id ORDER BY c.row_id LIMIT 1)')
-    sql.append(f'= {dbc.param_style}')
-    params.append(fin_yr)
-    sql.append('AND a.row_id -')
-    sql.append(f'(SELECT c.period_row_id FROM {company}.adm_yearends c')
-    sql.append('WHERE c.period_row_id < a.row_id ORDER BY c.row_id DESC LIMIT 1)')
-    sql.append(f'= {dbc.param_style}')
-    params.append(fin_per)
+    sql.append(f'SELECT {param}')
+    params.append(op_date)
+    sql.append('AS dte')
     sql.append('UNION ALL SELECT')
-    sql.append(f'{dbc.func_prefix}date_add(cl_date, 1) AS op_date,')
-    sql.append(f'{dbc.func_prefix}date_add(cl_date, 1) AS cl_date,')
-    sql.append('closing_date')
-    sql.append(f'FROM dates WHERE {dbc.func_prefix}date_add(cl_date, 1) <= dates.closing_date')
+    sql.append(f'{dbc.func_prefix}date_add(dates.dte, 1) AS dte')
+    sql.append(f'WHERE dates.dte < {cl_date}')
     sql.append(')')
-    sql.append('SELECT op_date, cl_date')
+    sql.append('SELECT dte, dte FROM dates')
+    sql.append(f"ORDER BY dte{' DESC' if date_seq == 'd' else ''}")
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         rows = await conn.fetchall(' '.join(sql), params)
     return rows
 
-async def sql_curr_cl_date(context):
-    company = context.company
-    sql = []
-    params = []
-    sql.append('SELECT')
-    sql.append('a.closing_date AS cl_date')
-    sql.append(f'FROM {company}.adm_periods a')
-    sql.append('WHERE a.row_id =')
-    sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
-    sql.append(f'WHERE state = {dbc.param_style}')
-    params.append('current')
-    if context.module_id != 'gl':
-        sql.append(f'AND ledger_row_id = {dbc.param_style}')
-        params.append(context.ledger_row_id)
-    sql.append(')')
+# async def sql_curr_cl_date(context):
+#     company = context.company
+#     param = dbc.param_style
 
-    async with context.db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
-        rows = await conn.fetchall(' '.join(sql), params)
-    return rows[0]
+#     sql = []
+#     params = []
+#     sql.append('SELECT')
+#     sql.append('a.closing_date AS cl_date')
+#     sql.append(f'FROM {company}.adm_periods a')
+#     sql.append('WHERE a.row_id =')
+#     sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
+#     sql.append(f'WHERE state = {param}')
+#     params.append('current')
+#     if context.module_id != 'gl':
+#         sql.append(f'AND ledger_row_id = {param}')
+#         params.append(context.ledger_row_id)
+#     sql.append(')')
 
-async def sql_curr_yr(context):
+#     async with context.db_session.get_connection() as db_mem_conn:
+#         conn = db_mem_conn.db
+#         cur = await conn.exec_sql(' '.join(sql), params)
+#         cl_date_row = await cur.__anext__()
+#     return cl_date_row
+
+async def sql_curr_per(context):
     company = context.company
+    param = dbc.param_style
     sql = []
     params = []
     sql.append('SELECT')
     sql.append(f'{dbc.func_prefix}date_add(')
-    sql.append(f'(SELECT b.closing_date FROM {company}.adm_periods b WHERE b.row_id = a.row_id - 1)')
+    sql.append('b.closing_date')
     sql.append(', 1) AS "op_date [DATE]",')
     sql.append('a.closing_date AS cl_date')
     sql.append(f'FROM {company}.adm_periods a')
-    sql.append('WHERE')
-    sql.append(f'(SELECT b.row_id FROM {company}.adm_yearends b')
-    sql.append('WHERE b.period_row_id >= a.row_id ORDER BY b.row_id LIMIT 1)')
-    sql.append('=')
+    sql.append(f'JOIN {company}.adm_periods b')
+    sql.append('ON b.row_id = a.row_id - 1')
+    sql.append('WHERE a.row_id =')
     sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
-    sql.append(f'WHERE state = {dbc.param_style}')
+    sql.append(f'WHERE state = {param}')
     params.append('current')
     if context.module_id != 'gl':
-        sql.append(f'AND ledger_row_id = {dbc.param_style}')
+        sql.append(f'AND ledger_row_id = {param}')
         params.append(context.ledger_row_id)
     sql.append(')')
 
@@ -1508,45 +1652,165 @@ async def sql_curr_yr(context):
         rows = await conn.fetchall(' '.join(sql), params)
     return rows
 
-async def sql_last_n(context, n):
+# async def sql_curr_yr(context):
+#     company = context.company
+#     sql = []
+#     params = []
+#     sql.append('SELECT')
+#     sql.append(f'{dbc.func_prefix}date_add(')
+#     sql.append(f'(SELECT b.closing_date FROM {company}.adm_periods b WHERE b.row_id = a.row_id - 1)')
+#     sql.append(', 1) AS "op_date [DATE]",')
+#     sql.append('a.closing_date AS cl_date')
+#     sql.append(f'FROM {company}.adm_periods a')
+#     sql.append('WHERE')
+#     sql.append(f'(SELECT b.row_id FROM {company}.adm_yearends b')
+#     sql.append('WHERE b.period_row_id >= a.row_id ORDER BY b.row_id LIMIT 1)')
+#     sql.append('=')
+#     sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
+#     sql.append(f'WHERE state = {dbc.param_style}')
+#     params.append('current')
+#     if context.module_id != 'gl':
+#         sql.append(f'AND ledger_row_id = {dbc.param_style}')
+#         params.append(context.ledger_row_id)
+#     sql.append(')')
+
+#     async with context.db_session.get_connection() as db_mem_conn:
+#         conn = db_mem_conn.db
+#         rows = await conn.fetchall(' '.join(sql), params)
+#     return rows
+
+async def sql_last_n_per(context, date_seq, sub_args, date_params):
+    (
+        grp_size,      # e.g. 1 x p = period, 3 x p = quarter
+        no_of_grps,    # number of groups
+        grps_to_skip,  # e.g. 11 x p = same period previous year
+        ) = sub_args
     company = context.company
+    param = dbc.param_style
+
+    if date_params is not None:
+        start_from = date_params
+    else:
+        sql = []
+        params = []
+        sql.append(f'SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
+        sql.append(f'WHERE state = {param}')
+        params.append('current')
+        if context.module_id != 'gl':
+            sql.append(f'AND ledger_row_id = {param}')
+            params.append(context.ledger_row_id)
+
+        async with context.db_session.get_connection() as db_mem_conn:
+            conn = db_mem_conn.db
+            cur = await conn.exec_sql(' '.join(sql), params)
+            start_from, = await cur.__anext__()
+
     sql = []
     params = []
+
     sql.append('WITH RECURSIVE dates AS (')
     sql.append('SELECT 1 AS cnt, a.row_id,')
     sql.append(f'{dbc.func_prefix}date_add(')
-    sql.append(f'(SELECT b.closing_date FROM {company}.adm_periods b WHERE b.row_id = a.row_id - 1)')
+    sql.append(f'(SELECT b.closing_date FROM {company}.adm_periods b WHERE b.row_id = a.row_id - {param})')
+    params.append(grp_size)
     sql.append(', 1) AS op_date,')
     sql.append('a.closing_date AS cl_date')
     sql.append(f'FROM {company}.adm_periods a')
-    sql.append('WHERE a.row_id =')
-    sql.append(f'(SELECT period_row_id-1 FROM {company}.{context.module_id}_ledger_periods')
-    sql.append(f'WHERE state = {dbc.param_style}')
-    params.append('current')
-    if context.ledger_row_id is not None:
-        sql.append(f'AND ledger_row_id = {dbc.param_style}')
-        params.append(context.ledger_row_id)
-    sql.append(') AND')
-    sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
-    sql.append(f'WHERE state = {dbc.param_style}')
-    params.append('current')
-    if context.ledger_row_id is not None:
-        sql.append(f'AND ledger_row_id = {dbc.param_style}')
-        params.append(context.ledger_row_id)
-    sql.append(') > 1')
+    sql.append(f'WHERE a.row_id = {param} AND a.row_id > {param}')
+    params.append(start_from)
+    params.append(grp_size-1)
     sql.append('UNION ALL SELECT')
     sql.append('d.cnt+1 AS cnt, a.row_id,')
     sql.append(f'{dbc.func_prefix}date_add(')
-    sql.append(f'(SELECT b.closing_date FROM {company}.adm_periods b WHERE b.row_id = a.row_id - 1)')
+    sql.append(f'(SELECT b.closing_date FROM {company}.adm_periods b WHERE b.row_id = a.row_id - {param})')
+    params.append(grp_size)
     sql.append(', 1) AS op_date,')
     sql.append('a.closing_date AS cl_date')
     sql.append(f'FROM {company}.adm_periods a, dates d')
-    sql.append(f'WHERE a.row_id = d.row_id - 1 AND d.row_id > 1 AND d.cnt < {dbc.param_style}')
-    params.append(n)
+    sql.append(f'WHERE a.row_id = d.row_id - {param} AND d.row_id > {param} AND d.cnt < {param}')
+    params.append(grp_size * (grps_to_skip + 1))
+    params.append((grp_size * (grps_to_skip + 1)) + (grp_size-1))
+    params.append(no_of_grps)
     sql.append(')')
-    sql.append('SELECT op_date, cl_date FROM dates ORDR BY row_id')
+    sql.append('SELECT op_date "[DATE]", cl_date "[DATE]" FROM dates')
+    sql.append(f"ORDER BY op_date{' DESC' if date_seq == 'd' else ''}")
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         rows = await conn.fetchall(' '.join(sql), params)
+
+    if len(rows) < no_of_grps:
+        raise AibError(head='Error', body='Not enough groups')
+
+    return rows
+
+async def sql_last_n_days(context, date_seq, sub_args, date_params):
+    (
+        grp_size,      # e.g. 7 = week
+        no_of_grps,    # number of groups
+        grps_to_skip,  # e.g. 51 = same week previous year (if grp_size = 7)
+        ) = sub_args
+    company = context.company
+    param = dbc.param_style
+
+    if date_params is not None:
+        start_from = date_params
+    else:
+        sql = []
+        params = []
+
+        sql.append('SELECT')
+        sql.append('closing_date "[DATE]"')
+        sql.append(f'FROM {company}.adm_periods')
+        sql.append('WHERE row_id =')
+        sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
+        sql.append(f'WHERE state = {param}')
+        params.append('current')
+        if context.module_id != 'gl':
+            sql.append(f'AND ledger_row_id = {param}')
+            params.append(context.ledger_row_id)
+        sql.append(')')
+
+        async with context.db_session.get_connection() as db_mem_conn:
+            conn = db_mem_conn.db
+            cur = await conn.exec_sql(' '.join(sql), params)
+            start_from, = await cur.__anext__()
+
+    sql = []
+    params = []
+    sql.append('WITH RECURSIVE dates AS (')
+    sql.append(f'SELECT 1 AS cnt,')
+    sql.append(f'{param} AS cl_date,')
+    params.append(start_from)
+    if grp_size > 1:
+        sql.append(f'{dbc.func_prefix}date_add(')
+        sql.append(f'{param}')
+        params.append(start_from)
+        sql.append(f', {param})')
+        params.append(0 - grp_size + 1)
+    else:
+        sql.append(f'{param}')
+        params.append(start_from)
+    sql.append('AS op_date')
+    sql.append('UNION ALL SELECT')
+    sql.append('d.cnt+1 AS cnt,')
+    sql.append(f'{dbc.func_prefix}date_add(d.op_date, {param}) AS cl_date,')
+    params.append(-1 - (grp_size * grps_to_skip))
+    sql.append(f'{dbc.func_prefix}date_add(d.op_date, {param})')
+    params.append(0 - (grp_size * (grps_to_skip+1)))
+    sql.append('AS op_date')
+    sql.append('FROM dates d')
+    sql.append(f'WHERE d.cnt < {param}')
+    params.append(no_of_grps)
+    sql.append(')')
+    sql.append('SELECT op_date "[DATE]", cl_date "[DATE]" FROM dates')
+    sql.append(f"ORDER BY op_date{' DESC' if date_seq == 'd' else ''}")
+
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        rows = await conn.fetchall(' '.join(sql), params)
+
+    if len(rows) < no_of_grps:
+        raise AibError(head='Error', body='Not enough groups')
+
     return rows

@@ -1,5 +1,5 @@
-report_name = 'ar_by_src'
-table_name = 'ar_totals'
+report_name = 'ap_by_src'
+table_name = 'ap_totals'
 report_type = 'bf_cf'
 
 groups = []

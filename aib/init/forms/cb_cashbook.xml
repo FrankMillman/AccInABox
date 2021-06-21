@@ -10,8 +10,6 @@
         long_descr="Settings, passed between main form and formview" allow_amend="true"/>
       <mem_col col_name="balance_date" data_type="DTE" short_descr="Balance date"
         long_descr="Balance at which date" allow_amend="true"/>
-    </mem_obj>
-    <mem_obj name="tran_vars" descr="Variables for 'Transactions' tab">
       <mem_col col_name="op_bal" data_type="DEC" short_descr="Opening balance"
         long_descr="Opening balance" col_head="B/F" allow_amend="true"
         db_scale="2" scale_ptr="cb_trans.ledger_row_id>currency_id>scale"/>
@@ -67,8 +65,8 @@
 
       <block/>
       <grid data_object="cb_trans" growable="false" num_grid_rows="8" readonly="true"
-          header_row="[`date_range_vars.start_date`, `'Bal b/f'`, `...`, `tran_vars.op_bal`]"
-          footer_row="[`date_range_vars.end_date`, `'Bal c/f'`, `...`, `tran_vars.cl_bal`]">
+          header_row="[`date_range_vars.start_date`, `'Bal b/f'`, `...`, `var.op_bal`]"
+          footer_row="[`date_range_vars.end_date`, `'Bal c/f'`, `...`, `var.cl_bal`]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,Enter" action="
@@ -104,8 +102,8 @@
             <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
             <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
             <<get_op_cl_bal args=`cb_trans, op_bal_cb, cl_bal_cb, tot_cb`/>>
-            <<assign src=`cb_trans.op_bal_cb` tgt=`tran_vars.op_bal`/>>
-            <<assign src=`cb_trans.cl_bal_cb` tgt=`tran_vars.cl_bal`/>>
+            <<assign src=`cb_trans.op_bal_cb` tgt=`var.op_bal`/>>
+            <<assign src=`cb_trans.cl_bal_cb` tgt=`var.cl_bal`/>>
             "/>
         </grid_methods>
       </grid>

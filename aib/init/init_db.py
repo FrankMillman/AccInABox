@@ -59,7 +59,7 @@ async def setup_db_tables(conn, company, company_name):
         column_id = await setup_db_metadata(conn, company, seq, table_name, column_id)
 
 async def setup_db_table(conn, table_name, company):
-    module = importlib.import_module('.tables.{}'.format(table_name), 'init')
+    module = importlib.import_module(f'.tables.{table_name}', 'init')
 
     tbl = module.table
     table_defn = [None] * 18
@@ -110,7 +110,7 @@ async def setup_modules(conn, company, company_name):
 async def setup_db_metadata(conn, company, seq, table_name, column_id):
     table_id = seq + 1  # seq starts from 0, table_id starts from 1
 
-    module = importlib.import_module('.tables.{}'.format(table_name), 'init')
+    module = importlib.import_module(f'.tables.{table_name}', 'init')
     tbl = module.table
 
     sql = (
@@ -269,7 +269,6 @@ async def setup_other_tables(context, conn):
         'dir_users_companies',
         'sys_form_defns',
         'sys_report_defns',
-        'sys_finrpt_defns',
         'sys_proc_defns',
         'sys_menu_defns',
         'acc_roles',
@@ -277,7 +276,7 @@ async def setup_other_tables(context, conn):
         'acc_users_roles',
         ]
     for table_name in tables:
-        module = importlib.import_module('.tables.{}'.format(table_name), 'init')
+        module = importlib.import_module(f'.tables.{table_name}', 'init')
         if table_name not in (
                 'db_tables', 'db_actions', 'db_columns'):  # already created
             await setup_table(module, db_tbl, db_col, table_name)
@@ -285,7 +284,7 @@ async def setup_other_tables(context, conn):
     db_cur = await db.objects.get_db_object(context, 'db_cursors')
     db_act = await db.objects.get_db_object(context, 'db_actions')
     for table_name in tables:
-        module = importlib.import_module('.tables.{}'.format(table_name), 'init')
+        module = importlib.import_module(f'.tables.{table_name}', 'init')
         await setup_cursor(module, db_tbl, db_cur, table_name)
         await setup_actions(module, db_act, table_name)
 
@@ -413,7 +412,7 @@ async def setup_forms(context):
     db_table = await db.objects.get_db_object(context, 'db_tables')
 
     async def setup_form(form_name):
-        xml = open('{}/{}.xml'.format(form_path, form_name)).read()
+        xml = open(f'{form_path}/{form_name}.xml').read()
         await form_defn.init()
         await form_defn.setval('form_name', form_name)
         # await form_defn.setval('title', title)
@@ -521,11 +520,10 @@ async def setup_data(context, conn, company_name):
     # await dir_comp.save()
 
     # use SQL instead of above, to avoid table_hook 'create_company'
-    param_style = dbc.param_style
     sql = (
         "INSERT INTO _sys.dir_companies (company_id, company_name) "
         "VALUES ({0}, {0})"
-        ).format(param_style)
+        ).format(dbc.param_style)
     params = (context.company, company_name)
     await conn.exec_cmd(sql, params)
 
@@ -533,7 +531,7 @@ async def setup_data(context, conn, company_name):
         "INSERT INTO _sys.dir_companies_audit_xref "
         "(data_row_id, user_row_id, date_time, type) "
         "VALUES ({0}, {0}, {0}, {0})"
-        ).format(param_style)
+        ).format(dbc.param_style)
     params = (1, USER_ROW_ID, conn.timestamp, 'add')
     await conn.exec_cmd(sql, params)
 

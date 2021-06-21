@@ -1,22 +1,15 @@
 report_name = 'tb_by_int'
 table_name = 'gl_totals'
-
-date_params = [
-    'as_at',         # date_type
-    'curr_cl_date',  # date_subtype
-    None,            # date_values
-    ]
+report_type = 'as_at'
 
 groups = []
 groups.append([
     'code',  # dim
-    'int',   # grp_name
-    [],      # filter
-    False,   # include zero bals
+    ['int', []],  # grp_name, filter, incude zero bals
     ])
 
 columns = [
-    ['code_maj', 'code_maj', 'Maj', 'TEXT', 80, None],
-    ['code_int', 'code_int', 'Int', 'TEXT', 80, None],
-    ['tran_tot', 'tran_tot', 'Total', 'DEC', 100, None],
+    ['code_maj', 'code_maj', 'Maj', 'TEXT', 80, None, 'Total:'],
+    ['code_int', 'code_int', 'Int', 'TEXT', 80, None, False],
+    ['tran_tot', 'tran_tot', 'Total', 'DEC', 100, None, True],
     ]

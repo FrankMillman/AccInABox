@@ -249,7 +249,7 @@ cols.append ({
                 ],
             ],
         ],
-    'fkey'       : ['cb_ledger_params', 'row_id', 'pmt_cb_id', 'ledger_id', False, None],
+    'fkey'       : ['cb_ledger_params', 'row_id', 'pmt_cb_id', 'ledger_id', False, 'cash_books'],
     'choices'    : None,
     })
 cols.append ({

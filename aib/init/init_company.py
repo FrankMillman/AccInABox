@@ -54,7 +54,7 @@ async def setup_db_tables(context, conn, company_name):
         await setup_db_metadata(context, conn, table_name)
 
 async def setup_db_table(conn, table_name, context):
-    module = importlib.import_module('.tables.{}'.format(table_name), 'init')
+    module = importlib.import_module(f'.tables.{table_name}', 'init')
 
     tbl = module.table
     table_defn = [None] * 17
@@ -116,7 +116,7 @@ async def setup_modules(context, conn, company_name):
         await conn.exec_cmd(sql_2, (pos, context.user_row_id, conn.timestamp, 'add'))
 
 async def setup_db_metadata(context, conn, table_name):
-    module = importlib.import_module('.tables.{}'.format(table_name), 'init')
+    module = importlib.import_module(f'.tables.{table_name}', 'init')
     tbl = module.table
 
     sql = (
@@ -149,7 +149,7 @@ async def setup_db_metadata(context, conn, table_name):
 async def setup_dir_tables(context, conn):
 
     async def setup_dir_table(table_name, seq):
-        module = importlib.import_module('.tables.{}'.format(table_name), 'init')
+        module = importlib.import_module(f'.tables.{table_name}', 'init')
         tbl = module.table
 
         sql = (
@@ -198,7 +198,6 @@ async def setup_sys_tables(context, conn):
         'acc_users_roles',
         'sys_form_defns',
         'sys_report_defns',
-        'sys_finrpt_defns',
         'sys_proc_defns',
         'sys_menu_defns',
         ]
@@ -246,6 +245,7 @@ async def setup_other_tables(context, conn):
         'gl_ledger_params',
         'gl_ledger_periods',
         'gl_source_codes',
+        'gl_finrpt_defns',
         'gl_tran_bf',
         'gl_tran_jnl',
         'gl_tran_jnl_det',
@@ -272,12 +272,14 @@ async def setup_other_tables(context, conn):
         'npch_tax_codes',
         'ar_ledger_params',
         'ar_ledger_periods',
+        'ar_finrpt_defns',
         'ar_terms_codes',
         'ar_customers',
         'ar_comments',
         'ar_stat_dates',
         'ap_ledger_params',
         'ap_ledger_periods',
+        'ap_finrpt_defns',
         'ap_terms_codes',
         'ap_suppliers',
         'ap_comments',
@@ -363,7 +365,7 @@ async def setup_other_tables(context, conn):
         'in_wh_prod_alloc',
         ]
     for table_name in tables:
-        module = importlib.import_module('.tables.{}'.format(table_name), 'init')
+        module = importlib.import_module(f'.tables.{table_name}', 'init')
         await setup_table(module, db_tbl, db_col, table_name)
         await db.create_table.create_table(conn, context.company, table_name)
         await setup_cursor(module, db_tbl, db_cur, table_name)
@@ -478,7 +480,7 @@ async def setup_views(context, conn):
         'cb_trans',
         ]
     for view_name in views:
-        module = importlib.import_module('.views.{}'.format(view_name), 'init')
+        module = importlib.import_module(f'.views.{view_name}', 'init')
         await setup_view(module, db_view, db_view_col, view_name)
         await db.create_view.create_view(context, conn, context.company, view_name)
 
@@ -545,7 +547,7 @@ async def setup_forms(context, conn):
     form_defn = await db.objects.get_db_object(context, 'sys_form_defns')
 
     async def setup_form(form_name):
-        xml = open('{}/{}.xml'.format(form_path, form_name)).read()
+        xml = open(f'{form_path}/{form_name}.xml').read()
         await form_defn.init()
         await form_defn.setval('form_name', form_name)
         xml = xml.replace('`', '&quot;').replace('<<', '&lt;').replace(
@@ -618,6 +620,8 @@ async def setup_forms(context, conn):
     await setup_form('cb_cashbook')
     await setup_form('nsls_ledger_new')
     await setup_form('npch_ledger_new')
+    # await setup_form('fin_reports')
+    await setup_form('fin_report')
 
 async def setup_reports(context, conn):
     # schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
@@ -630,7 +634,7 @@ async def setup_reports(context, conn):
     report_defn = await db.objects.get_db_object(context, 'sys_report_defns')
 
     async def setup_report(report_name):
-        xml = open('{}/{}.xml'.format(report_path, report_name)).read()
+        xml = open(f'{report_path}/{report_name}.xml').read()
         await report_defn.init()
         await report_defn.setval('report_name', report_name)
         xml = xml.replace('`', '&quot;').replace('<<', '&lt;').replace(
@@ -646,39 +650,49 @@ async def setup_reports(context, conn):
     await setup_report('ar_statement')
 
 async def setup_finrpts(context, conn):
-    finrpt_defn = await db.objects.get_db_object(context, 'sys_finrpt_defns')
+    async def setup_finrpt(db_obj, report_name):
 
-    async def setup_finrpt(report_name):
+        rpt = importlib.import_module(f'.fin_reports.{report_name}', 'init')
 
-        rpt = importlib.import_module('.fin_reports.{}'.format(report_name), 'init')
-
-        await finrpt_defn.init()
-        await finrpt_defn.setval('report_name', rpt.report_name)
-        await finrpt_defn.setval('descr', rpt.report_name)
-        await finrpt_defn.setval('table_name', rpt.table_name)
-        await finrpt_defn.setval('date_params', rpt.date_params)
-        await finrpt_defn.setval('group_params', rpt.groups)
-        await finrpt_defn.setval('columns', rpt.columns)
+        await db_obj.init()
+        await db_obj.setval('report_name', rpt.report_name)
+        await db_obj.setval('descr', rpt.report_name)
+        await db_obj.setval('table_name', rpt.table_name)
+        await db_obj.setval('report_type', rpt.report_type)
+        await db_obj.setval('group_params', rpt.groups)
+        await db_obj.setval('columns', rpt.columns)
         if hasattr(rpt, 'calc_cols'):
-            await finrpt_defn.setval('calc_cols', rpt.calc_cols)
+            await db_obj.setval('calc_cols', rpt.calc_cols)
+        if hasattr(rpt, 'include_zeros'):
+            await db_obj.setval('include_zeros', rpt.include_zeros)
         if hasattr(rpt, 'expand_subledg'):
-            await finrpt_defn.setval('expand_subledg', rpt.expand_subledg)
+            await db_obj.setval('expand_subledg', rpt.expand_subledg)
+        if hasattr(rpt, 'allow_select_loc_fun'):
+            await db_obj.setval('allow_select_loc_fun', rpt.allow_select_loc_fun)
         if hasattr(rpt, 'pivot_on'):
-            await finrpt_defn.setval('pivot_on', rpt.pivot_on)
+            await db_obj.setval('pivot_on', rpt.pivot_on)
         if hasattr(rpt, 'cashflow_params'):
-            await finrpt_defn.setval('cashflow_params', rpt.cashflow_params)
-        await finrpt_defn.save()
+            await db_obj.setval('cashflow_params', rpt.cashflow_params)
+        await db_obj.save()
 
-    await setup_finrpt('tb_by_maj')
-    await setup_finrpt('tb_by_int')
-    await setup_finrpt('tb_by_code')
-    await setup_finrpt('tb_pivot_maj')
-    await setup_finrpt('ar_by_src')
-    await setup_finrpt('ar_pivot_src')
-    await setup_finrpt('int_by_loc')
-    await setup_finrpt('int_pivot_loc')
-    await setup_finrpt('int_pivot_date')
-    await setup_finrpt('cb_cash_flow')
+    db_obj = await db.objects.get_db_object(context, 'gl_finrpt_defns')
+    await setup_finrpt(db_obj, 'tb_by_maj')
+    await setup_finrpt(db_obj, 'tb_by_int')
+    await setup_finrpt(db_obj, 'tb_by_code')
+    await setup_finrpt(db_obj, 'tb_pivot_maj')
+    await setup_finrpt(db_obj, 'int_by_loc')
+    await setup_finrpt(db_obj, 'int_pivot_loc')
+    await setup_finrpt(db_obj, 'int_pivot_date')
+    await setup_finrpt(db_obj, 'cb_cash_flow')
+    await setup_finrpt(db_obj, 'int_curr_prev')
+
+    db_obj = await db.objects.get_db_object(context, 'ar_finrpt_defns')
+    await setup_finrpt(db_obj, 'ar_by_src')
+    await setup_finrpt(db_obj, 'ar_pivot_src')
+
+    db_obj = await db.objects.get_db_object(context, 'ap_finrpt_defns')
+    await setup_finrpt(db_obj, 'ap_by_src')
+    await setup_finrpt(db_obj, 'ap_pivot_src')
 
 async def setup_processes(context, conn):
     parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
@@ -689,7 +703,7 @@ async def setup_processes(context, conn):
     S = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
 
     async def setup_process(process_id):
-        xml = open('{}/{}.xml'.format(proc_path, process_id)).read()
+        xml = open(f'{proc_path}/{process_id}.xml').read()
         await proc_defn.init()
         await proc_defn.setval('process_id', process_id)
         xml = xml.replace('`', '&quot;').replace('<<', '&lt;').replace(
@@ -764,16 +778,7 @@ async def setup_menus(context, conn, company_name):
             ['Gl transactions', 'menu', 'gl', [
                 ['Capture journal', 'form', 'gl_jnl'],
                 ]],
-            ['Gl reports', 'menu', 'gl', [
-                ['Trial balance', 'finrpt', 'tb_by_code'],
-                ['Trial balance by int', 'finrpt', 'tb_by_int'],
-                ['Trial balance by maj', 'finrpt', 'tb_by_maj'],
-                ['Trial balance pivot maj', 'finrpt', 'tb_pivot_maj'],
-                ['Int by loc', 'finrpt', 'int_by_loc'],
-                ['Int pivot loc', 'finrpt', 'int_pivot_loc'],
-                ['Int pivot date', 'finrpt', 'int_pivot_date'],
-                ['Cash flow', 'finrpt', 'cb_cash_flow'],
-                ]],
+            ['Financial reports', 'grid', 'gl_finrpt_defns', 'finrpt_list'],
             ['Period end procedure', 'form', 'gl_ledger_periods'],
             ]],
         ['Cash book', 'menu', 'cb', [
@@ -844,10 +849,11 @@ async def setup_menus(context, conn, company_name):
             ['AR balances', 'form', 'ar_balances'],
             ['Sales report', 'form', 'sls_report'],
             ]],
+        ['Financial reports', 'grid', 'ar_finrpt_defns', 'finrpt_list'],
         ['Ar reports', 'menu', 'ar', [
             ['Ledger summary', 'form', 'ar_ledger_summary'],
-            ['Ar by src', 'finrpt', 'ar_by_src'],
-            ['Ar pivot src', 'finrpt', 'ar_pivot_src'],
+            # ['Ar by src', 'finrpt', 'ar_by_src'],
+            # ['Ar pivot src', 'finrpt', 'ar_pivot_src'],
             ]],
         ['Period end procedure', 'form', 'ar_ledger_periods'],
         ]]
@@ -872,6 +878,7 @@ async def setup_menus(context, conn, company_name):
         ['Ap enquiries', 'menu', 'ap', [
             ['AP balances', 'form', 'ap_balances'],
             ]],
+        ['Financial reports', 'grid', 'ap_finrpt_defns', 'finrpt_list'],
         ['Ap reports', 'menu', 'ap', [
             ['Ledger summary', 'form', 'ap_ledger_summary'],
             ]],

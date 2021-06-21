@@ -3,11 +3,11 @@
   <mem_objects/>
   <input_params/>
   <output_params/>
-  <frame main_object="grid_obj">
+  <frame main_object="finrpt_obj">
     <toolbar/>
     <body>
       <block/>
-      <grid data_object="grid_obj" num_grid_rows="20">
+      <grid data_object="finrpt_obj" num_grid_rows="20">
         <toolbar template="Grid_Finrpt"/>
         <grid_methods template="Grid"/>
       </grid>

@@ -215,6 +215,14 @@
           "/>
         <end_if/>
 
+        <if test="[[`if`, ``, `_param.cb_ledger_id`, `is`, `$None`, ``]]"/>
+        <row/>
+        <col/>
+        <label value="Cash book:"/>
+        <col/>
+        <input obj_name="batch_hdr" col_name="pmt_cb_id" lng="80"/>
+        <end_if/>
+
         <row/>
         <col/>
         <label value="Due date:"/>

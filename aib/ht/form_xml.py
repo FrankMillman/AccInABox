@@ -710,11 +710,15 @@ async def compare(caller, xml):
     try:
         db_obj = caller.db_obj
     except AttributeError:  # not every caller has a db_obj - try params
-        if caller.context.ledger_row_id is not None:  # get ledger_params
-            db_obj = await db.cache.get_ledger_params(caller.company,
-                caller.context.module_row_id, caller.context.ledger_row_id)
-        else:  # get adm_params
-            db_obj = await db.cache.get_adm_params(caller.company)
+        if isinstance(caller, ht.form.Form):  # can be if called from after_start_form
+            db_obj = next(iter(caller.context.data_objects.values()))  # take first db_obj
+        else:
+            if caller.context.ledger_row_id is not None:  # get ledger_params
+                db_obj = await db.cache.get_ledger_params(caller.company,
+                    caller.context.module_row_id, caller.context.ledger_row_id)
+            else:  # get adm_params
+                db_obj = await db.cache.get_adm_params(caller.company)
+            print(f"*** in form_xml.compare {xml.get('test')}, no caller.db_obj, using {db_obj.table_name} ***")
     test = loads(xml.get('test').replace("'", '"').replace('~', "'"))
     return await eval_bool_expr(test, db_obj)
 

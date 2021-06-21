@@ -359,7 +359,7 @@ virt.append ({
     'short_descr': 'Tran type row id',
     'long_descr' : 'Tran type row id',
     'col_head'   : 'Tran type row id',
-    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'ar_jnl'",
+    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'ap_jnl'",
     })
 # virt.append ({
 #     'col_name'   : 'module_row_id',

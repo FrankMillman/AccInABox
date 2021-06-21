@@ -6,7 +6,7 @@ from random import randint
 import itertools
 from collections import OrderedDict as OD
 from types import SimpleNamespace as SN
-from json import loads
+from json import loads, dumps
 
 import logging
 logger = logging.getLogger(__name__)
@@ -160,14 +160,20 @@ class Form:
         title = title.replace('{comp_name}', db.cache.companies[self.company])
 
         if grid_params is not None:
-            table_name, cursor_name = grid_params
-            if cursor_name is None:  # finrpt passed in from rep.finrpt
-                grid_obj = self.data_objects['grid_obj']
+            table_name, arg = grid_params
+            if arg is None:  # finrpt passed in from rep.finrpt
+                grid_obj = self.data_objects['finrpt_obj']
                 title = 'Fin report'
+            elif isinstance(arg, list):  # finrpt with footer_row passed in from rep.finrpt
+                grid_obj = self.data_objects['finrpt_obj']
+                title = 'Fin report'
+                footer_row = dumps(arg)
+                grid = form_defn.find('frame').find('body').find('grid')
+                grid.attrib['footer_row'] = footer_row
             else:  # passed in from menu_defn if setup_grid
-                grid_obj = await db.objects.get_db_object(
-                    self.context, table_name)
+                grid_obj = await db.objects.get_db_object(self.context, table_name)
                 self.data_objects['grid_obj'] = grid_obj
+                cursor_name = arg
                 title = await grid_obj.setup_cursor_defn(cursor_name)
 
         self.title = title
