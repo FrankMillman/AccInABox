@@ -74,7 +74,7 @@ class Form:
             callback=None,      # if not None, function to call when form completed
             ctrl_grid=None,     # if not None, this is a formview or subform linked to grid
             inline=None,        # inline form part of form definition
-            grid_params=None,   # passed in from menu option if setup_grid
+            grid_params=None,   # passed in from menu option if setup_grid or passed in from finrpt
             formview_obj=None,  # supplied if formview or lookdown selected
             readonly=False,     # if True, entire form is set to 'readonly'
             ):
@@ -363,7 +363,7 @@ class Form:
             if clone_from is not None:
                 clone_from = self.data_objects[clone_from]
                 db_obj = await db.objects.get_clone_object(self.context,
-                    self.company, path_name, clone_from, parent=db_parent)
+                    path_name, clone_from, parent=db_parent)
             else:
                 db_obj = await db.objects.get_mem_object(self.context,
                     path_name, parent=db_parent, table_defn=obj_xml)

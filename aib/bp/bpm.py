@@ -306,7 +306,7 @@ class ProcessRoot:
             if clone_from is not None:
                 clone_from = self.data_objects[clone_from]
                 mem_obj = await db.objects.get_clone_object(self.context,
-                    company, obj_name, clone_from, parent=db_parent)
+                    obj_name, clone_from, parent=db_parent)
             else:
                 mem_obj = await db.objects.get_mem_object(self.context,
                     obj_name, parent=db_parent, table_defn=obj_xml)

@@ -121,7 +121,7 @@ class Report:
             if clone_from is not None:
                 clone_from = self.data_objects[clone_from]
                 db_obj = await db.objects.get_clone_object(self.context,
-                    self.company, full_name, clone_from, parent=db_parent)
+                    full_name, clone_from, parent=db_parent)
             else:
                 db_obj = await db.objects.get_mem_object(self.context,
                     full_name, parent=db_parent, table_defn=obj_xml)

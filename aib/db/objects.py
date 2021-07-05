@@ -157,15 +157,15 @@ async def get_mem_table(context, table_name, table_defn=None):
 
     return context.mem_tables_open[table_name]
 
-async def get_clone_object(context, company, table_name, clone_from, parent=None):
+async def get_clone_object(context, table_name, clone_from, parent=None):
     # get a copy of an in-memory table cloned from a database table
     if table_name not in context.mem_tables_open:
         cloned_table = ClonedTable()
-        await cloned_table._ainit_(context, company, table_name, clone_from)
+        await cloned_table._ainit_(context, table_name, clone_from)
         context.mem_tables_open[table_name] = cloned_table
     mem_table = context.mem_tables_open[table_name]
     mem_obj = MemObject()
-    await mem_obj._ainit_(context, company, mem_table, parent)
+    await mem_obj._ainit_(context, mem_table, parent)
     return mem_obj
 
 async def get_db_table(context, db_company, table_name):
@@ -3171,7 +3171,7 @@ class MemTable(DbTable):
             None,      # choices
             None,      # sql
             )
-        col = await self.add_mem_column(context, col_flds)
+        col = await self.add_mem_column(col_flds)
         self.primary_keys.append(col)
 
         for col_defn in table_defn.iter('mem_col'):
@@ -3198,7 +3198,7 @@ class MemTable(DbTable):
                 col_defn.get('choices'),
                 col_defn.get('sql')
                 )
-            col = await self.add_mem_column(context, col_flds)
+            col = await self.add_mem_column(col_flds)
 
             if col.key_field == 'A':
                 alt_keys.append(col)
@@ -3276,7 +3276,7 @@ class MemTable(DbTable):
 
         self.src_fkeys = self.tgt_fkeys = ()  # empty tuple
 
-    async def add_mem_column(self, context, col_flds):
+    async def add_mem_column(self, col_flds):
         """
         Create a :class:`~db.objects.Column` object from the arguments provided.
         """
@@ -3352,7 +3352,7 @@ class ClonedTable(MemTable):
     """
     An in-memory table cloned from a database table
     """
-    async def _ainit_(self, context, company, table_name, clone_from):
+    async def _ainit_(self, context, table_name, clone_from):
         db_table = clone_from.db_table
         self.table_name = table_name
         self.data_company = db_table.data_company
@@ -3402,7 +3402,7 @@ class ClonedTable(MemTable):
             None,      # choices
             None,      # sql
             )
-        col = await self.add_mem_column(context, company, col_flds)
+        col = await self.add_mem_column(col_flds)
         self.primary_keys.append(col)
 
         # this is ugly! at present [2017-10-27] the only cloned table is 'org_addresses'
@@ -3414,13 +3414,11 @@ class ClonedTable(MemTable):
             if col_defn.col_type == 'alt':
                 continue
             col_flds = col_defn.get_flds()
-            for pos in (10, 12):  # calculated, allow_amend
-                col_flds[pos] = dumps(col_flds[pos])  # reset to string
-            for pos in (18, 19, 20):  # col_checks, fkey, choices
+            for pos in (11, 13, 19, 20, 21):  # condition, allow_amend, col_checks, fkey, choices
                 if col_flds[pos] is not None:
                     col_flds[pos] = dumps(col_flds[pos])  # reset to string
             col_flds = col_flds[2:4] + col_flds[5:]  # drop row_id, table_id, seq
-            col = await self.add_mem_column(context, company, col_flds)
+            col = await self.add_mem_column(col_flds)
 
             if col.key_field == 'A':
                 alt_keys.append(col)
