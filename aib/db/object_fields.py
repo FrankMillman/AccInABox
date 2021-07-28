@@ -401,11 +401,14 @@ class Field:
 
         # print(f'setval {self.table_name}.{col_name}: "{self._value_}" -> "{value}"')
 
-        if from_sql:  # don't check - would not get into db if not checked
-            value = await self.get_val_from_sql(value)
-        else:
-            # check that value is of the correct type - do a bit of type-casting
-            value = await self.check_val(value)  # will raise AibError on error
+        # if from_sql:  # don't check - would not get into db if not checked
+        #     value = await self.get_val_from_sql(value)
+        # else:
+        #     # check that value is of the correct type - do a bit of type-casting
+        #     value = await self.check_val(value)  # will raise AibError on error
+        # changed [2021-07-28] - must always check
+        #   - we need the type-casting - e.g. if BOOL, 1 => True
+        value = await self.check_val(value)  # will raise AibError on error
 
         if not from_init and validate and (value is None or value == ''):
             if not col_defn.allow_null:
