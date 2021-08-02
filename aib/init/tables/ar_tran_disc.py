@@ -314,6 +314,33 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'disc_net_local',
+    'data_type'  : '$LCL',
+    'short_descr': 'Cr note net local',
+    'long_descr' : 'Cr note net amount in local currency',
+    'col_head'   : 'Crn net local',
+    'db_scale'   : 2,
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="disc_net_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+        '</expr>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'orig_item_id',
     'data_type'  : 'INT',
     'short_descr': 'Orig item id',
@@ -369,19 +396,6 @@ virt.append ({
     'sql'        : 'a.cust_row_id>function_row_id',
     })
 virt.append ({
-    'col_name'   : 'period_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Transaction period',
-    'long_descr' : 'Transaction period',
-    'col_head'   : 'Period',
-# need to execute this when SELECTing, but don't need to recalc if a.tran_date changed
-# no way to distinguish at present, so leave for now
-    'sql'        : (
-        "SELECT count(*) FROM {company}.adm_periods b "
-        "WHERE b.closing_date < a.tran_date"
-        ),
-    })
-virt.append ({
     'col_name'   : 'module_id',
     'data_type'  : 'TEXT',
     'short_descr': 'Module id',
@@ -427,24 +441,24 @@ virt.append ({
     'dflt_val'   : '{cust_row_id>currency_id}',
     'sql'        : 'a.cust_row_id>currency_id',
     })
-virt.append ({
-    'col_name'   : 'disc_net_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Invoice net local',
-    'long_descr' : 'Invoice net amount in local currency',
-    'col_head'   : 'Inv net local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="disc_net_amt"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.disc_net_amt / a.tran_exch_rate",
-    })
+# virt.append ({
+#     'col_name'   : 'disc_net_local',
+#     'data_type'  : '$LCL',
+#     'short_descr': 'Invoice net local',
+#     'long_descr' : 'Invoice net amount in local currency',
+#     'col_head'   : 'Inv net local',
+#     'db_scale'   : 2,
+#     'scale_ptr'  : '_param.local_curr_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="disc_net_amt"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'sql'        : "a.disc_net_amt / a.tran_exch_rate",
+#     })
 virt.append ({
     'col_name'   : 'disc_tot_amt',
     'data_type'  : '$TRN',
@@ -464,10 +478,28 @@ virt.append ({
     'sql'        : "a.disc_net_amt + a.disc_tax_amt"
     })
 virt.append ({
+    'col_name'   : 'disc_tot_cust',
+    'data_type'  : '$PTY',
+    'short_descr': 'Total amount cust',
+    'long_descr' : 'Total amount in customer currency',
+    'col_head'   : 'Tot amt',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="disc_net_cust"/>'
+          '<op type="+"/>'
+          '<fld_val name="disc_tax_cust"/>'
+        '</expr>'
+        ),
+    'sql'        : "a.disc_net_cust + a.disc_tax_cust"
+    })
+virt.append ({
     'col_name'   : 'disc_tot_local',
     'data_type'  : '$LCL',
     'short_descr': 'Total amount local',
-    'long_descr' : 'Total amount in customer currency',
+    'long_descr' : 'Total amount in local currency',
     'col_head'   : 'Tot amt',
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -480,30 +512,6 @@ virt.append ({
         '</expr>'
         ),
     'sql'        : "a.disc_net_local + a.disc_tax_local"
-    })
-virt.append ({
-    'col_name'   : 'disc_view_cust',
-    'data_type'  : '$PTY',
-    'short_descr': 'Amount for ar_trans - cust',
-    'long_descr' : 'Total amount for ar_trans view in customer currency',
-    'col_head'   : 'Tran cust',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : "0 - (a.disc_net_amt + a.disc_tax_amt)"
-    })
-virt.append ({
-    'col_name'   : 'disc_view_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Amount for ar_trans - local',
-    'long_descr' : 'Total amount for ar_trans view in local currency',
-    'col_head'   : 'Tran local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : "0 - (a.disc_net_local + a.disc_tax_local)"
     })
 
 # cursor definitions

@@ -1,16 +1,16 @@
 # table definition
 table = {
-    'table_name'    : 'cb_tran_bf',
+    'table_name'    : 'cb_tran_tfr_in',
     'module_id'     : 'cb',
-    'short_descr'   : 'B/f balance',
-    'long_descr'    : 'Cash book opening balance',
+    'short_descr'   : 'Cb transfer in',
+    'long_descr'    : 'Cash book - transfer from another account',
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
-    'ledger_col'    : None,
+    'ledger_col'    : 'ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -79,42 +79,13 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'ledger_row_id',
+    'col_name'   : 'src_tran_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Account row id',
-    'long_descr' : 'Bank account row id',
-    'col_head'   : 'Bank id',
-    'key_field'  : 'A',
-    'data_source': 'ctx',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : '{_param.cb_ledger_id}',
-    'dflt_rule'  : None,
-    'col_checks' : [
-        [
-            'ledger_id',
-            'Cannot change ledger id',
-            [
-                ['check', '', '$value', '=', '_ctx.ledger_row_id', ''],
-                ['or', '', '$module_row_id', '!=', '_ctx.module_row_id', ''],
-                ],
-            ],
-        ],
-    'fkey'       : ['cb_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, None],
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'tran_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Balance date',
-    'long_descr' : 'Balance date',
-    'col_head'   : 'Date',
+    'short_descr': 'Source row id',
+    'long_descr' : 'Source transaction row id',
+    'col_head'   : 'Src id',
     'key_field'  : 'N',
-    'data_source': 'input',
+    'data_source': 'par_id',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
@@ -123,11 +94,87 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : [
-        ['per_date', 'Must be prior to start', [
-            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_bf_date', ''],
-            ]],
-        ],
+    'col_checks' : None,
+    'fkey'       : ['cb_tran_tfr_out', 'row_id', None, None, True, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Account transferred from',
+    'long_descr' : 'Account transferred from',
+    'col_head'   : 'Tfr from',
+    'key_field'  : 'A',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['cb_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transfer number',
+    'long_descr' : 'Transfer number',
+    'col_head'   : 'Tfr no',
+    'key_field'  : 'A',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 15,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Transaction date',
+    'long_descr' : 'Transaction date',
+    'col_head'   : 'Date',
+    'key_field'  : 'N',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'party',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Party',
+    'long_descr' : 'Party',
+    'col_head'   : 'Party',
+    'key_field'  : 'N',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 30,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -142,53 +189,21 @@ cols.append ({
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
-    'max_len'    : 0,
+    'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'Balance b/f',
+    'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'tran_exch_rate',
-    'data_type'  : 'DEC',
-    'short_descr': 'Cb exchange rate',
-    'long_descr' : 'Exchange rate from cb currency to local',
-    'col_head'   : 'Rate cb',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 0,
-    'db_scale'   : 8,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-            '<compare test="[[`if`, ``, `ledger_row_id>currency_id`, `=`, `_param.local_curr_id`, ``]]">'
-                '<literal value="1"/>'
-            '</compare>'
-            '<default>'
-                '<exch_rate>'
-                    '<fld_val name="ledger_row_id>currency_id"/>'
-                    '<fld_val name="tran_date"/>'
-                '</exch_rate>'
-            '</default>'
-        '</case>'
-        ),
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
-    'col_name'   : 'amount_cb',
+    'col_name'   : 'tfr_amount',
     'data_type'  : '$PTY',
-    'short_descr': 'B/f cb',
-    'long_descr' : 'Balance b/f in cashbook currency',
-    'col_head'   : 'B/f cb',
+    'short_descr': 'Amount transferred - cb curr',
+    'long_descr' : 'Amount transferred in cb currency',
+    'col_head'   : 'Amt tfrd cb',
     'key_field'  : 'N',
     'data_source': 'input',
     'condition'  : None,
@@ -204,13 +219,13 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'amount_local',
+    'col_name'   : 'tfr_local',
     'data_type'  : '$LCL',
-    'short_descr': 'B/f loc',
-    'long_descr' : 'Balance b/f in local currency',
-    'col_head'   : 'B/f loc',
+    'short_descr': 'Amount transferred - loc curr',
+    'long_descr' : 'Amount transferred in local currency',
+    'col_head'   : 'Tfr loc',
     'key_field'  : 'N',
-    'data_source': 'calc',
+    'data_source': 'prog',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
@@ -218,13 +233,7 @@ cols.append ({
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="amount_cb"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-        '</expr>'
-        ),
+    'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -236,15 +245,24 @@ cols.append ({
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
     'key_field'  : 'N',
-    'data_source': 'prog',
+    'data_source': 'calc',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
-    'dflt_rule'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<on_post>'
+                '<literal value="$True"/>'
+            '</on_post>'
+            '<default>'
+                '<literal value="$False"/>'
+            '</default>'
+        '</case>'
+        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -253,36 +271,28 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type - used in gui to ask "Post another?"',
+    'col_head'   : 'Tran type',
+    'sql'        : "'cb_tfr_in'",
+    })
+virt.append ({
+    'col_name'   : 'module_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Module row id',
+    'long_descr' : 'Module row id',
+    'col_head'   : 'Module row id',
+    'sql'        : "SELECT row_id FROM {company}.db_modules WHERE module_id = 'cb'",
+    })
+virt.append ({
     'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Tran type row id',
     'long_descr' : 'Tran type row id',
     'col_head'   : 'Tran type row id',
-    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'cb_bf'",
-    })
-virt.append ({
-    'col_name'   : 'location_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Location row id',
-    'long_descr' : 'Location row id',
-    'col_head'   : 'Location',
-    'sql'        : 'a.ledger_row_id>location_row_id',
-    })
-virt.append ({
-    'col_name'   : 'function_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Function row id',
-    'long_descr' : 'Function row id',
-    'col_head'   : 'Function',
-    'sql'        : 'a.ledger_row_id>function_row_id',
-    })
-virt.append ({
-    'col_name'   : 'tran_number',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction number',
-    'long_descr' : 'Transaction number',
-    'col_head'   : 'Tran num',
-    'sql'        : '"Balance b/f"',
+    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'cb_tfr_in'",
     })
 
 # cursor definitions
@@ -298,19 +308,18 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                # ['source_code', "'cb_bf'"],
+                ['location_row_id', 'ledger_row_id>location_row_id'],
+                ['function_row_id', 'ledger_row_id>function_row_id'],
                 ['src_trantype_row_id', 'trantype_row_id'],
                 ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cb', '+', 'amount_cb'],  # tgt_col, op, src_col
-                ['tran_tot_cb', '+', 'amount_cb'],
-                ['tran_day_local', '+', 'amount_local'],
-                ['tran_tot_local', '+', 'amount_local'],
+                ['tran_day_cb', '+', 'tfr_amount'],  # tgt_col, op, src_col
+                ['tran_tot_cb', '+', 'tfr_amount'],
+                ['tran_day_local', '+', 'tfr_local'],
+                ['tran_tot_local', '+', 'tfr_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -323,17 +332,16 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                # ['source_code', "'cb_bf'"],
+                ['location_row_id', 'ledger_row_id>location_row_id'],
+                ['function_row_id', 'ledger_row_id>function_row_id'],
                 ['src_trantype_row_id', 'trantype_row_id'],
                 ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'amount_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'amount_local'],
+                ['tran_day', '+', 'tfr_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'tfr_local'],
                 ],
             [],  # on post
             [],  # on unpost

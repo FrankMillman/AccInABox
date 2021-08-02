@@ -177,7 +177,7 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['per_date', 'Period not open', [
-            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date,"cb",ledger_row_id', ''],
             ]],
         ],
     'fkey'       : None,
@@ -464,19 +464,6 @@ virt.append ({
     'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'cb_rec'",
     })
 virt.append ({
-    'col_name'   : 'period_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Transaction period',
-    'long_descr' : 'Transaction period row id',
-    'col_head'   : 'Period',
-# need to execute this when SELECTing, but don't need to recalc if a.tran_date changed
-# no way to distinguish at present, so leave for now
-    'sql'        : (
-        "SELECT count(*) FROM {company}.adm_periods b "
-        "WHERE b.closing_date < a.tran_date"
-        ),
-    })
-virt.append ({
     'col_name'   : 'cust_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Cust row id',
@@ -491,26 +478,6 @@ virt.append ({
     'long_descr' : 'Supplier row id - this is only here to satisfy diag.py',
     'col_head'   : 'Supp',
     'sql'        : "NULL",
-    })
-virt.append ({
-    'col_name'   : 'view_cb',
-    'data_type'  : '$PTY',
-    'short_descr': 'Amount received - cb curr',
-    'long_descr' : 'Amount received in cb currency',
-    'col_head'   : 'Amount cb',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'ledger_row_id>currency_id>scale',
-    'sql'        : "a.amount_cb",
-    })
-virt.append ({
-    'col_name'   : 'view_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Amount received - local curr',
-    'long_descr' : 'Amount received in local currency',
-    'col_head'   : 'Amount local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'sql'        : "a.amount_local",
     })
 
 # cursor definitions
@@ -539,7 +506,7 @@ actions.append([
             'Period is closed',
             [
                 ['check', '', '$exists', 'is', '$True', ''],
-                ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+                ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date,"cb",ledger_row_id', ''],
                 ],
             ],
         ],

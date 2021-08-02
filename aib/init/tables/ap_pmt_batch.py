@@ -159,7 +159,8 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['per_date', 'Period not open', [
-            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+            ['check', '', '$value', 'pyfunc',
+                'custom.date_funcs.check_tran_date,"ap",ledger_row_id', ''],
             ]],
         ],
     'fkey'       : None,
@@ -323,19 +324,6 @@ virt.append ({
     'col_head'   : 'Tran type',
     'sql'        : "'ap_pmt'",
     })
-virt.append ({
-    'col_name'   : 'period_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Transaction period',
-    'long_descr' : 'Transaction period',
-    'col_head'   : 'Period',
-# need to execute this when SELECTing, but don't need to recalc if a.tran_date changed
-# no way to distinguish at present, so leave for now
-    'sql'        : (
-        "SELECT count(*) FROM {company}.adm_periods b "
-        "WHERE b.closing_date < a.tran_date"
-        ),
-    })
 
 # cursor definitions
 cursors = []
@@ -377,7 +365,8 @@ actions.append([
             'Period is closed',
             [
                 ['check', '', '$exists', 'is', '$True', ''],
-                ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+                ['or', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ap",ledger_row_id', ''],
                 ],
             ],
         ],

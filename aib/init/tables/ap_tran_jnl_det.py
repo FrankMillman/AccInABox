@@ -272,15 +272,6 @@ virt.append ({
     'sql'        : "a.tran_row_id>text"
     })
 virt.append ({
-    'col_name'   : 'period_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Transaction period',
-    'long_descr' : 'Transaction period',
-    'col_head'   : 'Period',
-    'dflt_val'   : '{tran_row_id>period_row_id}',
-    'sql'        : "a.tran_row_id>period_row_id"
-    })
-virt.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
     'short_descr': 'Currency id',

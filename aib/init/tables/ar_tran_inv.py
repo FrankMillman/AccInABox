@@ -169,7 +169,8 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['per_date', 'Period not open', [
-            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+            ['check', '', '$value', 'pyfunc',
+                'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
             ]],
         ['stat_date', 'Statement period not open', [
             ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
@@ -447,6 +448,62 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'inv_net_cust',
+    'data_type'  : '$PTY',
+    'short_descr': 'Net amount',
+    'long_descr' : 'Net amount in customer currency',
+    'col_head'   : 'Net amt',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="inv_net_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="cust_exch_rate"/>'
+        '</expr>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'inv_tax_cust',
+    'data_type'  : '$PTY',
+    'short_descr': 'Tax amount',
+    'long_descr' : 'Tax amount in customer currency',
+    'col_head'   : 'Tax amt',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="inv_tax_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="cust_exch_rate"/>'
+        '</expr>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []
@@ -499,19 +556,6 @@ virt.append ({
     'sql'        : 'a.cust_row_id>function_row_id',
     })
 virt.append ({
-    'col_name'   : 'period_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Transaction period',
-    'long_descr' : 'Transaction period',
-    'col_head'   : 'Period',
-# need to execute this when SELECTing, but don't need to recalc if a.tran_date changed
-# no way to distinguish at present, so leave for now
-    'sql'        : (
-        "SELECT count(*) FROM {company}.adm_periods b "
-        "WHERE b.closing_date < a.tran_date"
-        ),
-    })
-virt.append ({
     'col_name'   : 'inv_tot_amt',
     'data_type'  : '$TRN',
     'short_descr': 'Total amount',
@@ -529,50 +573,50 @@ virt.append ({
         ),
     'sql'        : "a.inv_net_amt + a.inv_tax_amt"
     })
-virt.append ({
-    'col_name'   : 'inv_net_cust',
-    'data_type'  : '$PTY',
-    'short_descr': 'Net amount',
-    'long_descr' : 'Net amount in customer currency',
-    'col_head'   : 'Net amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="inv_net_amt"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-          '<op type="*"/>'
-          '<fld_val name="cust_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.inv_net_amt / a.tran_exch_rate * a.cust_exch_rate"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'inv_tax_cust',
-    'data_type'  : '$PTY',
-    'short_descr': 'Tax amount',
-    'long_descr' : 'Tax amount in customer currency',
-    'col_head'   : 'Tax amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="inv_tax_amt"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-          '<op type="*"/>'
-          '<fld_val name="cust_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.inv_tax_amt / a.tran_exch_rate * a.cust_exch_rate"
-        ),
-    })
+# virt.append ({
+#     'col_name'   : 'inv_net_cust',
+#     'data_type'  : '$PTY',
+#     'short_descr': 'Net amount',
+#     'long_descr' : 'Net amount in customer currency',
+#     'col_head'   : 'Net amt',
+#     'db_scale'   : 2,
+#     'scale_ptr'  : 'cust_row_id>currency_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="inv_net_amt"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_exch_rate"/>'
+#           '<op type="*"/>'
+#           '<fld_val name="cust_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'sql'        : (
+#         "a.inv_net_amt / a.tran_exch_rate * a.cust_exch_rate"
+#         ),
+#     })
+# virt.append ({
+#     'col_name'   : 'inv_tax_cust',
+#     'data_type'  : '$PTY',
+#     'short_descr': 'Tax amount',
+#     'long_descr' : 'Tax amount in customer currency',
+#     'col_head'   : 'Tax amt',
+#     'db_scale'   : 2,
+#     'scale_ptr'  : 'cust_row_id>currency_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="inv_tax_amt"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_exch_rate"/>'
+#           '<op type="*"/>'
+#           '<fld_val name="cust_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'sql'        : (
+#         "a.inv_tax_amt / a.tran_exch_rate * a.cust_exch_rate"
+#         ),
+#     })
 virt.append ({
     'col_name'   : 'inv_tot_cust',
     'data_type'  : '$PTY',
@@ -638,7 +682,8 @@ actions.append([
             'Period is closed',
             [
                 ['check', '', '$exists', 'is', '$True', ''],
-                ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+                ['or', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
                 ],
             ],
         [

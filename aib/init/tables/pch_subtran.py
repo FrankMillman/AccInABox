@@ -143,7 +143,9 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['wh_date', 'Warehouse period not open', [
-            ['check', '', 'wh_prod_row_id>ledger_row_id', 'pyfunc', 'custom.date_funcs.check_wh_date', ''],
+            # ['check', '', 'wh_prod_row_id>ledger_row_id', 'pyfunc', 'custom.date_funcs.check_wh_date', ''],
+            ['check', '', 'subparent_row_id>tran_date', 'pyfunc',
+                'custom.date_funcs.check_tran_date,"in",wh_prod_row_id>ledger_row_id', ''],
             ]],
         ],
     'fkey'       : [

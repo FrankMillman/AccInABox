@@ -121,8 +121,8 @@ cols.append ({
             ['ap_crn', 'ap_tran_crn_det'],
             ['ap_jnl', 'ap_tran_jnl_det'],
             ['ap_disc', 'ap_tran_disc'],
-            ['cb_pmt', 'cb_tran_pmt_det'],
             ['cb_rec', 'cb_tran_rec_det'],
+            ['cb_pmt', 'cb_tran_pmt_det'],
             ['gl_jnl', 'gl_tran_jnl_det'],
             ['ap_uex_bf', 'ap_uex_bf'],
             ]],
@@ -180,7 +180,7 @@ cols.append ({
             'Invalid location',
             [
                 ['check', '', '$value', '=', 'npch_code_id>valid_loc_ids', ''],
-                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,npch_code_id', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,"npch_code_id"', ''],
                 ],
             ],
         ],
@@ -218,7 +218,7 @@ cols.append ({
             'Invalid function',
             [
                 ['check', '', '$value', '=', 'npch_code_id>valid_fun_ids', ''],
-                ['or', '', '$value', 'pyfunc', 'db.checks.valid_fun_id,npch_code_id', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_fun_id,"npch_code_id"', ''],
                 ],
             ],
         ],
@@ -357,7 +357,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'tot_amt',
-    'data_type'  : '$LCL',
+    'data_type'  : '$TRN',
     'short_descr': 'Total in transaction currency',
     'long_descr' : 'Total amount in transaction currency',
     'col_head'   : 'Net amount',
@@ -378,7 +378,7 @@ virt.append ({
     'data_type'  : '$LCL',
     'short_descr': 'Total in local currency',
     'long_descr' : 'Total amount in local currency',
-    'col_head'   : 'Net local',
+    'col_head'   : 'Tot local',
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',

@@ -142,7 +142,8 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['per_date', 'Period not open', [
-            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+            ['check', '', '$value', 'pyfunc',
+                'custom.date_funcs.check_tran_date,"ap",ledger_row_id', ''],
             ]],
         ],
     'fkey'       : None,
@@ -467,24 +468,6 @@ virt.append ({
     'sql'        : 'a.supp_row_id>function_row_id',
     })
 virt.append ({
-    'col_name'   : 'period_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Transaction period',
-    'long_descr' : 'Statement transaction period',
-    'col_head'   : 'Period',
-# need to execute this when SELECTing, but don't need to recalc if a.tran_date changed
-# no way to distinguish at present, so leave for now
-    'sql'        : (
-#       "SELECT b.row_id - 1 FROM {company}.adm_periods b, {company}.adm_periods c "
-#       "WHERE c.row_id = (b.row_id - 1) AND a.tran_date > c.statement_date "
-#       "AND a.tran_date <= b.statement_date"
-
-        "SELECT count(*) FROM {company}.adm_periods b "
-#       "WHERE a.tran_date > b.statement_date"
-        "WHERE b.statement_date < a.tran_date"
-        ),
-    })
-virt.append ({
     'col_name'   : 'crn_tot_amt',
     'data_type'  : '$TRN',
     'short_descr': 'Total amount',
@@ -635,7 +618,8 @@ actions.append([
             'Period is closed',
             [
                 ['check', '', '$exists', 'is', '$True', ''],
-                ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+                ['or', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ap",ledger_row_id', ''],
                 ],
             ],
         ],

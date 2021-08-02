@@ -168,7 +168,8 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : [
         ['per_date', 'Period not open', [
-            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+            ['check', '', '$value', 'pyfunc',
+                'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
             ]],
         ['stat_date', 'Statement period not open', [
             ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
@@ -444,6 +445,62 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'crn_net_cust',
+    'data_type'  : '$PTY',
+    'short_descr': 'Net amount',
+    'long_descr' : 'Net amount in customer currency',
+    'col_head'   : 'Net amt',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="crn_net_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="cust_exch_rate"/>'
+        '</expr>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'crn_tax_cust',
+    'data_type'  : '$PTY',
+    'short_descr': 'Tax amount',
+    'long_descr' : 'Tax amount in customer currency',
+    'col_head'   : 'Tax amt',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="crn_tax_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="cust_exch_rate"/>'
+        '</expr>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []
@@ -495,24 +552,6 @@ virt.append ({
     'col_head'   : 'Function',
     'sql'        : 'a.cust_row_id>function_row_id',
     })
-virt.append ({
-    'col_name'   : 'period_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Transaction period',
-    'long_descr' : 'Statement transaction period',
-    'col_head'   : 'Period',
-# need to execute this when SELECTing, but don't need to recalc if a.tran_date changed
-# no way to distinguish at present, so leave for now
-    'sql'        : (
-#       "SELECT b.row_id - 1 FROM {company}.adm_periods b, {company}.adm_periods c "
-#       "WHERE c.row_id = (b.row_id - 1) AND a.tran_date > c.statement_date "
-#       "AND a.tran_date <= b.statement_date"
-
-        "SELECT count(*) FROM {company}.adm_periods b "
-#       "WHERE a.tran_date > b.statement_date"
-        "WHERE b.statement_date < a.tran_date"
-        ),
-    })
 # virt.append ({
 #     'col_name'   : 'item_row_id',
 #     'data_type'  : 'INT',
@@ -551,50 +590,50 @@ virt.append ({
         ),
     'sql'        : "a.crn_net_amt + a.crn_tax_amt"
     })
-virt.append ({
-    'col_name'   : 'crn_net_cust',
-    'data_type'  : '$PTY',
-    'short_descr': 'Net amount',
-    'long_descr' : 'Net amount in customer currency',
-    'col_head'   : 'Net amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="crn_net_amt"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-          '<op type="*"/>'
-          '<fld_val name="cust_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.crn_net_amt / a.tran_exch_rate * a.cust_exch_rate"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'crn_tax_cust',
-    'data_type'  : '$PTY',
-    'short_descr': 'Tax amount',
-    'long_descr' : 'Tax amount in customer currency',
-    'col_head'   : 'Tax amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="crn_tax_amt"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-          '<op type="*"/>'
-          '<fld_val name="cust_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.crn_tax_amt / a.tran_exch_rate * a.cust_exch_rate"
-        ),
-    })
+# virt.append ({
+#     'col_name'   : 'crn_net_cust',
+#     'data_type'  : '$PTY',
+#     'short_descr': 'Net amount',
+#     'long_descr' : 'Net amount in customer currency',
+#     'col_head'   : 'Net amt',
+#     'db_scale'   : 2,
+#     'scale_ptr'  : 'cust_row_id>currency_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="crn_net_amt"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_exch_rate"/>'
+#           '<op type="*"/>'
+#           '<fld_val name="cust_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'sql'        : (
+#         "a.crn_net_amt / a.tran_exch_rate * a.cust_exch_rate"
+#         ),
+#     })
+# virt.append ({
+#     'col_name'   : 'crn_tax_cust',
+#     'data_type'  : '$PTY',
+#     'short_descr': 'Tax amount',
+#     'long_descr' : 'Tax amount in customer currency',
+#     'col_head'   : 'Tax amt',
+#     'db_scale'   : 2,
+#     'scale_ptr'  : 'cust_row_id>currency_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="crn_tax_amt"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_exch_rate"/>'
+#           '<op type="*"/>'
+#           '<fld_val name="cust_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'sql'        : (
+#         "a.crn_tax_amt / a.tran_exch_rate * a.cust_exch_rate"
+#         ),
+#     })
 virt.append ({
     'col_name'   : 'crn_tot_cust',
     'data_type'  : '$PTY',
@@ -631,30 +670,6 @@ virt.append ({
         ),
     'sql'        : "a.crn_net_local + a.crn_tax_local"
     })
-virt.append ({
-    'col_name'   : 'crn_view_cust',
-    'data_type'  : '$PTY',
-    'short_descr': 'Total amount',
-    'long_descr' : 'Total amount for ar_trans view in customer currency',
-    'col_head'   : 'Tot amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : "0 - (a.crn_net_cust + a.crn_tax_cust)"
-    })
-virt.append ({
-    'col_name'   : 'crn_view_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Total amount local',
-    'long_descr' : 'Total amount for ar_trans view in local currency',
-    'col_head'   : 'Tot amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : "0 - (a.crn_net_local + a.crn_tax_local)"
-    })
 
 # cursor definitions
 cursors = []
@@ -684,7 +699,8 @@ actions.append([
             'Period is closed',
             [
                 ['check', '', '$exists', 'is', '$True', ''],
-                ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date', ''],
+                ['or', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
                 ],
             ],
         [

@@ -693,6 +693,12 @@ class Conn:
         else:
             build_sum = False
 
+        if col_name.lower().startswith('rev('):  # used in views and drilldown
+            reverse = True
+            col_name = col_name[4:-1]
+        else:
+            reverse = False
+
         col, alias, as_clause = await self.get_col_alias(
             context, db_table, col_params, col_name)
         if col is None:
@@ -711,15 +717,26 @@ class Conn:
                 col_name = col.col_name
             if build_sum:
                 col_text = f'SUM({as_clause}) as {col_name}'
+            elif not as_clause.count(' '):  # one-word as_clause - use it as column name
+                if reverse:
+                    col_text = f'0 - {as_clause}'
+                else:
+                    col_text = f'{as_clause}'
             else:
-                col_text = f'{as_clause} as {col_name}'
+                if reverse:
+                    col_text = f'0 - ({as_clause}) as {col_name}'
+                else:
+                    col_text = f'{as_clause} as {col_name}'
         elif build_sum:
             if (col.data_type == 'DEC' or col.data_type.startswith('$')) and not self.grouping:
                 col_text = f'SUM({alias}.{col.col_name}) AS "{col.col_name} [REAL{col.db_scale}]"'
             else:
                 col_text = f'SUM({alias}.{col.col_name})'
         else:
-            col_text = f'{alias}.{col.col_name}'
+            if reverse:
+                col_text = f'0 - {alias}.{col.col_name}'
+            else:
+                col_text = f'{alias}.{col.col_name}'
 
         return col_text
 

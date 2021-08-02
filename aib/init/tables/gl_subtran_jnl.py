@@ -219,7 +219,7 @@ cols.append ({
             'location_code',
             'Invalid location',
             [
-                ['check', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,gl_code_id', ''],
+                ['check', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,"gl_code_id"', ''],
                 ],
             ],
         ],
@@ -262,7 +262,7 @@ cols.append ({
             'function_code',
             'Invalid function',
             [
-                ['check', '', '$value', 'pyfunc', 'db.checks.valid_fun_id,gl_code_id', ''],
+                ['check', '', '$value', 'pyfunc', 'db.checks.valid_fun_id,"gl_code_id"', ''],
                 ],
             ],
         ],
@@ -397,7 +397,7 @@ actions.append([
                 ['gl_code_id', 'gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
-                ['src_tran_type', 'tran_type'],
+                ['src_tran_type', "'gl_subjnl'"],
                 ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'tran_date'],

@@ -165,7 +165,7 @@ virt.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
     'short_descr': 'Posted?',
-    'long_descr' : 'Has transaction been posted?',
+    'long_descr' : 'Has transaction been posted? Only here to satisfy diag.py',
     'col_head'   : 'Posted?',
     'dflt_val'   : '{subtran_row_id>subparent_row_id>posted}',
     'sql'        : "a.subtran_row_id>subparent_row_id>posted"
@@ -207,21 +207,6 @@ virt.append ({
         "* "
         "CASE WHEN a.subtran_row_id>subparent_row_id>rev_sign_pch = $True THEN -1 ELSE 1 END"
         ),
-    })
-virt.append ({
-    'col_name'   : 'exp_source_code',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Source code for exp',
-    'long_descr' : 'Source code for exp',
-    'col_head'   : 'Source code for exp',
-    'dflt_rule'   : (
-        '<expr>'
-          '<fld_val name="subtran_row_id>source_code"/>'
-          '<op type="+"/>'
-          '<literal value="_exp"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.subtran_row_id>source_code || '_exp'"
     })
 
 # cursor definitions

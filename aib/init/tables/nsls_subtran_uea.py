@@ -208,21 +208,6 @@ virt.append ({
         "CASE WHEN a.subtran_row_id>subparent_row_id>rev_sign_sls = $True THEN -1 ELSE 1 END"
         ),
     })
-virt.append ({
-    'col_name'   : 'ear_source_code',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Source code for ear',
-    'long_descr' : 'Source code for ear',
-    'col_head'   : 'Source code for ear',
-    'dflt_rule'   : (
-        '<expr>'
-          '<fld_val name="subtran_row_id>source_code"/>'
-          '<op type="+"/>'
-          '<literal value="_ear"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.subtran_row_id>source_code || '_ear'"
-    })
 
 # cursor definitions
 cursors = []

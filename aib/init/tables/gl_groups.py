@@ -218,7 +218,7 @@ cols.append ({
             [
                 ['check', '', 'parent_id', 'is', '$None', ''],
                 ['or', '', '$value', '=', 'parent_id>valid_loc_ids', ''],
-                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,parent_id', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,"parent_id"', ''],
                 ],
             ],
         ],
@@ -257,7 +257,7 @@ cols.append ({
             [
                 ['check', '', 'parent_id', 'is', '$None', ''],
                 ['or', '', '$value', '=', 'parent_id>valid_fun_ids', ''],
-                ['or', '', '$value', 'pyfunc', 'db.checks.valid_fun_id,parent_id', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_fun_id,"parent_id"', ''],
                 ],
             ],
         ],
