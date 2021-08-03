@@ -12,7 +12,6 @@ table = {
                 []],
             ['form', 'form', ['descr', 'module_row_id', 'ledger_row_id', 'form_name'], []],
             ['report', 'Report', ['descr', 'module_row_id', 'ledger_row_id'], []],
-            ['finrpt', 'Fin report', ['descr', 'module_row_id', 'ledger_row_id', 'form_name'], []],
             ]],
         ],
     'sub_trans'     : None,

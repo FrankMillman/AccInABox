@@ -42,8 +42,6 @@ async def setup_db_tables(context, conn, company_name):
         'db_modules',
         'db_tables',
         'db_columns',
-        # 'db_cursors',
-        # 'db_actions',
         ]
     # create tables first
     for table_name in tables:
@@ -245,7 +243,7 @@ async def setup_other_tables(context, conn):
         'gl_ledger_params',
         'gl_ledger_periods',
         'gl_source_codes',
-        'gl_finrpt_defns',
+        'sys_finrpt_defns',
         'gl_tran_bf',
         'gl_tran_jnl',
         'gl_tran_jnl_det',
@@ -257,7 +255,8 @@ async def setup_other_tables(context, conn):
         'cb_tran_rec_det',
         'cb_tran_pmt',
         'cb_tran_pmt_det',
-        'cb_tran_tfr',
+        'cb_tran_tfr_out',
+        'cb_tran_tfr_in',
         'cb_tran_bf',
         'cb_totals',
         'cb_comments',
@@ -272,14 +271,12 @@ async def setup_other_tables(context, conn):
         'npch_tax_codes',
         'ar_ledger_params',
         'ar_ledger_periods',
-        'ar_finrpt_defns',
         'ar_terms_codes',
         'ar_customers',
         'ar_comments',
         'ar_stat_dates',
         'ap_ledger_params',
         'ap_ledger_periods',
-        'ap_finrpt_defns',
         'ap_terms_codes',
         'ap_suppliers',
         'ap_comments',
@@ -620,8 +617,9 @@ async def setup_forms(context, conn):
     await setup_form('cb_cashbook')
     await setup_form('nsls_ledger_new')
     await setup_form('npch_ledger_new')
-    # await setup_form('fin_reports')
+    await setup_form('sys_finrpts')
     await setup_form('fin_report')
+    await setup_form('finrpt_grid')
 
 async def setup_reports(context, conn):
     # schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
@@ -650,11 +648,13 @@ async def setup_reports(context, conn):
     await setup_report('ar_statement')
 
 async def setup_finrpts(context, conn):
+
+    db_obj = await db.objects.get_db_object(context, 'sys_finrpt_defns')
+
     async def setup_finrpt(db_obj, report_name):
-
         rpt = importlib.import_module(f'.fin_reports.{report_name}', 'init')
-
         await db_obj.init()
+        await db_obj.setval('module_id', rpt.module_id)
         await db_obj.setval('report_name', rpt.report_name)
         await db_obj.setval('descr', rpt.report_name)
         await db_obj.setval('table_name', rpt.table_name)
@@ -675,24 +675,25 @@ async def setup_finrpts(context, conn):
             await db_obj.setval('cashflow_params', rpt.cashflow_params)
         await db_obj.save()
 
-    db_obj = await db.objects.get_db_object(context, 'gl_finrpt_defns')
-    await setup_finrpt(db_obj, 'tb_by_maj')
-    await setup_finrpt(db_obj, 'tb_by_int')
-    await setup_finrpt(db_obj, 'tb_by_code')
-    await setup_finrpt(db_obj, 'tb_pivot_maj')
-    await setup_finrpt(db_obj, 'int_by_loc')
-    await setup_finrpt(db_obj, 'int_pivot_loc')
-    await setup_finrpt(db_obj, 'int_pivot_date')
-    await setup_finrpt(db_obj, 'cb_cash_flow')
-    await setup_finrpt(db_obj, 'int_curr_prev')
+    finrpt_names = [
+        'tb_by_maj',
+        'tb_by_int',
+        'tb_by_code',
+        'tb_pivot_maj',
+        'int_by_loc',
+        'int_by_loc',
+        'int_pivot_loc',
+        'int_pivot_date',
+        'int_curr_prev',
+        'cb_cash_flow',
+        'ar_by_src',
+        'ar_pivot_src',
+        'ap_by_src',
+        'ap_pivot_src',
+        ]
 
-    db_obj = await db.objects.get_db_object(context, 'ar_finrpt_defns')
-    await setup_finrpt(db_obj, 'ar_by_src')
-    await setup_finrpt(db_obj, 'ar_pivot_src')
-
-    db_obj = await db.objects.get_db_object(context, 'ap_finrpt_defns')
-    await setup_finrpt(db_obj, 'ap_by_src')
-    await setup_finrpt(db_obj, 'ap_pivot_src')
+    for name in finrpt_names:
+        await setup_finrpt(db_obj, name)
 
 async def setup_processes(context, conn):
     parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
@@ -739,8 +740,6 @@ async def setup_menus(context, conn, company_name):
             await db_obj.setval('cursor_name', cursor_name)
         elif opt_type == 'form':
             await db_obj.setval('form_name', form_name)
-        elif opt_type == 'finrpt':
-            await db_obj.setval('form_name', form_name)
         await db_obj.save()
         return await db_obj.getval('row_id')
 
@@ -778,7 +777,7 @@ async def setup_menus(context, conn, company_name):
             ['Gl transactions', 'menu', 'gl', [
                 ['Capture journal', 'form', 'gl_jnl'],
                 ]],
-            ['Financial reports', 'grid', 'gl_finrpt_defns', 'finrpt_list'],
+            ['Financial reports', 'form', 'sys_finrpts'],
             ['Period end procedure', 'form', 'gl_ledger_periods'],
             ]],
         ['Cash book', 'menu', 'cb', [
@@ -849,12 +848,7 @@ async def setup_menus(context, conn, company_name):
             ['AR balances', 'form', 'ar_balances'],
             ['Sales report', 'form', 'sls_report'],
             ]],
-        ['Financial reports', 'grid', 'ar_finrpt_defns', 'finrpt_list'],
-        ['Ar reports', 'menu', 'ar', [
-            ['Ledger summary', 'form', 'ar_ledger_summary'],
-            # ['Ar by src', 'finrpt', 'ar_by_src'],
-            # ['Ar pivot src', 'finrpt', 'ar_pivot_src'],
-            ]],
+        ['Financial reports', 'form', 'sys_finrpts'],
         ['Period end procedure', 'form', 'ar_ledger_periods'],
         ]]
 
@@ -878,10 +872,7 @@ async def setup_menus(context, conn, company_name):
         ['Ap enquiries', 'menu', 'ap', [
             ['AP balances', 'form', 'ap_balances'],
             ]],
-        ['Financial reports', 'grid', 'ap_finrpt_defns', 'finrpt_list'],
-        ['Ap reports', 'menu', 'ap', [
-            ['Ledger summary', 'form', 'ap_ledger_summary'],
-            ]],
+        ['Financial reports', 'form', 'sys_finrpts'],
         ['Period end procedure', 'form', 'ap_ledger_periods'],
         ]]
 
@@ -918,8 +909,6 @@ async def setup_menus(context, conn, company_name):
             await setup_menu(descr, parent_id, opt_type, module_id=module_id, table_name=menu_opt[2],
                 cursor_name=menu_opt[3])
         elif opt_type == 'form':
-            await setup_menu(descr, parent_id, opt_type, module_id=module_id, form_name=menu_opt[2])
-        elif opt_type == 'finrpt':
             await setup_menu(descr, parent_id, opt_type, module_id=module_id, form_name=menu_opt[2])
 
     ledger_row_id = None
@@ -1005,11 +994,12 @@ async def setup_init_data(context, conn, company_name):
 
     tran_types = []
     tran_types.append(('gl_jnl', 'Gl journal', 'gl', 'gl_tran_jnl'))
-    # tran_types.append(('gl_subjnl', 'Gl subtran journal', 'gl', 'gl_subtran_jnl'))
+    tran_types.append(('gl_subjnl', 'Gl subtran journal', 'gl', 'gl_subtran_jnl'))
     tran_types.append(('gl_bf', 'Gl b/f balance', 'gl', 'gl_tran_bf'))
     tran_types.append(('cb_rec', 'Cb receipt', 'cb', 'cb_tran_rec'))
     tran_types.append(('cb_pmt', 'Cb payment', 'cb', 'cb_tran_pmt'))
-    tran_types.append(('cb_tfr', 'Cb tansfer', 'cb', 'cb_tran_tfr'))
+    tran_types.append(('cb_tfr_out', 'Cb tansfer', 'cb', 'cb_tran_tfr_out'))
+    tran_types.append(('cb_tfr_in', 'Cb tansfer', 'cb', 'cb_tran_tfr_in'))
     tran_types.append(('cb_bf', 'Cb b/f balance', 'cb', 'cb_tran_bf'))
     tran_types.append(('ar_inv', 'Ar invoice', 'ar', 'ar_tran_inv'))
     tran_types.append(('ar_crn', 'Ar cr note', 'ar', 'ar_tran_crn'))

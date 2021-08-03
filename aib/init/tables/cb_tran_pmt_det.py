@@ -34,7 +34,7 @@ table = {
                 ],
             ['apmt', 'Ap payment', 'ap_subtran_pmt',
                 [  # return values
-                    ['pmt_tran', 'apmt_amount'],  # tgt_col, src_col
+                    ['pmt_tran', 'pmt_amount'],  # tgt_col, src_col
                     ],
                 ['supp_id'],  # display descr
                 ],

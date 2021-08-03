@@ -321,7 +321,7 @@ cols.append ({
     'col_name'   : 'jnl_local',
     'data_type'  : '$PTY',
     'short_descr': 'Jnl local',
-    'long_descr' : 'Jnl amount in customer currency',
+    'long_descr' : 'Jnl amount in local currency',
     'col_head'   : 'Jnl local',
     'key_field'  : 'N',
     'data_source': 'calc',

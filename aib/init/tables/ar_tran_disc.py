@@ -488,12 +488,12 @@ virt.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
-          '<fld_val name="disc_net_cust"/>'
+          '<fld_val name="disc_net_amt"/>'
           '<op type="+"/>'
-          '<fld_val name="disc_tax_cust"/>'
+          '<fld_val name="disc_tax_amt"/>'
         '</expr>'
         ),
-    'sql'        : "a.disc_net_cust + a.disc_tax_cust"
+    'sql'        : "a.disc_net_amt + a.disc_tax_amt"
     })
 virt.append ({
     'col_name'   : 'disc_tot_local',

@@ -314,6 +314,33 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'disc_net_local',
+    'data_type'  : '$LCL',
+    'short_descr': 'Cr note net local',
+    'long_descr' : 'Cr note net amount in local currency',
+    'col_head'   : 'Crn net local',
+    'db_scale'   : 2,
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="disc_net_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+        '</expr>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'orig_item_id',
     'data_type'  : 'INT',
     'short_descr': 'Orig item id',
@@ -398,24 +425,24 @@ virt.append ({
     'dflt_val'   : '{supp_row_id>currency_id}',
     'sql'        : 'a.supp_row_id>currency_id',
     })
-virt.append ({
-    'col_name'   : 'disc_net_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Invoice net local',
-    'long_descr' : 'Invoice net amount in local currency',
-    'col_head'   : 'Inv net local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="disc_net_amt"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.disc_net_amt / a.tran_exch_rate",
-    })
+# virt.append ({
+#     'col_name'   : 'disc_net_local',
+#     'data_type'  : '$LCL',
+#     'short_descr': 'Invoice net local',
+#     'long_descr' : 'Invoice net amount in local currency',
+#     'col_head'   : 'Inv net local',
+#     'db_scale'   : 2,
+#     'scale_ptr'  : '_param.local_curr_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="disc_net_amt"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'sql'        : "a.disc_net_amt / a.tran_exch_rate",
+#     })
 virt.append ({
     'col_name'   : 'disc_tot_amt',
     'data_type'  : '$TRN',
@@ -424,6 +451,24 @@ virt.append ({
     'col_head'   : 'Tot amt',
     'db_scale'   : 2,
     'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="disc_net_amt"/>'
+          '<op type="+"/>'
+          '<fld_val name="disc_tax_amt"/>'
+        '</expr>'
+        ),
+    'sql'        : "a.disc_net_amt + a.disc_tax_amt"
+    })
+virt.append ({
+    'col_name'   : 'disc_tot_supp',
+    'data_type'  : '$PTY',
+    'short_descr': 'Total amount supp',
+    'long_descr' : 'Total amount in supplier currency',
+    'col_head'   : 'Tot amt',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
@@ -451,30 +496,6 @@ virt.append ({
         '</expr>'
         ),
     'sql'        : "a.disc_net_local + a.disc_tax_local"
-    })
-virt.append ({
-    'col_name'   : 'disc_view_supp',
-    'data_type'  : '$PTY',
-    'short_descr': 'Amount for ap_trans - supp',
-    'long_descr' : 'Total amount for ap_trans view in supplier currency',
-    'col_head'   : 'Tran supp',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : "0 - (a.disc_net_amt + a.disc_tax_amt)"
-    })
-virt.append ({
-    'col_name'   : 'disc_view_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Amount for ap_trans - local',
-    'long_descr' : 'Total amount for ap_trans view in local currency',
-    'col_head'   : 'Tran local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : "0 - (a.disc_net_local + a.disc_tax_local)"
     })
 
 # cursor definitions

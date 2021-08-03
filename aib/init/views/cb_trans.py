@@ -4,7 +4,7 @@ view = {
     'module_id'     : 'cb',
     'short_descr'   : 'Cb transactions',
     'long_descr'    : 'Cb transactions',
-    'base_tables'   : ['cb_tran_rec', 'cb_tran_pmt', 'cb_tran_tfr', 'cb_tran_tfr'],
+    'base_tables'   : ['cb_tran_rec', 'cb_tran_pmt', 'cb_tran_tfr_out', 'cb_tran_tfr_in'],
 
     'path_to_row'  : [
         'tran_type', {
@@ -55,7 +55,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'ledger_row_id',
-    'source'     : ['ledger_row_id', 'ledger_row_id', 'ledger_row_id', 'tgt_ledg_row_id'],
+    'source'     : ['ledger_row_id', 'ledger_row_id', 'ledger_row_id', 'ledger_row_id'],
     'data_type'  : 'INT',
     'short_descr': 'Account row id',
     'long_descr' : 'Bank account row id',
@@ -94,7 +94,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'party',
-    'source'     : ['payer', 'payee', 'src_party', 'tgt_party'],
+    'source'     : ['payer', 'payee', 'party', 'party'],
     'data_type'  : 'TEXT',
     'short_descr': 'Payer/payee',
     'long_descr' : 'Payer/payee',
@@ -107,7 +107,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'text',
-    'source'     : ['text', 'text', 'src_text', 'tgt_text'],
+    'source'     : ['text', 'text', 'text', 'text'],
     'data_type'  : 'TEXT',
     'short_descr': 'Text',
     'long_descr' : 'One line of text to appear on reports',
@@ -120,7 +120,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_cb',
-    'source'     : ['view_cb', 'view_cb', 'view_src_cb', 'view_tgt_cb'],
+    'source'     : ['amount_cb', 'rev(amount_cb)', 'rev(tfr_amount)', 'tfr_amount'],
     'data_type'  : '$PTY',
     'short_descr': 'Amount - cb curr',
     'long_descr' : 'Amount in cash book currency',
@@ -133,7 +133,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'source'     : ['view_local', 'view_local', 'view_src_local', 'view_tgt_local'],
+    'source'     : ['amount_local', 'rev(amount_local)', 'rev(tfr_local)', 'tfr_local'],
     'data_type'  : '$LCL',
     'short_descr': 'Amount - local curr',
     'long_descr' : 'Amount in local currency',

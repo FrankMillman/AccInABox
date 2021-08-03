@@ -160,6 +160,46 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Payment number',
+    'long_descr' : 'Payment number. Could be derived using fkey, but denormalised for ap_trans view..',
+    'col_head'   : 'Pmt no',
+    'key_field'  : 'N',
+    'data_source': 'repl',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{subparent_row_id>tran_number}',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Transaction date',
+    'long_descr' : 'Transaction date. Could be derived using fkey, but denormalised for ap_trans view..',
+    'col_head'   : 'Date',
+    'key_field'  : 'N',
+    'data_source': 'repl',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{subparent_row_id>tran_date}',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'text',
     'data_type'  : 'TEXT',
     'short_descr': 'Description',
@@ -217,7 +257,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'apmt_amount',
+    'col_name'   : 'pmt_amount',
     'data_type'  : '$TRN',
     'short_descr': 'Payment amount',
     'long_descr' : 'Payment amount in transaction currency',
@@ -237,7 +277,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'apmt_supp',
+    'col_name'   : 'pmt_supp',
     'data_type'  : '$PTY',
     'short_descr': 'Payment supp',
     'long_descr' : 'Payment amount in supplier currency',
@@ -253,7 +293,7 @@ cols.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
-          '<fld_val name="apmt_amount"/>'
+          '<fld_val name="pmt_amount"/>'
           '<op type="/"/>'
           '<fld_val name="tran_exch_rate"/>'
           '<op type="*"/>'
@@ -262,13 +302,72 @@ cols.append ({
         ),
     'col_checks' : [
         ['alt_pmt_err', 'Outside valid range', [
-            ['check', '', '$value', '=', 'apmt_supp', ''],
+            ['check', '', '$value', '=', 'pmt_supp', ''],
             ['or', '', '_ledger.alt_pmt_perc', '=', '0', ''],
             ['or', '',
-                '(abs(($value / (apmt_amount / tran_exch_rate * supp_exch_rate))'
+                '(abs(($value / (pmt_amount / tran_exch_rate * supp_exch_rate))'
                 ' - 1) * 100)', '<=', '_ledger.alt_pmt_perc', ''],
             ]],
         ],
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'pmt_local',
+    'data_type'  : '$LCL',
+    'short_descr': 'Payment local',
+    'long_descr' : 'Payment amount in local currency',
+    'col_head'   : 'Pmt local',
+    'db_scale'   : 2,
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="pmt_amount"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+        '</expr>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'posted',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Posted?',
+    'long_descr' : (
+        'Has transaction been posted? '
+        'Could be derived using fkey, but denormalised to speed up ap_trans view.'
+        ),
+    'col_head'   : 'Posted?',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+            '<on_post>'
+                '<literal value="$True"/>'
+            '</on_post>'
+            '<default>'
+                '<literal value="$False"/>'
+            '</default>'
+        '</case>'
+        ),
+    'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
     })
@@ -288,33 +387,33 @@ virt.append ({
         "AND b.split_no = 0 AND b.deleted_id = 0"
         ),
     })
-virt.append ({
-    'col_name'   : 'tran_number',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Receipt number',
-    'long_descr' : 'Receipt number',
-    'col_head'   : 'Rec no',
-    'dflt_val'   : '{subparent_row_id>tran_number}',
-    'sql'        : 'a.subparent_row_id>tran_number'
-    })
-virt.append ({
-    'col_name'   : 'tran_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date',
-    'col_head'   : 'Tran date',
-    'dflt_val'   : '{subparent_row_id>tran_date}',
-    'sql'        : "a.subparent_row_id>tran_date"
-    })
-virt.append ({
-    'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Posted?',
-    'long_descr' : 'Has transaction been posted?',
-    'col_head'   : 'Posted?',
-    'dflt_val'   : '{subparent_row_id>posted}',
-    'sql'        : "a.subparent_row_id>posted"
-    })
+# virt.append ({
+#     'col_name'   : 'tran_number',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Receipt number',
+#     'long_descr' : 'Receipt number',
+#     'col_head'   : 'Rec no',
+#     'dflt_val'   : '{subparent_row_id>tran_number}',
+#     'sql'        : 'a.subparent_row_id>tran_number'
+#     })
+# virt.append ({
+#     'col_name'   : 'tran_date',
+#     'data_type'  : 'DTE',
+#     'short_descr': 'Transaction date',
+#     'long_descr' : 'Transaction date',
+#     'col_head'   : 'Tran date',
+#     'dflt_val'   : '{subparent_row_id>tran_date}',
+#     'sql'        : "a.subparent_row_id>tran_date"
+#     })
+# virt.append ({
+#     'col_name'   : 'posted',
+#     'data_type'  : 'BOOL',
+#     'short_descr': 'Posted?',
+#     'long_descr' : 'Has transaction been posted?',
+#     'col_head'   : 'Posted?',
+#     'dflt_val'   : '{subparent_row_id>posted}',
+#     'sql'        : "a.subparent_row_id>posted"
+#     })
 virt.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
@@ -334,48 +433,24 @@ virt.append ({
     'dflt_val'   : '{subparent_row_id>tran_exch_rate}',
     'sql'        : 'a.subparent_row_id>tran_exch_rate',
     })
-virt.append ({
-    'col_name'   : 'apmt_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Payment local',
-    'long_descr' : 'Payment amount in local currency',
-    'col_head'   : 'Pmt local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="apmt_amount"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.apmt_amount / a.tran_exch_rate",
-    })
-virt.append ({
-    'col_name'   : 'pmt_view_supp',
-    'data_type'  : '$PTY',
-    'short_descr': 'Payment supp',
-    'long_descr' : 'Payment amount for ap_trans view in supplier currency',
-    'col_head'   : 'Pmt supp',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : "0 - a.apmt_supp",
-    })
-virt.append ({
-    'col_name'   : 'pmt_view_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Payment local',
-    'long_descr' : 'Payment amount for ap_trans view in local currency',
-    'col_head'   : 'Pmt local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : "0 - a.apmt_local",
-    })
+# virt.append ({
+#     'col_name'   : 'pmt_local',
+#     'data_type'  : '$LCL',
+#     'short_descr': 'Payment local',
+#     'long_descr' : 'Payment amount in local currency',
+#     'col_head'   : 'Pmt local',
+#     'db_scale'   : 2,
+#     'scale_ptr'  : '_param.local_curr_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="pmt_amount"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'sql'        : "a.pmt_amount / a.tran_exch_rate",
+#     })
 virt.append ({
     'col_name'   : 'unallocated',
     'data_type'  : '$PTY',
@@ -387,7 +462,7 @@ virt.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'sql'        : (
-        "a.apmt_supp "
+        "a.pmt_supp "
         "- "
         "COALESCE(("
             "SELECT SUM(b.alloc_supp) FROM {company}.ap_allocations b "
@@ -435,8 +510,8 @@ actions.append([
                 ['due_date', '=', 'tran_date'],
                 ['supp_row_id', '=', 'supp_row_id'],
                 ['tran_date', '=', 'tran_date'],
-                ['amount_supp', '-', 'apmt_supp'],
-                ['amount_local', '-', 'apmt_local'],
+                ['amount_supp', '-', 'pmt_supp'],
+                ['amount_local', '-', 'pmt_local'],
                 ],
             [],  # on unpost
             [  # return values
@@ -497,8 +572,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'apmt_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'apmt_local'],
+                ['tran_day', '-', 'pmt_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'pmt_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -517,10 +592,10 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_supp', '-', 'apmt_supp'],  # tgt_col, op, src_col
-                ['tran_tot_supp', '-', 'apmt_supp'],
-                ['tran_day_local', '-', 'apmt_local'],
-                ['tran_tot_local', '-', 'apmt_local'],
+                ['tran_day_supp', '-', 'pmt_supp'],  # tgt_col, op, src_col
+                ['tran_tot_supp', '-', 'pmt_supp'],
+                ['tran_day_local', '-', 'pmt_local'],
+                ['tran_tot_local', '-', 'pmt_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -541,8 +616,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'apmt_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'apmt_local'],
+                ['tran_day', '+', 'pmt_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'pmt_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -564,8 +639,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'apmt_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'apmt_local'],
+                ['tran_day', '-', 'pmt_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'pmt_local'],
                 ],
             [],  # on post
             [],  # on unpost

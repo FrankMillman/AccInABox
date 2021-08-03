@@ -343,6 +343,34 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'jnl_supp',
+    'data_type'  : '$PTY',
+    'short_descr': 'Jnl amount',
+    'long_descr' : 'Jnl amount in supplier currency',
+    'col_head'   : 'Jnl amt',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="jnl_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="supp_exch_rate"/>'
+        '</expr>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []
@@ -394,28 +422,28 @@ virt.append ({
     'col_head'   : 'Function',
     'sql'        : 'a.supp_row_id>function_row_id',
     })
-virt.append ({
-    'col_name'   : 'jnl_supp',
-    'data_type'  : '$PTY',
-    'short_descr': 'Jnl amount supp',
-    'long_descr' : 'Jnl amount in supplier currency',
-    'col_head'   : 'Jnl supp',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="jnl_amt"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-          '<op type="*"/>'
-          '<fld_val name="supp_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.jnl_amt / a.tran_exch_rate * a.supp_exch_rate"
-        ),
-    })
+# virt.append ({
+#     'col_name'   : 'jnl_supp',
+#     'data_type'  : '$PTY',
+#     'short_descr': 'Jnl amount supp',
+#     'long_descr' : 'Jnl amount in supplier currency',
+#     'col_head'   : 'Jnl supp',
+#     'db_scale'   : 2,
+#     'scale_ptr'  : 'supp_row_id>currency_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="jnl_amt"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_exch_rate"/>'
+#           '<op type="*"/>'
+#           '<fld_val name="supp_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'sql'        : (
+#         "a.jnl_amt / a.tran_exch_rate * a.supp_exch_rate"
+#         ),
+#     })
 
 # cursor definitions
 cursors = []

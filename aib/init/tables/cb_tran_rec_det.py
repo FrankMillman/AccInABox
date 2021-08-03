@@ -21,7 +21,7 @@ table = {
                 ],
             ['arec', 'Ar receipt', 'ar_subtran_rec',
                 [  # return values
-                    ['rec_tran', 'arec_amount'],  # tgt_col, src_col
+                    ['rec_tran', 'rec_amount'],  # tgt_col, src_col
                     ],
                 ['cust_id'],  # display descr
                 ],

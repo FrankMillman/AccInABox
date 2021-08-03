@@ -279,7 +279,7 @@ cols.append ({
 #     'choices'    : None,
 #     })
 cols.append ({
-    'col_name'   : 'arec_amount',
+    'col_name'   : 'rec_amount',
     'data_type'  : '$TRN',
     'short_descr': 'Receipt amount',
     'long_descr' : 'Receipt amount in transaction currency',
@@ -299,7 +299,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'arec_cust',
+    'col_name'   : 'rec_cust',
     'data_type'  : '$PTY',
     'short_descr': 'Receipt cust',
     'long_descr' : 'Receipt amount in customer currency',
@@ -315,7 +315,7 @@ cols.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
-          '<fld_val name="arec_amount"/>'
+          '<fld_val name="rec_amount"/>'
           '<op type="/"/>'
           '<fld_val name="tran_exch_rate"/>'
           '<op type="*"/>'
@@ -324,10 +324,10 @@ cols.append ({
         ),
     'col_checks' : [
         ['alt_rec_err', 'Outside valid range', [
-            ['check', '', '$value', '=', 'arec_cust', ''],
+            ['check', '', '$value', '=', 'rec_cust', ''],
             ['or', '', '_ledger.alt_rec_perc', '=', '0', ''],
             ['or', '',
-                '(abs(($value / (arec_amount / tran_exch_rate * cust_exch_rate))'
+                '(abs(($value / (rec_amount / tran_exch_rate * cust_exch_rate))'
                 ' - 1) * 100)', '<=', '_ledger.alt_rec_perc', ''],
             ]],
         ],
@@ -335,7 +335,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'arec_local',
+    'col_name'   : 'rec_local',
     'data_type'  : '$LCL',
     'short_descr': 'Receipt local',
     'long_descr' : 'Receipt amount in local currency',
@@ -352,7 +352,7 @@ cols.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
-          '<fld_val name="arec_amount"/>'
+          '<fld_val name="rec_amount"/>'
           '<op type="/"/>'
           '<fld_val name="tran_exch_rate"/>'
         '</expr>'
@@ -456,7 +456,7 @@ virt.append ({
     'sql'        : 'a.subparent_row_id>tran_exch_rate',
     })
 # virt.append ({
-#     'col_name'   : 'arec_local',
+#     'col_name'   : 'rec_local',
 #     'data_type'  : '$LCL',
 #     'short_descr': 'Receipt local',
 #     'long_descr' : 'Receipt amount in local currency',
@@ -466,12 +466,12 @@ virt.append ({
 #     'dflt_val'   : '0',
 #     'dflt_rule'  : (
 #         '<expr>'
-#           '<fld_val name="arec_amount"/>'
+#           '<fld_val name="rec_amount"/>'
 #           '<op type="/"/>'
 #           '<fld_val name="tran_exch_rate"/>'
 #         '</expr>'
 #         ),
-#     'sql'        : "a.arec_amount / a.tran_exch_rate",
+#     'sql'        : "a.rec_amount / a.tran_exch_rate",
 #     })
 # virt.append ({
 #     'col_name'   : 'rec_view_cust',
@@ -483,7 +483,7 @@ virt.append ({
 #     'scale_ptr'  : 'cust_row_id>currency_id>scale',
 #     'dflt_val'   : '0',
 #     'dflt_rule'  : None,
-#     'sql'        : "0 - a.arec_cust",
+#     'sql'        : "0 - a.rec_cust",
 #     })
 # virt.append ({
 #     'col_name'   : 'rec_view_local',
@@ -495,7 +495,7 @@ virt.append ({
 #     'scale_ptr'  : '_param.local_curr_id>scale',
 #     'dflt_val'   : '0',
 #     'dflt_rule'  : None,
-#     'sql'        : "0 - a.arec_local",
+#     'sql'        : "0 - a.rec_local",
 #     })
 virt.append ({
     'col_name'   : 'unallocated',
@@ -508,7 +508,7 @@ virt.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'sql'        : (
-        "a.arec_cust "
+        "a.rec_cust "
         "- "
         "COALESCE(("
             "SELECT SUM(b.alloc_cust) FROM {company}.ar_allocations b "
@@ -581,8 +581,8 @@ actions.append([
                 ['due_date', '=', 'tran_date'],
                 ['cust_row_id', '=', 'cust_row_id'],
                 ['tran_date', '=', 'tran_date'],
-                ['amount_cust', '-', 'arec_cust'],
-                ['amount_local', '-', 'arec_local'],
+                ['amount_cust', '-', 'rec_cust'],
+                ['amount_local', '-', 'rec_local'],
                 ],
             [],  # on unpost
             [  # return values
@@ -641,8 +641,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'arec_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'arec_local'],
+                ['tran_day', '-', 'rec_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'rec_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -661,10 +661,10 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cust', '-', 'arec_cust'],  # tgt_col, op, src_col
-                ['tran_tot_cust', '-', 'arec_cust'],
-                ['tran_day_local', '-', 'arec_local'],
-                ['tran_tot_local', '-', 'arec_local'],
+                ['tran_day_cust', '-', 'rec_cust'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '-', 'rec_cust'],
+                ['tran_day_local', '-', 'rec_local'],
+                ['tran_tot_local', '-', 'rec_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -685,8 +685,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'arec_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'arec_local'],
+                ['tran_day', '-', 'rec_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'rec_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -708,8 +708,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'arec_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'arec_local'],
+                ['tran_day', '+', 'rec_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'rec_local'],
                 ],
             [],  # on post
             [],  # on unpost

@@ -118,7 +118,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_cust',
-    'source'     : ['inv_tot_cust', 'crn_view_cust', 'jnl_cust', 'jnl_cust', 'rec_view_cust', 'disc_view_cust'],
+    'source'     : ['inv_tot_cust', 'rev(crn_tot_cust)', 'jnl_cust', 'jnl_cust', 'rev(rec_cust)', 'rev(disc_tot_cust)'],
     'data_type'  : '$PTY',
     'short_descr': 'Transaction amount - cust',
     'long_descr' : 'Transaction amount - cust',
@@ -131,7 +131,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'source'     : ['inv_tot_local', 'crn_view_local', 'jnl_local', 'jnl_local', 'rec_view_local', 'disc_view_local'],
+    'source'     : ['inv_tot_local', 'rev(crn_tot_local)', 'jnl_local', 'jnl_local', 'rev(rec_local)', 'rev(disc_tot_local)'],
     'data_type'  : '$LCL',
     'short_descr': 'Transaction amount - local',
     'long_descr' : 'Transaction amount - local',

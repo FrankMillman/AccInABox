@@ -424,7 +424,6 @@ async def setup_forms(context):
         await form_defn.save()
 
     await setup_form('setup_grid')
-    await setup_form('finrpt_grid')
     await setup_form('grid_lookup')
     await setup_form('tree_lookup')
     await setup_form('login_form')

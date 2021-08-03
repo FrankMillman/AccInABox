@@ -432,10 +432,10 @@ actions.append([
             [],  # aggregation
             [  # on insert
                 ['cust_row_id', '=', 'cust_row_id'],  # tgt_col, op, src_col
-                ['arec_amount', '=', 'rec_amt'],
+                ['rec_amount', '=', 'rec_amt'],
                 ],
             [  # on update
-                ['arec_amount', '=', 'rec_amt'],  # tgt_col, op, src_col
+                ['rec_amount', '=', 'rec_amt'],  # tgt_col, op, src_col
                 ],
             [],  # on delete
             ],

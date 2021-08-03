@@ -416,6 +416,62 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'crn_net_supp',
+    'data_type'  : '$PTY',
+    'short_descr': 'Net amount',
+    'long_descr' : 'Net amount in supplier currency',
+    'col_head'   : 'Net amt',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="crn_net_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="supp_exch_rate"/>'
+        '</expr>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'crn_tax_supp',
+    'data_type'  : '$PTY',
+    'short_descr': 'Tax amount',
+    'long_descr' : 'Tax amount in supplier currency',
+    'col_head'   : 'Tax amt',
+    'key_field'  : 'N',
+    'data_source': 'calc',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'dflt_rule'  : (
+        '<expr>'
+          '<fld_val name="crn_tax_amt"/>'
+          '<op type="/"/>'
+          '<fld_val name="tran_exch_rate"/>'
+          '<op type="*"/>'
+          '<fld_val name="supp_exch_rate"/>'
+        '</expr>'
+        ),
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []
@@ -485,50 +541,50 @@ virt.append ({
         ),
     'sql'        : "a.crn_net_amt + a.crn_tax_amt"
     })
-virt.append ({
-    'col_name'   : 'crn_net_supp',
-    'data_type'  : '$PTY',
-    'short_descr': 'Net amount',
-    'long_descr' : 'Net amount in supplier currency',
-    'col_head'   : 'Net amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="crn_net_amt"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-          '<op type="*"/>'
-          '<fld_val name="supp_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.crn_net_amt / a.tran_exch_rate * a.supp_exch_rate"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'crn_tax_supp',
-    'data_type'  : '$PTY',
-    'short_descr': 'Tax amount',
-    'long_descr' : 'Tax amount in supplier currency',
-    'col_head'   : 'Tax amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="crn_tax_amt"/>'
-          '<op type="/"/>'
-          '<fld_val name="tran_exch_rate"/>'
-          '<op type="*"/>'
-          '<fld_val name="supp_exch_rate"/>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.crn_tax_amt / a.tran_exch_rate * a.supp_exch_rate"
-        ),
-    })
+# virt.append ({
+#     'col_name'   : 'crn_net_supp',
+#     'data_type'  : '$PTY',
+#     'short_descr': 'Net amount',
+#     'long_descr' : 'Net amount in supplier currency',
+#     'col_head'   : 'Net amt',
+#     'db_scale'   : 2,
+#     'scale_ptr'  : 'supp_row_id>currency_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="crn_net_amt"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_exch_rate"/>'
+#           '<op type="*"/>'
+#           '<fld_val name="supp_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'sql'        : (
+#         "a.crn_net_amt / a.tran_exch_rate * a.supp_exch_rate"
+#         ),
+#     })
+# virt.append ({
+#     'col_name'   : 'crn_tax_supp',
+#     'data_type'  : '$PTY',
+#     'short_descr': 'Tax amount',
+#     'long_descr' : 'Tax amount in supplier currency',
+#     'col_head'   : 'Tax amt',
+#     'db_scale'   : 2,
+#     'scale_ptr'  : 'supp_row_id>currency_id>scale',
+#     'dflt_val'   : '0',
+#     'dflt_rule'  : (
+#         '<expr>'
+#           '<fld_val name="crn_tax_amt"/>'
+#           '<op type="/"/>'
+#           '<fld_val name="tran_exch_rate"/>'
+#           '<op type="*"/>'
+#           '<fld_val name="supp_exch_rate"/>'
+#         '</expr>'
+#         ),
+#     'sql'        : (
+#         "a.crn_tax_amt / a.tran_exch_rate * a.supp_exch_rate"
+#         ),
+#     })
 virt.append ({
     'col_name'   : 'crn_tot_supp',
     'data_type'  : '$PTY',
@@ -564,30 +620,6 @@ virt.append ({
         '</expr>'
         ),
     'sql'        : "a.crn_net_local + a.crn_tax_local"
-    })
-virt.append ({
-    'col_name'   : 'crn_view_supp',
-    'data_type'  : '$PTY',
-    'short_descr': 'Total amount',
-    'long_descr' : 'Total amount for ap_trans view in supplier currency',
-    'col_head'   : 'Tot amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'supp_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : "0 - (a.crn_net_supp + a.crn_tax_supp)"
-    })
-virt.append ({
-    'col_name'   : 'crn_view_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Total amount local',
-    'long_descr' : 'Total amount for ap_trans view in local currency',
-    'col_head'   : 'Tot amt',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : "0 - (a.crn_net_local + a.crn_tax_local)"
     })
 
 # cursor definitions
