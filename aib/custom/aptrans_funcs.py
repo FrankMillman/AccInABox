@@ -1,7 +1,5 @@
 from datetime import date as dt, datetime as dtm, timedelta as td
 from decimal import Decimal as D
-from lxml import etree
-import asyncio
 
 import db.objects
 import db.cache
@@ -9,17 +7,10 @@ from common import AibError
 
 async def split_npch(db_obj, conn, return_vals):
     # called as split_src func from pch_npch_subtran.upd_on_save() for pch_npch_subtran_uex
-    eff_date_param = await db_obj.getval('npch_code_id>chg_eff_date')
-    if eff_date_param == '1':  # 1st day of following month
-        period_no = await db_obj.getval('subparent_row_id>period_row_id')
-        adm_periods = await db.cache.get_adm_periods(db_obj.company)
-        closing_date = adm_periods[period_no].closing_date
-        eff_date = closing_date + td(1)
-    else:
-        # [TO DO] - implement multiple effective dates
-        raise NotImplementedError
 
-    yield (eff_date, await db_obj.getval('net_local'))
+    # at the moment this achieves nothing! [2021-08-07]
+    # but it will be used when there are multiple effective dates
+    yield (await db_obj.getval('eff_date'), await db_obj.getval('net_local'))
 
 async def setup_openitems(db_obj, conn, return_vals):
     # called as split_src func from ap_tran_inv.upd_on_post()
@@ -92,6 +83,97 @@ async def setup_openitems(db_obj, conn, return_vals):
             discount_supp,
             )
 
+async def set_per_closing_flag(caller, params):
+    print('set_closing_flag')
+
+    context = caller.manager.process.root.context
+    if 'ledg_per' not in context.data_objects:
+        context.data_objects['ledg_per'] = await db.objects.get_db_object(
+            context, 'ap_ledger_periods')
+    ledg_per = context.data_objects['ledg_per']
+    await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+    await ledg_per.setval('period_row_id', params['current_period'])
+    if await ledg_per.getval('state') not in ('current', 'open'):
+        raise AibError(head='Closing flag', body='Period is not open')
+    await ledg_per.setval('state', 'closing')
+    await ledg_per.save()
+
+async def posted_check(caller, params):
+    context = caller.manager.process.root.context
+
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        check_date = params['check_date']
+        where = []
+        where.append(['WHERE', '', 'tran_date', '<=', check_date, ''])
+        where.append(['AND', '', 'deleted_id', '=', 0, ''])
+        where.append(['AND', '', 'posted', '=', False, ''])
+
+        params = []
+        sql = 'SELECT CASE WHEN EXISTS ('
+
+        table_names = [
+            'ap_tran_inv',
+            'ap_tran_crn',
+            'ap_tran_jnl',
+            'ap_tran_pmt',
+            'ap_tran_disc',
+            'ap_subtran_rec',
+            'ap_subtran_pmt',
+            'ap_subtran_jnl',
+            ]
+
+        for table_name in table_names:
+            db_table = await db.objects.get_db_table(context, caller.company, table_name)
+            s, p = await conn.build_select(context, db_table, ['row_id'], where=where, order=[])
+            sql += s
+            params += p
+            if table_name != table_names[-1]:
+                sql += ' UNION ALL '
+
+        sql += ') THEN $True ELSE $False END'
+
+        cur = await conn.exec_sql(sql, params)
+        exists, = await cur.__anext__()
+
+    return_params = {'all_posted': not bool(exists)}
+    print('check all posted:', return_params)
+    return return_params
+
+async def set_per_closed_flag(caller, params):
+    print('set_per_closed_flag')
+
+    context = caller.manager.process.root.context
+    if 'ledg_per' not in context.data_objects:
+        context.data_objects['ledg_per'] = await db.objects.get_db_object(
+            context, 'ap_ledger_periods')
+    ledg_per = context.data_objects['ledg_per']
+    await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+    await ledg_per.setval('period_row_id', params['period_to_close'])
+    if await ledg_per.getval('state') != 'closing':
+        raise AibError(head='Closing flag', body='Closing flag not set')
+    await ledg_per.setval('state', 'closed')
+    await ledg_per.save()
+
+    if params['period_to_close'] == params['current_period']:
+        # set next month state to 'current'
+        await ledg_per.init()
+        await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+        await ledg_per.setval('period_row_id', params['current_period'] + 1)
+        await ledg_per.setval('state', 'current')
+        await ledg_per.save()
+
+        # set following month state to 'open'
+        await ledg_per.init()
+        await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+        await ledg_per.setval('period_row_id', params['current_period'] + 2)
+        await ledg_per.setval('state', 'open')
+        await ledg_per.save()
+
+async def notify_manager(caller, params):
+    print('notify', params)
+
+"""
 async def check_ledg_per(caller, xml):
     # called from ap_ledg_per.on_start_row
     ledg_per = caller.data_objects['ledg_per']
@@ -113,6 +195,7 @@ async def check_ledg_per(caller, xml):
         if await ledg_per.getval('state') == 'closed':
             await actions.setval('action', 'reopen')
             return
+"""
 
 async def get_tot_alloc(db_obj, fld, src):
     # called from ap_tran_alloc/ap_subtran_pmt in 'condition' for upd_on_post 'ap_allocations'
@@ -355,7 +438,7 @@ async def post_pmt_batch(caller, xml):
                 await cb_det.init()
                 await cb_det.setval('line_type', 'apmt')
                 await ap_sub.setval('supp_row_id', await batch_det.getval('supp_row_id'))
-                await ap_sub.setval('apmt_amount', await batch_det.getval('pmt_amt'))
+                await ap_sub.setval('pmt_amount', await batch_det.getval('pmt_amt'))
                 await cb_det.save()
 
             else:  # must be 'ap'

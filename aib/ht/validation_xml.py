@@ -124,4 +124,8 @@ async def chk_password(ctx, fld, value, xml):
 
 async def compare(ctx, fld, value, xml):
     test = loads(xml.get('test').replace("'", '"').replace('~', "'"))
-    return await eval_bool_expr(test, fld.db_obj, fld, value)
+    if hasattr(fld, 'db_obj'):
+        db_obj = fld.db_obj
+    else:  # probably a GuiButton
+        db_obj = fld.parent.db_obj
+    return await eval_bool_expr(test, db_obj, fld, value)

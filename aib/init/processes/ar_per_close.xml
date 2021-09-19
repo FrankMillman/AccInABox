@@ -75,7 +75,7 @@
       </semantic:subProcess>
       <semantic:scriptTask id="ar_per_close_13" name="Set 'closed' flag">
         <semantic:incoming>ar_per_close_81</semantic:incoming>
-        <semantic:outgoing>ar_per_close_27</semantic:outgoing>
+        <semantic:outgoing>ar_per_close_85</semantic:outgoing>
         <semantic:dataInputAssociation>
           <semantic:sourceRef>var.period_to_close</semantic:sourceRef>
           <semantic:targetRef>period_to_close</semantic:targetRef>
@@ -87,7 +87,7 @@
         <semantic:script>custom.artrans_funcs.set_per_closed_flag</semantic:script>
       </semantic:scriptTask>
       <semantic:endEvent id="ar_per_close_15" name="Done">
-        <semantic:incoming>ar_per_close_27</semantic:incoming>
+        <semantic:incoming>ar_per_close_87</semantic:incoming>
       </semantic:endEvent>
       <semantic:boundaryEvent id="ar_per_close_71" name="Timeout check" cancelActivity="false" attachedToRef="ar_per_close_61">
         <semantic:outgoing>ar_per_close_77</semantic:outgoing>
@@ -107,17 +107,23 @@
       <semantic:endEvent id="ar_per_close_75" name="Manager notified">
         <semantic:incoming>ar_per_close_79</semantic:incoming>
       </semantic:endEvent>
+      <semantic:userTask id="ar_per_close_83" name="Notify success" implementation="popup:Process completed">
+        <semantic:incoming>ar_per_close_85</semantic:incoming>
+        <semantic:outgoing>ar_per_close_87</semantic:outgoing>
+        <semantic:performer name="$user"/>
+      </semantic:userTask>
       <semantic:sequenceFlow sourceRef="ar_per_close_3" targetRef="ar_per_close_5" name="" id="ar_per_close_17"/>
       <semantic:sequenceFlow sourceRef="ar_per_close_5" targetRef="ar_per_close_61" name="" id="ar_per_close_19"/>
-      <semantic:sequenceFlow sourceRef="ar_per_close_13" targetRef="ar_per_close_15" name="" id="ar_per_close_27"/>
       <semantic:sequenceFlow sourceRef="ar_per_close_71" targetRef="ar_per_close_73" name="" id="ar_per_close_77"/>
       <semantic:sequenceFlow sourceRef="ar_per_close_73" targetRef="ar_per_close_75" name="" id="ar_per_close_79"/>
       <semantic:sequenceFlow sourceRef="ar_per_close_61" targetRef="ar_per_close_13" name="" id="ar_per_close_81"/>
+      <semantic:sequenceFlow sourceRef="ar_per_close_13" targetRef="ar_per_close_83" name="" id="ar_per_close_85"/>
+      <semantic:sequenceFlow sourceRef="ar_per_close_83" targetRef="ar_per_close_15" name="" id="ar_per_close_87"/>
     </semantic:process>
     <bpmndi:BPMNDiagram id="ar_per_close_2">
       <bpmndi:BPMNPlane bpmnElement="ar_per_close_1">
         <bpmndi:BPMNShape bpmnElement="ar_per_close_61" id="ar_per_close_62" isExpanded="true">
-          <dc:Bounds x="240" y="148.55000114440918" width="426" height="204.0"/>
+          <dc:Bounds x="240" y="150" width="426" height="204.0"/>
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNShape>
         <bpmndi:BPMNShape bpmnElement="ar_per_close_3" id="ar_per_close_4">
@@ -137,11 +143,11 @@
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNShape>
         <bpmndi:BPMNShape bpmnElement="ar_per_close_13" id="ar_per_close_14">
-          <dc:Bounds width="90" height="70" x="798" y="217"/>
+          <dc:Bounds width="90" height="70" x="702" y="217"/>
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNShape>
         <bpmndi:BPMNShape bpmnElement="ar_per_close_15" id="ar_per_close_16">
-          <dc:Bounds width="32" height="32" x="939" y="235"/>
+          <dc:Bounds width="32" height="32" x="948" y="236"/>
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNShape>
         <bpmndi:BPMNShape bpmnElement="ar_per_close_55" id="ar_per_close_56">
@@ -161,11 +167,6 @@
         <bpmndi:BPMNEdge bpmnElement="ar_per_close_21" id="ar_per_close_22">
           <di:waypoint x="444" y="247"/>
           <di:waypoint x="512" y="247"/>
-          <bpmndi:BPMNLabel/>
-        </bpmndi:BPMNEdge>
-        <bpmndi:BPMNEdge bpmnElement="ar_per_close_27" id="ar_per_close_28">
-          <di:waypoint x="888" y="252"/>
-          <di:waypoint x="939" y="252"/>
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNEdge>
         <bpmndi:BPMNEdge bpmnElement="ar_per_close_57" id="ar_per_close_58">
@@ -223,7 +224,21 @@
         </bpmndi:BPMNEdge>
         <bpmndi:BPMNEdge bpmnElement="ar_per_close_81" id="ar_per_close_82">
           <di:waypoint x="666" y="252"/>
-          <di:waypoint x="798" y="252"/>
+          <di:waypoint x="702" y="252"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="ar_per_close_83" id="ar_per_close_84">
+          <dc:Bounds x="825" y="217" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_85" id="ar_per_close_86">
+          <di:waypoint x="792" y="252"/>
+          <di:waypoint x="825" y="252"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="ar_per_close_87" id="ar_per_close_88">
+          <di:waypoint x="915" y="252"/>
+          <di:waypoint x="948" y="252"/>
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNEdge>
       </bpmndi:BPMNPlane>

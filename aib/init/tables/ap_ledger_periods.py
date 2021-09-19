@@ -100,6 +100,7 @@ cols.append ({
             'Cannot change ledger id',
             [
                 ['check', '', '$value', '=', '_ctx.ledger_row_id', ''],
+                ['or', '', '_ctx.ledger_row_id', 'is', '$None', ''],
                 ['or', '', '$module_row_id', '!=', '_ctx.module_row_id', ''],
                 ],
             ],
@@ -134,15 +135,21 @@ cols.append ({
     'long_descr' : 'Payment date',
     'col_head'   : 'Pmt date',
     'key_field'  : 'N',
-    'data_source': 'input',
-    'condition'  : None,
+    'data_source': 'null_if',
+    'condition'  : [['where', '', 'ledger_row_id>separate_pmt_close', 'is', '$False', '']],
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'dflt_rule'  : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `ledger_row_id>separate_pmt_close`, `is`, `$True`, ``]]">'
+            '<pyfunc name="custom.aptrans_funcs.get_pmt_date"/>'
+          '</compare>'
+        '</case>'
+        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -154,21 +161,27 @@ cols.append ({
     'long_descr' : 'State for payment run - open/closing/closed',
     'col_head'   : 'State',
     'key_field'  : 'N',
-    'data_source': 'proc',
-    'condition'  : None,
+    'data_source': 'null_if',
+    'condition'  : [['where', '', 'ledger_row_id>separate_pmt_close', 'is', '$False', '']],
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'dflt_rule'  : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `ledger_row_id>separate_pmt_close`, `is`, `$True`, ``]]">'
+            '<literal value="open"/>'
+          '</compare>'
+        '</case>'
+        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-            ['open', 'Pmnt period open'],
-            ['closing', 'Pmnt per-end started'],
-            ['closed', 'Pmnt period closed'],
+            ['open', 'Open'],
+            ['closing', 'Closing'],
+            ['closed', 'Closed'],
         ],
     })
 cols.append ({
@@ -205,16 +218,16 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
+    'dflt_val'   : 'open',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-            ['current', 'Current period'],
-            ['open', 'Period open'],
-            ['closing', 'Period-end started'],
-            ['closed', 'Period closed'],
-            ['reopened', 'Period reopened'],
+            ['current', 'Current'],
+            ['open', 'Open'],
+            ['closing', 'Closing'],
+            ['closed', 'Closed'],
+            ['reopened', 'Reopened'],
         ],
     })
 cols.append ({
@@ -253,7 +266,7 @@ virt.append ({
     'data_type'  : 'DTE',
     'short_descr': 'Opening date',
     'long_descr' : 'Opening date',
-    'col_head'   : 'Op date',
+    'col_head'   : 'Start date',
     'sql'        : (
         "SELECT $fx_date_add(b.closing_date, 1) "
         "FROM {company}.adm_periods b "
@@ -265,7 +278,7 @@ virt.append ({
     'data_type'  : 'DTE',
     'short_descr': 'Closing date',
     'long_descr' : 'Closing date',
-    'col_head'   : 'Cl date',
+    'col_head'   : 'End date',
     'sql'        : (
         "SELECT b.closing_date FROM {company}.adm_periods b "
         "WHERE b.row_id = a.period_row_id"
@@ -291,7 +304,7 @@ cursors.append({
     'columns': [
         ['period_row_id', 10, True, True],
         ['closing_date', 100, False, True],
-        ['state', 100, False, True],
+        ['state', 60, False, True],
         ],
     'filter': [],
     'sequence': [['row_id', False]],
@@ -303,9 +316,9 @@ cursors.append({
     'columns': [
         ['period_row_id', 10, True, True],
         ['payment_date', 100, False, True],
-        ['payment_state', 100, False, True],
+        ['payment_state', 60, False, True],
         ['closing_date', 100, False, True],
-        ['state', 100, False, True],
+        ['state', 60, False, True],
         ],
     'filter': [],
     'sequence': [['row_id', False]],

@@ -7,7 +7,11 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : ['seq', ['parent_id'], None],
-    'tree_params'   : [None, ['npch_group', 'descr', 'parent_id', 'seq'], ['group_type', {None: [['root', 'Root']]}, None]],
+    'tree_params'   : [
+        None,
+        ['npch_group', 'descr', 'parent_id', 'seq'], ['group_type', {None: [['root', 'Root']]},
+        None]
+        ],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : 'ledger_row_id',
@@ -15,6 +19,10 @@ table = {
     'data_company'  : None,
     'read_only'     : False,
     }
+
+"""
+See notes in nsls_groups - the same rules apply to npch_groups
+"""
 
 # column definitions
 cols = []
@@ -94,17 +102,18 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '{_param.npch_ledger_id}',
     'dflt_rule'  : None,
-    'col_checks' : [
-        [
-            'ledger_id',
-            'Cannot change ledger id',
-            [
-                ['check', '', '$value', 'is', '$None', ''],
-                ['or', '', '$value', '=', '_ctx.ledger_row_id', ''],
-                ['or', '', '$module_row_id', '!=', '_ctx.module_row_id', ''],
-                ],
-            ],
-        ],
+    'col_checks' : None,
+    # 'col_checks' : [
+    #     [
+    #         'ledger_id',
+    #         'Cannot change ledger id',
+    #         [
+    #             ['check', '', '$value', 'is', '$None', ''],
+    #             ['or', '', '$value', '=', '_ctx.ledger_row_id', ''],
+    #             ['or', '', '$module_row_id', '!=', '_ctx.module_row_id', ''],
+    #             ],
+    #         ],
+    #     ],
     'fkey'       : ['npch_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, 'npch'],
     'choices'    : None,
     })

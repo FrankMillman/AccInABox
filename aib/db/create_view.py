@@ -32,8 +32,6 @@ async def create_view(context, conn, company_id, view_name):
         cols = []
         for col in view_cols:
             source = loads(col[SOURCE])[pos]
-            # if source == col[COL_NAME]:
-            #     cols.append(source)
             if source.startswith("'"):
                 cols.append(f'{source} AS {col[COL_NAME]}')
             else:
@@ -43,8 +41,8 @@ async def create_view(context, conn, company_id, view_name):
                     source = source[:as_clause_pos]
                 cols.append(f'{source} AS {col[COL_NAME]}')
         sql += ', '.join(cols)
-        sql += f' FROM {conn.get_view_names(company_id, conn.tablenames)}'
 
+        fil_sql = ''  # don't update sql yet - could create additional joins
         if view_defn[FILTER] is not None:
             filter = loads(view_defn[FILTER])
             for fil in filter:
@@ -52,7 +50,11 @@ async def create_view(context, conn, company_id, view_name):
                 as_clause_pos = fil[2].lower().find(' as ')
                 if as_clause_pos > -1:
                     fil[2] = fil[2][:as_clause_pos]
-                sql += ' {}'.format(' '.join(fil))
+                fil_sql += f" {' '.join(fil)}"
+
+        sql += f' FROM {conn.get_view_names(company_id, conn.tablenames)}'
+        sql += fil_sql
+
         selects.append(sql)
 
     conn.tablenames = None

@@ -1,3 +1,4 @@
+module_id = 'gl'
 report_name = 'tb_pivot_maj'
 table_name = 'gl_totals'
 report_type = 'as_at'

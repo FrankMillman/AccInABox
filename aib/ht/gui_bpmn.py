@@ -8,6 +8,19 @@ from common import AibError
 
 #----------------------------------------------------------------------------
 
+"""
+TO DO - [2021-08-15]
+Exclusive Gateway -
+    Set up condition(s) for outward flows
+    Set up default for one outward flow
+    Show this info on diagram
+
+At present, this is added manually to the xml :-(
+
+"""
+
+#----------------------------------------------------------------------------
+
 class GuiBpmn:
     async def _ainit_(self, parent, gui, element, action):
         self.data_objects = parent.data_objects

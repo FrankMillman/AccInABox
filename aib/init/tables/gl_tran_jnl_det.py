@@ -231,7 +231,7 @@ virt.append ({
     'col_head'   : 'Rate tran',
     'db_scale'   : 8,
     'scale_ptr'  : None,
-    'sql'        : "1",
+    'sql'        : '1',
     })
 virt.append ({
     'col_name'   : 'trantype_row_id',
@@ -247,7 +247,7 @@ virt.append ({
     'short_descr': 'Ledger row id',
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger row id',
-    'sql'        : "1",
+    'sql'        : '0',
     })
 virt.append ({
     'col_name'   : 'rev_sign_gl',
@@ -279,6 +279,15 @@ virt.append ({
     'short_descr': 'Description',
     'long_descr' : 'Description',
     'col_head'   : 'Description',
+    })
+virt.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Journal number',
+    'long_descr' : 'Journal number',
+    'col_head'   : 'Jnl no',
+    'dflt_val'   : '{tran_row_id>tran_number}',
+    'sql'        : "a.tran_row_id>tran_number"
     })
 virt.append ({
     'col_name'   : 'tran_date',

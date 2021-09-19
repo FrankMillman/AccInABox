@@ -1,4 +1,3 @@
-import db.objects
 from common import AibError
 
 async def check_parent_id(db_obj, fld, parent_id):
@@ -77,7 +76,7 @@ async def check_parent_id(db_obj, fld, parent_id):
 
     return True
 
-async def valid_loc_id(db_obj, fld, src_val):
+async def valid_loc_id(db_obj, fld, src_val, ctrl_fld):
     # there are a number of columns with an fkey reference to adm_locations
     # the fkey is validated in the normal way - it must exist on adm_locations
 
@@ -133,9 +132,12 @@ async def valid_loc_id(db_obj, fld, src_val):
     #      get value of 'prov' for location_id 12 - 5 (B)
     #      validate that (A) = (B)
 
-    ctrl_fld = db_obj.context.pyfunc_args  # args taken from col_checks in col_defn
+    # ctrl_fld = db_obj.context.pyfunc_args  # args taken from col_checks in col_defn
 
-    valid_loc_fld = await db_obj.getfld(f'{ctrl_fld}>valid_loc_ids')
+    try:
+        valid_loc_fld = await db_obj.getfld(f'{ctrl_fld}>valid_loc_ids')
+    except:
+        breakpoint()
 
     if src_val == valid_loc_fld._value:
         return True
@@ -153,10 +155,10 @@ async def valid_loc_id(db_obj, fld, src_val):
 
     return this_loc_type_id == valid_loc_fld._value
 
-async def valid_fun_id(db_obj, fld, src_val):
+async def valid_fun_id(db_obj, fld, src_val, ctrl_fld):
     # see notes above in valid_loc_id() - all references to 'locations' apply equally to 'functions'
 
-    ctrl_fld = db_obj.context.pyfunc_args  # args taken from col_checks in col_defn
+    # ctrl_fld = db_obj.context.pyfunc_args  # args taken from col_checks in col_defn
 
     valid_fun_fld = await db_obj.getfld(f'{ctrl_fld}>valid_fun_ids')
 

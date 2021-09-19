@@ -229,6 +229,14 @@ virt.append ({
     'sql'        : "'ap'",
     })
 virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Tran type',
+    'sql'        : "'ap_uex_bf'",
+    })
+virt.append ({
     'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Tran type row id',

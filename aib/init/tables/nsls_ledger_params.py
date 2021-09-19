@@ -306,7 +306,15 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'gl_levels',
+            'Group levels must match gl group levels',
+            [
+                ['check', '', '$value', 'pyfunc', 'custom.gl_funcs.check_gl_group_link', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['gl_groups', 'row_id', 'group_link', 'gl_group', False, None],
     'choices'    : None,
     })

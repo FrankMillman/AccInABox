@@ -1,0 +1,78 @@
+<subtype_body subtype_id="ap_rec">
+  <block/>
+  <panel/>
+
+  <if test="[[`if`, ``, `ap_subrec.ledger_id`, `is`, `$None`, ``]]"/>
+  <row/>
+  <col/>
+  <label value="Ledger id:"/>
+  <col/>
+  <input obj_name="ap_subrec" col_name="ledger_id" lng="84"/>
+  <end_if/>
+
+  <row/>
+  <col/>
+  <label value="Supplier Id:"/>
+  <col/>
+  <input obj_name="ap_subrec" col_name="supp_id" lng="84" after="
+    <<!--  show exch_rate and ap_rec_supp if alt_curr - enable ap_rec_supp if override allowed -->>
+    <<!--case>>
+      <<compare test=`[['if', '', '_param.allow_alloc_rec', 'is', '$True', ''],
+          ['and', '', 'ap_subrec.supp_row_id>ledger_row_id>auto_alloc_oldest', 'is', '$False', '']]`>
+        <<change_button>>
+          <<btn_enabled btn_id=`alloc` state=`true`/>>
+        <</change_button>>
+      <</compare>>
+    <</case-->>
+    "/>
+  <display obj_name="ap_subrec" col_name="supp_row_id>party_row_id>display_name" lng="120"/>
+
+  <row/>
+  <col/>
+  <label value="Receipt amount:"/>
+  <col/>
+  <display obj_name="ap_subrec" col_name="currency_id>symbol" lng="10"/>
+  <input obj_name="ap_subrec" col_name="rec_amount" lng="84"/>
+
+  <!-- this does not work well - if > 1 ledger, alt_curr is $None when form is created -->
+  <if test="[[`if`, ``, `ap_subrec.supp_row_id>ledger_row_id>alt_curr`, `is`, `$True`, ``]]"/>
+
+  <row/>
+  <col/>
+  <label value="@"/>
+  <display obj_name="ap_subrec" col_name="supp_exch_rate" lng="100"/>
+  <label value="="/>
+  <col/>
+  <display obj_name="ap_subrec" col_name="supp_row_id>currency_id>symbol" lng="10"/>
+  <input obj_name="ap_subrec" col_name="ap_rec_supp" lng="84"/>
+
+  <end_if/>
+
+  <row/>
+  <col/>
+  <col/>
+  <button lng="150" btn_id="alloc" btn_label="Allocate now"
+    btn_enabled="false" btn_validate="true" action="
+      <<req_save/>>
+      <<assign src=`$None` tgt=`_ctx.this_item_rowid`/>>
+      <<sub_form name=`ap_alloc_item`>>
+        <<call_params>>
+          <<call_param name=`alloc_header` type=`data_obj` source=`ap_subrec`/>>
+          <<call_param name=`amount_to_alloc` type=`data_attr` source=`ap_subrec.ap_rec_supp`/>>
+          <<call_param name=`unallocated` type=`data_attr` source=`ap_subrec.unallocated`/>>
+        <</call_params>>
+        <<return_params>>
+          <<return_param name=`unallocated` type=`data_attr` target=`ap_subrec.unallocated`/>>
+        <</return_params>>
+        <<on_return>>
+          <<return state=`cancelled`>>
+            <<btn_set_focus btn_id=`btn_save`/>>
+          <</return>>
+          <<return state=`completed`>>
+            <<btn_set_focus btn_id=`btn_save`/>>
+          <</return>>
+        <</on_return>>
+      <</sub_form>>
+    "/>
+
+</subtype_body>

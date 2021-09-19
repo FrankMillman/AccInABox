@@ -291,6 +291,15 @@ virt.append ({
     'sql'        : 'a.tran_row_id>cust_row_id',
     })
 virt.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Invoice number',
+    'long_descr' : 'Invoice number',
+    'col_head'   : 'Inv no',
+    'dflt_val'   : '{tran_row_id>tran_number}',
+    'sql'        : "a.tran_row_id>tran_number"
+    })
+virt.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
     'short_descr': 'Transaction date',

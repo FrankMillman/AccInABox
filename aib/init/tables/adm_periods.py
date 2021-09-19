@@ -131,7 +131,7 @@ cols.append ({
 virt = []
 virt.append ({
     'col_name'   : 'period_row_id',
-    'data_type'  : 'TEXT',
+    'data_type'  : 'INT',
     'short_descr': 'Period row id',
     'long_descr' : 'Period row id',
     'col_head'   : 'Period',

@@ -5,7 +5,6 @@
       <mem_col col_name="current_period" data_type="INT" short_descr="Current period" long_descr="Current period"/>
       <mem_col col_name="separate_stat_cust" data_type="BOOL" short_descr="Separate stat per cust?" long_descr="Separate statement per customer?"/>
       <mem_col col_name="check_date" data_type="DTE" short_descr="Check date" long_descr="Check all posted with date up to this date"/>
-      <mem_col col_name="next_stat_date" data_type="DTE" short_descr="Next statement date" long_descr="Next statement date"/>
       <mem_col col_name="all_posted" data_type="BOOL" short_descr="All posted?" long_descr="All posted?"/>
     </mem_obj>
   </mem_objects>
@@ -13,7 +12,6 @@
     <input_param name="current_period" type="data_attr" target="var.current_period" required="true"/>
     <input_param name="separate_stat_cust" type="data_attr" target="var.separate_stat_cust" required="true"/>
     <input_param name="check_date" type="data_attr" target="var.check_date" required="true"/>
-    <input_param name="next_stat_date" type="data_attr" target="var.next_stat_date" required="true"/>
   </input_params>
   <output_params/>
   <semantic:definitions xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dbobj="http://www.accinabox.org/bpmn/dbobj_definitions" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:memobj="http://www.accinabox.org/bpmn/memobj_definitions" xmlns:semantic="http://www.omg.org/spec/BPMN/20100524/MODEL" id="ar_stat_close_0" targetNamespace="http://www.accinabox.org/bpmn">
@@ -95,10 +93,6 @@
           <semantic:sourceRef>var.current_period</semantic:sourceRef>
           <semantic:targetRef>current_period</semantic:targetRef>
         </semantic:dataInputAssociation>
-        <semantic:dataInputAssociation>
-          <semantic:sourceRef>var.next_stat_date</semantic:sourceRef>
-          <semantic:targetRef>next_stat_date</semantic:targetRef>
-        </semantic:dataInputAssociation>
         <semantic:script>custom.artrans_funcs.set_stat_closed_flag</semantic:script>
       </semantic:scriptTask>
       <semantic:endEvent id="ar_stat_close_15" name="Done">
@@ -113,15 +107,16 @@
       <semantic:userTask id="ar_stat_close_73" name="Notify process waiting" implementation="#;Process waiting;msg;text=Some transactons are unposted;text=Cannot continue with process">
         <semantic:incoming>ar_stat_close_77</semantic:incoming>
         <semantic:outgoing>ar_stat_close_79</semantic:outgoing>
-        <semantic:performer name="_user"/>
+        <semantic:performer name="$user"/>
       </semantic:userTask>
       <semantic:endEvent id="ar_stat_close_75" name="Manager notified">
         <semantic:incoming>ar_stat_close_79</semantic:incoming>
       </semantic:endEvent>
-      <semantic:userTask id="ar_stat_close_81" name="Notify process completed" implementation="#;Process completed;msg;text=Statement close process;text=has been completed">
+      <!--semantic:userTask id="ar_stat_close_81" name="Notify process completed" implementation="#;Process completed;msg;text=Statement close process has been completed"-->
+      <semantic:userTask id="ar_stat_close_81" name="Notify process completed" implementation="popup:Statement close process has been completed">
         <semantic:incoming>ar_stat_close_83</semantic:incoming>
         <semantic:outgoing>ar_stat_close_85</semantic:outgoing>
-        <semantic:performer name="_user"/>
+        <semantic:performer name="$user"/>
       </semantic:userTask>
       <semantic:sequenceFlow sourceRef="ar_stat_close_3" targetRef="ar_stat_close_5" name="" id="ar_stat_close_17"/>
       <semantic:sequenceFlow sourceRef="ar_stat_close_5" targetRef="ar_stat_close_61" name="" id="ar_stat_close_19"/>
@@ -135,7 +130,7 @@
     <bpmndi:BPMNDiagram id="ar_stat_close_2">
       <bpmndi:BPMNPlane bpmnElement="ar_stat_close_1">
         <bpmndi:BPMNShape bpmnElement="ar_stat_close_61" id="ar_stat_close_62" isExpanded="true">
-          <dc:Bounds x="240" y="148.55000114440918" width="426" height="204.0"/>
+          <dc:Bounds x="240" y="150" width="426" height="204.0"/>
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNShape>
         <bpmndi:BPMNShape bpmnElement="ar_stat_close_3" id="ar_stat_close_4">
@@ -159,7 +154,7 @@
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNShape>
         <bpmndi:BPMNShape bpmnElement="ar_stat_close_13" id="ar_stat_close_14">
-          <dc:Bounds width="90" height="70" x="852.0" y="212"/>
+          <dc:Bounds width="90" height="70" x="828.0" y="212"/>
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNShape>
         <bpmndi:BPMNShape bpmnElement="ar_stat_close_15" id="ar_stat_close_16">
@@ -191,8 +186,8 @@
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNEdge>
         <bpmndi:BPMNEdge bpmnElement="ar_stat_close_25" id="ar_stat_close_26">
-          <di:waypoint x="785.0" y="247"/>
-          <di:waypoint x="852.0" y="247"/>
+          <di:waypoint x="785" y="247"/>
+          <di:waypoint x="828" y="247"/>
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNEdge>
         <bpmndi:BPMNEdge bpmnElement="ar_stat_close_57" id="ar_stat_close_58">
@@ -253,7 +248,7 @@
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNShape>
         <bpmndi:BPMNEdge bpmnElement="ar_stat_close_83" id="ar_stat_close_84">
-          <di:waypoint x="942" y="247"/>
+          <di:waypoint x="918" y="247"/>
           <di:waypoint x="952" y="247"/>
           <bpmndi:BPMNLabel/>
         </bpmndi:BPMNEdge>

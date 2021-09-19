@@ -771,7 +771,7 @@
             <col/>
             <label value="Description:"/>
             <col/>
-            <input obj_name="db_cur" col_name="descr" lng="200"/>
+            <input obj_name="db_cur" col_name="title" lng="200"/>
             <row/>
             <col/>
             <label value="Cursor details:"/>

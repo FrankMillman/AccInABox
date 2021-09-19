@@ -1,3 +1,4 @@
+module_id = 'ap'
 report_name = 'ap_by_src'
 table_name = 'ap_totals'
 report_type = 'bf_cf'

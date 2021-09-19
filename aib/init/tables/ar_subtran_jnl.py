@@ -143,6 +143,10 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : [
+        ['stat_date', 'Statement period not open', [
+            ['check', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
+            ['or', '', 'subparent_row_id>tran_date', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
+            ]],
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', 'cust_row_id>currency_id', '=', 'subparent_row_id>currency_id', ''],
             ['or', '', '_ledger.alt_curr', 'is', '$True', '']

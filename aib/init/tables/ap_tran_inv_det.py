@@ -300,9 +300,9 @@ virt.append ({
 virt.append ({
     'col_name'   : 'tran_number',
     'data_type'  : 'TEXT',
-    'short_descr': 'Receipt number',
-    'long_descr' : 'Receipt number',
-    'col_head'   : 'Rec no',
+    'short_descr': 'Invoice number',
+    'long_descr' : 'Invoice number',
+    'col_head'   : 'Inv no',
     'dflt_val'   : '{tran_row_id>tran_number}',
     'sql'        : "a.tran_row_id>tran_number"
     })

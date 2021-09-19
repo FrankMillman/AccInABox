@@ -298,7 +298,7 @@ virt.append ({
     'short_descr': 'Ledger row id',
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger row id',
-    'sql'        : "'1'",
+    'sql'        : '0',
     })
 virt.append ({
     'col_name'   : 'tran_number',

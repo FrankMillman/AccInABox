@@ -19,11 +19,23 @@ table = {
                     ],
                 ['nsls_code_id>descr'],  # display descr
                 ],
-            ['arec', 'Ar receipt', 'ar_subtran_rec',
+            ['npch', 'Purchase of non-inventory item', 'npch_subtran',
+                [  # return values
+                    ['rec_tran', 'tot_amt'],  # tgt_col, src_col
+                    ],
+                ['npch_code_id>descr'],  # display descr
+                ],
+            ['ar_rec', 'Ar receipt', 'ar_subtran_rec',
                 [  # return values
                     ['rec_tran', 'rec_amount'],  # tgt_col, src_col
                     ],
                 ['cust_id'],  # display descr
+                ],
+            ['ap_rec', 'Ap receipt', 'ap_subtran_rec',
+                [  # return values
+                    ['rec_tran', 'rec_amount'],  # tgt_col, src_col
+                    ],
+                ['supp_id'],  # display descr
                 ],
             ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values

@@ -102,7 +102,7 @@ cols.append ({
     'col_name'   : 'state',
     'data_type'  : 'TEXT',
     'short_descr': 'State',
-    'long_descr' : 'State - current/open/re-opened/closing/closed',
+    'long_descr' : 'State - current/open/reopened/closing/closed',
     'col_head'   : 'State',
     'key_field'  : 'N',
     'data_source': 'proc',
@@ -112,16 +112,16 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
+    'dflt_val'   : 'open',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-            ['current', 'Current period'],
-            ['open', 'Period open'],
-            ['closing', 'Period-end started'],
-            ['closed', 'Period closed'],
-            ['reopened', 'Period reopened'],
+            ['current', 'Current'],
+            ['open', 'Open'],
+            ['closing', 'Closing'],
+            ['closed', 'Closed'],
+            ['reopened', 'Reopened'],
         ],
     })
 
@@ -133,7 +133,7 @@ virt.append ({
     'short_descr': 'Ledger row id',
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger row id',
-    'sql'        : "'1'",
+    'sql'        : '0',
     })
 virt.append ({
     'col_name'   : 'current_period',

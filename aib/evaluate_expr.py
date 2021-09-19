@@ -109,6 +109,19 @@ async def eval_elem(elem, db_obj, fld=None, value=None):
     if elem.startswith('-') and elem[1:].isdigit():
         return D(elem)
     if elem.startswith('('):
+        # in a finrpt_defn, we can declare a 'calc' column with an expression
+        #   such as ((col2 - col1) * 100 / col1) to return a percentage
+        # if col1 is 0, we want to return 0, not raise an exception
+        # appending |0 to the expression means 'if an exception is raised, return
+        #   the value to the right of the |'
+        if '|' in elem:
+            expr, exc_value = elem.split('|')
+            exc_value = exc_value[:-1]  # remove bracket from end of exc_value
+            expr += ')'  # replace bracket at end of elem
+            try:
+                return await eval_infix(expr[1:-1], db_obj, fld, value)
+            except Exception:
+                return exc_value
         return await eval_infix(elem[1:-1], db_obj, fld, value)
     if '$exists' in elem:  # e.g. db_table$exists in form setup_table
         obj_name = elem.split('$')[0]

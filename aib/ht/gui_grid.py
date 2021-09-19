@@ -1,4 +1,3 @@
-import asyncio
 import io
 import csv
 from collections import OrderedDict as OD
@@ -324,9 +323,16 @@ class GuiGrid:
                 header_cols.append(('text', {'value': header_col[1:-1]}))
                 self.download_hdr.append(header_col[1:-1])
             elif header_col  == '...':  # insert None for any 'optional' columns
-                header_cols.extend([None] * (len(gui_cols) - (len(header_row) - 1)))  #  -1 to adj for '...'
+                header_cols.extend([None] *
+                    (len(gui_cols) - (len(header_row) - 1)))  #  -1 to adj for '...'
                 self.download_hdr.extend([None] * (len(gui_cols) - (len(header_row) - 1)))
             else:
+                if ':' in header_col:  # obj_name.col_name:action
+                    header_col, action = header_col.split(':')
+                    action = etree.fromstring(
+                        f'<_>{action}</_>', parser=parser)
+                else:
+                    action = None
                 obj_name, col_name = header_col.split('.')
                 fld = await self.data_objects[obj_name].getfld(col_name)
                 gui_ctrl = ht.gui_objects.gui_ctrls[fld.col_defn.data_type]
@@ -350,6 +356,12 @@ class GuiGrid:
                 footer_cols.extend([None] * (len(gui_cols) - (len(footer_row) - 1)))  #  -1 to adj for '...'
                 self.download_ftr.extend([None] * (len(gui_cols) - (len(footer_row) - 1)))
             else:
+                if ':' in footer_col:  # obj_name.col_name:action [see rep.finrpt]
+                    footer_col, action = footer_col.split(':')
+                    action = etree.fromstring(
+                        f'<_>{action}</_>', parser=parser)
+                else:
+                    action = None
                 obj_name, col_name = footer_col.split('.')
                 fld = await self.data_objects[obj_name].getfld(col_name)
                 gui_ctrl = ht.gui_objects.gui_ctrls[fld.col_defn.data_type]
@@ -506,8 +518,7 @@ class GuiGrid:
             if self.start_val.startswith("'"):  # either literal or column name
                 start_val = self.start_val[1:-1]
             else:
-                start_fld = await self.db_obj.getfld(self.start_val)
-                start_val = await start_fld.getval()
+                start_val = await self.db_obj.getval(self.start_val)
 
         if debug:
             log.write(

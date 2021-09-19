@@ -7,7 +7,11 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : ['seq', ['parent_id'], None],
-    'tree_params'   : [None, ['nsls_group', 'descr', 'parent_id', 'seq'], ['group_type', {None: [['root', 'Root']]}, None]],
+    'tree_params'   : [
+        None,
+        ['nsls_group', 'descr', 'parent_id', 'seq'], ['group_type', {None: [['root', 'Root']]},
+        None]
+        ],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : 'ledger_row_id',
@@ -15,6 +19,36 @@ table = {
     'data_company'  : None,
     'read_only'     : False,
     }
+
+"""
+When company is created -
+    nsls_ledger_params is empty
+    nsls_groups has tree_levels of [None]: 'root'
+    an nsls_group is created with group_id = 'all' and group_type = 'root'
+    tree_levels is created as a dictionary to allow each nsls_ledger to define its own levels
+
+When an nsls_ledger is added -
+    in db.cache.ledger_inserted() -
+        add tree_level of [ledger_row_id]: 'ledg'
+        create group with group_id = ledger_id, parent = 'all', group_type = 'ledg'
+
+For each nsls_ledger -
+    optional - add additional levels to that ledger's tree_levels
+               add additional groups - will be validated against tree_levels
+    add nsls_codes - each one must be linked to a group leaf node
+
+If gl integration -
+    optional - link a 'ledg' group to a gl_group, for substitution in finrpt at runtime
+               see nsls_ledger_params.link_to_gl_group
+    validation - number of levels below 'ledg' must equal number of levels below linked group
+    
+[TODO]
+    instead of creating a redundant 'all' group, allow each 'ledg' group to be its own root
+    tried it, but other parts of the program are not designed to handle more than one 'root'
+        (i.e. no parent_id) in the same tree, so it got too complicated
+    maybe revisit this one day
+
+"""
 
 # column definitions
 cols = []
@@ -94,17 +128,18 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : '{_param.nsls_ledger_id}',
     'dflt_rule'  : None,
-    'col_checks' : [
-        [
-            'ledger_id',
-            'Cannot change ledger id',
-            [
-                ['check', '', '$value', 'is', '$None', ''],
-                ['or', '', '$value', '=', '_ctx.ledger_row_id', ''],
-                ['or', '', '$module_row_id', '!=', '_ctx.module_row_id', ''],
-                ],
-            ],
-        ],
+    'col_checks' : None,
+    # 'col_checks' : [
+    #     [
+    #         'ledger_id',
+    #         'Cannot change ledger id',
+    #         [
+    #             ['check', '', '$value', 'is', '$None', ''],
+    #             ['or', '', '$value', '=', '_ctx.ledger_row_id', ''],
+    #             ['or', '', '$module_row_id', '!=', '_ctx.module_row_id', ''],
+    #             ],
+    #         ],
+    #     ],
     'fkey'       : ['nsls_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, 'nsls'],
     'choices'    : None,
     })

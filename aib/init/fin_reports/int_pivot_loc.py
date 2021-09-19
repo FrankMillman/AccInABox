@@ -1,3 +1,4 @@
+module_id = 'gl'
 report_name = 'int_pivot_loc'
 table_name = 'gl_totals'
 report_type = 'from_to'

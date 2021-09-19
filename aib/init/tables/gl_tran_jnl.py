@@ -254,7 +254,7 @@ virt.append ({
     'short_descr': 'Ledger row id',
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger row id',
-    'sql'        : "'1'",
+    'sql'        : '0',
     })
 virt.append ({
     'col_name'   : 'tran_exch_rate',
@@ -264,7 +264,7 @@ virt.append ({
     'col_head'   : 'Rate tran',
     'db_scale'   : 8,
     'scale_ptr'  : None,
-    'sql'        : "1",
+    'sql'        : '1',
     })
 
 # cursor definitions

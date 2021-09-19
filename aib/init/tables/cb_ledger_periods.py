@@ -112,7 +112,7 @@ cols.append ({
     'data_type'  : 'INT',
     'short_descr': 'Period row id',
     'long_descr' : 'Period row id',
-    'col_head'   : 'Period row id',
+    'col_head'   : 'No',
     'key_field'  : 'A',
     'data_source': 'proc',
     'condition'  : None,
@@ -131,7 +131,7 @@ cols.append ({
     'col_name'   : 'state',
     'data_type'  : 'TEXT',
     'short_descr': 'State',
-    'long_descr' : 'State - current/open/re-opened/closing/closed',
+    'long_descr' : 'State - current/open/reopened/closing/closed',
     'col_head'   : 'State',
     'key_field'  : 'N',
     'data_source': 'proc',
@@ -141,17 +141,44 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : None,
+    'dflt_val'   : 'open',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-            ['current', 'Current period'],
-            ['open', 'Period open'],
-            ['closing', 'Period-end started'],
-            ['closed', 'Period closed'],
-            ['reopened', 'Period reopened'],
+            ['current', 'Current'],
+            ['open', 'Open'],
+            ['closing', 'Closing'],
+            ['closed', 'Closed'],
+            ['reopened', 'Reopened'],
         ],
+    })
+cols.append ({
+    'col_name'   : 'per_process_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Id for period close process',
+    'long_descr' : (
+        "Process id for 'period close process'. "
+        "Q. What is the purpose of this? "
+        "A. Display progess report - follow link to bpm_headers/details. "
+        "Q. What if closed, then reopened, then reclosed? id will be overwritten! "
+        "A. If the only purpose is to display a progress report on a process that is "
+        "    'in progress' (i.e. state='closing'), it should not matter."
+        ),
+    'col_head'   : 'Per proc id',
+    'key_field'  : 'N',
+    'data_source': 'proc',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['bpm_headers', 'row_id', None, None, False, None],
+    'choices'    : None,
     })
 
 # virtual column definitions
@@ -205,7 +232,7 @@ cursors.append({
     'cursor_name': 'cb_per',
     'title': 'Maintain cb ledger periods',
     'columns': [
-        ['period_row_id', 80, True, True],
+        ['period_row_id', 10, True, True],
         ['closing_date', 100, False, True],
         ['state', 100, False, True],
         ],

@@ -564,8 +564,8 @@ if (grid.header_row.length) {
 
         if (this.style.textDecoration === 'underline') {
           if (grid.frame.form.disable_count) return false;
-            var args = [this.input.ref, (this.grid_row + grid.first_grid_row)];
-            send_request('clicked', args);
+          var args = [this.input.ref, (this.grid_row + grid.first_grid_row)];
+          send_request('clicked', args);
           if (this.grid_row !== grid.active_row || this.grid_col !== grid.active_col)
             grid.req_cell_focus((grid.first_grid_row + this.grid_row), this.grid_col);
           return;
@@ -1727,14 +1727,14 @@ if (grid.header_row.length) {
       return;
     input.edit_cell(grid.active_cell, null, key);
     };
-  
+
   grid.clear_cell = function() {
     var input = grid.obj_list[grid.active_col];
     if (!input.amendable())
       return;
     input.clear_cell(grid.active_cell);
     };
-    
+
   grid.handle_tab = function(shiftKey) {
     //debug3('TAB ' + document.getElementsByTagName('*').length + ' ' +
     //  document.getElementsByTagName('*')[document.getElementsByTagName('*').length-1]);

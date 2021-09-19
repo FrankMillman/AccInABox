@@ -1,4 +1,4 @@
-<subtype_body subtype_id="arec">
+<subtype_body subtype_id="ar_rec">
   <block/>
   <panel/>
 
@@ -32,7 +32,7 @@
   <label value="Receipt amount:"/>
   <col/>
   <display obj_name="ar_subrec" col_name="currency_id>symbol" lng="10"/>
-  <input obj_name="ar_subrec" col_name="arec_amount" lng="84"/>
+  <input obj_name="ar_subrec" col_name="rec_amount" lng="84"/>
 
   <!-- this does not work well - if > 1 ledger, alt_curr is $None when form is created -->
   <if test="[[`if`, ``, `ar_subrec.cust_row_id>ledger_row_id>alt_curr`, `is`, `$True`, ``]]"/>

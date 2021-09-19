@@ -1144,11 +1144,7 @@ class DbObject:
                             await ht.form_xml.exec_xml(caller, method)
             return
 
-        # changed [2020-04-22] - implications?
-        # reason - e.g. in dbcols_setup inline form'calc', if 'undo changes',
-        #   tries to set all fields to orig (i.e. None), fails 'not null' validation
-        # if not self.mem_obj and not self.exists:
-        if not self.exists:
+        if not self.mem_obj and not self.exists:
             await self.init(display=display, init_vals=self.init_vals)
             if display:
                 for caller_ref in list(self.on_clean_func.keyrefs()):

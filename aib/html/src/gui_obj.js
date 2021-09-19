@@ -226,6 +226,17 @@ function create_input(frame, page, json_elem, label) {
   if (json_elem.skip)
     input.tabIndex = -1;  // remove from tab order
 
+  if (json_elem.clickable) {  // e.g. footer_row in grid
+    input.style.textDecoration = 'underline';
+    input.style.cursor = 'default';
+    input.onclick = function(e) {
+      if (input.frame.form.disable_count) return false;
+      var args = [input.ref];
+      send_request('clicked', args);
+      setTimeout(input.frame.form.current_focus.focus(), 0);
+      };
+    };
+
   input.pos = frame.obj_list.length;
   frame.obj_list.push(input);
   frame.form.obj_dict[json_elem.ref] = input;
@@ -358,27 +369,8 @@ function create_input(frame, page, json_elem, label) {
     return true;
     };
 
-  if (input.onclick === null) {  // else we over-write bool.onclick
-    input.onclick = function() {  // IE8 does not set focus!
-      input.focus();  // not sure if this is necessary - leave for now
-      };
-    };
-
   input.set_dflt_val = function(value) {
-//    this.current_value = value;
-//    if (this.frame.form.current_focus === this)
-//      this.aib_obj.after_got_focus(this);
-//    else
-//      this.aib_obj.after_lost_focus(this);
-    if (this.amendable())
-      this.aib_obj.set_dflt_val(this, value);
-    else {
-      this.current_value = value;
-      if (this.frame.form.current_focus === this)
-        this.aib_obj.after_got_focus(this);
-      else
-        this.aib_obj.after_lost_focus(this);
-      };
+    this.aib_obj.set_dflt_val(this, value);
     };
 
   input.amendable = function() {

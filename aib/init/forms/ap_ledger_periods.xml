@@ -1,25 +1,18 @@
 <form name="ap_ledger_periods" title="Ap ledger periods" before_start_form="
-  <<case>>
-    <<compare test=`[['if', '', '_ledger.separate_pmt_close', 'is', '$True', '']]`>>
-      <<assign src=`'ap_per_pmt'` tgt=`_ctx.cursor_name`/>>
-    <</compare>>
-    <<default>>
-      <<assign src=`'ap_per'` tgt=`_ctx.cursor_name`/>>
-    <</default>>
-  <</case>>
+  <<assign src=`'ap_per'` tgt=`_ctx.cursor_name`/>>
+  <<assign src=`_ctx.current_period` tgt=`var.current_period`/>>
   ">
 
   <db_objects>
     <db_obj name="ledg_per" table_name="ap_ledger_periods"/>
+    <db_obj name="bpm_det" table_name="bpm_details"/>
   </db_objects>
   <mem_objects>
-
     <mem_obj name="actions" descr="Possible actions"
         sub_types="[
         [`action`, null,
           [
             [`no_action`, `No action available`, [], []],
-            [`payment_close`, `Start payment close`, [], []],
             [`period_close`, `Start period close`, [], []],
             [`reopen`, `Reopen period`, [], []]
             ]
@@ -28,31 +21,21 @@
       <mem_col col_name="action" data_type="TEXT" short_descr="Action"
         long_descr="Action" col_head="Action" allow_null="true" allow_amend="true"/>
     </mem_obj>
-
     <mem_obj name="var" descr="Form variables" module_id="ap">
       <mem_col col_name="module_id" data_type="TEXT" short_descr="Module id"
         long_descr="Module id"/>
       <mem_col col_name="module_descr" data_type="TEXT" short_descr="Module descr"
         long_descr="Module descr"/>
       <mem_col col_name="ledger_id" data_type="TEXT" short_descr="Ledger id"
-        long_descr="Ledger id"/>
+        long_descr="Ledger id" dflt_val="{ledg_per.ledger_id}"/>
       <mem_col col_name="ledger_descr" data_type="TEXT" short_descr="Ledger descr"
-        long_descr="Ledger descr"/>
+        long_descr="Ledger descr" dflt_val="{ledg_per.ledger_id>descr}"/>
       <mem_col col_name="close_period" data_type="BOOL" short_descr="Close period?"
         long_descr="Close period?" allow_amend="true"/>
       <mem_col col_name="reopen_period" data_type="BOOL" short_descr="Reopen period?"
         long_descr="Reopen period?" allow_amend="true"/>
       <mem_col col_name="current_period" data_type="INT" short_descr="Current period"
         long_descr="Current period" col_head="Curr" allow_amend="true"/>
-      <mem_col col_name="single_supp" data_type="BOOL" short_descr="Single supplier?"
-        long_descr="Single supplier?" allow_amend="true"/>
-      <mem_col col_name="supp_row_id" data_type="INT" short_descr="Supplier row id"
-        long_descr="Supplier row id" allow_amend="true" allow_null="true"
-        fkey="[`ap_suppliers`, `row_id`, `supp_id`, `supp_id`, false, null]"/>
-      <mem_col col_name="payment_date" data_type="DTE" short_descr="Payment date"
-        long_descr="Payment date" allow_amend="true"/>
-      <mem_col col_name="close_params" data_type="JSON" short_descr="Params for close period"
-        long_descr="Parameters to pass to 'close period process'" allow_amend="true"/>
     </mem_obj>
   </mem_objects>
 
@@ -65,12 +48,13 @@
       <block/>
       <panel/>
       <row/>
-      <col/>
+      <!--col/>
       <label value="Module:"/>
-      <display obj_name="var" col_name="module_descr" lng="150"/>
+      <display obj_name="var" col_name="module_descr" lng="150"/-->
       <col/>
       <label value="Ledger:"/>
-      <display obj_name="var" col_name="ledger_descr" lng="150"/>
+      <display obj_name="var" col_name="ledger_id" lng="50"/>
+      <!--display obj_name="var" col_name="ledger_descr" lng="150"/-->
       <block/>
       <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="_ctx"
           start_col="period_row_id" start_val="var.current_period" readonly="true">
@@ -79,7 +63,7 @@
         </toolbar>
         <grid_methods template="Grid">
           <method name="on_start_row" action="
-            <<pyfunc name=`custom.aptrans_funcs.check_ledg_per`/>>
+            <<pyfunc name=`custom.date_funcs.check_ledg_per`/>>
           "/>
         </grid_methods>
       </grid>
@@ -100,28 +84,6 @@
               <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
             </subtype_body>
 
-            <subtype_body subtype_id="payment_close">
-              <block/>
-              <panel/>
-              <row/>
-              <col/>
-              <label value="Period"/>
-              <display obj_name="ledg_per" col_name="period_row_id" lng="20"/>
-              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
-              <button btn_id="close_pmt" btn_label="Close for payments"
-                help_msg = "Start 'payment close' process"
-                btn_enabled="true" btn_validate="true" action="
-                  <<inline_form name=`period_close`>>
-                    <<on_return>>
-                      <<return state=`cancelled`>>
-                      <</return>>
-                      <<return state=`completed`>>
-                      <</return>>
-                    <</on_return>>
-                  <</inline_form>>
-                "/>
-            </subtype_body>
-
             <subtype_body subtype_id="period_close">
               <block/>
               <panel/>
@@ -133,15 +95,26 @@
               <button btn_id="close_period" btn_label="Close period"
                 help_msg = "Start 'period close' process"
                 btn_enabled="true" btn_validate="true" action="
-                  <<inline_form name=`period_close`>>
-                    <<on_return>>
-                      <<return state=`cancelled`>>
-                      <</return>>
-                      <<return state=`completed`>>
-                      <</return>>
-                    <</on_return>>
-                  <</inline_form>>
-                "/>
+                  <<ask title=`Period close` enter=`No` escape=`No`
+                      question=`Ok to start period end process?`>>
+                    <<response ans=`No`/>>
+                    <<response ans=`Yes`>>
+                      <<start_process name=`ap_per_close`>>
+                        <<call_params>>
+                          <<call_param name=`period_to_close` type=`data_attr` source=`ledg_per.period_row_id`/>>
+                          <<call_param name=`current_period` type=`data_attr` source=`var.current_period`/>>
+                          <<call_param name=`check_date` type=`data_attr` source=`ledg_per.closing_date`/>>
+                        <</call_params>>
+                      <</start_process>>
+                      <<ask title=`Period close` enter=`Ok` escape=`Ok`
+                          question=`Close period process started`>>
+                        <<response ans=`Ok`>>
+                          <<end_form state=`completed`/>>
+                        <</response>>
+                      <</ask>>
+                    <</response>>
+                  <</ask>>
+                  "/>
             </subtype_body>
 
             <subtype_body subtype_id="reopen">
@@ -162,7 +135,7 @@
 
         </body>
         <button_row>
-          <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
+          <button btn_id="btn_ok" btn_label="Close" btn_enabled="true"
             btn_validate="true" btn_default="true" lng="60" action="
               <<end_form state=`completed`/>>
             "/>
@@ -173,72 +146,4 @@
     <button_row/>
     <frame_methods/>
   </frame>
-  <inline_form name="period_close" title="Start period close process">
-    <frame main_object="ledg_per">
-      <toolbar/>
-      <body>
-        <block/>
-        <panel/>
-<!--
-        <if test="[[`if`, ``, `_ledger.separate_pmt_supp`, `is`, `$True`, ``]]"/>
-        <row/>
-        <col/>
-        <label value="Single supplier?"/>
-        <col/>
-        <input obj_name="var" col_name="single_supp" after="
-          <<action>>
-            <<case>>
-              <<compare test=`[['if', '', 'var.single_supp', 'is', '$True', '']]`>>
-                <<set_readonly target=`var.supp_id` state=`false`/>>
-              <</compare>>
-              <<default>>
-                <<set_readonly target=`var.supp_id` state=`true`/>>
-              <</default>>
-            <</case>>
-          <</action>>
-          "/>
-        <row/>
-        <col/>
-        <label value="Supplier id:"/>
-        <col/>
-        <input obj_name="var" col_name="supp_id" lng="80"/>
-        <display obj_name="var" col_name="supp_row_id>party_row_id>display_name" lng="150"/>
-        <end_if/>
--->
-        <row/>
-        <col/>
-        <label value="Payment date:"/>
-        <col/>
-        <input obj_name="var" col_name="payment_date" lng="150"/>
-        <row/>
-        <col/>
-        <label value="Start period close process?"/>
-        <col/>
-        <button btn_id="start_period_close" btn_label="Start"
-          btn_enabled="true" btn_validate="true" action="
-            <<pyfunc name=`custom.aptrans_funcs.setup_close_params`/>>
-            <<start_process name=`ap_per_close`>>
-              <<call_params>>
-                <<call_param name=`close_params` type=`data_attr` source=`var.close_params`/>>
-              <</call_params>>
-              <<return_params>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`cancelled`/>>
-                <<return state=`completed`/>>
-              <</on_return>>
-            <</start_process>>
-          "/>
-      </body>
-      <button_row/>
-      <frame_methods>
-        <method name="on_req_cancel" action="
-          <<end_form state=`cancelled`/>>
-        "/>
-        <method name="on_req_close" action="
-          <<end_form state=`cancelled`/>>
-        "/>
-      </frame_methods>
-    </frame>
-  </inline_form>
 </form>

@@ -397,8 +397,10 @@ class Form:
             except KeyError:
                 if required:
                     head = 'Missing parameter'
-                    body = f"Required parameter '{name}' not supplied"
+                    body = f'Required parameter {name!r} not supplied'
                     raise AibError(head=head, body=body)
+                else:
+                    continue
             obj_name, col_name = target.split('.')
             db_obj = self.data_objects[obj_name]
             fld = await db_obj.getfld(col_name)
@@ -1103,8 +1105,11 @@ class Frame:
                 # db_obj.add_amend_func((self, method))
                 # self.on_amend_set.add(db_obj)
                 db_obj.on_amend_func[self] = method
-                for child in db_obj.children:  # mainly for sub_trans
-                    child.on_amend_func[self] = method
+                # if any sub_trans is amended, trigger amend_func on parent
+                for subtran_colname in db_obj.sub_trans:
+                    for subtran_colval in db_obj.sub_trans[subtran_colname]:
+                        subtran_obj = db_obj.sub_trans[subtran_colname][subtran_colval][0]
+                        subtran_obj.on_amend_func[self] = method
             elif method_name == 'on_delete':  # set up callback on db_object
                 db_obj = self.data_objects[obj_name]
                 # db_obj.add_delete_func((self, method))

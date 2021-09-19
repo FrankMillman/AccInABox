@@ -55,7 +55,10 @@ function setup_bpmn(frame, ref, nodes, edges) {
       rubber_band.setAttributeNS(null, 'height', e.clientY - this.min_y - y);
       };
     svg.subprocess_done = function(e) {
-      this.select_subprocess.push(e.clientX - this.min_x, e.clientY - this.min_y);
+	  var x = Math.round(e.clientX);
+	  var y = Math.round(e.clientY);
+      // this.select_subprocess.push(e.clientX - this.min_x, e.clientY - this.min_y);
+      this.select_subprocess.push(x - this.min_x, y - this.min_y);
       this.removeChild(this.lastChild);
       var subprocess_selected = this.select_subprocess.shift();  // extract first element
       subprocess_selected.call(this, this, ...this.select_subprocess);
@@ -86,7 +89,7 @@ function setup_bpmn(frame, ref, nodes, edges) {
       var addspace_selected = this.select_addspace.shift();  // extract first element
       addspace_selected.call(this, this, ...this.select_addspace);
       };
-                    
+
   };
 
 function render_bpmn(svg, nodes, edges) {
@@ -108,12 +111,16 @@ function render_bpmn(svg, nodes, edges) {
     start : function(e) {  // on mousedown
       if (e.button !== 0)  // 0 = left button
         return;
+      if (waiting_for_source !== null || waiting_for_target !== null)  // let onclick handle this
+        return;
       var o = Drag.obj = this;
       var svg = o.parentNode;
       var [minX, minY, maxX, maxY] = svg.get_bounds();
       var [x, y, w, h] = o.drag_bounds;
       maxX -= w;
       maxY -= h;
+      var page = svg.parentNode;
+      page.lastChild.firstChild.data = '\xa0';  // in case active
 
       o.dragged = false;  // to detect if dragged
 
@@ -291,7 +298,7 @@ function render_bpmn(svg, nodes, edges) {
     end : function() {
 
       var o = Drag.obj;
-  
+
       document.onmousemove = null;
       document.onmouseup = null;
       Drag.obj = null;
@@ -433,7 +440,7 @@ function render_bpmn(svg, nodes, edges) {
         task.setAttributeNS(null, 'href', task_types[node_args.task_type]);
         task.setAttributeNS(null, 'width', w);
         task.setAttributeNS(null, 'height', h);
-        if (name !==null) {  // create text node for name, with word-wrap
+        if (name !== null) {  // create text node for name, with word-wrap
           var x_pos = 5, y_pos = (node_args.task_type === null ? 8 : 20);
           word_wrap(shape, name, x_pos, y_pos, w-2);  // name, parent, x, y, max_x
           };

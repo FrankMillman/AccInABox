@@ -99,6 +99,15 @@ async def exch_rate(fld, xml, debug):
 
     return rate
 
+async def first_next_per(fld, xml, debug):
+    # called as dflt_rule from nsls/npch_subtran.eff_date
+    db_obj = fld.db_obj
+    tran_date = await db_obj.getval('subparent_row_id>tran_date')
+    adm_periods = await db.cache.get_adm_periods(db_obj.company)
+    period_no = bisect_left([_.closing_date for _ in adm_periods], tran_date)
+    closing_date = adm_periods[period_no].closing_date
+    return closing_date + td(1)
+
 async def alloc_tran_date(fld, xml, debug):
     # called as dflt_rule from ar_tran_alloc.tran_date
 

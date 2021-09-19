@@ -364,6 +364,14 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Tran type',
+    'sql'        : "'ap_disc'",
+    })
+virt.append ({
     'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Tran type row id',

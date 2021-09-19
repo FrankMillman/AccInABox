@@ -245,9 +245,8 @@ def callback(self, sql_cmd):
 #     return sql
 
 async def form_sql(self, columns, tablenames, where_clause='',
-        group_clause='', order_clause='', limit=0, offset=0, lock=False):
-    sql = 'SELECT'
-    sql += ' {} FROM {}'.format(columns, tablenames)
+        group_clause='', order_clause='', limit=0, offset=0, lock=False, distinct=False):
+    sql = f"SELECT{' DISTINCT' if distinct else ''} {columns} FROM {tablenames}"
     if where_clause:
         sql += where_clause
     if group_clause:
@@ -271,6 +270,7 @@ async def attach_company(self, company):
 
 async def convert_sql(self, sql, params=None):
 
+    # casting to BOOLTEXT does not work - Sqlite3 limitation [2021-07-29]
     sql = sql.replace('$True', '1').replace('$False', '0')
 
     if self.database != ':memory:':

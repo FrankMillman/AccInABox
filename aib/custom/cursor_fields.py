@@ -83,31 +83,22 @@ async def load_cur_flds_xml(caller, xml):
     #   etree element before passing into cur_col
 
     for seq, elem_xml in enumerate(await cur_vars.getval('cur_columns_xml')):
-#       init_vals = {col: cur_col.get_val_from_xml(col, elem_xml.get(col))
-#           for col in cur_column_cols}
-        init_vals = {}
-        for col in cur_column_cols:
-            init_vals[col] = await cur_col.get_val_from_xml(col, elem_xml.get(col))
+        init_vals = {col: await cur_col.get_val_from_xml(col, elem_xml.get(col))
+            for col in cur_column_cols}
         init_vals['seq'] = seq
         await cur_col.init(init_vals=init_vals)
         await cur_col.save()
 
     for seq, elem_xml in enumerate(await cur_vars.getval('cur_filter_xml')):
-#       init_vals = {col: cur_fil.get_val_from_xml(col, elem_xml.get(col))
-#           for col in cur_filter_cols}
-        init_vals = {}
-        for col in cur_filter_cols:
-            init_vals[col] = await cur_fil.get_val_from_xml(col, elem_xml.get(col))
+        init_vals = {col: await cur_fil.get_val_from_xml(col, elem_xml.get(col))
+            for col in cur_filter_cols}
         init_vals['seq'] = seq
         await cur_fil.init(init_vals=init_vals)
         await cur_fil.save()
 
     for seq, elem_xml in enumerate(await cur_vars.getval('cur_sequence_xml')):
-#       init_vals = {col: cur_seq.get_val_from_xml(col, elem_xml.get(col))
-#           for col in cur_sequence_cols}
-        init_vals = {}
-        for col in cur_sequence_cols:
-            init_vals[col] = await cur_seq.get_val_from_xml(col, elem_xml.get(col))
+        init_vals = {col: await cur_seq.get_val_from_xml(col, elem_xml.get(col))
+            for col in cur_sequence_cols}
         init_vals['seq'] = seq
         await cur_seq.init(init_vals=init_vals)
         await cur_seq.save()
@@ -132,8 +123,8 @@ async def dump_cur_flds_json(caller, xml):
     columns = []
     all_cols = cur_col.select_many(where=[], order=[['seq', False]])
     async for _ in all_cols:
-        # use get_val_for_sql() instead of getval() - some columns contain xml
-        columns.append([await fld.get_val_for_sql() for fld in cur_col.select_cols[2:]])
+        # only save first 4 cols - rest are for form_defn cursors, not db_defn cursors [2021-08-10]
+        columns.append([await fld.get_val_for_sql() for fld in cur_col.select_cols[2:6]])
     await cur_vars.setval('cur_columns_json', columns)
 
     filter = []

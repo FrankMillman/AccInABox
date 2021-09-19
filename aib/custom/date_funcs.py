@@ -388,24 +388,21 @@ async def check_bf_date(db_obj, fld, value):
     # needs more thought [2020-07-02]
     if period_row_id != 0:  # date is <= first period (and first period is dummy)
         raise AibError(head='Transaction date', body='Date must be prior to start of financial calendar')
+
     return True
 
-async def check_tran_date(db_obj, fld, value):
+async def check_tran_date(db_obj, fld, value, module_id, ledger_row_id=0):
     """
     called from various tran_date col_checks using pyfunc
-    called again before inserting - in case period closed in between
+    called again before inserting, in case period closed between 'capture' and 'save'
 
-    how to validate tran date ?? [2017-06-28]
-    
+    how to validate tran date [2017-06-28]
     1. convert date into 'period_row_id' from adm_periods
        if < first period, errmsg='period does not exist'
        if > last period, errmsg='period not set up'
-    
     2. use 'period_row_id' to read 'ledger_periods'
-       if state not 'open' or 'reopened', errmsg='period is closed'
-       if does not exist -
-         if period = current_period + 1, create new open period
-         else errmsg = 'Period not open'
+       if state not 'current', 'open' or 'reopened', errmsg='period is closed'
+       if does not exist, errmsg='period not open'
     """
 
     # if value > dt.today():
@@ -419,47 +416,29 @@ async def check_tran_date(db_obj, fld, value):
     if period_row_id == len(adm_periods):  # date is > last period
         raise AibError(head='Transaction date', body='Date not in financial calendar')
 
-    # module_row_id, ledger_row_id = db_obj.context.mod_ledg_id
-    # line above is not always true - e.g. ar_tran_alloc from cb_tran_rec
-    # next 2 lines should always work [2018-10-03]
-    # only works if cust_row_is is entered before tran_date - this may change [2019-02-09]
-    module_row_id = db_obj.db_table.module_row_id
-    ledger_col = db_obj.db_table.ledger_col
-    if ledger_col is None:  # module = 'gl'
-        ledger_row_id = None
-    else:
-        ledger_row_id = await db_obj.getval(ledger_col)
+    module_row_id = await db.cache.get_mod_id(db_obj.company, module_id)
     ledger_periods = await db.cache.get_ledger_periods(db_obj.company, module_row_id, ledger_row_id)
     if ledger_periods == {}:
-        raise AibError(head='Transaction date', body='Ledger periods not set up')
-
+        if ledger_row_id == 0:
+            ledger_id = 'gl'
+        else:
+            ledg_obj = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
+            ledger_id = await ledg_obj.getval('ledger_id')
+        raise AibError(head='Transaction date', body=f'{ledger_id} - ledger periods not set up')
     if period_row_id not in ledger_periods:
-        if period_row_id == ledger_periods.current_period + 1:  # create new open period
-            module_id = (await db.cache.get_mod_id(db_obj.company, db_obj.db_table.module_row_id))
-            ledger_period = await db.objects.get_db_object(db_obj.context, f'{module_id}_ledger_periods')
-            await ledger_period.init(init_vals={
-                'ledger_row_id': ledger_row_id,
-                'period_row_id': period_row_id,
-                'state': 'open',
-                })
-            await ledger_period.save()
-
-            ledger_periods = await db.cache.get_ledger_periods(
-                db_obj.company, module_row_id, ledger_row_id)
-
-    if period_row_id not in ledger_periods:
-        raise AibError(head='Transaction date', body='Period not open')
+        if ledger_row_id == 0:
+            ledger_id = 'gl'
+        else:
+            ledg_obj = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
+            ledger_id = await ledg_obj.getval('ledger_id')
+        raise AibError(head='Transaction date', body=f'{ledger_id} - period not open')
     if ledger_periods[period_row_id].state not in ('current', 'open', 'reopened'):
-        raise AibError(head='Transaction date', body='Period is closed')
-
-    # if not period_row_id not in (current_period, current_period+1):
-    #     try:  # permission to change period?
-    #         await db_obj.check_perms('amend', await db_obj.getfld('period_row_id'))
-    #     except AibDenied:  # change error message from 'Permission denied'
-    #         raise AibDenied(
-    #             head='Transaction date', body='Period not open')
-
-    await db_obj.setval('period_row_id', period_row_id)
+        if ledger_row_id == 0:
+            ledger_id = 'gl'
+        else:
+            ledg_obj = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
+            ledger_id = await ledg_obj.getval('ledger_id')
+        raise AibError(head='Transaction date', body=f'{ledger_id} - period is closed')
 
     return True
 
@@ -469,8 +448,6 @@ async def check_stat_date(db_obj, fld, value):
     module_row_id = db_obj.db_table.module_row_id
     ledger_row_id = await db_obj.getval(db_obj.db_table.ledger_col)
     ledger_params = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
-    if not await ledger_params.getval('separate_stat_close'):
-        return True
 
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
     period_row_id = bisect_left([_.closing_date for _ in adm_periods], value)
@@ -498,45 +475,6 @@ async def check_stat_date(db_obj, fld, value):
 
     return True
 
-async def check_wh_date(db_obj, fld, ledger_row_id):
-    # called from various ledger_row_id col_checks using pyfunc
-
-    if ledger_row_id is None:  # no dflt_val for ledger_row_id
-        return True  # will be called after entry of ledger_row_id
-
-    try:
-        period_row_id = await db_obj.getval('subparent_row_id>tran_row_id>period_row_id')
-    except KeyError:
-        period_row_id = await db_obj.getval('tran_row_id>period_row_id')
-    module_row_id = await db.cache.get_mod_id(db_obj.company, 'in')
-
-    ledger_periods = await db.cache.get_ledger_periods(
-        db_obj.company, module_row_id, ledger_row_id)
-
-    if ledger_periods is None:
-        raise AibError(head=fld.col_defn.short_descr, body='Warehouse period not set up')
-
-    if period_row_id not in ledger_periods:
-        if period_row_id == ledger_periods.current_period + 1:  # create new open period
-            context = await db.cache.get_new_context(1, True, db_obj.company)
-            ledger_period = await db.objects.get_db_object(context, 'in_ledger_periods')
-            await ledger_period.init(init_vals={
-                'ledger_row_id': ledger_row_id,
-                'period_row_id': period_row_id,
-                'state': 'open',
-                })
-            await ledger_period.save()
-
-            ledger_periods = await db.cache.get_ledger_periods(
-                db_obj.company, module_row_id, ledger_row_id)
-
-    if period_row_id not in ledger_periods:
-        raise AibError(head=fld.col_defn.short_descr, body='Warehouse period not open')
-    if ledger_periods[period_row_id].state not in ('current', 'open', 'reopened'):
-        raise AibError(head=fld.col_defn.short_descr, body='Warehouse period is closed')
-
-    return True
-
 async def check_ledg_per(caller, xml):
     # called from cb_ledg_per.on_start_row
     ledg_per = caller.data_objects['ledg_per']
@@ -547,7 +485,5 @@ async def check_ledg_per(caller, xml):
         if await ledg_per.getval('state') == 'current':
             if await ledg_per.getval('closing_date') <= dt.today():
                 await actions.setval('action', 'period_close')
-            return
-        if await ledg_per.getval('state') == 'closed':
+        elif await ledg_per.getval('state') == 'closed':
             await actions.setval('action', 'reopen')
-            return

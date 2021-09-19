@@ -6,7 +6,7 @@ view = {
     'long_descr'    : 'Ar transactions',
     'base_tables'   : [
         'ar_tran_inv', 'ar_tran_crn', 'ar_tran_jnl',
-        'ar_subtran_jnl', 'ar_subtran_rec', 'ar_tran_disc'
+        'ar_subtran_jnl', 'ar_subtran_rec', 'ar_subtran_pmt', 'ar_tran_disc'
         ],
 
     'path_to_row'  : [
@@ -22,6 +22,8 @@ view = {
                 ('ar_subtran_jnl', 'row_id', 'tran_row_id', 'sub_arjnl'),
             'ar_rec':
                 ('ar_subtran_rec', 'row_id', 'tran_row_id', 'sub_arec'),
+            'ar_pmt':
+                ('ar_subtran_pmt', 'row_id', 'tran_row_id', 'sub_apmt'),
             'ar_disc':
                 ('ar_tran_disc', 'row_id', 'tran_row_id', 'ar_disc'),
             }],
@@ -40,7 +42,7 @@ view = {
 cols = []
 cols.append ({
     'col_name'   : 'tran_type',
-    'source'     : ["'ar_inv'", "'ar_crn'", "'ar_jnl'", "'ar_tgt'", "'ar_rec'", "'ar_disc'"],
+    'source'     : ["'ar_inv'", "'ar_crn'", "'ar_jnl'", "'ar_tgt'", "'ar_rec'", "'ar_pmt'", "'ar_disc'"],
     'data_type'  : 'TEXT',
     'short_descr': 'Tran type',
     'long_descr' : 'Transaction type',
@@ -53,7 +55,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tran_row_id',
-    'source'     : ['row_id', 'row_id', 'row_id', 'row_id', 'row_id', 'row_id'],
+    'source'     : ['row_id', 'row_id', 'row_id', 'row_id', 'row_id', 'row_id', 'row_id'],
     'data_type'  : 'INT',
     'short_descr': 'Transaction id',
     'long_descr' : 'Transaction row id',
@@ -66,7 +68,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tran_number',
-    'source'     : ['tran_number', 'tran_number', 'tran_number', 'tran_number', 'tran_number', 'tran_number'],
+    'source'     : ['tran_number', 'tran_number', 'tran_number', 'tran_number', 'tran_number', 'tran_number', 'tran_number'],
     'data_type'  : 'TEXT',
     'short_descr': 'Transaction number',
     'long_descr' : 'Transaction number',
@@ -79,7 +81,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'cust_row_id',
-    'source'     : ['cust_row_id', 'cust_row_id', 'cust_row_id', 'cust_row_id', 'cust_row_id', 'cust_row_id'],
+    'source'     : ['cust_row_id', 'cust_row_id', 'cust_row_id', 'cust_row_id', 'cust_row_id', 'cust_row_id', 'cust_row_id'],
     'data_type'  : 'INT',
     'short_descr': 'Customer row id',
     'long_descr' : 'Customer row id',
@@ -92,7 +94,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tran_date',
-    'source'     : ['tran_date', 'tran_date', 'tran_date', 'tran_date', 'tran_date', 'tran_date'],
+    'source'     : ['tran_date', 'tran_date', 'tran_date', 'tran_date', 'tran_date', 'tran_date', 'tran_date'],
     'data_type'  : 'DTE',
     'short_descr': 'Transaction date',
     'long_descr' : 'Transaction date',
@@ -105,7 +107,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'text',
-    'source'     : ['text', 'text', 'text', 'text', 'text', 'text'],
+    'source'     : ['text', 'text', 'text', 'text', 'text', 'text', 'text'],
     'data_type'  : 'TEXT',
     'short_descr': 'Text',
     'long_descr' : 'One line of text to appear on reports',
@@ -118,7 +120,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_cust',
-    'source'     : ['inv_tot_cust', 'rev(crn_tot_cust)', 'jnl_cust', 'jnl_cust', 'rev(rec_cust)', 'rev(disc_tot_cust)'],
+    'source'     : ['inv_tot_cust', 'rev(crn_tot_cust)', 'jnl_cust', 'jnl_cust', 'rev(rec_cust)', 'pmt_cust', 'rev(disc_tot_cust)'],
     'data_type'  : '$PTY',
     'short_descr': 'Transaction amount - cust',
     'long_descr' : 'Transaction amount - cust',
@@ -131,7 +133,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'source'     : ['inv_tot_local', 'rev(crn_tot_local)', 'jnl_local', 'jnl_local', 'rev(rec_local)', 'rev(disc_tot_local)'],
+    'source'     : ['inv_tot_local', 'rev(crn_tot_local)', 'jnl_local', 'jnl_local', 'rev(rec_local)', 'pmt_local', 'rev(disc_tot_local)'],
     'data_type'  : '$LCL',
     'short_descr': 'Transaction amount - local',
     'long_descr' : 'Transaction amount - local',

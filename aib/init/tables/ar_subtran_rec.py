@@ -142,6 +142,10 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : [
+        ['stat_date', 'Statement period not open', [
+            ['check', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
+            ['or', '', 'subparent_row_id>tran_date', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
+            ]],
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', 'cust_row_id>currency_id', '=', 'currency_id', ''],
             ['or', '', '_ledger.alt_curr', 'is', '$True', ''],
@@ -544,7 +548,8 @@ actions.append([
         [
             'ar_allocations',
             [  # condition
-                ['where', '', '_ledger.auto_alloc_oldest', 'is', '$True', ''],
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['and', '', '_ledger.auto_alloc_oldest', 'is', '$True', ''],
                 ['and', '', '$in_db_post', 'is', '$False', ''],
                 ],
 
@@ -592,7 +597,8 @@ actions.append([
         [
             'ar_allocations',
             [  # condition
-                ['where', '', '_ctx.tot_alloc_cust', 'pyfunc', 'custom.artrans_funcs.get_tot_alloc', ''],
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['and', '', '_ctx.tot_alloc_cust', 'pyfunc', 'custom.artrans_funcs.get_tot_alloc', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -608,7 +614,8 @@ actions.append([
         [
             'ar_tran_disc',
             [  # condition
-                ['where', '', '_ctx.tot_disc_cust', '!=', '0', ''],
+                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['and', '', '_ctx.tot_disc_cust', '!=', '0', ''],
                 ],
             False,  # split source?
             [  # key fields

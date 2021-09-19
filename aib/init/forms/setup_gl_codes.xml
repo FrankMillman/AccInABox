@@ -41,7 +41,12 @@
           <panel/>
           <row/>
           <col/>
-          <label value="Code:"/>
+          <label value="Group:"/>
+          <col/>
+          <display obj_name="gl_group" col_name="gl_group" lng="80"/>
+          <row/>
+          <col/>
+          <label value="G/l code:"/>
           <col/>
           <input obj_name="gl_code" col_name="gl_code" lng="80"/>
           <row/>
@@ -49,11 +54,6 @@
           <label value="Description:"/>
           <col/>
           <input obj_name="gl_code" col_name="descr" lng="120"/>
-          <row/>
-          <col/>
-          <label value="G/l code:"/>
-          <col/>
-          <input obj_name="gl_code" col_name="gl_code" lng="80"/>
 
         </body>
         <button_row template="Tree_Frame"/>

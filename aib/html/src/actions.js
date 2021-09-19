@@ -61,6 +61,9 @@ function got_focus(new_focus) {
   if (new_focus.disabled)
     return;  // opera accepts focus even if disabled!
 
+  if (new_focus.tabIndex < 0)  // e.g. footer_row in grid - accept click, do not set focus
+    return;
+
   //debug3('GOT FOCUS ' + new_focus.ref + ' ' + new_focus.help_msg + ' ' +
   //  (new_focus.frame.form.current_focus === new_focus) + ' ' +
   //  new_focus_form.focus_from_server);

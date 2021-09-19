@@ -1,6 +1,129 @@
 import db.objects
+from db.connection import db_constants as dbc
 import rep.finrpt
+import rep.tranrpt
 from common import AibError
+
+async def check_subledg(caller, params):
+    # called from gl_per_close process - check that all sub-ledgers for this period have been closed
+    context = caller.manager.process.root.context
+
+    # print(params)
+    # return_params = {'all_closed': False}
+    # return return_params
+
+    current_period = params['current_period']
+    module_ids = ['cb', 'ar', 'ap', 'in']
+    sql = []
+    params = []
+    sql.append('SELECT module_id, ledger_id FROM (')
+    for module_id in module_ids:
+        sql.append(f'SELECT {dbc.param_style} AS module_id, b.ledger_id')
+        params.append(module_id)
+        sql.append(f'FROM {caller.company}.{module_id}_ledger_periods a')
+        sql.append(f'JOIN {caller.company}.{module_id}_ledger_params b ON b.row_id = a.ledger_row_id')
+        sql.append(f'WHERE a.period_row_id = {dbc.param_style}')
+        params.append(current_period)
+        sql.append(f'AND a.deleted_id = {dbc.param_style}')
+        params.append(0)
+        sql.append(f'AND a.state != {dbc.param_style}')
+        params.append('closed')
+        if module_id != module_ids[-1]:
+            sql.append('UNION ALL')
+    sql.append(') dum')
+
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        cur = await conn.exec_sql(' '.join(sql), params)
+        async for module_id, ledger_id in cur:
+            exists = True
+            break
+        else:
+            exists = False
+            module_id = ledger_id = None
+
+    return_params = {'all_closed': not exists, 'module_id': module_id, 'ledger_id': ledger_id}
+    print('check all closed:', return_params)
+    return return_params
+
+async def set_per_closing_flag(caller, params):
+    print('set_closing_flag')
+
+    context = caller.manager.process.root.context
+    if 'ledg_per' not in context.data_objects:
+        context.data_objects['ledg_per'] = await db.objects.get_db_object(
+            context, 'gl_ledger_periods')
+    ledg_per = context.data_objects['ledg_per']
+    await ledg_per.setval('period_row_id', params['current_period'])
+    if await ledg_per.getval('state') not in ('current', 'open'):
+        raise AibError(head='Closing flag', body='Period is not open')
+    await ledg_per.setval('state', 'closing')
+    await ledg_per.save()
+
+async def posted_check(caller, params):
+    context = caller.manager.process.root.context
+
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        check_date = params['check_date']
+        where = []
+        where.append(['WHERE', '', 'tran_date', '<=', check_date, ''])
+        where.append(['AND', '', 'deleted_id', '=', 0, ''])
+        where.append(['AND', '', 'posted', '=', False, ''])
+
+        params = []
+        sql = 'SELECT CASE WHEN EXISTS ('
+
+        table_names = [
+            'gl_tran_jnl',
+            ]
+
+        for table_name in table_names:
+            db_table = await db.objects.get_db_table(context, caller.company, table_name)
+            s, p = await conn.build_select(context, db_table, ['row_id'], where=where, order=[])
+            sql += s
+            params += p
+            if table_name != table_names[-1]:
+                sql += ' UNION ALL '
+
+        sql += ') THEN $True ELSE $False END'
+
+        cur = await conn.exec_sql(sql, params)
+        exists, = await cur.__anext__()
+
+    return_params = {'all_posted': not bool(exists)}
+    print('check all posted:', return_params)
+    return return_params
+
+async def set_per_closed_flag(caller, params):
+    print('set_per_closed_flag')
+
+    context = caller.manager.process.root.context
+    if 'ledg_per' not in context.data_objects:
+        context.data_objects['ledg_per'] = await db.objects.get_db_object(
+            context, 'gl_ledger_periods')
+    ledg_per = context.data_objects['ledg_per']
+    await ledg_per.setval('period_row_id', params['period_to_close'])
+    if await ledg_per.getval('state') != 'closing':
+        raise AibError(head='Closing flag', body='Closing flag not set')
+    await ledg_per.setval('state', 'closed')
+    await ledg_per.save()
+
+    if params['period_to_close'] == params['current_period']:
+        # set next month state to 'current'
+        await ledg_per.init()
+        await ledg_per.setval('period_row_id', params['current_period'] + 1)
+        await ledg_per.setval('state', 'current')
+        await ledg_per.save()
+
+        # set following month state to 'open'
+        await ledg_per.init()
+        await ledg_per.setval('period_row_id', params['current_period'] + 2)
+        await ledg_per.setval('state', 'open')
+        await ledg_per.save()
+
+async def notify_manager(caller, params):
+    print('notify', params)
 
 async def setup_ctrl(db_obj, xml):
     # called from after_insert in various ledger_params
@@ -39,8 +162,54 @@ async def setup_ctrl(db_obj, xml):
             await gl_codes.setval('ctrl_acc_type', 'uex')
             await gl_codes.save()
 
+async def check_gl_group_link(db_obj, fld, value):
+    # called as validation from col_checks in nsls/npch_ledger_params.link_to_gl_grp
+    # number of 'drilldown' levels must match gl_groups, for drilldown reporting
+    if value is None:  # link is optional - if None, nothing to check
+        return True
+    # get 'number of levels' in nsls_npch_groups, skip 'root' and 'ledg'
+    mod_row_id = db_obj.db_table.module_row_id
+    module_id = await db.cache.get_mod_id(db_obj.company, mod_row_id)
+    grp_table = await db.objects.get_db_table(db_obj.context, db_obj.company, f'{module_id}_groups')
+    tree_params = grp_table.tree_params
+    group, col_names, levels = tree_params
+    type_colname, level_types, sublevel_type = levels
+    level_types = level_types[None] + level_types[await db_obj.getval('row_id')]
+    no_grp_levels = len(level_types) - 2  # skip 'root' and 'ledg'
+    # get 'number of levels' in gl_groups, skip 'root' and levels up to and including this link
+    gl_grp = fld.foreign_key['tgt_field'].db_obj
+    gl_tree_params = gl_grp.db_table.tree_params
+    group, col_names, levels = gl_tree_params
+    type_colname, level_types, sublevel_type = levels
+    gl_type = await gl_grp.getval('group_type')
+    gl_levels = [x[0] for x in level_types]
+    gl_level_pos = gl_levels.index(gl_type)
+    no_gl_levels = len(levels) - 1 - gl_level_pos  # levels below link_point - skip 'root' and level_pos
+    if no_grp_levels != no_gl_levels:
+        raise AibError(head='Link', body='Number of levels does not match gl')
+    return True
+
 async def setup_gl_group_link(db_obj, xml):
     # called from after_update in nsls/npch_ledger_params
+
+    """
+    This only applies if gl_integration has been set up.
+    It assumes that gl_groups has been set up, with fixed levels.
+    It also assumes that {db_obj}_groups has been set up, with fixed levels. [It doesn't, but it should]
+    gl_groups top level is always 'root'.
+    {db_obj}_groups top level is 'root', but there are separate sub_trees for each ledger,
+        so each sub_tree's top level is 'ledg'.
+    The group link creates a link from the 'ledg' group in {db_obj}_group to a gl_group.
+    # There is no requirement that they have to be at the same level.
+    # But there should be a validation that there are the same number of levels *below*
+    #     the link level, so that drill-downs always have a corresponding level to drill down to.
+    # 1. This validation has not been implemented yet.
+    2. Changes to gl_groups levels or {db_obj}_groups levels will have implications - not thought through.
+    3. Theoretically there is no requirement that they have to be at the same level.
+        But rep.finrpt is written on that assumption, so will have to be changed to handle alternatives.
+        Specifically, the JOINS from 'totals' to 'root' match those from 'gl'.
+    """
+
     fld = await db_obj.getfld('link_to_gl_grp')
     if fld._value == fld._orig:
         return  # no change
@@ -66,8 +235,8 @@ async def setup_finrpt_vars(caller, xml):
     context = caller.context
     var = context.data_objects['var']
     await var.init()
-    finrpt = context.data_objects['finrpt']
-    group_params = await finrpt.getval('group_params')
+    finrpt_defn = context.data_objects['finrpt_defn']
+    group_params = await finrpt_defn.getval('group_params')
     for grp in group_params:
         if grp[0] == 'date':
             date_type = grp[1][0]
@@ -75,7 +244,7 @@ async def setup_finrpt_vars(caller, xml):
     else:  # 'date' not in group_params - must be 'single date'
         date_type = 'single'
 
-    report_type = await finrpt.getval('report_type')
+    report_type = await finrpt_defn.getval('report_type')
     if date_type == 'single':
         date_param = 'balance_date' if report_type == 'as_at' else 'date_range'
     elif date_type == 'fin_yr':
@@ -89,12 +258,12 @@ async def setup_finrpt_vars(caller, xml):
     
     await var.setval('date_param', date_param)
 
-    if await finrpt.getval('allow_select_loc_fun'):
+    if await finrpt_defn.getval('allow_select_loc_fun'):
         if 'loc' not in [x[0] for x in group_params]:  # n/a if already grouped by location
-            if await finrpt.getval('_param.location_row_id') is None:  # n/a if only 1 location
+            if await finrpt_defn.getval('_param.location_row_id') is None:  # n/a if only 1 location
                 await var.setval('select_location', True)
         if 'fun' not in [x[0] for x in group_params]:  # n/a if already grouped by function
-            if await finrpt.getval('_param.function_row_id') is None:  # n/a if only 1 function
+            if await finrpt_defn.getval('_param.function_row_id') is None:  # n/a if only 1 function
                 await var.setval('select_function', True)
 
 async def run_finrpt(caller, xml):
@@ -119,6 +288,130 @@ async def run_finrpt(caller, xml):
         var = context.data_objects['balance_date_vars']
         date_params = await var.getval('balance_date')
 
+    finrpt_defn = caller.context.data_objects['finrpt_defn']
+    finrpt_data = await finrpt_defn.get_data()
+    finrpt_data['ledger_row_id'] = context.ledger_row_id
+    finrpt_data['date_params'] = date_params
+    # finrpt_data['orig_level_data'] = None  # use as indicator that we have switched to subledger
+
     finrpt = rep.finrpt.FinReport()
-    await finrpt._ainit_(caller.context.data_objects['finrpt'],
+    await finrpt._ainit_(caller.form, finrpt_data,
         caller.session, date_params, location_id, function_id)
+
+async def finrpt_drilldown(caller, xml):
+    vars = caller.data_objects['vars']
+    finrpt_data = await vars.getval('finrpt_data')
+    group_params = finrpt_data['group_params']
+    if not group_params:
+        return
+
+    drilldown = finrpt_data['drilldown']
+    tots = (xml.get('tots')) == 'true'  # clicked on 'total' field in footer_row
+
+    drilled = False  # can only drill one group at a time
+    for group in reversed(group_params):
+        dim, args = group
+        level_data = finrpt_data[f'{dim}_level_data']
+        levels = list(level_data.keys())
+        level_type = args[0]
+        level = levels.index(level_type)
+        # value = await caller.db_obj.getval(f'{dim}_{level_type}')
+
+        new_level_data = level_data
+        new_levels = levels
+        new_level_type = level_type
+        type = 'code'
+        if dim == 'code' and not tots:  # check for expanded subledger
+            if 'type' in caller.db_obj.fields:
+                type = await caller.db_obj.getval('type')  # e.g. 'code', 'nsls_1', 'npch_2'
+                if type != 'code':
+                    module_id, ledger_row_id = type.split('_')
+                    finrpt_data['table_name'] = finrpt_data['table_name'].replace('gl', module_id)
+                    finrpt_data['ledger_row_id'] = int(ledger_row_id)
+                    new_level_data = finrpt_data[f'{type}_level_data']
+                    new_levels = list(new_level_data.keys())
+                    new_level_type = new_levels[level]
+                    args[0] = new_level_type
+
+        if dim == 'code' and type != 'code':
+            if new_level_type == 'ledg':
+                args[1] = []  # no filter - will filter on ledger_id
+            else:
+                value = await caller.db_obj.getval(f'{dim}_{level_type}')
+                args[1] = [['AND', '', new_level_type, '=', repr(value), '']]
+        elif not tots:  # if tots, keep previous filter
+            value = await caller.db_obj.getval(f'{dim}_{level_type}')
+            args[1] = [['AND', '', level_type, '=', repr(value), '']]
+        if not drilled:  # can only drill one group at a time
+            if level > 0:
+                old_type = levels[level]
+                new_type = new_levels[level-1]
+                this_col_name = f'{dim}_{old_type}'  # must insert new column after this one
+                args[0] = new_type
+                drilled = True
+
+    if level == 0:  # highest group has reached lowest level - drilldown to transactions
+        if tots:  # always drill down to transactions if 'tots' clicked
+            tranrpt = rep.tranrpt.TranReport()
+            await tranrpt.__ainit__(caller, finrpt_data)
+            return
+        # if single code clicked, check if module is 'gl'
+        tots_tablename = finrpt_data['table_name']
+        module_id = tots_tablename.split('_')[0]  # either 'gl' or a subledger id
+        # if not, drill down to transactions
+        if module_id != 'gl':
+            tranrpt = rep.tranrpt.TranReport()
+            await tranrpt.__ainit__(caller, finrpt_data)
+            return
+        # get code_obj, check if it is a ctrl a/c
+        group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'code']
+        filter = group[0][1][1]
+        assert len(filter) == 1 and filter[0][2] == 'code'
+        level_data = finrpt_data['code_level_data']
+        code_data = level_data['code']
+        code_obj = await db.objects.get_db_object(caller.context, code_data[2])
+        await code_obj.setval(code_data[0], filter[0][4][1:-1])
+        # if not a ctrl a/c, drill down to transactions
+        if await code_obj.getval('ctrl_mod_row_id') is None:
+            tranrpt = rep.tranrpt.TranReport()
+            await tranrpt.__ainit__(caller, finrpt_data)
+            return
+        print(filter[0][4], ': CONTROL ACCOUNT')
+        tranrpt = rep.tranrpt.TranReport()
+        await tranrpt.__ainit__(caller, finrpt_data)
+
+    else:  # set up next level, call finrpt
+        columns = finrpt_data['columns']
+        grp_col_pos = [col[1] for col in columns].index(this_col_name)
+        new_col = columns[grp_col_pos][:]  # make a copy
+
+        if type != 'code':
+            for col in columns:
+                if col[3] == 'TEXT':
+                    dim, col_level_type = col[1].split('_')
+                    if dim == 'code':
+                        col_level = levels.index(col_level_type)
+                        new_level_type = new_levels[col_level]
+                        col[0] = col[0].replace(col_level_type, new_level_type)
+                        col[1] = col[1].replace(col_level_type, new_level_type)
+                        col[2] = new_level_type.capitalize()
+
+        new_col[0] = new_col[0].replace(old_type, new_type)
+        new_col[1] = new_col[1].replace(old_type, new_type)
+        new_col[2] = new_type.capitalize()
+        new_col[6] = False
+        columns.insert(grp_col_pos+1, new_col)
+        date_params = finrpt_data['date_params']
+        finrpt = rep.finrpt.FinReport()
+        await finrpt._ainit_(caller.form, finrpt_data,
+            caller.session, date_params, drilldown=drilldown+1)
+
+async def tranrpt_drilldown(caller, xml):
+    # from transaction row, retrieve originating transaction
+    print(caller.db_obj)  # tranrpt_obj
+    src_table_name = await caller.db_obj.getval('src_table_name')
+    src_row_id = await caller.db_obj.getval('src_row_id')
+    tran_obj = await db.objects.get_db_object(caller.context, src_table_name)
+    await tran_obj.setval('row_id', src_row_id)
+    print(tran_obj)
+    breakpoint()

@@ -253,6 +253,14 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Tran type',
+    'sql'        : "'cb_bf'",
+    })
+virt.append ({
     'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Tran type row id',
@@ -282,7 +290,7 @@ virt.append ({
     'short_descr': 'Transaction number',
     'long_descr' : 'Transaction number',
     'col_head'   : 'Tran num',
-    'sql'        : '"Balance b/f"',
+    'sql'        : "'Balance b/f'",
     })
 
 # cursor definitions

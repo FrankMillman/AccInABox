@@ -627,7 +627,10 @@ class Field:
                     if tree_params is not None:
                         group, col_names, levels = tree_params
                         if levels is not None:  # fixed levels defined
-                            if col_name in ('valid_loc_ids', 'valid_fun_ids', 'link_to_gl_grp'):  # hardcoded - BAD
+                            if col_name in (
+                                    'valid_loc_ids', 'valid_fun_ids',
+                                     'link_to_gl_grp', 'link_to_gl_ue_grp'
+                                     ):  # hardcoded - BAD
                                 pass  # these can be for any level, not just leaf
                             else:
                                 code, descr, parent_id, seq = col_names

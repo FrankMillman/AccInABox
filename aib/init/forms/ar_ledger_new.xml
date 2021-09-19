@@ -42,6 +42,13 @@
       <label value="Description"/>
       <col/>
       <input obj_name="ledger" col_name="descr" lng="160"/>
+      <if test="[[`if`, ``, `_param.gl_integration`, `is`, `$True`, ``]]"/>
+      <row/>
+      <col/>
+      <label value="G/l control a/c:"/>
+      <col/>
+      <input obj_name="ledger" col_name="gl_code"/>
+      <end_if/>
       <row/>
       <col/>
       <label value="Separate statement close?"/>
@@ -84,8 +91,9 @@
           <<case>>
             <<compare test=`[['if', '', 'ledger.separate_stat_close', 'is', '$True', '']]`>>
               <<case>>
-                <<compare test=`[['if', '', 'var.first_stat_date', 'is', '$None', '']]`>>
-                  <<error head=`Opening period` body=`Please enter first statement date`/>>
+                <<!--compare test=`[['if', '', 'var.first_stat_date', 'is', '$None', '']]`-->>
+                <<compare test=`[['if', '', 'ledger.stmt_date', 'is', '$None', '']]`>>
+                  <<error head=`Statements` body=`Please enter statement date parameter`/>>
                 <</compare>>
               <</case>>
             <</compare>>
@@ -100,12 +108,17 @@
         <<assign src=`ledger.row_id` tgt=`ledg_per.ledger_row_id`/>>
         <<assign src=`adm_period.period_row_id` tgt=`ledg_per.period_row_id`/>>
         <<assign src=`'current'` tgt=`ledg_per.state`/>>
-        <<case>>
+        <<!--case>>
           <<compare test=`[['if', '', 'ledger.separate_stat_close', 'is', '$True', '']]`>>
             <<assign src=`var.first_stat_date` tgt=`ledg_per.statement_date`/>>
             <<assign src=`'open'` tgt=`ledg_per.statement_state`/>>
           <</compare>>
-        <</case>>
+        <</case-->>
+        <<save_obj obj_name=`ledg_per`/>>
+        <<init_obj obj_name=`ledg_per`/>>
+        <<assign src=`ledger.row_id` tgt=`ledg_per.ledger_row_id`/>>
+        <<assign src=`(adm_period.period_row_id + 1)` tgt=`ledg_per.period_row_id`/>>
+        <<assign src=`'open'` tgt=`ledg_per.state`/>>
         <<save_obj obj_name=`ledg_per`/>>
         "/>
     </frame_methods>
@@ -149,11 +162,13 @@
       <body>
         <block/>
         <panel/>
+<!--
         <row/>
         <col/>
         <label value="First statement date:"/>
         <col/>
         <input obj_name="var" col_name="first_stat_date" lng="84"/>
+-->
         <row/>
         <col/>
         <label value="Statement date parameter:"/>

@@ -1,3 +1,4 @@
+module_id = 'gl'
 report_name = 'int_pivot_date'
 table_name = 'gl_totals'
 report_type = 'from_to'
@@ -23,7 +24,7 @@ allow_select_loc_fun = True
 pivot_on = ('date', 'to_date')
 
 columns = [
-    ['code_maj', 'code_maj', 'Maj', 'TEXT', 60, None, False],
+    ['code_maj', 'code_maj', 'Maj', 'TEXT', 60, None, 'Total:'],
     ['code_int', 'code_int', 'Int', 'TEXT', 60, None, False],
-    ['to_date', 'tran_tot', '%b %Y', 'DEC', 75, 'to_date', False],
+    ['to_date', 'tran_tot', '%b %Y', 'DEC', 80, 'to_date', True],
     ]

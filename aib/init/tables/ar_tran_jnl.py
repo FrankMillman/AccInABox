@@ -173,7 +173,8 @@ cols.append ({
                 'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
             ]],
         ['stat_date', 'Statement period not open', [
-            ['check', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
+            ['check', '', '_ledger.separate_stat_close', 'is', '$False', ''],
+            ['or', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
             ]],
         ],
     'fkey'       : None,
@@ -483,6 +484,15 @@ actions.append([
                 ['check', '', '$exists', 'is', '$True', ''],
                 ['or', '', 'tran_date', 'pyfunc',
                     'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
+                ],
+            ],
+        [
+            'recheck_stat_date',
+            'Statement period closed',
+            [
+                ['check', '', '$exists', 'is', '$True', ''],
+                ['or', '', '_ledger.separate_stat_close', 'is', '$False', ''],
+                ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
                 ],
             ],
         ],

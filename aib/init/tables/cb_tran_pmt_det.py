@@ -25,18 +25,24 @@ table = {
             #         ],
             #     ['nsls_code_id>descr'],  # display descr
             #     ],
-            ['arjnl', 'Ar journal', 'ar_subtran_jnl',
+            ['ar_jnl', 'Ar journal', 'ar_subtran_jnl',
                 [  # return values
                     ['pmt_tran', 'jnl_amount'],  # tgt_col, src_col
                     ],
                 # ['cust_row_id>party_row_id>display_name'],  # display descr
                 ['cust_id'],  # display descr
                 ],
-            ['apmt', 'Ap payment', 'ap_subtran_pmt',
+            ['ap_pmt', 'Ap payment', 'ap_subtran_pmt',
                 [  # return values
                     ['pmt_tran', 'pmt_amount'],  # tgt_col, src_col
                     ],
                 ['supp_id'],  # display descr
+                ],
+            ['ar_pmt', 'Ar payment', 'ar_subtran_pmt',
+                [  # return values
+                    ['pmt_tran', 'pmt_amount'],  # tgt_col, src_col
+                    ],
+                ['cust_id'],  # display descr
                 ],
             ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values

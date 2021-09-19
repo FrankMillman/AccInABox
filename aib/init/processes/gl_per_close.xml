@@ -1,0 +1,335 @@
+<process id="gl_per_close" descr="Gl period close process">
+  <db_objects/>
+  <mem_objects>
+    <mem_obj name="var" descr="Process variables">
+      <mem_col col_name="period_to_close" data_type="INT" short_descr="Period to close" long_descr="Period to close"/>
+      <mem_col col_name="current_period" data_type="INT" short_descr="Current period" long_descr="Current period"/>
+      <mem_col col_name="check_date" data_type="DTE" short_descr="Check date" long_descr="Check all posted with date up to this date"/>
+      <mem_col col_name="all_posted" data_type="BOOL" short_descr="All posted?" long_descr="All posted?"/>
+      <mem_col col_name="all_closed" data_type="BOOL" short_descr="All subledgers closed?" long_descr="All subledgers closed?" col_head="All closed?"/>
+      <mem_col col_name="module_id" short_descr="Module id" long_descr="Module id" col_head="Mod id" allow_null="true"/>
+      <mem_col col_name="ledger_id" short_descr="Ledger id" long_descr="Ledger id" col_head="Ledg id" allow_null="true"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params>
+    <input_param name="period_to_close" type="data_attr" target="var.period_to_close" required="true"/>
+    <input_param name="current_period" type="data_attr" target="var.current_period" required="true"/>
+    <input_param name="check_date" type="data_attr" target="var.check_date" required="true"/>
+  </input_params>
+  <output_params/>
+  <semantic:definitions xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dbobj="http://www.accinabox.org/bpmn/dbobj_definitions" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:memobj="http://www.accinabox.org/bpmn/memobj_definitions" xmlns:semantic="http://www.omg.org/spec/BPMN/20100524/MODEL" id="gl_per_close_0" targetNamespace="http://www.accinabox.org/bpmn">
+    <semantic:itemDefinition id="var_obj" structureRef="memobj:var"/>
+    <semantic:process id="gl_per_close_1" isExecutable="true">
+      <semantic:dataObject id="var" itemSubjectRef="var_obj"/>
+      <semantic:startEvent id="gl_per_close_3" name="Start">
+        <semantic:outgoing>gl_per_close_93</semantic:outgoing>
+      </semantic:startEvent>
+      <semantic:scriptTask id="gl_per_close_5" name="Set 'closing' flag">
+        <semantic:incoming>gl_per_close_97</semantic:incoming>
+        <semantic:outgoing>gl_per_close_19</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.current_period</semantic:sourceRef>
+          <semantic:targetRef>current_period</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:script>custom.gl_funcs.set_per_closing_flag</semantic:script>
+      </semantic:scriptTask>
+      <semantic:subProcess id="gl_per_close_61" name="Check all transactions posted">
+        <semantic:incoming>gl_per_close_19</semantic:incoming>
+        <semantic:outgoing>gl_per_close_81</semantic:outgoing>
+        <semantic:startEvent id="gl_per_close_63" name="Start subprocess">
+          <semantic:outgoing>gl_per_close_65</semantic:outgoing>
+        </semantic:startEvent>
+        <semantic:scriptTask id="gl_per_close_7" name="Check all posted">
+          <semantic:incoming>gl_per_close_65</semantic:incoming>
+          <semantic:incoming>gl_per_close_59</semantic:incoming>
+          <semantic:outgoing>gl_per_close_21</semantic:outgoing>
+          <semantic:dataInputAssociation>
+            <semantic:sourceRef>var.check_date</semantic:sourceRef>
+            <semantic:targetRef>check_date</semantic:targetRef>
+          </semantic:dataInputAssociation>
+          <semantic:dataOutputAssociation>
+            <semantic:sourceRef>all_posted</semantic:sourceRef>
+            <semantic:targetRef>var.all_posted</semantic:targetRef>
+          </semantic:dataOutputAssociation>
+          <semantic:script>custom.gl_funcs.posted_check</semantic:script>
+        </semantic:scriptTask>
+        <semantic:exclusiveGateway id="gl_per_close_9" name="All posted?" default="gl_per_close_57">
+          <semantic:incoming>gl_per_close_21</semantic:incoming>
+          <semantic:outgoing>gl_per_close_69</semantic:outgoing>
+          <semantic:outgoing>gl_per_close_57</semantic:outgoing>
+        </semantic:exclusiveGateway>
+        <semantic:intermediateCatchEvent id="gl_per_close_55" name="Delay">
+          <semantic:incoming>gl_per_close_57</semantic:incoming>
+          <semantic:outgoing>gl_per_close_59</semantic:outgoing>
+          <semantic:timerEventDefinition>
+            <semantic:timeDuration>PT5S</semantic:timeDuration>
+          </semantic:timerEventDefinition>
+        </semantic:intermediateCatchEvent>
+        <semantic:sequenceFlow sourceRef="gl_per_close_7" targetRef="gl_per_close_9" name="" id="gl_per_close_21"/>
+        <semantic:sequenceFlow sourceRef="gl_per_close_9" targetRef="gl_per_close_55" name="" id="gl_per_close_57"/>
+        <semantic:sequenceFlow sourceRef="gl_per_close_55" targetRef="gl_per_close_7" name="" id="gl_per_close_59"/>
+        <semantic:sequenceFlow sourceRef="gl_per_close_63" targetRef="gl_per_close_7" name="" id="gl_per_close_65"/>
+        <semantic:endEvent id="gl_per_close_67" name="End subprocess">
+          <semantic:incoming>gl_per_close_69</semantic:incoming>
+        </semantic:endEvent>
+        <semantic:sequenceFlow sourceRef="gl_per_close_9" targetRef="gl_per_close_67" name="" id="gl_per_close_69">
+          <semantic:conditionExpression>[["check", null, "var.all_posted", "is_", "$True", null]]</semantic:conditionExpression>
+        </semantic:sequenceFlow>
+      </semantic:subProcess>
+      <semantic:scriptTask id="gl_per_close_13" name="Set 'closed' flag">
+        <semantic:incoming>gl_per_close_81</semantic:incoming>
+        <semantic:outgoing>gl_per_close_85</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.period_to_close</semantic:sourceRef>
+          <semantic:targetRef>period_to_close</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.current_period</semantic:sourceRef>
+          <semantic:targetRef>current_period</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:script>custom.gl_funcs.set_per_closed_flag</semantic:script>
+      </semantic:scriptTask>
+      <semantic:endEvent id="gl_per_close_15" name="Done">
+        <semantic:incoming>gl_per_close_87</semantic:incoming>
+      </semantic:endEvent>
+      <semantic:boundaryEvent id="gl_per_close_71" name="Timeout check" cancelActivity="false" attachedToRef="gl_per_close_61">
+        <semantic:outgoing>gl_per_close_77</semantic:outgoing>
+        <semantic:timerEventDefinition>
+          <semantic:timeCycle>R/PT10S</semantic:timeCycle>
+        </semantic:timerEventDefinition>
+      </semantic:boundaryEvent>
+      <semantic:scriptTask id="gl_per_close_73" name="Notify manager">
+        <semantic:incoming>gl_per_close_77</semantic:incoming>
+        <semantic:outgoing>gl_per_close_79</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>ctx.user_row_id</semantic:sourceRef>
+          <semantic:targetRef>user_row_id</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:script>custom.gl_funcs.notify_manager</semantic:script>
+      </semantic:scriptTask>
+      <semantic:endEvent id="gl_per_close_75" name="Manager notified">
+        <semantic:incoming>gl_per_close_79</semantic:incoming>
+      </semantic:endEvent>
+      <semantic:userTask id="gl_per_close_83" name="Notify success" implementation="popup:Process completed">
+        <semantic:incoming>gl_per_close_85</semantic:incoming>
+        <semantic:outgoing>gl_per_close_87</semantic:outgoing>
+        <semantic:performer name="$user"/>
+      </semantic:userTask>
+      <semantic:scriptTask id="gl_per_close_89" name="Check all subledgers closed">
+        <semantic:incoming>gl_per_close_93</semantic:incoming>
+        <semantic:outgoing>gl_per_close_95</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.current_period</semantic:sourceRef>
+          <semantic:targetRef>current_period</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:dataOutputAssociation>
+          <semantic:sourceRef>all_closed</semantic:sourceRef>
+          <semantic:targetRef>var.all_closed</semantic:targetRef>
+        </semantic:dataOutputAssociation>
+        <semantic:dataOutputAssociation>
+          <semantic:sourceRef>module_id</semantic:sourceRef>
+          <semantic:targetRef>var.module_id</semantic:targetRef>
+        </semantic:dataOutputAssociation>
+        <semantic:dataOutputAssociation>
+          <semantic:sourceRef>ledger_id</semantic:sourceRef>
+          <semantic:targetRef>var.ledger_id</semantic:targetRef>
+        </semantic:dataOutputAssociation>
+        <semantic:script>custom.gl_funcs.check_subledg</semantic:script>
+      </semantic:scriptTask>
+      <semantic:exclusiveGateway id="gl_per_close_91" name="All closed?" default="gl_per_close_101">
+        <semantic:incoming>gl_per_close_95</semantic:incoming>
+        <semantic:outgoing>gl_per_close_101</semantic:outgoing>
+        <semantic:outgoing>gl_per_close_97</semantic:outgoing>
+      </semantic:exclusiveGateway>
+      <semantic:userTask id="gl_per_close_99" name="Notify subledgers waiting" implementation="popup:Subledger {var.module_id}.{var.ledger_id} not closed">
+        <semantic:incoming>gl_per_close_101</semantic:incoming>
+        <semantic:outgoing>gl_per_close_105</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.module_id</semantic:sourceRef>
+          <semantic:targetRef>module_id</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.ledger_id</semantic:sourceRef>
+          <semantic:targetRef>ledger_id</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:performer name="$user"/>
+      </semantic:userTask>
+      <semantic:endEvent id="gl_per_close_103" name="Process cancelled">
+        <semantic:incoming>gl_per_close_105</semantic:incoming>
+      </semantic:endEvent>
+      <semantic:sequenceFlow sourceRef="gl_per_close_5" targetRef="gl_per_close_61" name="" id="gl_per_close_19"/>
+      <semantic:sequenceFlow sourceRef="gl_per_close_71" targetRef="gl_per_close_73" name="" id="gl_per_close_77"/>
+      <semantic:sequenceFlow sourceRef="gl_per_close_73" targetRef="gl_per_close_75" name="" id="gl_per_close_79"/>
+      <semantic:sequenceFlow sourceRef="gl_per_close_61" targetRef="gl_per_close_13" name="" id="gl_per_close_81"/>
+      <semantic:sequenceFlow sourceRef="gl_per_close_13" targetRef="gl_per_close_83" name="" id="gl_per_close_85"/>
+      <semantic:sequenceFlow sourceRef="gl_per_close_83" targetRef="gl_per_close_15" name="" id="gl_per_close_87"/>
+      <semantic:sequenceFlow sourceRef="gl_per_close_3" targetRef="gl_per_close_89" name="" id="gl_per_close_93"/>
+      <semantic:sequenceFlow sourceRef="gl_per_close_89" targetRef="gl_per_close_91" name="" id="gl_per_close_95"/>
+      <semantic:sequenceFlow sourceRef="gl_per_close_91" targetRef="gl_per_close_5" name="" id="gl_per_close_97">
+        <semantic:conditionExpression>[["check", null, "var.all_closed", "is_", "$True", null]]</semantic:conditionExpression>
+      </semantic:sequenceFlow>
+      <semantic:sequenceFlow sourceRef="gl_per_close_91" targetRef="gl_per_close_99" name="" id="gl_per_close_101"/>
+      <semantic:sequenceFlow sourceRef="gl_per_close_99" targetRef="gl_per_close_103" name="" id="gl_per_close_105"/>
+    </semantic:process>
+    <bpmndi:BPMNDiagram id="gl_per_close_2">
+      <bpmndi:BPMNPlane bpmnElement="gl_per_close_1">
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_61" id="gl_per_close_62" isExpanded="true">
+          <dc:Bounds x="351.0" y="150" width="426" height="204.0"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_3" id="gl_per_close_4">
+          <dc:Bounds width="30" height="30" x="32.0" y="232"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_5" id="gl_per_close_6">
+          <dc:Bounds width="90" height="70" x="240" y="212"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_7" id="gl_per_close_8">
+          <dc:Bounds width="90" height="70" x="465.0" y="212"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_9" id="gl_per_close_10" isMarkerVisible="true">
+          <dc:Bounds width="42" height="42" x="623.0" y="226"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_13" id="gl_per_close_14">
+          <dc:Bounds width="90" height="70" x="813.0" y="217"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_15" id="gl_per_close_16">
+          <dc:Bounds width="32" height="32" x="1059.0" y="236"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_55" id="gl_per_close_56">
+          <dc:Bounds x="567.0" y="166" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_19" id="gl_per_close_20">
+          <di:waypoint x="330" y="247"/>
+          <di:waypoint x="351" y="247"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_21" id="gl_per_close_22">
+          <di:waypoint x="555.0" y="247"/>
+          <di:waypoint x="623.0" y="247"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_57" id="gl_per_close_58">
+          <di:waypoint x="644.0" y="226"/>
+          <di:waypoint x="644.0" y="181"/>
+          <di:waypoint x="597.0" y="181"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_59" id="gl_per_close_60">
+          <di:waypoint x="567.0" y="181"/>
+          <di:waypoint x="510.0" y="181"/>
+          <di:waypoint x="510.0" y="212"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_63" id="gl_per_close_64">
+          <dc:Bounds x="405.0" y="232.0" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_65" id="gl_per_close_66">
+          <di:waypoint x="435.0" y="247.0"/>
+          <di:waypoint x="465.0" y="247.0"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_67" id="gl_per_close_68">
+          <dc:Bounds x="695.0" y="232.0" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_69" id="gl_per_close_70">
+          <di:waypoint x="665.0" y="247.0"/>
+          <di:waypoint x="695.0" y="247.0"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_71" id="gl_per_close_72">
+          <dc:Bounds x="704.0" y="336" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_73" id="gl_per_close_74">
+          <dc:Bounds x="854.0" y="381" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_75" id="gl_per_close_76">
+          <dc:Bounds x="1034.0" y="401" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_77" id="gl_per_close_78">
+          <di:waypoint x="719.0" y="366"/>
+          <di:waypoint x="719.0" y="416"/>
+          <di:waypoint x="854.0" y="416"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_79" id="gl_per_close_80">
+          <di:waypoint x="944.0" y="416"/>
+          <di:waypoint x="1034.0" y="416"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_81" id="gl_per_close_82">
+          <di:waypoint x="777.0" y="252"/>
+          <di:waypoint x="813.0" y="252"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_83" id="gl_per_close_84">
+          <dc:Bounds x="936.0" y="217" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_85" id="gl_per_close_86">
+          <di:waypoint x="903.0" y="252"/>
+          <di:waypoint x="936.0" y="252"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_87" id="gl_per_close_88">
+          <di:waypoint x="1026.0" y="252"/>
+          <di:waypoint x="1059.0" y="252"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_89" id="gl_per_close_90">
+          <dc:Bounds x="84" y="212" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_91" id="gl_per_close_92" isMarkerVisible="true">
+          <dc:Bounds x="184" y="226" width="42" height="42"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_93" id="gl_per_close_94">
+          <di:waypoint x="62" y="247"/>
+          <di:waypoint x="84" y="247"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_95" id="gl_per_close_96">
+          <di:waypoint x="174" y="247"/>
+          <di:waypoint x="184" y="247"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_97" id="gl_per_close_98">
+          <di:waypoint x="226" y="247"/>
+          <di:waypoint x="240" y="247"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_99" id="gl_per_close_100">
+          <dc:Bounds x="410" y="41" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_101" id="gl_per_close_102">
+          <di:waypoint x="205" y="226"/>
+          <di:waypoint x="205" y="76"/>
+          <di:waypoint x="410" y="76"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_per_close_103" id="gl_per_close_104">
+          <dc:Bounds x="674" y="61" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_per_close_105" id="gl_per_close_106">
+          <di:waypoint x="500" y="76"/>
+          <di:waypoint x="674" y="76"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+      </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+  </semantic:definitions>
+</process>

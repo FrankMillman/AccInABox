@@ -1,7 +1,5 @@
 import importlib
-import asyncio
 import operator
-import re
 from json import dumps, loads
 
 import db.cache
@@ -470,7 +468,7 @@ async def ask(caller, xml):
         tran_type = await caller.db_obj.getval('tran_type')
         tran_number = await caller.db_obj.getval('tran_number')
         question = question.replace('[tran_type]', tran_type).replace('[tran_number]', tran_number)
-    for response in xml.iter('response'):
+    for response in xml.iterchildren('response'):
         ans = response.get('ans')
         answers.append(ans)
         callbacks[ans] = response

@@ -40,11 +40,11 @@
       <mem_col col_name="crn" data_type="DEC" short_descr="Credit notes"
         long_descr="Credit notes" col_head="Crn"
         db_scale="2" scale_ptr="scale_var.curr_scale"/>
-      <mem_col col_name="chg" data_type="DEC" short_descr="Charges"
-        long_descr="Charges" col_head="Chg"
-        db_scale="2" scale_ptr="scale_var.curr_scale"/>
       <mem_col col_name="jnl" data_type="DEC" short_descr="Journals"
         long_descr="Journals" col_head="Jnl"
+        db_scale="2" scale_ptr="scale_var.curr_scale"/>
+      <mem_col col_name="tgt" data_type="DEC" short_descr="Target"
+        long_descr="Target" col_head="Tgt"
         db_scale="2" scale_ptr="scale_var.curr_scale"/>
       <mem_col col_name="rec" data_type="DEC" short_descr="Receipts"
         long_descr="Receipts" col_head="Rec"
@@ -155,7 +155,8 @@
               <</case>>
               "/>
             <cur_col col_name="crn" lng="100"/>
-            <cur_col col_name="chg" lng="100" action="
+            <cur_col col_name="jnl" lng="100"/>
+            <cur_col col_name="tgt" lng="100" action="
               <<start_row/>>
               <<case>>
                 <<obj_exists obj_name=`mem_totals`>>
@@ -173,7 +174,6 @@
                 <</obj_exists>>
               <</case>>
               "/>
-            <cur_col col_name="jnl" lng="100"/>
             <cur_col col_name="rec" lng="100" action="
               <<start_row/>>
               <<case>>
@@ -230,8 +230,8 @@
             <cur_col col_name="op_bal" lng="100"/>
             <cur_col col_name="inv" lng="100"/>
             <cur_col col_name="crn" lng="100"/>
-            <cur_col col_name="chg" lng="100"/>
             <cur_col col_name="jnl" lng="100"/>
+            <cur_col col_name="tgt" lng="100"/>
             <cur_col col_name="rec" lng="100"/>
             <cur_col col_name="disc" lng="100"/>
             <cur_col col_name="cl_bal" lng="100"/>

@@ -28,14 +28,13 @@ def add_task(task):
 async def claim_task(session, task_id):
     if task_id not in active_tasks:
         raise AibError(head='Claim task',
-            body='Task {} already completed/cancelled'.format(task_id))
+            body=f'Task {task_id} already completed/cancelled')
     task, claimed_by = active_tasks[task_id]
     if claimed_by is not None:
         user_name = await db.cache.get_user_name(
             claimed_by.user_row_id)
         raise AibError(head='Claim task',
-            body='Task {} already claimed by {}'.format(
-                task.title, user_name))
+            body=f'Task {task.title} already claimed by {user_name}')
     active_tasks[task_id] = (task, session)
     bump_version()
     await task.start_task(session)
@@ -50,7 +49,7 @@ def cancel_task(task):
 
 def complete_task(task):
     del active_tasks[id(task)]
-    bump_version()  # not strictly necessary
+    # bump_version()  # not necessary, as not included in task_list
 
 def get_task_list(user_row_id, last_version):
     if last_version == version:
@@ -65,10 +64,10 @@ def get_task_list(user_row_id, last_version):
 
 #----------------------------------------------------------------------------
 
-async def init_task(process, company, form_name, performer,
+async def init_task(process, company, form_name, title, performer,
         potential_owners, data_inputs, callback):
-    task = HumanTask(company, form_name, performer, potential_owners,
-        data_inputs, callback)
+    task = HumanTask(company, form_name, title, performer,
+        potential_owners, data_inputs, callback)
     add_task(task)
     return task
 
@@ -128,11 +127,11 @@ def restart_active_tasks():
 
 class HumanTask:
 
-    def __init__(self, company, form_name, performer, potential_owners,
+    def __init__(self, company, form_name, title, performer, potential_owners,
             data_inputs, callback):
         self.company = company
         self.form_name = form_name
-        self.title = form_name.split(';')[1]
+        self.title = title
         self.performer = performer  # either a user_row_id
         self.potential_owners = potential_owners  # or a list of 'roles'
         self.data_inputs = data_inputs
@@ -156,7 +155,6 @@ class HumanTask:
             session.sys_admin, self.company, mem_id=id(form))
         await form._ainit_(context, session, self.form_name, data_inputs=self.data_inputs,
             callback=(self.on_task_completed,))
-
 
     async def on_task_completed(self, session, state, return_params):
         if state != 'completed':

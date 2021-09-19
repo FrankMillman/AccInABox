@@ -1,3 +1,4 @@
+module_id = 'gl'
 report_name = 'cb_cash_flow'
 table_name = 'gl_totals'
 report_type = 'from_to'

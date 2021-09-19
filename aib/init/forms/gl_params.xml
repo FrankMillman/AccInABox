@@ -1,8 +1,8 @@
 <form name="gl_params" title="Set up general ledger parameters" before_start_form="
-  <<assign src=`1` tgt=`params.row_id`/>>
+  <<assign src=`0` tgt=`params.row_id`/>>
   ">
   <db_objects>
-    <db_obj name="params" table_name="gl_params"/>
+    <db_obj name="params" table_name="gl_ledger_params"/>
     <db_obj name="adm_period" table_name="adm_periods"/>
     <db_obj name="ledg_per" table_name="gl_ledger_periods"/>
   </db_objects>

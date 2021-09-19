@@ -23,10 +23,10 @@
   <</case>>
   ">
   <db_objects>
-    <db_obj name="finrpt" table_name="grid_obj" is_formview_obj="true"/>
+    <!--db_obj name="finrpt_defn" table_name="grid_obj" is_formview_obj="true"/-->
   </db_objects>
   <mem_objects>
-    <mem_obj name="var" descr="Variables used in form" sub_types="[
+    <!--mem_obj name="var" descr="Variables used in form" sub_types="[
         [`date_param`, null,
           [
             [`balance_date`, `Balance date`, [], []],
@@ -73,11 +73,11 @@
         long_descr="From which date" allow_amend="true"/>
       <mem_col col_name="end_date" data_type="DTE" short_descr="Date to"
         long_descr="To which date" allow_amend="true"/>
-    </mem_obj>
+    </mem_obj-->
   </mem_objects>
   <input_params/>
   <output_params/>
-  <frame main_object="finrpt">
+  <frame main_object="finrpt_defn">
     <toolbar/>
     <body>
       <block/>
@@ -86,12 +86,12 @@
       <col/>
       <label value="Report name:"/>
       <col/>
-      <display obj_name="finrpt" col_name="report_name" lng="200"/>
+      <display obj_name="finrpt_defn" col_name="report_name" lng="200"/>
       <row/>
       <col/>
       <label value="Report type:"/>
       <col/>
-      <display obj_name="finrpt" col_name="report_type" lng="200"/>
+      <display obj_name="finrpt_defn" col_name="report_type" lng="200"/>
       <row/>
       <col/>
       <label value="Date type:"/>
@@ -243,8 +243,8 @@
     <button_row>
       <button btn_id="run_report" btn_label="Run report" btn_enabled="true"
         btn_validate="true" action="
-          <<pyfunc name=`custom.gl_funcs.run_finrpt`/>>
           <<end_form state=`cancelled`/>>
+          <<pyfunc name=`custom.gl_funcs.run_finrpt`/>>
         "/>
     </button_row>
     <frame_methods>

@@ -186,7 +186,7 @@ setup_bpmn_palette = function(palette, svg) {
   title.innerHTML = 'Connector';
   connector.appendChild(title);
   connector.onmouseup = function(e) {connector_clicked(svg)};
-            
+
   var connector_clicked = function(svg) {
     var page = svg.parentNode;
     page.lastChild.firstChild.data = 'Step 1: click source shape';
@@ -256,7 +256,7 @@ setup_bpmn_palette = function(palette, svg) {
       for (var x=0; x<5; x++) {svg.removeChild(svg.lastChild)};
       var page = svg.parentNode;
       page.lastChild.firstChild.data = '\xa0';
-  
+
       var edge = document.getElementById(exists);
       var args = [null, edge.id, 'Exists - select option',
         ['Edit', 'Delete', 'Cancel'], 'Edit', 'Cancel', [edge, edge.on_question_return]];
@@ -496,7 +496,7 @@ setup_bpmn_palette = function(palette, svg) {
   var addleftarrow = document.createElementNS(NS, 'path');
   palette.appendChild(addleftarrow);
   addleftarrow.svg = svg;
-  addleftarrow.setAttributeNS(null, 'd', 'M15,192 L11,197 L15,202');
+  addleftarrow.setAttributeNS(null, 'd', 'M13,192 L9,197 L13,202');
   addleftarrow.setAttributeNS(null, 'stroke', 'black');
   addleftarrow.setAttributeNS(null, 'stroke-width', 1);
   addleftarrow.setAttributeNS(null, 'fill', 'transparent');
@@ -581,7 +581,7 @@ setup_bpmn_palette = function(palette, svg) {
 
     end : function() {
       var o = Drag.obj;
-  
+
       document.onmousemove = null;
       document.onmouseup = null;
       Drag.obj = null;
@@ -598,5 +598,5 @@ setup_bpmn_palette = function(palette, svg) {
       page.lastChild.firstChild.data = '\xa0';  // remove help message
       },
     };
-      
+
   };

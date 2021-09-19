@@ -50,7 +50,7 @@ def init(self):
     # conn = pyodbc.connect(driver='sql server', server=r'localhost\sqlexpress',
     #     database=self.database, user=self.user, password=self.pwd, trusted_connection=True)
     # refer to https://github.com/mkleehammer/pyodbc/issues/658 for info on odbc connection
-    conn = pyodbc.connect(driver='ODBC Driver 17 for Sql Server', server=r'localhost\sqlexpress',
+    conn = pyodbc.connect(driver='ODBC Driver 17 for Sql Server', server='localhost',
         database=self.database, trusted_connection='Yes')
     self.conn = conn
     self.servertype = 'mssql'
@@ -102,9 +102,9 @@ def init(self):
 #         return sql
 
 async def form_sql(self, columns, tablenames, where_clause='',
-        group_clause='', order_clause='', limit=0, offset=0, lock=False):
+        group_clause='', order_clause='', limit=0, offset=0, lock=False, distinct=False):
     if offset:
-        sql = 'SELECT {} FROM ('.format(columns)
+        sql = f"SELECT{' DISTINCT' if distinct else ''}{columns} FROM ("
         sql += ('SELECT {}, ROW_NUMBER() OVER ({}) AS _rowno '
             .format(columns, order_clause))
         sql += 'FROM {}'.format(tablenames)
@@ -118,10 +118,10 @@ async def form_sql(self, columns, tablenames, where_clause='',
         else:  # [UNTESTED]
             sql += 'WHERE _rowno > {} AND _rowno < {}'.format(offset, offset+limit+1)
     else:
-        sql = 'SELECT'
+        sql = f"SELECT{' DISTINCT' if distinct else ''}"
         if limit:
-            sql += ' TOP ({})'.format(limit)
-        sql += ' {} FROM {}'.format(columns, tablenames)
+            sql += f' TOP ({limit})'
+        sql += f' {columns} FROM {tablenames}'
         if lock:
             sql += ' WITH (UPDLOCK)'
         if where_clause:

@@ -298,6 +298,7 @@ async def setup_other_tables(context, conn):
         'ar_tran_jnl_det',
         'ar_tran_rec',
         'ar_subtran_rec',
+        'ar_subtran_pmt',
         'ar_subtran_jnl',
         'ar_tran_disc',
         'ar_tran_alloc',
@@ -322,6 +323,7 @@ async def setup_other_tables(context, conn):
         'ap_pmt_batch_det',
         'ap_tran_pmt',
         'ap_subtran_pmt',
+        'ap_subtran_rec',
         'ap_subtran_jnl',
         'ap_tran_disc',
         'ap_tran_alloc',
@@ -620,6 +622,7 @@ async def setup_forms(context, conn):
     await setup_form('sys_finrpts')
     await setup_form('fin_report')
     await setup_form('finrpt_grid')
+    await setup_form('tranrpt_grid')
 
 async def setup_reports(context, conn):
     # schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
@@ -688,8 +691,12 @@ async def setup_finrpts(context, conn):
         'cb_cash_flow',
         'ar_by_src',
         'ar_pivot_src',
+        'ar_cust_pivot_src',
+        'ar_loc_pivot_src',
         'ap_by_src',
         'ap_pivot_src',
+        'ap_supp_pivot_src',
+        'ap_loc_pivot_src',
         ]
 
     for name in finrpt_names:
@@ -718,8 +725,11 @@ async def setup_processes(context, conn):
         await proc_defn.setval('proc_xml', proc_xml)
         await proc_defn.save()
 
+    await setup_process('gl_per_close')
+    await setup_process('cb_per_close')
     await setup_process('ar_per_close')
     await setup_process('ar_stat_close')
+    await setup_process('ap_per_close')
 
 async def setup_menus(context, conn, company_name):
     db_obj = await db.objects.get_db_object(context, 'sys_menu_defns')
@@ -732,7 +742,7 @@ async def setup_menus(context, conn, company_name):
         await db_obj.setval('opt_type', opt_type)
         await db_obj.setval('module_id', module_id)
         if module_id == 'gl':  # not pretty!
-            await db_obj.setval('ledger_row_id', 1)
+            await db_obj.setval('ledger_row_id', 0)
         else:
             await db_obj.setval('ledger_row_id', ledger_row_id)
         if opt_type == 'grid':
@@ -1007,6 +1017,7 @@ async def setup_init_data(context, conn, company_name):
     tran_types.append(('ar_rec', 'Ar receipt', 'ar', 'ar_tran_rec'))
     tran_types.append(('ar_disc', 'Ar discount', 'ar', 'ar_tran_disc'))
     tran_types.append(('ar_subrec', 'Ar subtran receipt', 'ar', 'ar_subtran_rec'))
+    tran_types.append(('ar_subpmt', 'Ar subtran payment', 'ar', 'ar_subtran_pmt'))
     tran_types.append(('ar_subjnl', 'Ar subtran journal', 'ar', 'ar_subtran_jnl'))
     tran_types.append(('ar_bf', 'Ar b/f balance', 'ar', 'ar_tran_bf'))
     tran_types.append(('ar_uea_bf', 'Ar b/f unearned', 'ar', 'ar_uea_bf'))
@@ -1016,6 +1027,7 @@ async def setup_init_data(context, conn, company_name):
     tran_types.append(('ap_pmt', 'Ap payment', 'ap', 'ap_tran_pmt'))
     tran_types.append(('ap_disc', 'Ap discount', 'ap', 'ap_tran_disc'))
     tran_types.append(('ap_subpmt', 'Ap subtran payment', 'ap', 'ap_subtran_pmt'))
+    tran_types.append(('ap_subrec', 'Ap subtran receipt', 'ap', 'ap_subtran_rec'))
     tran_types.append(('ap_subjnl', 'Ap subtran journal', 'ap', 'ap_subtran_jnl'))
     tran_types.append(('ap_bf', 'Ap b/f balance', 'ap', 'ap_tran_bf'))
     tran_types.append(('ap_uex_bf', 'Ap b/f unexpensed', 'ap', 'ap_uex_bf'))

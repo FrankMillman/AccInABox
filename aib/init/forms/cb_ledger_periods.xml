@@ -1,10 +1,11 @@
 <form name="cb_ledger_periods" title="Cb ledger periods" before_start_form="
   <<assign src=`'cb_per'` tgt=`_ctx.cursor_name`/>>
+  <<assign src=`_ctx.current_period` tgt=`var.current_period`/>>
   ">
 
   <db_objects>
-    <db_obj name="adm_period" table_name="adm_periods"/>
     <db_obj name="ledg_per" table_name="cb_ledger_periods"/>
+    <db_obj name="bpm_det" table_name="bpm_details"/>
   </db_objects>
   <mem_objects>
     <mem_obj name="actions" descr="Possible actions"
@@ -26,9 +27,9 @@
       <mem_col col_name="module_descr" data_type="TEXT" short_descr="Module descr"
         long_descr="Module descr"/>
       <mem_col col_name="ledger_id" data_type="TEXT" short_descr="Ledger id"
-        long_descr="Ledger id"/>
+        long_descr="Ledger id" dflt_val="{ledg_per.ledger_id}"/>
       <mem_col col_name="ledger_descr" data_type="TEXT" short_descr="Ledger descr"
-        long_descr="Ledger descr"/>
+        long_descr="Ledger descr" dflt_val="{ledg_per.ledger_id>descr}"/>
       <mem_col col_name="close_period" data_type="BOOL" short_descr="Close period?"
         long_descr="Close period?" allow_amend="true"/>
       <mem_col col_name="reopen_period" data_type="BOOL" short_descr="Reopen period?"
@@ -47,12 +48,13 @@
       <block/>
       <panel/>
       <row/>
-      <col/>
+      <!--col/>
       <label value="Module:"/>
-      <display obj_name="var" col_name="module_descr" lng="150"/>
+      <display obj_name="var" col_name="module_descr" lng="150"/-->
       <col/>
       <label value="Ledger:"/>
-      <display obj_name="var" col_name="ledger_descr" lng="150"/>
+      <display obj_name="var" col_name="ledger_id" lng="50"/>
+      <!--display obj_name="var" col_name="ledger_descr" lng="150"/-->
       <block/>
       <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="_ctx"
           start_col="period_row_id" start_val="var.current_period" readonly="true">
@@ -93,15 +95,26 @@
               <button btn_id="close_period" btn_label="Close period"
                 help_msg = "Start 'period close' process"
                 btn_enabled="true" btn_validate="true" action="
-                  <<inline_form name=`period_close`>>
-                    <<on_return>>
-                      <<return state=`cancelled`>>
-                      <</return>>
-                      <<return state=`completed`>>
-                      <</return>>
-                    <</on_return>>
-                  <</inline_form>>
-                "/>
+                  <<ask title=`Period close` enter=`No` escape=`No`
+                      question=`Ok to start period end process?`>>
+                    <<response ans=`No`/>>
+                    <<response ans=`Yes`>>
+                      <<start_process name=`cb_per_close`>>
+                        <<call_params>>
+                          <<call_param name=`period_to_close` type=`data_attr` source=`ledg_per.period_row_id`/>>
+                          <<call_param name=`current_period` type=`data_attr` source=`var.current_period`/>>
+                          <<call_param name=`check_date` type=`data_attr` source=`ledg_per.closing_date`/>>
+                        <</call_params>>
+                      <</start_process>>
+                      <<ask title=`Period close` enter=`Ok` escape=`Ok`
+                          question=`Close period process started`>>
+                        <<response ans=`Ok`>>
+                          <<end_form state=`completed`/>>
+                        <</response>>
+                      <</ask>>
+                    <</response>>
+                  <</ask>>
+                  "/>
             </subtype_body>
 
             <subtype_body subtype_id="reopen">
@@ -122,7 +135,7 @@
 
         </body>
         <button_row>
-          <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
+          <button btn_id="btn_ok" btn_label="Close" btn_enabled="true"
             btn_validate="true" btn_default="true" lng="60" action="
               <<end_form state=`completed`/>>
             "/>
@@ -133,40 +146,4 @@
     <button_row/>
     <frame_methods/>
   </frame>
-  <inline_form name="period_close" title="Start period close process">
-    <frame main_object="var">
-      <toolbar/>
-      <body>
-        <block/>
-        <panel/>
-        <row/>
-        <col/>
-        <label value="Start period close process?"/>
-        <col/>
-        <button btn_id="start_period_close" btn_label="Start"
-          btn_enabled="true" btn_validate="true" action="
-            <<start_process name=`period_end`>>
-              <<call_params>>
-                <<call_param name=`current_period` type=`data_attr` source=`var.current_period`/>>
-              <</call_params>>
-              <<return_params>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`cancelled`/>>
-                <<return state=`completed`/>>
-              <</on_return>>
-            <</start_process>>
-          "/>
-      </body>
-      <button_row/>
-      <frame_methods>
-        <method name="on_req_cancel" action="
-          <<end_form state=`cancelled`/>>
-        "/>
-        <method name="on_req_close" action="
-          <<end_form state=`cancelled`/>>
-        "/>
-      </frame_methods>
-    </frame>
-  </inline_form>
 </form>

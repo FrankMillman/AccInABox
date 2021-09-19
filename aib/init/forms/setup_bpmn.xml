@@ -122,7 +122,8 @@
       <mem_col col_name="elem_id" data_type="TEXT" short_descr="Element id" long_descr="Element id"
           allow_null="true"/>
       <mem_col col_name="text" data_type="TEXT" short_descr="Text for connector"
-        long_descr="Text to be shown next to connector" allow_null="true" allow_amend="true"/>
+        long_descr="Text to be shown next to connector" allow_null="true" allow_amend="true"
+        dflt_val="Remove before saving!"/>
       <mem_col col_name="dflt_conn" data_type="BOOL" short_descr="Default connector?"
         long_descr="Is this the default connector?" allow_amend="true"/>
       <mem_col col_name="dflt_orig" data_type="BOOL" short_descr="Default connector copy"

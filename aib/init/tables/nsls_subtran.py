@@ -246,6 +246,47 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'eff_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Effective date',
+    'long_descr' : 'Effective date',
+    'col_head'   : 'Eff date',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`where`, ``, `eff_date`, `is not`, `$None`, ``]]">'
+            '<fld_val name="eff_date"/>'
+          '</compare>'
+          '<compare test="[[`where`, ``, `nsls_code_id>chg_eff_date`, `=`, `~0~`, ``]]">'
+            '<fld_val name="subparent_row_id>tran_date"/>'
+          '</compare>'
+          '<compare test="[[`where`, ``, `nsls_code_id>chg_eff_date`, `=`, `~1~`, ``]]">'
+            '<first_next_per/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : [
+        ['cannot_change', 'Cannot change effective date', [
+            ['check', '', '$value', '=', 'subparent_row_id>tran_date', ''],
+            ['or', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+            ]],
+        ['per_date', 'Period is closed', [
+            ['check', '', '$value', '=', 'subparent_row_id>tran_date', ''],
+            ['or', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date,"gl"', ''],
+            ]],
+        ],
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'nsls_amount',
     'data_type'  : '$TRN',
     'short_descr': 'Sales amount',
@@ -336,6 +377,15 @@ virt.append ({
     'col_head'   : 'Posted?',
     'dflt_val'   : '{subparent_row_id>posted}',
     'sql'        : "a.subparent_row_id>posted"
+    })
+virt.append ({
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Receipt number',
+    'long_descr' : 'Receipt number',
+    'col_head'   : 'Rec no',
+    'dflt_val'   : '{subparent_row_id>tran_number}',
+    'sql'        : "a.subparent_row_id>tran_number"
     })
 virt.append ({
     'col_name'   : 'net_local',
@@ -466,6 +516,7 @@ actions.append([
             'nsls_subtran_uea',
             [  # condition
                 ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                # ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
                 ],
 
             True,  # split source?
@@ -492,6 +543,7 @@ actions.append([
             'nsls_totals',  # table name
             [  # condition
                 ['where', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
+                # ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -514,6 +566,7 @@ actions.append([
             'nsls_uea_totals',  # table name
             [  # condition
                 ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                # ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -536,6 +589,7 @@ actions.append([
             'nsls_cust_totals',  # table name
             [  # condition
                 ['where', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
+                # ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
                 ['and', '', 'subparent_row_id>module_id', '=', "'ar'", ''],
                 ],
             False,  # split source?
@@ -560,6 +614,7 @@ actions.append([
             'nsls_cust_uea_totals',  # table name
             [  # condition
                 ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                # ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
                 ['and', '', 'subparent_row_id>module_id', '=', "'ar'", ''],
                 ],
             False,  # split source?
@@ -585,6 +640,7 @@ actions.append([
             [  # condition
                 ['where', '', '_param.gl_integration', 'is', '$True', ''],
                 ['and', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
+                # ['and', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -608,6 +664,7 @@ actions.append([
             [  # condition
                 ['where', '', '_param.gl_integration', 'is', '$True', ''],
                 ['and', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                # ['and', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
                 ],
             False,  # split source?
             [  # key fields

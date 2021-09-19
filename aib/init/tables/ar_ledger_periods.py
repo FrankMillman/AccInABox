@@ -100,6 +100,7 @@ cols.append ({
             'Cannot change ledger id',
             [
                 ['check', '', '$value', '=', '_ctx.ledger_row_id', ''],
+                ['or', '', '_ctx.ledger_row_id', 'is', '$None', ''],
                 ['or', '', '$module_row_id', '!=', '_ctx.module_row_id', ''],
                 ],
             ],
@@ -134,15 +135,21 @@ cols.append ({
     'long_descr' : 'Statement date',
     'col_head'   : 'Stat date',
     'key_field'  : 'N',
-    'data_source': 'input',
-    'condition'  : None,
+    'data_source': 'null_if',
+    'condition'  : [['where', '', 'ledger_row_id>separate_stat_close', 'is', '$False', '']],
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'dflt_rule'  : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `ledger_row_id>separate_stat_close`, `is`, `$True`, ``]]">'
+            '<pyfunc name="custom.artrans_funcs.get_stat_date"/>'
+          '</compare>'
+        '</case>'
+        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -154,21 +161,27 @@ cols.append ({
     'long_descr' : 'State for statement run - open/closing/closed',
     'col_head'   : 'State',
     'key_field'  : 'N',
-    'data_source': 'proc',
-    'condition'  : None,
+    'data_source': 'null_if',
+    'condition'  : [['where', '', 'ledger_row_id>separate_stat_close', 'is', '$False', '']],
     'allow_null' : True,
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'dflt_rule'  : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `ledger_row_id>separate_stat_close`, `is`, `$True`, ``]]">'
+            '<literal value="open"/>'
+          '</compare>'
+        '</case>'
+        ),
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-            ['open', 'Stmnt period open'],
-            ['closing', 'Stmnt per-end started'],
-            ['closed', 'Stmnt period closed'],
+            ['open', 'Open'],
+            ['closing', 'Closing'],
+            ['closed', 'Closed'],
         ],
     })
 cols.append ({
@@ -210,18 +223,18 @@ cols.append ({
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-            ['current', 'Current period'],
-            ['open', 'Period open'],
-            ['closing', 'Period-end started'],
-            ['closed', 'Period closed'],
-            ['reopened', 'Period reopened'],
+            ['current', 'Current'],
+            ['open', 'Open'],
+            ['closing', 'Closing'],
+            ['closed', 'Closed'],
+            ['reopened', 'Reopened'],
         ],
     })
 cols.append ({
     'col_name'   : 'per_process_id',
     'data_type'  : 'INT',
     'short_descr': 'Id for period close process',
-    'long_descr' : 'Process if for period close process',
+    'long_descr' : 'Process id for period close process',
     'col_head'   : 'Per proc id',
     'key_field'  : 'N',
     'data_source': 'proc',
@@ -291,7 +304,7 @@ cursors.append({
     'columns': [
         ['period_row_id', 10, True, True],
         ['closing_date', 100, False, True],
-        ['state', 100, False, True],
+        ['state', 60, False, True],
         ],
     'filter': [],
     'sequence': [['row_id', False]],
@@ -303,9 +316,9 @@ cursors.append({
     'columns': [
         ['period_row_id', 10, True, True],
         ['statement_date', 100, False, True],
-        ['statement_state', 100, False, True],
+        ['statement_state', 60, False, True],
         ['closing_date', 100, False, True],
-        ['state', 100, False, True],
+        ['state', 60, False, True],
         ],
     'filter': [],
     'sequence': [['row_id', False]],

@@ -479,7 +479,7 @@ class Grid_Setup(Grid):  # template for setup-type grids - added 'formview'
 
 #----------------------------------------------------------------------------
 
-class Grid_Finrpt(Grid):  # template for setup-type grids - added 'formview'
+class Grid_Finrpt(Grid):  # template for finrpt - only nav and download
     toolbar = (
         '<toolbar>'
         f'{tool_nav}'

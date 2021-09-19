@@ -399,13 +399,6 @@ class ResponseHandler:
             await form._ainit_(context, self.session, await menu_defns.getval('form_name'))
         elif opt_type == 'report':
             pass
-        elif opt_type == 'finrpt':
-            finrpt = rep.finrpt.FinReport()
-            context = await db.cache.get_new_context(self.session.user_row_id,
-                self.session.sys_admin, company, id(finrpt),
-                await menu_defns.getval('module_row_id'),
-                await menu_defns.getval('ledger_row_id'))
-            await finrpt._ainit_(context, self.session, await menu_defns.getval('form_name'))
         # elif opt_type == 'process':
         #     process = bp.bpm.ProcessRoot(company, await menu_defns.getval('process_id'))
         #     context = await db.cache.get_new_context(self.session.user_row_id,

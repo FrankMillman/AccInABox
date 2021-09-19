@@ -75,8 +75,8 @@ def init(self):
 #     return sql + ' FOR UPDATE'
 
 async def form_sql(self, columns, tablenames, where_clause='',
-        group_clause='', order_clause='', limit=0, offset=0, lock=False):
-    sql = f'SELECT {columns} FROM {tablenames}'
+        group_clause='', order_clause='', limit=0, offset=0, lock=False, distinct=False):
+    sql = f"SELECT{' DISTINCT' if distinct else ''} {columns} FROM {tablenames}"
     if where_clause:
         sql += where_clause
     if group_clause:
@@ -236,6 +236,10 @@ async def convert_sql(self, sql, params=None):
 
     if 'ORDER BY' not in sql.upper():
         return sql, params
+
+    # this fails on finrpt int_pivot_date [2021-09-16]
+    # run without it for a while and see if we actually need it!
+    return sql, params
 
     skip_expr = 0  # counter to check for brackets around expressions - can incr/decr
     skip_case = 0  # counter to check for CASE ... END - use counter in case nested

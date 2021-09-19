@@ -408,7 +408,7 @@ async def setup_mem_trans(caller, xml):
         sql, params, fmt = get_sql(cte, params, company, conn, caller.context.ledger_row_id)
 
         cur = await conn.exec_sql(sql, params)
-        async for op_date, cl_date, op_bal, inv, crn, chg, jnl, rec, disc, cl_bal in cur:
+        async for op_date, cl_date, op_bal, inv, crn, jnl, tgt, rec, disc, cl_bal in cur:
             await mem_totals.init()
             await mem_totals.setval('date', cl_date)
             await mem_totals.setval('op_date', op_date)
@@ -416,8 +416,8 @@ async def setup_mem_trans(caller, xml):
             await mem_totals.setval('op_bal', op_bal)
             await mem_totals.setval('inv', inv)
             await mem_totals.setval('crn', crn)
-            await mem_totals.setval('chg', chg)
             await mem_totals.setval('jnl', jnl)
+            await mem_totals.setval('tgt', tgt)
             await mem_totals.setval('rec', rec)
             await mem_totals.setval('disc', disc)
             await mem_totals.setval('cl_bal', cl_bal)

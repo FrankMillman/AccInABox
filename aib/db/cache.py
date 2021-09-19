@@ -235,7 +235,9 @@ async def ledger_updated(db_obj, xml):
 async def gl_param_updated(db_obj, xml):
     pass  # to be decided
 
-# callback to set up ledger role - {module_id}_ledger_params.actions.after_insert
+# callback after ledger inserted -
+#   1. set up ledger role - {module_id}_ledger_params.actions.after_insert
+#   2. if nsls/npch_ledger, setup group code and tree_params
 async def ledger_inserted(db_obj, xml):
 
     # if there is exactly one row in {module_id}_ledger_params, the virtual field
@@ -336,8 +338,6 @@ async def ledger_inserted(db_obj, xml):
 
     if module_id == 'nsls':  # set up top-level 'group'
         context = db_obj.context
-        # context._ledger_row_id = ledger_row_id
-
         sls_table = await db.objects.get_db_object(context, 'db_tables')
         await sls_table.setval('table_name', 'nsls_groups')
         tree_params = await sls_table.getval('tree_params')
@@ -350,7 +350,6 @@ async def ledger_inserted(db_obj, xml):
         if table_key in db.objects.tables_open:
             db_table = db.objects.tables_open[table_key]
             db_table.tree_params = tree_params
-
         sls_group = await db.objects.get_db_object(context, 'nsls_groups')
         await sls_group.setval('ledger_row_id', ledger_row_id)
         await sls_group.setval('nsls_group', ledger_id)
@@ -360,8 +359,6 @@ async def ledger_inserted(db_obj, xml):
         await sls_group.save()
     elif module_id == 'npch':  # set up top-level 'group'
         context = db_obj.context
-        context._ledger_row_id = ledger_row_id
-
         pch_table = await db.objects.get_db_object(context, 'db_tables')
         await pch_table.setval('table_name', 'npch_groups')
         tree_params = await pch_table.getval('tree_params')
@@ -374,7 +371,6 @@ async def ledger_inserted(db_obj, xml):
         if table_key in db.objects.tables_open:
             db_table = db.objects.tables_open[table_key]
             db_table.tree_params = tree_params
-
         pch_group = await db.objects.get_db_object(context, 'npch_groups')
         await pch_group.setval('ledger_row_id', await db_obj.getval('row_id'))
         await pch_group.setval('npch_group', ledger_id)
@@ -559,6 +555,9 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
         if module_row_id not in ledger_periods[company]:
             ledger_periods[company][module_row_id] = {}
         if ledger_row_id not in ledger_periods[company][module_row_id]:
+            # we *could* initialise this with {}
+            # but we use it to store 'current_period' as an extra attribute (see below)
+            # this is allowed with an OD(), but not with a {}
             ledger_periods[company][module_row_id][ledger_row_id] = OD()
             module_id = (await get_mod_id(company, module_row_id))
 

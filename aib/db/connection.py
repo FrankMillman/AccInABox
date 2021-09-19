@@ -170,12 +170,15 @@ class DbHandler(threading.Thread):
             else:
                 if cur is None:
                     cur = conn.conn.cursor()
-                loop, sql, params, return_queue, is_cmd = req
+                loop, sql, params, return_queue, is_cmd, is_many = req
                 if log_db:
                     db_log.write(f'{conn.timestamp}: {id(conn)}: {sql}; {params}\n')
                     db_log.flush()
                 try:
-                    cur.execute(sql, params)
+                    if is_many:
+                        cur.executemany(sql, params)
+                    else:
+                        cur.execute(sql, params)
                     if is_cmd:
                         rowcount = cur.rowcount
                         # sqlite3 returns 'lastrowid' after an INSERT
@@ -201,10 +204,10 @@ class DbHandler(threading.Thread):
 
 #-----------------------------------------------------------------------------
 
-async def async_cursor(conn, sql, params, is_cmd=False, chunk=False):
+async def async_cursor(conn, sql, params, is_cmd=False, is_many=False, chunk=False):
     loop = asyncio.get_running_loop()
     return_queue = asyncio.Queue()
-    conn.request_queue.put((loop, sql, params, return_queue, is_cmd))
+    conn.request_queue.put((loop, sql, params, return_queue, is_cmd, is_many))
 
     while True:
         rows = await return_queue.get()
@@ -265,7 +268,7 @@ class Conn:
         self.joins = {}
         self.save_tablenames = []
 
-    async def exec_cmd(self, sql, params=None, *, context=None, raw=False):
+    async def exec_cmd(self, sql, params=None, *, context=None, raw=False, is_many=False):
         if params is None:
             params = []
         # raw is set to True by conn_sqlite3.attach_company() - execute command directly
@@ -274,7 +277,9 @@ class Conn:
             sql, params = await self.check_sql_params(sql, params, context)
         # async for result in async_cursor(self, sql, params, is_cmd=True):
         #    self.rowcount, self.lastrowid = result
-        self.rowcount, self.lastrowid = await async_cursor(self, sql, params, is_cmd=True).__anext__()
+        self.rowcount, self.lastrowid = await async_cursor(
+            self, sql, params, is_cmd=True, is_many=is_many
+            ).__anext__()
 
     async def exec_sql(self, sql, params=None, context=None):
         if params is None:
@@ -392,12 +397,12 @@ class Conn:
         return cur
 
     async def full_select(self, db_obj, col_names, where, order=None, group=None,
-            limit=0, offset=0, lock=False, param=None, debug=False):
+            limit=0, offset=0, lock=False, param=None, distinct=False, debug=False):
 
         await db_obj.check_perms('select')
 
         sql, params = await self.build_select(db_obj.context, db_obj.db_table,
-            col_names, where, order, group, limit, offset, lock, param, debug)
+            col_names, where, order, group, limit, offset, lock, param, distinct, debug)
 
         # print('FULL', sql, params, '\n\n')
 
@@ -413,7 +418,7 @@ class Conn:
         return cur
 
     async def build_select(self, context, db_table, col_names, where, order, group=None,
-            limit=0, offset=0, lock=False, param=None, debug=False):
+            limit=0, offset=0, lock=False, param=None, distinct=False, debug=False):
 
         if self.tablenames is not None:  # existing build is in progress
             self.save_tablenames.append(self.tablenames)
@@ -486,17 +491,19 @@ class Conn:
         col_params = []
         columns = []
         for col_name in col_names:
-
             if col_name is None:
                 columns.append('NULL')
-                continue
-
-            if isinstance(col_name, int):  # can happen when building 'combo' tree
+            elif isinstance(col_name, int):  # can happen when building 'combo' tree
                 columns.append(str(col_name))
-                continue
-
-            col_text = await self.get_col_text(context, db_table, col_params, col_name)
-            columns.append(col_text)
+            elif col_name.startswith("'"):  # literal value  (e.g. table_name in drilldown)
+                if '|' in col_name:  # alias
+                    col_name, alias = col_name.split('|')
+                    columns.append(f'{col_name} AS {alias}')
+                else:
+                    columns.append(col_name)
+            else:
+                col_text = await self.get_col_text(context, db_table, col_params, col_name)
+                columns.append(col_text)
 
         columns = ', '.join(columns)
 
@@ -666,7 +673,7 @@ class Conn:
         params = col_params + table_params + where_params + group_params + order_params
 
         sql = await self.form_sql(columns, self.tablenames, where_clause,
-            group_clause, order_clause, limit, offset, lock)
+            group_clause, order_clause, limit, offset, lock, distinct)
 
         if self.save_tablenames:
             self.tablenames = self.save_tablenames.pop()
@@ -687,6 +694,11 @@ class Conn:
                 self.join_company = f'{db_table.data_company}.'
             # self.joins = {}
 
+        if '|' in col_name:  # e.g. eff_date|tran_date from drilldown
+            col_name, alt_name = col_name.split('|')
+        else:
+            alt_name = None
+
         if col_name.lower().startswith('sum('):
             build_sum = True
             col_name = col_name[4:-1]
@@ -704,29 +716,36 @@ class Conn:
         if col is None:
             col_text = f'NULL AS {col_name}'
         elif as_clause is not None:
-            if (col.data_type == 'DEC' or col.data_type.startswith('$')) and not self.grouping:
-                # force sqlite3 to return Decimal type
-                col_name = f'"{col.col_name} AS [REAL{col.db_scale}]"'
-            elif col.data_type == 'BOOL' and not self.grouping:
-                # force sqlite3 to return Bool type
-                col_name = f'"{col.col_name} AS [BOOLTEXT]"'
-            elif col.data_type == 'DTE' and not self.grouping:
-                # force sqlite3 to return Date type
-                col_name = f'"{col.col_name} AS [DATE]"'
+            if self.servertype in (':memory:', 'sqlite3'):  # sqlite3 needs COLTYPES
+                if (col.data_type == 'DEC' or col.data_type.startswith('$')) and not self.grouping:
+                    # force sqlite3 to return Decimal type
+                    col_name = f'"{col.col_name} AS [REAL{col.db_scale}]"'
+                elif col.data_type == 'BOOL' and not self.grouping:
+                    # force sqlite3 to return Bool type
+                    col_name = f'"{col.col_name} AS [BOOLTEXT]"'
+                # removed [2021-08-19] on the assumption that sqlite3 will return 'yyyy-mm-dd' and
+                #   fld.check_val() will convert it to a datetime.date, so not necessary
+                # elif col.data_type == 'DTE' and not self.grouping:
+                #     # force sqlite3 to return Date type
+                #     col_name = f'"{col.col_name} AS [DATE]"'
+                else:
+                    col_name = col.col_name
             else:
                 col_name = col.col_name
             if build_sum:
-                col_text = f'SUM({as_clause}) as {col_name}'
+                col_text = f'SUM({as_clause}) AS {col_name}'
             elif not as_clause.count(' '):  # one-word as_clause - use it as column name
                 if reverse:
                     col_text = f'0 - {as_clause}'
                 else:
                     col_text = f'{as_clause}'
+                if alt_name is not None:
+                    col_text += f' AS {alt_name}'
             else:
                 if reverse:
-                    col_text = f'0 - ({as_clause}) as {col_name}'
+                    col_text = f'0 - ({as_clause}) AS {col_name}'
                 else:
-                    col_text = f'{as_clause} as {col_name}'
+                    col_text = f'{as_clause} AS {col_name}'
         elif build_sum:
             if (col.data_type == 'DEC' or col.data_type.startswith('$')) and not self.grouping:
                 col_text = f'SUM({alias}.{col.col_name}) AS "{col.col_name} [REAL{col.db_scale}]"'
@@ -737,6 +756,8 @@ class Conn:
                 col_text = f'0 - {alias}.{col.col_name}'
             else:
                 col_text = f'{alias}.{col.col_name}'
+            if alt_name is not None:
+                col_text += f' AS {alt_name}'
 
         return col_text
 

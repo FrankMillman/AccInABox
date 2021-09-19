@@ -162,6 +162,14 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'tran_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Transaction type',
+    'long_descr' : 'Transaction type',
+    'col_head'   : 'Tran type',
+    'sql'        : "'npch_exp'",
+    })
+virt.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
     'short_descr': 'Posted?',
@@ -171,13 +179,22 @@ virt.append ({
     'sql'        : "a.subtran_row_id>subparent_row_id>posted"
     })
 virt.append ({
-    'col_name'   : 'tran_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date',
-    'col_head'   : 'Tran date',
-    'dflt_val'   : '{subtran_row_id>subparent_row_id>tran_date}',
-    'sql'        : "a.subtran_row_id>subparent_row_id>tran_date"
+    'col_name'   : 'tran_number',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Receipt number',
+    'long_descr' : 'Receipt number',
+    'col_head'   : 'Rec no',
+    'dflt_val'   : '{subtran_row_id>subparent_row_id>tran_number}',
+    'sql'        : "a.subtran_row_id>subparent_row_id>tran_number"
+    })
+virt.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text',
+    'long_descr' : 'Text',
+    'col_head'   : 'Text',
+    'dflt_val'   : '{subtran_row_id>subparent_row_id>text}',
+    'sql'        : "a.subtran_row_id>subparent_row_id>text"
     })
 virt.append ({
     'col_name'   : 'upd_expensed',

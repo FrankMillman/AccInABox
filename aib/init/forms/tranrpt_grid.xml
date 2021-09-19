@@ -1,0 +1,23 @@
+<form name="tranrpt_grid" title="Transaction Report">
+  <db_objects/>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="tranrpt_obj">
+    <toolbar/>
+    <body>
+      <block/>
+      <grid data_object="tranrpt_obj" num_grid_rows="20" readonly="true"
+          footer_row="[`'Total:'`, `...`, `var.tot_value`]">
+        <toolbar template="Grid_Finrpt"/>
+        <grid_methods template="Grid"/>
+      </grid>
+    </body>
+    <button_row>
+      <!--button btn_id="ok" btn_label="Ok" btn_enabled="true" btn_validate="true" action="
+          <<end_form state=`cancelled`/>>
+        "/-->
+    </button_row>
+    <frame_methods/>
+  </frame>
+</form>

@@ -1440,6 +1440,7 @@ class userTask(task):
     def __init__(self, process, elem):
         task.__init__(self, process, elem, rUserTask)
         self.form_name = elem.get('implementation')
+        self.title = elem.get('name')
         self.performer = elem.find(S+'performer')
         if self.performer is not None:
             self.performer = self.performer.get('name')
@@ -1509,7 +1510,7 @@ class rUserTask(rTask):
 
         performer = self.manager.defn.performer
         if performer is not None:
-            if performer == '_user':
+            if performer == '$user':
                 performer = manager.process.root.context.user_row_id
             else:
                 performer = await db.cache.get_user(performer)
@@ -1518,11 +1519,22 @@ class rUserTask(rTask):
                     body = f"User '{self.manager.defn.performer}' does not exist"
                     raise AibError(head=head, body=body)
 
-
-        self.htm_task = await ht.htm.init_task(manager.process,
-            self.company, manager.defn.form_name, performer,
-            self.manager.defn.potential_owners, data_inputs,
-            callback=(self.on_task_completed, rep, self.det_row_id))
+        if manager.defn.form_name.lower().startswith('popup:'):
+            popup = manager.defn.form_name.split(':')[1]
+            while (pos1 := popup.find('{')) > -1:
+                pos2 = popup.find('}', pos1)
+                expr = popup[pos1+1:pos2]
+                obj_name, fld_name = expr.split('.')
+                data_object = manager.process.data_objects[obj_name]
+                value = await data_object.getval(fld_name)
+                popup = popup[:pos1] + value + popup[pos2+1:]
+            print(f'Popup: {popup}')
+            await self.on_task_completed(None, [], rep, self.det_row_id)
+        else:
+            self.htm_task = await ht.htm.init_task(manager.process,
+                self.company, manager.defn.form_name, manager.defn.title, performer,
+                self.manager.defn.potential_owners, data_inputs,
+                callback=(self.on_task_completed, rep, self.det_row_id))
 
         if debug:
             print(f'user task "{manager.defn.elem_id}" iter={manager.iteration} rep={rep} waiting')
@@ -1547,6 +1559,8 @@ class rUserTask(rTask):
                 manager.process.data_objects[obj_name] = source_value
 
         manager.active_tasks.remove(self)
+
+        self.htm_task = None
 
         bpm_detail = manager.process.root.bpm_detail
         async with manager.process.root.db_lock:
@@ -1586,6 +1600,7 @@ class rUserTask(rTask):
 
         if self.htm_task is not None:  # task has been started
             await self.htm_task.cancel_task()
+            self.htm_task = None
         print(f'task {self.manager.defn.elem_id} terminated')
 
         bpm_detail = self.manager.process.root.bpm_detail
