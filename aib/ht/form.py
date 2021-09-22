@@ -1438,6 +1438,10 @@ class Frame:
         if button.must_validate:
             await self.validate_data(button.pos)
         self.btn_args = btn_args
+        # if the object clicked is not a button, it is (probably) a 'total' field in a footer row
+        # save it for inspection in custom.gl_funcs.finrpt_drilldown()
+        if not isinstance(button, ht.gui_objects.GuiButton):
+            self.obj_clicked = button
         self.active_button = button
         await ht.form_xml.on_click(self, button)
         self.active_button = None

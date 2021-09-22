@@ -235,13 +235,16 @@ class FinReport:
         if self.ctes:  # a 'cte' has been generated for 'include_zeros = True'
             if report_type == 'as_at':
                 self.combo_cols.append('bal_date')
+                self.combo_cols.append('tran_tot')
             elif report_type == 'from_to':
                 self.combo_cols.append('from_date')
                 self.combo_cols.append('to_date')
+                self.combo_cols.append('tran_tot')
             elif report_type == 'bf_cf':
                 self.combo_cols.append('op_date')
                 self.combo_cols.append('cl_date')
-            self.combo_cols.append('tran_tot')
+                self.combo_cols.append('op_bal')
+                self.combo_cols.append('cl_bal')
 
         if self.cflow_param is not None:
             self.sql_joins.append(
@@ -313,7 +316,6 @@ class FinReport:
                 async for row in await conn.exec_sql(' '.join(cflow_sql), cflow_params):
                     op_bal, cl_bal = row
 
-        pivot_params = []
         if self.pivot_on is not None:
             pivot_dim, pivot_grp = self.pivot_on
             if pivot_grp is not None:  # must generate pivot columns
@@ -338,8 +340,7 @@ class FinReport:
                                 pivot_col[2] = pivot_val.strftime(col[2])  # col_head
                             else:
                                 pivot_col[2] = pivot_val  # col_head
-                            pivot_col[5] = f'{pivot_grp} = {param}'  # used in CASE WHEN ... in gen_sql()
-                            pivot_params.append(pivot_val)
+                            pivot_col[5] = (pivot_grp, pivot_val)  # used in CASE WHEN ... in gen_sql()
                             pivot_cols.append(pivot_col)
                         break
                 columns[pos:pos+1] = pivot_cols  # replace placeholder col with actual cols
@@ -352,7 +353,7 @@ class FinReport:
             #   can tell which SQL any row originates from
             columns.append(['type', 'type', 'Type', 'TEXT', 0, None, False])
 
-        sql, params = self.gen_sql(report_type, columns, pivot_params)
+        sql, params = self.gen_sql(report_type, columns)
         # print(sql)
         # print(params)
         # input()
@@ -597,7 +598,6 @@ class FinReport:
                     self.pivot_group_by.append(f'code_{grp_name}')
                     self.order_by.append(f'code_{grp_name}')
             self.tot_col_name = 'tran_tot_local'
-            # breakpoint()
             return
 
         group, col_names, levels = tree_params
@@ -661,16 +661,12 @@ class FinReport:
                 link_level_types = link_level_types[link_ledg_id]
                 link_level_data = {}
                 # assume first level is always 'code' - gl_totals>gl_codes, nsls_totals>nsls_codes, etc
-                # link_level_data['code'] = (f'{link_mod}_code', 'seq', code_table_name.replace('gl', link_mod))
                 link_level_data['code'] = (
                     f'{link_mod}_code', 'seq',  # should not hardcode 'seq', but it works!
-                    # code_table_name.replace('gl', link_mod),
                     level_data['code'][2].replace('gl', link_mod),
                     level_data['code'][3].replace('gl', link_mod),
                     )
                 # set up level_data
-                # for type, descr in reversed(link_level_types):
-                #     link_level_data[type] = (link_code, link_seq, group_table_name.replace('gl', link_mod))
                 for level_type, link_level_type in zip(reversed(level_types), reversed(link_level_types)):
                     level = level_type[0]
                     level_dat = level_data[level]
@@ -713,7 +709,6 @@ class FinReport:
                 cte_cols.append("'code' AS type")
             cte_cols.append(f'code_{grp_name}.row_id AS code_{grp_name}_id')
             for level in reversed(levels):
-                # col_name, seq_name, table_name = level_data[level]
                 col_name, seq_name = level_data[level][:2]
                 cte_cols.append(f'code_{level}.{col_name} AS code_{level}')
                 cte_cols.append(f'code_{level}.{seq_name} AS code_{level}_{seq_name}')
@@ -725,7 +720,7 @@ class FinReport:
                     self.order_by.append(f'code_{level}_{seq_name}')
                     if self.links_to_subledg:
                         self.pivot_group_by.append('type')
-                self.cf_join_bf.append(f'code_{level}_{seq_name}')
+                self.cf_join_bf.append(f'code_{grp_name}_id')
                 if level == grp_name:
                     break
 
@@ -735,7 +730,6 @@ class FinReport:
                 link_cols.append(f"'{link_obj.module_id}_{link_obj.ledger_row_id}' AS type")
                 link_cols.append(f'code_{grp_name}.row_id AS code_{grp_name}_id')
                 for level in reversed(levels):
-                    # col_name, seq_name, table_name = level_data[level]
                     col_name, seq_name = level_data[level][:2]
                     link_cols.append(f"code_{level}.{col_name.replace('gl', link_obj.module_id)} AS code_{level}")
                     if level == link_obj.group_type:
@@ -776,7 +770,6 @@ class FinReport:
                 await self.setup_code_pivot(company,
                     type_colname, levels, level_data, grp_name, parent_id, filter, pivot_grp)
 
-        # for lvl, (col_name, seq_name, table_name) in reversed(level_data.items()):
         for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
             self.combo_cols.append(f'code_{lvl}')
             self.combo_cols.append(f'code_{lvl}_{seq_name}')
@@ -800,7 +793,6 @@ class FinReport:
         self.pivot_sql.append(f'SELECT {pivot_grp} FROM (')
         self.pivot_sql.append(f'SELECT')
         self.pivot_sql.append(f'code_{toplevel_type}.row_id AS code_{toplevel_type}_id')
-        # for lvl, (col_name, seq_name, table_name) in reversed(level_data.items()):
         for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
             self.pivot_sql.append(f', code_{lvl}.{col_name} AS code_{lvl}')
             self.pivot_sql.append(f', code_{lvl}.{seq_name} AS code_{lvl}_{seq_name}')
@@ -903,7 +895,6 @@ class FinReport:
 
     async def setup_code_sql_without_cte(self, level_data, grp_name, filter):
 
-        # for lvl, (col_name, seq_name, table_name) in reversed(level_data.items()):
         for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
             self.part_cols.append(f'code_{lvl}.{col_name} AS code_{lvl}')
             self.part_cols.append(f'code_{lvl}.{seq_name} AS code_{lvl}_{seq_name}')
@@ -989,7 +980,6 @@ class FinReport:
             cte_cols = []
             cte_cols.append(f'{prefix}_{grp_name}.row_id AS {prefix}_{grp_name}_id')
             for level in reversed(levels):
-                # col_name, seq_name, table_name = level_data[level]
                 col_name, seq_name = level_data[level][:2]
                 cte_cols.append(f'{prefix}_{level}.{col_name} AS {prefix}_{level}')
                 cte_cols.append(f'{prefix}_{level}.{seq_name} AS {prefix}_{level}_{seq_name}')
@@ -999,7 +989,7 @@ class FinReport:
                     self.pivot_group_by.append(f'{prefix}_{level}')
                     self.pivot_group_by.append(f'{prefix}_{level}_{seq_name}')
                     self.order_by.append(f'{prefix}_{level}_{seq_name}')
-                self.cf_join_bf.append(f'{prefix}_{level}_{seq_name}')
+                self.cf_join_bf.append(f'{prefix}_{grp_name}_id')
                 if level == grp_name:
                     break
 
@@ -1030,7 +1020,6 @@ class FinReport:
                 await self.setup_lf_pivot(company, table_name,
                     prefix, type_colname, levels, level_data, grp_name, parent_id, filter, pivot_grp)
 
-        # for lvl, (col_name, seq_name, table_name) in reversed(level_data.items()):
         for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
             self.combo_cols.append(f'{prefix}_{lvl}')
             self.combo_cols.append(f'{prefix}_{lvl}_{seq_name}')
@@ -1053,7 +1042,6 @@ class FinReport:
         self.pivot_sql.append(f'SELECT {pivot_grp} FROM (')
         self.pivot_sql.append(f'SELECT')
         self.pivot_sql.append(f'{prefix}_{toplevel_type}.row_id AS {prefix}_{toplevel_type}_id')
-        # for lvl, (col_name, seq_name, table_name) in reversed(level_data.items()):
         for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
             self.pivot_sql.append(f', {prefix}_{lvl}.{col_name} AS {prefix}_{lvl}')
             self.pivot_sql.append(f', {prefix}_{lvl}.{seq_name} AS {prefix}_{lvl}_{seq_name}')
@@ -1082,8 +1070,6 @@ class FinReport:
 
         self.pivot_sql.append(') _')
         self.pivot_sql.append('ORDER BY ' + ', '.join(order_by))
-
-        # breakpoint()
 
     async def setup_lf_cte(self, company, cte_cols, cte_joins, prefix,
                 type_colname, levels, level_data, grp_name, filter):
@@ -1130,7 +1116,6 @@ class FinReport:
                 )
             prev_type = f'{prefix}_{type}'
 
-        # for lvl, (col_name, seq_name, table_name) in reversed(level_data.items()):
         for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
             self.part_cols.append(f'{prefix}_{lvl}.{col_name} AS {prefix}_{lvl}')
             self.part_cols.append(f'{prefix}_{lvl}.{seq_name} AS {prefix}_{lvl}_{seq_name}')
@@ -1418,7 +1403,12 @@ class FinReport:
                 part_sql.append(", 'code' AS type")
 
         if self.group_by:
-            part_sql.append(f", {', '.join(f'cf.{_}' for _ in self.group_by)}")
+            if self.ctes:
+                # if using ctes, self.group_by already has a prefix of 'codes'
+                # must remove the prefix and replace it with 'cf'
+                part_sql.append(f""", {', '.join(f'cf.{_.split(".")[-1]}' for _ in self.group_by)}""")
+            else:
+                part_sql.append(f", {', '.join(f'cf.{_}' for _ in self.group_by)}")
 
         part_sql.append('FROM (SELECT')
 
@@ -1426,7 +1416,16 @@ class FinReport:
         if self.group_by:
             part_sql.append(f", {', '.join(self.group_by)}")
 
-        part_sql.append('FROM (')
+        part_sql.append('FROM')
+
+        if self.ctes:
+            for pos, cte in enumerate(self.ctes):
+                if pos:
+                    part_sql.append(f'LEFT JOIN {cte.type} ON 1=1')
+                else:
+                    part_sql.append(cte.type)
+            part_sql.append('LEFT JOIN')
+        part_sql.append('(')
 
         first_partition_col = self.db_table.col_list[3].col_name
         if link_obj:
@@ -1501,7 +1500,16 @@ class FinReport:
         if self.group_by:
             part_sql.append(f", {', '.join(self.group_by)}")
 
-        part_sql.append('FROM (')
+        part_sql.append('FROM')
+
+        if self.ctes:
+            for pos, cte in enumerate(self.ctes):
+                if pos:
+                    part_sql.append(f'LEFT JOIN {cte.type} ON 1=1')
+                else:
+                    part_sql.append(cte.type)
+            part_sql.append('LEFT JOIN')
+        part_sql.append('(')
 
         if link_obj:
             part_sql.append(f"SELECT {'0-' if link_obj.module_id == 'nsls' else ''}a.{self.tot_col_name} AS tran_tot")
@@ -1612,7 +1620,7 @@ class FinReport:
                 sql.append(f'{on_clause} codes.type = {dbc.param_style}')
                 sql_params.append(link_val)
 
-    def gen_sql(self, report_type, columns, pivot_params):
+    def gen_sql(self, report_type, columns):
         sql = []
         sql_params = []
 
@@ -1624,10 +1632,7 @@ class FinReport:
             cte_prefix = ','  # in case there is another one
             sql_params.extend(cte.cte_params)
 
-        sql_params.extend(pivot_params)
-
         sql.append('SELECT')
-        # sql.append(', '.join(f'{_[1]} AS "{_[2]}"' for _ in columns))
         sql_cols = []
         for col_name, col_sql, col_head, data_type, lng, pvt, tot in columns:
             if pvt is None:
@@ -1635,7 +1640,12 @@ class FinReport:
             elif pvt == '*':
                 sql_cols.append(f'SUM({col_sql}) AS "{col_head}"')
             else:
-                sql_cols.append(f'SUM(CASE WHEN {pvt} THEN {col_sql} ELSE 0 END) AS "{col_head}"')
+                pivot_grp, pivot_val = pvt
+                sql_cols.append(
+                    f'SUM(CASE WHEN {pivot_grp} = {dbc.param_style} '
+                    f'THEN {col_sql} ELSE 0 END) AS "{col_head}"'
+                    )
+                sql_params.append(pivot_val)
         sql.append(', '.join(sql_cols))
 
         sql.append('FROM (')
@@ -1651,39 +1661,10 @@ class FinReport:
                 sql.append('UNION ALL')
                 self.gen_sql_body(report_type, sql, sql_params, date_param, link_obj)
 
-        # if pos > 0:  # more than 1 self.dates
-        #     if self.pivot_on is None or self.pivot_on[0] != 'date':
-        #         if report_type == 'as_at':
-        #             self.order_by.insert(0, f"bal_date{' DESC' if self.date_seq == 'd' else ''}")
-        #             if self.pivot_on is not None:
-        #                 self.pivot_group_by.insert(0, 'bal_date')
-        #         elif report_type == 'from_to':
-        #             self.order_by.insert(0, f"from_date{' DESC' if self.date_seq == 'd' else ''}")
-        #             if self.pivot_on is not None:
-        #                 self.pivot_group_by.insert(0, 'from_date')
-        #                 self.pivot_group_by.insert(0, 'to_date')
-        #         elif report_type == 'bf_cf':
-        #             self.order_by.insert(0, f"op_date{' DESC' if self.date_seq == 'd' else ''}")
-        #             if self.pivot_on is not None:
-        #                 self.pivot_group_by.insert(0, 'op_date')
-        #                 self.pivot_group_by.insert(0, 'cl_date')
-
         sql.append(') dum2')
 
         if self.pivot_group_by:
             sql.append(f"GROUP BY {', '.join(_ for _ in self.pivot_group_by)}")
-
-        # if self.order_by:
-        #     if self.pivot_on is None:
-        #         sql.append(f"ORDER BY {', '.join(_ for _ in self.order_by)}")
-        #     else:
-        #         pivot_dim = self.pivot_on[0]
-        #         order_by = []
-        #         for ob in self.order_by:
-        #             if ob.split('_')[0] != pivot_dim:
-        #                 order_by.append(ob)
-        #         if order_by:
-        #             sql.append(f"ORDER BY {', '.join(_ for _ in order_by)}")
 
         if self.order_by:
             sql.append(f"ORDER BY {', '.join(_ for _ in self.order_by)}")
@@ -1781,30 +1762,6 @@ async def sql_date_range(context, date_seq, sub_args, date_params):
         rows = await conn.fetchall(' '.join(sql), params)
     return rows
 
-# async def sql_curr_cl_date(context):
-#     company = context.company
-#     param = dbc.param_style
-
-#     sql = []
-#     params = []
-#     sql.append('SELECT')
-#     sql.append('a.closing_date AS cl_date')
-#     sql.append(f'FROM {company}.adm_periods a')
-#     sql.append('WHERE a.row_id =')
-#     sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
-#     sql.append(f'WHERE state = {param}')
-#     params.append('current')
-#     if context.module_id != 'gl':
-#         sql.append(f'AND ledger_row_id = {param}')
-#         params.append(self.ledger_row_id)
-#     sql.append(')')
-
-#     async with context.db_session.get_connection() as db_mem_conn:
-#         conn = db_mem_conn.db
-#         cur = await conn.exec_sql(' '.join(sql), params)
-#         cl_date_row = await cur.__anext__()
-#     return cl_date_row
-
 async def sql_curr_per(context):
     company = context.company
     param = dbc.param_style
@@ -1831,33 +1788,6 @@ async def sql_curr_per(context):
         conn = db_mem_conn.db
         rows = await conn.fetchall(' '.join(sql), params)
     return rows
-
-# async def sql_curr_yr(context):
-#     company = context.company
-#     sql = []
-#     params = []
-#     sql.append('SELECT')
-#     sql.append(f'{dbc.func_prefix}date_add(')
-#     sql.append(f'(SELECT b.closing_date FROM {company}.adm_periods b WHERE b.row_id = a.row_id - 1)')
-#     sql.append(', 1) AS "op_date [DATE]",')
-#     sql.append('a.closing_date AS cl_date')
-#     sql.append(f'FROM {company}.adm_periods a')
-#     sql.append('WHERE')
-#     sql.append(f'(SELECT b.row_id FROM {company}.adm_yearends b')
-#     sql.append('WHERE b.period_row_id >= a.row_id ORDER BY b.row_id LIMIT 1)')
-#     sql.append('=')
-#     sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
-#     sql.append(f'WHERE state = {dbc.param_style}')
-#     params.append('current')
-#     if context.module_id != 'gl':
-#         sql.append(f'AND ledger_row_id = {dbc.param_style}')
-#         params.append(self.ledger_row_id)
-#     sql.append(')')
-
-#     async with context.db_session.get_connection() as db_mem_conn:
-#         conn = db_mem_conn.db
-#         rows = await conn.fetchall(' '.join(sql), params)
-#     return rows
 
 async def sql_last_n_per(context, date_seq, sub_args, date_params):
     (

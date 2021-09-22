@@ -292,13 +292,13 @@ async def run_finrpt(caller, xml):
     finrpt_data = await finrpt_defn.get_data()
     finrpt_data['ledger_row_id'] = context.ledger_row_id
     finrpt_data['date_params'] = date_params
-    # finrpt_data['orig_level_data'] = None  # use as indicator that we have switched to subledger
 
     finrpt = rep.finrpt.FinReport()
     await finrpt._ainit_(caller.form, finrpt_data,
         caller.session, date_params, location_id, function_id)
 
 async def finrpt_drilldown(caller, xml):
+
     vars = caller.data_objects['vars']
     finrpt_data = await vars.getval('finrpt_data')
     group_params = finrpt_data['group_params']
@@ -311,6 +311,9 @@ async def finrpt_drilldown(caller, xml):
     drilled = False  # can only drill one group at a time
     for group in reversed(group_params):
         dim, args = group
+        if dim == 'date':
+            level = 0
+            continue
         level_data = finrpt_data[f'{dim}_level_data']
         levels = list(level_data.keys())
         level_type = args[0]

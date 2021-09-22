@@ -822,6 +822,9 @@ class GuiGrid:
             self.current_row = None
 
     async def on_clicked(self, button, btn_args):
+        # if a grid is clicked, the object clicked is not a 'button' but a 'cell' with an 'action'
+        # save it for inspection in custom.gl_funcs.finrpt_drilldown()
+        self.obj_clicked = button
         self.btn_args = btn_args
         await ht.form_xml.on_click(self, button)
 

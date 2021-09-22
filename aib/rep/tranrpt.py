@@ -16,7 +16,7 @@ class TranReport:
         await tranrpt_obj.delete_all()
 
         date_params = finrpt_data['date_params']
-        drill_date = date_params[1]
+        start_date, end_date = date_params
 
         tots_tablename = finrpt_data['table_name']
         module_id = tots_tablename.split('_')[0]  # either 'gl' or a subledger id
@@ -29,7 +29,11 @@ class TranReport:
         col_names = ['src_trantype_row_id']
         where = []
         where.append(['WHERE', '', 'deleted_id', '=', 0, ''])
-        where.append(['AND', '', 'tran_date', '<=', drill_date, ''])
+        if start_date == end_date:
+            where.append(['AND', '', 'tran_date', '<=', end_date, ''])
+        else:
+            where.append(['AND', '', 'tran_date', '>=', start_date, ''])
+            where.append(['AND', '', 'tran_date', '<=', end_date, ''])
         if module_id != 'gl':
             where.append(['AND', '', f'{module_id}_code_id>ledger_row_id', '=', ledger_row_id, ''])
 
@@ -98,7 +102,11 @@ class TranReport:
                                     where.append([test, lbr, col_name, op, expr, rbr])
                             col_names.append(f'{src}>{module_id}_code|ledger_code')
                         elif tgt == 'tran_date':
-                            where.append(['AND', '', src, '<=', drill_date, ''])
+                            if start_date == end_date:
+                                where.append(['AND', '', src, '<=', end_date, ''])
+                            else:
+                                where.append(['AND', '', src, '>=', start_date, ''])
+                                where.append(['AND', '', src, '<=', end_date, ''])
                             col_names.append(f'{src}|tran_date')
                         elif tgt == 'location_row_id':
                             group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'loc']
@@ -153,16 +161,12 @@ class TranReport:
 
             # tot_value = 0
             # cur = await conn.exec_sql(sql, all_params)
-            # # async for row in cur:
-            # #     await tranrpt_obj.init()
-            # #     for fld, dat in zip(tranrpt_obj.select_cols[1:], row):
-            # #         await fld.setval(dat)
-            # #     await tranrpt_obj.save()
-            # #     tot_value += await tranrpt_obj.getval('value')
-            # rows = []
             # async for row in cur:
-            #     rows.append(row)
-            #     tot_value += row[-1]
+            #     await tranrpt_obj.init()
+            #     for fld, dat in zip(tranrpt_obj.select_cols[1:], row):
+            #         await fld.setval(dat)
+            #     await tranrpt_obj.save()
+            #     tot_value += await tranrpt_obj.getval('value')
 
             rows = await conn.fetchall(sql, all_params)
             tot_value = sum(_[-1] for _ in rows)

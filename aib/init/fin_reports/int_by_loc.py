@@ -22,7 +22,7 @@ groups.append([
     ])
 
 include_zeros = True
-expand_subledg = True
+# expand_subledg = True
 allow_select_loc_fun = False
 
 columns = [
