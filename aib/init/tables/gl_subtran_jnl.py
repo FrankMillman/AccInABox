@@ -391,7 +391,7 @@ actions.append([
             # [  # condition
             #     ['where', '', '_param.gl_integration', 'is', '$True', ''],
             #     ],
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['gl_code_id', 'gl_code_id'],  # tgt_col, src_col

@@ -1,13 +1,13 @@
 <form name="finrpt_grid" title="Financial Report">
   <db_objects/>
   <mem_objects>
-    <mem_obj name="vars" descr="Variables">
-      <mem_col col_name="finrpt_data" data_type="JSON" short_descr="Report definition"
-        long_descr="Report definition"/>
+    <mem_obj name="finrpt_memobj" descr="Variable to hold finrpt_data">
+      <mem_col col_name="finrpt_data" data_type="JSON" short_descr="Report definition data"
+        long_descr="Report definition data"/>
     </mem_obj>
   </mem_objects>
   <input_params>
-    <input_param name="finrpt_data" type="data_attr" target="vars.finrpt_data" required="true"/>
+    <input_param name="finrpt_data" type="data_attr" target="finrpt_memobj.finrpt_data" required="true"/>
   </input_params>
   <output_params/>
   <frame main_object="finrpt_obj">
@@ -19,11 +19,7 @@
         <grid_methods template="Grid"/>
       </grid>
     </body>
-    <button_row>
-      <!--button btn_id="ok" btn_label="Ok" btn_enabled="true" btn_validate="true" action="
-          <<end_form state=`cancelled`/>>
-        "/-->
-    </button_row>
+    <button_row/>
     <frame_methods/>
   </frame>
 </form>

@@ -6,8 +6,8 @@ report_type = 'as_at'
 groups = []
 groups.append([
     'code',  # dim
-#   ['int', [['AND', '', 'maj', '=', "'curr_liab'", '']]],  # grp_name, filter
-    ['int', []],  # grp_name, filter
+#   ['code_int', [['AND', '', 'maj', '=', "'curr_liab'", '']]],  # grp_name, filter
+    ['code_int', []],  # grp_name, filter
     ])
 
 include_zeros = True

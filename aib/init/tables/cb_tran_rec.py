@@ -526,7 +526,7 @@ actions.append([
     'upd_on_post', [
         [
             'cb_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col

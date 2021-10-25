@@ -6,7 +6,7 @@ report_type = 'from_to'
 groups = []
 groups.append([
     'code',  # dim
-    ['int', []],   # grp_name, filter
+    ['code_int', []],   # grp_name, filter
     ])
 
 # cashflow_params = None

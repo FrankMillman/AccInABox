@@ -257,7 +257,7 @@ actions.append([
     'upd_on_post', [
         [
             'pch_tax_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['tax_code_id', 'tax_code_id'],  # tgt_col, src_col

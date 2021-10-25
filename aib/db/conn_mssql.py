@@ -1,10 +1,9 @@
 import pyodbc
 
-import db.objects
-
 def customise(constants, DbConn, db_params):
     # add db-specific methods to DbConn class
 
+    constants.servertype = 'mssql'
     constants.param_style = '?'
     constants.func_prefix = 'dbo.'
     constants.concat = '+'
@@ -53,7 +52,6 @@ def init(self):
     conn = pyodbc.connect(driver='ODBC Driver 17 for Sql Server', server='localhost',
         database=self.database, trusted_connection='Yes')
     self.conn = conn
-    self.servertype = 'mssql'
     self.exception = (pyodbc.Error, pyodbc.DatabaseError, pyodbc.IntegrityError)
 
 # async def add_lock(self, sql):

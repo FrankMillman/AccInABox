@@ -6,10 +6,10 @@ report_type = 'from_to'
 groups = []
 groups.append([
     'code',  # dim
-    ['int',  # grp_name
+    ['code_int',  # grp_name
         [       # filter
-            ['AND', '(', 'maj', '=', "'inc'", ''],
-            ['OR', '', 'maj', '=', "'exp'", ')'],
+            ['AND', '(', 'code_maj', '=', "'inc'", ''],
+            ['OR', '', 'code_maj', '=', "'exp'", ')'],
             ],
         ],
     ])
@@ -22,12 +22,12 @@ groups.append([
 include_zeros = True
 expand_subledg = True
 allow_select_loc_fun = True
-pivot_on = ('date', 'to_date')
+pivot_on = ('date', 'end_date')
 
 columns = [
     ['code_maj', 'code_maj', 'Maj', 'TEXT', 60, None, 'Total:'],
     ['code_int', 'code_int', 'Int', 'TEXT', 120, None, False],
-    ['to_date', 'tran_tot', '%b %Y', 'DEC', 80, 'to_date', True],
+    ['end_date', 'tran_tot', '%b %Y', 'DEC', 80, 'end_date', True],
     ]
 
 calc_cols = [

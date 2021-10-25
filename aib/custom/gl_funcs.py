@@ -1,6 +1,6 @@
 import db.objects
 from db.connection import db_constants as dbc
-import rep.finrpt
+import rep.finrpt as rep_finrpt
 import rep.tranrpt
 from common import AibError
 
@@ -206,7 +206,7 @@ async def setup_gl_group_link(db_obj, xml):
     # 1. This validation has not been implemented yet.
     2. Changes to gl_groups levels or {db_obj}_groups levels will have implications - not thought through.
     3. Theoretically there is no requirement that they have to be at the same level.
-        But rep.finrpt is written on that assumption, so will have to be changed to handle alternatives.
+        But rep_finrpt is written on that assumption, so will have to be changed to handle alternatives.
         Specifically, the JOINS from 'totals' to 'root' match those from 'gl'.
     """
 
@@ -234,7 +234,6 @@ async def setup_gl_group_link(db_obj, xml):
 async def setup_finrpt_vars(caller, xml):
     context = caller.context
     var = context.data_objects['var']
-    await var.init()
     finrpt_defn = context.data_objects['finrpt_defn']
     group_params = await finrpt_defn.getval('group_params')
     for grp in group_params:
@@ -246,11 +245,11 @@ async def setup_finrpt_vars(caller, xml):
 
     report_type = await finrpt_defn.getval('report_type')
     if date_type == 'single':
-        date_param = 'balance_date' if report_type == 'as_at' else 'date_range'
+        date_param = 'balance_date' if report_type == 'as_at2' else 'date_range'
     elif date_type == 'fin_yr':
         date_param = 'fin_yr'
     elif date_type == 'date_range':
-        date_param = 'balance_date' if report_type == 'as_at' else 'date_range'
+        date_param = 'balance_date' if report_type == 'as_at2' else 'date_range'
     elif date_type == 'last_n_per':
         date_param = 'start_per'
     elif date_type == 'last_n_days':
@@ -270,93 +269,191 @@ async def run_finrpt(caller, xml):
     context = caller.context
     var = context.data_objects['var']
 
-    location_id = await var.getval('location_id')  # None for all locations
-    function_id = await var.getval('function_id')  # None for all functions
-
     date_param = await var.getval('date_param')
     if date_param == 'balance_date':
-        var = context.data_objects['balance_date_vars']
-        date_params = (await var.getval('balance_date'), await var.getval('balance_date'))
+        date_var = context.data_objects['balance_date_vars']
+        date_params = (await date_var.getval('balance_date'),) * 2  # end_date = start_date
     elif date_param == 'date_range':
-        var = context.data_objects['date_range_vars']
-        date_params = (await var.getval('start_date'), await var.getval('end_date'))
+        date_var = context.data_objects['date_range_vars']
+        date_params = (await date_var.getval('start_date'), await date_var.getval('end_date'))
     elif date_param == 'fin_yr':
         date_params = await var.getval('year_no')
     elif date_param == 'start_per':
         date_params = await var.getval('period_no')
     elif date_param == 'start_date':
-        var = context.data_objects['balance_date_vars']
-        date_params = await var.getval('balance_date')
+        date_var = context.data_objects['balance_date_vars']
+        date_params = await date_var.getval('balance_date')
 
     finrpt_defn = caller.context.data_objects['finrpt_defn']
     finrpt_data = await finrpt_defn.get_data()
     finrpt_data['ledger_row_id'] = context.ledger_row_id
     finrpt_data['date_params'] = date_params
+    finrpt_data['single_location'] = await var.getval('location_id')  # None for all locations
+    finrpt_data['single_function'] = await var.getval('function_id')  # None for all functions
 
-    finrpt = rep.finrpt.FinReport()
-    await finrpt._ainit_(caller.form, finrpt_data,
-        caller.session, date_params, location_id, function_id)
+    finrpt = rep_finrpt.FinReport()
+    await finrpt._ainit_(caller.form, finrpt_data, caller.session)
 
 async def finrpt_drilldown(caller, xml):
+    # retrieve the finrpt_data that was used to create the report
+    # it was passed to finrpt_grid.finrpt_memobj as an input parameter
+    finrpt_memobj = caller.data_objects['finrpt_memobj']
+    finrpt_data = await finrpt_memobj.getval('finrpt_data')  # data_type is JSON, so this is a copy
 
-    vars = caller.data_objects['vars']
-    finrpt_data = await vars.getval('finrpt_data')
     group_params = finrpt_data['group_params']
     if not group_params:
         return
 
-    drilldown = finrpt_data['drilldown']
+    drilldown = finrpt_data['drilldown']  # increased by 1 for each drilldown
     tots = (xml.get('tots')) == 'true'  # clicked on 'total' field in footer_row
 
+    # finrpt_defn = caller.data_objects['finrpt_defn']
+    # await finrpt_defn.init()
+    # await finrpt_defn.setval('report_name', 'int_curr_prev')
+    # newrpt_data = await finrpt_defn.get_data()
+    # assert newrpt_data['report_type'] == finrpt_data['report_type']
+
+    # breakpoint()
+
     drilled = False  # can only drill one group at a time
+    this_col_name = None
+    pivot_on_date = False  # must get dates from pivot_val if True
+    new_grps = None  # can't change groups while iterating - set up new_grps, replace at end
+
     for group in reversed(group_params):
         dim, args = group
-        if dim == 'date':
-            level = 0
-            continue
-        level_data = finrpt_data[f'{dim}_level_data']
-        levels = list(level_data.keys())
-        level_type = args[0]
-        level = levels.index(level_type)
-        # value = await caller.db_obj.getval(f'{dim}_{level_type}')
 
-        new_level_data = level_data
-        new_levels = levels
-        new_level_type = level_type
-        type = 'code'
-        if dim == 'code' and not tots:  # check for expanded subledger
-            if 'type' in caller.db_obj.fields:
-                type = await caller.db_obj.getval('type')  # e.g. 'code', 'nsls_1', 'npch_2'
-                if type != 'code':
-                    module_id, ledger_row_id = type.split('_')
-                    finrpt_data['table_name'] = finrpt_data['table_name'].replace('gl', module_id)
-                    finrpt_data['ledger_row_id'] = int(ledger_row_id)
-                    new_level_data = finrpt_data[f'{type}_level_data']
-                    new_levels = list(new_level_data.keys())
-                    new_level_type = new_levels[level]
-                    args[0] = new_level_type
+        if f'{dim}_level_data' not in finrpt_data:  # no levels available
+            level = 0
+        else:
+            level_data = finrpt_data[f'{dim}_level_data']
+            levels = list(level_data.keys())
+            level_type = args[0]
+            level = levels.index(level_type)
+
+            new_level_data = level_data
+            new_levels = levels
+            new_level_type = level_type
+            type = 'code'
+            if dim == 'code' and not tots:  # check for expanded subledger
+                if 'type' in caller.db_obj.fields:
+                    type = await caller.db_obj.getval('type')  # e.g. 'code', 'nsls_1', 'npch_2'
+                    if type != 'code':
+                        module_id, ledger_row_id = type.split('_')
+                        finrpt_data['table_name'] = finrpt_data['table_name'].replace('gl', module_id)
+                        finrpt_data['ledger_row_id'] = int(ledger_row_id)
+                        new_level_data = finrpt_data[f'{type}_level_data']
+                        new_levels = list(new_level_data.keys())
+                        new_level_type = new_levels[level]
+                        args[0] = new_level_type
+
+        if finrpt_data['pivot_on'] is not None and finrpt_data['pivot_on'][0] == dim:
+            columns = finrpt_data['columns']
+            col_name = caller.obj_clicked.col_name
+            pivot_col = [col for col in columns if col[0] == col_name][0]
+            if pivot_col[5] == '*':
+                new_cols = []
+                for col in columns:
+                    if col[5] is None:
+                        new_cols.append(col)
+                    elif col[5] == '*':
+                        new_col = col[:]
+                        new_col[5] = None
+                        new_cols.append(new_col)
+                finrpt_data['columns'] = new_cols
+                new_grps = [grp for grp in group_params if grp[0] != dim]
+            elif dim == 'date':
+                pivot_on_date = True
+                pivot_grp, pivot_val = pivot_col[5]
+                finrpt_data['date_params'] = pivot_val
+                new_cols = []
+                for col in columns:
+                    if col[5] is None:
+                        new_cols.append(col)
+                    elif col[0] == col_name:
+                        new_col = []
+                        new_col.append(pivot_grp)  # mem_obj col_name
+                        new_col.append(pivot_grp)  # sql col_name
+                        new_col.append('Date')  # mem_obj col_head
+                        new_col.append('DTE')  # mem_obj data_type
+                        new_col.append(100)  # column width
+                        new_col.append(None)  # pivot_on
+                        new_col.append(False)  # 'total'
+                        new_cols.append(new_col)
+                        new_col = col[:]
+                        new_col[0] = 'Total'
+                        new_col[2] = 'Total'
+                        new_col[5] = None
+                        new_cols.append(new_col)
+                finrpt_data['columns'] = new_cols
+                new_grps = [grp for grp in group_params if grp[0] != dim]
+            else:
+                pivot_grp, pivot_val = pivot_col[5]
+                groups = [x[0] for x in finrpt_data['group_params']]
+                grp_pos = groups.index(dim)
+                finrpt_data['group_params'][grp_pos][1][1] = [
+                    ['AND', '', pivot_grp, '=', repr(pivot_val), '']
+                    ]
+                new_cols = []
+                for col in columns:
+                    if col[5] is None:
+                        new_cols.append(col)
+                    elif col[0] == col_name:
+                        new_col = []
+                        new_col.append(pivot_grp)  # mem_obj col_name
+                        new_col.append(pivot_grp)  # sql col_name
+                        new_col.append(pivot_grp.split('_')[1].capitalize())  # mem_obj col_head
+                        new_col.append('TEXT')  # mem_obj data_type
+                        new_col.append(100)  # column width
+                        new_col.append(None)  # pivot_on
+                        new_col.append(False)  # 'total'
+                        new_cols.append(new_col)
+                        new_col = col[:]
+                        new_col[0] = 'Total'
+                        new_col[2] = 'Total'
+                        new_col[5] = None
+                        new_cols.append(new_col)
+                finrpt_data['columns'] = new_cols
+            finrpt_data['pivot_on'] = None
+            finrpt_data['calc_cols'] = None  # assume calc_cols reference pivot_cols - remove
+            continue
+
+        if f'{dim}_level_data' not in finrpt_data:  # cannot filter or drilldown
+            continue
 
         if dim == 'code' and type != 'code':
-            if new_level_type == 'ledg':
+            if new_level_type == 'code_ledg':
                 args[1] = []  # no filter - will filter on ledger_id
             else:
-                value = await caller.db_obj.getval(f'{dim}_{level_type}')
+                value = await caller.db_obj.getval(level_type)
                 args[1] = [['AND', '', new_level_type, '=', repr(value), '']]
         elif not tots:  # if tots, keep previous filter
-            value = await caller.db_obj.getval(f'{dim}_{level_type}')
+            value = await caller.db_obj.getval(level_type)
             args[1] = [['AND', '', level_type, '=', repr(value), '']]
+
         if not drilled:  # can only drill one group at a time
             if level > 0:
                 old_type = levels[level]
                 new_type = new_levels[level-1]
-                this_col_name = f'{dim}_{old_type}'  # must insert new column after this one
+                this_col_name = old_type  # must insert new column after this one
                 args[0] = new_type
                 drilled = True
 
+    if new_grps is not None:
+        finrpt_data['group_params'] = new_grps
+
     if level == 0:  # highest group has reached lowest level - drilldown to transactions
+        if pivot_on_date:
+            start_date, end_date = pivot_val
+        else:
+            if tots:  # no row selected
+                await caller.db_obj.setval('row_id', 1)
+            start_date = await caller.db_obj.getval('start_date')
+            end_date = await caller.db_obj.getval('end_date')
+        # breakpoint()
         if tots:  # always drill down to transactions if 'tots' clicked
             tranrpt = rep.tranrpt.TranReport()
-            await tranrpt.__ainit__(caller, finrpt_data)
+            await tranrpt.__ainit__(caller, finrpt_data, start_date, end_date)
             return
         # if single code clicked, check if module is 'gl'
         tots_tablename = finrpt_data['table_name']
@@ -364,50 +461,53 @@ async def finrpt_drilldown(caller, xml):
         # if not, drill down to transactions
         if module_id != 'gl':
             tranrpt = rep.tranrpt.TranReport()
-            await tranrpt.__ainit__(caller, finrpt_data)
+            await tranrpt.__ainit__(caller, finrpt_data, start_date, end_date)
             return
         # get code_obj, check if it is a ctrl a/c
         group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'code']
         filter = group[0][1][1]
-        assert len(filter) == 1 and filter[0][2] == 'code'
+        assert len(filter) == 1 and filter[0][2] == 'code_code'
         level_data = finrpt_data['code_level_data']
-        code_data = level_data['code']
+        code_data = level_data['code_code']
         code_obj = await db.objects.get_db_object(caller.context, code_data[2])
         await code_obj.setval(code_data[0], filter[0][4][1:-1])
         # if not a ctrl a/c, drill down to transactions
         if await code_obj.getval('ctrl_mod_row_id') is None:
             tranrpt = rep.tranrpt.TranReport()
-            await tranrpt.__ainit__(caller, finrpt_data)
+            await tranrpt.__ainit__(caller, finrpt_data, start_date, end_date)
             return
         print(filter[0][4], ': CONTROL ACCOUNT')
         tranrpt = rep.tranrpt.TranReport()
-        await tranrpt.__ainit__(caller, finrpt_data)
+        await tranrpt.__ainit__(caller, finrpt_data, start_date, end_date)
 
     else:  # set up next level, call finrpt
-        columns = finrpt_data['columns']
-        grp_col_pos = [col[1] for col in columns].index(this_col_name)
-        new_col = columns[grp_col_pos][:]  # make a copy
+        if this_col_name is not None:  # else we are un-pivoting, not drilling
+            columns = finrpt_data['columns']
+            grp_col_pos = [col[1] for col in columns].index(this_col_name)
+            new_col = columns[grp_col_pos][:]  # make a copy
 
-        if type != 'code':
-            for col in columns:
-                if col[3] == 'TEXT':
-                    dim, col_level_type = col[1].split('_')
-                    if dim == 'code':
-                        col_level = levels.index(col_level_type)
-                        new_level_type = new_levels[col_level]
-                        col[0] = col[0].replace(col_level_type, new_level_type)
-                        col[1] = col[1].replace(col_level_type, new_level_type)
-                        col[2] = new_level_type.capitalize()
+            if type != 'code':
+                for col in columns:
+                    if col[3] == 'TEXT':
+                        if not '_' in col[1]:
+                            breakpoint()
+                        col_level_type = col[1]
+                        if col[1].split('_')[0] == 'code':
+                            col_level = levels.index(col_level_type)
+                            new_level_type = new_levels[col_level]
+                            col[0] = col[0].replace(col_level_type, new_level_type)
+                            col[1] = col[1].replace(col_level_type, new_level_type)
+                            col[2] = new_level_type.split('_')[1].capitalize()
 
-        new_col[0] = new_col[0].replace(old_type, new_type)
-        new_col[1] = new_col[1].replace(old_type, new_type)
-        new_col[2] = new_type.capitalize()
-        new_col[6] = False
-        columns.insert(grp_col_pos+1, new_col)
-        date_params = finrpt_data['date_params']
-        finrpt = rep.finrpt.FinReport()
+            new_col[0] = new_col[0].replace(old_type, new_type)
+            new_col[1] = new_col[1].replace(old_type, new_type)
+            new_col[2] = new_type.split('_')[1].capitalize()
+            new_col[6] = False
+            columns.insert(grp_col_pos+1, new_col)
+
+        finrpt = rep_finrpt.FinReport()
         await finrpt._ainit_(caller.form, finrpt_data,
-            caller.session, date_params, drilldown=drilldown+1)
+            caller.session, drilldown=drilldown+1)
 
 async def tranrpt_drilldown(caller, xml):
     # from transaction row, retrieve originating transaction

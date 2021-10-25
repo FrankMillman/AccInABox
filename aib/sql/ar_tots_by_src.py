@@ -69,7 +69,7 @@ def get_sql(cte, params, company, conn, ledger_row_id):
         SUM(COALESCE(cl_bal.cl_tot, 0))
         """
 
-    if conn.servertype == 'sqlite3':
+    if conn.constants.servertype == 'sqlite3':
         sql = cte + f"""
             SELECT 
                 dates.op_date AS "[DATE]", dates.cl_date AS "[DATE]"
@@ -86,7 +86,7 @@ def get_sql(cte, params, company, conn, ledger_row_id):
             ORDER BY dates.op_date
             """
         params += (ledger_row_id, ledger_row_id) * 8
-    elif conn.servertype == 'pgsql':
+    elif conn.constants.servertype == 'pgsql':
         sql = cte + f"""
             SELECT 
                 dates.op_date AS "[DATE]", dates.cl_date AS "[DATE]"
@@ -111,7 +111,7 @@ def get_sql(cte, params, company, conn, ledger_row_id):
             ORDER BY dates.op_date
             """
         params += (ledger_row_id, ledger_row_id)
-    elif conn.servertype == 'mssql':
+    elif conn.constants.servertype == 'mssql':
         sql = cte + f"""
             SELECT 
                 dates.op_date AS "[DATE]", dates.cl_date AS "[DATE]"

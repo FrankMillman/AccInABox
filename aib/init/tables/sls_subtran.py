@@ -669,6 +669,8 @@ actions.append([
             [  # key fields
                 ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['prod_row_id', 'wh_prod_row_id>prod_row_id'],
+                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
                 ['src_tran_type', "'sls'"],
                 ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
@@ -692,6 +694,8 @@ actions.append([
             [  # key fields
                 ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['class_row_id', 'wh_prod_row_id>prod_row_id>class_row_id'],
+                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
                 ['src_tran_type', "'sls'"],
                 ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
@@ -710,7 +714,7 @@ actions.append([
             ],
         [
             'sls_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['prod_code_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
@@ -734,7 +738,7 @@ actions.append([
             ],
         [
             'sls_class_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['prod_class_id', 'wh_prod_row_id>prod_row_id>class_row_id'],  # tgt_col, src_col

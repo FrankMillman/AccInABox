@@ -212,6 +212,8 @@ async def start_row(grid, xml):
 
 async def req_formview(grid, xml):
     row, = grid.btn_args
+    if row == grid.num_rows and not grid.growable:
+        return  # clicked on blank bottom row, not growable (cannot add new row)
     await grid.on_formview(row)
 
 async def select_from_view(grid, xml):

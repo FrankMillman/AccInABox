@@ -242,7 +242,6 @@ async def setup_other_tables(context, conn):
         'org_contacts',
         'gl_ledger_params',
         'gl_ledger_periods',
-        'gl_source_codes',
         'sys_finrpt_defns',
         'gl_tran_bf',
         'gl_tran_jnl',
@@ -592,15 +591,6 @@ async def setup_forms(context, conn):
     await setup_form('ar_receipt')
     await setup_form('ar_alloc_item')
     await setup_form('ar_alloc')
-    await setup_form('ar_ledger_summary')
-    await setup_form('ar_inv_day_per')
-    await setup_form('ar_inv_day')
-    await setup_form('ar_jnl_day_per')
-    await setup_form('ar_jnl_day')
-    await setup_form('ar_rec_day_per')
-    await setup_form('ar_rec_day')
-    await setup_form('ar_disc_day_per')
-    await setup_form('ar_disc_day')
     await setup_form('setup_nsls_codes')
     await setup_form('sls_report')
     await setup_form('setup_apsupp')
@@ -610,17 +600,15 @@ async def setup_forms(context, conn):
     await setup_form('ap_journal')
     await setup_form('ap_pmt_batch')
     await setup_form('ap_balances')
-    await setup_form('ap_ledger_summary')
     await setup_form('setup_prod_codes')
     await setup_form('setup_sell_prices')
     await setup_form('cb_receipt')
     await setup_form('cb_payment')
-    await setup_form('cb_ledger_summary')
     await setup_form('cb_cashbook')
     await setup_form('nsls_ledger_new')
     await setup_form('npch_ledger_new')
-    await setup_form('sys_finrpts')
-    await setup_form('fin_report')
+    await setup_form('finrpt_list')
+    await setup_form('finrpt_run')
     await setup_form('finrpt_grid')
     await setup_form('tranrpt_grid')
 
@@ -697,6 +685,11 @@ async def setup_finrpts(context, conn):
         'ap_pivot_src',
         'ap_supp_pivot_src',
         'ap_loc_pivot_src',
+        'cb_pivot_src',
+        'npch_uex_code_src',
+        'npch_uex_pivot_src',
+        'nsls_uea_code_src',
+        'nsls_uea_pivot_src',
         ]
 
     for name in finrpt_names:
@@ -787,7 +780,7 @@ async def setup_menus(context, conn, company_name):
             ['Gl transactions', 'menu', 'gl', [
                 ['Capture journal', 'form', 'gl_jnl'],
                 ]],
-            ['Financial reports', 'form', 'sys_finrpts'],
+            ['Financial reports', 'form', 'finrpt_list'],
             ['Period end procedure', 'form', 'gl_ledger_periods'],
             ]],
         ['Cash book', 'menu', 'cb', [
@@ -835,7 +828,7 @@ async def setup_menus(context, conn, company_name):
             ]],
         ['Cb reports', 'menu', 'cb', [
             ['Cash book report', 'form', 'cb_cashbook'],
-            ['Cash book summary', 'form', 'cb_ledger_summary'],
+            ['Financial reports', 'form', 'finrpt_list'],
             ]],
         ['Period end procedure', 'form', 'cb_ledger_periods'],
         ]]
@@ -858,7 +851,7 @@ async def setup_menus(context, conn, company_name):
             ['AR balances', 'form', 'ar_balances'],
             ['Sales report', 'form', 'sls_report'],
             ]],
-        ['Financial reports', 'form', 'sys_finrpts'],
+        ['Financial reports', 'form', 'finrpt_list'],
         ['Period end procedure', 'form', 'ar_ledger_periods'],
         ]]
 
@@ -882,7 +875,7 @@ async def setup_menus(context, conn, company_name):
         ['Ap enquiries', 'menu', 'ap', [
             ['AP balances', 'form', 'ap_balances'],
             ]],
-        ['Financial reports', 'form', 'sys_finrpts'],
+        ['Financial reports', 'form', 'finrpt_list'],
         ['Period end procedure', 'form', 'ap_ledger_periods'],
         ]]
 
@@ -898,6 +891,7 @@ async def setup_menus(context, conn, company_name):
             ['Parameters', 'form', 'nsls_params'],
             ['Income codes', 'form', 'setup_nsls_codes'],
             ]],
+        ['Financial reports', 'form', 'finrpt_list'],
         ]]
 
     npch_menu = ['Non-inventory purchases', 'menu', 'npch', [
@@ -905,6 +899,7 @@ async def setup_menus(context, conn, company_name):
             ['Parameters', 'form', 'npch_params'],
             ['Expense codes', 'form', 'setup_npch_codes'],
             ]],
+        ['Financial reports', 'form', 'finrpt_list'],
         ]]
 
     async def parse_menu(menu_opt, parent_id, module_id=None):

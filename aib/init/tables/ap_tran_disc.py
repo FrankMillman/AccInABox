@@ -562,7 +562,7 @@ actions.append([
             ],
         [
             'ap_allocations',
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 # ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
@@ -577,13 +577,12 @@ actions.append([
             ],
         [
             'ap_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'supp_row_id>ledger_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
-                # ['source_code', "'ap_disc_net'"],
                 ['src_trantype_row_id', 'trantype_row_id'],
                 ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'supp_row_id>ledger_row_id'],
@@ -606,7 +605,6 @@ actions.append([
         #         ['ledger_row_id', 'supp_row_id>ledger_row_id'],  # tgt_col, src_col
         #         ['location_row_id', 'supp_row_id>location_row_id'],
         #         ['function_row_id', 'supp_row_id>function_row_id'],
-        #         # ['source_code', "'ap_disc_tax'"],
         #         ['src_trantype_row_id', 'trantype_row_id'],
         #         ['orig_trantype_row_id', 'trantype_row_id'],
         #         ['orig_ledger_row_id', 'supp_row_id>ledger_row_id'],
@@ -621,13 +619,12 @@ actions.append([
         #     ],
         [
             'ap_supp_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['supp_row_id', 'supp_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
-                # ['source_code', "'ap_disc_net'"],
                 ['src_trantype_row_id', 'trantype_row_id'],
                 ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'supp_row_id>ledger_row_id'],
@@ -652,7 +649,6 @@ actions.append([
         #         ['supp_row_id', 'supp_row_id'],  # tgt_col, src_col
         #         ['location_row_id', 'supp_row_id>location_row_id'],
         #         ['function_row_id', 'supp_row_id>function_row_id'],
-        #         # ['source_code', "'ap_disc_tax'"],
         #         ['src_trantype_row_id', 'trantype_row_id'],
         #         ['orig_trantype_row_id', 'trantype_row_id'],
         #         ['orig_ledger_row_id', 'supp_row_id>ledger_row_id'],
@@ -677,7 +673,6 @@ actions.append([
                 ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'supp_row_id>location_row_id'],
                 ['function_row_id', 'supp_row_id>function_row_id'],
-                # ['source_code', "'ap_disc_net'"],
                 ['src_trantype_row_id', 'trantype_row_id'],
                 ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'supp_row_id>ledger_row_id'],
@@ -701,7 +696,6 @@ actions.append([
         #         ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
         #         ['location_row_id', 'supp_row_id>location_row_id'],
         #         ['function_row_id', 'supp_row_id>function_row_id'],
-        #         # ['source_code', "'ap_disc_tax'"],
         #         ['src_trantype_row_id', 'trantype_row_id'],
         #         ['orig_trantype_row_id', 'trantype_row_id'],
         #         ['orig_ledger_row_id', 'supp_row_id>ledger_row_id'],

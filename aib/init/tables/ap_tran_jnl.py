@@ -508,7 +508,7 @@ actions.append([
 
         [
             'ap_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
@@ -528,7 +528,7 @@ actions.append([
             ],
         [
             'ap_supp_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['supp_row_id', 'supp_row_id'],  # tgt_col, src_col

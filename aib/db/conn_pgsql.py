@@ -2,8 +2,6 @@ import psycopg2
 import psycopg2.extensions  # so that strings are returned as unicode
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
 
-import db.objects
-
 # bytea data is usually returned as a 'memoryview'
 # this creates a problem - after a roundtrip to the database, it no
 #   longer compares equal to the original object
@@ -19,6 +17,7 @@ psycopg2.extensions.register_type(BYTEA2BYTES)
 def customise(constants, DbConn, db_params):
     # add db-specific methods to DbConn class
 
+    constants.servertype = 'pgsql'
     constants.param_style = '%s'
     constants.func_prefix = ''
     constants.concat = '||'
@@ -67,7 +66,6 @@ def init(self):
     conn = psycopg2.connect(database=self.database, user=self.user, password=self.pwd)
     conn.set_client_encoding('UNICODE')
     self.conn = conn
-    self.servertype = 'pgsql'
     self.exception = (psycopg2.ProgrammingError, psycopg2.IntegrityError,
         psycopg2.InternalError)
 

@@ -716,7 +716,7 @@ class Conn:
         if col is None:
             col_text = f'NULL AS {col_name}'
         elif as_clause is not None:
-            if self.servertype in (':memory:', 'sqlite3'):  # sqlite3 needs COLTYPES
+            if self.constants.servertype == 'sqlite3':  # sqlite3 needs COLTYPES
                 if (col.data_type == 'DEC' or col.data_type.startswith('$')) and not self.grouping:
                     # force sqlite3 to return Decimal type
                     col_name = f'"{col.col_name} AS [REAL{col.db_scale}]"'

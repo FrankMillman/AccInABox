@@ -6,18 +6,18 @@ report_type = 'from_to'
 groups = []
 groups.append([
     'code',  # dim
-    ['int',  # grp_name
+    ['code_int',  # grp_name
         [        # filter
-            ['AND', '(', 'maj', '=', "'inc'", ''],
-            ['OR', '', 'maj', '=', "'exp'", ')'],
+            ['AND', '(', 'code_maj', '=', "'inc'", ''],
+            ['OR', '', 'code_maj', '=', "'exp'", ')'],
             ],
         ],
     ])
 
 groups.append([
     'loc',   # dim
-    ['prop', # grp_name
-        [['AND', '', 'type', '=', "'PROP'", '']],  # filter
+    ['loc_prop', # grp_name
+        [['AND', '', 'loc_type', '=', "'PROP'", '']],  # filter
         ],
     ])
 

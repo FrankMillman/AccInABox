@@ -32,6 +32,9 @@ database date functions -
         SELECT to_char(closing_date, 'dd') as day
 """
 
+adj_curr_per = 1  # for reports, default initial period can be adjusted by 1 if required, else set to 0
+                  # if this works, make it a parameter in adm_params [2021-09-23]
+
 async def setup_date_choices(caller):
     fin_periods = await db.cache.get_adm_periods(caller.company)
 
@@ -44,18 +47,23 @@ async def setup_date_choices(caller):
             for fin_per in fin_periods[1:]}
 
 async def setup_balance_date(caller, xml):
-    # called from ar_balances before_start_form
+    # called from ar_balances, ap_balances, finrpt_run before_start_form
     context = caller.context
     fin_periods = await db.cache.get_adm_periods(caller.company)
-    ledger_periods = await db.cache.get_ledger_periods(context.company,
-        context.module_row_id, context.ledger_row_id)
+    if context.module_id in ('nsls', 'npch'):
+        mod, ledg = 8, 0  # use 'gl' periods (not thought through!)
+    else:
+        mod, ledg = context.module_row_id, context.ledger_row_id
+    ledger_periods = await db.cache.get_ledger_periods(context.company, mod, ledg)
     if not ledger_periods:
         raise AibError(head='Periods',
             body=f'No periods set up for {caller.context.module_row_id}.{caller.context.ledger_row_id}')
-    current_period = ledger_periods.current_period  # set initial period_no to current_period
+    adjusted_curr_per = ledger_periods.current_period
+    if adjusted_curr_per > 1:
+        adjusted_curr_per -= adj_curr_per
 
     today = dt.today()
-    current_closing_date = fin_periods[current_period].closing_date
+    current_closing_date = fin_periods[adjusted_curr_per].closing_date
     if today > current_closing_date:
         balance_date = current_closing_date
     else:
@@ -65,7 +73,7 @@ async def setup_balance_date(caller, xml):
     await var.setval('balance_date', balance_date)
     await var.setval('settings', [
         'P',  # select_method
-        current_period,  # period_no
+        adjusted_curr_per,  # period_no
         balance_date,
         ])
 
@@ -185,8 +193,11 @@ async def load_ye_per(caller, xml):
         f'{fin_per.year_per_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
             for fin_per in fin_periods[1:]}
 
-    ledger_periods = await db.cache.get_ledger_periods(context.company,
-        context.module_row_id, context.ledger_row_id)
+    if context.module_id in ('nsls', 'npch'):
+        mod, ledg = 8, 0  # use 'gl' periods (not thought through!)
+    else:
+        mod, ledg = context.module_row_id, context.ledger_row_id
+    ledger_periods = await db.cache.get_ledger_periods(context.company, mod, ledg)
 
     var = caller.data_objects['var']
 
@@ -196,7 +207,10 @@ async def load_ye_per(caller, xml):
 
     fld = await var.getfld('period_no')
     fld.col_defn.choices = per_choices
-    await fld.setval(ledger_periods.current_period)
+    adjusted_curr_per = ledger_periods.current_period
+    if adjusted_curr_per > 1:
+        adjusted_curr_per -= adj_curr_per
+    await fld.setval(adjusted_curr_per)
 
 async def setup_choices(caller, xml):
     # called from sls_report on_start_frame

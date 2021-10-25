@@ -1640,7 +1640,7 @@ class DbObject:
     async def upd_on_save(self, upd_on_save, conn, upd_type):
         tbl_name, condition, split_src, *upd_on_save = upd_on_save
 
-        if condition:
+        if condition is not None:
             if not await eval_bool_expr(condition, self, None):
                 return
 
@@ -2021,7 +2021,7 @@ class DbObject:
     async def upd_on_post(self, upd_on_post, conn, post_type):
         tbl_name, condition, split_src, *upd_on_post = upd_on_post
 
-        if condition:
+        if condition is not None:
             if not await eval_bool_expr(condition, self, None):
                 return
 

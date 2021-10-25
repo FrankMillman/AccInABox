@@ -350,7 +350,7 @@ virt = []
 cursors = []
 
 cursors.append({
-    'cursor_name': 'finrpt_list',
+    'cursor_name': 'finrpt_setup',
     'title': 'Maintain fin rpt defns',
     'columns': [
         ['report_name', 160, False, False],
@@ -360,7 +360,21 @@ cursors.append({
         ['WHERE', '', 'module_row_id', '=', '_ctx.module_row_id', ''],
         ],
     'sequence': [['report_name', False]],
-    'formview_name': 'fin_report',
+    'formview_name': 'finrpt_setup',
+    })
+
+cursors.append({
+    'cursor_name': 'finrpt_list',
+    'title': 'Display fin rpt defns',
+    'columns': [
+        ['report_name', 160, False, False],
+        ['descr', 300, True, False],
+        ],
+    'filter': [
+        ['WHERE', '', 'module_row_id', '=', '_ctx.module_row_id', ''],
+        ],
+    'sequence': [['report_name', False]],
+    'formview_name': 'finrpt_run',
     })
 
 # actions

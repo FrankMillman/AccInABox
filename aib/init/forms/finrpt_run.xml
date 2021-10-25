@@ -1,4 +1,5 @@
-<form name="fin_report" title="Run financial report" before_start_form="
+<form name="finrpt_run" title="Run financial report" before_start_form="
+  <<init_obj obj_name=`var`/>>
   <<pyfunc name=`custom.gl_funcs.setup_finrpt_vars`/>>
   <<case>>
     <<compare test=`[['if', '', 'var.date_param', '=', '~balance_date~', '']]`>>

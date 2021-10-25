@@ -761,7 +761,7 @@ actions.append([
             ],
         [
             'ar_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
@@ -781,7 +781,7 @@ actions.append([
             ],
         [
             'ar_cust_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col

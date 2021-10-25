@@ -33,7 +33,7 @@ async def get_sql(cte, params, company, conn, locations):
         ON op_bal.location_id = cl_bal.location_id 
         """
 
-    if conn.servertype == 'sqlite3':
+    if conn.constants.servertype == 'sqlite3':
         sql = cte + f"""
             SELECT 
                 dates.op_date AS "Start [DATE]", dates.cl_date AS "End [DATE]",
@@ -47,7 +47,7 @@ async def get_sql(cte, params, company, conn, locations):
             FROM dates
             ORDER BY dates.op_date
             """
-    elif conn.servertype == 'pgsql':
+    elif conn.constants.servertype == 'pgsql':
         sql = cte + f"""
             SELECT 
                 dates.op_date AS "Start [DATE]", dates.cl_date AS "End [DATE]",
@@ -69,7 +69,7 @@ async def get_sql(cte, params, company, conn, locations):
             ON true
             ORDER BY dates.op_date
             """
-    elif conn.servertype == 'mssql':
+    elif conn.constants.servertype == 'mssql':
         sql = cte + f"""
             SELECT 
                 dates.op_date AS "Start [DATE]", dates.cl_date AS "End [DATE]",

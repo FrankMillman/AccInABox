@@ -12,7 +12,7 @@ def get_sql(cte, params, company, conn, ledger_id, source_codes):
         ) as day
         """
 
-    if conn.servertype == 'sqlite3':
+    if conn.constants.servertype == 'sqlite3':
         sql = cte + f"""
             SELECT 
                 dates.date AS "[DATE]",
@@ -25,7 +25,7 @@ def get_sql(cte, params, company, conn, ledger_id, source_codes):
             ORDER BY dates.date
             """
         params += (ledger_id, *source_codes) * len(source_codes)
-    elif conn.servertype == 'pgsql':
+    elif conn.constants.servertype == 'pgsql':
         sql = cte + f"""
             SELECT 
                 dates.date AS "[DATE]",
@@ -45,7 +45,7 @@ def get_sql(cte, params, company, conn, ledger_id, source_codes):
             ORDER BY dates.date
         """
         params += (ledger_id, *source_codes)
-    elif conn.servertype == 'mssql':
+    elif conn.constants.servertype == 'mssql':
         sql = cte + f"""
             SELECT 
                 dates.date AS "[DATE]",

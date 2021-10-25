@@ -588,7 +588,7 @@ actions.append([
     'upd_on_save', [
         [
             'cb_tran_tfr_in',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ],
@@ -611,7 +611,7 @@ actions.append([
     'upd_on_post', [
         [
             'cb_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
@@ -633,7 +633,7 @@ actions.append([
             ],
         # [
         #     'cb_totals',  # table name
-        #     [],  # condition
+        #     None,  # condition
         #     False,  # split source?
         #     [  # key fields
         #         ['ledger_row_id', 'tgt_ledg_row_id'],  # tgt_col, src_col

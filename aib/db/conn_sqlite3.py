@@ -4,7 +4,6 @@ import asyncio
 from datetime import date, timedelta
 from decimal import Decimal as D
 
-import db.objects
 import db.cache
 
 attach_lock = asyncio.Lock()  # to ensure that two processes don't try to attach at the same time
@@ -12,6 +11,7 @@ attach_lock = asyncio.Lock()  # to ensure that two processes don't try to attach
 def customise(constants, DbConn, db_params):
     # add db-specific methods to DbConn class
 
+    constants.servertype = 'sqlite3'
     constants.param_style = '?'
     constants.func_prefix = ''
     constants.concat = '||'
@@ -204,14 +204,12 @@ def init(self, mem_id=None):
         conn = sqlite3.connect(f'file:{mem_id}?mode=memory&cache=shared',
             detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
             check_same_thread=False, uri=True)
-        self.servertype = ':memory:'
         cur = conn.cursor()
         cur.execute("pragma read_uncommitted = on")  # http://www.sqlite.org/sharedcache.html
     else:
         conn = sqlite3.connect('{0}/_base'.format(self.database),
             detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
             check_same_thread=False)
-        self.servertype = 'sqlite3'
         cur = conn.cursor()
         cur.execute("pragma foreign_keys = on")  # must be enabled for each connection
     conn.create_function('substring', 3, substring)

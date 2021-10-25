@@ -11,14 +11,14 @@ groups.append([
 
 groups.append([
     'src',  # dim
-    ['src', []],  # grp_name, filter
+    ['src_type', []],  # grp_name, filter
     ])
 
 pivot_on = ('src', None)
 
 columns = [
-    ['op_date', 'op_date', 'Op date', 'DTE', 85, None, False],
-    ['cl_date', 'cl_date', 'Cl date', 'DTE', 85, None, False],
+    ['start_date', 'start_date', 'Start date', 'DTE', 85, None, False],
+    ['end_date', 'end_date', 'End date', 'DTE', 85, None, False],
     ['op_bal', 'op_bal', 'B/f', 'DEC', 100, '*', False],
     ['inv', 'cl_bal - op_bal', 'Inv', 'DEC', 80, ('src_type', 'ap_inv'), False],
     ['crn', 'cl_bal - op_bal', 'Crn', 'DEC', 80, ('src_type', 'ap_crn'), False],

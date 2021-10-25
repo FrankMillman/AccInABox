@@ -6,14 +6,14 @@ report_type = 'bf_cf'
 groups = []
 groups.append([
     'code',    # dim
-    ['code', # grp_name
+    ['code_code', # grp_name
         [],  # filter
         ],
     ])
 
 groups.append([
     'src',  # dim
-    ['src', []],  # grp_name, filter
+    ['src_type', []],  # grp_name, filter
     ])
 
 pivot_on = ('src', None)

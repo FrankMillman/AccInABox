@@ -6,24 +6,25 @@ report_type = 'from_to'
 groups = []
 groups.append([
     'code',  # dim
-    ['int',  # grp_name
+    ['code_int',  # grp_name
         [       # filter
-            ['AND', '(', 'maj', '=', "'inc'", ''],
-            ['OR', '', 'maj', '=', "'exp'", ')'],
+            ['AND', '(', 'code_maj', '=', "'inc'", ''],
+            ['OR', '', 'code_maj', '=', "'exp'", ')'],
             ],
         ],
     ])
 
 groups.append([
     'loc',   # dim
-    ['prop',  # grp_name
+    ['loc_prop',  # grp_name
         [        # filter
-            ['AND', '', 'type', '=', "'PROP'", ''],
-            ['AND', '', 'prop', '!=', "'TSK'", ''],
+            ['AND', '', 'loc_type', '=', "'PROP'", ''],
+            ['AND', '', 'loc_prop', '!=', "'TSK'", ''],
             ],
         ],
     ])
 
+include_zeros = True
 expand_subledg = True
 pivot_on = ('loc', 'loc_prop')
 

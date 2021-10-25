@@ -1,4 +1,4 @@
-<form name="sys_finrpts" title="Financial reports">
+<form name="finrpt_list" title="Financial reports">
   <db_objects>
     <db_obj name="finrpt_defn" table_name="sys_finrpt_defns"/>
   </db_objects>
@@ -14,6 +14,8 @@
             ]
           ]
         ]">
+      <mem_col col_name="finrpt_data" data_type="JSON" short_descr="Report definition"
+        long_descr="Report definition"/>
       <mem_col col_name="date_param" data_type="TEXT" short_descr="Date type"
         long_descr="Date type" allow_amend="true"/>
       <mem_col col_name="year_no" data_type="INT" short_descr="Year no"

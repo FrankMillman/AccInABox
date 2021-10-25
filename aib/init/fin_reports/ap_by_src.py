@@ -6,7 +6,7 @@ report_type = 'bf_cf'
 groups = []
 groups.append([
     'src',  # dim
-    ['src', []],  # grp_name, filter
+    ['src_type', []],  # grp_name, filter
     ])
 
 groups.append([
@@ -15,8 +15,8 @@ groups.append([
     ])
 
 columns = [
-    ['op_date', 'op_date', 'Op date', 'DTE', 85, None, False],
-    ['cl_date', 'cl_date', 'Cl date', 'DTE', 85, None, False],
+    ['start_date', 'start_date', 'Start date', 'DTE', 85, None, False],
+    ['end_date', 'end_date', 'End date', 'DTE', 85, None, False],
     ['src_type', 'src_type', 'Source', 'TEXT', 80, None, False],
     ['op_bal', 'op_bal', 'Op bal', 'DEC', 100, None, False],
     ['mvmt', 'cl_bal - op_bal', 'Mvmt', 'DEC', 100, None, False],

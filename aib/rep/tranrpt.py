@@ -4,8 +4,7 @@ from db.connection import db_constants as dbc
 import ht.form
 
 class TranReport:
-    # async def __ainit__(self, caller, db_obj, finrpt_data, filter, value, tots):
-    async def __ainit__(self, caller, finrpt_data):
+    async def __ainit__(self, caller, finrpt_data, start_date, end_date):
 
         context = caller.context
         session = caller.session
@@ -15,12 +14,21 @@ class TranReport:
         tranrpt_obj = caller.data_objects['tranrpt_obj']
         await tranrpt_obj.delete_all()
 
-        date_params = finrpt_data['date_params']
-        start_date, end_date = date_params
-
         tots_tablename = finrpt_data['table_name']
         module_id = tots_tablename.split('_')[0]  # either 'gl' or a subledger id
         ledger_row_id = finrpt_data['ledger_row_id']
+
+        # if expand_subledg is True, need to show subledger code, not gl code
+        # this sets up a dictionary that is used below
+        links_to_subledg = {}
+        if module_id == 'gl' and finrpt_data['expand_subledg']:
+            grp_obj = await db.objects.get_db_object(context, 'gl_groups')
+            where = [['WHERE', '', 'link_to_subledg', 'IS NOT', None, '']]
+            all_grp = grp_obj.select_many(where=where, order=[])
+            async for _ in all_grp:
+                link_mod_id, link_ledg_id = await grp_obj.getval('link_to_subledg')
+                link_mod = await db.cache.get_mod_id(company, link_mod_id)
+                links_to_subledg[link_mod_id] = link_mod
 
         types = await db.objects.get_db_object(context, 'adm_tran_types')
         actions = await db.objects.get_db_object(context, 'db_actions')
@@ -35,23 +43,23 @@ class TranReport:
             where.append(['AND', '', 'tran_date', '>=', start_date, ''])
             where.append(['AND', '', 'tran_date', '<=', end_date, ''])
         if module_id != 'gl':
-            where.append(['AND', '', f'{module_id}_code_id>ledger_row_id', '=', ledger_row_id, ''])
+            where.append(['AND', '', tots_table.ledger_col, '=', ledger_row_id, ''])
 
         for group in finrpt_data['group_params']:
             dim, args = group
-            if dim == 'code':
-                if module_id == 'gl':
-                    level_data = finrpt_data['code_level_data']
-                else:
-                    level_data = finrpt_data[f'{module_id}_{ledger_row_id}_level_data']
+            if dim == 'code' and module_id != 'gl':
+                level_data_key = f'{module_id}_{ledger_row_id}_level_data'
+            else:
+                level_data_key = f'{dim}_level_data'
+            if level_data_key in finrpt_data:  # level_data exists
+                level_data = finrpt_data[level_data_key]
                 grp_name, filter = args
                 for (test, lbr, level, op, expr, rbr) in filter:
                     where.append([test, lbr, level_data[level][3], op, expr, rbr])
-            elif dim == 'loc':
-                level_data = finrpt_data['loc_level_data']
+            elif dim == 'src':
                 grp_name, filter = args
-                for (test, lbr, level, op, expr, rbr) in filter:
-                    where.append([test, lbr, level_data[level][3], op, expr, rbr])
+                for (test, lbr, col_name, op, expr, rbr) in filter:
+                    where.append([test, lbr, 'src_trantype_row_id>tran_type', op, expr, rbr])
 
         all_sql = []
         all_params = []
@@ -70,27 +78,29 @@ class TranReport:
                 if not actions.exists:
                     continue
                 upd_on_post = await actions.getval('upd_on_post') or []
-                for tbl_name, condition, split_src, *upd_on_post in upd_on_post:
+                for tbl_name, condition, split_src, *this_upd_on_post in upd_on_post:
                     if not tbl_name == tots_tablename:
                         continue
-                    key_fields, aggr, on_post, on_unpost, *return_vals = upd_on_post
+                    key_fields, aggr, on_post, on_unpost, *return_vals = this_upd_on_post
 
                     col_names = []
                     col_names.append(f'{source_tablename!r}|src_table_name')
                     col_names.append('row_id|src_row_id')
                     where = []
-                    # test = 'WHERE'
-                    for test, lbr, col_name, op, expr, rbr in condition:
-                        if col_name.startswith('_param'):
-                            continue
-                        where.append([test, lbr, col_name, op, expr, rbr])
+                    if condition is not None:
+                        for test, lbr, col_name, op, expr, rbr in condition:
+                            if col_name.startswith('_param'):
+                                continue
+                            where.append([test, lbr, col_name, op, expr, rbr])
 
-                    for tgt, src in key_fields:
-                        if tgt == f'{module_id}_code_id':
+                    for pos, (tgt, src) in enumerate(key_fields):
+                        # if tgt == f'{module_id}_code_id':
+                        if pos == 0:
                             group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'code']
                             if group:
-                                filter = group[0][1][1]
-                                if module_id == 'gl':
+                                filter = group[0][1][1]  # [[dim, [grp_name, filter]]]
+                                # breakpoint()
+                                if module_id == 'gl' or not finrpt_data['expand_subledg']:
                                     level_data = finrpt_data['code_level_data']
                                 else:
                                     level_data = finrpt_data[f'{module_id}_{ledger_row_id}_level_data']
@@ -100,42 +110,62 @@ class TranReport:
                                     pos = col_name.find('>')
                                     col_name = f'{src}{col_name[pos:]}'
                                     where.append([test, lbr, col_name, op, expr, rbr])
-                            col_names.append(f'{src}>{module_id}_code|ledger_code')
-                        elif tgt == 'tran_date':
-                            if start_date == end_date:
-                                where.append(['AND', '', src, '<=', end_date, ''])
+                            # if link_to_subledg, show subledger code, not gl code
+                            if source_table.module_row_id in links_to_subledg:  # e.g. 'nsls'
+                                subledg = links_to_subledg[source_table.module_row_id]
+                                sub_upd_on_post = [x for x in upd_on_post
+                                    if x[0] == tbl_name.replace('gl', subledg)][0]  # e.g. 'nsls_totals'
+                                sub_src = sub_upd_on_post[3][0][1]  # src portion of first key field
+                                col_names.append(f'{sub_src}>{subledg}_code|ledger_code')
+                            elif tgt == 'ledger_row_id':
+                                col_names.append(f'{src}>ledger_id|ledger_id')
+                                where.append(['AND', '', src, '=', ledger_row_id, ''])
                             else:
-                                where.append(['AND', '', src, '>=', start_date, ''])
-                                where.append(['AND', '', src, '<=', end_date, ''])
-                            col_names.append(f'{src}|tran_date')
-                        elif tgt == 'location_row_id':
-                            group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'loc']
-                            if group:
-                                filter = group[0][1][1]
-                                level_data = finrpt_data['loc_level_data']
-                                for (test, lbr, level, op, expr, rbr) in filter:
-                                    col_name = level_data[level][-1]
-                                    pos = col_name.find('>')
-                                    col_name = f'{src}{col_name[pos:]}'
-                                    where.append([test, lbr, col_name, op, expr, rbr])
+                                col_names.append(f'{src}>{module_id}_code|ledger_code')
+                            # breakpoint()
+                        # elif tgt == 'location_row_id':
+                        elif pos == 1:  # location_row_id
+                            if finrpt_data['single_location'] is not None:
+                                where.append(['AND', '', f'{src}>location_id', '=',
+                                    repr(finrpt_data['single_location']), ''])
+                            else:
+                                group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'loc']
+                                if group:
+                                    filter = group[0][1][1]
+                                    level_data = finrpt_data['loc_level_data']
+                                    for (test, lbr, level, op, expr, rbr) in filter:
+                                        col_name = level_data[level][-1]
+                                        pos = col_name.find('>')
+                                        col_name = f'{src}{col_name[pos:]}'
+                                        where.append([test, lbr, col_name, op, expr, rbr])
                             col_names.append(f'{src}>location_id|location_id')
-                        elif tgt == 'function_row_id':
-                            group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'fun']
-                            if group:
-                                filter = group[0][1][1]
-                                level_data = finrpt_data['fun_level_data']
-                                for (test, lbr, level, op, expr, rbr) in filter:
-                                    col_name = level_data[level][-1]
-                                    pos = col_name.find('>')
-                                    col_name = f'{src}{col_name[pos:]}'
-                                    where.append([test, lbr, col_name, op, expr, rbr])
+                        # elif tgt == 'function_row_id':
+                        elif pos == 2:  # function_row_id
+                            if finrpt_data['single_function'] is not None:
+                                where.append(['AND', '', f'{src}>function_id', '=',
+                                    repr(finrpt_data['single_function']), ''])
+                            else:
+                                group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'fun']
+                                if group:
+                                    filter = group[0][1][1]
+                                    level_data = finrpt_data['fun_level_data']
+                                    for (test, lbr, level, op, expr, rbr) in filter:
+                                        col_name = level_data[level][-1]
+                                        pos = col_name.find('>')
+                                        col_name = f'{src}{col_name[pos:]}'
+                                        where.append([test, lbr, col_name, op, expr, rbr])
                             col_names.append(f'{src}>function_id|function_id')
+                        # elif tgt == 'tran_date':
+                        elif pos == 6:  # tran_date
+                            where.append(['AND', '', src, '>=', start_date, ''])
+                            where.append(['AND', '', src, '<=', end_date, ''])
+                            col_names.append(f'{src}|tran_date')
 
                     col_names.append('tran_type|tran_type')
                     col_names.append('tran_number|tran_number')
                     col_names.append('text|text')
                     for tgt, op, src in aggr:
-                        if tgt == 'tran_day':
+                        if tgt in ('tran_day', 'tran_day_local'):
                             if op == '-':
                                 col_names.append(f'REV({src})|value')
                             else:
@@ -169,6 +199,7 @@ class TranReport:
             #     tot_value += await tranrpt_obj.getval('value')
 
             rows = await conn.fetchall(sql, all_params)
+            # breakpoint()
             tot_value = sum(_[-1] for _ in rows)
 
             conn_mem = db_mem_conn.mem

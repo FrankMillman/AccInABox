@@ -225,6 +225,14 @@ virt.append ({
         "CASE WHEN a.subtran_row_id>subparent_row_id>rev_sign_pch = $True THEN -1 ELSE 1 END"
         ),
     })
+virt.append ({
+    'col_name'   : 'trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Tran type row id',
+    'long_descr' : 'Tran type row id',
+    'col_head'   : 'Tran type row id',
+    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'npch_exp'",
+    })
 
 # cursor definitions
 cursors = []
@@ -235,15 +243,17 @@ actions.append([
     'upd_on_post', [
         [
             'npch_uex_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['npch_code_id', 'subtran_row_id>npch_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'subtran_row_id>location_row_id'],
                 ['function_row_id', 'subtran_row_id>function_row_id'],
                 ['src_tran_type', "'npch_exp'"],
-                ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
@@ -255,15 +265,17 @@ actions.append([
             ],
         [
             'npch_totals',  # table name
-            [],  # condition
+            None,  # condition
             False,  # split source?
             [  # key fields
                 ['npch_code_id', 'subtran_row_id>npch_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'subtran_row_id>location_row_id'],
                 ['function_row_id', 'subtran_row_id>function_row_id'],
                 ['src_tran_type', "'npch_exp'"],
-                ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
@@ -285,8 +297,10 @@ actions.append([
                 ['location_row_id', 'subtran_row_id>location_row_id'],
                 ['function_row_id', 'subtran_row_id>function_row_id'],
                 ['src_tran_type', "'npch_exp'"],
-                ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
@@ -308,8 +322,10 @@ actions.append([
                 ['location_row_id', 'subtran_row_id>location_row_id'],
                 ['function_row_id', 'subtran_row_id>function_row_id'],
                 ['src_tran_type', "'npch_exp'"],
-                ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
@@ -330,8 +346,10 @@ actions.append([
                 ['location_row_id', 'subtran_row_id>location_row_id'],
                 ['function_row_id', 'subtran_row_id>function_row_id'],
                 ['src_tran_type', "'npch_exp'"],
-                ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
@@ -352,8 +370,10 @@ actions.append([
                 ['location_row_id', 'subtran_row_id>location_row_id'],
                 ['function_row_id', 'subtran_row_id>function_row_id'],
                 ['src_tran_type', "'npch_exp'"],
-                ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
+                ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation

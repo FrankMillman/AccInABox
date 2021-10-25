@@ -189,15 +189,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'first_row',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'First row?',
-#     'long_descr' : 'If table is empty, this is the first row',
-#     'col_head'   : '',
-#     'sql'        : "CASE WHEN EXISTS(SELECT * FROM {company}.in_prod_groups WHERE deleted_id = 0) "
-#                    "THEN $False ELSE $True END",
-#     })
 virt.append ({
     'col_name'   : 'children',
     'data_type'  : 'INT',

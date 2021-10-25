@@ -38,6 +38,7 @@ For each nsls_ledger -
     add nsls_codes - each one must be linked to a group leaf node
 
 If gl integration -
+    specify g/l code to act as 'control a/c' for each nsls_ledger
     optional - link a 'ledg' group to a gl_group, for substitution in finrpt at runtime
                see nsls_ledger_params.link_to_gl_group
     validation - number of levels below 'ledg' must equal number of levels below linked group

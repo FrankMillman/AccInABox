@@ -6,7 +6,7 @@ report_type = 'bf_cf'
 groups = []
 groups.append([
     'code',  # dim
-    ['maj', []],  # grp_name, filter
+    ['code_maj', []],  # grp_name, filter
     ])
 
 include_zeros = True
