@@ -14,7 +14,7 @@ table = {
         ],
     'indexes'       : [
         ['sls_tots_cover', [
-            ['prod_code_id', False],
+            ['prod_row_id', False],
             ['location_row_id', False],
             ['function_row_id', False],
             ['src_trantype_row_id', False],
@@ -99,10 +99,10 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'prod_code_id',
+    'col_name'   : 'prod_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Product code id',
-    'long_descr' : 'Product code id',
+    'short_descr': 'Product row id',
+    'long_descr' : 'Product row id',
     'col_head'   : 'Code',
     'key_field'  : 'A',
     'data_source': 'prog',
@@ -258,7 +258,7 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 6,
-    'scale_ptr'  : 'prod_code_id>scale',
+    'scale_ptr'  : 'prod_row_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -278,7 +278,7 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 6,
-    'scale_ptr'  : 'prod_code_id>scale',
+    'scale_ptr'  : 'prod_row_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,

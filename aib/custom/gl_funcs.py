@@ -443,11 +443,11 @@ async def finrpt_drilldown(caller, xml):
         finrpt_data['group_params'] = new_grps
 
     if level == 0:  # highest group has reached lowest level - drilldown to transactions
-        if pivot_on_date:
+        if pivot_on_date:  # each column has its own start/end dates
             start_date, end_date = pivot_val
-        else:
-            if tots:  # no row selected
-                await caller.db_obj.setval('row_id', 1)
+        else:  # each row has its own start/end dates
+            if tots:  # no row selected - all rows share the same start/end date
+                await caller.db_obj.setval('row_id', 1)  # select first row
             start_date = await caller.db_obj.getval('start_date')
             end_date = await caller.db_obj.getval('end_date')
         # breakpoint()

@@ -717,7 +717,7 @@ actions.append([
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['prod_code_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
+                ['prod_row_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
                 ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
                 ['src_tran_type', "'sls'"],
@@ -741,7 +741,7 @@ actions.append([
             None,  # condition
             False,  # split source?
             [  # key fields
-                ['prod_class_id', 'wh_prod_row_id>prod_row_id>class_row_id'],  # tgt_col, src_col
+                ['class_row_id', 'wh_prod_row_id>prod_row_id>class_row_id'],  # tgt_col, src_col
                 ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
                 ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
                 ['src_tran_type', "'sls'"],
@@ -767,7 +767,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['prod_code_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
+                ['prod_row_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
                 ['cust_row_id', 'subparent_row_id>cust_row_id'],
                 ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
                 ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],

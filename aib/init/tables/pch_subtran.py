@@ -599,7 +599,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['prod_code_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
+                ['prod_row_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
                 ['supp_row_id', 'subparent_row_id>supp_row_id'],
                 ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
                 ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
