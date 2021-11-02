@@ -582,10 +582,8 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['qty_day', '+', 'upd_qty'],  # tgt_col, op, src_col
-                ['tran_day_wh', '+', 'upd_whouse'],
+                ['tran_day_wh', '+', 'upd_whouse'],  # tgt_col, op, src_col
                 ['tran_day_loc', '+', 'upd_local'],
-                ['qty_tot', '+', 'upd_qty'],
                 ['tran_tot_wh', '+', 'upd_whouse'],
                 ['tran_tot_loc', '+', 'upd_local'],
                 ],

@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : [
         ['tran_date'],  # key fields to roll on
-        ['tran_tot']  # fields to roll
+        ['tran_tot'],  # fields to roll
         ],
     'indexes'       : [
         ['nsls_cust_uea_cover', [
@@ -305,6 +305,22 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'path_to_cust_code',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Path to cust code',
+    'long_descr' : 'Path to cust code - used in financial reports',
+    'col_head'   : 'Code',
+    'dflt_val'   : '{cust_row_id>party_row_id>party_id}',
+    })
+virt.append ({
+    'col_name'   : 'path_to_nsls_code',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Path to nsls code',
+    'long_descr' : 'Path to nsls code - used in financial reports',
+    'col_head'   : 'Code',
+    'dflt_val'   : '{nsls_code_id>nsls_code}',
+    })
 
 # cursor definitions
 cursors = []

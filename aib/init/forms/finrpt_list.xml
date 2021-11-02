@@ -62,8 +62,8 @@
         long_descr="Source table name" col_head="Table"/>
       <mem_col col_name="src_row_id" data_type="INT" short_descr="Source row id"
         long_descr="Source row id" col_head="Row id"/>
-      <mem_col col_name="ledger_code" data_type="TEXT" short_descr="Ledger code"
-        long_descr="Ledger code" col_head="Code"/>
+      <mem_col col_name="code" data_type="TEXT" short_descr="Code"
+        long_descr="Code" col_head="Code"/>
       <mem_col col_name="location_id" data_type="TEXT" short_descr="Location id"
         long_descr="Location id" col_head="Location"/>
       <mem_col col_name="function_id" data_type="TEXT" short_descr="Function id"

@@ -160,9 +160,9 @@ class FinReport:
                 src, tgt = db_table.ledger_col.split('>')  # assume only one '>'
                 tgt_table = db_table.col_dict[src].fkey[0]
                 self.sql_joins.append(
-                    f'JOIN {company}.{tgt_table} tgt ON tgt.row_id = a.{src}'
+                    f'JOIN {company}.{tgt_table} tgt_tbl ON tgt_tbl.row_id = a.{src}'
                     )
-                self.sql_where.append(f'AND tgt.{tgt} = {param}')
+                self.sql_where.append(f'AND tgt_tbl.{tgt} = {param}')
                 self.sql_params.append(self.ledger_row_id)
             else:
                 self.sql_where.append(f'AND a.{db_table.ledger_col} = {param}')
@@ -185,10 +185,6 @@ class FinReport:
 
         self.pivot_sql = []
         self.pivot_params = []
-
-        # N.B. most 'total' tables have a single 'code'
-        #      [n]sls_cust[_uea]_totals and [n]pch_supp[_uex]_totals have 2 codes
-        #      this will need special handling - how??
 
         dates = None
         for (dim, args) in group_params:
@@ -258,7 +254,7 @@ class FinReport:
 
             if isinstance(self.cflow_param, int):  # all cb - param = module_row_id
                 self.sql_where.append(
-                    f"AND NOT COALESCE(code_code.ctrl_mod_row_id, 0) = {param}"
+                    f"AND NOT COALESCE(code_code_tbl.ctrl_mod_row_id, 0) = {param}"
                     )
                 self.sql_params.append(cb_mod_row_id)
                 self.sql_where.append(
@@ -364,15 +360,6 @@ class FinReport:
 
         memobj_defn = []
         memobj_defn.append(f'<mem_obj name="{memobj_name}">')
-
-        # memobj_defn.append(
-        #     '<mem_col col_name="start_date" data_type="DTE" short_descr="Op date" '
-        #     'long_descr="Op date" col_head="Op date"/>'
-        #     )
-        # memobj_defn.append(
-        #     '<mem_col col_name="end_date" data_type="DTE" short_descr="Cl date" '
-        #     'long_descr="Cl date" col_head="Cl date"/>'
-        #     )
 
         for col_name, col_sql, col_head, data_type, lng, pvt, tot in columns:
             if data_type == 'DEC':
@@ -543,25 +530,8 @@ class FinReport:
                 self.context, date_seq, sub_args, date_params, self.ledger_row_id)
 
         if self.pivot_on is None:
-            # if report_type == 'as_at':
-            #     self.order_by.append(f"end_date{' DESC' if date_seq == 'd' else ''}")
-            # elif report_type == 'from_to':
-            #     self.order_by.append(f"start_date{' DESC' if date_seq == 'd' else ''}")
-            # elif report_type == 'bf_cf':
-            #     self.order_by.append(f"start_date{' DESC' if date_seq == 'd' else ''}")
             self.order_by.append(f"end_date{' DESC' if date_seq == 'd' else ''}")
         elif self.pivot_on[0] != 'date':
-            # if report_type == 'as_at':
-            #     self.order_by.append(f"end_date{' DESC' if date_seq == 'd' else ''}")
-            #     self.pivot_group_by.append('end_date')
-            # elif report_type == 'from_to':
-            #     self.order_by.append(f"start_date{' DESC' if date_seq == 'd' else ''}")
-            #     self.pivot_group_by.append('start_date')
-            #     self.pivot_group_by.append('end_date')
-            # elif report_type == 'bf_cf':
-            #     self.order_by.append(f"start_date{' DESC' if date_seq == 'd' else ''}")
-            #     self.pivot_group_by.append('start_date')
-            #     self.pivot_group_by.append('end_date')
             self.order_by.append(f"end_date{' DESC' if date_seq == 'd' else ''}")
             self.pivot_group_by.append('start_date')
             self.pivot_group_by.append('end_date')
@@ -576,35 +546,52 @@ class FinReport:
         # store data_colname, seq_colname, table_name for each level
         level_data = {}
     
-        # assume fkey to code table is in column 4 (after row_id, created_id, deleted_id)
-        code_col = self.db_table.col_list[3]
+        # N.B. most 'total' tables have a single 'code'
+        #      [n]sls_cust[_uea]_totals and [n]pch_supp[_uex]_totals have 2 codes
+        #      this will need special handling - how??
+
+        # path_to_code = self.db_table.path_to_tots_code.split('>')
+        path_to_code = self.db_table.col_dict['path_to_code'].dflt_val[1:-1].split('>')
+        src_alias = 'a'  # initial alias is always 'a'
+        src_table = self.db_table
+        while len(path_to_code) > 2:
+            code_col_name = path_to_code.pop(0)
+            code_col = src_table.col_dict[code_col_name]
+            # get the code table name from the fkey definition
+            code_table_name = code_col.fkey[0]
+            code_table = await db.objects.get_db_table(context, company, code_table_name)
+            tgt_alias = chr(ord(src_alias)+1)  # 'a' -> 'b' -> 'c' etc
+            self.sql_joins.append(
+                f'JOIN {company}.{code_table_name} {tgt_alias} '
+                f'ON {tgt_alias}.row_id = {src_alias}.{code_col.col_name}'
+                )
+            src_alias = tgt_alias
+            src_table = code_table
+        code_col_name = path_to_code.pop(0)
+        code_col = src_table.col_dict[code_col_name]
         # get the code table name from the fkey definition
         code_table_name = code_col.fkey[0]
-        # set up JOIN to source table (alias is always 'a')
+        code_table = await db.objects.get_db_table(context, company, code_table_name)
+        tgt_alias = 'code_code_tbl'
         self.sql_joins.append(
-            f'JOIN {company}.{code_table_name} code_code ON code_code.row_id = a.{code_col.col_name}'
+            f'JOIN {company}.{code_table_name} {tgt_alias} '
+            f'ON {tgt_alias}.row_id = {src_alias}.{code_col.col_name}'
             )
 
-        code_table = await db.objects.get_db_table(context, company, code_table_name)
         tree_params = code_table.tree_params
         if tree_params is None:
-
-            # this is hard-coded - must parameterise!
-            self.sql_joins.append(
-                f'JOIN {company}.org_parties code_party ON code_party.row_id = code_code.party_row_id'
-                )
-
-            # assume column to use is column 4 (after row_id, created_id, deleted_id) [ar_customers.party_row_id]
-            # col_name = code_table.col_list[3].col_name
-            # col_name = 'party_row_id'
-            self.part_cols.append(f'code_party.party_id AS {grp_name}')
+            code = path_to_code[0]
+            self.part_cols.append(f'code_code_tbl.{code} AS {grp_name}')
             self.group_by.append(f'{grp_name}')
             self.cf_join_bf.append(f'{grp_name}')
-            if self.pivot_on is not None:
-                if self.pivot_on[0] != 'code':
-                    self.pivot_group_by.append(f'{grp_name}')
-                    self.order_by.append(f'{grp_name}')
-            self.tot_col_name = 'tran_tot_local'
+            if self.pivot_on is None:
+                self.order_by.append(f'{grp_name}')
+            elif self.pivot_on[0] != 'code':
+                self.pivot_group_by.append(f'{grp_name}')
+                self.order_by.append(f'{grp_name}')
+            level_data['code_code'] = (
+                code, None, code_table_name, self.db_table.col_dict['path_to_code'].dflt_val[1:-1])
+            finrpt_data['code_level_data'] = level_data
             return
 
         group, col_names, levels = tree_params
@@ -659,8 +646,8 @@ class FinReport:
                 grp_seq = await grp_obj.getval('seq')
                 link_mod_id, link_ledg_id = await grp_obj.getval('link_to_subledg')
                 link_mod = await db.cache.get_mod_id(company, link_mod_id)
-                # seq_col = f'code_{grp_type}.{level_data[code_{grp_type}][1]}'
-                seq_col = f'{grp_type}.{level_data[grp_type][1]}'
+                # seq_col = f'code_{grp_type}_tbl.{level_data[code_{grp_type}][1]}'
+                seq_col = f'{grp_type}_tbl.{level_data[grp_type][1]}'
                 link_tree_params = (
                     await db.objects.get_db_table(context, company, f'{link_mod}_groups')
                     ).tree_params
@@ -716,11 +703,11 @@ class FinReport:
             cte_cols = []
             if self.links_to_subledg:
                 cte_cols.append("'code' AS type")
-            cte_cols.append(f'{grp_name}.row_id AS {grp_name}_id')
+            cte_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
             for level in reversed(levels):
                 col_name, seq_name = level_data[level][:2]
-                cte_cols.append(f'{level}.{col_name} AS {level}')
-                cte_cols.append(f'{level}.{seq_name} AS {level}_{seq_name}')
+                cte_cols.append(f'{level}_tbl.{col_name} AS {level}')
+                cte_cols.append(f'{level}_tbl.{seq_name} AS {level}_{seq_name}')
                 if self.pivot_on is None:
                     self.order_by.append(f'{level}_{seq_name}')
                 elif self.pivot_on[0] != 'code':
@@ -737,15 +724,15 @@ class FinReport:
                 link_cols = []
                 link_params = []
                 link_cols.append(f"'{link_obj.module_id}_{link_obj.ledger_row_id}' AS type")
-                link_cols.append(f'{grp_name}.row_id AS {grp_name}_id')
+                link_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
                 for level in reversed(levels):
                     col_name, seq_name = level_data[level][:2]
-                    link_cols.append(f"{level}.{col_name.replace('gl', link_obj.module_id)} AS {level}")
+                    link_cols.append(f"{level}_tbl.{col_name.replace('gl', link_obj.module_id)} AS {level}")
                     if level == link_obj.group_type:
                         seq = dbc.param_style
                         link_params.append(link_obj.group_seq)
                     else:
-                        seq = f'{level}.{seq_name}'
+                        seq = f'{level}_tbl.{seq_name}'
                     link_cols.append(f'{seq} AS {level}_{seq_name}')
                     if level == grp_name:
                         break
@@ -763,13 +750,13 @@ class FinReport:
                 joins = cte_joins
             if prev_level is None:
                 joins.append(
-                    f'JOIN {company}.{group_table_name} {level} '
-                    f'ON {level}.row_id = code_code.{link_col.col_name}'
+                    f'JOIN {company}.{group_table_name} {level}_tbl '
+                    f'ON {level}_tbl.row_id = code_code_tbl.{link_col.col_name}'
                     )
             else:
                 joins.append(
-                    f'JOIN {company}.{group_table_name} {level} '
-                    f'ON {level}.row_id = {prev_level}.{parent_id}'
+                    f'JOIN {company}.{group_table_name} {level}_tbl '
+                    f'ON {level}_tbl.row_id = {prev_level}_tbl.{parent_id}'
                     )
             prev_level = f'{level}'
 
@@ -790,8 +777,8 @@ class FinReport:
         if include_zeros:
             await self.setup_code_cte(company, cte_cols, cte_joins,
                 type_colname, levels, level_data, grp_name, filter)
-            self.part_cols.append(f'{grp_name}.row_id AS {grp_name}_id')
-            self.group_by.append(f'codes.{grp_name}_id')
+            self.part_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
+            self.group_by.append(f'codes_cte.{grp_name}_id')
         else:
             await self.setup_code_sql_without_cte(level_data, grp_name, filter)
 
@@ -801,28 +788,28 @@ class FinReport:
         order_by = []
         self.pivot_sql.append(f'SELECT {pivot_grp} FROM (')
         self.pivot_sql.append(f'SELECT')
-        self.pivot_sql.append(f'{toplevel_type}.row_id AS {toplevel_type}_id')
+        self.pivot_sql.append(f'{toplevel_type}_tbl.row_id AS {toplevel_type}_id')
         for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
-            self.pivot_sql.append(f', {lvl}.{col_name} AS {lvl}')
-            self.pivot_sql.append(f', {lvl}.{seq_name} AS {lvl}_{seq_name}')
+            self.pivot_sql.append(f', {lvl}_tbl.{col_name} AS {lvl}')
+            self.pivot_sql.append(f', {lvl}_tbl.{seq_name} AS {lvl}_{seq_name}')
             order_by.append(f'{lvl}_{seq_name}')
             if lvl == grp_name:
                 break
-        self.pivot_sql.append(f'FROM {company}.gl_groups {toplevel_type}')
+        self.pivot_sql.append(f'FROM {company}.gl_groups {toplevel_type}_tbl')
         prev_type = f'{toplevel_type}'
         for type in levels[-2::-1]:  # ignore 'toplevel', reverse order
             if prev_type == pivot_grp:
                 break
             self.pivot_sql.append(
-                f'JOIN {company}.gl_groups {type} ON {type}.{parent_id} = {prev_type}.row_id'
+                f'JOIN {company}.gl_groups {type}_tbl ON {type}_tbl.{parent_id} = {prev_type}_tbl.row_id'
                 )
             prev_type = f'{type}'
-        self.pivot_sql.append(f'WHERE {toplevel_type}.{type_colname} = {dbc.param_style}')
+        self.pivot_sql.append(f'WHERE {toplevel_type}_tbl.{type_colname} = {dbc.param_style}')
         self.pivot_params.append(toplevel_type.split('_')[1])
 
         for (test, lbr, level, op, expr, rbr) in filter:
             self.pivot_sql.append(
-                f'{test} {lbr}{level}.{level_data[level][0]} {op} {dbc.param_style}{rbr}'
+                f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}'
                 )
             if expr.startswith("'"):  # literal string
                 expr = expr[1:-1]
@@ -842,7 +829,7 @@ class FinReport:
 
         table_name = level_data[grp_name][2]
         cte_table = await db.objects.get_db_table(self.context, company, table_name)
-        cte.append(f'FROM {company}.{table_name} {grp_name}')
+        cte.append(f'FROM {company}.{table_name} {grp_name}_tbl')
 
         if cte_joins:
             cte.append(' '.join(cte_joins))
@@ -852,7 +839,7 @@ class FinReport:
         # else group is a group - select where code_grp_name = grp_name
         if levels.index(grp_name):  # > 0
             test = 'WHERE'
-            cte.append(f'{test} {grp_name}.{type_colname} = {dbc.param_style}')
+            cte.append(f'{test} {grp_name}_tbl.{type_colname} = {dbc.param_style}')
             cte_params.append(grp_name.split('_')[1])  # strip 'code' from grp_name
 
         for link_obj in self.links_to_subledg:  # if any
@@ -864,7 +851,7 @@ class FinReport:
             test = 'WHERE' if test is None else test2
             try:
                 grp_name
-                cte.append(f'{test} {lbr}{level}.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
+                cte.append(f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
             except:
                 breakpoint()
             if expr.startswith("'"):  # literal string
@@ -874,7 +861,7 @@ class FinReport:
 
         if cte_table.ledger_col is not None:
             test = 'WHERE' if test is None else 'AND'
-            cte.append(f'{test} {grp_name}.{cte_table.ledger_col} = {dbc.param_style}')
+            cte.append(f'{test} {grp_name}_tbl.{cte_table.ledger_col} = {dbc.param_style}')
             cte_params.append(self.ledger_row_id)
 
         for link_obj in self.links_to_subledg:  # if any
@@ -882,7 +869,7 @@ class FinReport:
             cte.append(', '.join(link_obj.cols))
             cte_params.extend(link_obj.params)
 
-            cte.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} {grp_name}")
+            cte.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} {grp_name}_tbl")
 
             for join in cte_joins:
                 cte.append(join.replace('gl', link_obj.module_id))
@@ -891,14 +878,14 @@ class FinReport:
             # if level is 0, group is 'code' - select all codes
             # else group is a group - select where code_grp_name = grp_name
             if levels.index(grp_name):  # > 0
-                cte.append(f'{test} {grp_name}.{link_obj.type_colname} = {dbc.param_style}')
+                cte.append(f'{test} {grp_name}_tbl.{link_obj.type_colname} = {dbc.param_style}')
                 cte_params.append(link_obj.grp_name)
                 test = 'AND'
-            cte.append(f'{test} {grp_name}.ledger_row_id = {dbc.param_style}')
+            cte.append(f'{test} {grp_name}_tbl.ledger_row_id = {dbc.param_style}')
             cte_params.append(link_obj.ledger_row_id)
 
         self.ctes.append(SN(
-            type='codes',
+            type='codes_cte',
             cte=' '.join(cte),
             cte_params=cte_params,
             join_col=f'{grp_name}_id'
@@ -907,8 +894,8 @@ class FinReport:
     async def setup_code_sql_without_cte(self, level_data, grp_name, filter):
 
         for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
-            self.part_cols.append(f'{lvl}.{col_name} AS {lvl}')
-            self.part_cols.append(f'{lvl}.{seq_name} AS {lvl}_{seq_name}')
+            self.part_cols.append(f'{lvl}_tbl.{col_name} AS {lvl}')
+            self.part_cols.append(f'{lvl}_tbl.{seq_name} AS {lvl}_{seq_name}')
             self.group_by.append(f'{lvl}')
             self.group_by.append(f'{lvl}_{seq_name}')
             if self.pivot_on is None:
@@ -924,7 +911,7 @@ class FinReport:
                 break
 
         for (test, lbr, level, op, expr, rbr) in filter:
-            self.sql_where.append(f'{test} {lbr}{level}.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
+            self.sql_where.append(f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
             if expr.startswith("'"):  # literal string
                 expr = expr[1:-1]
             self.sql_params.append(expr)
@@ -957,16 +944,12 @@ class FinReport:
         level_types = level_types[1:]  # exclude 'root'
 
         # set up level_data
-        # prev_level = None
-        # for level, descr in reversed(level_types):
         for pos, (level, descr) in enumerate(reversed(level_types)):
-            # if prev_level is None:
             if pos == 0:
                 path = link_col_name
             else:
                 path += f'>{parent_id}'
             level_data[f'{prefix}_{level}'] = (code, seq, table_name, f'{path}>{code}')
-            # prev_level = f'{prefix}_{level}'
         levels = list(level_data.keys())
 
         assert grp_name in levels, f'{grp_name} not in {levels}'
@@ -977,11 +960,11 @@ class FinReport:
             cte_joins = []
             # set up cte columns
             cte_cols = []
-            cte_cols.append(f'{grp_name}.row_id AS {grp_name}_id')
+            cte_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
             for level in reversed(levels):
                 col_name, seq_name = level_data[level][:2]
-                cte_cols.append(f'{level}.{col_name} AS {level}')
-                cte_cols.append(f'{level}.{seq_name} AS {level}_{seq_name}')
+                cte_cols.append(f'{level}_tbl.{col_name} AS {level}')
+                cte_cols.append(f'{level}_tbl.{seq_name} AS {level}_{seq_name}')
                 if self.pivot_on is None:
                     self.order_by.append(f'{level}_{seq_name}')
                 elif self.pivot_on[0] != prefix:
@@ -1003,13 +986,13 @@ class FinReport:
                 joins = cte_joins
             if prev_level is None:
                 joins.append(
-                    f'JOIN {company}.{table_name} {level} '
-                    f'ON {level}.row_id = a.{link_col_name}'
+                    f'JOIN {company}.{table_name} {level}_tbl '
+                    f'ON {level}_tbl.row_id = a.{link_col_name}'
                     )
             else:
                 joins.append(
-                    f'JOIN {company}.{table_name} {level} '
-                    f'ON {level}.row_id = {prev_level}.{parent_id}'
+                    f'JOIN {company}.{table_name} {level}_tbl '
+                    f'ON {level}_tbl.row_id = {prev_level}_tbl.{parent_id}'
                     )
             prev_level = level
 
@@ -1028,8 +1011,8 @@ class FinReport:
         if include_zeros:
             await self.setup_lf_cte(company, cte_cols, cte_joins, prefix,
                 type_colname, levels, level_data, grp_name, filter)
-            self.part_cols.append(f'{grp_name}.row_id AS {grp_name}_id')
-            self.group_by.append(f'{prefix}.{grp_name}_id')
+            self.part_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
+            self.group_by.append(f'{prefix}_cte.{grp_name}_id')
         else:
             await self.setup_lf_sql_without_cte(company, table_name,
                 prefix, levels, level_data, grp_name, parent_id, filter)
@@ -1040,28 +1023,28 @@ class FinReport:
         order_by = []
         self.pivot_sql.append(f'SELECT {pivot_grp} FROM (')
         self.pivot_sql.append(f'SELECT')
-        self.pivot_sql.append(f'{toplevel_type}.row_id AS {toplevel_type}_id')
+        self.pivot_sql.append(f'{toplevel_type}_tbl.row_id AS {toplevel_type}_id')
         for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
-            self.pivot_sql.append(f', {lvl}.{col_name} AS {lvl}')
-            self.pivot_sql.append(f', {lvl}.{seq_name} AS {lvl}_{seq_name}')
+            self.pivot_sql.append(f', {lvl}_tbl.{col_name} AS {lvl}')
+            self.pivot_sql.append(f', {lvl}_tbl.{seq_name} AS {lvl}_{seq_name}')
             order_by.append(f'{lvl}_{seq_name}')
             if lvl == grp_name:
                 break
-        self.pivot_sql.append(f'FROM {company}.{table_name} {toplevel_type}')
+        self.pivot_sql.append(f'FROM {company}.{table_name} {toplevel_type}_tbl')
         prev_type = f'{toplevel_type}'
         for type in levels[-2::-1]:  # ignore 'toplevel', reverse order
             if prev_type == pivot_grp:
                 break
             self.pivot_sql.append(
-                f'JOIN {company}.{table_name} {type} ON {type}.{parent_id} = {prev_type}.row_id'
+                f'JOIN {company}.{table_name} {type}_tbl ON {type}_tbl.{parent_id} = {prev_type}_tbl.row_id'
                 )
             prev_type = f'{type}'
-        self.pivot_sql.append(f'WHERE {toplevel_type}.{type_colname} = {dbc.param_style}')
+        self.pivot_sql.append(f'WHERE {toplevel_type}_tbl.{type_colname} = {dbc.param_style}')
         self.pivot_params.append(toplevel_type.split('_')[1])  # strip 'loc' from toplevel_type
 
         for (test, lbr, level, op, expr, rbr) in filter:
             self.pivot_sql.append(
-                f'{test} {lbr}{level}.{level_data[level][0]} {op} {dbc.param_style}{rbr}'
+                f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}'
                 )
             if expr.startswith("'"):  # literal string
                 expr = expr[1:-1]
@@ -1080,24 +1063,24 @@ class FinReport:
         cte.append(', '.join(cte_cols))
 
         table_name = level_data[grp_name][2]
-        cte.append(f'FROM {company}.{table_name} {grp_name}')
+        cte.append(f'FROM {company}.{table_name} {grp_name}_tbl')
 
         if cte_joins:
             cte.append(' '.join(cte_joins))
 
-        cte.append(f'WHERE {grp_name}.{type_colname} = {dbc.param_style}')
+        cte.append(f'WHERE {grp_name}_tbl.{type_colname} = {dbc.param_style}')
         cte_params.append(grp_name.split('_')[1])  # strip 'loc' from grp_name
 
         test = None
         for (test2, lbr, level, op, expr, rbr) in filter:
             test = 'AND' if test is None else test2  # change test to WHERE if no prior WHERE
-            cte.append(f'{test} {lbr}{level}.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
+            cte.append(f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
             if expr.startswith("'"):  # literal string
                 expr = expr[1:-1]
             cte_params.append(expr)
 
         self.ctes.append(SN(
-            type=prefix,
+            type=f'{prefix}_cte',
             cte=' '.join(cte),
             cte_params=cte_params,
             join_col=f'{grp_name}_id'
@@ -1111,13 +1094,13 @@ class FinReport:
         prev_type = f'{type}'
         for type in reversed(levels[1:-1]):  # ignore 'root' and 'leaf'
             self.sql_joins.append(
-                f'JOIN {company}.{table_name} {type} ON {type}.row_id = {prev_type}.{parent_id}'
+                f'JOIN {company}.{table_name} {type}_tbl ON {type}_tbl.row_id = {prev_type}_tbl.{parent_id}'
                 )
             prev_type = f'{type}'
 
         for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
-            self.part_cols.append(f'{lvl}.{col_name} AS {lvl}')
-            self.part_cols.append(f'{lvl}.{seq_name} AS {lvl}_{seq_name}')
+            self.part_cols.append(f'{lvl}_tbl.{col_name} AS {lvl}')
+            self.part_cols.append(f'{lvl}_tbl.{seq_name} AS {lvl}_{seq_name}')
             self.group_by.append(f'{lvl}')
             self.group_by.append(f'{lvl}_{seq_name}')
             if self.pivot_on is None:
@@ -1132,7 +1115,7 @@ class FinReport:
 
         for (test, lbr, level, op, expr, rbr) in filter:
             self.sql_where.append(
-                f'{test} {lbr}{level}.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
+                f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
             if expr.startswith("'"):  # literal string
                 expr = expr[1:-1]
             self.sql_params.append(expr)
@@ -1141,9 +1124,9 @@ class FinReport:
         grp_name, filter = args
         company = self.context.company
 
-        self.sql_joins.append(f'JOIN {company}.adm_tran_types src ON src.row_id = a.src_trantype_row_id')
-        self.part_cols.append('src.tran_type AS src_type')
-        self.part_cols.append('src.row_id AS src_id')
+        self.sql_joins.append(f'JOIN {company}.adm_tran_types src_tbl ON src_tbl.row_id = a.src_trantype_row_id')
+        self.part_cols.append('src_tbl.tran_type AS src_type')
+        self.part_cols.append('src_tbl.row_id AS src_id')
         self.group_by.append('src_type')
         self.group_by.append('src_id')
         if self.pivot_on is None:
@@ -1155,7 +1138,7 @@ class FinReport:
         self.cf_join_bf.append('src_id')
 
         for (test, lbr, col_name, op, expr, rbr) in filter:
-            self.sql_where.append(f'{test} {lbr}src.{col_name} {op} {dbc.param_style}{rbr}')
+            self.sql_where.append(f'{test} {lbr}src_tbl.{col_name} {op} {dbc.param_style}{rbr}')
             if expr.startswith("'"):  # literal string
                 expr = expr[1:-1]
             self.sql_params.append(expr)
@@ -1217,7 +1200,7 @@ class FinReport:
                 if 'code_' not in where:  # omit 'code' filter, include other filters
                     part_sql.append(where)
                     sql_params.append(self.sql_params[pos])
-            part_sql.append(f'AND code_code.ledger_row_id = {dbc.param_style}')
+            part_sql.append(f'AND code_code_tbl.ledger_row_id = {dbc.param_style}')
             sql_params.append(link_obj.ledger_row_id)
         else:
             part_sql.append(f'SELECT a.{self.tot_col_name} AS tran_tot')
@@ -1247,7 +1230,7 @@ class FinReport:
                 on_clause = 'AND'
             if self.links_to_subledg:
                 link_val = 'code' if link_obj is None else f'{link_obj.module_id}_{link_obj.ledger_row_id}'
-                part_sql.append(f'{on_clause} codes.type = {dbc.param_style}')
+                part_sql.append(f'{on_clause} codes_cte.type = {dbc.param_style}')
                 sql_params.append(link_val)
 
         part_sql.append(f"WHERE row_num = 1{' OR row_num IS NULL' if self.ctes else ''}")
@@ -1310,7 +1293,7 @@ class FinReport:
                 if 'code_' not in where:  # omit 'code' filter, include other filters
                     part_sql.append(where)
                     sql_params.append(self.sql_params[pos])
-            part_sql.append(f'AND code_code.ledger_row_id = {dbc.param_style}')
+            part_sql.append(f'AND code_code_tbl.ledger_row_id = {dbc.param_style}')
             sql_params.append(link_obj.ledger_row_id)
         else:
             part_sql.append(f'SELECT a.{self.tot_col_name} AS tran_tot')
@@ -1376,7 +1359,7 @@ class FinReport:
                 on_clause = 'AND'
             if self.links_to_subledg:
                 link_val = 'code' if link_obj is None else f'{link_obj.module_id}_{link_obj.ledger_row_id}'
-                part_sql.append(f'{on_clause} codes.type = {dbc.param_style}')
+                part_sql.append(f'{on_clause} codes_cte.type = {dbc.param_style}')
                 sql_params.append(link_val)
 
         if self.group_by:
@@ -1453,7 +1436,7 @@ class FinReport:
                 if 'code_' not in where:  # omit 'code' filter, include other filters
                     part_sql.append(where)
                     sql_params.append(self.sql_params[pos])
-            part_sql.append(f'AND code_code.ledger_row_id = {dbc.param_style}')
+            part_sql.append(f'AND code_code_tbl.ledger_row_id = {dbc.param_style}')
             sql_params.append(link_obj.ledger_row_id)
         else:
             part_sql.append(f'SELECT a.{self.tot_col_name} AS tran_tot')
@@ -1483,7 +1466,7 @@ class FinReport:
                 on_clause = 'AND'
             if self.links_to_subledg:
                 link_val = 'code' if link_obj is None else f'{link_obj.module_id}_{link_obj.ledger_row_id}'
-                part_sql.append(f'{on_clause} codes.type = {dbc.param_style}')
+                part_sql.append(f'{on_clause} codes_cte.type = {dbc.param_style}')
                 sql_params.append(link_val)
 
         part_sql.append(f"WHERE row_num = 1{' OR row_num IS NULL' if self.ctes else ''}")
@@ -1536,7 +1519,7 @@ class FinReport:
                 if 'code_' not in where:  # omit 'code' filter, include other filters
                     part_sql.append(where)
                     sql_params.append(self.sql_params[pos])
-            part_sql.append(f'AND code_code.ledger_row_id = {dbc.param_style}')
+            part_sql.append(f'AND code_code_tbl.ledger_row_id = {dbc.param_style}')
             sql_params.append(link_obj.ledger_row_id)
         else:
             part_sql.append(f'SELECT a.{self.tot_col_name} AS tran_tot')
@@ -1566,7 +1549,7 @@ class FinReport:
                 on_clause = 'AND'
             if self.links_to_subledg:
                 link_val = 'code' if link_obj is None else f'{link_obj.module_id}_{link_obj.ledger_row_id}'
-                part_sql.append(f'{on_clause} codes.type = {dbc.param_style}')
+                part_sql.append(f'{on_clause} codes_cte.type = {dbc.param_style}')
                 sql_params.append(link_val)
 
         part_sql.append(f"WHERE row_num = 1{' OR row_num IS NULL' if self.ctes else ''}")
@@ -1614,7 +1597,7 @@ class FinReport:
                 on_clause = 'AND'
             if self.links_to_subledg:
                 link_val = 'code' if link_obj is None else f'{link_obj.module_id}_{link_obj.ledger_row_id}'
-                sql.append(f'{on_clause} codes.type = {dbc.param_style}')
+                sql.append(f'{on_clause} codes_cte.type = {dbc.param_style}')
                 sql_params.append(link_val)
 
     def gen_sql(self, report_type, columns, dates):

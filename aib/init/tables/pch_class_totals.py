@@ -10,11 +10,12 @@ table = {
     'tree_params'   : None,
     'roll_params'   : [
         ['tran_date'],  # key fields to roll on
-        ['qty_tot', 'pchs_tot']  # fields to roll
+        # ['qty_tot', 'pchs_tot'],  # fields to roll
+        ['pchs_tot'],  # fields to roll
         ],
     'indexes'       : [
         ['pch_class_tots_cover', [
-            ['prod_class_id', False],
+            ['class_row_id', False],
             ['location_row_id', False],
             ['function_row_id', False],
             ['src_trantype_row_id', False],
@@ -97,11 +98,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'prod_class_id',
+    'col_name'   : 'class_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Product class id',
     'long_descr' : 'Product class id',
-    'col_head'   : 'Class',
+    'col_head'   : 'Class id',
     'key_field'  : 'A',
     'data_source': 'prog',
     'condition'  : None,
@@ -326,6 +327,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'path_to_code',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Path to code',
+    'long_descr' : 'Path to code - used in financial reports',
+    'col_head'   : 'Code',
+    'dflt_val'   : '{class_row_id>prod_class}',
+    })
 
 # cursor definitions
 cursors = []

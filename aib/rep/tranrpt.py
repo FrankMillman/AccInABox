@@ -20,8 +20,9 @@ class TranReport:
 
         # if expand_subledg is True, need to show subledger code, not gl code
         # this sets up a dictionary that is used below
+        expand_subledg = finrpt_data['expand_subledg']
         links_to_subledg = {}
-        if module_id == 'gl' and finrpt_data['expand_subledg']:
+        if module_id == 'gl' and expand_subledg:
             grp_obj = await db.objects.get_db_object(context, 'gl_groups')
             where = [['WHERE', '', 'link_to_subledg', 'IS NOT', None, '']]
             all_grp = grp_obj.select_many(where=where, order=[])
@@ -47,7 +48,7 @@ class TranReport:
 
         for group in finrpt_data['group_params']:
             dim, args = group
-            if dim == 'code' and module_id != 'gl':
+            if dim == 'code' and expand_subledg and module_id != 'gl':
                 level_data_key = f'{module_id}_{ledger_row_id}_level_data'
             else:
                 level_data_key = f'{dim}_level_data'
@@ -60,7 +61,6 @@ class TranReport:
                 grp_name, filter = args
                 for (test, lbr, col_name, op, expr, rbr) in filter:
                     where.append([test, lbr, 'src_trantype_row_id>tran_type', op, expr, rbr])
-
         all_sql = []
         all_params = []
 
@@ -99,12 +99,11 @@ class TranReport:
                             group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'code']
                             if group:
                                 filter = group[0][1][1]  # [[dim, [grp_name, filter]]]
-                                # breakpoint()
-                                if module_id == 'gl' or not finrpt_data['expand_subledg']:
-                                    level_data = finrpt_data['code_level_data']
-                                else:
+                                if expand_subledg and module_id != 'gl':
                                     level_data = finrpt_data[f'{module_id}_{ledger_row_id}_level_data']
                                     where.append(['AND', '', f'{src}>ledger_row_id', '=', ledger_row_id, ''])
+                                else:
+                                    level_data = finrpt_data['code_level_data']
                                 for (test, lbr, level, op, expr, rbr) in filter:
                                     col_name = level_data[level][-1]
                                     pos = col_name.find('>')
@@ -116,13 +115,38 @@ class TranReport:
                                 sub_upd_on_post = [x for x in upd_on_post
                                     if x[0] == tbl_name.replace('gl', subledg)][0]  # e.g. 'nsls_totals'
                                 sub_src = sub_upd_on_post[3][0][1]  # src portion of first key field
-                                col_names.append(f'{sub_src}>{subledg}_code|ledger_code')
+                                col_names.append(f'{sub_src}>{subledg}_code|code')
                             elif tgt == 'ledger_row_id':
                                 col_names.append(f'{src}>ledger_id|ledger_id')
                                 where.append(['AND', '', src, '=', ledger_row_id, ''])
                             else:
-                                col_names.append(f'{src}>{module_id}_code|ledger_code')
-                            # breakpoint()
+                                # path_to_code = tots_table.path_to_tots_code
+                                path_to_code = tots_table.col_dict['path_to_code'].dflt_val[1:-1]
+                                if '>' not in src:
+                                    col_name = path_to_code
+                                elif '>' not in path_to_code:
+                                    print('HERE')  # do we get here?
+                                    col_name = src
+                                else:
+                                    # construct col_name by combining src and path_to_code
+                                    # usually the last part of src == the first part of path
+                                    #   e.g. in ar_subtran_rec -> gl_totals
+                                    #        src = cust_row_id>ledger_row_id>gl_code_id
+                                    #        path = gl_code_id>gl_code
+                                    #   the result is the same whether we use src + path[1:]
+                                    #        or src[:-1] + path
+                                    #   col_name = cust_row_id>ledger_row_id>gl_code_id>gl_code
+                                    # but sometimes they are not equal
+                                    #   e.g. in ar_subtran_rec -> gl_totals where rec_tran_src = 'ar'
+                                    #        src = cust_row_id>ledger_row_id>gl_rec_code_id
+                                    #        path = gl_code_id>gl_code
+                                    #   in this case it is important to use src + path[1:]
+                                    #   col_name = cust_row_id>ledger_row_id>gl_rec_code_id>gl_code
+                                    # therefore do not change the next line!
+                                    col_name = '>'.join(
+                                        src.split('>') +
+                                        path_to_code.split('>')[1:])
+                                col_names.append(f'{col_name}|code')
                         # elif tgt == 'location_row_id':
                         elif pos == 1:  # location_row_id
                             if finrpt_data['single_location'] is not None:
@@ -199,7 +223,6 @@ class TranReport:
             #     tot_value += await tranrpt_obj.getval('value')
 
             rows = await conn.fetchall(sql, all_params)
-            # breakpoint()
             tot_value = sum(_[-1] for _ in rows)
 
             conn_mem = db_mem_conn.mem
@@ -217,7 +240,7 @@ class TranReport:
                 col_lngs.append(0)
             elif col_name == 'src_row_id':
                 col_lngs.append(0)
-            elif col_name == 'ledger_code':
+            elif col_name == 'code':
                 col_lngs.append(80)
             elif col_name == 'location_id':
                 if await tranrpt_obj.getval('_param.location_row_id') is None:

@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : [
         ['tran_date'],  # key fields to roll on
-        ['qty_tot', 'sales_tot', 'cos_tot']  # fields to roll
+        ['qty_tot', 'sales_tot', 'cos_tot'],  # fields to roll
         ],
     'indexes'       : [
         ['sls_tots_cover', [
@@ -368,6 +368,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'path_to_code',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Path to code',
+    'long_descr' : 'Path to code - used in financial reports',
+    'col_head'   : 'Code',
+    'dflt_val'   : '{prod_row_id>prod_code}',
+    })
 
 # cursor definitions
 cursors = []

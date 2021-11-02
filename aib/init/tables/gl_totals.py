@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : [
         ['tran_date'],  # key fields to roll on
-        ['tran_tot']  # fields to roll
+        ['tran_tot'],  # fields to roll
         ],
     'indexes'       : [
         ['gl_tots_cover', [
@@ -284,6 +284,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'path_to_code',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Path to code',
+    'long_descr' : 'Path to code - used in financial reports',
+    'col_head'   : 'Code',
+    'dflt_val'   : '{gl_code_id>gl_code}',
+    })
 virt.append ({
     'col_name'   : 'balance',
     'data_type'  : '$LCL',

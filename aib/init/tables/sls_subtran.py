@@ -702,9 +702,7 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['qty_day', '-', 'upd_qty'],  # tgt_col, op, src_col
-                ['qty_tot', '-', 'upd_qty'],
-                ['tran_day_wh', '-', 'upd_cost_wh'],
+                ['tran_day_wh', '-', 'upd_cost_wh'],  # tgt_col, op, src_col
                 ['tran_tot_wh', '-', 'upd_cost_wh'],
                 ['tran_day_loc', '-', 'upd_cost'],
                 ['tran_tot_loc', '-', 'upd_cost'],
@@ -750,9 +748,7 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['qty_day', '+', 'upd_qty'],  # tgt_col, op, src_col
-                ['qty_tot', '+', 'upd_qty'],
-                ['sales_day', '+', 'upd_local'],
+                ['sales_day', '+', 'upd_local'],  # tgt_col, op, src_col
                 ['sales_tot', '+', 'upd_local'],
                 ['cos_day', '+', 'upd_cost'],
                 ['cos_tot', '+', 'upd_cost'],
