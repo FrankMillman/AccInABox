@@ -120,7 +120,6 @@ class TranReport:
                                 col_names.append(f'{src}>ledger_id|ledger_id')
                                 where.append(['AND', '', src, '=', ledger_row_id, ''])
                             else:
-                                # path_to_code = tots_table.path_to_tots_code
                                 path_to_code = tots_table.col_dict['path_to_code'].dflt_val[1:-1]
                                 if '>' not in src:
                                     col_name = path_to_code
@@ -147,6 +146,13 @@ class TranReport:
                                         src.split('>') +
                                         path_to_code.split('>')[1:])
                                 col_names.append(f'{col_name}|code')
+                                if module_id != 'gl':
+                                    ledger_col = tots_table.ledger_col
+                                    if '>' in ledger_col:
+                                        ledger_col = '>'.join(
+                                            src.split('>') +
+                                            ledger_col.split('>')[1:])
+                                    where.append(['AND', '', ledger_col, '=', ledger_row_id, ''])
                         # elif tgt == 'location_row_id':
                         elif pos == 1:  # location_row_id
                             if finrpt_data['single_location'] is not None:

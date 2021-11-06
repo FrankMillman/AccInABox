@@ -19,6 +19,12 @@ table = {
                     ],
                 ['nsls_code_id>descr'],  # display descr
                 ],
+            ['npch', 'Non-inventory item', 'npch_subtran',
+                [  # return values
+                    ['jnl_amt', 'tot_amt'],  # tgt_col, src_col
+                    ],
+                ['npch_code_id>descr'],  # display descr
+                ],
             ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values
                     ['jnl_amt', 'gl_amount'],  # tgt_col, src_col
@@ -219,6 +225,14 @@ virt.append ({
     'sql'        : '$True',
     })
 virt.append ({
+    'col_name'   : 'rev_sign_pch',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign - purchase transactions?',
+    'col_head'   : 'Reverse sign?',
+    'sql'        : '$False',
+    })
+virt.append ({
     'col_name'   : 'rev_sign_gl',
     'data_type'  : 'BOOL',
     'short_descr': 'Reverse sign?',
@@ -307,6 +321,14 @@ virt.append ({
     'col_head'   : 'Posted?',
     'dflt_val'   : '{tran_row_id>posted}',
     'sql'        : "a.tran_row_id>posted"
+    })
+virt.append ({
+    'col_name'   : 'supp_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Supp row id',
+    'long_descr' : 'Supplier row id - this is only here to satisfy diag.py',
+    'col_head'   : 'Supp',
+    'sql'        : "NULL",
     })
 virt.append ({
     'col_name'   : 'jnl_local',

@@ -497,8 +497,8 @@ actions.append([
                 ['due_date', '=', 'tran_date'],
                 ['supp_row_id', '=', 'supp_row_id'],
                 ['tran_date', '=', 'tran_date'],
-                ['amount_supp', '-', 'jnl_amt'],
-                ['amount_local', '-', 'jnl_local'],
+                ['amount_supp', '+', 'jnl_amt'],
+                ['amount_local', '+', 'jnl_local'],
                 ],
             [],  # on unpost
             # [  # return values

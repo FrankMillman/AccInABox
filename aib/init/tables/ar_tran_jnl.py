@@ -538,8 +538,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'jnl_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'jnl_local'],
+                ['tran_day', '-', 'jnl_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'jnl_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -558,10 +558,10 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cust', '+', 'jnl_amt'],  # tgt_col, op, src_col
-                ['tran_tot_cust', '+', 'jnl_amt'],
-                ['tran_day_local', '+', 'jnl_local'],
-                ['tran_tot_local', '+', 'jnl_local'],
+                ['tran_day_cust', '-', 'jnl_amt'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '-', 'jnl_amt'],
+                ['tran_day_local', '-', 'jnl_local'],
+                ['tran_tot_local', '-', 'jnl_local'],
                 ],
             [],  # on post
             [],  # on unpost

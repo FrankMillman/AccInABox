@@ -30,7 +30,13 @@ cash flow for all module_id = 9 [cb]
 
 SELECT * FROM gl_totals WHERE ctrl_mod != 9 AND orig_mod = 9
 UNION ALL
-SELECT * FROM gl_totals WHERE ctrl_mod = 9 AND orig_mod != 9  # can never happen! not required
+SELECT * FROM gl_totals WHERE ctrl_mod = 9 AND orig_mod != 9  # can never happen! not required (see below *)
+
+* it can never happen where module_id = 'cb', because other modules cannot post *to* cb
+  BUT
+  if this concept is applied to other modules, such as ap/ar, it *can* happen,
+    because other modules can post to ap/ar
+
 """
 
 

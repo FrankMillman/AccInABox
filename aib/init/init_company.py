@@ -686,6 +686,8 @@ async def setup_finrpts(context, conn):
         'ap_supp_pivot_src',
         'ap_loc_pivot_src',
         'cb_pivot_src',
+        'npch_pivot_date',
+        'nsls_pivot_date',
         'npch_per',
         'nsls_per',
         'npch_uex_code_src',

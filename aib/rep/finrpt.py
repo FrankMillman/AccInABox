@@ -550,7 +550,6 @@ class FinReport:
         #      [n]sls_cust[_uea]_totals and [n]pch_supp[_uex]_totals have 2 codes
         #      this will need special handling - how??
 
-        # path_to_code = self.db_table.path_to_tots_code.split('>')
         path_to_code = self.db_table.col_dict['path_to_code'].dflt_val[1:-1].split('>')
         src_alias = 'a'  # initial alias is always 'a'
         src_table = self.db_table
@@ -1314,9 +1313,9 @@ class FinReport:
 
             if isinstance(self.cflow_param, tuple):  # single cb - (module_row_id, ledger_row_id)
                 cb_mod_row_id, cb_ledg_row_id = self.cflow_param
-                part_sql.append(f"AND NOT (COALESCE(code_code.ctrl_mod_row_id, 0) = {dbc.param_style}")
+                part_sql.append(f"AND NOT (COALESCE(code_code_tbl.ctrl_mod_row_id, 0) = {dbc.param_style}")
                 sql_params.append(cb_mod_row_id)
-                part_sql.append(f"AND COALESCE(code_code.ctrl_ledg_row_id, 0) = {dbc.param_style})")
+                part_sql.append(f"AND COALESCE(code_code_tbl.ctrl_ledg_row_id, 0) = {dbc.param_style})")
                 sql_params.append(cb_ledg_row_id)
                 part_sql.append(f"AND (orig_trantype.module_row_id = {dbc.param_style}")
                 sql_params.append(cb_mod_row_id)
@@ -1341,9 +1340,9 @@ class FinReport:
                 part_sql.extend(self.sql_where)
                 sql_params.extend(self.sql_params)
 
-                part_sql.append(f"AND (code_code.ctrl_mod_row_id = {dbc.param_style}")
+                part_sql.append(f"AND (code_code_tbl.ctrl_mod_row_id = {dbc.param_style}")
                 sql_params.append(cb_mod_row_id)
-                part_sql.append(f"AND code_code.ctrl_ledg_row_id = {dbc.param_style})")
+                part_sql.append(f"AND code_code_tbl.ctrl_ledg_row_id = {dbc.param_style})")
                 sql_params.append(cb_ledg_row_id)
                 part_sql.append(f"AND NOT (orig_trantype.module_row_id = {dbc.param_style}")
                 sql_params.append(cb_mod_row_id)

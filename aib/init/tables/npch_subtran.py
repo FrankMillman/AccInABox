@@ -121,6 +121,7 @@ cols.append ({
             ['ap_crn', 'ap_tran_crn_det'],
             ['ap_jnl', 'ap_tran_jnl_det'],
             ['ap_disc', 'ap_tran_disc'],
+            ['ar_jnl', 'ar_tran_jnl_det'],
             ['cb_rec', 'cb_tran_rec_det'],
             ['cb_pmt', 'cb_tran_pmt_det'],
             ['gl_jnl', 'gl_tran_jnl_det'],
@@ -172,6 +173,9 @@ cols.append ({
           '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ap~`, ``]]">'
             '<fld_val name="subparent_row_id>supp_row_id>location_row_id"/>'
           '</compare>'
+          '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ar~`, ``]]">'
+            '<fld_val name="subparent_row_id>cust_row_id>location_row_id"/>'
+          '</compare>'
         '</case>'
         ),
     'col_checks' : [
@@ -209,6 +213,9 @@ cols.append ({
           '</compare>'
           '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ap~`, ``]]">'
             '<fld_val name="subparent_row_id>supp_row_id>function_row_id"/>'
+          '</compare>'
+          '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~ar~`, ``]]">'
+            '<fld_val name="subparent_row_id>cust_row_id>function_row_id"/>'
           '</compare>'
         '</case>'
         ),
