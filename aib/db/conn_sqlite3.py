@@ -300,15 +300,8 @@ async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
 
     await self.exec_cmd(sql, vals)
     data_row_id = self.lastrowid  # automatically returned by sqlite3
-
     fld._value = data_row_id
-    for child in fld.children:
-        child._value = data_row_id
 
-    # if not db_obj.mem_obj:  # always add 'created_id' - [2017-01-14]
-    # what was the reason for the above? [2017-07-20]
-    # it causes a problem with tables like inv_wh_prod_unposted, or any split_src table
-    # these can be deleted on the fly and recreated, leaving dangling audit trail entries
     if not db_obj.mem_obj and not from_upd_on_save:
 
         cols = ['data_row_id', 'user_row_id', 'date_time', 'type']

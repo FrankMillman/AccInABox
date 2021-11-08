@@ -952,32 +952,8 @@ class Field:
         return self._value_
     def _set_value(self, value):
         if value != self._value_:
-            # next block works 99% of the time, but ...
-            #   if self is db_tables.row_id, and child is db_actions.table_id,
-            #     we want db_actions to call select_row()
-            # it will if we use 'await setval()', but cannot mix @property and async :-(
-            # fixed by -
-            #   removing block below
-            #   adding
-            #       for child in self.children:
-            #           child._value = value
-            #           if child.table_keys:
-            #               await child.read_row(value, display)
-            #     to db.objects.on_row_selected()
-            #   adding
-            #       for child in self.children:
-            #           child._value = None
-            #     to db.objects.init()
-            #   adding
-            #       for child in self.children:
-            #           child._value = value
-            #     to conn.mssql/pgsql/sqlite3
-            #   any other places? don't know
-            # tried to add 'assert child._value == value' here,
-            #   but hit recursion limit if child has a table_key/fkey
-            # Monitor
-            # for child in self.children:
-            #     child._value = value
+            for child in self.children:
+                child._value = value
             for fld in self.flds_to_recalc:
                 fld.must_be_evaluated = True
             self._value_ = value

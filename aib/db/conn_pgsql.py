@@ -103,13 +103,7 @@ async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
 
     fld = await db_obj.getfld('row_id')
     fld._value = data_row_id
-    for child in fld.children:
-        child._value = data_row_id
 
-    # if True:  # always add 'created_id' - [2017-01-14]
-    # what was the reason for the above? [2017-07-20]
-    # it causes a problem with tables like inv_wh_prod_unposted, or any split_src table
-    # these can be deleted on the fly and recreated, leaving dangling audit trail entries
     if not from_upd_on_save:
 
         cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
@@ -226,121 +220,7 @@ async def delete_row(self, db_obj, from_upd_on_save):
         await self.exec_cmd(sql, key_vals)
 
 async def convert_sql(self, sql, params=None):
-    # PostgreSQL sorts NULLs last, sqlite3 and Sql Server sort them first
-    # this adds NULLS FIRST to each PostgreSQL ORDER BY clause for compatibility
-    # if sorting in descending sequence, use NULLS LAST
-
     sql = sql.replace('$True', 'true').replace('$False', 'false')
-
-    if 'ORDER BY' not in sql.upper():
-        return sql, params
-
-    # this fails on finrpt int_pivot_date [2021-09-16]
-    # run without it for a while and see if we actually need it!
-    return sql, params
-
-    skip_expr = 0  # counter to check for brackets around expressions - can incr/decr
-    skip_case = 0  # counter to check for CASE ... END - use counter in case nested
-    skip_text = False  # flag to check for literal text (in case it contains ORDER BY)
-    def text_start(word):  # function to check for start of text
-        for s in ("'", "('", ",'"):  # any others?
-            if word.startswith(s):
-                return True
-        return False
-    def text_end(word):  # function to check for end of text
-        for e in ("'", "')", "',", '\n'):  # any others?
-            if word.endswith(e):
-                return True
-        return False
-    sqlist = sql.split(' ')  # must specify ' ' to avoid collapsing whitespace
-    found = 0  # looking for ORDER BY
-    pos = 0
-    max = len(sqlist)
-    while pos < max:
-        word = sqlist[pos].upper()
-        pos += 1  # increment now, as there are many continuation points
-        if skip_text:
-            if text_end(word):
-                skip_text = False
-            continue
-        if text_start(word):
-            if not text_end(word):
-                skip_text = True
-            continue
-        if word == 'ORDER':
-            found = 1
-            continue
-        if found == 1:
-            if word == 'BY':
-                found = 2
-            else:  # can this happen?
-                found = 0
-            continue
-        if found == 2:
-            # in the following, pos has already been incremented
-            # therefore sqlist[pos-1] is where 'word' is taken from
-            if word == '':  # 'a..b'.split('.') gives['a', '', 'b']
-                continue
-            if word == ',':
-                continue
-            if word == '||':
-                continue
-            skip_expr += word.count('(')  # check for expression enclosed in brackets
-            skip_expr -= word.count(')')  # brackets can be spread over multiple 'words'
-            if skip_expr:
-                continue
-            if ',' in word:  # 'a,b,c' -> 'a NULLS FIRST, b NULLS FIRST, c'
-                sqlist[pos-1] = ' NULLS FIRST,'.join(sqlist[pos-1].split(','))
-                continue
-            if word == 'CASE':
-                skip_case += 1
-                continue
-            if skip_case:
-                if word == 'END':
-                    skip_case -= 1
-                if skip_case:
-                    continue
-            if pos == max:  # on last word
-                sqlist[pos-1] = f'{sqlist[pos-1]} NULLS FIRST'
-                continue
-            next_word = sqlist[pos].upper()
-            if next_word == '||':
-                continue
-            if next_word == 'ASC':
-                sqlist[pos] = f'{sqlist[pos]} NULLS FIRST'
-                pos += 1
-                if pos < max:
-                    if not sqlist[pos].startswith(','):
-                        found = 0
-            elif next_word == 'ASC,':
-                sqlist[pos] = f'{sqlist[pos][:-1]} NULLS FIRST,'
-                pos += 1
-            elif next_word == 'ASC)':
-                sqlist[pos] = f'{sqlist[pos][:-1]} NULLS FIRST)'
-                pos += 1
-                if pos < max:
-                    if not sqlist[pos].startswith(','):
-                        found = 0
-            elif next_word == 'DESC':
-                sqlist[pos] = f'{sqlist[pos]} NULLS LAST'
-                pos += 1
-                if pos < max:
-                    if not sqlist[pos].startswith(','):
-                        found = 0
-            elif next_word == 'DESC,':
-                sqlist[pos] = f'{sqlist[pos][:-1]} NULLS LAST,'
-                pos += 1
-            elif next_word == 'DESC)':
-                sqlist[pos] = f'{sqlist[pos][:-1]} NULLS LAST)'
-                pos += 1
-                if pos < max:
-                    if not sqlist[pos].startswith(','):
-                        found = 0
-            else:
-                sqlist[pos-1] = f'{sqlist[pos-1]} NULLS FIRST'
-                if not sqlist[pos].startswith(','):
-                    found = 0
-    sql = ' '.join(sqlist)
     return sql, params
 
 def convert_string(self, string, db_scale=None, text_key=False):

@@ -144,13 +144,7 @@ async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
 
     fld = await db_obj.getfld('row_id')
     fld._value = data_row_id
-    for child in fld.children:
-        child._value = data_row_id
 
-    #   if True:  # always add 'created_id' - [2017-01-14]
-    #   what was the reason for the above? [2017-07-20]
-    #   it causes a problem with tables like inv_wh_prod_unposted, or any split_src table
-    #   these can be deleted on the fly and recreated, leaving dangling audit trail entries
     if not from_upd_on_save:
 
         cols = ['data_row_id', 'user_row_id', 'date_time', 'type']

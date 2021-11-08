@@ -991,7 +991,9 @@ class DbObject:
 
         if not self.view_obj:  # 'view' does not have 'row_id'
             row_id_fld = self.fields['row_id']
-            if row_id_fld.children:  # populate child values with row_id value
+            if row_id_fld.children:
+                # check for 1-1 relationship (e.g. tran_det -> subtran, db_tables -> db_actions)
+                # if True (child has table_keys), read in child row
                 if self.sub_trans:  # if sub_trans, only populate active sub_tran
                     children = []
                     for subtran_col in self.sub_trans:
@@ -1005,7 +1007,6 @@ class DbObject:
                     children = row_id_fld.children
                 row_id_val = await row_id_fld.getval()
                 for child in children:
-                    child._value = row_id_val
                     if child.table_keys:  # if child has table_keys, read in the child row
                         await child.read_row(row_id_val, display)
 
@@ -1048,8 +1049,6 @@ class DbObject:
             if self.exists:
                 fld._prev = fld._value
             fld._value = None
-            for child in fld.children:
-                child._value = None
             if fld.foreign_key:
                 if fld.fkey_parent is None:
                     foreign_keys = await self.get_foreign_key(fld, all=True)
