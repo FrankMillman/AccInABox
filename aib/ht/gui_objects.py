@@ -551,6 +551,7 @@ gui_ctrls = {
     'PWD'   : (GuiTextCtrl),
     'INT'   : (GuiNumCtrl),
     'DEC'   : (GuiNumCtrl),
+    '$QTY'  : (GuiNumCtrl),
     '$TRN'  : (GuiNumCtrl),
     '$PTY'  : (GuiNumCtrl),
     '$LCL'  : (GuiNumCtrl),

@@ -134,7 +134,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'min_qty',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Minimum quantity',
     'long_descr' : 'Minimum quantity',
     'col_head'   : 'Min qty',
@@ -154,7 +154,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'reorder_qty',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Re-order quantity',
     'long_descr' : 'Quantity to re-order if available quantity drops below minimum quantity',
     'col_head'   : 'Reorder qty',

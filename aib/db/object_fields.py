@@ -361,8 +361,6 @@ class Field:
                 else:
                     raise RuntimeError('More than one row found')
 
-        value = await self.check_val(value)
-
         # print('-'*20)
         # print(f'{self.table_name}.{self.col_name}')
         # print(sql)
@@ -1037,80 +1035,6 @@ class Json(Text):
         #   we would not be able to detect if it was changed
         return deepcopy(self._value)
 
-    # def serialise(self, value):
-    #     # simple serialiser to handle date objects
-    #     # if any are found, they will be converted into a string using repr -
-    #     #   'datetime.date(y, m, d)'
-    #     # ditto for Decimal objects
-    #     return dumps(value, default=repr)
-
-    # def deserialise(self, value):
-    #     # simple deserialiser to handle date objects
-    #     # assumes that any string starting with 'datetime.date(' is a date object
-    #     # also handles Decimal objects - string starting with 'Decimal('
-    #     def deserialise_list(value):
-    #         # for pos, val in enumerate(value):
-    #         #     if isinstance(val, str):
-    #         #         if val.startswith('datetime.date('):
-    #         #             value[pos] = dt(*map(int, val[14:-1].split(',')))
-    #         #         elif val.startswith('Decimal('):
-    #         #             value[pos] = D(val[9:-2])
-    #         #     elif isinstance(val, list):
-    #         #         deserialise_list(val)
-    #         #     elif isinstance(val, dict):
-    #         #         deserialise_dict(val)
-    #         new_val = []
-    #         for val in value:
-    #             if isinstance(val, str):
-    #                 if val.startswith('datetime.date('):
-    #                     new_val.append(dt(*map(int, val[14:-1].split(','))))
-    #                 elif val.startswith('Decimal('):
-    #                     new_val.append(D(val[9:-2]))
-    #                 else:
-    #                     new_val.append(val)
-    #             elif isinstance(val, list):
-    #                 new_val.append(deserialise_list(val))
-    #             elif isinstance(val, dict):
-    #                 new_val.append(deserialise_dict(val))
-    #             else:  # e.g. None
-    #                 new_val.append(val)
-    #         return new_val
-    #     def deserialise_dict(value):
-    #         # for key, val in value.items():
-    #         #     if isinstance(val, str):
-    #         #         if val.startswith('datetime.date('):
-    #         #             value[key] = dt(*map(int, val[14:-1].split(',')))
-    #         #         elif val.startswith('Decimal('):
-    #         #             value[key] = D(val[9:-2])
-    #         #     elif isinstance(val, list):
-    #         #         deserialise_list(val)
-    #         #     elif isinstance(val, dict):
-    #         #         deserialise_dict(val)
-    #         new_val = {}
-    #         for key, val in value.items():
-    #             if key.isdigit():  # JSON converts integer keys to strings
-    #                 key = int(key)  # this *assumes* that all 'integer' strings should be converted back
-    #             if isinstance(val, str):
-    #                 if val.startswith('datetime.date('):
-    #                     new_val[key] = dt(*map(int, val[14:-1].split(',')))
-    #                 elif val.startswith('Decimal('):
-    #                     new_val[key] = D(val[9:-2])
-    #                 else:
-    #                     new_val[key] = val
-    #             elif isinstance(val, list):
-    #                 new_val[key] = deserialise_list(val)
-    #             elif isinstance(val, dict):
-    #                 new_val[key] = deserialise_dict(val)
-    #             else:  # e.g. None
-    #                 new_val[key] = val
-    #         return new_val
-    #     value = loads(value)
-    #     if isinstance(value, list):
-    #         value = deserialise_list(value)
-    #     elif isinstance(value, dict):
-    #         value = deserialise_dict(value)
-    #     return value
-
     async def get_dflt(self, from_init=False):
         dflt_val = await Field.get_dflt(self, from_init)
         if dflt_val is None:
@@ -1736,6 +1660,7 @@ DATA_TYPES = {
     'PWD'  :Password,
     'INT'  :Integer,
     'DEC'  :Decimal,
+    '$QTY' :Decimal,
     '$TRN' :Decimal,
     '$PTY' :Decimal,
     '$LCL' :Decimal,

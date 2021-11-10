@@ -205,6 +205,7 @@ cols.append ({
             ['TEXT', 'Text'],
             ['INT', 'Integer'],
             ['DEC', 'Decimal'],
+            ['$QTY', 'Quantity'],
             ['$TRN', 'Transaction currency'],
             ['$PTY', 'Party currency'],
             ['$LCL', 'Local currency'],

@@ -122,7 +122,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'alloc_qty',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Allocated quantity',
     'long_descr' : 'Quantity allocated to order/invoice, not yet posted',
     'col_head'   : 'Alloc qty',

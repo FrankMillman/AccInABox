@@ -194,7 +194,7 @@ async def load_ye_per(caller, xml):
             for fin_per in fin_periods[1:]}
 
     if context.module_id in ('nsls', 'npch'):
-        mod, ledg = 8, 0  # use 'gl' periods (not thought through!)
+        mod, ledg = 8, 0  # use 'gl' periods (not thought through!) does not work if no gl integration!
     else:
         mod, ledg = context.module_row_id, context.ledger_row_id
     ledger_periods = await db.cache.get_ledger_periods(context.company, mod, ledg)

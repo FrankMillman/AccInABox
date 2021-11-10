@@ -266,7 +266,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'qty_day',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Purchase qty - daily total',
     'long_descr' : 'Purchase quantity - daily total',
     'col_head'   : 'Qty day',
@@ -286,7 +286,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'qty_tot',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Purchase qty - accum total',
     'long_descr' : 'Purchase quantity - accumulated total',
     'col_head'   : 'Qty tot',

@@ -189,6 +189,7 @@ cols.append ({
             ['PWD', 'Password'],
             ['INT', 'Integer'],
             ['DEC', 'Decimal'],
+            ['$QTY', 'Quantity'],
             ['$TRN', 'Transaction currency'],
             ['$PTY', 'Party currency'],
             ['$LCL', 'Local currency'],

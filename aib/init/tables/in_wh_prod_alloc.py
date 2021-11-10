@@ -145,7 +145,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'qty',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Quantity',
     'long_descr' : 'Quantity',
     'col_head'   : 'Qty',

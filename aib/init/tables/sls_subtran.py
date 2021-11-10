@@ -154,7 +154,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'qty',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Quantity',
     'long_descr' : 'Quantity',
     'col_head'   : 'Qty',
@@ -337,7 +337,7 @@ cols.append ({
 virt = []
 virt.append ({
     'col_name'   : 'qty_available',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Quantity available',
     'long_descr' : 'Quantity available',
     'col_head'   : 'Qty avail',
@@ -449,7 +449,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'upd_qty',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Signed quantity',
     'long_descr' : 'Quantity - pos for inv, neg for crn',
     'col_head'   : 'Qty',

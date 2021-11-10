@@ -230,6 +230,7 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('DTE', 'DATE')
         .replace('DTM', 'TIMESTAMP')
         .replace('DEC', f'DEC (21,{db_scale})')
+        .replace('$QTY', f'DEC (21,{db_scale})')
         .replace('$TRN', f'DEC (21,{db_scale})')
         .replace('$PTY', f'DEC (21,{db_scale})')
         .replace('$LCL', f'DEC (21,{db_scale})')

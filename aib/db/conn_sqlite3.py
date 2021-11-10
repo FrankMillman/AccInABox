@@ -476,6 +476,7 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('DTE', 'DATE')
         .replace('DTM', 'TIMESTAMP')
         .replace('DEC', f'REAL{db_scale}')  # to allow correct rounding when reading back
+        .replace('$QTY', f'REAL{db_scale}')
         .replace('$TRN', f'REAL{db_scale}')
         .replace('$PTY', f'REAL{db_scale}')
         .replace('$LCL', f'REAL{db_scale}')

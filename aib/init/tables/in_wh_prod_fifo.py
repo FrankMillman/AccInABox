@@ -122,7 +122,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'orig_qty',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Orig qty',
     'long_descr' : 'Original quantity',
     'col_head'   : 'Orig qty',
@@ -182,7 +182,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'alloc_qty',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Alloc quantity',
     'long_descr' : 'Allocated quantity',
     'col_head'   : 'Alloc qty',
@@ -255,7 +255,7 @@ virt.append ({
 """
 virt.append ({
     'col_name'   : 'balance_qty',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Balance',
     'long_descr' : 'Balance outstanding - whouse currency',
     'col_head'   : 'Balance',
@@ -316,7 +316,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'unalloc_qty',
-    'data_type'  : 'DEC',
+    'data_type'  : '$QTY',
     'short_descr': 'Unallocated quantity',
     'long_descr' : 'Unallocated quantity',
     'col_head'   : 'Unalloc qty',

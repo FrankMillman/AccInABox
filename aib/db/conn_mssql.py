@@ -369,6 +369,7 @@ def convert_string(self, string, db_scale=None, text_key=False):
         # DATETIME2 is accurate to 100ns, so compatible with datetime.datetime type
         .replace('DTM', 'DATETIME2')
         .replace('DEC', f'DEC (21,{db_scale})')
+        .replace('$QTY', f'DEC (21,{db_scale})')
         .replace('$TRN', f'DEC (21,{db_scale})')
         .replace('$PTY', f'DEC (21,{db_scale})')
         .replace('$LCL', f'DEC (21,{db_scale})')
