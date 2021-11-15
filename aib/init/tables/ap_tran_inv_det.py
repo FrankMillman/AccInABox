@@ -9,29 +9,29 @@ table = {
         ['line_type', 'display_descr', [
             ['pch', 'Inventory item', 'pch_subtran',
                 [  # return values
-                    ['inv_net_amt', 'net_amt'],  # tgt_col, src_col
-                    ['inv_tax_amt', 'tax_amt'],
-                    ['inv_tax_local', 'tax_local'],
+                    ['inv_net_amt', '-net_amt'],  # tgt_col, src_col
+                    ['inv_tax_amt', '-tax_amt'],
+                    ['inv_tax_local', '-tax_local'],
                     ],
                 ['wh_prod_row_id>prod_row_id>prod_code'],  # display descr
                 ],
             ['npch', 'Non-inventory item', 'npch_subtran',
                 [  # return values
-                    ['inv_net_amt', 'net_amt'],  # tgt_col, src_col
-                    ['inv_tax_amt', 'tax_amt'],
-                    ['inv_tax_local', 'tax_local'],
+                    ['inv_net_amt', '-net_amt'],  # tgt_col, src_col
+                    ['inv_tax_amt', '-tax_amt'],
+                    ['inv_tax_local', '-tax_local'],
                     ],
                 ['npch_code_id>descr'],  # display descr
                 ],
             ['arjnl', 'Ar journal', 'ar_subtran_jnl',
                 [  # return values
-                    ['inv_net_amt', 'jnl_amount'],  # tgt_col, src_col
+                    ['inv_net_amt', '-jnl_amount'],  # tgt_col, src_col
                     ],
                 ['cust_row_id>party_row_id>display_name'],  # display descr
                 ],
             ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values
-                    ['inv_net_amt', 'gl_amount'],  # tgt_col, src_col
+                    ['inv_net_amt', '-gl_amount'],  # tgt_col, src_col
                     ],
                 ['gl_code'],  # display descr
                 ],
@@ -178,7 +178,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'inv_net_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Net amount',
     'long_descr' : 'Net amount - updated when subtran is saved',
     'col_head'   : 'Net amt',
@@ -198,7 +198,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'inv_tax_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Tax amount',
     'long_descr' : 'Tax amount - updated when subtran is saved',
     'col_head'   : 'Tax amt',
@@ -218,7 +218,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'inv_tax_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Invoice tax local',
     'long_descr' : 'Invoice tax amount in local currency - updated when subtran is saved',
     'col_head'   : 'Inv tax local',
@@ -262,22 +262,6 @@ virt.append ({
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger',
     'sql'        : 'a.tran_row_id>ledger_row_id',
-    })
-virt.append ({
-    'col_name'   : 'rev_sign_pch',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - purchase transactions?',
-    'col_head'   : 'Reverse sign?',
-    'sql'        : '$False',
-    })
-virt.append ({
-    'col_name'   : 'rev_sign_gl',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - gl transactions?',
-    'col_head'   : 'Reverse sign?',
-    'sql'        : '$False',
     })
 virt.append ({
     'col_name'   : 'display_descr',
@@ -363,8 +347,16 @@ virt.append ({
     'sql'        : "a.tran_row_id>posted"
     })
 virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : '<literal value="$True"/>',
+    })
+virt.append ({
     'col_name'   : 'inv_tot_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Total amount',
     'long_descr' : 'Line amount in transaction currency',
     'col_head'   : 'Tot amt',
@@ -382,7 +374,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'inv_net_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Invoice net local',
     'long_descr' : 'Invoice net amount in local currency',
     'col_head'   : 'Inv net local',

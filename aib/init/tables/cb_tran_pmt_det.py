@@ -9,44 +9,44 @@ table = {
         ['line_type', 'display_descr', [
             ['pch', 'Purchase of inventory item', 'pch_subtran',
                 [  # return values
-                    ['pmt_tran', 'tot_amt'],  # tgt_col, src_col
+                    ['pmt_tran', '-tot_amt'],  # tgt_col, src_col
                     ],
                 ['wh_prod_row_id>prod_row_id>prod_code'],  # display descr
                 ],
             ['npch', 'Purchase of non-inventory item', 'npch_subtran',
                 [  # return values
-                    ['pmt_tran', 'tot_amt'],  # tgt_col, src_col
+                    ['pmt_tran', '-tot_amt'],  # tgt_col, src_col
                     ],
                 ['npch_code_id>descr'],  # display descr
                 ],
             # ['nsls', 'Refund of non-inventory item', 'nsls_subtran',
             #     [  # return values
-            #         ['pmt_tran', 'tot_amt'],  # tgt_col, src_col
+            #         ['pmt_tran', '-tot_amt'],  # tgt_col, src_col
             #         ],
             #     ['nsls_code_id>descr'],  # display descr
             #     ],
             ['ar_jnl', 'Ar journal', 'ar_subtran_jnl',
                 [  # return values
-                    ['pmt_tran', 'jnl_amount'],  # tgt_col, src_col
+                    ['pmt_tran', '-jnl_amount'],  # tgt_col, src_col
                     ],
                 # ['cust_row_id>party_row_id>display_name'],  # display descr
                 ['cust_id'],  # display descr
                 ],
             ['ap_pmt', 'Ap payment', 'ap_subtran_pmt',
                 [  # return values
-                    ['pmt_tran', 'pmt_amount'],  # tgt_col, src_col
+                    ['pmt_tran', '-pmt_amount'],  # tgt_col, src_col
                     ],
                 ['supp_id'],  # display descr
                 ],
             ['ar_pmt', 'Ar payment', 'ar_subtran_pmt',
                 [  # return values
-                    ['pmt_tran', 'pmt_amount'],  # tgt_col, src_col
+                    ['pmt_tran', '-pmt_amount'],  # tgt_col, src_col
                     ],
                 ['cust_id'],  # display descr
                 ],
             ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values
-                    ['pmt_tran', 'gl_amount'],  # tgt_col, src_col
+                    ['pmt_tran', '-gl_amount'],  # tgt_col, src_col
                     ],
                 ['gl_code'],  # display descr
                 ],
@@ -190,7 +190,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'pmt_tran',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Pmt amount in tran currency',
     'long_descr' : 'Payment amount - updated when subtran is saved',
     'col_head'   : 'Pmt amt',
@@ -227,14 +227,6 @@ virt.append ({
     'col_head'   : 'Module',
     'sql'        : "'cb'",
     })
-# virt.append ({
-#     'col_name'   : 'module_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Module row id',
-#     'long_descr' : 'Module row id',
-#     'col_head'   : 'Module row id',
-#     'sql'        : 'a.tran_row_id>module_row_id',
-#     })
 virt.append ({
     'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
@@ -250,30 +242,6 @@ virt.append ({
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger',
     'sql'        : 'a.tran_row_id>ledger_row_id',
-    })
-virt.append ({
-    'col_name'   : 'rev_sign_sls',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - sales transactions?',
-    'col_head'   : 'Reverse sign?',
-    'sql'        : '$True',
-    })
-virt.append ({
-    'col_name'   : 'rev_sign_pch',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - purchase transactions?',
-    'col_head'   : 'Reverse sign?',
-    'sql'        : '$False',
-    })
-virt.append ({
-    'col_name'   : 'rev_sign_gl',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - gl transactions?',
-    'col_head'   : 'Reverse sign?',
-    'sql'        : '$False',
     })
 virt.append ({
     'col_name'   : 'display_descr',
@@ -330,6 +298,14 @@ virt.append ({
     'sql'        : 'a.tran_row_id>tran_exch_rate',
     })
 virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : '<literal value="$True"/>',
+    })
+virt.append ({
     'col_name'   : 'tax_incl',
     'data_type'  : 'BOOL',
     'short_descr': 'Tax inclusive',
@@ -365,7 +341,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'pmt_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Pmt amt local',
     'long_descr' : 'Payment amount in local currency',
     'col_head'   : 'Pmt local',

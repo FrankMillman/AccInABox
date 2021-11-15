@@ -53,9 +53,7 @@
         <body>
 
           <block/>
-          <subtran_frame subtran_obj="ap_det" subtran_col="line_type">
-            <subtran_body subtran_id="apmt"/>
-          </subtran_frame>
+          <subtran_frame subtran_obj="ap_det" subtran_col="line_type"/>
 
         </body>
         <button_row template="Grid_Frame_Grid_RO"/>

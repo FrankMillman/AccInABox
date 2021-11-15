@@ -232,55 +232,9 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'module_id',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Module',
-#     'long_descr' : 'Module id',
-#     'col_head'   : '',
-#     'sql'        : "'in'",
-#     })
-# virt.append ({
-#     'col_name'   : 'module_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Module row id',
-#     'long_descr' : 'Module row id',
-#     'col_head'   : '',
-#     'sql'        : "SELECT b.row_id FROM {company}.db_modules b WHERE b.module_id = 'in'",
-#     })
-"""
-virt.append ({
-    'col_name'   : 'wh_code',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Warehouse code',
-    'long_descr' : 'Warehouse code',
-    'col_head'   : 'Wh code',
-    'sql'        : 'SELECT a.ledger_id',
-    })
-virt.append ({
-    'col_name'   : 'name',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Warehouse name',
-    'long_descr' : 'Warehouse name',
-    'col_head'   : 'Name',
-    'sql'        : 'SELECT a.descr',
-    })
-"""
 
 # cursor definitions
 cursors = []
-"""
-cursors.append({
-    'cursor_name': 'in_ledg',
-    'descr': 'Warehouses',
-    'columns': [
-        ['ledger_id', 100, False, False],
-        ['descr', 260, True, True],
-        ],
-    'filter': [],
-    'sequence': [['ledger_id', False]],
-    })
-"""
 cursors.append({
     'cursor_name': 'whouse',
     'title': 'Maintain warehouse params',

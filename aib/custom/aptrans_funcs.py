@@ -208,10 +208,11 @@ async def get_tot_alloc(db_obj, fld, src):
         tran_type = 'ap_subpmt'
 
     sql = (
-        'SELECT SUM(alloc_supp) AS "[REAL2]", SUM(discount_supp) AS "[REAL2]", '
-        'SUM(alloc_local) AS "[REAL2]", SUM(discount_local) AS "[REAL2]" '
-        f'FROM {db_obj.company}.ap_allocations '
-        f'WHERE tran_type = {tran_type!r} AND tran_row_id = {row_id} AND deleted_id = 0'
+        'SELECT SUM(a.alloc_supp) AS "[REAL2]", SUM(a.discount_supp) AS "[REAL2]", '
+        'SUM(a.alloc_local) AS "[REAL2]", SUM(a.discount_local) AS "[REAL2]" '
+        f'FROM {db_obj.company}.ap_allocations a '
+        f'JOIN {db_obj.company}.adm_tran_types b ON b.row_id = a.trantype_row_id '
+        f'WHERE b.tran_type = {tran_type!r} AND a.tran_row_id = {row_id} AND a.deleted_id = 0'
         )
 
     async with db_obj.context.db_session.get_connection() as db_mem_conn:

@@ -1,3 +1,4 @@
+
 # table definition
 table = {
     'table_name'    : 'cb_tran_tfr_out',
@@ -323,7 +324,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tfr_amount',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Amount transferred - cb curr',
     'long_descr' : 'Amount transferred in cb currency',
     'col_head'   : 'Amt tfrd cb',
@@ -343,7 +344,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tgt_amount',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Amount transferred - tgt curr',
     'long_descr' : 'Amount transferred in target currency',
     'col_head'   : 'Amt tfrd cb',
@@ -389,7 +390,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tfr_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Amount transferred - loc curr',
     'long_descr' : 'Amount transferred in local currency',
     'col_head'   : 'Tfr loc',
@@ -472,14 +473,6 @@ virt.append ({
     'col_head'   : 'Tran type row id',
     'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'cb_tfr_out'",
     })
-# virt.append ({
-#     'col_name'   : 'src_text',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Text',
-#     'long_descr' : 'Line of text to appear on reports',
-#     'col_head'   : 'Src text',
-#     'sql'        : "'Transfer to ' || a.tgt_party",
-#     })
 virt.append ({
     'col_name'   : 'tgt_text',
     'data_type'  : 'TEXT',
@@ -495,62 +488,14 @@ virt.append ({
         ),
     # 'sql'        : "'Transfer from ' || a.party",
     })
-# virt.append ({
-#     'col_name'   : 'tgt_local',
-#     'data_type'  : '$LCL',
-#     'short_descr': 'Amount transferred - loc curr',
-#     'long_descr' : 'Amount transferred in local currency',
-#     'col_head'   : 'Amt tfrd cb',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_rule'  : (
-#         '<expr>'
-#             '<literal value="0"/>'
-#             '<op type="-"/>'
-#             '<fld_val name="tfr_local"/>'
-#         '</expr>'
-#         ),
-#     })
-# virt.append ({
-#     'col_name'   : 'view_src_cb',
-#     'data_type'  : '$PTY',
-#     'short_descr': 'Amount tfrd out - cb curr',
-#     'long_descr' : 'Amount transferred out - cb currency',
-#     'col_head'   : 'Src cb',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
-#     'sql'        : "0 - a.tfr_amount",
-#     })
-# virt.append ({
-#     'col_name'   : 'view_tgt_cb',
-#     'data_type'  : '$PTY',
-#     'short_descr': 'Amount tfrd in - cb curr',
-#     'long_descr' : 'Amount transferred in - cb currency',
-#     'col_head'   : 'Tgt cb',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
-#     'sql'        : "a.tgt_amount",
-#     })
-# virt.append ({
-#     'col_name'   : 'view_src_local',
-#     'data_type'  : '$LCL',
-#     'short_descr': 'Amount tfrd out - local curr',
-#     'long_descr' : 'Amount transferred out - local currency',
-#     'col_head'   : 'Src loc',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'sql'        : "0 - a.tfr_local",
-#     })
-# virt.append ({
-#     'col_name'   : 'view_tgt_local',
-#     'data_type'  : '$LCL',
-#     'short_descr': 'Amount tfrd in - local curr',
-#     'long_descr' : 'Amount transferred in - local currency',
-#     'col_head'   : 'Tgt loc',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'sql'        : "a.tfr_local",
-#     })
+virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : '<literal value="$True"/>',
+    })
 
 # cursor definitions
 cursors = []
@@ -599,8 +544,8 @@ actions.append([
                 ['tran_date', '=', 'tran_date'],
                 ['party', '=', 'target_id'],
                 ['text', '=', 'tgt_text'],
-                ['tfr_amount', '=', 'tgt_amount'],
-                ['tfr_local', '=', 'tfr_local'],
+                ['tfr_amount', '=', '-tgt_amount'],
+                ['tfr_local', '=', '-tfr_local'],
                 ],
             [],  # on update
             [],  # on delete
@@ -623,36 +568,14 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cb', '-', 'tfr_amount'],  # tgt_col, op, src_col
-                ['tran_tot_cb', '-', 'tfr_amount'],
-                ['tran_day_local', '-', 'tfr_local'],
-                ['tran_tot_local', '-', 'tfr_local'],
+                ['tran_day_cb', '+', 'tfr_amount'],  # tgt_col, op, src_col
+                ['tran_tot_cb', '+', 'tfr_amount'],
+                ['tran_day_local', '+', 'tfr_local'],
+                ['tran_tot_local', '+', 'tfr_local'],
                 ],
             [],  # on post
             [],  # on unpost
             ],
-        # [
-        #     'cb_totals',  # table name
-        #     None,  # condition
-        #     False,  # split source?
-        #     [  # key fields
-        #         ['ledger_row_id', 'tgt_ledg_row_id'],  # tgt_col, src_col
-        #         ['location_row_id', 'tgt_ledg_row_id>location_row_id'],
-        #         ['function_row_id', 'tgt_ledg_row_id>function_row_id'],
-        #         ['src_trantype_row_id', 'trantype_row_id'],
-        #         ['orig_trantype_row_id', 'trantype_row_id'],
-        #         ['orig_ledger_row_id', 'ledger_row_id'],
-        #         ['tran_date', 'tran_date'],
-        #         ],
-        #     [  # aggregation
-        #         ['tran_day_cb', '+', 'tgt_amount'],  # tgt_col, op, src_col
-        #         ['tran_tot_cb', '+', 'tgt_amount'],
-        #         ['tran_day_local', '+', 'tfr_local'],
-        #         ['tran_tot_local', '+', 'tfr_local'],
-        #         ],
-        #     [],  # on post
-        #     [],  # on unpost
-        #     ],
         [
             'gl_totals',  # table name
             [  # condition
@@ -669,33 +592,11 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'tfr_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'tfr_local'],
+                ['tran_day', '+', 'tfr_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'tfr_local'],
                 ],
             [],  # on post
             [],  # on unpost
             ],
-        # [
-        #     'gl_totals',  # table name
-        #     [  # condition
-        #         ['where', '', '_param.gl_integration', 'is', '$True', ''],
-        #         ],
-        #     False,  # split source?
-        #     [  # key fields
-        #         ['gl_code_id', 'tgt_ledg_row_id>gl_code_id'],  # tgt_col, src_col
-        #         ['location_row_id', 'tgt_ledg_row_id>location_row_id'],
-        #         ['function_row_id', 'tgt_ledg_row_id>function_row_id'],
-        #         ['src_trantype_row_id', 'trantype_row_id'],
-        #         ['orig_trantype_row_id', 'trantype_row_id'],
-        #         ['orig_ledger_row_id', 'ledger_row_id'],
-        #         ['tran_date', 'tran_date'],
-        #         ],
-        #     [  # aggregation
-        #         ['tran_day', '+', 'tfr_local'],  # tgt_col, op, src_col
-        #         ['tran_tot', '+', 'tfr_local'],
-        #         ],
-        #     [],  # on post
-        #     [],  # on unpost
-        #     ],
         ],
     ])

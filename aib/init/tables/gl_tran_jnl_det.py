@@ -161,7 +161,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'jnl_amt',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Journal amount',
     'long_descr' : 'Journal amount - updated when subtran is saved',
     'col_head'   : 'Jnl amt',
@@ -197,6 +197,14 @@ virt.append ({
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger row id',
     'sql'        : "'1'",
+    })
+virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : '<literal value="$False"/>',
     })
 virt.append ({
     'col_name'   : 'cust_row_id',
@@ -248,30 +256,6 @@ virt.append ({
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger row id',
     'sql'        : '0',
-    })
-virt.append ({
-    'col_name'   : 'rev_sign_gl',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - gl transactions?',
-    'col_head'   : 'Reverse sign?',
-    'sql'        : '$False',
-    })
-virt.append ({
-    'col_name'   : 'rev_sign_sls',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - sales transactions?',
-    'col_head'   : 'Reverse sign?',
-    'sql'        : '$True',
-    })
-virt.append ({
-    'col_name'   : 'rev_sign_pch',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - pch transactions?',
-    'col_head'   : 'Reverse sign?',
-    'sql'        : '$False',
     })
 virt.append ({
     'col_name'   : 'display_descr',

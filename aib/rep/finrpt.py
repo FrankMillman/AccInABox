@@ -1174,7 +1174,7 @@ class FinReport:
 
         first_partition_col = self.db_table.col_list[3].col_name
         if link_obj:
-            part_sql.append(f"SELECT {'0-' if link_obj.module_id == 'nsls' else ''}a.{self.tot_col_name} AS tran_tot")
+            part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
             part_cols = []
             for part_col in self.part_cols:
                 part_col = part_col.replace(
@@ -1270,7 +1270,7 @@ class FinReport:
         part_sql.append('(')
 
         if link_obj:
-            part_sql.append(f"SELECT {'0-' if link_obj.module_id == 'nsls' else ''}a.{self.tot_col_name} AS tran_tot")
+            part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
             part_cols = []
             for part_col in self.part_cols:
                 part_col = part_col.replace(
@@ -1410,7 +1410,7 @@ class FinReport:
 
         first_partition_col = self.db_table.col_list[3].col_name
         if link_obj:
-            part_sql.append(f"SELECT {'0-' if link_obj.module_id == 'nsls' else ''}a.{self.tot_col_name} AS tran_tot")
+            part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
             part_cols = []
             for part_col in self.part_cols:
                 part_col = part_col.replace(
@@ -1493,7 +1493,7 @@ class FinReport:
         part_sql.append('(')
 
         if link_obj:
-            part_sql.append(f"SELECT {'0-' if link_obj.module_id == 'nsls' else ''}a.{self.tot_col_name} AS tran_tot")
+            part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
             part_cols = []
             for part_col in self.part_cols:
                 part_col = part_col.replace(

@@ -296,17 +296,6 @@ virt.append ({
         "END"
         ),
     })
-# virt.append ({
-#     'col_name'   : 'loc_root_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Row id of loc root element',
-#     'long_descr' : 'Row id of root element for adm_locations',
-#     'col_head'   : '',
-#     'sql'        : (
-#         "SELECT row_id FROM {company}.adm_locations "
-#         "WHERE parent_id IS NULL AND deleted_id = 0"
-#         ),
-#     })
 virt.append ({
     'col_name'   : 'function_row_id',
     'data_type'  : 'INT',
@@ -321,17 +310,6 @@ virt.append ({
         "END"
         ),
     })
-# virt.append ({
-#     'col_name'   : 'fun_root_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Row id of fun root element',
-#     'long_descr' : 'Row id of root element for adm_functions',
-#     'col_head'   : '',
-#     'sql'        : (
-#         "SELECT row_id FROM {company}.adm_functions "
-#         "WHERE parent_id IS NULL AND deleted_id = 0"
-#         ),
-#     })
 virt.append ({
     'col_name'   : 'gl_group_row_id',
     'data_type'  : 'INT',

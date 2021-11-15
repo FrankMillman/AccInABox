@@ -215,7 +215,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'discount_cust',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Discount cust',
     'long_descr' : 'Discount amount in customer currency',
     'col_head'   : 'Disc cust',
@@ -235,7 +235,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'discount_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Discount local',
     'long_descr' : 'Discount amount in local currency',
     'col_head'   : 'Disc local',
@@ -255,7 +255,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'disc_net_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Discount net amount',
     'long_descr' : 'Discount net amount in transaction currency - updated from nsls_subtran',
     'col_head'   : 'Disc net amt',
@@ -275,7 +275,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'disc_tax_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Discount tax amount',
     'long_descr' : 'Discount tax amount in transaction currency - updated from nsls_subtran',
     'col_head'   : 'Disc tax amt',
@@ -295,7 +295,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'disc_tax_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Cr note tax local',
     'long_descr' : 'Cr note tax amount in local currency - updated from nsls_subtran',
     'col_head'   : 'Disc tax local',
@@ -315,7 +315,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'disc_net_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Cr note net local',
     'long_descr' : 'Cr note net amount in local currency',
     'col_head'   : 'Crn net local',
@@ -412,12 +412,12 @@ virt.append ({
     'sql'        : "'ar'",
     })
 virt.append ({
-    'col_name'   : 'rev_sign_sls',
+    'col_name'   : 'rev_sign',
     'data_type'  : 'BOOL',
     'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - sales transactions?',
+    'long_descr' : 'Reverse sign?',
     'col_head'   : 'Reverse sign?',
-    'sql'        : '$True',
+    'dflt_rule'  : '<literal value="$True"/>',
     })
 virt.append ({
     'col_name'   : 'tax_incl',
@@ -436,7 +436,8 @@ virt.append ({
     'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
     'sql'        : (
         "SELECT b.row_id FROM {company}.ar_openitems b "
-        "WHERE b.tran_type = 'ar_disc' AND b.tran_row_id = a.row_id "
+        "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
+        "WHERE c.tran_type = 'ar_disc' AND b.tran_row_id = a.row_id "
         "AND b.split_no = 0 AND b.deleted_id = 0"
         ),
     })
@@ -449,27 +450,9 @@ virt.append ({
     'dflt_val'   : '{cust_row_id>currency_id}',
     'sql'        : 'a.cust_row_id>currency_id',
     })
-# virt.append ({
-#     'col_name'   : 'disc_net_local',
-#     'data_type'  : '$LCL',
-#     'short_descr': 'Invoice net local',
-#     'long_descr' : 'Invoice net amount in local currency',
-#     'col_head'   : 'Inv net local',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#           '<fld_val name="disc_net_amt"/>'
-#           '<op type="/"/>'
-#           '<fld_val name="tran_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'sql'        : "a.disc_net_amt / a.tran_exch_rate",
-#     })
 virt.append ({
     'col_name'   : 'disc_tot_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Total amount',
     'long_descr' : 'Cr note total amount in transaction currency',
     'col_head'   : 'Tot amt',
@@ -487,7 +470,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'disc_tot_cust',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Total amount cust',
     'long_descr' : 'Total amount in customer currency',
     'col_head'   : 'Tot amt',
@@ -505,7 +488,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'disc_tot_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Total amount local',
     'long_descr' : 'Total amount in local currency',
     'col_head'   : 'Tot amt',
@@ -568,8 +551,8 @@ actions.append([
                 ['due_date', '=', 'tran_date'],
                 ['cust_row_id', '=', 'cust_row_id'],
                 ['tran_date', '=', 'tran_date'],
-                ['amount_cust', '-', 'disc_tot_amt'],
-                ['amount_local', '-', 'disc_tot_local'],
+                ['amount_cust', '=', 'disc_tot_amt'],
+                ['amount_local', '=', 'disc_tot_local'],
                 ],
             [],  # on unpost
             [  # return values
@@ -605,34 +588,12 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'disc_tot_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'disc_tot_local'],
+                ['tran_day', '+', 'disc_tot_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'disc_tot_local'],
                 ],
             [],  # on post
             [],  # on unpost
             ],
-        # [
-        #     'ar_totals',  # table name
-        #     [  # condition
-        #         ['where', '', 'disc_tax_local', '!=', '0', ''],
-        #         ],
-        #     False,  # split source?
-        #     [  # key fields
-        #         ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
-        #         ['location_row_id', 'location_row_id'],
-        #         ['function_row_id', 'function_row_id'],
-        #         ['src_trantype_row_id', 'trantype_row_id'],
-        #         ['orig_trantype_row_id', 'trantype_row_id'],
-        #         ['orig_ledger_row_id', 'ledger_row_id'],
-        #         ['tran_date', 'tran_date'],
-        #         ],
-        #     [  # aggregation
-        #         ['tran_day', '-', 'disc_tax_local'],  # tgt_col, op, src_col
-        #         ['tran_tot', '-', 'disc_tax_local'],
-        #         ],
-        #     [],  # on post
-        #     [],  # on unpost
-        #     ],
         [
             'ar_cust_totals',  # table name
             None,  # condition
@@ -647,38 +608,14 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cust', '-', 'disc_tot_amt'],  # tgt_col, op, src_col
-                ['tran_tot_cust', '-', 'disc_tot_amt'],
-                ['tran_day_local', '-', 'disc_tot_local'],
-                ['tran_tot_local', '-', 'disc_tot_local'],
+                ['tran_day_cust', '+', 'disc_tot_amt'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '+', 'disc_tot_amt'],
+                ['tran_day_local', '+', 'disc_tot_local'],
+                ['tran_tot_local', '+', 'disc_tot_local'],
                 ],
             [],  # on post
             [],  # on unpost
             ],
-        # [
-        #     'ar_cust_totals',  # table name
-        #     [  # condition
-        #         ['where', '', 'disc_tax_local', '!=', '0', ''],
-        #         ],
-        #     False,  # split source?
-        #     [  # key fields
-        #         ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
-        #         ['location_row_id', 'location_row_id'],
-        #         ['function_row_id', 'function_row_id'],
-        #         ['src_trantype_row_id', 'trantype_row_id'],
-        #         ['orig_trantype_row_id', 'trantype_row_id'],
-        #         ['orig_ledger_row_id', 'ledger_row_id'],
-        #         ['tran_date', 'tran_date'],
-        #         ],
-        #     [  # aggregation
-        #         ['tran_day_cust', '-', 'disc_tax_amt'],  # tgt_col, op, src_col
-        #         ['tran_tot_cust', '-', 'disc_tax_amt'],
-        #         ['tran_day_local', '-', 'disc_tax_local'],
-        #         ['tran_tot_local', '-', 'disc_tax_local'],
-        #         ],
-        #     [],  # on post
-        #     [],  # on unpost
-        #     ],
         [
             'gl_totals',  # table name
             [  # condition
@@ -695,34 +632,11 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'disc_tot_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'disc_tot_local'],
+                ['tran_day', '+', 'disc_tot_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'disc_tot_local'],
                 ],
             [],  # on post
             [],  # on unpost
             ],
-        # [
-        #     'gl_totals',  # table name
-        #     [  # condition
-        #         ['where', '', '_param.gl_integration', 'is', '$True', ''],
-        #         ['and', '', 'disc_tax_local', '!=', '0', ''],
-        #         ],
-        #     False,  # split source?
-        #     [  # key fields
-        #         ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
-        #         ['location_row_id', 'location_row_id'],
-        #         ['function_row_id', 'function_row_id'],
-        #         ['src_trantype_row_id', 'trantype_row_id'],
-        #         ['orig_trantype_row_id', 'trantype_row_id'],
-        #         ['orig_ledger_row_id', 'ledger_row_id'],
-        #         ['tran_date', 'tran_date'],
-        #         ],
-        #     [  # aggregation
-        #         ['tran_day', '-', 'disc_tax_local'],  # tgt_col, op, src_col
-        #         ['tran_tot', '-', 'disc_tax_local'],
-        #         ],
-        #     [],  # on post
-        #     [],  # on unpost
-        #     ],
         ],
     ])

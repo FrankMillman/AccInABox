@@ -85,12 +85,7 @@
           <input obj_name="ap_jnldet" col_name="line_type" form_dflt="<<prev_value/>>"/>
 
           <block/>
-          <subtran_frame subtran_obj="ap_jnldet" subtran_col="line_type">
-            <subtran_body subtran_id="npch"/>
-            <subtran_body subtran_id="ar_jnl"/>
-            <subtran_body subtran_id="gl"/>
-            <subtran_body subtran_id="com"/>
-          </subtran_frame>
+          <subtran_frame subtran_obj="ap_jnldet" subtran_col="line_type"/>
 
         </body>
         <button_row template="Grid_Frame_Grid_RO"/>

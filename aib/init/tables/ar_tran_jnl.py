@@ -181,6 +181,29 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'jnl_type',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Journal type',
+    'long_descr' : 'Journal type',
+    'col_head'   : 'Type',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : [
+            ['db', 'Debit journal'],
+            ['cr', 'Credit journal'],
+        ],
+    })
+cols.append ({
     'col_name'   : 'text',
     'data_type'  : 'TEXT',
     'short_descr': 'Text',
@@ -314,7 +337,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'jnl_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Journal amount',
     'long_descr' : 'Journal amount in tran currency - updated from ar_tran_jnl_det',
     'col_head'   : 'Jnl amt',
@@ -334,7 +357,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'jnl_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Journal local',
     'long_descr' : 'Journal amount in local currency - updated from ar_tran_jnl_det',
     'col_head'   : 'Jnl local',
@@ -354,7 +377,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'jnl_cust',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Jnl amount',
     'long_descr' : 'Jnl amount in customer currency',
     'col_head'   : 'Jnl amt',
@@ -399,14 +422,6 @@ virt.append ({
     'col_head'   : 'Tran type row id',
     'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'ar_jnl'",
     })
-# virt.append ({
-#     'col_name'   : 'module_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Module row id',
-#     'long_descr' : 'Module row id',
-#     'col_head'   : 'Module row id',
-#     'sql'        : "SELECT row_id FROM {company}.db_modules WHERE module_id = 'ar'",
-#     })
 virt.append ({
     'col_name'   : 'ledger_row_id',
     'data_type'  : 'INT',
@@ -431,28 +446,23 @@ virt.append ({
     'col_head'   : 'Function',
     'sql'        : 'a.cust_row_id>function_row_id',
     })
-# virt.append ({
-#     'col_name'   : 'jnl_cust',
-#     'data_type'  : '$PTY',
-#     'short_descr': 'Jnl amount cust',
-#     'long_descr' : 'Jnl amount in customer currency',
-#     'col_head'   : 'Jnl cust',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'cust_row_id>currency_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#           '<fld_val name="jnl_amt"/>'
-#           '<op type="/"/>'
-#           '<fld_val name="tran_exch_rate"/>'
-#           '<op type="*"/>'
-#           '<fld_val name="cust_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'sql'        : (
-#         "a.jnl_amt / a.tran_exch_rate * a.cust_exch_rate"
-#         ),
-#     })
+virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `jnl_type`, `=`, `~cr~`, ``]]">'
+            '<literal value="$True"/>'
+          '</compare>'
+          '<default>'
+            '<literal value="$False"/>'
+          '</default>'
+        '</case>'
+        ),
+    })
 
 # cursor definitions
 cursors = []
@@ -515,8 +525,8 @@ actions.append([
                 ['due_date', '=', 'tran_date'],
                 ['cust_row_id', '=', 'cust_row_id'],
                 ['tran_date', '=', 'tran_date'],
-                ['amount_cust', '-', 'jnl_amt'],
-                ['amount_local', '-', 'jnl_local'],
+                ['amount_cust', '+', 'jnl_amt'],
+                ['amount_local', '+', 'jnl_local'],
                 ],
             [],  # on unpost
             # [  # return values
@@ -538,8 +548,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'jnl_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'jnl_local'],
+                ['tran_day', '+', 'jnl_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'jnl_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -558,10 +568,10 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cust', '-', 'jnl_amt'],  # tgt_col, op, src_col
-                ['tran_tot_cust', '-', 'jnl_amt'],
-                ['tran_day_local', '-', 'jnl_local'],
-                ['tran_tot_local', '-', 'jnl_local'],
+                ['tran_day_cust', '+', 'jnl_amt'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '+', 'jnl_amt'],
+                ['tran_day_local', '+', 'jnl_local'],
+                ['tran_tot_local', '+', 'jnl_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -582,8 +592,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'jnl_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'jnl_local'],
+                ['tran_day', '+', 'jnl_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'jnl_local'],
                 ],
             [],  # on post
             [],  # on unpost

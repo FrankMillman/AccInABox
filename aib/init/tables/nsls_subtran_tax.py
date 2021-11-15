@@ -201,38 +201,6 @@ virt.append ({
         ),
     })
 virt.append ({
-    'col_name'   : 'upd_tax',
-    'data_type'  : '$LCL',
-    'short_descr': 'Signed tax local',
-    'long_descr' : 'Tax amount in local currency - pos for inv, neg for crn',
-    'col_head'   : 'Tax local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-            '<expr>'
-            '<fld_val name="tax_amt"/>'
-            '<op type="/"/>'
-            '<fld_val name="subtran_row_id>subparent_row_id>tran_exch_rate"/>'
-            '</expr>'
-          '<op type="*"/>'
-          '<case>'
-            '<compare test="[[`if`, ``, `subtran_row_id>subparent_row_id>rev_sign_sls`, `is`, `$True`, ``]]">'
-              '<literal value="-1"/>'
-            '</compare>'
-            '<default>'
-              '<literal value="1"/>'
-            '</default>'
-          '</case>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "(a.tax_amt / a.subtran_row_id>subparent_row_id>tran_exch_rate) "
-        "* "
-        "CASE WHEN a.subtran_row_id>subparent_row_id>rev_sign_sls = $True THEN -1 ELSE 1 END"
-        ),
-    })
-virt.append ({
     'col_name'   : 'tax_source_code',
     'data_type'  : 'TEXT',
     'short_descr': 'Source code for tax',
@@ -269,10 +237,10 @@ actions.append([
                 ['tran_date', 'subtran_row_id>subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['sales_day', '+', 'subtran_row_id>upd_local'],  # tgt_col, op, src_col
-                ['sales_tot', '+', 'subtran_row_id>upd_local'],
-                ['tax_day', '+', 'upd_tax'],
-                ['tax_tot', '+', 'upd_tax'],
+                ['sales_day', '+', 'subtran_row_id>net_local'],  # tgt_col, op, src_col
+                ['sales_tot', '+', 'subtran_row_id>net_local'],
+                ['tax_day', '+', 'tax_amt'],
+                ['tax_tot', '+', 'tax_amt'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -293,8 +261,8 @@ actions.append([
                 ['tran_date', 'subtran_row_id>subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'upd_tax'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'upd_tax'],
+                ['tran_day', '+', 'tax_amt'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'tax_amt'],
                 ],
             [],  # on post
             [],  # on unpost

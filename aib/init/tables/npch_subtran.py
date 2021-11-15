@@ -295,7 +295,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'npch_amount',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Purchase amount',
     'long_descr' : 'Purchase amount in transaction currency',
     'col_head'   : 'Pch amount',
@@ -315,7 +315,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'net_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Net amount',
     'long_descr' : 'Net amount - updated if tax is calculated',
     'col_head'   : 'Net amt',
@@ -335,7 +335,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tax_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Tax amount',
     'long_descr' : 'Tax amount - updated if tax is calculated',
     'col_head'   : 'Tax amt',
@@ -355,7 +355,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tax_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Tax local',
     'long_descr' : 'Tax amount in local currency - updated if tax is calculated',
     'col_head'   : 'Tax local',
@@ -386,6 +386,27 @@ virt.append ({
     'sql'        : "a.subparent_row_id>posted"
     })
 virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `tran_type`, `=`, `~gl_jnl~`, ``]]">'
+            '<literal value="$False"/>'
+          '</compare>'
+          '<default>'
+            '<expr>'
+              '<literal value="dummy"/>'
+              '<op type="not"/>'
+              '<fld_val name="subparent_row_id>rev_sign"/>'
+            '</expr>'
+          '</default>'
+        '</case>'
+        ),
+    })
+virt.append ({
     'col_name'   : 'tran_number',
     'data_type'  : 'TEXT',
     'short_descr': 'Receipt number',
@@ -396,7 +417,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'net_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Net local',
     'long_descr' : 'Purchase net amount in local currency',
     'col_head'   : 'Net local',
@@ -414,7 +435,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'tot_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Total in transaction currency',
     'long_descr' : 'Total amount in transaction currency',
     'col_head'   : 'Net amount',
@@ -432,7 +453,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'tot_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Total in local currency',
     'long_descr' : 'Total amount in local currency',
     'col_head'   : 'Tot local',
@@ -452,39 +473,6 @@ virt.append ({
         ),
     'sql'        : (
         "(a.net_amt + a.tax_amt) / a.subparent_row_id>tran_exch_rate"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'upd_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Signed net local',
-    'long_descr' : 'Sales net amount in local currency - pos for inv, neg for crn',
-    'col_head'   : 'Net local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<expr>'
-            '<fld_val name="net_amt"/>'
-            '<op type="/"/>'
-            '<fld_val name="subparent_row_id>tran_exch_rate"/>'
-          '</expr>'
-          '<op type="*"/>'
-          '<case>'
-            '<compare test="[[`if`, ``, `subparent_row_id>rev_sign_pch`, `is`, `$True`, ``]]">'
-              '<literal value="-1"/>'
-            '</compare>'
-            '<default>'
-              '<literal value="1"/>'
-            '</default>'
-          '</case>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "(a.net_amt / a.subparent_row_id>tran_exch_rate) "
-        "* "
-        "CASE WHEN a.subparent_row_id>rev_sign_pch = $True THEN -1 ELSE 1 END"
         ),
     })
 
@@ -563,8 +551,8 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'upd_local'],
+                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'net_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -586,8 +574,8 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'upd_local'],
+                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'net_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -611,8 +599,8 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'upd_local'],
+                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'net_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -636,8 +624,8 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'upd_local'],
+                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'net_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -660,8 +648,8 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'upd_local'],
+                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'net_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -684,8 +672,8 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'upd_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'upd_local'],
+                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'net_local'],
                 ],
             [],  # on post
             [],  # on unpost

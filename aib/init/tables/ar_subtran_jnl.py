@@ -165,15 +165,18 @@ cols.append ({
     'long_descr' : 'Receipt number. Could be derived using fkey, but denormalised for ar_trans view..',
     'col_head'   : 'Rec no',
     'key_field'  : 'N',
-    'data_source': 'repl',
+    # 'data_source': 'repl',
+    'data_source': 'calc',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{subparent_row_id>tran_number}',
-    'dflt_rule'  : None,
+    # 'dflt_val'   : '{subparent_row_id>tran_number}',
+    'dflt_val'   : None,
+    # 'dflt_rule'  : None,
+    'dflt_rule'  : '<fld_val name="subparent_row_id>tran_number"/>',
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -252,27 +255,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'tran_exch_rate',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Tran exchange rate',
-#     'long_descr' : 'Exchange rate from transaction currency to local currency. Denormalised for ar_trans view.',
-#     'col_head'   : 'Tran exch rate',
-#     'db_scale'   : 8,
-#     'key_field'  : 'N',
-#     'data_source': 'repl',
-#     'condition'  : None,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 8,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : '{subparent_row_id>tran_exch_rate}',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'jnl_amount',
     'data_type'  : '$TRN',
@@ -382,33 +364,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'tran_number',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Receipt number',
-#     'long_descr' : 'Receipt number',
-#     'col_head'   : 'Rec no',
-#     'dflt_val'   : '{subparent_row_id>tran_number}',
-#     'sql'        : 'a.subparent_row_id>tran_number'
-#     })
-# virt.append ({
-#     'col_name'   : 'tran_date',
-#     'data_type'  : 'DTE',
-#     'short_descr': 'Transaction date',
-#     'long_descr' : 'Transaction date',
-#     'col_head'   : 'Tran date',
-#     'dflt_val'   : '{subparent_row_id>tran_date}',
-#     'sql'        : "a.subparent_row_id>tran_date"
-#     })
-# virt.append ({
-#     'col_name'   : 'posted',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Posted?',
-#     'long_descr' : 'Has transaction been posted?',
-#     'col_head'   : 'Posted?',
-#     'dflt_val'   : '{subparent_row_id>posted}',
-#     'sql'        : "a.subparent_row_id>posted"
-#     })
 virt.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
@@ -429,44 +384,6 @@ virt.append ({
     # 'fkey'       : ['adm_currencies', 'row_id', None, None, False, None],
     'sql'        : "a.subparent_row_id>currency_id"
     })
-# virt.append ({
-#     'col_name'   : 'jnl_cust',
-#     'data_type'  : '$PTY',
-#     'short_descr': 'Journal cust',
-#     'long_descr' : 'Journal amount in customer currency',
-#     'col_head'   : 'Jnl cust',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'cust_row_id>currency_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#           '<fld_val name="jnl_amount"/>'
-#           '<op type="/"/>'
-#           '<fld_val name="tran_exch_rate"/>'
-#           '<op type="*"/>'
-#           '<fld_val name="cust_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'sql'        : "a.jnl_amount / a.tran_exch_rate * a.cust_exch_rate",
-#     })
-# virt.append ({
-#     'col_name'   : 'jnl_local',
-#     'data_type'  : '$LCL',
-#     'short_descr': 'Journal local',
-#     'long_descr' : 'Journal amount in local currency',
-#     'col_head'   : 'Jnl local',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#           '<fld_val name="jnl_amount"/>'
-#           '<op type="/"/>'
-#           '<fld_val name="tran_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'sql'        : "a.jnl_amount / a.tran_exch_rate",
-#     })
 
 # cursor definitions
 cursors = []

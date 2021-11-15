@@ -134,7 +134,7 @@ async def alloc_oldest(db_obj, conn, return_vals):
     # called as split_src func from ar_subtran_rec.upd_on_save()
     # only called if _ledger.auto_alloc_oldest is True
     cust_row_id = await db_obj.getval('cust_row_id')
-    tot_to_allocate = await db_obj.getval('rec_cust')
+    tot_to_allocate = 0 - await db_obj.getval('rec_cust')
     db_obj.context.as_at_date = await db_obj.getval('tran_date')
 
     if 'ar_openitems' not in db_obj.context.data_objects:
@@ -152,11 +152,11 @@ async def alloc_oldest(db_obj, conn, return_vals):
     async for row_id, due_cust in await conn.full_select(
             ar_items, cols_to_select, where=where, order=order):
         if tot_to_allocate > due_cust:
-            amt_allocated = due_cust
+            amt_allocated = 0 - due_cust
         else:
-            amt_allocated = tot_to_allocate
+            amt_allocated = 0 - tot_to_allocate
         yield (row_id, amt_allocated)
-        tot_to_allocate -= amt_allocated
+        tot_to_allocate += amt_allocated
         if not tot_to_allocate:
             break # fully allocated
 
@@ -171,10 +171,11 @@ async def get_tot_alloc(db_obj, fld, src):
         tran_type = 'ar_subrec'
 
     sql = (
-        'SELECT SUM(alloc_cust) AS "[REAL2]", SUM(discount_cust) AS "[REAL2]", '
-        'SUM(alloc_local) AS "[REAL2]", SUM(discount_local) AS "[REAL2]" '
-        f'FROM {db_obj.company}.ar_allocations '
-        f'WHERE tran_type = {tran_type!r} AND tran_row_id = {row_id} AND deleted_id = 0'
+        'SELECT SUM(a.alloc_cust) AS "[REAL2]", SUM(a.discount_cust) AS "[REAL2]", '
+        'SUM(a.alloc_local) AS "[REAL2]", SUM(a.discount_local) AS "[REAL2]" '
+        f'FROM {db_obj.company}.ar_allocations a '
+        f'JOIN {db_obj.company}.adm_tran_types b ON b.row_id = a.trantype_row_id '
+        f'WHERE b.tran_type = {tran_type!r} AND a.tran_row_id = {row_id} AND a.deleted_id = 0'
         )
 
     async with db_obj.context.db_session.get_connection() as db_mem_conn:
@@ -299,27 +300,30 @@ async def after_save_alloc(caller, xml):
     ar_item = caller.data_objects['ar_items']
     alloc_cust_fld = await ar_item.getfld('alloc_cust_gui')
     alloc_cust = await alloc_cust_fld.getval() or 0
-    alloc_orig = await alloc_cust_fld.get_orig() or 0
-    if alloc_cust == alloc_orig:
+    alloc_init = await alloc_cust_fld.get_init() or 0
+    if alloc_cust == alloc_init:
         return
 
-    alloc_det = caller.data_objects['ar_allocations']
-    await alloc_det.init()
-    await alloc_det.setval('item_row_id', await ar_item.getval('row_id'))
+    ar_alloc = caller.data_objects['ar_allocations']
+    await ar_alloc.init()
+    await ar_alloc.setval('item_row_id', await ar_item.getval('row_id'))
 
-    if alloc_det.exists and not alloc_cust:
+    if ar_alloc.exists and not alloc_cust:
         # if alloc_cust has been cleared, delete the row in the allocations table
-        await alloc_det.delete(from_upd_on_save=True)  # actually delete
+        await ar_alloc.delete(from_upd_on_save=True)  # actually delete
     else:
-        await alloc_det.setval('alloc_cust', alloc_cust)
-        await alloc_det.save(from_upd_on_save=True)  # do not update audit trail
+        await ar_alloc.setval('alloc_cust', alloc_cust)
+        # fld = await ar_alloc.getfld('alloc_cust')
+        # alloc_cust = await fld.str_to_val(alloc_cust)
+        # await fld.setval(alloc_cust)
+        await ar_alloc.save(from_upd_on_save=True)  # do not update audit trail
 
-    alloc_cust_fld._orig = alloc_cust
+    alloc_cust_fld._init = alloc_cust
 
-    vars = caller.data_objects['vars']
-    unalloc_fld = await vars.getfld('unallocated')
+    ar_subrec = caller.data_objects['ar_subrec']
+    unalloc_fld = await ar_subrec.getfld('unallocated')
     unallocated = await unalloc_fld.getval()
-    await unalloc_fld.setval(unallocated - (alloc_cust - alloc_orig))
+    await unalloc_fld.setval(unallocated - (alloc_cust - alloc_init))
 
 async def alloc_ageing(caller, xml):
     # called from ar_alloc_item after select/deselect 'allocate bucket'
@@ -385,13 +389,13 @@ async def alloc_ageing(caller, xml):
 
     ar_items = caller.data_objects['ar_items']
     alloc_hdr = caller.data_objects['alloc_header']
-    alloc_det = caller.data_objects['ar_allocations']
+    ar_alloc = caller.data_objects['ar_allocations']
 
     cust_row_id = await alloc_hdr.getval('cust_row_id')
     this_item_rowid = caller.context.this_item_rowid
 
-    vars = caller.data_objects['vars']
-    unalloc_fld = await vars.getfld('unallocated')
+    ar_subrec = caller.data_objects['ar_subrec']
+    unalloc_fld = await ar_subrec.getfld('unallocated')
     unallocated = await unalloc_fld.getval()
 
     async def alloc(conn):
@@ -404,16 +408,16 @@ async def alloc_ageing(caller, xml):
         where.append(['AND', '', 'due_cust', '!=', 0, ''])
         all_alloc = ar_items.select_many(where=where, order=[])
         async for _ in all_alloc:
-            await alloc_det.init(init_vals={
+            await ar_alloc.init(init_vals={
                 'item_row_id': await ar_items.getval('row_id'),
                 })
             # cannot include alloc_cust in init_vals
             # in db.objects.init(), _orig is set to _value for init_vals
             # ar_allocations.discount_cust uses 'if _orig = _value' in dflt_rule
-            await alloc_det.setval('alloc_cust', await ar_items.getval('due_cust'))
-            await alloc_det.save()
-            await ar_items.setval('alloc_cust_gui', await alloc_det.getval('alloc_cust'))
-            unallocated -= await alloc_det.getval('alloc_cust')
+            await ar_alloc.setval('alloc_cust', 0 - (await ar_items.getval('due_cust')))
+            await ar_alloc.save()
+            await ar_items.setval('alloc_cust_gui', await ar_alloc.getval('alloc_cust'))
+            unallocated -= await ar_alloc.getval('alloc_cust')
             await unalloc_fld.setval(unallocated)
 
     async def unalloc(conn):
@@ -426,13 +430,13 @@ async def alloc_ageing(caller, xml):
         where.append(['AND', '', 'due_cust', '!=', 0, ''])
         all_alloc = ar_items.select_many(where=where, order=[])
         async for _ in all_alloc:
-            await alloc_det.init(init_vals={
+            await ar_alloc.init(init_vals={
                 'item_row_id': await ar_items.getval('row_id'),
                 })
-            if alloc_det.exists:
+            if ar_alloc.exists:
                 unallocated += await ar_items.getval('alloc_cust_gui')
                 await unalloc_fld.setval(unallocated)
-                await alloc_det.delete()
+                await ar_alloc.delete()
                 await ar_items.setval('alloc_cust_gui', None)
 
     async with caller.db_session.get_connection() as db_mem_conn:

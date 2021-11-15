@@ -694,19 +694,20 @@ virt.append ({
                     SUM(c.alloc_cust + c.discount_cust) AS tot_alloc,
                     SUM(c.discount_cust) AS disc_alloc
                 FROM {company}.ar_allocations c
+                JOIN {company}.adm_tran_types d ON d.row_id = c.trantype_row_id
 
                 WHERE
                     CASE
-                        WHEN c.tran_type = 'ar_alloc' THEN
-                            (SELECT d.row_id FROM {company}.ar_allocations d
-                                WHERE d.tran_type = c.tran_type AND
-                                    d.tran_row_id = c.tran_row_id AND
-                                    d.item_row_id =
-                                        (SELECT e.item_row_id FROM {company}.ar_tran_alloc e
-                                        WHERE e.row_id = c.tran_row_id))
+                        WHEN d.tran_type = 'ar_alloc' THEN
+                            (SELECT e.row_id FROM {company}.ar_allocations e
+                                WHERE e.trantype_row_id = c.trantype_row_id AND
+                                    e.tran_row_id = c.tran_row_id AND
+                                    e.item_row_id =
+                                        (SELECT f.item_row_id FROM {company}.ar_tran_alloc f
+                                        WHERE f.row_id = c.tran_row_id))
                         ELSE
-                            (SELECT d.row_id FROM {company}.ar_openitems d
-                                WHERE d.tran_type = c.tran_type AND d.tran_row_id = c.tran_row_id)
+                            (SELECT e.row_id FROM {company}.ar_openitems e
+                                WHERE e.trantype_row_id = c.trantype_row_id AND e.tran_row_id = c.tran_row_id)
                     END IS NOT NULL
 
                 GROUP BY c.item_row_id

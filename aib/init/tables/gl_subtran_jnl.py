@@ -271,7 +271,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'gl_amount',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Journal amount',
     'long_descr' : 'Journal amount in transaction currency',
     'col_head'   : 'Jnl amount',
@@ -328,8 +328,29 @@ virt.append ({
     'sql'        : "a.subparent_row_id>posted"
     })
 virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `tran_type`, `=`, `~gl_jnl~`, ``]]">'
+            '<literal value="$False"/>'
+          '</compare>'
+          '<default>'
+            '<expr>'
+              '<literal value="dummy"/>'
+              '<op type="not"/>'
+              '<fld_val name="subparent_row_id>rev_sign"/>'
+            '</expr>'
+          '</default>'
+        '</case>'
+        ),
+    })
+virt.append ({
     'col_name'   : 'gl_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Ledger amount local',
     'long_descr' : 'Ledger amount in local currency',
     'col_head'   : 'Gl local',
@@ -344,39 +365,6 @@ virt.append ({
         '</expr>'
         ),
     'sql'        : "a.gl_amount / a.subparent_row_id>tran_row_id>tran_exch_rate",
-    })
-virt.append ({
-    'col_name'   : 'upd_gl',
-    'data_type'  : '$LCL',
-    'short_descr': 'Signed ledger amount local',
-    'long_descr' : 'Ledger amount in local currency - pos if dr, neg if cr',
-    'col_head'   : 'Gl local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-            '<expr>'
-              '<fld_val name="gl_amount"/>'
-              '<op type="/"/>'
-              '<fld_val name="subparent_row_id>tran_row_id>tran_exch_rate"/>'
-            '</expr>'
-          '<op type="*"/>'
-          '<case>'
-            '<compare test="[[`if`, ``, `subparent_row_id>rev_sign_gl`, `is`, `$True`, ``]]">'
-              '<literal value="-1"/>'
-            '</compare>'
-            '<default>'
-              '<literal value="1"/>'
-            '</default>'
-          '</case>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "(a.gl_amount / a.subparent_row_id>tran_row_id>tran_exch_rate) "
-        "* "
-        "CASE WHEN a.subparent_row_id>rev_sign_gl = $True THEN -1 ELSE 1 END"
-        ),
     })
 
 # cursor definitions
@@ -403,8 +391,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'upd_gl'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'upd_gl'],
+                ['tran_day', '+', 'gl_amount'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'gl_amount'],
                 ],
             [],  # on post
             [],  # on unpost

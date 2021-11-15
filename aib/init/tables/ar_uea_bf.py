@@ -269,10 +269,10 @@ virt.append ({
     'sql'        : 'a.cust_row_id>function_row_id',
     })
 virt.append ({
-    'col_name'   : 'rev_sign_sls',
+    'col_name'   : 'rev_sign',
     'data_type'  : 'BOOL',
     'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - sales transactions?',
+    'long_descr' : 'Reverse sign?',
     'col_head'   : 'Reverse sign?',
     'sql'        : '$False',
     })

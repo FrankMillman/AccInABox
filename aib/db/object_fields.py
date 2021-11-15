@@ -77,6 +77,7 @@ class Field:
 
         self.ledger_col = (self.col_name == db_obj.db_table.ledger_col)
         self.must_be_evaluated = False  # if set to True, recalc on getval, then reset to False
+        self.must_get_fkey = False  # if set to True, get fkey on first getval, then reset to False
 
         self.children = []  # list of xrefs to child fkey fields
         self.table_keys = []  # populated if this is a key field
@@ -89,15 +90,12 @@ class Field:
         else:
             self._calculated = None  # will be evaluated in self.calculated()
 
-        self.getval = self._getval  # on getval(), call _getval() which returns value immediately
-                                    # but see next block - can be over-ridden
-
         if col_defn.fkey is None:
             self.foreign_key = None
         else:
             self.foreign_key = {}  # un-initialised foreign key
-            if col_defn.fkey[FK_IS_ALT]:
-                self.getval = self._getval_fkey  # on getval(), set up fkey before calling _getval()
+            if col_defn.fkey[FK_IS_ALT]:  # why only IS_ALT? can't remember :-( 2021-11-10
+                self.must_get_fkey = True
 
         self._value_ = None  # used by 'property' for '_value' - see at end
         self._value = await self.get_dflt(from_init=True)  # eval dflt_val, but not dflt_rule
@@ -183,7 +181,6 @@ class Field:
                 self.foreign_key.append(fkeys)
                 for val, tbl_name in vals_tblnames:
                     fkeys[val] = {}
-        # self.getval = self._getval
 
     async def setup_fkey(self, tgt_table_name, tgt_col_name, altsrc_name, alttgt_name, is_alt):
         foreign_key = {}
@@ -802,39 +799,22 @@ class Field:
         for obj in self.gui_obj:
             obj.set_readonly(state)
 
-    async def _getval(self):
+    async def getval(self):
         if self.must_be_evaluated:
             self.must_be_evaluated = False  # reset first, to avoid recursion in some situations
             await self.recalc(display=True)
+
+        if self.must_get_fkey:
+            await self.db_obj.get_foreign_key(self)
+            self.must_get_fkey = False
+
         return self._value
-
-    async def _getval_fkey(self):
-        # # await self.setup_foreign_key()
-        # # return await self._getval()
-
-        # foreign_key = await self.db_obj.get_foreign_key(self)
-
-        # # if self.foreign_key == {}:
-        # #     await self.setup_foreign_key()
-        # # true_src = self.foreign_key['true_src']
-        # true_src = foreign_key['true_src']
-        # await true_src.get_fk_object()  # what does this do?
-        # # return await self.foreign_key['tgt_field'].getval()
-        # return await foreign_key['tgt_field'].getval()
-
-        # if the next lines work, replace the above [2020-05-05]
-        # this is only called if this field has an alt_key that has not yet been set up
-        # it assumes that the system will reliably maintain the field's _value from this point,
-        #   covering all eventualities such as init(), read_row(), setval(), restore(), etc
-        # monitor carefully before committing!
-
-        await self.db_obj.get_foreign_key(self)
-        self.getval = self._getval  # replace function definition
-        # print(f'{self.table_name}.{self.col_name} {await self._getval()}')
-        return await self._getval()
 
     async def get_orig(self):
         return self._orig
+
+    async def get_init(self):
+        return self._init
 
     async def get_prev(self):
         return self._prev
@@ -1030,7 +1010,7 @@ class Password(Text):
             == bytes.fromhex(dk))
 
 class Json(Text):
-    async def _getval(self):
+    async def getval(self):
         # must return deepcopy because value is mutable, so
         #   we would not be able to detect if it was changed
         return deepcopy(self._value)
@@ -1109,7 +1089,7 @@ class Xml(Text):
     schema = None
     root = None
 
-    async def _getval(self):
+    async def getval(self):
         # must return deepcopy because value is mutable, so
         #   we would not be able to detect if it was changed
         return deepcopy(self._value)
@@ -1468,6 +1448,75 @@ class Decimal(Field):
     def get_val_for_where(self):
         return self._value  # not tested
 
+class RevDec(Decimal): # reversible decimal
+
+    async def str_to_val(self, value):
+        if value in (None, ''):
+            return None
+        try:
+            value = D(value)
+        except DecimalException:
+            errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Decimal type'
+            raise AibError(head=self.col_defn.short_descr, body=errmsg)
+        scale = await self.get_scale()
+        quant = D(str(10**-scale))
+        try:
+            value = D(value).quantize(
+                quant, context=Context(traps=[Inexact]))
+        except Inexact:
+            if scale:
+                errmsg = f'{self.table_name}.{self.col_name} - cannot exceed {scale} decimals'
+            else:
+                errmsg = f'{self.table_name}.{self.col_name} - no decimals allowed'
+            raise AibError(head=self.col_defn.short_descr, body=errmsg)
+        try:
+            rev_sign = await self.db_obj.getval('rev_sign')
+        except KeyError:
+            rev_sign = False
+        if rev_sign:
+            return 0 - value
+        else:
+            return value
+
+    async def val_to_str(self, value=blank, scale=None):
+        try:
+            await self.db_obj.check_perms('view', self)
+        except AibDenied:
+            return '*'
+        if value is blank:
+            value = await self.getval()
+        if value is None:
+            return ''
+        try:
+            rev_sign = await self.db_obj.getval('rev_sign')
+        except KeyError:
+            rev_sign = False
+        if rev_sign:
+            value = 0 - value
+        if scale is None:
+            scale = await self.get_scale()
+        output = f'{{:.{scale}f}}'
+        return output.format(value)
+
+    async def prev_to_str(self, value=blank):
+        try:
+            await self.db_obj.check_perms('view', self)
+        except AibDenied:
+            return '*'
+        if value is blank:
+            value = self._prev
+        if value is None:
+            return ''
+        try:
+            rev_sign = await self.db_obj.getval('rev_sign')
+        except KeyError:
+            rev_sign = False
+        if rev_sign:
+            value = 0 - value
+        scale = await self.get_scale()
+        output = f'{{:.{scale}f}}'
+        return output.format(value)
+
 class Date(Field):
     async def check_val(self, value):
         if value is None:
@@ -1664,6 +1713,10 @@ DATA_TYPES = {
     '$TRN' :Decimal,
     '$PTY' :Decimal,
     '$LCL' :Decimal,
+    '$RQTY' :RevDec,
+    '$RTRN' :RevDec,
+    '$RPTY' :RevDec,
+    '$RLCL' :RevDec,
     'DTE'  :Date,
     'DTM'  :DateTime,
     'BOOL' :Boolean,

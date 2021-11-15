@@ -166,15 +166,18 @@ cols.append ({
     'long_descr' : 'Payment number. Could be derived using fkey, but denormalised for ap_trans view..',
     'col_head'   : 'Pmt no',
     'key_field'  : 'N',
-    'data_source': 'repl',
+    # 'data_source': 'repl',
+    'data_source': 'calc',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{subparent_row_id>tran_number}',
-    'dflt_rule'  : None,
+    # 'dflt_val'   : '{subparent_row_id>tran_number}',
+    'dflt_val'   : None,
+    # 'dflt_rule'  : None,
+    'dflt_rule'  : '<fld_val name="subparent_row_id>tran_number"/>',
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -258,7 +261,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'pmt_amount',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Payment amount',
     'long_descr' : 'Payment amount in transaction currency',
     'col_head'   : 'Pmt amount',
@@ -278,7 +281,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'pmt_supp',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Payment supp',
     'long_descr' : 'Payment amount in supplier currency',
     'col_head'   : 'Pmt supp',
@@ -314,7 +317,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'pmt_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Payment local',
     'long_descr' : 'Payment amount in local currency',
     'col_head'   : 'Pmt local',
@@ -383,37 +386,11 @@ virt.append ({
     'fkey'       : ['ap_openitems', 'row_id', None, None, False, None],
     'sql'        : (
         "SELECT b.row_id FROM {company}.ap_openitems b "
-        "WHERE b.tran_type = 'ap_pmt' AND b.tran_row_id = a.row_id "
+        "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
+        "WHERE c.tran_type = 'ap_subpmt' AND b.tran_row_id = a.row_id "
         "AND b.split_no = 0 AND b.deleted_id = 0"
         ),
     })
-# virt.append ({
-#     'col_name'   : 'tran_number',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Receipt number',
-#     'long_descr' : 'Receipt number',
-#     'col_head'   : 'Rec no',
-#     'dflt_val'   : '{subparent_row_id>tran_number}',
-#     'sql'        : 'a.subparent_row_id>tran_number'
-#     })
-# virt.append ({
-#     'col_name'   : 'tran_date',
-#     'data_type'  : 'DTE',
-#     'short_descr': 'Transaction date',
-#     'long_descr' : 'Transaction date',
-#     'col_head'   : 'Tran date',
-#     'dflt_val'   : '{subparent_row_id>tran_date}',
-#     'sql'        : "a.subparent_row_id>tran_date"
-#     })
-# virt.append ({
-#     'col_name'   : 'posted',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Posted?',
-#     'long_descr' : 'Has transaction been posted?',
-#     'col_head'   : 'Posted?',
-#     'dflt_val'   : '{subparent_row_id>posted}',
-#     'sql'        : "a.subparent_row_id>posted"
-#     })
 virt.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
@@ -433,27 +410,23 @@ virt.append ({
     'dflt_val'   : '{subparent_row_id>tran_exch_rate}',
     'sql'        : 'a.subparent_row_id>tran_exch_rate',
     })
-# virt.append ({
-#     'col_name'   : 'pmt_local',
-#     'data_type'  : '$LCL',
-#     'short_descr': 'Payment local',
-#     'long_descr' : 'Payment amount in local currency',
-#     'col_head'   : 'Pmt local',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : '_param.local_curr_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#           '<fld_val name="pmt_amount"/>'
-#           '<op type="/"/>'
-#           '<fld_val name="tran_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'sql'        : "a.pmt_amount / a.tran_exch_rate",
-#     })
+virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : (
+      '<expr>'
+        '<literal value="dummy"/>'
+        '<op type="not"/>'
+        '<fld_val name="subparent_row_id>rev_sign"/>'
+      '</expr>'
+      ),
+    })
 virt.append ({
     'col_name'   : 'unallocated',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Unallocated',
     'long_descr' : 'Balance of payment not allocated',
     'col_head'   : 'Unalloc',
@@ -466,13 +439,14 @@ virt.append ({
         "- "
         "COALESCE(("
             "SELECT SUM(b.alloc_supp) FROM {company}.ap_allocations b "
-            "WHERE b.tran_type = 'ap_pmt' AND b.tran_row_id = a.row_id AND b.deleted_id = 0"
+            "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
+            "WHERE c.tran_type = 'ap_subpmt' AND b.tran_row_id = a.row_id AND b.deleted_id = 0"
             "), 0)"
         ),
     })
 virt.append ({
     'col_name'   : 'discount_allowed',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Discount allowed',
     'long_descr' : 'Discount allowed - local currency',
     'col_head'   : 'Disc',
@@ -484,7 +458,8 @@ virt.append ({
         "SELECT 0 - SUM(c.discount_local) "
         "FROM {company}.ap_openitems b "
         "JOIN {company}.ap_allocations c ON c.item_row_id = b.row_id "
-        "WHERE b.tran_type = 'ap_pmt' and b.tran_row_id = a.row_id"
+        "JOIN {company}.adm_tran_types d ON d.row_id = b.trantype_row_id "
+        "WHERE d.tran_type = 'ap_subpmt' and b.tran_row_id = a.row_id"
         ),
     })
 
@@ -510,8 +485,8 @@ actions.append([
                 ['due_date', '=', 'tran_date'],
                 ['supp_row_id', '=', 'supp_row_id'],
                 ['tran_date', '=', 'tran_date'],
-                ['amount_supp', '-', 'pmt_supp'],
-                ['amount_local', '-', 'pmt_local'],
+                ['amount_supp', '+', 'pmt_supp'],
+                ['amount_local', '+', 'pmt_local'],
                 ],
             [],  # on unpost
             [  # return values
@@ -530,8 +505,8 @@ actions.append([
                 ],
             [],  # aggregation
             [  # on post
-                ['alloc_supp', '-', '_ctx.tot_alloc_supp'],  # tgt_col, op, src_col
-                ['alloc_local', '-', '_ctx.tot_alloc_local'],
+                ['alloc_supp', '+', '_ctx.tot_alloc_supp'],  # tgt_col, op, src_col
+                ['alloc_local', '+', '_ctx.tot_alloc_local'],
                 ],
             [],  # on unpost
             ],
@@ -572,8 +547,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'pmt_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'pmt_local'],
+                ['tran_day', '+', 'pmt_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'pmt_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -592,10 +567,10 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_supp', '-', 'pmt_supp'],  # tgt_col, op, src_col
-                ['tran_tot_supp', '-', 'pmt_supp'],
-                ['tran_day_local', '-', 'pmt_local'],
-                ['tran_tot_local', '-', 'pmt_local'],
+                ['tran_day_supp', '+', 'pmt_supp'],  # tgt_col, op, src_col
+                ['tran_tot_supp', '+', 'pmt_supp'],
+                ['tran_day_local', '+', 'pmt_local'],
+                ['tran_tot_local', '+', 'pmt_local'],
                 ],
             [],  # on post
             [],  # on unpost

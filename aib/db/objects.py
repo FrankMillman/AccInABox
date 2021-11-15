@@ -603,10 +603,18 @@ class DbObject:
     async def setup_subtran(self, subtran_obj, subtran_colname, subtran_colval):
         # this is invoked by child table on instantiation, if it is a subtran table
         assert self.sub_trans[subtran_colname][subtran_colval] is None
-        subtran_tblname, return_vals = self.db_table.sub_trans[subtran_colname][subtran_colval]
+        subtran_tblname, return_cols = self.db_table.sub_trans[subtran_colname][subtran_colval]
         assert subtran_tblname == subtran_obj.table_name
-        return_vals = [(await self.getfld(tgt_col), await subtran_obj.getfld(src_col))
-            for tgt_col, src_col in return_vals]
+        return_vals = []
+        for tgt_col, src_col in return_cols:
+            if src_col.startswith('-'):  # update tgt value with negative src value
+                factor = -1
+                src_col = src_col[1:]
+            else:
+                factor = 1
+            tgt_fld = await self.getfld(tgt_col)
+            src_fld = await subtran_obj.getfld(src_col)
+            return_vals.append((tgt_fld, factor, src_fld))
         self.sub_trans[subtran_colname][subtran_colval] = (subtran_obj, return_vals)
         subtran_obj.subtran_parent = (self, return_vals)
 
@@ -1269,8 +1277,9 @@ class DbObject:
 
                 if self.subtran_parent is not None:
                     subtran_parent, return_vals = self.subtran_parent
-                    for tgt_fld, src_fld in return_vals:
-                        await tgt_fld.setval(await src_fld.getval(), display=True, validate=False)
+                    for tgt_fld, factor, src_fld in return_vals:
+                        src_val = (await src_fld.getval()) * factor  # factor is 1 or -1
+                        await tgt_fld.setval(src_val, display=True, validate=False)
 
                 if self.dirty:  # could have been updated in upd_on_save/post or from sub_tran
                     await self.update(conn, from_upd_on_save=True)
@@ -1751,7 +1760,10 @@ class DbObject:
                 if on_ins:
                     save_obj = True
                 for tgt_col, op, src_col in on_ins:
-                    src_val = await self.get_src_val(src_col)
+                    if src_col.startswith('-'):
+                        src_val = 0 - (await self.get_src_val(src_col[1:]))
+                    else:
+                        src_val = await self.get_src_val(src_col)
                     tgt_fld = await tgt_obj.getfld(tgt_col)
                     if op == '=':
                         await tgt_fld.setval(src_val, validate=False)
@@ -1767,7 +1779,10 @@ class DbObject:
                 if on_upd:
                     save_obj = True
                 for tgt_col, op, src_col in on_upd:
-                    src_val = await self.get_src_val(src_col)
+                    if src_col.startswith('-'):
+                        src_val = 0 - (await self.get_src_val(src_col[1:]))
+                    else:
+                        src_val = await self.get_src_val(src_col)
                     tgt_fld = await tgt_obj.getfld(tgt_col)
                     if op == '=':
                         await tgt_fld.setval(src_val, validate=False)
@@ -1783,7 +1798,10 @@ class DbObject:
                 if on_del:
                     save_obj = True
                 for tgt_col, op, src_col in on_del:
-                    src_val = await self.get_src_val(src_col)
+                    if src_col.startswith('-'):
+                        src_val = 0 - (await self.get_src_val(src_col[1:]))
+                    else:
+                        src_val = await self.get_src_val(src_col)
                     tgt_fld = await tgt_obj.getfld(tgt_col)
                     if op == '=':
                         await tgt_fld.setval(src_val, validate=False)
@@ -2125,7 +2143,10 @@ class DbObject:
                 if on_post:
                     save_obj = True
                 for tgt_col, op, src_col in on_post:
-                    src_val = await self.get_src_val(src_col)
+                    if src_col.startswith('-'):
+                        src_val = 0 - (await self.get_src_val(src_col[1:]))
+                    else:
+                        src_val = await self.get_src_val(src_col)
                     tgt_fld = await tgt_obj.getfld(tgt_col)
                     if op == '=':
                         await tgt_fld.setval(src_val, validate=False)
@@ -2141,7 +2162,10 @@ class DbObject:
                 if on_unpost:
                     save_obj = True
                 for tgt_col, op, src_col in on_unpost:
-                    src_val = await self.get_src_val(src_col)
+                    if src_col.startswith('-'):
+                        src_val = 0 - (await self.get_src_val(src_col[1:]))
+                    else:
+                        src_val = await self.get_src_val(src_col)
                     tgt_fld = await tgt_obj.getfld(tgt_col)
                     if op == '=':
                         await tgt_fld.setval(src_val, validate=False)

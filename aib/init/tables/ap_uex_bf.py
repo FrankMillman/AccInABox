@@ -269,12 +269,12 @@ virt.append ({
     'sql'        : 'a.supp_row_id>function_row_id',
     })
 virt.append ({
-    'col_name'   : 'rev_sign_pch',
+    'col_name'   : 'rev_sign',
     'data_type'  : 'BOOL',
     'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - purchase transactions?',
+    'long_descr' : 'Reverse sign?',
     'col_head'   : 'Reverse sign?',
-    'sql'        : '$False',
+    'sql'        : '$True',
     })
 virt.append ({
     'col_name'   : 'currency_id',

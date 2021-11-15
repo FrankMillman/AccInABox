@@ -72,11 +72,7 @@
             <<prev_value/>>
             "/>
           <block/>
-          <subtran_frame subtran_obj="gl_det" subtran_col="line_type">
-            <subtran_body subtran_id="gl"/>
-            <subtran_body subtran_id="nsls"/>
-            <subtran_body subtran_id="npch"/>
-          </subtran_frame>
+          <subtran_frame subtran_obj="gl_det" subtran_col="line_type"/>
         </body>
         <button_row template="Grid_Frame_Grid_RO"/>
         <frame_methods template="Grid_Frame_Grid_RO"/>

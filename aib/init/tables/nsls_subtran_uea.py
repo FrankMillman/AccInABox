@@ -197,35 +197,6 @@ virt.append ({
     'sql'        : "a.subtran_row_id>subparent_row_id>text"
     })
 virt.append ({
-    'col_name'   : 'upd_earned',
-    'data_type'  : '$LCL',
-    'short_descr': 'Signed sls amt earned - local',
-    'long_descr' : 'Sales amount earned - local currency - pos for inv, neg for crn',
-    'col_head'   : 'Sls amt earned loc',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="nsls_earned_loc"/>'
-          '<op type="*"/>'
-          '<case>'
-            '<compare test="[[`if`, ``, `subtran_row_id>subparent_row_id>rev_sign_sls`, `is`, `$True`, ``]]">'
-              '<literal value="-1"/>'
-            '</compare>'
-            '<default>'
-              '<literal value="1"/>'
-            '</default>'
-          '</case>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.nsls_earned_loc "
-        "* "
-        "CASE WHEN a.subtran_row_id>subparent_row_id>rev_sign_sls = $True THEN -1 ELSE 1 END"
-        ),
-    })
-virt.append ({
     'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Tran type row id',
@@ -257,8 +228,8 @@ actions.append([
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'upd_earned'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'upd_earned'],
+                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'nsls_earned_loc'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -279,8 +250,8 @@ actions.append([
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'upd_earned'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'upd_earned'],
+                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'nsls_earned_loc'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -304,8 +275,8 @@ actions.append([
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'upd_earned'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'upd_earned'],
+                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'nsls_earned_loc'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -329,8 +300,8 @@ actions.append([
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'upd_earned'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'upd_earned'],
+                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'nsls_earned_loc'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -353,8 +324,8 @@ actions.append([
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'upd_earned'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'upd_earned'],
+                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'nsls_earned_loc'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -377,8 +348,8 @@ actions.append([
                 ['tran_date', 'eff_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'upd_earned'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'upd_earned'],
+                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'nsls_earned_loc'],
                 ],
             [],  # on post
             [],  # on unpost

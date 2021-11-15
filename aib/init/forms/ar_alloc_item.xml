@@ -5,15 +5,6 @@
   </db_objects>
   <mem_objects>
 
-    <mem_obj name="vars" descr="Form variables">
-      <mem_col col_name="amount_to_alloc" data_type="DEC" short_descr="Amount to allocate"
-        long_descr="Amount to allocate" db_scale="2"
-        scale_ptr="alloc_header.cust_row_id>currency_id>scale"/>
-      <mem_col col_name="unallocated" data_type="DEC" short_descr="Unallocated"
-        long_descr="Unallocated" allow_amend="true" db_scale="2"
-        scale_ptr="alloc_header.cust_row_id>currency_id>scale"/>
-    </mem_obj>
-
     <mem_obj name="due_bal" descr="Balance due in customer currency">
       <mem_col col_name="due_total" data_type="DEC" short_descr="Total"
         long_descr="Total" col_head="Total" allow_null="true"
@@ -71,15 +62,11 @@
 
   <input_params>
     <input_param name="alloc_header" type="data_obj" target="alloc_header" required="true"/>
-    <input_param name="amount_to_alloc" type="data_attr" target="vars.amount_to_alloc" required="true"/>
-    <input_param name="unallocated" type="data_attr" target="vars.unallocated" required="true"/>
   </input_params>
 
-  <output_params>
-    <output_param name="unallocated" type="data_attr" source="vars.unallocated"/>
-  </output_params>
+  <output_params/>
 
-  <frame main_object="vars">
+  <frame main_object="ar_subrec">
     <toolbar/>
 
     <body>
@@ -97,13 +84,13 @@
       <col/>
       <label value="Amount to allocate:"/>
       <col/>
-      <input obj_name="vars" col_name="amount_to_alloc" lng="84" readonly="true" skip="true"/>
+      <input obj_name="ar_subrec" col_name="rec_cust" lng="84" readonly="true" skip="true"/>
 
       <row/>
       <col/>
       <label value="Unallocated:"/>
       <col/>
-      <input obj_name="vars" col_name="unallocated" lng="84" readonly="true" skip="true"/>
+      <input obj_name="ar_subrec" col_name="unallocated" lng="84" readonly="true" skip="true"/>
 
       <block/>
       <panel/>
@@ -256,7 +243,7 @@
       <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
         btn_validate="true" btn_default="true" lng="60" action="
           <<case>>
-            <<compare test=`[['if', '', 'vars.unallocated', '!=', '0', '']]`>>
+            <<compare test=`[['if', '', 'ar_subrec.unallocated', '!=', '0', '']]`>>
               <<ask title=`Unallocated` enter=`No` escape=`No`
                   question=`Not fully allocated - sure you want to return?`>>
                 <<response ans=`No`>>
@@ -281,7 +268,7 @@
         "/>
       <method name="on_req_cancel" action="
           <<case>>
-            <<compare test=`[['if', '', 'vars.unallocated', '!=', '0', '']]`>>
+            <<compare test=`[['if', '', 'ar_subrec.unallocated', '!=', '0', '']]`>>
               <<ask title=`Unallocated` enter=`No` escape=`No`
                   question=`Not fully allocated - sure you want to return?`>>
                 <<response ans=`No`>>

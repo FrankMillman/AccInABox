@@ -208,7 +208,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'bf_cust',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'B/f cust',
     'long_descr' : 'B/f amount in customer currency',
     'col_head'   : 'B/f cust',
@@ -239,8 +239,16 @@ virt.append ({
     'sql'        : 'a.tran_row_id>cust_row_id',
     })
 virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : '<literal value="$False"/>',
+    })
+virt.append ({
     'col_name'   : 'bf_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'B/f local',
     'long_descr' : 'B/f amount in local currency',
     'col_head'   : 'B/f local',

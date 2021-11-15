@@ -230,6 +230,8 @@ async def expr(fld, xml, debug):
             result /= rhs
         elif op == '=':
             result = (result == rhs)
+        elif op == 'not':
+            result = not rhs
     if debug:
         print('dbg:', 'result =', result)
     return result

@@ -120,7 +120,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_cb',
-    'source'     : ['amount_cb', 'rev(amount_cb)', 'rev(tfr_amount)', 'tfr_amount'],
+    'source'     : ['amount_cb', 'amount_cb', 'tfr_amount', 'tfr_amount'],
     'data_type'  : '$PTY',
     'short_descr': 'Amount - cb curr',
     'long_descr' : 'Amount in cash book currency',
@@ -133,7 +133,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'source'     : ['amount_local', 'rev(amount_local)', 'rev(tfr_local)', 'tfr_local'],
+    'source'     : ['amount_local', 'amount_local', 'tfr_local', 'tfr_local'],
     'data_type'  : '$LCL',
     'short_descr': 'Amount - local curr',
     'long_descr' : 'Amount in local currency',

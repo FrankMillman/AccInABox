@@ -78,31 +78,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'tran_type',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Transaction type',
-#     'long_descr' : 'Transaction type',
-#     'col_head'   : 'Tran type',
-#     'key_field'  : 'A',
-#     'data_source': 'par_con',
-#     'condition'  : None,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 0,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : None,
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : [
-#             ['ar_inv', 'A/c sale'],
-#             ['cb_rec', 'Cash sale'],
-#             ['ar_crn', 'A/c cr note'],
-#             ['cb_pmt', 'Cash cr note'],
-#         ],
-#     })
 cols.append ({
     'col_name'   : 'subtran_row_id',
     'data_type'  : 'INT',

@@ -159,7 +159,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'bf_bal',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'B/f balance',
     'long_descr' : 'B/f balance in customer currency',
     'col_head'   : 'B/f balance',
@@ -179,7 +179,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'bf_cust',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Balance updated - cust',
     'long_descr' : 'Balance updated from ar_tran_bf_det - customer currency',
     'col_head'   : 'Upd bal - cust',
@@ -199,7 +199,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'bf_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Balance updated - local',
     'long_descr' : 'Balance updated from ar_tran_bf_det - local currency',
     'col_head'   : 'Upd bal - local',
@@ -279,6 +279,14 @@ virt.append ({
     'long_descr' : 'Function row id',
     'col_head'   : 'Function',
     'sql'        : 'a.cust_row_id>function_row_id',
+    })
+virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : '<literal value="$False"/>',
     })
 virt.append ({
     'col_name'   : 'tran_number',

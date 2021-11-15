@@ -312,7 +312,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Amount paid',
     'long_descr' : 'Amount paid in tran currency',
     'col_head'   : 'Amount',
@@ -332,7 +332,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_cb',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Amount paid - cb curr',
     'long_descr' : 'Amount paid in cb currency',
     'col_head'   : 'Amt paid cb',
@@ -340,7 +340,7 @@ cols.append ({
     'data_source': 'dflt_if',
     'condition'  : [
         ['where', '', 'currency_id', '=', 'ledger_row_id>currency_id', ''],
-        ['or', '', '_ledger.alt_amt_override', 'is', '$False', ''],
+        ['or', '', '_ledger.alt_amt_override', 'is', '$RFalse', ''],
         ],
     'allow_null' : False,
     'allow_amend': [['where', '', '_ledger.alt_amt_override', 'is', '$True', '']],
@@ -378,7 +378,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_tran',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Amount received',
     'long_descr' : 'Amount received in tran currency - updated from cb_tran_pmt_det',
     'col_head'   : 'Amount tran',
@@ -398,7 +398,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Amount paid - local curr',
     'long_descr' : 'Amount paid in local currency - updated from cb_tran_pmt_det',
     'col_head'   : 'Amount loc',
@@ -462,6 +462,14 @@ virt.append ({
     'long_descr' : 'Tran type row id',
     'col_head'   : 'Tran type row id',
     'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'cb_pmt'",
+    })
+virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : '<literal value="$True"/>',
     })
 virt.append ({
     'col_name'   : 'cust_row_id',
@@ -538,10 +546,10 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cb', '-', 'amount_cb'],  # tgt_col, op, src_col
-                ['tran_tot_cb', '-', 'amount_cb'],
-                ['tran_day_local', '-', 'amount_local'],
-                ['tran_tot_local', '-', 'amount_local'],
+                ['tran_day_cb', '+', 'amount_cb'],  # tgt_col, op, src_col
+                ['tran_tot_cb', '+', 'amount_cb'],
+                ['tran_day_local', '+', 'amount_local'],
+                ['tran_tot_local', '+', 'amount_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -562,8 +570,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'amount_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'amount_local'],
+                ['tran_day', '+', 'amount_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'amount_local'],
                 ],
             [],  # on post
             [],  # on unpost

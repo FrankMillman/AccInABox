@@ -120,7 +120,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_supp',
-    'source'     : ['inv_tot_supp', 'rev(crn_tot_supp)', 'jnl_supp', 'jnl_supp', 'rev(pmt_supp)', 'rec_supp', 'rev(disc_tot_supp)'],
+    'source'     : ['inv_tot_supp', 'crn_tot_supp', 'jnl_supp', 'jnl_supp', 'pmt_supp', 'rec_supp', 'disc_tot_supp'],
     'data_type'  : '$PTY',
     'short_descr': 'Transaction amount - supp',
     'long_descr' : 'Transaction amount - supp',
@@ -133,7 +133,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'amount_local',
-    'source'     : ['inv_tot_local', 'rev(crn_tot_local)', 'jnl_local', 'jnl_local', 'rev(pmt_local)', 'rec_local', 'rev(disc_tot_local)'],
+    'source'     : ['inv_tot_local', 'crn_tot_local', 'jnl_local', 'jnl_local', 'pmt_local', 'rec_local', 'disc_tot_local'],
     'data_type'  : '$LCL',
     'short_descr': 'Transaction amount - local',
     'long_descr' : 'Transaction amount - local',

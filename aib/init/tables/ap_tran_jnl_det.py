@@ -9,19 +9,19 @@ table = {
         ['line_type', 'display_descr', [
             ['npch', 'Non-inventory item', 'npch_subtran',
                 [  # return values
-                    ['jnl_amt', 'tot_amt'],  # tgt_col, src_col
+                    ['jnl_amt', '-tot_amt'],  # tgt_col, src_col
                     ],
                 ['npch_code_id>descr'],  # display descr
                 ],
             ['arjnl', 'Ar journal', 'ar_subtran_jnl',
                 [  # return values
-                    ['jnl_amt', 'jnl_amount'],  # tgt_col, src_col
+                    ['jnl_amt', '-jnl_amount'],  # tgt_col, src_col
                     ],
                 ['cust_row_id>party_row_id>display_name'],  # display descr
                 ],
             ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values
-                    ['jnl_amt', 'gl_amount'],  # tgt_col, src_col
+                    ['jnl_amt', '-gl_amount'],  # tgt_col, src_col
                     ],
                 ['gl_code'],  # display descr
                 ],
@@ -165,7 +165,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'jnl_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Journal amount',
     'long_descr' : 'Journal amount - updated when subtran is saved',
     'col_head'   : 'Jnl amt',
@@ -211,20 +211,12 @@ virt.append ({
     'sql'        : 'a.tran_row_id>supp_row_id>ledger_row_id',
     })
 virt.append ({
-    'col_name'   : 'rev_sign_pch',
+    'col_name'   : 'rev_sign',
     'data_type'  : 'BOOL',
     'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - purchase transactions?',
+    'long_descr' : 'Reverse sign?',
     'col_head'   : 'Reverse sign?',
-    'sql'        : '$False',
-    })
-virt.append ({
-    'col_name'   : 'rev_sign_gl',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign - gl transactions?',
-    'col_head'   : 'Reverse sign?',
-    'sql'        : '$False',
+    'dflt_rule'  : '<fld_val name="tran_row_id>rev_sign"/>',
     })
 virt.append ({
     'col_name'   : 'display_descr',
@@ -310,7 +302,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'jnl_amt_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Journal amt local',
     'long_descr' : 'Journal amount in local currency',
     'col_head'   : 'Jnl amt local',

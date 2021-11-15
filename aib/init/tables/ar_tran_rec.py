@@ -257,7 +257,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'rec_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Receipt amount',
     'long_descr' : 'Receipt amount in transaction currency',
     'col_head'   : 'Rec amt',
@@ -305,8 +305,8 @@ virt.append ({
     'long_descr' : 'Transaction type - used in gui to ask "Post another?"',
     'col_head'   : 'Tran type',
     # 'dflt_rule'  : '<trantype_row_id tran_type="ar_rec"/>',
-    # 'sql'        : "'ar_rec'",
-    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'ar_rec'",
+    'sql'        : "'ar_rec'",
+    # 'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'ar_rec'",
     })
 virt.append ({
     'col_name'   : 'module_row_id',
@@ -349,32 +349,13 @@ virt.append ({
     'col_head'   : 'Function',
     'sql'        : 'a.cust_row_id>function_row_id',
     })
-# virt.append ({
-#     'col_name'   : 'tran_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Tran row id',
-#     'long_descr' : 'Tran row id',
-#     'col_head'   : 'Tran row id',
-#     'sql'        : "a.row_id",
-#     })
 virt.append ({
-    'col_name'   : 'unallocated',
-    'data_type'  : '$PTY',
-    'short_descr': 'Unallocated',
-    'long_descr' : 'Balance of receipt not allocated',
-    'col_head'   : 'Unalloc',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : (
-        "a.rec_amt "
-        "- "
-        "COALESCE(("
-            "SELECT SUM(b.alloc_cust) FROM {company}.ar_allocations b "
-            "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id AND b.deleted_id = 0"
-            "), 0)"
-        ),
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : '<literal value="$False"/>',
     })
 
 # cursor definitions
@@ -442,10 +423,10 @@ actions.append([
             [],  # aggregation
             [  # on insert
                 ['cust_row_id', '=', 'cust_row_id'],  # tgt_col, op, src_col
-                ['rec_amount', '=', 'rec_amt'],
+                ['rec_amount', '=', '-rec_amt'],
                 ],
             [  # on update
-                ['rec_amount', '=', 'rec_amt'],  # tgt_col, op, src_col
+                ['rec_amount', '=', '-rec_amt'],  # tgt_col, op, src_col
                 ],
             [],  # on delete
             ],

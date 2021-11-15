@@ -200,7 +200,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tfr_amount',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Amount transferred - cb curr',
     'long_descr' : 'Amount transferred in cb currency',
     'col_head'   : 'Amt tfrd cb',
@@ -220,7 +220,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tfr_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Amount transferred - loc curr',
     'long_descr' : 'Amount transferred in local currency',
     'col_head'   : 'Tfr loc',
@@ -293,6 +293,14 @@ virt.append ({
     'long_descr' : 'Tran type row id',
     'col_head'   : 'Tran type row id',
     'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'cb_tfr_in'",
+    })
+virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : '<literal value="$False"/>',
     })
 
 # cursor definitions

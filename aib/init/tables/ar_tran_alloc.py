@@ -170,15 +170,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'cust_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Customer row id',
-#     'long_descr' : 'Customer row id',
-#     'col_head'   : 'Cust row_id',
-#     'dflt_val'   : '{item_row_id>cust_row_id}',
-#     'sql'        : 'a.item_row_id>cust_row_id'
-#     })
 virt.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',

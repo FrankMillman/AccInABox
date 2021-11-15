@@ -110,12 +110,8 @@
             <<sub_form name=`ar_alloc_item`>>
               <<call_params>>
                 <<call_param name=`alloc_header` type=`data_obj` source=`ar_rec`/>>
-                <<call_param name=`amount_to_alloc` type=`data_attr` source=`ar_rec.rec_amt`/>>
-                <<call_param name=`unallocated` type=`data_attr` source=`ar_rec.unallocated`/>>
               <</call_params>>
-              <<return_params>>
-                <<return_param name=`unallocated` type=`data_attr` target=`ar_rec.unallocated`/>>
-              <</return_params>>
+              <<return_params/>>
               <<on_return>>
                 <<return state=`cancelled`>>
                   <<btn_set_focus btn_id=`btn_post`/>>

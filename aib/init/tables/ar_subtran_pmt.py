@@ -170,15 +170,18 @@ cols.append ({
     'long_descr' : 'Payment number. Could be derived using fkey, but denormalised for ar_trans view..',
     'col_head'   : 'Pmt no',
     'key_field'  : 'N',
-    'data_source': 'repl',
+    # 'data_source': 'repl',
+    'data_source': 'calc',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{subparent_row_id>tran_number}',
-    'dflt_rule'  : None,
+    # 'dflt_val'   : '{subparent_row_id>tran_number}',
+    'dflt_val'   : None,
+    # 'dflt_rule'  : None,
+    'dflt_rule'  : '<fld_val name="subparent_row_id>tran_number"/>',
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : None,
@@ -260,27 +263,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'tran_exch_rate',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Tran exchange rate',
-#     'long_descr' : 'Exchange rate from transaction currency to local currency. Denormalised for ar_trans view.',
-#     'col_head'   : 'Tran exch rate',
-#     'db_scale'   : 8,
-#     'key_field'  : 'N',
-#     'data_source': 'repl',
-#     'condition'  : None,
-#     'allow_null' : False,
-#     'allow_amend': False,
-#     'max_len'    : 0,
-#     'db_scale'   : 8,
-#     'scale_ptr'  : None,
-#     'dflt_val'   : '{subparent_row_id>tran_exch_rate}',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'pmt_amount',
     'data_type'  : '$TRN',
@@ -408,37 +390,11 @@ virt.append ({
     'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
     'sql'        : (
         "SELECT b.row_id FROM {company}.ar_openitems b "
-        "WHERE b.tran_type = 'ar_subrec' AND b.tran_row_id = a.row_id "
+        "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
+        "WHERE c.tran_type = 'ar_subrec' AND b.tran_row_id = a.row_id "
         "AND b.split_no = 0 AND b.deleted_id = 0"
         ),
     })
-# virt.append ({
-#     'col_name'   : 'tran_number',
-#     'data_type'  : 'TEXT',
-#     'short_descr': 'Receipt number',
-#     'long_descr' : 'Receipt number',
-#     'col_head'   : 'Rec no',
-#     'dflt_val'   : '{subparent_row_id>tran_number}',
-#     'sql'        : 'a.subparent_row_id>tran_number'
-#     })
-# virt.append ({
-#     'col_name'   : 'tran_date',
-#     'data_type'  : 'DTE',
-#     'short_descr': 'Transaction date',
-#     'long_descr' : 'Transaction date',
-#     'col_head'   : 'Tran date',
-#     'dflt_val'   : '{subparent_row_id>tran_date}',
-#     'sql'        : "a.subparent_row_id>tran_date"
-#     })
-# virt.append ({
-#     'col_name'   : 'posted',
-#     'data_type'  : 'BOOL',
-#     'short_descr': 'Posted?',
-#     'long_descr' : 'Has transaction been posted?',
-#     'col_head'   : 'Posted?',
-#     'dflt_val'   : '{subparent_row_id>posted}',
-#     'sql'        : "a.subparent_row_id>posted"
-#     })
 virt.append ({
     'col_name'   : 'currency_id',
     'data_type'  : 'INT',
@@ -459,6 +415,21 @@ virt.append ({
     'sql'        : 'a.subparent_row_id>tran_exch_rate',
     })
 virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : (
+      '<expr>'
+        '<literal value="dummy"/>'
+        '<op type="not"/>'
+        '<fld_val name="subparent_row_id>rev_sign"/>'
+      '</expr>'
+      ),
+    })
+
+virt.append ({
     'col_name'   : 'unallocated',
     'data_type'  : '$PTY',
     'short_descr': 'Unallocated',
@@ -473,7 +444,8 @@ virt.append ({
         "- "
         "COALESCE(("
             "SELECT SUM(b.alloc_cust) FROM {company}.ar_allocations b "
-            "WHERE b.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id AND b.deleted_id = 0"
+            "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
+            "WHERE c.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id AND b.deleted_id = 0"
             "), 0)"
         ),
     })
@@ -491,7 +463,8 @@ virt.append ({
         "SELECT 0 - SUM(c.discount_local) "
         "FROM {company}.ar_openitems b "
         "JOIN {company}.ar_allocations c ON c.item_row_id = b.row_id "
-        "WHERE b.tran_type = 'ar_rec' and b.tran_row_id = a.row_id"
+        "JOIN {company}.adm_tran_types d ON d.row_id = b.trantype_row_id "
+        "WHERE d.tran_type = 'ar_rec' and b.tran_row_id = a.row_id"
         ),
     })
 

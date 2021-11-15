@@ -1,3 +1,4 @@
+
 # table definition
 table = {
     'table_name'    : 'ap_tran_crn',
@@ -298,7 +299,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'crn_amount',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Cr note amount',
     'long_descr' : 'Credit note amount in transaction currency',
     'col_head'   : 'Crn amount',
@@ -338,7 +339,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'crn_net_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Cr note net amount',
     'long_descr' : 'Cr note net amount in tran currency - updated from ap_tran_crn_det',
     'col_head'   : 'Crn net amt',
@@ -358,7 +359,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'crn_tax_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Cr note tax amount',
     'long_descr' : 'Cr note tax amount in tran currency - updated from ap_tran_crn_det',
     'col_head'   : 'Crn tax amt',
@@ -378,7 +379,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'crn_net_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Cr note net local',
     'long_descr' : 'Cr note net amount in local currency - updated from ap_tran_crn_det',
     'col_head'   : 'crn net local',
@@ -398,7 +399,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'crn_tax_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Cr note tax local',
     'long_descr' : 'Cr note tax amount in local currency - updated from ap_tran_crn_det',
     'col_head'   : 'crn tax local',
@@ -418,7 +419,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'crn_net_supp',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Net amount',
     'long_descr' : 'Net amount in supplier currency',
     'col_head'   : 'Net amt',
@@ -446,7 +447,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'crn_tax_supp',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Tax amount',
     'long_descr' : 'Tax amount in supplier currency',
     'col_head'   : 'Tax amt',
@@ -524,8 +525,16 @@ virt.append ({
     'sql'        : 'a.supp_row_id>function_row_id',
     })
 virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : '<literal value="$False"/>',
+    })
+virt.append ({
     'col_name'   : 'crn_tot_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Total amount',
     'long_descr' : 'Cr note total amount in tran currency',
     'col_head'   : 'Tot amt',
@@ -541,53 +550,9 @@ virt.append ({
         ),
     'sql'        : "a.crn_net_amt + a.crn_tax_amt"
     })
-# virt.append ({
-#     'col_name'   : 'crn_net_supp',
-#     'data_type'  : '$PTY',
-#     'short_descr': 'Net amount',
-#     'long_descr' : 'Net amount in supplier currency',
-#     'col_head'   : 'Net amt',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'supp_row_id>currency_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#           '<fld_val name="crn_net_amt"/>'
-#           '<op type="/"/>'
-#           '<fld_val name="tran_exch_rate"/>'
-#           '<op type="*"/>'
-#           '<fld_val name="supp_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'sql'        : (
-#         "a.crn_net_amt / a.tran_exch_rate * a.supp_exch_rate"
-#         ),
-#     })
-# virt.append ({
-#     'col_name'   : 'crn_tax_supp',
-#     'data_type'  : '$PTY',
-#     'short_descr': 'Tax amount',
-#     'long_descr' : 'Tax amount in supplier currency',
-#     'col_head'   : 'Tax amt',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'supp_row_id>currency_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#           '<fld_val name="crn_tax_amt"/>'
-#           '<op type="/"/>'
-#           '<fld_val name="tran_exch_rate"/>'
-#           '<op type="*"/>'
-#           '<fld_val name="supp_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'sql'        : (
-#         "a.crn_tax_amt / a.tran_exch_rate * a.supp_exch_rate"
-#         ),
-#     })
 virt.append ({
     'col_name'   : 'crn_tot_supp',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Total amount',
     'long_descr' : 'Total amount in supplier currency',
     'col_head'   : 'Tot amt',
@@ -605,7 +570,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'crn_tot_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Total amount local',
     'long_descr' : 'Total amount in supplier currency',
     'col_head'   : 'Tot amt',
@@ -710,8 +675,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'crn_tot_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'crn_tot_local'],
+                ['tran_day', '+', 'crn_tot_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'crn_tot_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -732,10 +697,10 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_supp', '-', 'crn_tot_supp'],  # tgt_col, op, src_col
-                ['tran_tot_supp', '-', 'crn_tot_supp'],
-                ['tran_day_local', '-', 'crn_tot_local'],
-                ['tran_tot_local', '-', 'crn_tot_local'],
+                ['tran_day_supp', '+', 'crn_tot_supp'],  # tgt_col, op, src_col
+                ['tran_tot_supp', '+', 'crn_tot_supp'],
+                ['tran_day_local', '+', 'crn_tot_local'],
+                ['tran_tot_local', '+', 'crn_tot_local'],
                 ],
             [],  # on post
             [],  # on unpost

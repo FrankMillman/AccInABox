@@ -86,13 +86,7 @@
             <<prev_value/>>
             "/>
           <block/>
-          <subtran_frame subtran_obj="cb_pmt_det" subtran_col="line_type">
-            <subtran_body subtran_id="pch"/>
-            <subtran_body subtran_id="npch"/>
-            <subtran_body subtran_id="ar_jnl"/>
-            <subtran_body subtran_id="gl"/>
-            <subtran_body subtran_id="com"/>
-          </subtran_frame>
+          <subtran_frame subtran_obj="cb_pmt_det" subtran_col="line_type"/>
         </body>
         <button_row template="Grid_Frame_Grid_RO"/>
         <frame_methods template="Grid_Frame_Grid_RO"/>

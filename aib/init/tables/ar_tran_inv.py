@@ -371,7 +371,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'inv_net_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Invoice net amount',
     'long_descr' : 'Invoice net amount in invoice currency - updated from ar_tran_inv_det',
     'col_head'   : 'Inv net amt',
@@ -391,7 +391,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'inv_tax_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Invoice tax amount',
     'long_descr' : 'Invoice tax amount in invoice currency - updated from ar_tran_inv_det',
     'col_head'   : 'Inv tax amt',
@@ -411,7 +411,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'inv_net_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Invoice net local',
     'long_descr' : 'Invoice net amount in local currency - updated from ar_tran_inv_det',
     'col_head'   : 'Inv net local',
@@ -431,7 +431,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'inv_tax_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Invoice tax local',
     'long_descr' : 'Invoice tax amount in local currency - updated from ar_tran_inv_det',
     'col_head'   : 'Inv tax local',
@@ -451,7 +451,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'inv_net_cust',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Net amount',
     'long_descr' : 'Net amount in customer currency',
     'col_head'   : 'Net amt',
@@ -479,7 +479,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'inv_tax_cust',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Tax amount',
     'long_descr' : 'Tax amount in customer currency',
     'col_head'   : 'Tax amt',
@@ -516,14 +516,6 @@ virt.append ({
     'col_head'   : 'Tran type',
     'sql'        : "'ar_inv'",
     })
-# virt.append ({
-#     'col_name'   : 'module_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Module row id',
-#     'long_descr' : 'Module row id',
-#     'col_head'   : 'Module row id',
-#     'sql'        : "SELECT row_id FROM {company}.db_modules WHERE module_id = 'ar'",
-#     })
 virt.append ({
     'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
@@ -557,8 +549,16 @@ virt.append ({
     'sql'        : 'a.cust_row_id>function_row_id',
     })
 virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : '<literal value="$False"/>',
+    })
+virt.append ({
     'col_name'   : 'inv_tot_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Total amount',
     'long_descr' : 'Invoice total amount in transaction currency',
     'col_head'   : 'Tot amt',
@@ -574,53 +574,9 @@ virt.append ({
         ),
     'sql'        : "a.inv_net_amt + a.inv_tax_amt"
     })
-# virt.append ({
-#     'col_name'   : 'inv_net_cust',
-#     'data_type'  : '$PTY',
-#     'short_descr': 'Net amount',
-#     'long_descr' : 'Net amount in customer currency',
-#     'col_head'   : 'Net amt',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'cust_row_id>currency_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#           '<fld_val name="inv_net_amt"/>'
-#           '<op type="/"/>'
-#           '<fld_val name="tran_exch_rate"/>'
-#           '<op type="*"/>'
-#           '<fld_val name="cust_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'sql'        : (
-#         "a.inv_net_amt / a.tran_exch_rate * a.cust_exch_rate"
-#         ),
-#     })
-# virt.append ({
-#     'col_name'   : 'inv_tax_cust',
-#     'data_type'  : '$PTY',
-#     'short_descr': 'Tax amount',
-#     'long_descr' : 'Tax amount in customer currency',
-#     'col_head'   : 'Tax amt',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'cust_row_id>currency_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : (
-#         '<expr>'
-#           '<fld_val name="inv_tax_amt"/>'
-#           '<op type="/"/>'
-#           '<fld_val name="tran_exch_rate"/>'
-#           '<op type="*"/>'
-#           '<fld_val name="cust_exch_rate"/>'
-#         '</expr>'
-#         ),
-#     'sql'        : (
-#         "a.inv_tax_amt / a.tran_exch_rate * a.cust_exch_rate"
-#         ),
-#     })
 virt.append ({
     'col_name'   : 'inv_tot_cust',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Total amount',
     'long_descr' : 'Total amount in customer currency',
     'col_head'   : 'Tot amt',
@@ -638,7 +594,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'inv_tot_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Total amount local',
     'long_descr' : 'Total amount in customer currency',
     'col_head'   : 'Tot amt',

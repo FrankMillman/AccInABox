@@ -253,7 +253,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'pmt_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Payment amount',
     'long_descr' : 'Payment amount in transaction currency - updated from ap_allocations',
     'col_head'   : 'Pmt amt',
@@ -326,30 +326,14 @@ virt.append ({
     'col_head'   : 'Ledger',
     'sql'        : 'a.supp_row_id>ledger_row_id',
     })
-# virt.append ({
-#     'col_name'   : 'tran_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Tran row id',
-#     'long_descr' : 'Tran row id',
-#     'col_head'   : 'Tran row id',
-#     'sql'        : "a.row_id",
-#     })
-# virt.append ({
-#     'col_name'   : 'unallocated',
-#     'data_type'  : '$PTY',
-#     'short_descr': 'Unallocated',
-#     'long_descr' : 'Unallocated amount in supplier currency',
-#     'col_head'   : 'Unalloc',
-#     'db_scale'   : 2,
-#     'scale_ptr'  : 'supp_row_id>currency_id>scale',
-#     'dflt_rule'  : (
-#         '<expr>'
-#             '<fld_val name="pmt_supp"/>'
-#             '<op type="-"/>'
-#             '<fld_val name="alloc_supp"/>'
-#         '</expr>'
-#         ),
-#     })
+virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : '<literal value="$False"/>',
+    })
 
 # cursor definitions
 cursors = []

@@ -154,7 +154,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'qty',
-    'data_type'  : '$QTY',
+    'data_type'  : '$RQTY',
     'short_descr': 'Quantity',
     'long_descr' : 'Quantity',
     'col_head'   : 'Qty',
@@ -171,7 +171,7 @@ cols.append ({
     'col_checks' : [
         ['check_avail', 'Insufficient stock', [
             ['check', '', 'wh_prod_row_id>ledger_row_id>allow_neg_stock', 'is', '$True', ''],
-            ['or', '', '(qty_available - ($value * subparent_row_id>rev_sign_sls))', '>=', '0', ''],
+            ['or', '', '(qty_available - $value)', '>=', '0', ''],
             ],
         ]],
     'fkey'       : None,
@@ -208,7 +208,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'sls_amount',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Inv amount',
     'long_descr' : 'Inv amount in transaction currency',
     'col_head'   : 'Inv amount',
@@ -234,7 +234,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'cost_whouse',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Cost',
     'long_descr' : 'Cost in whouse currency - updated on_post by in_wh_prod_alloc',
     'col_head'   : 'Cost',
@@ -254,7 +254,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'cost_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Cost',
     'long_descr' : 'Cost in local currency - updated on_post by in_wh_tran_alloc',
     'col_head'   : 'Cost',
@@ -274,7 +274,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'net_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Net amount',
     'long_descr' : 'Net amount - updated when tax is calculated',
     'col_head'   : 'Net amt',
@@ -294,7 +294,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tax_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Tax amount',
     'long_descr' : 'Tax amount - updated when tax is calculated',
     'col_head'   : 'Tax amt',
@@ -314,7 +314,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'tax_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Tax local',
     'long_descr' : 'Tax amount in local currency - updated when tax is calculated',
     'col_head'   : 'Tax local',
@@ -337,7 +337,7 @@ cols.append ({
 virt = []
 virt.append ({
     'col_name'   : 'qty_available',
-    'data_type'  : '$QTY',
+    'data_type'  : '$RQTY',
     'short_descr': 'Quantity available',
     'long_descr' : 'Quantity available',
     'col_head'   : 'Qty avail',
@@ -378,8 +378,29 @@ virt.append ({
     'sql'        : "a.subparent_row_id>posted"
     })
 virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `tran_type`, `=`, `~gl_jnl~`, ``]]">'
+            '<literal value="$True"/>'
+          '</compare>'
+          '<default>'
+            '<expr>'
+              '<literal value="dummy"/>'
+              '<op type="not"/>'
+              '<fld_val name="subparent_row_id>rev_sign"/>'
+            '</expr>'
+          '</default>'
+        '</case>'
+        ),
+    })
+virt.append ({
     'col_name'   : 'net_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Net local',
     'long_descr' : 'Sales net amount in local currency',
     'col_head'   : 'Net local',
@@ -399,7 +420,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'tot_amt',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Total in transaction currency',
     'long_descr' : 'Total amount in transaction currency',
     'col_head'   : 'Net amount',
@@ -417,7 +438,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'tot_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Total in local currency',
     'long_descr' : 'Total amount in local currency',
     'col_head'   : 'Net local',
@@ -447,123 +468,6 @@ virt.append ({
         "(a.net_amt / a.subparent_row_id>tran_exch_rate) + a.tax_local"
         ),
     })
-virt.append ({
-    'col_name'   : 'upd_qty',
-    'data_type'  : '$QTY',
-    'short_descr': 'Signed quantity',
-    'long_descr' : 'Quantity - pos for inv, neg for crn',
-    'col_head'   : 'Qty',
-    'db_scale'   : 6,
-    'scale_ptr'  : 'wh_prod_row_id>prod_row_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="qty"/>'
-          '<op type="*"/>'
-          '<case>'
-            '<compare test="[[`if`, ``, `subparent_row_id>rev_sign_sls`, `is`, `$True`, ``]]">'
-              '<literal value="-1"/>'
-            '</compare>'
-            '<default>'
-              '<literal value="1"/>'
-            '</default>'
-          '</case>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.qty "
-        "* "
-        "CASE WHEN a.subparent_row_id>rev_sign_sls = $True THEN -1 ELSE 1 END"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'upd_local',
-    'data_type'  : '$LCL',
-    'short_descr': 'Signed net local',
-    'long_descr' : 'Sales net amount in local currency - pos for inv, neg for crn',
-    'col_head'   : 'Net local',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : (
-        '<expr>'
-          '<expr>'
-            '<fld_val name="net_amt"/>'
-            '<op type="/"/>'
-            '<fld_val name="subparent_row_id>tran_exch_rate"/>'
-          '</expr>'
-          '<op type="*"/>'
-          '<case>'
-            '<compare test="[[`if`, ``, `subparent_row_id>rev_sign_sls`, `is`, `$True`, ``]]">'
-              '<literal value="-1"/>'
-            '</compare>'
-            '<default>'
-              '<literal value="1"/>'
-            '</default>'
-          '</case>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "(a.net_amt / a.subparent_row_id>tran_exch_rate) "
-        "* "
-        "CASE WHEN a.subparent_row_id>rev_sign_sls = $True THEN -1 ELSE 1 END"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'upd_cost',
-    'data_type'  : '$LCL',
-    'short_descr': 'Signed cost',
-    'long_descr' : 'Cost in local currency - pos for inv, neg for crn',
-    'col_head'   : 'Cost',
-    'db_scale'   : 2,
-    'scale_ptr'  : '_param.local_curr_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="cost_local"/>'
-          '<op type="*"/>'
-          '<case>'
-            '<compare test="[[`if`, ``, `subparent_row_id>rev_sign_sls`, `is`, `$True`, ``]]">'
-              '<literal value="-1"/>'
-            '</compare>'
-            '<default>'
-              '<literal value="1"/>'
-            '</default>'
-          '</case>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.cost_local "
-        "* "
-        "CASE WHEN a.subparent_row_id>rev_sign_sls = $True THEN -1 ELSE 1 END"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'upd_cost_wh',
-    'data_type'  : '$PTY',
-    'short_descr': 'Signed cost wh',
-    'long_descr' : 'Cost in whouse currency - pos for inv, neg for crn',
-    'col_head'   : 'Cost wh',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'wh_prod_row_id>ledger_row_id>currency_id>scale',
-    'dflt_rule'  : (
-        '<expr>'
-          '<fld_val name="cost_whouse"/>'
-          '<op type="*"/>'
-          '<case>'
-            '<compare test="[[`if`, ``, `subparent_row_id>rev_sign_sls`, `is`, `$True`, ``]]">'
-              '<literal value="-1"/>'
-            '</compare>'
-            '<default>'
-              '<literal value="1"/>'
-            '</default>'
-          '</case>'
-        '</expr>'
-        ),
-    'sql'        : (
-        "a.cost_whouse "
-        "* "
-        "CASE WHEN a.subparent_row_id>rev_sign_sls = $True THEN -1 ELSE 1 END"
-        ),
-    })
 
 # cursor definitions
 cursors = []
@@ -577,7 +481,7 @@ actions.append([
             'Insufficient stock',
             [
                 ['check', '', 'wh_prod_row_id>ledger_row_id>allow_neg_stock', 'is', '$True', ''],
-                ['or', '', '(qty_available - upd_qty)', '>=', '0', ''],
+                ['or', '', '(qty_available - qty)', '>=', '0', ''],
                 ],
             ],
         ],
@@ -615,10 +519,10 @@ actions.append([
                 ],
             [],  # aggregation
             [  # on insert
-                ['alloc_qty', '=', 'upd_qty'],  # tgt_col, op, src_col
+                ['alloc_qty', '=', 'qty'],  # tgt_col, op, src_col
                 ],
             [  # on update
-                ['alloc_qty', '=', 'upd_qty'],  # tgt_col, op, src_col
+                ['alloc_qty', '=', 'qty'],  # tgt_col, op, src_col
                 ],
             [  # on delete
                 ['delete', '', ''],  # tgt_col, op, src_col
@@ -677,12 +581,12 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['qty_day', '-', 'upd_qty'],  # tgt_col, op, src_col
-                ['qty_tot', '-', 'upd_qty'],
-                ['tran_day_wh', '-', 'upd_cost_wh'],
-                ['tran_tot_wh', '-', 'upd_cost_wh'],
-                ['tran_day_loc', '-', 'upd_cost'],
-                ['tran_tot_loc', '-', 'upd_cost'],
+                ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
+                ['qty_tot', '+', 'qty'],
+                ['tran_day_wh', '+', 'cost_whouse'],
+                ['tran_tot_wh', '+', 'cost_whouse'],
+                ['tran_day_loc', '+', 'cost_local'],
+                ['tran_tot_loc', '+', 'cost_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -702,10 +606,10 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_wh', '-', 'upd_cost_wh'],  # tgt_col, op, src_col
-                ['tran_tot_wh', '-', 'upd_cost_wh'],
-                ['tran_day_loc', '-', 'upd_cost'],
-                ['tran_tot_loc', '-', 'upd_cost'],
+                ['tran_day_wh', '+', 'cost_whouse'],  # tgt_col, op, src_col
+                ['tran_tot_wh', '+', 'cost_whouse'],
+                ['tran_day_loc', '+', 'cost_local'],
+                ['tran_tot_loc', '+', 'cost_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -724,12 +628,12 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['qty_day', '+', 'upd_qty'],  # tgt_col, op, src_col
-                ['qty_tot', '+', 'upd_qty'],
-                ['sales_day', '+', 'upd_local'],
-                ['sales_tot', '+', 'upd_local'],
-                ['cos_day', '+', 'upd_cost'],
-                ['cos_tot', '+', 'upd_cost'],
+                ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
+                ['qty_tot', '+', 'qty'],
+                ['sales_day', '+', 'net_local'],
+                ['sales_tot', '+', 'net_local'],
+                ['cos_day', '+', 'cost_local'],
+                ['cos_tot', '+', 'cost_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -748,10 +652,10 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['sales_day', '+', 'upd_local'],  # tgt_col, op, src_col
-                ['sales_tot', '+', 'upd_local'],
-                ['cos_day', '+', 'upd_cost'],
-                ['cos_tot', '+', 'upd_cost'],
+                ['sales_day', '+', 'net_local'],  # tgt_col, op, src_col
+                ['sales_tot', '+', 'net_local'],
+                ['cos_day', '+', 'cost_local'],
+                ['cos_tot', '+', 'cost_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -773,12 +677,12 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['qty_day', '+', 'upd_qty'],  # tgt_col, op, src_col
-                ['qty_tot', '+', 'upd_qty'],
-                ['sales_day', '+', 'upd_local'],
-                ['sales_tot', '+', 'upd_local'],
-                ['cos_day', '+', 'upd_cost'],
-                ['cos_tot', '+', 'upd_cost'],
+                ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
+                ['qty_tot', '+', 'qty'],
+                ['sales_day', '+', 'net_local'],
+                ['sales_tot', '+', 'net_local'],
+                ['cos_day', '+', 'cost_local'],
+                ['cos_tot', '+', 'cost_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -799,8 +703,8 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'upd_cost'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'upd_cost'],
+                ['tran_day', '+', 'cost_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'cost_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -821,8 +725,8 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '-', 'upd_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'upd_local'],
+                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                ['tran_tot', '+', 'net_local'],
                 ],
             [],  # on post
             [],  # on unpost
@@ -843,8 +747,8 @@ actions.append([
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
             [  # aggregation
-                ['tran_day', '+', 'upd_cost'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'upd_cost'],
+                ['tran_day', '-', 'cost_local'],  # tgt_col, op, src_col
+                ['tran_tot', '-', 'cost_local'],
                 ],
             [],  # on post
             [],  # on unpost

@@ -10,7 +10,6 @@ table = {
     'tree_params'   : None,
     'roll_params'   : [
         ['tran_date'],  # key fields to roll on
-        # ['qty_tot', 'tran_tot_wh', 'tran_tot_loc'],  # fields to roll
         ['tran_tot_wh', 'tran_tot_loc'],  # fields to roll
         ],
     'indexes'       : [
@@ -23,8 +22,6 @@ table = {
             ['orig_trantype_row_id', False],
             ['orig_ledger_row_id', False],
             ['tran_date', True],
-            # ['qty_day', False],
-            # ['qty_tot', False],
             ['tran_day_wh', False],
             ['tran_tot_wh', False],
             ['tran_day_loc', False],
@@ -287,46 +284,6 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-# cols.append ({
-#     'col_name'   : 'qty_day',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Qty - daily total',
-#     'long_descr' : 'Quantity - daily total',
-#     'col_head'   : 'Qty day',
-#     'key_field'  : 'N',
-#     'data_source': 'aggr',
-#     'condition'  : None,
-#     'allow_null' : False,
-#     'allow_amend': True,
-#     'max_len'    : 0,
-#     'db_scale'   : 6,
-#     'scale_ptr'  : 'prod_row_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
-# cols.append ({
-#     'col_name'   : 'qty_tot',
-#     'data_type'  : 'DEC',
-#     'short_descr': 'Qty - accum total',
-#     'long_descr' : 'Quantity - accumulated total',
-#     'col_head'   : 'Qty tot',
-#     'key_field'  : 'N',
-#     'data_source': 'aggr',
-#     'condition'  : None,
-#     'allow_null' : False,
-#     'allow_amend': True,
-#     'max_len'    : 0,
-#     'db_scale'   : 6,
-#     'scale_ptr'  : 'prod_row_id>scale',
-#     'dflt_val'   : '0',
-#     'dflt_rule'  : None,
-#     'col_checks' : None,
-#     'fkey'       : None,
-#     'choices'    : None,
-#     })
 cols.append ({
     'col_name'   : 'tran_day_wh',
     'data_type'  : '$PTY',

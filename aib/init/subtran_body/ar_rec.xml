@@ -15,7 +15,7 @@
   <label value="Customer Id:"/>
   <col/>
   <input obj_name="ar_subrec" col_name="cust_id" lng="84" after="
-    <<!--  show exch_rate and arec_cust if alt_curr - enable arec_cust if override allowed -->>
+    <<!--  show exch_rate and rec_cust if alt_curr - enable rec_cust if override allowed -->>
     <<case>>
       <<compare test=`[['if', '', '_param.allow_alloc_rec', 'is', '$True', ''],
           ['and', '', 'ar_subrec.cust_row_id>ledger_row_id>auto_alloc_oldest', 'is', '$False', '']]`>
@@ -44,7 +44,7 @@
   <label value="="/>
   <col/>
   <display obj_name="ar_subrec" col_name="cust_row_id>currency_id>symbol" lng="10"/>
-  <input obj_name="ar_subrec" col_name="arec_cust" lng="84"/>
+  <input obj_name="ar_subrec" col_name="rec_cust" lng="84"/>
 
   <end_if/>
 
@@ -52,18 +52,14 @@
   <col/>
   <col/>
   <button lng="150" btn_id="alloc" btn_label="Allocate now"
-    btn_enabled="false" btn_validate="true" action="
+    btn_enabled="true" btn_validate="true" action="
       <<req_save/>>
       <<assign src=`$None` tgt=`_ctx.this_item_rowid`/>>
       <<sub_form name=`ar_alloc_item`>>
         <<call_params>>
           <<call_param name=`alloc_header` type=`data_obj` source=`ar_subrec`/>>
-          <<call_param name=`amount_to_alloc` type=`data_attr` source=`ar_subrec.arec_cust`/>>
-          <<call_param name=`unallocated` type=`data_attr` source=`ar_subrec.unallocated`/>>
         <</call_params>>
-        <<return_params>>
-          <<return_param name=`unallocated` type=`data_attr` target=`ar_subrec.unallocated`/>>
-        <</return_params>>
+        <<return_params/>>
         <<on_return>>
           <<return state=`cancelled`>>
             <<btn_set_focus btn_id=`btn_save`/>>
