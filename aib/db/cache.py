@@ -299,15 +299,20 @@ async def ledger_inserted(db_obj, xml):
 
     conn = await db.connection._get_connection()
 
-    company = db_obj.company
+    # find row_id of 'root' of sub_ledger menu 'template'
+    sql = (
+        f"SELECT row_id FROM {company}.sys_menu_defns "
+        f"WHERE module_row_id = {module_row_id} AND parent_id IS NULL"
+        )
+    cur = await conn.exec_sql(sql)
+    tree_start_row, = await cur.__anext__()
+
+    # select all rows in template, use them to create new sub_ledger menu
     cte = await conn.tree_select(
         context=db_obj.context,
         table_name='sys_menu_defns',
         tree_params = [None, ['row_id', 'descr', 'parent_id', 'seq'], None],
-        filter=[
-            ['WHERE', '', 'module_row_id', '=',module_row_id, ''],
-            ['AND', '', 'deleted_id', '=', -1, ''],
-            ],
+        start_row=tree_start_row,
         sort=True,
         )
     sql = (cte +

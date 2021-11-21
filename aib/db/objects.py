@@ -1437,6 +1437,9 @@ class DbObject:
             await self.check_perms('delete')
 
         if self.db_table.tree_params is not None:
+            if await self.getval('row_id') == 1:
+                raise AibError(head='Delete {}'.format(self.table_name),
+                    body='Cannot delete root')  # added 2021-11-19 - ok?
             # tree_params[2] is a list of 'levels'
             # if number of levels is 1, by definition there cannot
             #   be any children
@@ -1447,6 +1450,12 @@ class DbObject:
                     raise AibError(head='Delete {}'.format(self.table_name),
                         body='Children exist - cannot delete')
 
+        # moved from inside transaction to outside [2021-11-19] - monitor
+        for descr, errmsg, del_chk in self.db_table.actions.del_checks:
+            if not await eval_bool_expr(del_chk, self):
+                raise AibError(head=self.db_table.short_descr, body=errmsg)
+
+        # start a transaction
         async with self.context.db_session.get_connection() as db_mem_conn:
 
             if self.mem_obj:
@@ -1454,9 +1463,11 @@ class DbObject:
             else:
                 conn = db_mem_conn.db
 
-            for descr, errmsg, del_chk in self.db_table.actions.del_checks:
-                if not await eval_bool_expr(del_chk, self):
-                    raise AibError(head=self.db_table.short_descr, body=errmsg)
+            # why is this inside transaction? [2021-11-19]
+            # move to before transaction started, monitor
+            # for descr, errmsg, del_chk in self.db_table.actions.del_checks:
+            #     if not await eval_bool_expr(del_chk, self):
+            #         raise AibError(head=self.db_table.short_descr, body=errmsg)
 
             if self.sub_trans:  # delete any subtran children
                 for subtran_colname in self.sub_trans:

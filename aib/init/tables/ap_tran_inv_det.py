@@ -23,11 +23,12 @@ table = {
                     ],
                 ['npch_code_id>descr'],  # display descr
                 ],
-            ['arjnl', 'Ar journal', 'ar_subtran_jnl',
+            ['ar_jnl', 'Ar journal', 'ar_subtran_jnl',
                 [  # return values
                     ['inv_net_amt', '-jnl_amount'],  # tgt_col, src_col
                     ],
-                ['cust_row_id>party_row_id>display_name'],  # display descr
+                # ['cust_row_id>party_row_id>display_name'],  # display descr
+                ['cust_id'],  # display descr
                 ],
             ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values

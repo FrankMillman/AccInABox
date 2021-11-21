@@ -22,12 +22,12 @@
           <panel/>
           <row/>
           <col/>
-          <label value="Code:"/>
+          <label value="Group code:"/>
           <col/>
           <input obj_name="gl_group" col_name="gl_group" lng="80"/>
           <row/>
           <col/>
-          <label value="Description:"/>
+          <label value="Group description:"/>
           <col/>
           <input obj_name="gl_group" col_name="descr" lng="120"/>
         </body>

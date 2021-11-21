@@ -7,11 +7,12 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['apjnl', 'Ap journal', 'ap_subtran_jnl',
+            ['ap_jnl', 'Ap journal', 'ap_subtran_jnl',
                 [  # return values
                     ['jnl_amt', '-jnl_amount'],  # tgt_col, src_col
                     ],
-                ['supp_row_id>party_row_id>display_name'],  # display descr
+                # ['supp_row_id>party_row_id>display_name'],  # display descr
+                ['supp_id'],  # display descr
                 ],
             ['nsls', 'Non-inventory item', 'nsls_subtran',
                 [  # return values

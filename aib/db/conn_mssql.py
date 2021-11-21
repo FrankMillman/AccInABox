@@ -566,7 +566,7 @@ def get_lower_colname(self, col_name, alias):
     return f'{alias}._{col_name}'
 
 async def tree_select(self, context, table_name, tree_params, level=None,
-        start_value=None, filter=None, sort=False, up=False):
+        start_row=1, filter=None, sort=False, up=False):
 
     company = context.company
     group, col_names, fixed_levels = tree_params
@@ -641,10 +641,7 @@ async def tree_select(self, context, table_name, tree_params, level=None,
     else:
         where_2 += f"{test} _tree.row_id = _tree2.{parent_id}"
 
-    if start_value is None:
-        where_1 += f"{test} {parent_id} IS NULL"
-    else:
-        where_1 += f"{test} {parent_id} = {start_value}"
+    where_1 += f"{test} row_id = {start_row}"
 
     cte = (
         "WITH _tree AS ("

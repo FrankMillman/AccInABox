@@ -15,7 +15,7 @@
   <label value="Supplier Id:"/>
   <col/>
   <input obj_name="ap_subpmt" col_name="supp_id" lng="84" after="
-    <<!--  show exch_rate and apmt_supp if alt_curr - enable apmt_supp if override allowed -->>
+    <<!--  show exch_rate and pmt_supp if alt_curr - enable pmt_supp if override allowed -->>
     <<case>>
       <<compare test=`[['if', '', '_param.allow_alloc_pmt', 'is', '$True', ''],
           ['and', '', 'ap_subpmt.supp_row_id>ledger_row_id>auto_alloc_oldest', 'is', '$False', '']]`>
@@ -72,7 +72,7 @@
   <label value="Payment amount:"/>
   <col/>
   <display obj_name="ap_subpmt" col_name="currency_id>symbol" lng="10"/>
-  <input obj_name="ap_subpmt" col_name="apmt_amount" lng="84"/>
+  <input obj_name="ap_subpmt" col_name="pmt_amount" lng="84"/>
 
   <!-- this does not work well - if > 1 ledger, alt_curr is $None when form is created -->
   <if test="[[`if`, ``, `ap_subpmt.supp_row_id>ledger_row_id>alt_curr`, `is`, `$True`, ``]]"/>
@@ -84,7 +84,7 @@
   <label value="="/>
   <col/>
   <display obj_name="ap_subpmt" col_name="supp_row_id>currency_id>symbol" lng="10"/>
-  <input obj_name="ap_subpmt" col_name="apmt_supp" lng="84"/>
+  <input obj_name="ap_subpmt" col_name="pmt_supp" lng="84"/>
 
   <end_if/>
 
@@ -98,7 +98,7 @@
       <<sub_form name=`ar_alloc_item`>>
         <<call_params>>
           <<call_param name=`alloc_header` type=`data_obj` source=`ap_subpmt`/>>
-          <<call_param name=`amount_to_alloc` type=`data_attr` source=`ap_subpmt.apmt_supp`/>>
+          <<call_param name=`amount_to_alloc` type=`data_attr` source=`ap_subpmt.pmt_supp`/>>
           <<call_param name=`unallocated` type=`data_attr` source=`ap_subpmt.unallocated`/>>
         <</call_params>>
         <<return_params>>

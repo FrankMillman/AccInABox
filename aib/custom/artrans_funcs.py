@@ -313,9 +313,6 @@ async def after_save_alloc(caller, xml):
         await ar_alloc.delete(from_upd_on_save=True)  # actually delete
     else:
         await ar_alloc.setval('alloc_cust', alloc_cust)
-        # fld = await ar_alloc.getfld('alloc_cust')
-        # alloc_cust = await fld.str_to_val(alloc_cust)
-        # await fld.setval(alloc_cust)
         await ar_alloc.save(from_upd_on_save=True)  # do not update audit trail
 
     alloc_cust_fld._init = alloc_cust

@@ -33,7 +33,6 @@ class GuiTreeCommon:
         self.session = parent.session
         self.node_inserted = False
         self.insert_params = {}
-        self.methods = {}
         self.auto_start = element.get('auto_start') != 'false'  # default to True
         self.before_input = None
 
@@ -44,7 +43,7 @@ class GuiTreeCommon:
     async def validate(self, save=False):
         # 2016-07-28 - don't know when this gets called, or if save is ever True
         # default save to False, monitor
-        print('HOW DO WE GET HERE?')
+        # 2021-11-18 - can happen if form has gui_objects *after* tree object - no examples at present
         if debug:
             log.write('validate tree {} {}\n\n'.format(
                 self.ref, self.db_obj.dirty))
@@ -57,18 +56,15 @@ class GuiTreeCommon:
                 print('DBOBJ NOT SAVED!')
 
     async def on_req_cancel(self):
-        if 'on_req_cancel' in self.methods:
-            await ht.form_xml.exec_xml(self, self.methods['on_req_cancel'])
-        else:
-            await self.parent.on_req_cancel()
+        await self.parent.on_req_cancel()
 
     async def on_req_close(self):
-        if 'on_req_close' in self.methods:
-            ht.form_xml.exec_xml(self, self.methods['on_req_close'])
-        else:
-            await self.parent.on_req_close()
+        await self.parent.on_req_close()
 
-    async def setup_memobj(self, group, member):
+    async def setup_memobj(self):
+
+        group = self.group
+        member = self.member
 
         if '_mem_combo' not in self.data_objects:
             combo_defn = (
@@ -103,16 +99,34 @@ class GuiTreeCommon:
 
         await self.db_obj.delete_all()
 
-        group_parent, group_col_names, group_levels = group.db_table.tree_params
-        member_group_id, member_col_names, member_levels = member.db_table.tree_params
-
+        self.group_tree_params = group.db_table.tree_params
+        group_parent, group_col_names, group_levels = self.group_tree_params
         self.group_code, self.group_descr, self.group_parent_id, self.group_seq = group_col_names
-        self.group_levels = 1 if group_levels is None else len(group_levels[1])  # only need number of levels
+        self.tree_start_row = 1  # can be overridden in next block
+        if group_levels is not None:
+            type_colname, level_types, sublevel_type = group_levels
+            if group.db_table.ledger_col is not None:
+                # if sub-ledgers, level_types is a dict keyed on ledger_row_id
+                ledger_row_id = await member.getval('ledger_row_id')
+                level_types = level_types[ledger_row_id]
+                group_levels = type_colname, level_types, sublevel_type
+                self.group_tree_params = group_parent, group_col_names, group_levels
+                keys = {'ledger_row_id': ledger_row_id, 'parent_id': 1}
+                await group.select_row(keys=keys, display=False)
+                self.tree_start_row = await group.getval('row_id')
+        self.no_grp_levels = 1 if group_levels is None else len(group_levels[1])
+
+        self.member_tree_params = member.db_table.tree_params
+        member_group_id, member_col_names, member_levels = self.member_tree_params
         self.member_group_id = member_group_id
         self.member_code, self.member_descr, self.member_parent_id, self.member_seq = member_col_names
-        self.member_levels = 1 if member_levels is None else len(member_levels[1])
+        self.no_mem_levels = 1 if member_levels is None else len(member_levels[1])
+        self.group_tree_params = group_parent, group_col_names, group_levels
 
-    async def get_combo_data(self, group, member):
+    async def get_combo_data(self):
+
+        group = self.group
+        member = self.member
 
         if group.mem_obj or group.view_obj:
             group_where = ''
@@ -124,21 +138,10 @@ class GuiTreeCommon:
         else:
             member_where = ' WHERE deleted_id = 0'
 
-        # this has to be hard-coded :-(  [2021-05-22]
-        # if looking up nsls/npch_codes, and ledger_row_id is not None,
-        #   use that ledger_row_id as a filter when selecting nsls/npch_groups
-        if member.table_name in ('nsls_codes', 'npch_codes'):
-            if group.table_name in ('nsls_groups', 'npch_groups'):
-                ledger_row_id = await member.getval('ledger_row_id')
-                if ledger_row_id is None:
-                    ledger_row_id = self.form
-                if ledger_row_id is not None:
-                    group_where += f' AND ledger_row_id = {ledger_row_id}'
-
         async with db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
 
-            if self.group_levels == 1:
+            if self.no_grp_levels == 1:
 
                 # create 'root' node
                 await self.db_obj.init(display=False)
@@ -153,38 +156,26 @@ class GuiTreeCommon:
                 await self.db_obj.setval('is_leaf', False)
                 await self.db_obj.save()
 
-                self.group_levels += 1
+                self.no_grp_levels += 1
 
                 sql = (
-                    "SELECT row_id, {}, {}, "
-                    "0 as parent_id, 1 as _level, {} FROM {}.{}{} "
+                    f"SELECT row_id, {self.group_code}, {self.group_descr}, "
+                    f"0 as parent_id, 1 as _level, {self.group_seq} "
+                    f"FROM {self.parent.company}.{group.table_name}{group_where} "
                     "ORDER BY seq"
-                    .format(self.group_code, self.group_descr, self.group_seq,
-                        self.parent.company, group.table_name, group_where)
                     )
             else:
-                tree_params = group.db_table.tree_params
-                group_parent, group_col_names, group_levels = tree_params
-
-                if group_levels is not None:
-                    type_colname, level_types, sublevel_type = group_levels
-                    if group.db_table.ledger_col is not None:  # if sub-ledgers, level_types is a dict keyed on ledger_row_id
-                        ledger_row_id = await member.getval('ledger_row_id')
-                        level_types = level_types[ledger_row_id]
-                        group_levels = type_colname, level_types, sublevel_type
-                        tree_params = group_parent, group_col_names, group_levels
-
                 cte = await conn.tree_select(
                     context=self.parent.context,
                     table_name=group.table_name,
-                    tree_params=tree_params,
+                    tree_params=self.group_tree_params,
+                    start_row=self.tree_start_row,
                     )
                 sql = (cte +
-                    "SELECT row_id, {}, {}, {}, "
-                    "_level, {} FROM _tree{} "
-                    "ORDER BY parent_id, {}"
-                    .format(self.group_code, self.group_descr,
-                    self.group_parent_id, self.group_seq, group_where, self.group_seq)
+                    f"SELECT row_id, {self.group_code}, {self.group_descr}, "
+                    f"{self.group_parent_id}, _level, {self.group_seq} "
+                    f"FROM _tree{group_where} "
+                    f"ORDER BY parent_id, {self.group_seq}"
                     )
 
             # expandable?  [the opposite of 'is_leaf']
@@ -224,16 +215,7 @@ class GuiTreeCommon:
                 await self.db_obj.setval('is_leaf', False)
                 await self.db_obj.save()
 
-            if self.member_levels == 1:
-                # sql = (
-                #     "SELECT row_id, {}, {}, {}, "
-                #     "null as parent_id, 0 as _level, {} FROM {}.{}{} "
-                #     "ORDER BY {}, {}"
-                #     .format(self.member_code, self.member_descr, self.member_group_id,
-                #         self.member_seq, self.parent.company, member.table_name,
-                #         member_where, self.member_group_id, self.member_seq)
-                #     )
-
+            if self.no_mem_levels == 1:
                 col_names = ['row_id', self.member_code, self.member_descr,
                     self.member_group_id, None, 0, self.member_seq]
                 if member_where:
@@ -265,12 +247,10 @@ class GuiTreeCommon:
                     member.context, member.db_table, col_names, where, order)
 
             else:
-                tree_params = member.db_table.tree_params
-                # member_group_id, member_col_names, member_levels = tree_params
                 cte = await conn.tree_select(
                     context=self.parent.context,
                     table_name=member.table_name,
-                    tree_params=tree_params,
+                    tree_params=self.member_tree_params,
                     )
                 sql = (cte +
                     "SELECT row_id, {}, {}, {}, "
@@ -301,16 +281,16 @@ class GuiTreeCommon:
                         init_vals={'type': 'member', 'data_row_id': data_parent_id})
                 parent_id = await self.db_obj.getval('row_id')
 
-                if self.member_levels == 1:
+                if self.no_mem_levels == 1:
                     is_leaf = True
-                elif _level == (self.member_levels - 1):
+                elif _level == (self.no_mem_levels - 1):
                     is_leaf = True
-                elif not self.member_levels:
+                elif not self.no_mem_levels:
                     await member.init(display=False, init_vals={'row_id': data_row_id})
                     is_leaf = await member.getval('is_leaf')
                 else:
                     is_leaf = False
-                # print(code, self.member_levels, _level, is_leaf)
+                # print(code, self.no_mem_levels, _level, is_leaf)
 
                 await self.db_obj.init(display=False)
                 await self.db_obj.setval('type', 'member')
@@ -504,9 +484,9 @@ class GuiTreeCombo(GuiTreeCommon):
         member_name = element.get('member_name')
         self.member = self.data_objects[member_name]
 
-        await self.setup_memobj(self.group, self.member)
+        await self.setup_memobj()
 
-        if self.group_levels:  # no of levels is fixed
+        if self.no_grp_levels:  # no of levels is fixed
             # insert while on bottom level means 'insert new member'
             # insert while on higher level means 'insert new group'
             ask_insert = False
@@ -526,7 +506,7 @@ class GuiTreeCombo(GuiTreeCommon):
         self.tree_frames = {}  # key='group'/'member' val=tree_frame for group/member
 
     async def start_tree(self):
-        tree_data = await self.get_combo_data(self.group, self.member)
+        tree_data = await self.get_combo_data()
 
         # for td in tree_data:
         #     print('{:<10}{!r:<10}{:<24}{}'.format(*td))
@@ -561,14 +541,12 @@ class GuiTreeCombo(GuiTreeCommon):
         node_type = await self.db_obj.getval('type')
         data_row_id = await self.db_obj.getval('data_row_id')
 
-        node_type = await self.db_obj.getval('type')
         if node_type == 'group':
-            # await self.group.init(init_vals={'row_id': data_row_id})
             await self.group.select_row({'row_id': data_row_id})
             self.tree_frame = self.tree_frames['group']
         else:  # must be 'member'
-            # await self.member.init(init_vals={'row_id': data_row_id})
             await self.member.select_row({'row_id': data_row_id})
+            await self.group.select_row({'row_id': await self.member.getval(self.member_group_id)})
             self.tree_frame = self.tree_frames['member']
         await self.tree_frame.restart_frame(set_focus=False)
 
@@ -595,8 +573,8 @@ class GuiTreeCombo(GuiTreeCommon):
         else:
             await self.group.init(display=False,
                 init_vals={'row_id': await self.db_obj.getval('data_row_id')})
-            if self.group_levels:
-                if await self.db_obj.getval('level') == (self.group_levels - 1):
+            if self.no_grp_levels:
+                if await self.db_obj.getval('level') == (self.no_grp_levels - 1):
                     new_node_type = 'member_root'
                 else:
                     new_node_type = 'group'
@@ -625,10 +603,16 @@ class GuiTreeCombo(GuiTreeCommon):
                     'seq': seq})
                 self.tree_frame = self.tree_frames['member']
             else:
-                # self.insert_params = {'seq': seq,
-                #     self.group_parent_id: await self.db_obj.getval('data_row_id')}
                 self.insert_params = {'seq': seq}
-                if self.group_parent_id is not None:
+                group_parent, group_col_names, group_levels = self.group_tree_params
+                if group_levels is not None:
+                    type_colname, level_types, sublevel_type = group_levels
+                    level_types = [x[0] for x in level_types]
+                    this_level = await self.db_obj.getval('level')
+                    # this_type = await self.group.getval(type_colname)
+                    # assert this_type == levels[this_level]
+                    self.insert_params[type_colname] = level_types[this_level + 1]
+                if self.group_parent_id is not None:  # when can it be None ??
                     self.insert_params[self.group_parent_id] = await self.db_obj.getval('data_row_id')
                 await self.group.init()
                 await self.db_obj.init(display=False, init_vals={
@@ -686,11 +670,11 @@ class GuiTreeCombo(GuiTreeCommon):
             code = await self.member.getval(self.member_code)
             text = await self.member.getval(self.member_descr)
 
-            if self.member_levels == 1:
+            if self.no_mem_levels == 1:
                 is_leaf = True
-            elif await self.db_obj.getval('level') == (self.member_levels - 1):
+            elif await self.db_obj.getval('level') == (self.no_mem_levels - 1):
                 is_leaf = True
-            elif not self.member_levels:
+            elif not self.no_mem_levels:
                 is_leaf = await self.member.getval('is_leaf')
             else:
                 is_leaf = True
@@ -705,7 +689,7 @@ class GuiTreeCombo(GuiTreeCommon):
                 data_parent_id = None
             code = await self.group.getval(self.group_code)
             text = await self.group.getval(self.group_descr)
-            is_leaf = True
+            is_leaf = False
         await self.db_obj.setval('data_row_id', data_row_id)
         await self.db_obj.setval('data_group_id', data_group_id)
         await self.db_obj.setval('data_parent_id', data_parent_id)
@@ -731,7 +715,7 @@ class GuiTreeLkup(GuiTreeCommon):
             fld = await self.db_obj.getfld(group_name)
             self.group = await fld.get_fk_object()
             self.member = self.db_obj
-            await self.setup_memobj(self.group, self.member)
+            await self.setup_memobj()
             gui.append(('tree', {
                 'ref': self.ref,
                 'lng': element.get('lng'),
@@ -764,7 +748,7 @@ class GuiTreeLkup(GuiTreeCommon):
 
     async def start_tree(self):
         if self.group is not None:
-            tree_data = await self.get_combo_data(self.group, self.member)
+            tree_data = await self.get_combo_data()
             if len(tree_data) == 1:  # there is only a root node
                 hide_root = False
             else:

@@ -732,7 +732,7 @@ cursors.append({
             ['if', '', '_ledger.currency_id', 'is', '$None', '']
             ]],
         ['location_row_id>location_id', 60, False, True, [
-            ['if', '', '_ledger.valid_loc_ids>is_leaf', 'is', '$Falsee', '']
+            ['if', '', '_ledger.valid_loc_ids>is_leaf', 'is', '$False', '']
             ]],
         ['function_row_id>function_id', 60, False, True, [
             ['if', '', '_ledger.valid_fun_ids>is_leaf', 'is', '$False', '']
