@@ -607,7 +607,7 @@ class FinReport:
         group_table = await db.objects.get_db_table(context, company, group_table_name)
         tree_params = group_table.tree_params
         group, col_names, levels = tree_params
-        code, descr, parent_id, seq = col_names
+        code, descr, parent_col_name, seq_col_name = col_names
         type_colname, level_types, sublevel_type = levels
 
         if group_table.ledger_col is not None:  # if sub-ledgers, level_types is a dict keyed on ledger_row_id
@@ -623,8 +623,8 @@ class FinReport:
             if pos == 0:
                 path += f'>{link_col.col_name}'
             else:
-                path += f'>{parent_id}'
-            level_data[f'code_{level}'] = (code, seq, group_table_name, f'{path}>{code}')
+                path += f'>{parent_col_name}'
+            level_data[f'code_{level}'] = (code, seq_col_name, group_table_name, f'{path}>{code}')
             # prev_level = f'code_{level}'
         levels = list(level_data.keys())
 
@@ -642,11 +642,38 @@ class FinReport:
             all_grp = grp_obj.select_many(where=where, order=[])
             async for _ in all_grp:
                 grp_type = f"code_{await grp_obj.getval('group_type')}"
-                grp_seq = await grp_obj.getval('seq')
+                if filter:  # if there is a filter, exclude sub_ledger if not included in filter
+                    new_filter = []
+                    for fil in filter:
+                        new_fil = fil[:]  # make a copy
+                        if fil[2] == grp_type:  # include this one
+                            new_fil[2] = 'gl_group'
+                        elif levels.index(fil[2]) > levels.index(grp_type):  # higher group
+                            gap = levels.index(fil[2]) - levels.index(grp_type)
+                            new_fil[2] = f"{(parent_col_name + '>')*gap}gl_group"
+                        else:
+                            new_fil[2] = '$None'  # not for this 'level'
+                        new_filter.append(new_fil)
+                    if not await eval_bool_expr(new_filter, grp_obj):
+                        continue
+                grp_seq = await grp_obj.getval(seq_col_name)
+                grp_parent = await grp_obj.getval(parent_col_name)
                 link_mod_id, link_ledg_id = await grp_obj.getval('link_to_subledg')
                 link_mod = await db.cache.get_mod_id(company, link_mod_id)
-                # seq_col = f'code_{grp_type}_tbl.{level_data[code_{grp_type}][1]}'
-                seq_col = f'{grp_type}_tbl.{level_data[grp_type][1]}'
+                seq_col = f'{grp_type}_tbl.{seq_col_name}'
+                parent_col = f'{grp_type}_tbl.{parent_col_name}'
+                link_parent_data = []
+                this_type = f"code_{await grp_obj.getval('group_type')}"
+                while this_type != levels[-1]:
+                    par_id = await grp_obj.getval(parent_col_name)
+                    await grp_obj.init()
+                    await grp_obj.setval('row_id', par_id)
+                    par_grp = await grp_obj.getval('gl_group')
+                    par_seq = await grp_obj.getval(seq_col_name)
+                    par_type = f"code_{await grp_obj.getval('group_type')}"
+                    parent_data = (par_grp, par_seq, par_type)
+                    link_parent_data.append(parent_data)
+                    this_type = par_type
                 link_tree_params = (
                     await db.objects.get_db_table(context, company, f'{link_mod}_groups')
                     ).tree_params
@@ -678,23 +705,14 @@ class FinReport:
                     ledger_row_id=link_ledg_id,
                     group_type=grp_type,
                     group_seq=grp_seq,
+                    group_parent=grp_parent,
                     seq_col=seq_col,
+                    parent_col=parent_col,
                     type_colname=link_type_colname,
                     grp_name=link_grp_name.split('_')[1],
+                    parent_data=link_parent_data,
                     )
-                if filter:  # if there is a filter, exclude sub_ledger if not included in filter
-                    new_filter = []
-                    for fil in filter:
-                        new_fil = fil[:]  # make a copy
-                        if fil[2] == grp_type:  # include this one
-                            new_fil[2] = 'gl_group'
-                        else:
-                            new_fil[2] = '$None'  # not for this 'level'
-                        new_filter.append(new_fil)
-                    if await eval_bool_expr(new_filter, grp_obj):
-                        self.links_to_subledg.append(link_obj)
-                else:  # if no filter, include all sub_ledgers
-                    self.links_to_subledg.append(link_obj)
+                self.links_to_subledg.append(link_obj)
 
         if include_zeros:
             cte_joins = []
@@ -724,7 +742,13 @@ class FinReport:
                 link_params = []
                 link_cols.append(f"'{link_obj.module_id}_{link_obj.ledger_row_id}' AS type")
                 link_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
-                for level in reversed(levels):
+                for parent in reversed(link_obj.parent_data):
+                    par_grp, par_seq, par_type = parent
+                    link_cols.append(f'{dbc.param_style} AS {par_type}')
+                    link_params.append(par_grp)
+                    link_cols.append(f'{dbc.param_style} AS {par_type}_{seq_col_name}')
+                    link_params.append(par_seq)
+                for level in reversed(levels[:-len(link_obj.parent_data)] if link_obj.parent_data else levels):
                     col_name, seq_name = level_data[level][:2]
                     link_cols.append(f"{level}_tbl.{col_name.replace('gl', link_obj.module_id)} AS {level}")
                     if level == link_obj.group_type:
@@ -755,7 +779,7 @@ class FinReport:
             else:
                 joins.append(
                     f'JOIN {company}.{group_table_name} {level}_tbl '
-                    f'ON {level}_tbl.row_id = {prev_level}_tbl.{parent_id}'
+                    f'ON {level}_tbl.row_id = {prev_level}_tbl.{parent_col_name}'
                     )
             prev_level = f'{level}'
 
@@ -763,7 +787,7 @@ class FinReport:
             pivot_dim, pivot_grp = self.pivot_on
             if pivot_dim == 'code' and pivot_grp is not None:
                 await self.setup_code_pivot(company,
-                    type_colname, levels, level_data, grp_name, parent_id, filter, pivot_grp)
+                    type_colname, levels, level_data, grp_name, parent_col_name, filter, pivot_grp)
 
         for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
             self.combo_cols.append(f'{lvl}')
@@ -782,7 +806,7 @@ class FinReport:
             await self.setup_code_sql_without_cte(level_data, grp_name, filter)
 
     async def setup_code_pivot(self, company, type_colname, levels, level_data,
-            grp_name, parent_id, filter, pivot_grp):
+            grp_name, parent_col_name, filter, pivot_grp):
         toplevel_type = levels[-1]  # 'root' has been removed
         order_by = []
         self.pivot_sql.append(f'SELECT {pivot_grp} FROM (')
@@ -800,7 +824,7 @@ class FinReport:
             if prev_type == pivot_grp:
                 break
             self.pivot_sql.append(
-                f'JOIN {company}.gl_groups {type}_tbl ON {type}_tbl.{parent_id} = {prev_type}_tbl.row_id'
+                f'JOIN {company}.gl_groups {type}_tbl ON {type}_tbl.{parent_col_name} = {prev_type}_tbl.row_id'
                 )
             prev_type = f'{type}'
         self.pivot_sql.append(f'WHERE {toplevel_type}_tbl.{type_colname} = {dbc.param_style}')
@@ -843,7 +867,9 @@ class FinReport:
 
         for link_obj in self.links_to_subledg:  # if any
             test = 'WHERE' if test is None else 'AND'
-            cte.append(f'{test} {link_obj.seq_col} != {dbc.param_style}')
+            cte.append(f'{test} NOT ({link_obj.parent_col} = {dbc.param_style}')
+            cte_params.append(link_obj.group_parent)
+            cte.append(f'AND {link_obj.seq_col} = {dbc.param_style})')
             cte_params.append(link_obj.group_seq)
 
         for (test2, lbr, level, op, expr, rbr) in filter:
@@ -916,7 +942,9 @@ class FinReport:
             self.sql_params.append(expr)
 
         for link_obj in self.links_to_subledg:  # if any
-            self.sql_where.append(f'AND {link_obj.seq_col} != {dbc.param_style}')
+            self.sql_where.append(f'AND NOT ({link_obj.parent_col} = {dbc.param_style}')
+            self.sql_params.append(link_obj.group_parent)
+            self.sql_where.append(f'AND {link_obj.seq_col} = {dbc.param_style})')
             self.sql_params.append(link_obj.group_seq)
 
     async def setup_loc_fun(self, prefix, args, include_zeros, finrpt_data):
@@ -1176,11 +1204,24 @@ class FinReport:
         if link_obj:
             part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
             part_cols = []
-            for part_col in self.part_cols:
-                part_col = part_col.replace(
-                    'gl', link_obj.module_id).replace(
-                    link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
-                part_cols.append(part_col)
+
+            if self.ctes:
+                for part_col in self.part_cols:
+                    part_col = part_col.replace(
+                        'gl', link_obj.module_id).replace(
+                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
+                    part_cols.append(part_col)
+            else:
+                for parent in reversed(link_obj.parent_data):
+                    par_grp, par_seq, par_type = parent
+                    part_cols.append(f'{par_grp!r} AS {par_type}')
+                    part_cols.append(f'{par_seq} AS {par_type}_seq')
+                for part_col in self.part_cols[len(link_obj.parent_data)*2:]:
+                    part_col = part_col.replace(
+                        'gl', link_obj.module_id).replace(
+                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
+                    part_cols.append(part_col)
+
             if part_cols:
                 part_sql.append(f", {', '.join(part_cols)}")
             part_sql.append(', ROW_NUMBER() OVER (PARTITION BY')
@@ -1190,8 +1231,12 @@ class FinReport:
                 )
             part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
             part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
-            for join in self.sql_joins:
-                part_sql.append(join.replace('gl', link_obj.module_id))
+            if self.ctes:
+                for join in self.sql_joins:
+                    part_sql.append(join.replace('gl', link_obj.module_id))
+            else:
+                for join in self.sql_joins[:-len(link_obj.parent_data)] if link_obj.parent_data else self.sql_joins:
+                    part_sql.append(join.replace('gl', link_obj.module_id))
             part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(dbc.param_style))
             sql_params.append(0)
             sql_params.append(end_date)
@@ -1272,15 +1317,28 @@ class FinReport:
         if link_obj:
             part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
             part_cols = []
-            for part_col in self.part_cols:
-                part_col = part_col.replace(
-                    'gl', link_obj.module_id).replace(
-                    link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
-                part_cols.append(part_col)
+
+            if self.ctes:
+                for part_col in self.part_cols:
+                    part_col = part_col.replace(
+                        'gl', link_obj.module_id).replace(
+                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
+                    part_cols.append(part_col)
+            else:
+                for parent in reversed(link_obj.parent_data):
+                    par_grp, par_seq, par_type = parent
+                    part_cols.append(f'{par_grp!r} AS {par_type}')
+                    part_cols.append(f'{par_seq} AS {par_type}_seq')
+                for part_col in self.part_cols[len(link_obj.parent_data)*2:]:
+                    part_col = part_col.replace(
+                        'gl', link_obj.module_id).replace(
+                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
+                    part_cols.append(part_col)
+
             if part_cols:
                 part_sql.append(f", {', '.join(part_cols)}")
             part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
-            for join in self.sql_joins:
+            for join in self.sql_joins[:-len(link_obj.parent_data)] if link_obj.parent_data else self.sql_joins:
                 part_sql.append(join.replace('gl', link_obj.module_id))
             part_sql.append(
                 'WHERE a.deleted_id = {0} AND a.tran_date BETWEEN {0} AND {0}'.format(dbc.param_style)
@@ -1412,11 +1470,24 @@ class FinReport:
         if link_obj:
             part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
             part_cols = []
-            for part_col in self.part_cols:
-                part_col = part_col.replace(
-                    'gl', link_obj.module_id).replace(
-                    link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
-                part_cols.append(part_col)
+
+            if self.ctes:
+                for part_col in self.part_cols:
+                    part_col = part_col.replace(
+                        'gl', link_obj.module_id).replace(
+                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
+                    part_cols.append(part_col)
+            else:
+                for parent in reversed(link_obj.parent_data):
+                    par_grp, par_seq, par_type = parent
+                    part_cols.append(f'{par_grp!r} AS {par_type}')
+                    part_cols.append(f'{par_seq} AS {par_type}_seq')
+                for part_col in self.part_cols[len(link_obj.parent_data)*2:]:
+                    part_col = part_col.replace(
+                        'gl', link_obj.module_id).replace(
+                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
+                    part_cols.append(part_col)
+
             if part_cols:
                 part_sql.append(f", {', '.join(part_cols)}")
             part_sql.append(', ROW_NUMBER() OVER (PARTITION BY')
@@ -1426,7 +1497,7 @@ class FinReport:
                 )
             part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
             part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
-            for join in self.sql_joins:
+            for join in self.sql_joins[:-len(link_obj.parent_data)] if link_obj.parent_data else self.sql_joins:
                 part_sql.append(join.replace('gl', link_obj.module_id))
             part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(dbc.param_style))
             sql_params.append(0)
@@ -1495,11 +1566,24 @@ class FinReport:
         if link_obj:
             part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
             part_cols = []
-            for part_col in self.part_cols:
-                part_col = part_col.replace(
-                    'gl', link_obj.module_id).replace(
-                    link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
-                part_cols.append(part_col)
+
+            if self.ctes:
+                for part_col in self.part_cols:
+                    part_col = part_col.replace(
+                        'gl', link_obj.module_id).replace(
+                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
+                    part_cols.append(part_col)
+            else:
+                for parent in reversed(link_obj.parent_data):
+                    par_grp, par_seq, par_type = parent
+                    part_cols.append(f'{par_grp!r} AS {par_type}')
+                    part_cols.append(f'{par_seq} AS {par_type}_seq')
+                for part_col in self.part_cols[len(link_obj.parent_data)*2:]:
+                    part_col = part_col.replace(
+                        'gl', link_obj.module_id).replace(
+                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
+                    part_cols.append(part_col)
+
             if part_cols:
                 part_sql.append(f", {', '.join(part_cols)}")
             part_sql.append(', ROW_NUMBER() OVER (PARTITION BY')
@@ -1509,7 +1593,7 @@ class FinReport:
                 )
             part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
             part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
-            for join in self.sql_joins:
+            for join in self.sql_joins[:-len(link_obj.parent_data)] if link_obj.parent_data else self.sql_joins:
                 part_sql.append(join.replace('gl', link_obj.module_id))
             part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date < {0}'.format(dbc.param_style))
             sql_params.append(0)

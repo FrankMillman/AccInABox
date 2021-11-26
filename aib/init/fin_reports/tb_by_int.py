@@ -6,7 +6,7 @@ report_type = 'as_at'
 groups = []
 groups.append([
     'code',  # dim
-#   ['code_int', [['AND', '', 'maj', '=', "'curr_liab'", '']]],  # grp_name, filter
+#   ['code_int', [['AND', '', 'code_maj', '=', "'curr_liab'", '']]],  # grp_name, filter
     ['code_int', []],  # grp_name, filter
     ])
 

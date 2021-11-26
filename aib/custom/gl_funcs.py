@@ -184,7 +184,7 @@ async def check_gl_group_link(db_obj, fld, value):
     gl_type = await gl_grp.getval('group_type')
     gl_levels = [x[0] for x in level_types]
     gl_level_pos = gl_levels.index(gl_type)
-    no_gl_levels = len(levels) - 1 - gl_level_pos  # levels below link_point - skip 'root' and level_pos
+    no_gl_levels = len(gl_levels) - 1 - gl_level_pos  # levels below link_point - skip 'root' and level_pos
     if no_grp_levels != no_gl_levels:
         raise AibError(head='Link', body='Number of levels does not match gl')
     return True
@@ -483,6 +483,19 @@ async def finrpt_drilldown(caller, xml):
     else:  # set up next level, call finrpt
         if this_col_name is not None:  # else we are un-pivoting, not drilling
             columns = finrpt_data['columns']
+            if type != 'code':
+                # if len(levels) > len(new_levels), it means that the sub_ledger
+                #   has been 'mounted' below the top level
+                # if any higher levels are included in 'columns', the column must be
+                #   removed to avoid errors in the next report
+                # possible alternative - don't remove, but pass literal value for display
+                #   this would require some re-engineering, so leave for now
+                for extra_level in levels[len(new_levels):]:
+                    try:
+                        extra_pos = [x[1] for x in columns].index(extra_level)
+                        del(columns[extra_pos])
+                    except ValueError:
+                        pass
             grp_col_pos = [col[1] for col in columns].index(this_col_name)
             new_col = columns[grp_col_pos][:]  # make a copy
 
