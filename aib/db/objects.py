@@ -2852,26 +2852,16 @@ class DbTable:
                 xxx = {}
                 for ledger_row_id, dict_level_types in level_types.items():
                     if ledger_row_id is None:
-                        continue
-                    if None in level_types:
+                        continue  # don't create entry for None
+                    if None in level_types:  # but add None level_type to all other level_types
                         dict_level_types = level_types[None] + dict_level_types
-                    num_levels = len(dict_level_types)
-                    for level in range(num_levels):
-                        level_type, level_descr = dict_level_types[level]
+
+                    for level, (level_type, level_descr) in enumerate(dict_level_types):
                         if level_type not in xxx:
                             xxx[level_type] = [level_descr, []]
-                        if level == 0:
-                            if num_levels > 2:
-                                xxx[level_type][1].append((dict_level_types[2][0], ledger_row_id, 2))
-                            if num_levels > 1:
-                                xxx[level_type][1].append((dict_level_types[1][0], ledger_row_id, 1))
-                            xxx[level_type][1].append((dict_level_types[0][0], 0, 0))
-                        if level == 1:
-                            if num_levels > 2:
-                                xxx[level_type][1].append((dict_level_types[2][0], ledger_row_id, 1))
-                            xxx[level_type][1].append((dict_level_types[1][0], ledger_row_id, 0))
-                        if level == 2:
-                            xxx[level_type][1].append((dict_level_types[2][0], ledger_row_id, 0))
+                        xxx[level_type][1].append((level_type, ledger_row_id, 0))
+                        for sub_level, (sublevel_type, sublevel_descr) in enumerate(dict_level_types[level+1:], 1):
+                            xxx[level_type][1].append((sublevel_type, ledger_row_id, sub_level))
 
                 for col_name in xxx:
                     level_descr, levels = xxx[col_name]
@@ -2882,7 +2872,17 @@ class DbTable:
                         if ledger_row_id != 0:
                             sql.append(f"AND a.{ledger_col} = {ledger_row_id}")
                         sql.append("THEN")
-                        if level == 2:
+                        if level == 3:
+                            sql.append("(SELECT d.row_id")
+                            sql.append(
+                                f"FROM {data_company}.{table_name} d, {data_company}.{table_name} c, "
+                                f"{data_company}.{table_name} b"
+                                )
+                            sql.append(
+                                "WHERE d.row_id = c.parent_id AND c.row_id = b.parent_id "
+                                "AND b.row_id = a.parent_id)"
+                                )
+                        elif level == 2:
                             sql.append("(SELECT c.row_id")
                             sql.append(f"FROM {data_company}.{table_name} c, {data_company}.{table_name} b")
                             sql.append("WHERE c.row_id = b.parent_id AND b.row_id = a.parent_id)")
