@@ -386,7 +386,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'gl_subjnl'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'tran_date'],
                 ],

@@ -503,8 +503,8 @@ actions.append([
         [
             'nsls_subtran_uea',
             [  # condition
-                ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
-                # ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                # ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
                 ],
 
             True,  # split source?
@@ -530,8 +530,8 @@ actions.append([
         [
             'nsls_totals',  # table name
             [  # condition
-                ['where', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
-                # ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                # ['where', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
+                ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -539,7 +539,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'nsls'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
@@ -553,8 +553,8 @@ actions.append([
         [
             'nsls_uea_totals',  # table name
             [  # condition
-                ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
-                # ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                # ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -562,7 +562,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'nsls'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
@@ -576,8 +576,8 @@ actions.append([
         [
             'nsls_cust_totals',  # table name
             [  # condition
-                ['where', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
-                # ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                # ['where', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
+                ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
                 ['and', '', 'subparent_row_id>module_id', '=', "'ar'", ''],
                 ],
             False,  # split source?
@@ -587,7 +587,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'nsls'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
@@ -601,8 +601,8 @@ actions.append([
         [
             'nsls_cust_uea_totals',  # table name
             [  # condition
-                ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
-                # ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                # ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
                 ['and', '', 'subparent_row_id>module_id', '=', "'ar'", ''],
                 ],
             False,  # split source?
@@ -612,7 +612,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'nsls'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
@@ -627,8 +627,8 @@ actions.append([
             'gl_totals',  # table name
             [  # condition
                 ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ['and', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
-                # ['and', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                # ['and', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
+                ['and', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -636,7 +636,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'nsls'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
@@ -651,8 +651,8 @@ actions.append([
             'gl_totals',  # table name
             [  # condition
                 ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ['and', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
-                # ['and', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                # ['and', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+                ['and', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -660,7 +660,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'nsls'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],

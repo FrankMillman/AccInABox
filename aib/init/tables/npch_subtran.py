@@ -510,8 +510,8 @@ actions.append([
         [
             'npch_subtran_uex',
             [  # condition
-                ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
-                # ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                # ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
+                ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
                 ],
 
             True,  # split source?
@@ -537,8 +537,8 @@ actions.append([
         [
             'npch_totals',  # table name
             [  # condition
-                ['where', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
-                # ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                # ['where', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
+                ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -546,7 +546,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'npch'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
@@ -560,8 +560,8 @@ actions.append([
         [
             'npch_uex_totals',  # table name
             [  # condition
-                ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
-                # ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                # ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
+                ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -569,7 +569,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'npch'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
@@ -583,8 +583,8 @@ actions.append([
         [
             'npch_supp_totals',  # table name
             [  # condition
-                ['where', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
-                # ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                # ['where', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
+                ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
                 ['and', '', 'subparent_row_id>module_id', '=', "'ap'", ''],
                 ],
             False,  # split source?
@@ -594,7 +594,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'npch'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
@@ -608,8 +608,8 @@ actions.append([
         [
             'npch_supp_uex_totals',  # table name
             [  # condition
-                ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
-                # ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                # ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
+                ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
                 ['and', '', 'subparent_row_id>module_id', '=', "'ap'", ''],
                 ],
             False,  # split source?
@@ -619,7 +619,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'npch'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
@@ -634,8 +634,8 @@ actions.append([
             'gl_totals',  # table name
             [  # condition
                 ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ['and', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
-                # ['and', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                # ['and', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
+                ['and', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -643,7 +643,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'npch'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
@@ -658,8 +658,8 @@ actions.append([
             'gl_totals',  # table name
             [  # condition
                 ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ['and', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
-                # ['and', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                # ['and', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
+                ['and', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -667,7 +667,7 @@ actions.append([
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_tran_type', "'npch'"],
-                ['orig_trantype_row_id', 'subparent_row_id>trantype_row_id'],
+                ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                 ['tran_date', 'subparent_row_id>tran_date'],
                 ],
