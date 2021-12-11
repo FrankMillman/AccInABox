@@ -1113,7 +1113,9 @@ class DbObject:
                 fld._value = await fld.check_val(col_defn.sql[1:-1])
                 fld._init = fld._orig = fld._value
 
-        for fld in self.fields.values():
+        # for fld in self.fields.values():
+        for col_name in list(self.fields.keys()):  # rev_sign might be added - cannot change dict size!
+            fld = self.fields[col_name]
             if display:
                 for obj in fld.gui_obj:
                     await obj._redisplay()
@@ -2863,8 +2865,8 @@ class DbTable:
                         for sub_level, (sublevel_type, sublevel_descr) in enumerate(dict_level_types[level+1:], 1):
                             xxx[level_type][1].append((sublevel_type, ledger_row_id, sub_level))
 
-                for col_name in xxx:
-                    level_descr, levels = xxx[col_name]
+                for level_name in xxx:
+                    level_descr, levels = xxx[level_name]
                     sql = []
                     sql.append("SELECT CASE")
                     for level_type, ledger_row_id, level in levels:
@@ -2873,7 +2875,7 @@ class DbTable:
                             sql.append(f"AND a.{ledger_col} = {ledger_row_id}")
                         sql.append("THEN")
                         if level == 3:
-                            sql.append("(SELECT d.row_id")
+                            sql.append("(SELECT d.ID")
                             sql.append(
                                 f"FROM {data_company}.{table_name} d, {data_company}.{table_name} c, "
                                 f"{data_company}.{table_name} b"
@@ -2883,48 +2885,57 @@ class DbTable:
                                 "AND b.row_id = a.parent_id)"
                                 )
                         elif level == 2:
-                            sql.append("(SELECT c.row_id")
+                            sql.append("(SELECT c.ID")
                             sql.append(f"FROM {data_company}.{table_name} c, {data_company}.{table_name} b")
                             sql.append("WHERE c.row_id = b.parent_id AND b.row_id = a.parent_id)")
                         elif level == 1:
-                            sql.append("(SELECT b.row_id")
+                            sql.append("(SELECT b.ID")
                             sql.append(f"FROM {data_company}.{table_name} b")
                             sql.append("WHERE b.row_id = a.parent_id)")
                         elif level == 0:
-                            sql.append("a.row_id")
+                            sql.append("a.ID")
                     sql.append("END")
 
-                    sql = ' '.join(sql)
+                    # create 2 virt cols, one for row_id, one for code (extracted from col_names above)
+                    for type_of_col in ('row_id', 'code'):
+                        if type_of_col == 'row_id':
+                            col_name = f'{level_name}_id'
+                            data_type = 'INT'
+                            sql2 = ' '.join(sql).replace('ID', 'row_id')
+                        else:
+                            col_name = level_name
+                            data_type = 'TEXT'
+                            sql2 = ' '.join(sql).replace('ID', code)
 
-                    col = Column([
-                        len(self.col_list),    # col_id
-                        self.table_name,       # table_id
-                        col_name,              # col_name
-                        'virt',                # col_type
-                        len(self.col_list),    # seq
-                        'INT',                 # data_type
-                        level_descr,           # short_descr
-                        level_descr,           # long_descr
-                        col_name,              # col_head
-                        'N',                   # key_field
-                        'calc',                # data_source
-                        None,                  # condition
-                        True,                  # allow_null
-                        True,                  # allow_amend
-                        0,                     # max len
-                        0,                     # db_scale
-                        None,                  # scale_ptr
-                        None,                  # dflt_val
-                        None,                  # dflt_rule
-                        None,                  # col_checks
-                        None,                  # fkey
-                        None,                  # choices
-                        sql,                   # sql
-                        ])
-                    self.col_list.append(col)
-                    self.col_dict[col.col_name] = col
-                    col.table_name = self.table_name
-                    await get_dependencies(col)
+                        col = Column([
+                            len(self.col_list),    # col_id
+                            self.table_name,       # table_id
+                            col_name,              # col_name
+                            'virt',                # col_type
+                            len(self.col_list),    # seq
+                            data_type,             # data_type
+                            level_descr,           # short_descr
+                            level_descr,           # long_descr
+                            col_name,              # col_head
+                            'N',                   # key_field
+                            'calc',                # data_source
+                            None,                  # condition
+                            True,                  # allow_null
+                            True,                  # allow_amend
+                            0,                     # max len
+                            0,                     # db_scale
+                            None,                  # scale_ptr
+                            None,                  # dflt_val
+                            None,                  # dflt_rule
+                            None,                  # col_checks
+                            None,                  # fkey
+                            None,                  # choices
+                            sql2,                  # sql
+                            ])
+                        self.col_list.append(col)
+                        self.col_dict[col.col_name] = col
+                        col.table_name = self.table_name
+                        await get_dependencies(col)
 
         self.sub_types = OD()
         if sub_types is not None:

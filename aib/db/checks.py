@@ -117,27 +117,24 @@ async def valid_loc_id(db_obj, fld, src_val, ctrl_fld):
 
     # example -
     #   adm_locations could have fixed levels of 'root', 'prov', 'town'
-    #   row_id  location    location_type  parent  'root'  'prov'  'town'
-    #     1     all         root             -        1       -       -
-    #     5     gauteng     prov             1        1       5       -
-    #     6     w cape      prov             1        1       6       -
-    #     8     pretoria    town             5        1       5       8
-    #     12    benoni      town             5        1       5       12
-    #     15    knysna      town             6        1       6       15
+    #   row_id  location    location_type  parent  'root_id'  'prov_id'  'town_id'
+    #     1     all         root             -        1          -          -
+    #     5     gauteng     prov             1        1          5          -
+    #     6     w cape      prov             1        1          6          -
+    #     8     pretoria    town             5        1          5          8
+    #     12    benoni      town             5        1          5          12
+    #     15    knysna      town             6        1          6          15
     #   ar_ledger_params could have 'valid_loc_ids' of 5, meaning all customer
     #      location_ids must be in gauteng province
     #   steps to validate a customer location_id (say 12) -
     #      get ar_ledger_params valid_loc_ids - 5 (A)
     #      get location type for location_id 5 - 'prov'
-    #      get value of 'prov' for location_id 12 - 5 (B)
+    #      get value of 'prov_id' for location_id 12 - 5 (B)
     #      validate that (A) = (B)
 
     # ctrl_fld = db_obj.context.pyfunc_args  # args taken from col_checks in col_defn
 
-    try:
-        valid_loc_fld = await db_obj.getfld(f'{ctrl_fld}>valid_loc_ids')
-    except:
-        breakpoint()
+    valid_loc_fld = await db_obj.getfld(f'{ctrl_fld}>valid_loc_ids')
 
     if src_val == valid_loc_fld._value:
         return True
@@ -151,7 +148,7 @@ async def valid_loc_id(db_obj, fld, src_val, ctrl_fld):
     # virt fields for each location_type are set up dynamically in db.object.DbTable()
     # this uses the location code entered, finds the equivalent level for that code,
     #   and returns that level's row id
-    this_loc_type_id = await db_obj.getval(f'{fld.col_name}>{valid_loc_type}')
+    this_loc_type_id = await db_obj.getval(f'{fld.col_name}>{valid_loc_type}_id')
 
     return this_loc_type_id == valid_loc_fld._value
 
@@ -174,7 +171,7 @@ async def valid_fun_id(db_obj, fld, src_val, ctrl_fld):
     # virt fields for each function_type are set up dynamically in db.object.DbTable()
     # this uses the function code entered, finds the equivalent level for that code,
     #   and returns that level's row id
-    this_fun_type_id = await db_obj.getval(f'{fld.col_name}>{valid_fun_type}')
+    this_fun_type_id = await db_obj.getval(f'{fld.col_name}>{valid_fun_type}_id')
 
     return this_fun_type_id == valid_fun_fld._value
 
