@@ -18,7 +18,7 @@
     <db_obj name="cb_pmt_det" table_name="cb_tran_pmt_det" parent="cb_pmt"/>
     <db_obj name="pch" table_name="pch_subtran" parent="cb_pmt_det"/>
     <db_obj name="npch" table_name="npch_subtran" parent="cb_pmt_det"/>
-    <db_obj name="arjnl" table_name="ar_subtran_jnl" parent="cb_pmt_det"/>
+    <db_obj name="ar_jnl" table_name="ar_subtran_jnl" parent="cb_pmt_det"/>
     <db_obj name="ap_subpmt" table_name="ap_subtran_pmt" parent="cb_pmt_det"/>
     <db_obj name="ap_allocations" table_name="ap_allocations" parent="ap_subpmt"/>
     <db_obj name="gl" table_name="gl_subtran_jnl" parent="cb_pmt_det"/>

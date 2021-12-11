@@ -2,53 +2,53 @@
   <block/>
   <panel/>
 
-  <if test="[[`if`, ``, `arjnl.ledger_id`, `is`, `$None`, ``]]"/>
+  <if test="[[`if`, ``, `ar_jnl.ledger_id`, `is`, `$None`, ``]]"/>
 <row/>
   <col/>
   <label value="Ledger id:"/>
   <col/>
-  <input obj_name="arjnl" col_name="ledger_id" lng="84"/>
+  <input obj_name="ar_jnl" col_name="ledger_id" lng="84"/>
   <end_if/>
 
   <row/>
   <col/>
   <label value="Customer Id:"/>
   <col/>
-  <input obj_name="arjnl" col_name="cust_id" lng="84" after="
+  <input obj_name="ar_jnl" col_name="cust_id" lng="84" after="
     <<!--  show exch_rate and jnl_cust if alt_curr - enable jnl_cust if override allowed -->>
     <<!--
-    <<assign src=`arjnl.tran_date` tgt=`_ctx.as_at_date`/>>
-    <<assign src=`'arjnl'` tgt=`_ctx.tran_type`/>>
-    <<assign src=`arjnl.row_id` tgt=`_ctx.tran_row_id`/>>
-    <<assign src=`arjnl.item_row_id` tgt=`_ctx.item_row_id`/>>
+    <<assign src=`ar_jnl.tran_date` tgt=`_ctx.as_at_date`/>>
+    <<assign src=`'ar_jnl'` tgt=`_ctx.tran_type`/>>
+    <<assign src=`ar_jnl.row_id` tgt=`_ctx.tran_row_id`/>>
+    <<assign src=`ar_jnl.item_row_id` tgt=`_ctx.item_row_id`/>>
     -->>
     "/>
-  <display obj_name="arjnl" col_name="cust_row_id>party_row_id>display_name" lng="120"/>
+  <display obj_name="ar_jnl" col_name="cust_row_id>party_row_id>display_name" lng="120"/>
 
   <row/>
   <col/>
   <label value="Description:"/>
   <col/>
-  <input obj_name="arjnl" col_name="text" lng="160"/>
+  <input obj_name="ar_jnl" col_name="text" lng="160"/>
 
   <row/>
   <col/>
   <label value="Charge amount:"/>
   <col/>
-  <display obj_name="arjnl" col_name="currency_id>symbol" lng="10"/>
-  <input obj_name="arjnl" col_name="jnl_amount" lng="84"/>
+  <display obj_name="ar_jnl" col_name="currency_id>symbol" lng="10"/>
+  <input obj_name="ar_jnl" col_name="jnl_amount" lng="84"/>
 
   <!-- this does not work well - if > 1 ledger, alt_curr is $None when form is created -->
-  <if test="[[`if`, ``, `arjnl.cust_row_id>ledger_row_id>alt_curr`, `is`, `$True`, ``]]"/>
+  <if test="[[`if`, ``, `ar_jnl.cust_row_id>ledger_row_id>alt_curr`, `is`, `$True`, ``]]"/>
 
   <row/>
   <col/>
   <label value="@"/>
-  <display obj_name="arjnl" col_name="cust_exch_rate" lng="100"/>
+  <display obj_name="ar_jnl" col_name="cust_exch_rate" lng="100"/>
   <label value="="/>
   <col/>
-  <display obj_name="arjnl" col_name="cust_row_id>currency_id>symbol" lng="10"/>
-  <input obj_name="arjnl" col_name="jnl_cust" lng="84"/>
+  <display obj_name="ar_jnl" col_name="cust_row_id>currency_id>symbol" lng="10"/>
+  <input obj_name="ar_jnl" col_name="jnl_cust" lng="84"/>
 
   <end_if/>
 

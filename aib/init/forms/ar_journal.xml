@@ -17,7 +17,7 @@
     <db_obj name="ar_jnl" table_name="ar_tran_jnl" is_formview_obj="true"/>
     <db_obj name="ar_jnldet" table_name="ar_tran_jnl_det" parent="ar_jnl"/>
     <db_obj name="npch" table_name="npch_subtran" parent="ar_jnldet"/>
-    <db_obj name="apjnl" table_name="ap_subtran_jnl" parent="ar_jnldet"/>
+    <db_obj name="ap_jnl" table_name="ap_subtran_jnl" parent="ar_jnldet"/>
     <db_obj name="gl" table_name="gl_subtran_jnl" parent="ar_jnldet"/>
     <db_obj name="com" table_name="ar_comments" parent="ar_jnldet"/>
   </db_objects>
