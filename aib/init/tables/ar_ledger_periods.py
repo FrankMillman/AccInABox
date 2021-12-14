@@ -303,20 +303,12 @@ cursors.append({
     'title': 'Maintain ar ledger periods',
     'columns': [
         ['period_row_id', 10, True, True],
-        ['closing_date', 100, False, True],
-        ['state', 60, False, True],
-        ],
-    'filter': [],
-    'sequence': [['row_id', False]],
-    'formview_name': None,
-    })
-cursors.append({
-    'cursor_name': 'ar_per_stat',
-    'title': 'Ar ledger per with stat date',
-    'columns': [
-        ['period_row_id', 10, True, True],
-        ['statement_date', 100, False, True],
-        ['statement_state', 60, False, True],
+        ['statement_date', 100, False, True, [
+            ['if', '', '_ledger.separate_stat_close', 'is', '$True', '']
+            ]],
+        ['statement_state', 60, False, True, [
+            ['if', '', '_ledger.separate_stat_close', 'is', '$True', '']
+            ]],
         ['closing_date', 100, False, True],
         ['state', 60, False, True],
         ],

@@ -1,12 +1,4 @@
 <form name="ar_ledger_per" title="Ar ledger periods" before_start_form="
-  <<case>>
-    <<compare test=`[['if', '', '_ledger.separate_stat_close', 'is', '$True', '']]`>>
-      <<assign src=`'ar_per_stat'` tgt=`_ctx.cursor_name`/>>
-    <</compare>>
-    <<default>>
-      <<assign src=`'ar_per'` tgt=`_ctx.cursor_name`/>>
-    <</default>>
-  <</case>>
   <<assign src=`_ctx.current_period` tgt=`var.current_period`/>>
   ">
 
@@ -75,7 +67,7 @@
     <toolbar/>
     <body>
       <block/>
-      <grid data_object="ar_ledg_per" growable="false" num_grid_rows="8" cursor_name="_ctx"
+      <grid data_object="ar_ledg_per" growable="false" num_grid_rows="8" cursor_name="ar_per"
           start_col="period_row_id" start_val="var.current_period" readonly="true">
         <toolbar>
           <tool type="nav"/>

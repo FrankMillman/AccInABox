@@ -149,8 +149,6 @@ class GuiGrid:
 
             if self.db_obj.cursor_defn is None:
                 cursor_name = element.get('cursor_name')
-                if cursor_name == '_ctx':
-                    cursor_name = self.db_obj.context.cursor_name
                 if cursor_name is None:
                     raise AibError(head=self.db_obj.table_name,
                         body=f'No cursor for {self.db_obj.table_name}')

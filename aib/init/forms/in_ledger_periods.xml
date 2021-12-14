@@ -1,6 +1,4 @@
-<form name="in_ledger_periods" title="In ledger periods" before_start_form="
-  <<assign src=`'in_per'` tgt=`_ctx.cursor_name`/>>
-  ">
+<form name="in_ledger_periods" title="In ledger periods">
 
   <db_objects>
     <db_obj name="adm_period" table_name="adm_periods"/>
@@ -54,7 +52,7 @@
       <label value="Ledger:"/>
       <display obj_name="var" col_name="ledger_descr" lng="150"/>
       <block/>
-      <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="_ctx"
+      <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="in_per"
           start_col="period_row_id" start_val="var.current_period" readonly="true">
         <toolbar>
           <tool type="nav"/>

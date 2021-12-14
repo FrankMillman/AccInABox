@@ -1,5 +1,4 @@
 <form name="cb_ledger_periods" title="Cb ledger periods" before_start_form="
-  <<assign src=`'cb_per'` tgt=`_ctx.cursor_name`/>>
   <<assign src=`_ctx.current_period` tgt=`var.current_period`/>>
   ">
 
@@ -56,7 +55,7 @@
       <display obj_name="var" col_name="ledger_id" lng="50"/>
       <!--display obj_name="var" col_name="ledger_descr" lng="150"/-->
       <block/>
-      <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="_ctx"
+      <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="cb_per"
           start_col="period_row_id" start_val="var.current_period" readonly="true">
         <toolbar>
           <tool type="nav"/>

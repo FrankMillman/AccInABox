@@ -303,20 +303,12 @@ cursors.append({
     'title': 'Maintain ap ledger periods',
     'columns': [
         ['period_row_id', 10, True, True],
-        ['closing_date', 100, False, True],
-        ['state', 60, False, True],
-        ],
-    'filter': [],
-    'sequence': [['row_id', False]],
-    'formview_name': None,
-    })
-cursors.append({
-    'cursor_name': 'ap_per_pmt',
-    'title': 'Ar ledger per with pmt date',
-    'columns': [
-        ['period_row_id', 10, True, True],
-        ['payment_date', 100, False, True],
-        ['payment_state', 60, False, True],
+        ['payment_date', 100, False, True, [
+            ['if', '', '_ledger.separate_pmt_close', 'is', '$True', '']
+            ]],
+        ['payment_state', 60, False, True, [
+            ['if', '', '_ledger.separate_pmt_close', 'is', '$True', '']
+            ]],
         ['closing_date', 100, False, True],
         ['state', 60, False, True],
         ],
