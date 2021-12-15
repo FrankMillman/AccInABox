@@ -7,12 +7,6 @@ from common import AibError
 async def check_subledg(caller, params):
     # called from gl_per_close process - check that all sub-ledgers for this period have been closed
     context = caller.manager.process.root.context
-
-    # print(params)
-    # return_params = {'all_closed': False}
-    # return return_params
-
-    current_period = params['current_period']
     module_ids = ['cb', 'ar', 'ap', 'in']
     sql = []
     params = []
@@ -23,7 +17,7 @@ async def check_subledg(caller, params):
         sql.append(f'FROM {caller.company}.{module_id}_ledger_periods a')
         sql.append(f'JOIN {caller.company}.{module_id}_ledger_params b ON b.row_id = a.ledger_row_id')
         sql.append(f'WHERE a.period_row_id = {dbc.param_style}')
-        params.append(current_period)
+        params.append(params['period_to_close'])
         sql.append(f'AND a.deleted_id = {dbc.param_style}')
         params.append(0)
         sql.append(f'AND a.state != {dbc.param_style}')
@@ -54,7 +48,7 @@ async def set_per_closing_flag(caller, params):
         context.data_objects['ledg_per'] = await db.objects.get_db_object(
             context, 'gl_ledger_periods')
     ledg_per = context.data_objects['ledg_per']
-    await ledg_per.setval('period_row_id', params['current_period'])
+    await ledg_per.setval('period_row_id', params['period_to_close'])
     if await ledg_per.getval('state') not in ('current', 'open'):
         raise AibError(head='Closing flag', body='Period is not open')
     await ledg_per.setval('state', 'closing')
@@ -109,18 +103,23 @@ async def set_per_closed_flag(caller, params):
     await ledg_per.setval('state', 'closed')
     await ledg_per.save()
 
-    if params['period_to_close'] == params['current_period']:
+    if params['period_to_close'] == await ledg_per.getval('_ledger.current_period'):
         # set next month state to 'current'
         await ledg_per.init()
-        await ledg_per.setval('period_row_id', params['current_period'] + 1)
+        await ledg_per.setval('period_row_id', params['period_to_close'] + 1)
         await ledg_per.setval('state', 'current')
         await ledg_per.save()
 
         # set following month state to 'open'
         await ledg_per.init()
-        await ledg_per.setval('period_row_id', params['current_period'] + 2)
+        await ledg_per.setval('period_row_id', params['period_to_close'] + 2)
         await ledg_per.setval('state', 'open')
         await ledg_per.save()
+
+        # force 'current_period' in gl_ledger_params to be re-evaluated
+        ledger_params = await db.cache.get_ledger_params(caller.company,
+            context.module_row_id, context.ledger_row_id)
+        ledger_params.fields['current_period'].must_be_evaluated = True
 
 async def notify_manager(caller, params):
     print('notify', params)

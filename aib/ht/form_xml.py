@@ -739,12 +739,7 @@ async def get_val(caller, value):
     if '.' in value:
         obj_name, col_name = value.split('.')
         if obj_name == '_ctx':
-            if col_name == 'current_period':
-                ledger_periods = await db.cache.get_ledger_periods(caller.company,
-                    caller.context.module_row_id, caller.context.ledger_row_id)
-                return ledger_periods.current_period
-            else:
-                return getattr(caller.context, col_name)
+            return getattr(caller.context, col_name)
         else:
             if obj_name == '_param':
                 db_obj = await db.cache.get_adm_params(caller.company)

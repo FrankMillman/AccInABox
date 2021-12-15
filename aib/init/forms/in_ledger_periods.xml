@@ -31,8 +31,6 @@
         long_descr="Close period?" allow_amend="true"/>
       <mem_col col_name="reopen_period" data_type="BOOL" short_descr="Reopen period?"
         long_descr="Reopen period?" allow_amend="true"/>
-      <mem_col col_name="current_period" data_type="INT" short_descr="Current period"
-        long_descr="Current period" col_head="Curr" allow_amend="true"/>
     </mem_obj>
   </mem_objects>
 
@@ -53,7 +51,7 @@
       <display obj_name="var" col_name="ledger_descr" lng="150"/>
       <block/>
       <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="in_per"
-          start_col="period_row_id" start_val="var.current_period" readonly="true">
+          start_col="period_row_id" start_val="_ledger.current_period" readonly="true">
         <toolbar>
           <tool type="nav"/>
         </toolbar>
@@ -144,9 +142,7 @@
         <button btn_id="start_period_close" btn_label="Start"
           btn_enabled="true" btn_validate="true" action="
             <<start_process name=`period_end`>>
-              <<call_params>>
-                <<call_param name=`current_period` type=`data_attr` source=`var.current_period`/>>
-              <</call_params>>
+              <<call_params/>>
               <<return_params>>
               <</return_params>>
               <<on_return>>

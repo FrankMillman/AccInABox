@@ -3,7 +3,6 @@
   <mem_objects>
     <mem_obj name="var" descr="Process variables">
       <mem_col col_name="period_to_close" data_type="INT" short_descr="Period to close" long_descr="Period to close"/>
-      <mem_col col_name="current_period" data_type="INT" short_descr="Current period" long_descr="Current period"/>
       <mem_col col_name="check_date" data_type="DTE" short_descr="Check date" long_descr="Check all posted with date up to this date"/>
       <mem_col col_name="all_posted" data_type="BOOL" short_descr="All posted?" long_descr="All posted?"/>
       <mem_col col_name="all_closed" data_type="BOOL" short_descr="All subledgers closed?" long_descr="All subledgers closed?" col_head="All closed?"/>
@@ -13,7 +12,6 @@
   </mem_objects>
   <input_params>
     <input_param name="period_to_close" type="data_attr" target="var.period_to_close" required="true"/>
-    <input_param name="current_period" type="data_attr" target="var.current_period" required="true"/>
     <input_param name="check_date" type="data_attr" target="var.check_date" required="true"/>
   </input_params>
   <output_params/>
@@ -28,8 +26,8 @@
         <semantic:incoming>gl_per_close_97</semantic:incoming>
         <semantic:outgoing>gl_per_close_19</semantic:outgoing>
         <semantic:dataInputAssociation>
-          <semantic:sourceRef>var.current_period</semantic:sourceRef>
-          <semantic:targetRef>current_period</semantic:targetRef>
+          <semantic:sourceRef>var.period_to_close</semantic:sourceRef>
+          <semantic:targetRef>period_to_close</semantic:targetRef>
         </semantic:dataInputAssociation>
         <semantic:script>custom.gl_funcs.set_per_closing_flag</semantic:script>
       </semantic:scriptTask>
@@ -83,10 +81,6 @@
           <semantic:sourceRef>var.period_to_close</semantic:sourceRef>
           <semantic:targetRef>period_to_close</semantic:targetRef>
         </semantic:dataInputAssociation>
-        <semantic:dataInputAssociation>
-          <semantic:sourceRef>var.current_period</semantic:sourceRef>
-          <semantic:targetRef>current_period</semantic:targetRef>
-        </semantic:dataInputAssociation>
         <semantic:script>custom.gl_funcs.set_per_closed_flag</semantic:script>
       </semantic:scriptTask>
       <semantic:endEvent id="gl_per_close_15" name="Done">
@@ -119,8 +113,8 @@
         <semantic:incoming>gl_per_close_93</semantic:incoming>
         <semantic:outgoing>gl_per_close_95</semantic:outgoing>
         <semantic:dataInputAssociation>
-          <semantic:sourceRef>var.current_period</semantic:sourceRef>
-          <semantic:targetRef>current_period</semantic:targetRef>
+          <semantic:sourceRef>var.period_to_close</semantic:sourceRef>
+          <semantic:targetRef>period_to_close</semantic:targetRef>
         </semantic:dataInputAssociation>
         <semantic:dataOutputAssociation>
           <semantic:sourceRef>all_closed</semantic:sourceRef>

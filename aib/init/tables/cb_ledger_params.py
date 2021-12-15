@@ -413,6 +413,17 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'current_period',
+    'data_type'  : 'INT',
+    'short_descr': 'Current period',
+    'long_descr' : 'Current period',
+    'col_head'   : 'Curr',
+    'sql'        : (
+        "SELECT b.period_row_id FROM {company}.cb_ledger_periods b "
+        "WHERE b.ledger_row_id = a.row_id AND b.state = 'current'"
+        )
+    })
 
 # cursor definitions
 cursors = []
