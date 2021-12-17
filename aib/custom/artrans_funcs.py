@@ -721,14 +721,11 @@ async def check_ledg_per(caller, xml):
 
     await set_action('no_action')  # initial state
 
-    ledger_periods = await db.cache.get_ledger_periods(caller.company,
-        caller.context.module_row_id, caller.context.ledger_row_id)
-    if period_row_id > ledger_periods.current_period:
-        return  # no action possible until prior current period closed
-                # what if we allow setting future period to 'open'?
-
     ledger_params = await db.cache.get_ledger_params(caller.company,
         caller.context.module_row_id, caller.context.ledger_row_id)
+    if period_row_id > await ledger_params.getval('current_period'):
+        return  # no action possible until prior current period closed
+                # what if we allow setting future period to 'open'?
     separate_stat_close = await ledger_params.getval('separate_stat_close')
 
     if (

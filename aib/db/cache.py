@@ -4,7 +4,6 @@ This module is a cache to store commonly used data objects
 
 import asyncio
 from collections import namedtuple as NT, defaultdict as DD, OrderedDict as OD
-from types import SimpleNamespace as SN
 from json import loads
 from datetime import date as dt, timedelta as td
 
@@ -542,13 +541,16 @@ the value for each company is a dictionary -
   key: module_row_id
   value: a dictionary of all ledgers -
     key: ledger_row_id
-    value: an ordered dictionary of all periods
+    value: a dictionary of all periods, where each period is a namedtuple
       key: period_row_id
-      value: SN(state=state
+      value: PerObj(state=state
              if module_id == 'ar' -
                   statement_date=statement_date
-              )
-    'current_period' is also stored as an attribute of the dictionary - can only do this with OD(), not {} !
+                  statement_state=statement_state
+             if module_id == 'ap' -
+                  payment_date=payment_date
+                  payment_state=payment_state
+             )
 """
 
 ledger_periods = {}
@@ -560,44 +562,35 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
         if module_row_id not in ledger_periods[company]:
             ledger_periods[company][module_row_id] = {}
         if ledger_row_id not in ledger_periods[company][module_row_id]:
-            # we *could* initialise this with {}
-            # but we use it to store 'current_period' as an extra attribute (see below)
-            # this is allowed with an OD(), but not with a {}
-            ledger_periods[company][module_row_id][ledger_row_id] = OD()
+            ledger_periods[company][module_row_id][ledger_row_id] = {}
             module_id = (await get_mod_id(company, module_row_id))
 
             conn = await db.connection._get_connection()
             # select all periods for module/ledger combination, with their current state
+            col_names = ['period_row_id', 'state']
             if module_id == 'ar':
-                sub_date = 'statement_date'
-                sub_state = 'statement_state'
+                col_names.append('statement_date')
+                col_names.append('statement_state')
             elif module_id == 'ap':
-                sub_date = 'payment_date'
-                sub_state = 'payment_state'
-            else:
-                sub_date = 'null'
-                sub_state = 'null'
+                col_names.append('payment_date')
+                col_names.append('payment_state')
+            # elif module_id == 'gl':
+            #     col_names.append('ye_state')
+            PerObj = NT('Period', col_names)
             sql = []
             params = []
-            sql.append(f'SELECT period_row_id, state, {sub_date}, {sub_state}')
+            sql.append('SELECT')
+            sql.append(', '.join(col_names))
             sql.append(f'FROM {company}.{module_id}_ledger_periods')
             sql.append(f'WHERE deleted_id = 0')
             if module_id != 'gl':
                 sql.append(f'AND ledger_row_id = {conn.constants.param_style}')
                 params.append(ledger_row_id)
             sql.append(f'ORDER BY period_row_id')
-            async for period_row_id, state, sub_date, sub_state in await conn.exec_sql(
-                    ' '.join(sql), params):
-                period_data = SN(state=state)
-                if module_id == 'ar':
-                    period_data.statement_date = sub_date
-                    period_data.statement_state = sub_state
-                elif module_id == 'ap':
-                    period_data.payment_date = sub_date
-                    period_data.payment_state = sub_state
+            async for row in await conn.exec_sql(' '.join(sql), params):
+                period_data = PerObj(**{k: v for k, v in zip(col_names, row)})
+                period_row_id = period_data.period_row_id
                 ledger_periods[company][module_row_id][ledger_row_id][period_row_id] = period_data
-                if state == 'current':
-                    ledger_periods[company][module_row_id][ledger_row_id].current_period = period_row_id
 
     return ledger_periods[company][module_row_id][ledger_row_id]
 
@@ -608,8 +601,8 @@ async def ledger_period_updated(db_obj, xml):
         module_row_id = db_obj.db_table.module_row_id
         if module_row_id in ledger_periods[company]:
             ledger_row_id = await db_obj.getval('ledger_row_id')
-            if ledger_row_id in ledger_periods[company][module_row_id]:
-                async with ledg_per_lock:
+            async with ledg_per_lock:
+                if ledger_row_id in ledger_periods[company][module_row_id]:
                     del ledger_periods[company][module_row_id][ledger_row_id]
 
 #----------------------------------------------------------------------------
