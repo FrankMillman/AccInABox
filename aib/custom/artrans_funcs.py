@@ -514,7 +514,9 @@ async def set_stat_closing_flag(caller, params):
     print('set_closing_flag')
 
     context = caller.manager.process.root.context
-    current_period = await ledg_per.getval('_ledger.current_period')
+    ledger_params = await db.cache.get_ledger_params(caller.company,
+        context.module_row_id, context.ledger_row_id)
+    current_period = await ledger_params.getval('current_period')
 
     async def handle_all_cust():
         if 'ar_ledg_per' not in context.data_objects:
@@ -605,7 +607,10 @@ async def set_stat_closed_flag(caller, params):
     print('set_stat_closed_flag')
 
     context = caller.manager.process.root.context
-    current_period = await ledg_per.getval('_ledger.current_period')
+    ledger_params = await db.cache.get_ledger_params(caller.company,
+        context.module_row_id, context.ledger_row_id)
+    current_period = await ledger_params.getval('current_period')
+
     if not params['separate_stat_cust']:
         if 'ar_ledg_per' not in context.data_objects:
             context.data_objects['ar_ledg_per'] = await db.objects.get_db_object(

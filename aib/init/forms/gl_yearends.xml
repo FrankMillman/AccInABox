@@ -1,0 +1,124 @@
+<form name="gl_yearends" title="General ledger year-ends">
+
+  <db_objects>
+    <db_obj name="gl_ye" table_name="gl_yearends"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="actions" descr="Possible actions"
+        sub_types="[
+        [`action`, null,
+          [
+            [`no_action`, `No action available`, [], []],
+            [`yearend_close`, `Start yearend close`, [], []],
+            [`yearend_reopen`, `Reopen yearend`, [], []]
+            ]
+          ]
+        ]">
+      <mem_col col_name="action" data_type="TEXT" short_descr="Action"
+        long_descr="Action" col_head="Action" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="var" descr="Form variables" module_id="gl">
+      <mem_col col_name="close_yearend" data_type="BOOL" short_descr="Close yearend?"
+        long_descr="Close yearend?" allow_amend="true"/>
+      <mem_col col_name="reopen_yearend" data_type="BOOL" short_descr="Reopen yearend?"
+        long_descr="Reopen yearend?" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="var">
+    <toolbar/>
+    <body>
+      <block/>
+      <grid data_object="gl_ye" growable="false" num_grid_rows="8" cursor_name="gl_ye"
+          start_col="yearend_row_id" start_val="_ledger.year_end" readonly="true">
+        <toolbar>
+          <tool type="nav"/>
+        </toolbar>
+        <grid_methods template="Grid">
+          <method name="on_start_row" action="
+            <<pyfunc name=`custom.gl_funcs.check_ye`/>>
+          "/>
+        </grid_methods>
+      </grid>
+      <grid_frame main_object="gl_ye">
+        <toolbar/>
+        <body>
+
+          <block/>
+          <subtype_frame subtype_obj="actions" subtype_col="action">
+
+            <subtype_body subtype_id="no_action">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Year end"/>
+              <display obj_name="gl_ye" col_name="yearend_row_id" lng="20"/>
+              <display obj_name="gl_ye" col_name="closing_date" lng="85"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="yearend_close">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Year end"/>
+              <display obj_name="gl_ye" col_name="yearend_row_id" lng="20"/>
+              <display obj_name="gl_ye" col_name="closing_date" lng="85"/>
+              <button btn_id="close_yearend" btn_label="Close yearend"
+                help_msg = "Start 'yearend close' process"
+                btn_enabled="true" btn_validate="true" action="
+                  <<ask title=`Year end close` enter=`No` escape=`No`
+                      question=`Ok to start yearend end process?`>>
+                    <<response ans=`No`/>>
+                    <<response ans=`Yes`>>
+                      <<start_process name=`gl_ye_close`>>
+                        <<call_params>>
+                          <<call_param name=`yearend_to_close` type=`data_attr` source=`gl_ye.yearend_row_id`/>>
+                          <<call_param name=`check_date` type=`data_attr` source=`gl_ye.closing_date`/>>
+                        <</call_params>>
+                      <</start_process>>
+                      <<ask title=`Year end close` enter=`Ok` escape=`Ok`
+                          question=`Close yearend process started`>>
+                        <<response ans=`Ok`>>
+                          <<end_form state=`completed`/>>
+                        <</response>>
+                      <</ask>>
+                    <</response>>
+                  <</ask>>
+                  "/>
+            </subtype_body>
+
+            <subtype_body subtype_id="reopen">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Year end"/>
+              <display obj_name="gl_ye" col_name="yearend_row_id" lng="20"/>
+              <display obj_name="gl_ye" col_name="closing_date" lng="85"/>
+              <button btn_id="reopen_yearend" btn_label="Reopen yearend"
+                help_msg = "Reopen yearend if permitted"
+                btn_enabled="true" btn_validate="true" action="
+                  <<pyfunc name=`custom.artrans_funcs.reopen_yearend`/>>
+                "/>
+            </subtype_body>
+          </subtype_frame>
+
+        </body>
+        <button_row>
+          <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
+            btn_validate="true" btn_default="true" lng="60" action="
+              <<end_form state=`completed`/>>
+            "/>
+        </button_row>
+        <frame_methods/>
+      </grid_frame>
+    </body>
+    <button_row/>
+    <frame_methods/>
+  </frame>
+</form>

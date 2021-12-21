@@ -120,6 +120,8 @@ cols.append ({
     'fkey'       : [
         ['tran_type', [
             ['gl_jnl', 'gl_tran_jnl_det'],
+            ['gl_adj', 'gl_tran_adj_det'],
+            ['gl_tfr', 'gl_tran_tfr_det'],
             ['ar_inv', 'ar_tran_inv_det'],
             ['ar_crn', 'ar_tran_crn_det'],
             ['ar_jnl', 'ar_tran_jnl_det'],
@@ -335,7 +337,7 @@ virt.append ({
     'col_head'   : 'Reverse sign?',
     'dflt_rule'  : (
         '<case>'
-          '<compare test="[[`if`, ``, `tran_type`, `=`, `~gl_jnl~`, ``]]">'
+          '<compare test="[[`if`, ``, `subparent_row_id>module_id`, `=`, `~gl~`, ``]]">'
             '<literal value="$False"/>'
           '</compare>'
           '<default>'

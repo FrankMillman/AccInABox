@@ -450,6 +450,63 @@ async def check_tran_date(db_obj, fld, value, module_id, ledger_row_id=0):
 
     return True
 
+async def check_ye_adj_date(db_obj, fld, value):
+    """
+    called from gl_tran_adj.tran_date col_checks
+    called again before inserting, in case period closed between 'capture' and 'save'
+    """
+
+    adm_periods = await db.cache.get_adm_periods(db_obj.company)
+    period_row_id = bisect_left([_.closing_date for _ in adm_periods], value)
+
+    if period_row_id == 0:  # date is <= first period (and first period is dummy)
+        raise AibError(head='Transaction date', body='Date prior to start of financial calendar')
+    if period_row_id == len(adm_periods):  # date is > last period
+        raise AibError(head='Transaction date', body='Date not in financial calendar')
+    if adm_periods[period_row_id].year_per_id != period_row_id:
+        raise AibError(head='Transaction date', body='Period is not a year end')
+
+    async with db_obj.context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        param_style = conn.constants.param_style
+        sql = f"SELECT state FROM {db_obj.company}.gl_yearends WHERE yearend_row_id = {param_style}"
+        params = [adm_periods[period_row_id].year_no]
+        rows = await conn.fetchall(sql, params=params)
+    if not rows:
+        raise AibError(head='Transaction date', body='Year end not started')
+    if rows[0][0] != 'open':
+        raise AibError(head='Transaction date', body='Year end is closed')
+
+    return True
+
+async def check_ye_tfr_date(db_obj, fld, value):
+    """
+    called from gl_tran_tfr.tran_date col_checks
+    """
+
+    adm_periods = await db.cache.get_adm_periods(db_obj.company)
+    period_row_id = bisect_left([_.closing_date for _ in adm_periods], value)
+
+    if period_row_id == 0:  # date is <= first period (and first period is dummy)
+        raise AibError(head='Transaction date', body='Date prior to start of financial calendar')
+    if period_row_id == len(adm_periods):  # date is > last period
+        raise AibError(head='Transaction date', body='Date not in financial calendar')
+    if adm_periods[period_row_id].year_per_id != period_row_id:
+        raise AibError(head='Transaction date', body='Period is not a year end')
+
+    async with db_obj.context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        param_style = conn.constants.param_style
+        sql = f"SELECT state FROM {db_obj.company}.gl_yearends WHERE yearend_row_id = {param_style}"
+        params = [adm_periods[period_row_id].year_no]
+        rows = await conn.fetchall(sql, params=params)
+    if not rows:
+        raise AibError(head='Transaction date', body='Year end not started')
+    if rows[0][0] != 'closing':
+        raise AibError(head='Transaction date', body='Year end is closed')
+
+    return True
+
 async def check_stat_date(db_obj, fld, value):
     # called as col_check from tran_date
 

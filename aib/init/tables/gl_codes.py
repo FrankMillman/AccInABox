@@ -334,6 +334,30 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'balance',
+    'data_type'  : '$PTY',
+    'short_descr': 'Balance',
+    'long_descr' : 'Balance',
+    'col_head'   : 'Balance',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : (
+        "SELECT COALESCE("
+            "(SELECT SUM(c.tran_tot) FROM ( "
+            "SELECT b.tran_tot, ROW_NUMBER() OVER (PARTITION BY "
+                "b.gl_code_id, b.location_row_id, b.function_row_id, "
+                "b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id "
+                "ORDER BY b.tran_date DESC) row_num "
+            "FROM {company}.gl_totals b "
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date <= {_ctx.balance_date} "
+            "AND b.gl_code_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            "), 0)"
+        )
+    })
 
 # cursor definitions
 cursors = []

@@ -1,0 +1,31 @@
+<form name="all_captured" title="Approve loan">
+
+  <db_objects/>
+  <mem_objects>
+    <mem_obj name="var" descr="Form variables">
+      <mem_col col_name="all_captured" data_type="BOOL" short_descr="All captured?"
+        long_descr="All y/end adjustments captured?"/>
+    </mem_obj>
+  </mem_objects>
+
+  <input_params>
+  </input_params>
+  <output_params>
+    <output_param name="all_captured" type="data_attr" source="var.all_captured"/>
+  </output_params>
+
+  <frame>
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Have all y/end adjustments been captured?"/>
+      <col/>
+      <input obj_name="var" col_name="all_captured"/>
+    </body>
+    <button_row template="Query_Form"/>
+    <frame_methods template="Query_Form"/>
+  </frame>
+</form>

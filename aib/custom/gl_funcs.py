@@ -103,6 +103,17 @@ async def set_per_closed_flag(caller, params):
     await ledg_per.setval('state', 'closed')
     await ledg_per.save()
 
+    if await ledg_per.getval('is_year_end'):
+        gl_ye = await db.objects.get_db_object(context, 'gl_yearends')
+        await gl_ye.setval('yearend_row_id', await ledg_per.getval('year_no'))
+        await gl_ye.setval('state', 'open')
+        await gl_ye.save()
+
+        # force 'year_end' in gl_ledger_params to be re-evaluated
+        ledger_params = await db.cache.get_ledger_params(caller.company,
+            context.module_row_id, context.ledger_row_id)
+        ledger_params.fields['year_end'].must_be_evaluated = True
+
     if params['period_to_close'] == await ledg_per.getval('_ledger.current_period'):
         # set next month state to 'current'
         await ledg_per.init()
@@ -120,6 +131,215 @@ async def set_per_closed_flag(caller, params):
         ledger_params = await db.cache.get_ledger_params(caller.company,
             context.module_row_id, context.ledger_row_id)
         ledger_params.fields['current_period'].must_be_evaluated = True
+
+async def check_ye(caller, xml):
+    # called from gl_yearends on_start_row
+    gl_ye = caller.data_objects['gl_ye']
+    actions = caller.data_objects['actions']
+
+    await actions.setval('action', 'no_action')  # initial state
+    if gl_ye.exists:
+        if await gl_ye.getval('state') == 'open':
+            # if > 1, only the first one can be closed - _ledger.year_end.sql tests for this
+            if await gl_ye.getval('yearend_row_id') == await gl_ye.getval('_ledger.year_end'):
+                await actions.setval('action', 'yearend_close')
+        elif await gl_ye.getval('state') == 'closed':
+            await actions.setval('action', 'yearend_reopen')
+
+async def set_ye_closing_flag(caller, params):
+    print('set_closing_flag')
+
+    context = caller.manager.process.root.context
+    if 'gl_ye' not in context.data_objects:
+        context.data_objects['gl_ye'] = await db.objects.get_db_object(
+            context, 'gl_yearends')
+    gl_ye = context.data_objects['gl_ye']
+    await gl_ye.setval('yearend_row_id', params['yearend_to_close'])
+    if await gl_ye.getval('state') != 'open':
+        raise AibError(head='Closing flag', body='Yearend is not open')
+    await gl_ye.setval('state', 'closing')
+    await gl_ye.save()
+
+async def check_adj_posted(caller, params):
+    context = caller.manager.process.root.context
+
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        check_date = params['check_date']
+        where = []
+        where.append(['WHERE', '', 'tran_date', '<=', check_date, ''])
+        where.append(['AND', '', 'deleted_id', '=', 0, ''])
+        where.append(['AND', '', 'posted', '=', False, ''])
+
+        params = []
+        sql = 'SELECT CASE WHEN EXISTS ('
+
+        table_names = [
+            'gl_tran_adj',
+            ]
+
+        for table_name in table_names:
+            db_table = await db.objects.get_db_table(context, caller.company, table_name)
+            s, p = await conn.build_select(context, db_table, ['row_id'], where=where, order=[])
+            sql += s
+            params += p
+            if table_name != table_names[-1]:
+                sql += ' UNION ALL '
+
+        sql += ') THEN $True ELSE $False END'
+
+        cur = await conn.exec_sql(sql, params)
+        exists, = await cur.__anext__()
+
+    return_params = {'all_posted': not bool(exists)}
+    print('check all posted:', return_params)
+    return return_params
+
+async def set_ye_closed_flag(caller, params):
+    print('set_ye_closed_flag')
+
+    context = caller.manager.process.root.context
+    if 'gl_ye' not in context.data_objects:
+        context.data_objects['gl_ye'] = await db.objects.get_db_object(
+            context, 'gl_yearends')
+    gl_ye = context.data_objects['gl_ye']
+    await gl_ye.setval('yearend_row_id', params['yearend_to_close'])
+    if await gl_ye.getval('state') != 'closing':
+        raise AibError(head='Closing flag', body='Closing flag not set')
+    await gl_ye.setval('state', 'closed')
+    await gl_ye.save()
+
+    # force 'year_end' in gl_ledger_params to be re-evaluated
+    ledger_params = await db.cache.get_ledger_params(caller.company,
+        context.module_row_id, context.ledger_row_id)
+    ledger_params.fields['year_end'].must_be_evaluated = True
+
+async def ye_tfr_jnl(caller, params):
+
+    sql = """
+        SELECT b.gl_code_id, b.location_row_id, b.function_row_id, sum(b.tran_tot)
+        FROM (
+
+            SELECT a.gl_code_id, a.location_row_id, a.function_row_id, a.tran_tot,
+                ROW_NUMBER() OVER (PARTITION BY
+                a.gl_code_id, a.location_row_id, a.function_row_id,
+                a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id
+                ORDER BY a.tran_date DESC) row_num
+            FROM {company}.gl_totals a
+            JOIN {company}.gl_codes code ON code.row_id = a.gl_code_id
+            JOIN {company}.gl_groups int ON int.row_id = code.group_id
+            JOIN {company}.gl_groups maj ON maj.row_id = int.parent_id
+            JOIN {company}.gl_groups bs_is ON bs_is.row_id = maj.parent_id
+            WHERE a.deleted_id = 0
+            AND a.tran_date <= {_ctx.ye_date}
+            AND code.ctrl_mod_row_id IS NULL
+            AND bs_is.gl_group = 'is'
+            ) as b
+        WHERE b.row_num = 1
+        GROUP BY b.gl_code_id, b.location_row_id, b.function_row_id
+        ORDER BY b.gl_code_id, b.location_row_id, b.function_row_id
+    """
+
+    sql_sub = """
+        SELECT b.SUB_code_id, b.location_row_id, b.function_row_id, sum(b.tran_tot)
+        FROM (
+
+            SELECT a.SUB_code_id, a.location_row_id, a.function_row_id, a.tran_tot,
+                ROW_NUMBER() OVER (PARTITION BY
+                a.SUB_code_id, a.location_row_id, a.function_row_id,
+                a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id
+                ORDER BY a.tran_date DESC) row_num
+            FROM {company}.SUB_totals a
+            WHERE a.deleted_id = 0
+            AND a.tran_date <= {_ctx.ye_date}
+            ) as b
+        WHERE b.row_num = 1
+        GROUP BY b.SUB_code_id, b.location_row_id, b.function_row_id
+        ORDER BY b.SUB_code_id, b.location_row_id, b.function_row_id
+    """
+
+    # context = await db.cache.get_new_context(user_row_id, sys_admin, company)
+    context = caller.manager.process.root.context
+    if 'gl_ye' not in context.data_objects:
+        context.data_objects['gl_ye'] = await db.objects.get_db_object(
+            context, 'gl_yearends')
+    gl_ye = context.data_objects['gl_ye']
+    await gl_ye.setval('yearend_row_id', params['yearend_to_close'])
+
+    ye_period = await gl_ye.getval('period_row_id')
+    adm_periods = await db.cache.get_adm_periods(caller.company)
+    context.ye_date = adm_periods[ye_period].closing_date
+
+    gl_code = await db.objects.get_db_object(context, 'gl_codes')
+    gl_param = await db.objects.get_db_object(context, 'gl_ledger_params')
+    gl_tfr = await db.objects.get_db_object(context, 'gl_tran_tfr')
+    gl_det = await db.objects.get_db_object(context, 'gl_tran_tfr_det', parent=gl_tfr)
+    gl_sub = await db.objects.get_db_object(context, 'gl_subtran_jnl', parent=gl_det)
+    nsls_sub = await db.objects.get_db_object(context, 'nsls_subtran', parent=gl_det)
+    npch_sub = await db.objects.get_db_object(context, 'npch_subtran', parent=gl_det)
+
+    await gl_param.setval('row_id', 0)
+    ye_tfr_codes = await gl_param.getval('ye_tfr_codes')
+    tot_perc = 0
+    for tfr_code, tfr_perc in ye_tfr_codes:
+        await gl_code.init(init_vals={'gl_code': tfr_code})
+        assert gl_code.exists
+        tot_perc += tfr_perc
+    assert tot_perc == 100
+
+    tot_tfr = 0
+
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+
+        await gl_tfr.setval('tran_date', context.ye_date)
+        await gl_tfr.setval('text', 'Y/e transfer')
+        await gl_tfr.setval('narrative', 'Y/e transfer of income statement balances')
+        await gl_tfr.save()
+
+        async for row in await conn.exec_sql(sql, context=context):
+            gl_id, loc_id, fun_id, tran_tot = row
+            await gl_det.init()
+            await gl_det.setval('line_type', 'gl')
+            await gl_sub.setval('gl_code_id', gl_id)
+            await gl_sub.setval('location_row_id', loc_id)
+            await gl_sub.setval('function_row_id', fun_id)
+            await gl_sub.setval('gl_amount', 0 - tran_tot)
+            tot_tfr -= await gl_sub.getval('gl_amount')
+            await gl_det.save()
+
+        for mod_id in ('nsls', 'npch'):  # what about sls/pch? will it work the same, or does it need its own SQL?
+            if mod_id == 'nsls':
+                sub_obj = nsls_sub
+            elif mod_id == 'npch':
+                sub_obj = npch_sub
+            sub_sql = sql_sub.replace('SUB', mod_id)
+            async for row in await conn.exec_sql(sub_sql, context=context):
+                code_id, loc_id, fun_id, tran_tot = row
+                await gl_det.init()
+                await gl_det.setval('line_type', mod_id)
+                await sub_obj.setval(f'{mod_id}_code_id', code_id)
+                await sub_obj.setval('location_row_id', loc_id)
+                await sub_obj.setval('function_row_id', fun_id)
+                await sub_obj.setval('eff_date', context.ye_date)
+                await sub_obj.setval(f'{mod_id}_amount', 0 - tran_tot)
+                tot_tfr -= await sub_obj.getval(f'{mod_id}_amount')
+                await gl_det.save()
+
+        tfr_amounts = []
+        for tfr_code, tfr_perc in ye_tfr_codes:
+            tfr_amounts.append(tot_tfr * tfr_perc / 100)
+        if sum(tfr_amounts) != tot_tfr:
+            tfr_amounts[-1] += (tot_tfr - sum(tfr_amounts))
+
+        for (tfr_code, tfr_perc), tfr_amount in zip(ye_tfr_codes, tfr_amounts):
+            await gl_det.init()
+            await gl_det.setval('line_type', 'gl')
+            await gl_sub.setval('gl_code', tfr_code)
+            await gl_sub.setval('gl_amount', tfr_amount)
+            await gl_det.save()
+
+        await gl_tfr.post()
 
 async def notify_manager(caller, params):
     print('notify', params)

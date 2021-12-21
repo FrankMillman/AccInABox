@@ -242,10 +242,15 @@ async def setup_other_tables(context, conn):
         'org_contacts',
         'gl_ledger_params',
         'gl_ledger_periods',
+        'gl_yearends',
         'sys_finrpt_defns',
         'gl_tran_bf',
         'gl_tran_jnl',
         'gl_tran_jnl_det',
+        'gl_tran_adj',
+        'gl_tran_adj_det',
+        'gl_tran_tfr',
+        'gl_tran_tfr_det',
         'gl_subtran_jnl',
         'gl_totals',
         'cb_ledger_params',
@@ -574,6 +579,7 @@ async def setup_forms(context, conn):
     await setup_form('ap_ledger_periods')
     await setup_form('cb_ledger_periods')
     await setup_form('in_ledger_periods')
+    await setup_form('gl_yearends')
     await setup_form('setup_currencies')
     await setup_form('setup_tax_codes')
     await setup_form('setup_ar_terms_codes')
@@ -582,6 +588,7 @@ async def setup_forms(context, conn):
     await setup_form('setup_functions')
     await setup_form('setup_gl_codes')
     await setup_form('gl_jnl')
+    await setup_form('gl_adj')
     await setup_form('setup_party')
     await setup_form('setup_arcust')
     await setup_form('ar_cust_bal')
@@ -611,6 +618,7 @@ async def setup_forms(context, conn):
     await setup_form('finrpt_run')
     await setup_form('finrpt_grid')
     await setup_form('tranrpt_grid')
+    await setup_form('all_captured')
 
 async def setup_reports(context, conn):
     # schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
@@ -723,6 +731,7 @@ async def setup_processes(context, conn):
         await proc_defn.save()
 
     await setup_process('gl_per_close')
+    await setup_process('gl_ye_close')
     await setup_process('cb_per_close')
     await setup_process('ar_per_close')
     await setup_process('ar_stat_close')
@@ -786,6 +795,10 @@ async def setup_menus(context, conn, company_name):
                 ]],
             ['Financial reports', 'form', 'finrpt_list'],
             ['Period end procedure', 'form', 'gl_ledger_periods'],
+            ['Year end menu', 'menu', 'gl', [
+                ['Capture y/end adjustments', 'form', 'gl_adj'],
+                ['Year end cleanup', 'form', 'gl_yearends'],
+                ]],
             ]],
         ['Cash book', 'menu', 'cb', [
             ['Add new cashbook', 'form', 'cb_ledger_new'],
@@ -1003,6 +1016,8 @@ async def setup_init_data(context, conn, company_name):
 
     tran_types = []
     tran_types.append(('gl_jnl', 'Gl journal', 'gl', 'gl_tran_jnl'))
+    tran_types.append(('gl_adj', 'Gl y/e adj', 'gl', 'gl_tran_adj'))
+    tran_types.append(('gl_tfr', 'Gl y/e tfr', 'gl', 'gl_tran_tfr'))
     tran_types.append(('gl_subjnl', 'Gl subtran journal', 'gl', 'gl_subtran_jnl'))
     tran_types.append(('gl_bf', 'Gl b/f balance', 'gl', 'gl_tran_bf'))
     tran_types.append(('cb_rec', 'Cb receipt', 'cb', 'cb_tran_rec'))

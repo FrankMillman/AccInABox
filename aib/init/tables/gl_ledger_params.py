@@ -141,6 +141,26 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'ye_tfr_codes',
+    'data_type'  : 'JSON',
+    'short_descr': 'Codes for y/e transfer',
+    'long_descr' : 'G/l code(s) for y/e transfer of i/s balances. If > 1, %s must total 100',
+    'col_head'   : 'Y/e tfr codes',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,  # must be set before running y/end
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []
@@ -171,6 +191,26 @@ virt.append ({
     'sql'        : (
         "SELECT b.period_row_id FROM {company}.gl_ledger_periods b "
         "WHERE b.state = 'current'"
+        )
+    })
+virt.append ({
+    'col_name'   : 'year_end',
+    'data_type'  : 'INT',
+    'short_descr': 'Year end',
+    'long_descr' : 'First open year end if exists, else current year_end',
+    'col_head'   : 'Y/end',
+    'sql'        : (
+        "SELECT CASE WHEN EXISTS "
+        "(SELECT * FROM {company}.gl_yearends WHERE state = 'open') "
+        "THEN "
+        "(SELECT yearend_row_id FROM {company}.gl_yearends WHERE state = 'open' "
+        "ORDER BY row_id LIMIT 1) "
+        "ELSE "
+        "(SELECT b.row_id FROM {company}.adm_yearends b "
+        "WHERE b.period_row_id >= "
+        "(SELECT c.period_row_id FROM {company}.gl_ledger_periods c WHERE c.state = 'current') "
+        "ORDER BY b.row_id LIMIT 1) "
+        "END"
         )
     })
 

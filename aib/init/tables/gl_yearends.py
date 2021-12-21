@@ -1,16 +1,17 @@
 # table definition
 table = {
-    'table_name'    : 'gl_ledger_periods',
+    'table_name'    : 'gl_yearends',
     'module_id'     : 'gl',
-    'short_descr'   : 'Gl ledger financial periods',
-    'long_descr'    : 'Financial periods and states for general ledger',
+    'short_descr'   : 'Gl ledger year ends',
+    'long_descr'    : 'Financial year ends and states for general ledger',
     'sub_types'     : None,
     'sub_trans'     : None,
     'sequence'      : None,
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
-    'ledger_col'    : 'ledger_row_id',
+    # 'ledger_col'    : 'ledger_row_id',
+    'ledger_col'    : None,
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -79,11 +80,11 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'period_row_id',
+    'col_name'   : 'yearend_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Period row id',
-    'long_descr' : 'Period row id',
-    'col_head'   : 'No',
+    'short_descr': 'Year end row id',
+    'long_descr' : 'Year end row id',
+    'col_head'   : 'Y/end',
     'key_field'  : 'A',
     'data_source': 'input',
     'condition'  : None,
@@ -95,14 +96,14 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
-    'fkey'       : ['adm_periods', 'row_id', None, None, False, None],
+    'fkey'       : ['adm_yearends', 'row_id', None, None, False, None],
     'choices'    : None,
     })
 cols.append ({
     'col_name'   : 'state',
     'data_type'  : 'TEXT',
     'short_descr': 'State',
-    'long_descr' : 'State - current/open/reopened/closing/closed',
+    'long_descr' : 'State - open/closing/closed',
     'col_head'   : 'State',
     'key_field'  : 'N',
     'data_source': 'proc',
@@ -117,44 +118,33 @@ cols.append ({
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-            ['current', 'Current'],
             ['open', 'Open'],
             ['closing', 'Closing'],
             ['closed', 'Closed'],
-            ['reopened', 'Reopened'],
         ],
     })
 
 # virtual column definitions
 virt = []
+# virt.append ({
+#     'col_name'   : 'ledger_row_id',
+#     'data_type'  : 'INT',
+#     'short_descr': 'Ledger row id',
+#     'long_descr' : 'Ledger row id',
+#     'col_head'   : 'Ledger row id',
+#     'sql'        : '0',
+#    })
 virt.append ({
-    'col_name'   : 'ledger_row_id',
+    'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Ledger row id',
-    'long_descr' : 'Ledger row id',
-    'col_head'   : 'Ledger row id',
-    'sql'        : '0',
-    })
-virt.append ({
-    'col_name'   : 'current_period',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Current period?',
-    'long_descr' : 'Current period?',
-    'col_head'   : 'Curr?',
-    'sql'        : "CASE WHEN a.state = 'current' THEN $True ELSE $False END",
-    })
-virt.append ({
-    'col_name'   : 'opening_date',
-    'data_type'  : 'DTE',
-    'short_descr': 'Opening date',
-    'long_descr' : 'Opening date',
-    'col_head'   : 'Op date',
+    'short_descr': 'Period row id',
+    'long_descr' : 'Period row id',
+    'col_head'   : 'Period row id',
     'sql'        : (
-        "SELECT $fx_date_add(b.closing_date, 1) "
-        "FROM {company}.adm_periods b "
-        "WHERE b.row_id = a.period_row_id - 1"
+        "SELECT b.period_row_id FROM {company}.adm_yearends b "
+        "WHERE b.row_id = a.yearend_row_id"
         ),
-    })
+   })
 virt.append ({
     'col_name'   : 'closing_date',
     'data_type'  : 'DTE',
@@ -162,42 +152,20 @@ virt.append ({
     'long_descr' : 'Closing date',
     'col_head'   : 'Cl date',
     'sql'        : (
-        "SELECT b.closing_date FROM {company}.adm_periods b "
-        "WHERE b.row_id = a.period_row_id"
-        ),
-    })
-virt.append ({
-    'col_name'   : 'year_no',
-    'data_type'  : 'INT',
-    'short_descr': 'Year number',
-    'long_descr' : 'Year number',
-    'col_head'   : 'Year',
-    'sql'        : (
-        "(SELECT b.row_id FROM {company}.adm_yearends b "
-        "WHERE b.period_row_id >= a.period_row_id ORDER BY b.row_id LIMIT 1) "
-        )
-    })
-virt.append ({
-    'col_name'   : 'is_year_end',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Year end?',
-    'long_descr' : 'Is this the last period of the financial year?',
-    'col_head'   : 'Year end?',
-    'sql'        : (
-        "SELECT CASE WHEN a.period_row_id = "
-        "(SELECT b.period_row_id FROM {company}.adm_yearends b WHERE b.period_row_id >= a.period_row_id "
-        "ORDER BY b.row_id limit 1)"
-        "THEN $True ELSE $False END"
+        "SELECT c.closing_date FROM {company}.adm_periods c "
+        "WHERE c.row_id = "
+        "(SELECT b.period_row_id FROM {company}.adm_yearends b "
+        "WHERE b.row_id = a.yearend_row_id)"
         ),
     })
 
 # cursor definitions
 cursors = []
 cursors.append({
-    'cursor_name': 'gl_per',
-    'title': 'Maintain gl ledger periods',
+    'cursor_name': 'gl_ye',
+    'title': 'Maintain gl year ends',
     'columns': [
-        ['period_row_id', 10, True, True],
+        ['yearend_row_id', 10, True, True],
         ['closing_date', 100, False, True],
         ['state', 60, False, True],
         ],
@@ -208,6 +176,3 @@ cursors.append({
 
 # actions
 actions = []
-actions.append([
-    'after_commit', '<pyfunc name="db.cache.ledger_period_updated"/>'
-    ])

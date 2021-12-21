@@ -1,0 +1,273 @@
+<process id="gl_ye_close" descr="G/l y/end close procedure">
+  <db_objects/>
+  <mem_objects>
+    <mem_obj name="var" descr="Process variables">
+      <mem_col col_name="yearend_to_close" data_type="INT" short_descr="Y/end to close" long_descr="Id of yearend to close" col_head="Y/end"/>
+      <mem_col col_name="check_date" data_type="DTE" short_descr="Check date" long_descr="Check all posted up to this date." col_head="Check date"/>
+      <mem_col col_name="all_captured" data_type="BOOL" short_descr="All captured?" long_descr="All y/end adjustments captured?"/>
+      <mem_col col_name="all_posted" data_type="BOOL" short_descr="All posted?" long_descr="All y/end adjustments posted?"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params>
+    <input_param name="yearend_to_close" type="data_attr" target="var.yearend_to_close" required="true"/>
+    <input_param name="check_date" type="data_attr" target="var.check_date" required="true"/>
+  </input_params>
+  <output_params/>
+  <semantic:definitions xmlns:semantic="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:dbobj="http://www.accinabox.org/bpmn/dbobj_definitions" xmlns:memobj="http://www.accinabox.org/bpmn/memobj_definitions" id="gl_ye_close_0" targetNamespace="http://www.accinabox.org/bpmn">
+    <semantic:itemDefinition id="var_obj" structureRef="memobj:var"/>
+    <semantic:process id="gl_ye_close_1" isExecutable="true">
+      <semantic:dataObject id="var" itemSubjectRef="var_obj"/>
+      <semantic:startEvent id="gl_ye_close_3" name="Start">
+        <semantic:outgoing>gl_ye_close_75</semantic:outgoing>
+      </semantic:startEvent>
+      <semantic:userTask id="gl_ye_close_17" name="Ask all captured?" implementation="all_captured">
+        <semantic:incoming>gl_ye_close_75</semantic:incoming>
+        <semantic:outgoing>gl_ye_close_23</semantic:outgoing>
+        <semantic:dataOutputAssociation>
+          <semantic:sourceRef>all_captured</semantic:sourceRef>
+          <semantic:targetRef>var.all_captured</semantic:targetRef>
+        </semantic:dataOutputAssociation>
+        <semantic:performer name="$user"/>
+      </semantic:userTask>
+      <semantic:exclusiveGateway id="gl_ye_close_21" name="All captured?" default="gl_ye_close_27">
+        <semantic:incoming>gl_ye_close_23</semantic:incoming>
+        <semantic:outgoing>gl_ye_close_77</semantic:outgoing>
+        <semantic:outgoing>gl_ye_close_73</semantic:outgoing>
+      </semantic:exclusiveGateway>
+      <semantic:endEvent id="gl_ye_close_25" name="Cancel">
+        <semantic:incoming>gl_ye_close_77</semantic:incoming>
+      </semantic:endEvent>
+      <semantic:scriptTask id="gl_ye_close_29" name="Set y/end 'closing' flag">
+        <semantic:incoming>gl_ye_close_73</semantic:incoming>
+        <semantic:outgoing>gl_ye_close_35</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.yearend_to_close</semantic:sourceRef>
+          <semantic:targetRef>yearend_to_close</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:script>custom.gl_funcs.set_ye_closing_flag</semantic:script>
+      </semantic:scriptTask>
+      <semantic:scriptTask id="gl_ye_close_33" name="Check all adjustments posted">
+        <semantic:incoming>gl_ye_close_45</semantic:incoming>
+        <semantic:incoming>gl_ye_close_35</semantic:incoming>
+        <semantic:outgoing>gl_ye_close_39</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.check_date</semantic:sourceRef>
+          <semantic:targetRef>check_date</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:dataOutputAssociation>
+          <semantic:sourceRef>all_posted</semantic:sourceRef>
+          <semantic:targetRef>var.all_posted</semantic:targetRef>
+        </semantic:dataOutputAssociation>
+        <semantic:script>custom.gl_funcs.check_adj_posted</semantic:script>
+      </semantic:scriptTask>
+      <semantic:exclusiveGateway id="gl_ye_close_37" name="All posted?" default="gl_ye_close_43">
+        <semantic:incoming>gl_ye_close_39</semantic:incoming>
+        <semantic:outgoing>gl_ye_close_59</semantic:outgoing>
+        <semantic:outgoing>gl_ye_close_43</semantic:outgoing>
+      </semantic:exclusiveGateway>
+      <semantic:intermediateCatchEvent id="gl_ye_close_41" name="Delay">
+        <semantic:incoming>gl_ye_close_43</semantic:incoming>
+        <semantic:outgoing>gl_ye_close_45</semantic:outgoing>
+        <semantic:timerEventDefinition>
+          <semantic:timeDuration>PT5S</semantic:timeDuration>
+        </semantic:timerEventDefinition>
+      </semantic:intermediateCatchEvent>
+      <semantic:boundaryEvent id="gl_ye_close_47" name="Timeout" cancelActivity="false" attachedToRef="gl_ye_close_33">
+        <semantic:outgoing>gl_ye_close_51</semantic:outgoing>
+        <semantic:timerEventDefinition>
+          <semantic:timeCycle>R/PT10S</semantic:timeCycle>
+        </semantic:timerEventDefinition>
+      </semantic:boundaryEvent>
+      <semantic:userTask id="gl_ye_close_49" name="Notify manager" implementation="popup:Y/e adjustments not all posted">
+        <semantic:incoming>gl_ye_close_51</semantic:incoming>
+        <semantic:outgoing>gl_ye_close_55</semantic:outgoing>
+        <semantic:performer name="$User"/>
+      </semantic:userTask>
+      <semantic:endEvent id="gl_ye_close_53" name="End">
+        <semantic:incoming>gl_ye_close_55</semantic:incoming>
+      </semantic:endEvent>
+      <semantic:scriptTask id="gl_ye_close_57" name="Transfer income statement balances">
+        <semantic:incoming>gl_ye_close_59</semantic:incoming>
+        <semantic:outgoing>gl_ye_close_63</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.yearend_to_close</semantic:sourceRef>
+          <semantic:targetRef>yearend_to_close</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:script>custom.gl_funcs.ye_tfr_jnl</semantic:script>
+      </semantic:scriptTask>
+      <semantic:scriptTask id="gl_ye_close_61" name="Set y/end 'closed' flag">
+        <semantic:incoming>gl_ye_close_63</semantic:incoming>
+        <semantic:outgoing>gl_ye_close_67</semantic:outgoing>
+        <semantic:dataInputAssociation>
+          <semantic:sourceRef>var.yearend_to_close</semantic:sourceRef>
+          <semantic:targetRef>yearend_to_close</semantic:targetRef>
+        </semantic:dataInputAssociation>
+        <semantic:script>custom.gl_funcs.set_ye_closed_flag</semantic:script>
+      </semantic:scriptTask>
+      <semantic:userTask id="gl_ye_close_65" name="Notify complete" implementation="popup:Y/e procedure completed">
+        <semantic:incoming>gl_ye_close_67</semantic:incoming>
+        <semantic:outgoing>gl_ye_close_71</semantic:outgoing>
+        <semantic:performer name="$user"/>
+      </semantic:userTask>
+      <semantic:endEvent id="gl_ye_close_69" name="End">
+        <semantic:incoming>gl_ye_close_71</semantic:incoming>
+      </semantic:endEvent>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_17" targetRef="gl_ye_close_21" name="" id="gl_ye_close_23"/>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_29" targetRef="gl_ye_close_33" name="" id="gl_ye_close_35"/>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_33" targetRef="gl_ye_close_37" name="Remove before saving!" id="gl_ye_close_39"/>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_37" targetRef="gl_ye_close_41" name="" id="gl_ye_close_43"/>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_41" targetRef="gl_ye_close_33" name="" id="gl_ye_close_45"/>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_47" targetRef="gl_ye_close_49" name="" id="gl_ye_close_51"/>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_49" targetRef="gl_ye_close_53" name="" id="gl_ye_close_55"/>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_37" targetRef="gl_ye_close_57" name="" id="gl_ye_close_59">
+        <semantic:conditionExpression>[["where", null, "var.all_posted", "is_", "$True", null]]</semantic:conditionExpression>
+      </semantic:sequenceFlow>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_57" targetRef="gl_ye_close_61" name="" id="gl_ye_close_63"/>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_61" targetRef="gl_ye_close_65" name="" id="gl_ye_close_67"/>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_65" targetRef="gl_ye_close_69" name="" id="gl_ye_close_71"/>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_21" targetRef="gl_ye_close_29" name="" id="gl_ye_close_73">
+        <semantic:conditionExpression>[["where", null, "var.all_captured", "is_", "$True", null]]</semantic:conditionExpression>
+      </semantic:sequenceFlow>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_3" targetRef="gl_ye_close_17" name="" id="gl_ye_close_75"/>
+      <semantic:sequenceFlow sourceRef="gl_ye_close_21" targetRef="gl_ye_close_25" name="" id="gl_ye_close_77"/>
+    </semantic:process>
+    <bpmndi:BPMNDiagram id="gl_ye_close_2">
+      <bpmndi:BPMNPlane bpmnElement="gl_ye_close_1">
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_3" id="gl_ye_close_4">
+          <dc:Bounds x="22" y="206" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_17" id="gl_ye_close_18">
+          <dc:Bounds x="77" y="186" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_21" id="gl_ye_close_22" isMarkerVisible="true">
+          <dc:Bounds x="205" y="200" width="42" height="42"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_23" id="gl_ye_close_24">
+          <di:waypoint x="167" y="221"/>
+          <di:waypoint x="205" y="221"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_25" id="gl_ye_close_26">
+          <dc:Bounds x="211" y="316" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_29" id="gl_ye_close_30">
+          <dc:Bounds x="285" y="186" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_33" id="gl_ye_close_34">
+          <dc:Bounds x="432" y="186" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_35" id="gl_ye_close_36">
+          <di:waypoint x="375" y="221"/>
+          <di:waypoint x="432" y="221"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_37" id="gl_ye_close_38" isMarkerVisible="true">
+          <dc:Bounds x="571" y="200" width="42" height="42"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_39" id="gl_ye_close_40">
+          <di:waypoint x="522" y="221"/>
+          <di:waypoint x="571" y="221"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_41" id="gl_ye_close_42">
+          <dc:Bounds x="578" y="109" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_43" id="gl_ye_close_44">
+          <di:waypoint x="592" y="200"/>
+          <di:waypoint x="593" y="139"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_45" id="gl_ye_close_46">
+          <di:waypoint x="578" y="124"/>
+          <di:waypoint x="477" y="124"/>
+          <di:waypoint x="477" y="186"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_47" id="gl_ye_close_48">
+          <dc:Bounds x="444" y="171" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_49" id="gl_ye_close_50">
+          <dc:Bounds x="337" y="66" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_51" id="gl_ye_close_52">
+          <di:waypoint x="459" y="171"/>
+          <di:waypoint x="459" y="101"/>
+          <di:waypoint x="427" y="101"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_53" id="gl_ye_close_54">
+          <dc:Bounds x="271" y="87" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_55" id="gl_ye_close_56">
+          <di:waypoint x="337" y="101"/>
+          <di:waypoint x="283" y="101"/>
+          <di:waypoint x="283" y="102"/>
+          <di:waypoint x="301" y="102"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_57" id="gl_ye_close_58">
+          <dc:Bounds x="648" y="186" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_59" id="gl_ye_close_60">
+          <di:waypoint x="613" y="221"/>
+          <di:waypoint x="648" y="221"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_61" id="gl_ye_close_62">
+          <dc:Bounds x="782" y="186" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_63" id="gl_ye_close_64">
+          <di:waypoint x="738" y="221"/>
+          <di:waypoint x="782" y="221"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_65" id="gl_ye_close_66">
+          <dc:Bounds x="902" y="186" width="90" height="70"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_67" id="gl_ye_close_68">
+          <di:waypoint x="872" y="221"/>
+          <di:waypoint x="902" y="221"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNShape bpmnElement="gl_ye_close_69" id="gl_ye_close_70">
+          <dc:Bounds x="1024" y="206" width="30" height="30"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_71" id="gl_ye_close_72">
+          <di:waypoint x="992" y="221"/>
+          <di:waypoint x="1024" y="221"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_73" id="gl_ye_close_74">
+          <di:waypoint x="247" y="221"/>
+          <di:waypoint x="285" y="221"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_75" id="gl_ye_close_76">
+          <di:waypoint x="52" y="221"/>
+          <di:waypoint x="77" y="221"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge bpmnElement="gl_ye_close_77" id="gl_ye_close_78">
+          <di:waypoint x="226" y="242"/>
+          <di:waypoint x="226" y="316"/>
+          <bpmndi:BPMNLabel/>
+        </bpmndi:BPMNEdge>
+      </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+  </semantic:definitions>
+</process>
