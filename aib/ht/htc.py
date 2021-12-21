@@ -226,11 +226,12 @@ class ResponseHandler:
                 try:
                     await getattr(self, 'on_'+evt_id)(args)  # get method and call it
                     self.check_redisplay()
-                    task_list, activetasks_version = ht.htm.get_task_list(
-                        session.user_row_id, session.last_activetasks_version)
-                    if task_list is not None:
-                        self.reply.append(('append_tasks', task_list))
-                        session.last_activetasks_version = activetasks_version
+                    if self.reply is not None:  # if None do not reply - set by on_answer()
+                        task_list, activetasks_version = ht.htm.get_task_list(
+                            session.user_row_id, session.last_activetasks_version)
+                        if task_list is not None:
+                            self.reply.append(('append_tasks', task_list))
+                            session.last_activetasks_version = activetasks_version
                 except AibError as err:
                     print(f"ERR: head='{err.head}' body='{err.body}'")
                     self.check_redisplay()

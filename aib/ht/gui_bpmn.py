@@ -8,19 +8,6 @@ from common import AibError
 
 #----------------------------------------------------------------------------
 
-"""
-TO DO - [2021-08-15]
-Exclusive Gateway -
-    Set up condition(s) for outward flows
-    Set up default for one outward flow
-    Show this info on diagram
-
-At present, this is added manually to the xml :-(
-
-"""
-
-#----------------------------------------------------------------------------
-
 class GuiBpmn:
     async def _ainit_(self, parent, gui, element, action):
         self.data_objects = parent.data_objects
@@ -372,7 +359,25 @@ async def after_new_connector(caller, state, output_params, xml, args):
     bpmn_defn = caller.data_objects['bpmn_defn']
     bpmn_xml = await bpmn_defn.getval('bpmn_xml')
 
-    await setup_connector(caller, xml, bpmn_xml, args)
+    flow_elem = await setup_connector(caller, xml, bpmn_xml, args)
+
+    text = await connector_vars.getval('text')
+    flow_elem.attrib['name'] = text or ''
+
+    if await connector_vars.getval('dflt_conn'):
+        source_elem = bpmn_xml.find(".//*[@id='{}']".format(flow_elem.get('sourceRef')))
+        source_elem.attrib['default'] = flow_elem.get('id')
+
+    condition = caller.data_objects['condition']
+    cond = []
+    all_cond = condition.select_many(where=[], order=[])
+    async for _ in all_cond:
+        cond.append(
+            [await condition.getval(col) for col in ('test', 'lbr', 'src', 'chk', 'tgt', 'rbr')]
+            )
+    if cond:
+        condition_expr = etree.SubElement(flow_elem, f"{{{bpmn_xml.nsmap['semantic']}}}conditionExpression")
+        condition_expr.text = dumps(cond)
 
     await bpmn_defn.setval('bpmn_xml', bpmn_xml)
     await refresh_bpmn(caller)
@@ -427,6 +432,8 @@ async def setup_connector(caller, xml, bpmn_xml, args):
         wp.set('x', str(x))
         wp.set('y', str(y))
     etree.SubElement(new_edge, f"{{{bpmn_xml.nsmap['bpmndi']}}}BPMNLabel")
+
+    return new_flow
 
 async def setup_new_shape(caller, bpmn_xml, proc_elem, elem_id, shape_id,
         bbox, extra_attrib=None, at_start=False):
@@ -795,7 +802,6 @@ async def edit_connector(caller, xml, elem_id, args, bpmn_xml, edge_elem):
     source_elem = bpmn_xml.find(".//*[@id='{}']".format(flow_elem.get('sourceRef')))
     dflt_conn = (source_elem.get('default') == flow_elem.get('id'))
 
-    await connector_vars.init()
     init_vals = {
         'elem_id': flow_elem.get('id'),
         'text': flow_elem.get('name'),
@@ -832,6 +838,7 @@ async def after_edit_connector(caller, state, output_params, xml):
 
     dflt_orig = await connector_vars.getval('dflt_orig')
     dflt_conn = await connector_vars.getval('dflt_conn')
+
     if dflt_orig != dflt_conn:
         source_elem = bpmn_xml.find(".//*[@id='{}']".format(flow_elem.get('sourceRef')))
         if dflt_orig:  # changed from True to False

@@ -379,12 +379,12 @@ function render_bpmn(svg, nodes, edges) {
         }
       else if (answer === 'Delete') {
         var args = [null, this.id, 'Ok to delete ' + this.id + '?',
-          ['Cancel', 'Ok'], 'Cancel', 'Cancel', [this, this.on_confirm_delete]];
+          ['No', 'Yes'], 'No', 'No', [this, this.on_confirm_delete]];
         ask_question(args);
         };
       };
     shape.on_confirm_delete = function(answer) {
-      if (answer === 'Ok') {
+      if (answer === 'Yes') {
         var args = [this.parentNode.ref, this.id, 'Delete'];
         send_request('clicked', args);
         };
@@ -478,12 +478,12 @@ function render_bpmn(svg, nodes, edges) {
         }
       else if (answer === 'Delete') {
         var args = [null, this.id, 'Ok to delete ' + this.id + '?',
-          ['Cancel', 'Ok'], 'Cancel', 'Cancel', [this, this.on_confirm_delete]];
+          ['No', 'Yes'], 'No', 'No', [this, this.on_confirm_delete]];
         ask_question(args);
         };
       };
     g.on_confirm_delete = function(answer) {
-      if (answer === 'Ok') {
+      if (answer === 'Yes') {
         var args = [this.parentNode.ref, this.id, 'Delete'];
         send_request('clicked', args);
         };

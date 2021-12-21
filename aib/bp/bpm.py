@@ -1529,7 +1529,7 @@ class rUserTask(rTask):
                 value = await data_object.getval(fld_name)
                 popup = popup[:pos1] + value + popup[pos2+1:]
             print(f'Popup: {popup}')
-            await self.on_task_completed(None, [], rep, self.det_row_id)
+            await self.on_task_completed(None, {}, rep, self.det_row_id)
         else:
             self.htm_task = await ht.htm.init_task(manager.process,
                 self.company, manager.defn.form_name, manager.defn.title, performer,

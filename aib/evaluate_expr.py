@@ -219,7 +219,7 @@ async def eval_bool_expr(expr, db_obj, fld=None, value=None):
                     ]]
                 max -= (last - first)
 
-        elif expr[pos-1][1] is False and exp[0].lower() == 'and':
+        elif pos > 0 and expr[pos-1][1] is False and exp[0].lower() == 'and':
             # no need to evaluate - leave as False
             expr[pos:pos+1] = []
             max -= 1
