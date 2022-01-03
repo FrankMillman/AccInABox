@@ -193,8 +193,8 @@ virt.append ({
     'short_descr': 'Text',
     'long_descr' : 'Text',
     'col_head'   : 'Text',
-    'dflt_val'   : '{subtran_row_id>subparent_row_id>text}',
-    'sql'        : "a.subtran_row_id>subparent_row_id>text"
+    'dflt_val'   : '{subtran_row_id>text}',
+    'sql'        : "a.subtran_row_id>text"
     })
 virt.append ({
     'col_name'   : 'trantype_row_id',

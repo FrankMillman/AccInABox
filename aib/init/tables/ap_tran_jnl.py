@@ -327,6 +327,26 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'amount',
+    'data_type'  : '$RTRN',
+    'short_descr': 'Journal amount',
+    'long_descr' : 'Journal amount',
+    'col_head'   : 'Jnl amt',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'currency_id>scale',
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'jnl_amt',
     'data_type'  : '$RTRN',
     'short_descr': 'Journal amount',
@@ -465,7 +485,7 @@ cursors.append({
         ['supp_row_id>party_row_id>display_name', 160, True, True],
         ['tran_number', 100, False, True],
         ['tran_date', 80, False, True],
-        ['jnl_amount', 100, False, True],
+        ['jnl_amt', 100, False, True],
         ],
     'filter': [
         ['where', '', 'posted', '=', "'0'", ''],
@@ -485,6 +505,17 @@ actions.append([
                 ['check', '', '$exists', 'is', '$True', ''],
                 ['or', '', 'tran_date', 'pyfunc',
                     'custom.date_funcs.check_tran_date,"ap",ledger_row_id', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'post_checks', [
+        [
+            'check_totals',
+            'Journal amount does not equal total of line items',
+            [
+                ['check', '', 'amount', '=', 'jnl_amt', ''],
                 ],
             ],
         ],

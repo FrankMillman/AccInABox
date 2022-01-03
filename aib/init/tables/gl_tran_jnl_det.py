@@ -32,6 +32,12 @@ table = {
                 # ['cust_row_id>party_row_id>display_name'],  # display descr
                 ['cust_id'],  # display descr
                 ],
+            ['ap_jnl', 'Ap journal', 'ap_subtran_jnl',
+                [  # return values
+                    ['jnl_amt', 'jnl_amount'],  # tgt_col, src_col
+                    ],
+                ['supp_id'],  # display descr
+                ],
             ]],
         ],
     'sequence'      : ['line_no', ['tran_row_id'], None],

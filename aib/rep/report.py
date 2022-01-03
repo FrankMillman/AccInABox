@@ -60,8 +60,6 @@ class Report:
             target = input_param.get('target')
             if target in self.data_objects:
                 continue
-
-            # target = input_param.get('target')
             required = input_param.get('required') == 'true'
             try:
                 self.data_objects[target] = self.data_inputs[obj_name]
@@ -107,8 +105,7 @@ class Report:
 
             full_name = f'r___{self.report_name}__{obj_name}'  # 'r' for 'report' in case form with same name
             if full_name in self.data_objects:
-                # report with mem_obj created, then closed,
-                #   then re-opened - safe to re-use mem_obj
+                # report with mem_obj created, then closed, then re-opened - safe to re-use mem_obj
                 if obj_name in self.data_objects:  # save object before over-writing
                     self.mem_tables[obj_name] = self.data_objects[obj_name]
                 self.data_objects[obj_name] = self.data_objects[full_name]
@@ -237,7 +234,7 @@ class Panel:
             x1, y1, x2, y2 = self.coords
             ht = c._pagesize[1]
             x = element.get('x')
-            if x == 'c':  # 'centre' - only allowed in strings
+            if x == 'c':  # 'centre'
                 x = x1 + ((x2 - x1) / 2)
             else:
                 x = float(x)

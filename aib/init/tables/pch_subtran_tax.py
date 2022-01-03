@@ -170,6 +170,15 @@ virt.append ({
     'sql'        : "'pch_tax'",
     })
 virt.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text',
+    'long_descr' : 'Text',
+    'col_head'   : 'Text',
+    'dflt_val'   : '{subtran_row_id>text}',
+    'sql'        : "a.subtran_row_id>text"
+    })
+virt.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
     'short_descr': 'Posted?',
@@ -199,21 +208,6 @@ virt.append ({
         " / "
         "a.subtran_row_id>subparent_row_id>tran_exch_rate"
         ),
-    })
-virt.append ({
-    'col_name'   : 'tax_source_code',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Source code for tax',
-    'long_descr' : 'Source code for tax',
-    'col_head'   : 'Source code for tax',
-    'dflt_rule'   : (
-        '<expr>'
-          '<fld_val name="subtran_row_id>source_code"/>'
-          '<op type="+"/>'
-          '<literal value="_tax"/>'
-        '</expr>'
-        ),
-    'sql'        : "a.subtran_row_id>source_code || '_tax'"
     })
 
 # cursor definitions

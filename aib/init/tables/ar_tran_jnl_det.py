@@ -7,6 +7,13 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
+            ['ar_jnl', 'Ar journal', 'ar_subtran_jnl',
+                [  # return values
+                    ['jnl_amt', '-jnl_amount'],  # tgt_col, src_col
+                    ],
+                # ['cust_row_id>party_row_id>display_name'],  # display descr
+                ['cust_id'],  # display descr
+                ],
             ['ap_jnl', 'Ap journal', 'ap_subtran_jnl',
                 [  # return values
                     ['jnl_amt', '-jnl_amount'],  # tgt_col, src_col

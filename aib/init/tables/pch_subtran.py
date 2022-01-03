@@ -193,6 +193,26 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'text',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text',
+    'long_descr' : 'Line of text to appear on reports',
+    'col_head'   : 'Text',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 30,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : '{subparent_row_id>text}',
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'pch_amount',
     'data_type'  : '$RTRN',
     'short_descr': 'Inv amount',

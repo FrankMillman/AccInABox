@@ -119,9 +119,10 @@ cols.append ({
     'col_checks' : None,
     'fkey'       : [
         ['tran_type', [
-            ['ap_inv', 'ap_tran_inv_det'],
+            ['ap_jnl', 'ap_tran_jnl_det'],
             ['ar_jnl', 'ar_tran_jnl_det'],
             ['cb_pmt', 'cb_tran_pmt_det'],
+            ['gl_jnl', 'gl_tran_jnl_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,

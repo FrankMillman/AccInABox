@@ -32,63 +32,63 @@ function setup_bpmn(frame, ref, nodes, edges) {
   svg.oncontextmenu = function(e) {
     return false;
     };
-    svg.subprocess_start = function(e) {
-      [this.min_x, this.min_y, this.max_x, this.max_y] = this.get_bounds();
-      this.select_subprocess.push(e.clientX - this.min_x, e.clientY - this.min_y);
-      var rubber_band = document.createElementNS(NS, 'rect');
-      this.appendChild(rubber_band);
-      rubber_band.setAttributeNS(null, 'x', e.clientX - this.min_x);
-      rubber_band.setAttributeNS(null, 'y', e.clientY - this.min_y);
-      rubber_band.setAttributeNS(null, 'width', 0);
-      rubber_band.setAttributeNS(null, 'height', 0);
-      rubber_band.setAttributeNS(null, 'stroke', 'grey');
-      rubber_band.setAttributeNS(null, 'stroke-width', 1);
-      rubber_band.setAttributeNS(null, 'stroke-dasharray', '3 3');
-      rubber_band.setAttributeNS(null, 'fill', 'transparent');
-      svg.onselectstart = function(){return false};  // disable text selection
+  svg.subprocess_start = function(e) {
+    [this.min_x, this.min_y, this.max_x, this.max_y] = this.get_bounds();
+    this.select_subprocess.push(e.clientX - this.min_x, e.clientY - this.min_y);
+    var rubber_band = document.createElementNS(NS, 'rect');
+    this.appendChild(rubber_band);
+    rubber_band.setAttributeNS(null, 'x', e.clientX - this.min_x);
+    rubber_band.setAttributeNS(null, 'y', e.clientY - this.min_y);
+    rubber_band.setAttributeNS(null, 'width', 0);
+    rubber_band.setAttributeNS(null, 'height', 0);
+    rubber_band.setAttributeNS(null, 'stroke', 'grey');
+    rubber_band.setAttributeNS(null, 'stroke-width', 1);
+    rubber_band.setAttributeNS(null, 'stroke-dasharray', '3 3');
+    rubber_band.setAttributeNS(null, 'fill', 'transparent');
+    svg.onselectstart = function(){return false};  // disable text selection
     };
-    svg.subprocess_drag = function(e) {
-      var rubber_band = this.lastChild;
-      var x = rubber_band.getAttributeNS(null, 'x');
-      var y = rubber_band.getAttributeNS(null, 'y');
-      rubber_band.setAttributeNS(null, 'width', e.clientX - this.min_x - x);
-      rubber_band.setAttributeNS(null, 'height', e.clientY - this.min_y - y);
-      };
-    svg.subprocess_done = function(e) {
-	  var x = Math.round(e.clientX);
-	  var y = Math.round(e.clientY);
-      // this.select_subprocess.push(e.clientX - this.min_x, e.clientY - this.min_y);
-      this.select_subprocess.push(x - this.min_x, y - this.min_y);
-      this.removeChild(this.lastChild);
-      var subprocess_selected = this.select_subprocess.shift();  // extract first element
-      subprocess_selected.call(this, this, ...this.select_subprocess);
-      svg.onselectstart = null;  // restore text selection
-      };
+  svg.subprocess_drag = function(e) {
+    var rubber_band = this.lastChild;
+    var x = rubber_band.getAttributeNS(null, 'x');
+    var y = rubber_band.getAttributeNS(null, 'y');
+    rubber_band.setAttributeNS(null, 'width', e.clientX - this.min_x - x);
+    rubber_band.setAttributeNS(null, 'height', e.clientY - this.min_y - y);
+    };
+  svg.subprocess_done = function(e) {
+    var x = Math.round(e.clientX);
+    var y = Math.round(e.clientY);
+    // this.select_subprocess.push(e.clientX - this.min_x, e.clientY - this.min_y);
+    this.select_subprocess.push(x - this.min_x, y - this.min_y);
+    this.removeChild(this.lastChild);
+    var subprocess_selected = this.select_subprocess.shift();  // extract first element
+    subprocess_selected.call(this, this, ...this.select_subprocess);
+    svg.onselectstart = null;  // restore text selection
+    };
 
-    svg.addspace_start = function(e) {
-      [this.min_x, this.min_y, this.max_x, this.max_y] = this.get_bounds();
-      this.select_addspace.push(e.clientX-this.min_x);
-      var vert = document.createElementNS(NS, 'line');
-      this.appendChild(vert);
-      vert.setAttributeNS(null, 'x1', e.clientX-this.min_x);
-      vert.setAttributeNS(null, 'y1', 0);
-      vert.setAttributeNS(null, 'x2', e.clientX-this.min_x);
-      vert.setAttributeNS(null, 'y2', this.max_y-this.min_y);
-      vert.setAttributeNS(null, 'stroke', 'grey');
-      vert.setAttributeNS(null, 'stroke-width', 1);
-      vert.setAttributeNS(null, 'stroke-dasharray', '3 3');
-      };
-    svg.addspace_drag = function(e) {
-      var vert = this.lastChild;
-      vert.setAttributeNS(null, 'x1', e.clientX-this.min_x);
-      vert.setAttributeNS(null, 'x2', e.clientX-this.min_x);
-      };
-    svg.addspace_done = function(e) {
-      this.select_addspace.push(e.clientX-this.min_x);
-      this.removeChild(this.lastChild);
-      var addspace_selected = this.select_addspace.shift();  // extract first element
-      addspace_selected.call(this, this, ...this.select_addspace);
-      };
+  svg.addspace_start = function(e) {
+    [this.min_x, this.min_y, this.max_x, this.max_y] = this.get_bounds();
+    this.select_addspace.push(e.clientX-this.min_x);
+    var vert = document.createElementNS(NS, 'line');
+    this.appendChild(vert);
+    vert.setAttributeNS(null, 'x1', e.clientX-this.min_x);
+    vert.setAttributeNS(null, 'y1', 0);
+    vert.setAttributeNS(null, 'x2', e.clientX-this.min_x);
+    vert.setAttributeNS(null, 'y2', this.max_y-this.min_y);
+    vert.setAttributeNS(null, 'stroke', 'grey');
+    vert.setAttributeNS(null, 'stroke-width', 1);
+    vert.setAttributeNS(null, 'stroke-dasharray', '3 3');
+    };
+  svg.addspace_drag = function(e) {
+    var vert = this.lastChild;
+    vert.setAttributeNS(null, 'x1', e.clientX-this.min_x);
+    vert.setAttributeNS(null, 'x2', e.clientX-this.min_x);
+    };
+  svg.addspace_done = function(e) {
+    this.select_addspace.push(e.clientX-this.min_x);
+    this.removeChild(this.lastChild);
+    var addspace_selected = this.select_addspace.shift();  // extract first element
+    addspace_selected.call(this, this, ...this.select_addspace);
+    };
 
   };
 

@@ -336,6 +336,26 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'amount',
+    'data_type'  : '$RTRN',
+    'short_descr': 'Journal amount',
+    'long_descr' : 'Journal amount',
+    'col_head'   : 'Jnl amt',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': False,
+    'max_len'    : 0,
+    'db_scale'   : 2,
+    'scale_ptr'  : 'currency_id>scale',
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'jnl_amt',
     'data_type'  : '$RTRN',
     'short_descr': 'Journal amount',
@@ -503,6 +523,17 @@ actions.append([
                 ['check', '', '$exists', 'is', '$True', ''],
                 ['or', '', '_ledger.separate_stat_close', 'is', '$False', ''],
                 ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'post_checks', [
+        [
+            'check_totals',
+            'Journal amount does not equal total of line items',
+            [
+                ['check', '', 'amount', '=', 'jnl_amt', ''],
                 ],
             ],
         ],

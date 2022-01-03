@@ -17,6 +17,7 @@ groups.append([
 groups.append([
     'date',  # dim
     ['fin_yr', 'a', []],
+    # ['last_n_per', 'a', [1, 12, 0]],  # date_type, date_seq, [grp_size, no_grps, grps_to_skip]
     ])
 
 expand_subledg = True

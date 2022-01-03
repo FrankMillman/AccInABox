@@ -7,11 +7,12 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['npch', 'Non-inventory item', 'npch_subtran',
+            ['ap_jnl', 'Ap journal', 'ap_subtran_jnl',
                 [  # return values
-                    ['jnl_amt', '-tot_amt'],  # tgt_col, src_col
+                    ['jnl_amt', '-jnl_amount'],  # tgt_col, src_col
                     ],
-                ['npch_code_id>descr'],  # display descr
+                # ['supp_row_id>party_row_id>display_name'],  # display descr
+                ['supp_id'],  # display descr
                 ],
             ['ar_jnl', 'Ar journal', 'ar_subtran_jnl',
                 [  # return values
@@ -19,6 +20,12 @@ table = {
                     ],
                 # ['cust_row_id>party_row_id>display_name'],  # display descr
                 ['cust_id'],  # display descr
+                ],
+            ['npch', 'Non-inventory item', 'npch_subtran',
+                [  # return values
+                    ['jnl_amt', '-tot_amt'],  # tgt_col, src_col
+                    ],
+                ['npch_code_id>descr'],  # display descr
                 ],
             ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values

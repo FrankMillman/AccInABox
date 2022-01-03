@@ -7,6 +7,7 @@ from common import AibError
 async def check_subledg(caller, params):
     # called from gl_per_close process - check that all sub-ledgers for this period have been closed
     context = caller.manager.process.root.context
+    period_to_close = params['period_to_close']
     module_ids = ['cb', 'ar', 'ap', 'in']
     sql = []
     params = []
@@ -17,7 +18,7 @@ async def check_subledg(caller, params):
         sql.append(f'FROM {caller.company}.{module_id}_ledger_periods a')
         sql.append(f'JOIN {caller.company}.{module_id}_ledger_params b ON b.row_id = a.ledger_row_id')
         sql.append(f'WHERE a.period_row_id = {dbc.param_style}')
-        params.append(params['period_to_close'])
+        params.append(period_to_close)
         sql.append(f'AND a.deleted_id = {dbc.param_style}')
         params.append(0)
         sql.append(f'AND a.state != {dbc.param_style}')
