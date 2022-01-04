@@ -6,8 +6,8 @@ table = {
     'long_descr'    : 'Product classes',
     'sub_types'     : None,
     'sub_trans'     : None,
-    'sequence'      : ['seq', ['group_id'], None],
-    'tree_params'   : ['group_id', ['prod_class', 'descr', None, 'seq'], None],
+    'sequence'      : ['seq', ['group_row_id'], None],
+    'tree_params'   : ['group_row_id', ['prod_class', 'descr', None, 'seq'], None],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -121,7 +121,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'group_id',
+    'col_name'   : 'group_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Group row id',
     'long_descr' : 'Group row id',

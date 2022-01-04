@@ -6,8 +6,8 @@ table = {
     'long_descr'    : 'Pch codes - non-inventory',
     'sub_types'     : None,
     'sub_trans'     : None,
-    'sequence'      : ['seq', ['group_id'], None],
-    'tree_params'   : ['group_id', ['npch_code', 'descr', None, 'seq'], None],
+    'sequence'      : ['seq', ['group_row_id'], None],
+    'tree_params'   : ['group_row_id', ['npch_code', 'descr', None, 'seq'], None],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : 'ledger_row_id',
@@ -82,7 +82,7 @@ cols.append ({
     'col_name'   : 'ledger_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Ledger row id',
-    'long_descr' : 'Ledger row id. Could be derived from group_id, but this allows non-unique npch codes.',
+    'long_descr' : 'Ledger row id. Could be derived from group_row_id, but this allows non-unique npch codes.',
     'col_head'   : 'Ledger',
     'key_field'  : 'A',
     'data_source': 'ctx',
@@ -148,7 +148,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'group_id',
+    'col_name'   : 'group_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Group row id',
     'long_descr' : 'Group row id',
@@ -168,7 +168,7 @@ cols.append ({
             'ledger_id',
             'Group ledger id must match code ledger id',
             [
-                ['check', '', 'group_id>ledger_row_id', '=', 'ledger_row_id', ''],
+                ['check', '', 'group_row_id>ledger_row_id', '=', 'ledger_row_id', ''],
                 ],
             ],
         ],

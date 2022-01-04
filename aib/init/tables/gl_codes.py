@@ -6,8 +6,8 @@ table = {
     'long_descr'    : 'Ledger codes',
     'sub_types'     : None,
     'sub_trans'     : None,
-    'sequence'      : ['seq', ['group_id'], None],
-    'tree_params'   : ['group_id', ['gl_code', 'descr', None, 'seq'], None],
+    'sequence'      : ['seq', ['group_row_id'], None],
+    'tree_params'   : ['group_row_id', ['gl_code', 'descr', None, 'seq'], None],
     'roll_params'   : None,
     'indexes'       : None,
     'ledger_col'    : None,
@@ -119,7 +119,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'group_id',
+    'col_name'   : 'group_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Group row id',
     'long_descr' : 'Group row id',
@@ -179,11 +179,20 @@ cols.append ({
             '<fld_val name="_param.location_row_id"/>'
           '</compare>'
           '<default>'
-            '<fld_val name="group_id>valid_loc_ids"/>'
+            '<fld_val name="group_row_id>valid_loc_ids"/>'
           '</default>'
         '</case>'
         ),
-    'col_checks' : None,  # should validate that value is equal to or subset of group value
+    'col_checks' : [
+        [
+            'location_code',
+            'Must be a valid gl group location',
+            [
+                ['check', '', '$value', '=', 'group_row_id>valid_loc_ids', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,"group_row_id"', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['adm_locations', 'row_id', 'valid_locs', 'location_id', False, None],
     'choices'    : None,
     })
@@ -208,11 +217,20 @@ cols.append ({
             '<fld_val name="_param.function_row_id"/>'
           '</compare>'
           '<default>'
-            '<fld_val name="group_id>valid_fun_ids"/>'
+            '<fld_val name="group_row_id>valid_fun_ids"/>'
           '</default>'
         '</case>'
         ),
-    'col_checks' : None,
+    'col_checks' : [
+        [
+            'function_code',
+            'Must be a valid gl group function',
+            [
+                ['check', '', '$value', '=', 'group_row_id>valid_fun_ids', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_fun_id,"group_row_id"', ''],
+                ],
+            ],
+        ],
     'fkey'       : ['adm_functions', 'row_id', 'valid_funs', 'function_id', False, None],
     'choices'    : None,
     })
