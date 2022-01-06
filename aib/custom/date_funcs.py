@@ -43,8 +43,7 @@ async def setup_balance_date(caller, xml):
         mod, ledg = 8, 0  # use 'gl' periods (not thought through!)
     else:
         mod, ledg = context.module_row_id, context.ledger_row_id
-    ledger_params = await db.cache.get_ledger_params(context.company, mod, ledg)
-    adjusted_curr_per = await ledger_params.getval('current_period')
+    adjusted_curr_per = await db.cache.get_current_period(context.company, mod, ledg)
     if adjusted_curr_per is None:
         raise AibError(head='Periods',
             body=f'No periods set up for {caller.context.module_row_id}.{caller.context.ledger_row_id}')
@@ -109,12 +108,9 @@ async def setup_date_range(caller, xml):
             start_period = period_no
 
     if start_period is None:
-        # get current_period from ledger_params, and use
-        #   that as the inital value for date_range
-
-        ledger_params = await db.cache.get_ledger_params(context.company,
-            context.module_row_id, context.ledger_row_id)
-        start_period = await ledger_params.getval('current_period')
+        # use current_period as the inital value for date_range
+        start_period = await db.cache.get_current_period(
+            context.company, context.module_row_id, context.ledger_row_id)
 
     start_date = fin_periods[start_period].opening_date
     end_date = fin_periods[start_period].closing_date
@@ -189,8 +185,7 @@ async def load_ye_per(caller, xml):
             for fin_per in fin_periods[1:]}
 
     mod, ledg = context.module_row_id, context.ledger_row_id
-    ledger_params = await db.cache.get_ledger_params(context.company, mod, ledg)
-    current_period = await ledger_params.getval('current_period')
+    current_period = await db.cache.get_current_period(context.company, mod, ledg)
 
     var = caller.data_objects['var']
 
@@ -232,9 +227,8 @@ async def setup_choices(caller, xml):
             ))
     settings = await var.getval('settings')
     if settings is None:  # first time - set up defaults
-        ledger_params = await db.cache.get_ledger_params(caller.company,
+        current_period = await db.cache.get_current_period(caller.company,
             caller.context.module_row_id, caller.context.ledger_row_id)
-        current_period = await ledger_params.getval('current_period')
         fld = await var.getfld('start_period')
         fld.col_defn.choices = choice_opening
         await fld.setval(current_period)
@@ -371,9 +365,8 @@ async def get_dflt_date(caller, obj, xml):
         return prev_date
     db_obj = obj.fld.db_obj
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
-    ledger_params = await db.cache.get_ledger_params(caller.company,
+    current_period = await db.cache.get_current_period(caller.company,
         caller.context.module_row_id, caller.context.ledger_row_id)
-    current_period = await ledger_params.getval('current_period')
     if current_period is None:
         raise AibError(head=obj.fld.col_defn.short_descr, body='Ledger periods not set up')
     curr_closing_date = adm_periods[current_period].closing_date

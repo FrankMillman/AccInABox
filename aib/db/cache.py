@@ -553,6 +553,12 @@ the value for each company is a dictionary -
              )
 """
 
+async def get_current_period(company, module_row_id, ledger_row_id):
+    ledg_per = await get_ledger_periods(company, module_row_id, ledger_row_id)
+    for per in ledg_per:
+        if ledg_per[per].state == 'current':
+            return per
+
 ledger_periods = {}
 ledg_per_lock = asyncio.Lock()
 async def get_ledger_periods(company, module_row_id, ledger_row_id):

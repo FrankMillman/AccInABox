@@ -183,17 +183,6 @@ virt.append ({
         ),
     })
 virt.append ({
-    'col_name'   : 'current_period',
-    'data_type'  : 'INT',
-    'short_descr': 'Current period',
-    'long_descr' : 'Current period',
-    'col_head'   : 'Curr',
-    'sql'        : (
-        "SELECT b.period_row_id FROM {company}.gl_ledger_periods b "
-        "WHERE b.state = 'current'"
-        )
-    })
-virt.append ({
     'col_name'   : 'year_end',
     'data_type'  : 'INT',
     'short_descr': 'Year end',
