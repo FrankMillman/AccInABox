@@ -167,6 +167,9 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
+          '<compare test="[[`if`, ``, `location_row_id`, `is not`, `$None`, ``]]">'
+            '<fld_val name="location_row_id"/>'
+          '</compare>'
           '<compare test="[[`if`, ``, `nsls_code_id>valid_loc_ids>is_leaf`, `is`, `$True`, ``]]">'
             '<fld_val name="nsls_code_id>valid_loc_ids"/>'
           '</compare>'
@@ -205,6 +208,9 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
+          '<compare test="[[`if`, ``, `function_row_id`, `is not`, `$None`, ``]]">'
+            '<fld_val name="function_row_id"/>'
+          '</compare>'
           '<compare test="[[`if`, ``, `nsls_code_id>valid_fun_ids>is_leaf`, `is`, `$True`, ``]]">'
             '<fld_val name="nsls_code_id>valid_fun_ids"/>'
           '</compare>'
@@ -275,10 +281,10 @@ cols.append ({
         '</case>'
         ),
     'col_checks' : [
-        ['cannot_change', 'Cannot change effective date', [
-            ['check', '', '$value', '=', 'subparent_row_id>tran_date', ''],
-            ['or', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
-            ]],
+        # ['cannot_change', 'Cannot change effective date', [
+        #     ['check', '', '$value', '=', 'subparent_row_id>tran_date', ''],
+        #     ['or', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
+        #     ]],
         ['per_date', 'Period is closed', [
             ['check', '', '$value', '=', 'subparent_row_id>tran_date', ''],
             ['or', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date,"gl"', ''],
