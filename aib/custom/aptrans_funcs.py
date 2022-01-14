@@ -21,7 +21,7 @@ async def setup_openitems(db_obj, conn, return_vals):
     due_rule = await terms_obj.getval('due_rule')
     if not due_rule:
         due_rule = [1, 30, 'd']  # default to '30 days'
-    if await db_obj.getval('_ledger.discount_code_id') is None:
+    if await db_obj.getval('ledger_row_id>discount_code_id') is None:
         discount_rule = None
     else:
         discount_rule = await terms_obj.getval('discount_rule')
@@ -409,7 +409,7 @@ async def post_pmt_batch(caller, xml):
     batch_hdr = context.data_objects['batch_hdr']
     batch_det = context.data_objects['batch_det']
     tran_date = await batch_hdr.getval('tran_date')
-    if await batch_hdr.getval('_ledger.pmt_tran_source') == 'cb':
+    if await batch_hdr.getval('ledger_row_id>pmt_tran_source') == 'cb':
         pmt_tran = 'cb'
         module_row_id = await db.cache.get_mod_id(context.company, 'cb')
         ledger_row_id = await batch_hdr.getval('pmt_cb_ledger_id')
@@ -419,7 +419,7 @@ async def post_pmt_batch(caller, xml):
         cb_det = await db.objects.get_db_object(post_ctx, 'cb_tran_pmt_det', parent=cb_pmt)
         ap_sub = await db.objects.get_db_object(post_ctx, 'ap_subtran_pmt', parent=cb_det)
         ap_alloc = await db.objects.get_db_object(post_ctx, 'ap_allocations', ap_sub)
-    elif await batch_hdr.getval('_ledger.pmt_tran_source') == 'ap':
+    elif await batch_hdr.getval('ledger_row_id>pmt_tran_source') == 'ap':
         pmt_tran = 'ap'
         post_ctx = await db.cache.get_new_context(context.user_row_id, context.sys_admin,
             context.company, context.mem_id, context.module_row_id, context.ledger_row_id)

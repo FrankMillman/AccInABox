@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
-    'ledger_col'    : None,
+    'ledger_col'    : 'ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -269,22 +269,6 @@ virt.append ({
     'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'cb_bf'",
     })
 virt.append ({
-    'col_name'   : 'location_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Location row id',
-    'long_descr' : 'Location row id',
-    'col_head'   : 'Location',
-    'sql'        : 'a.ledger_row_id>location_row_id',
-    })
-virt.append ({
-    'col_name'   : 'function_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Function row id',
-    'long_descr' : 'Function row id',
-    'col_head'   : 'Function',
-    'sql'        : 'a.ledger_row_id>function_row_id',
-    })
-virt.append ({
     'col_name'   : 'tran_number',
     'data_type'  : 'TEXT',
     'short_descr': 'Transaction number',
@@ -306,8 +290,8 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
+                ['location_row_id', 'ledger_row_id>location_row_id'],
+                ['function_row_id', 'ledger_row_id>function_row_id'],
                 ['src_trantype_row_id', 'trantype_row_id'],
                 ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'ledger_row_id'],
@@ -330,8 +314,8 @@ actions.append([
             False,  # split source?
             [  # key fields
                 ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
+                ['location_row_id', 'ledger_row_id>location_row_id'],
+                ['function_row_id', 'ledger_row_id>function_row_id'],
                 ['src_trantype_row_id', 'trantype_row_id'],
                 ['orig_trantype_row_id', 'trantype_row_id'],
                 ['orig_ledger_row_id', 'ledger_row_id'],

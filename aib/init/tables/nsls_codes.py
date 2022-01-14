@@ -203,7 +203,7 @@ cols.append ({
     'col_head'   : 'Chg eff?',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.allow_eff_date', 'is', '$False', '']],
+    'condition'  : [['where', '', 'ledger_row_id>allow_eff_date', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -217,7 +217,7 @@ cols.append ({
             'Cannot change effective date',
             [
                 ['check', '', '$value', '=', '0', ''],
-                ['or', '', '_ledger.allow_eff_date', 'is', '$True', ''],
+                ['or', '', 'ledger_row_id>allow_eff_date', 'is', '$True', ''],
                 ],
             ],
         ],

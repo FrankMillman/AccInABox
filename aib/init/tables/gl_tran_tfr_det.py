@@ -196,7 +196,7 @@ virt.append ({
     'short_descr': 'Ledger row id',
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger row id',
-    'sql'        : "'1'",
+    'sql'        : '0',
     })
 virt.append ({
     'col_name'   : 'rev_sign',
@@ -248,14 +248,6 @@ virt.append ({
     'long_descr' : 'Tran type row id',
     'col_head'   : 'Tran type row id',
     'sql'        : 'a.tran_row_id>trantype_row_id',
-    })
-virt.append ({
-    'col_name'   : 'ledger_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Ledger row id',
-    'long_descr' : 'Ledger row id',
-    'col_head'   : 'Ledger row id',
-    'sql'        : '0',
     })
 virt.append ({
     'col_name'   : 'display_descr',

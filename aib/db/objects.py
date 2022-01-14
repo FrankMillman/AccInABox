@@ -690,14 +690,8 @@ class DbObject:
             if obj_name == '_param':
                 db_obj = await db.cache.get_adm_params(self.company)
             elif obj_name == '_ledger':
-                module_row_id = self.db_table.module_row_id
-                if module_row_id == self.context.module_row_id:  # get ledger_row_id from 'context'
-                    ledger_row_id = self.context.ledger_row_id
-                else:  # get ledger_row_id from db_table.ledger_col - could be None
-                    ledger_col = self.db_table.ledger_col
-                    ledger_row_id = await self.getval(ledger_col)
                 db_obj = await db.cache.get_ledger_params(
-                    self.company, module_row_id, ledger_row_id)
+                    self.company, self.context.module_row_id, self.context.ledger_row_id)
             elif obj_name in self.context.data_objects:
                 db_obj = self.context.data_objects[obj_name]
             elif obj_name.startswith('subtran:'):
@@ -1638,14 +1632,8 @@ class DbObject:
         elif '.' in src_col:
             src_tbl, src_col = src_col.split('.')
             if src_tbl == '_ledger':
-                module_row_id = self.db_table.module_row_id
-                if module_row_id == self.context.module_row_id:  # get ledger_row_id from 'context'
-                    ledger_row_id = self.context.ledger_row_id
-                else:  # get ledger_row_id from db_table.ledger_col - could be None
-                    ledger_col = self.db_table.ledger_col
-                    ledger_row_id = await self.getval(ledger_col)
                 src_db_obj = await db.cache.get_ledger_params(
-                    self.company, module_row_id, ledger_row_id)
+                    self.company, self.context.module_row_id, self.context.ledger_row_id)
             else:
                 # this assumes that we are getting a value from a table
                 #   updated by this db_obj in upd_on_save/upd_on_post
@@ -3578,7 +3566,7 @@ async def get_dependencies(col):
         for child in col.dflt_rule.iter():
             if child.tag == 'fld_val':
                 fld_colname = child.get('name').split('>')[0]
-                if fld_colname != col.col_name and not fld_colname.startswith('_'):
+                if fld_colname != col.col_name and fld_colname != '_param':
                     col.dependencies.add(fld_colname)
             elif child.tag == 'compare':
                 test = child.get('test').replace("'", '"').replace('~', "'")

@@ -112,7 +112,7 @@ cols.append ({
     'col_head'   : 'Crn no',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.auto_crn_no', 'is not', '$None', '']],
+    'condition'  : [['where', '', 'cust_row_id>ledger_row_id>auto_crn_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -123,8 +123,8 @@ cols.append ({
         '<case>'
           '<on_post>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_crn_no"/>'
+              '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="cust_row_id>ledger_row_id>auto_crn_no"/>'
               '</compare>'
               '<default>'
                 '<fld_val name="tran_number"/>'
@@ -133,11 +133,11 @@ cols.append ({
           '</on_post>'
           '<on_insert>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_temp_no"/>'
+              '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="cust_row_id>ledger_row_id>auto_temp_no"/>'
               '</compare>'
-              '<compare test="[[`if`, ``, `_ledger.auto_crn_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_crn_no"/>'
+              '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>auto_crn_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="cust_row_id>ledger_row_id>auto_crn_no"/>'
               '</compare>'
             '</case>'
           '</on_insert>'
@@ -172,7 +172,7 @@ cols.append ({
                 'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
             ]],
         ['stat_date', 'Statement period not open', [
-            ['check', '', '_ledger.separate_stat_close', 'is', '$False', ''],
+            ['check', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
             ['or', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
             ]],
         ],
@@ -207,7 +207,7 @@ cols.append ({
     'col_head'   : 'Currency',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
+    'condition'  : [['where', '', 'cust_row_id>ledger_row_id>alt_curr', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -653,7 +653,7 @@ actions.append([
             'Statement period closed',
             [
                 ['check', '', '$exists', 'is', '$True', ''],
-                ['or', '', '_ledger.separate_stat_close', 'is', '$False', ''],
+                ['or', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
                 ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
                 ],
             ],
@@ -664,7 +664,7 @@ actions.append([
         [
             'ar_openitems',  # table name
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ],
 
             True,  # split source?
@@ -752,7 +752,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_trantype_row_id', 'trantype_row_id'],

@@ -24,13 +24,13 @@ table = {
 When company is created -
     nsls_ledger_params is empty
     nsls_groups has tree_levels of [None]: 'root'
-    an nsls_group is created with group_id = 'all' and group_type = 'root'
+    an nsls_group is created with nsls_group = 'all' and group_type = 'root'
     tree_levels is created as a dictionary to allow each nsls_ledger to define its own levels
 
 When an nsls_ledger is added -
     in db.cache.ledger_inserted() -
         add tree_level of [ledger_row_id]: 'ledg'
-        create group with group_id = ledger_id, parent = 'all', group_type = 'ledg'
+        create group with nsls_group = ledger_id, parent = 'all', group_type = 'ledg'
 
 For each nsls_ledger -
     optional - add additional levels to that ledger's tree_levels

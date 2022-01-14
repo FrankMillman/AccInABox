@@ -135,7 +135,7 @@ cols.append ({
     'col_head'   : 'Loc',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.valid_loc_ids>is_leaf', 'is', '$True', '']],
+    'condition'  : [['where', '', 'ledger_row_id>valid_loc_ids>is_leaf', 'is', '$True', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -144,10 +144,10 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare test="[[`if`, ``, `_ledger.valid_loc_ids>is_leaf`, `is`, `$True`, ``]]">'
-            '<fld_val name="_ledger.valid_loc_ids"/>'
+          '<compare test="[[`if`, ``, `ledger_row_id>valid_loc_ids>is_leaf`, `is`, `$True`, ``]]">'
+            '<fld_val name="ledger_row_id>valid_loc_ids"/>'
           '</compare>'
-          '<compare test="[[`if`, ``, `_ledger.multiple_locations`, `is`, `$False`, ``]]">'
+          '<compare test="[[`if`, ``, `ledger_row_id>multiple_locations`, `is`, `$False`, ``]]">'
             '<fld_val name="loc_id_if_exists"/>'
           '</compare>'
         '</case>'
@@ -164,7 +164,7 @@ cols.append ({
             'multi_loc',
             'Account with a different location exists',
             [
-                ['check', '', '_ledger.multiple_locations', 'is', '$True', ''],
+                ['check', '', 'ledger_row_id>multiple_locations', 'is', '$True', ''],
                 ['or', '', 'loc_id_if_exists', 'is', '$None', ''],
                 ['or', '', '$value', '=', 'loc_id_if_exists', ''],
                 ],
@@ -181,7 +181,7 @@ cols.append ({
     'col_head'   : 'Fun',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.valid_fun_ids>is_leaf', 'is', '$True', '']],
+    'condition'  : [['where', '', 'ledger_row_id>valid_fun_ids>is_leaf', 'is', '$True', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -190,10 +190,10 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare test="[[`if`, ``, `_ledger.valid_fun_ids>is_leaf`, `is`, `$True`, ``]]">'
-            '<fld_val name="_ledger.valid_fun_ids"/>'
+          '<compare test="[[`if`, ``, `ledger_row_id>valid_fun_ids>is_leaf`, `is`, `$True`, ``]]">'
+            '<fld_val name="ledger_row_id>valid_fun_ids"/>'
           '</compare>'
-          '<compare test="[[`if`, ``, `_ledger.multiple_functions`, `is`, `$False`, ``]]">'
+          '<compare test="[[`if`, ``, `ledger_row_id>multiple_functions`, `is`, `$False`, ``]]">'
             '<fld_val name="fun_id_if_exists"/>'
           '</compare>'
         '</case>'
@@ -210,7 +210,7 @@ cols.append ({
             'multi_fun',
             'Account with a different function exists',
             [
-                ['check', '', '_ledger.multiple_functions', 'is', '$True', ''],
+                ['check', '', 'ledger_row_id>multiple_functions', 'is', '$True', ''],
                 ['or', '', 'fun_id_if_exists', 'is', '$None', ''],
                 ['or', '', '$value', '=', 'fun_id_if_exists', ''],
                 ],
@@ -227,13 +227,13 @@ cols.append ({
     'col_head'   : 'Currency',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.currency_id', 'is not', '$None', '']],
+    'condition'  : [['where', '', 'ledger_row_id>currency_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{_ledger.currency_id}',
+    'dflt_val'   : '{ledger_row_id>currency_id}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
@@ -597,13 +597,13 @@ cursors.append({
         ['supp_id', 100, False, False],
         ['party_row_id>display_name', 260, True, True],
         ['currency_id>symbol', 40, False, True, [
-            ['if', '', '_ledger.currency_id', 'is', '$None', '']
+            ['if', '', 'ledger_row_id>currency_id', 'is', '$None', '']
             ]],
         ['location_row_id>location_id', 60, False, True, [
-            ['if', '', '_ledger.valid_loc_ids>is_leaf', 'is', '$False', '']
+            ['if', '', 'ledger_row_id>valid_loc_ids>is_leaf', 'is', '$False', '']
             ]],
         ['function_row_id>function_id', 60, False, True, [
-            ['if', '', '_ledger.valid_fun_ids>is_leaf', 'is', '$False', '']
+            ['if', '', 'ledger_row_id>valid_fun_ids>is_leaf', 'is', '$False', '']
             ]],
         ],
     'filter': [],
@@ -617,13 +617,13 @@ cursors.append({
         ['supp_id', 80, False, True],
         ['party_row_id>display_name', 150, True, True],
         ['currency_id>symbol', 40, False, True, [
-            ['if', '', '_ledger.currency_id', 'is', '$None', '']
+            ['if', '', 'ledger_row_id>currency_id', 'is', '$None', '']
             ]],
         ['location_row_id>location_id', 60, False, True, [
-            ['if', '', '_ledger.valid_loc_ids>is_leaf', 'is', '$False', '']
+            ['if', '', 'ledger_row_id>valid_loc_ids>is_leaf', 'is', '$False', '']
             ]],
         ['function_row_id>function_id', 60, False, True, [
-            ['if', '', '_ledger.valid_fun_ids>is_leaf', 'is', '$False', '']
+            ['if', '', 'ledger_row_id>valid_fun_ids>is_leaf', 'is', '$False', '']
             ]],
         ['balance_sup', 100, False, True],
         ['balance_loc', 100, False, True],
@@ -639,13 +639,13 @@ cursors.append({
         ['supp_id', 80, False, True],
         ['party_row_id>display_name', 150, True, True],
         ['currency_id>symbol', 40, False, True, [
-            ['if', '', '_ledger.currency_id', 'is', '$None', '']
+            ['if', '', 'ledger_row_id>currency_id', 'is', '$None', '']
             ]],
         ['location_row_id>location_id', 60, False, True, [
-            ['if', '', '_ledger.valid_loc_ids>is_leaf', 'is', '$False', '']
+            ['if', '', 'ledger_row_id>valid_loc_ids>is_leaf', 'is', '$False', '']
             ]],
         ['function_row_id>function_id', 60, False, True, [
-            ['if', '', '_ledger.valid_fun_ids>is_leaf', 'is', '$False', '']
+            ['if', '', 'ledger_row_id>valid_fun_ids>is_leaf', 'is', '$False', '']
             ]],
         ['bal_due_sup', 100, False, True],
         ],

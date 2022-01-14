@@ -115,7 +115,7 @@ cols.append ({
     'col_head'   : 'Pmt no',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.auto_pmt_batch_no', 'is not', '$None', '']],
+    'condition'  : [['where', '', 'ledger_row_id>auto_pmt_batch_no', 'is not', '$None', '']],
     'allow_null' : True,
     'allow_amend': False,
     'max_len'    : 15,
@@ -126,8 +126,8 @@ cols.append ({
         '<case>'
           '<on_insert>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_pmt_batch_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_batch_pmt_no"/>'
+              '<compare test="[[`if`, ``, `ledger_row_id>auto_pmt_batch_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="ledger_row_id>auto_batch_pmt_no"/>'
               '</compare>'
             '</case>'
           '</on_insert>'
@@ -194,13 +194,13 @@ cols.append ({
     'col_head'   : 'Currency',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.currency_id', 'is not', '$None', '']],
+    'condition'  : [['where', '', 'ledger_row_id>currency_id', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{_ledger.currency_id}',
+    'dflt_val'   : '{ledger_row_id>currency_id}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
@@ -215,7 +215,7 @@ cols.append ({
     'key_field'  : 'N',
     'data_source': 'null_if',
     'condition'  : [
-        ['where', '', '_ledger.pmt_tran_source', '!=', "'cb'", ''],
+        ['where', '', 'ledger_row_id>pmt_tran_source', '!=', "'cb'", ''],
         ],
     'allow_null' : True,  # null means 'not posted from cash book'
     'allow_amend': True,
@@ -225,7 +225,7 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
-          '<compare test="[[`if`, ``, `_ledger.pmt_tran_source`, `=`, `~cb~`, ``]]">'
+          '<compare test="[[`if`, ``, `ledger_row_id>pmt_tran_source`, `=`, `~cb~`, ``]]">'
             '<fld_val name="_param.cb_ledger_id"/>'
           '</compare>'
         '</case>'
@@ -235,9 +235,9 @@ cols.append ({
             'pmt_cb_id',
             'Cash book id required if payments posted from cashbook',
             [
-                ['check', '(', '_ledger.pmt_tran_source', '=', "'cb'", ''],
+                ['check', '(', 'ledger_row_id>pmt_tran_source', '=', "'cb'", ''],
                 ['and', '', '$value', 'is not', '$None', ')'],
-                ['or', '(', '_ledger.pmt_tran_source', '!=', "'cb'", ''],
+                ['or', '(', 'ledger_row_id>pmt_tran_source', '!=', "'cb'", ''],
                 ['and', '', '$value', 'is', '$None', ')'],
                 ],
             ],
@@ -351,7 +351,7 @@ actions.append([
         '<case>'
           '<compare test="[[\'if\', \'\', \'_ctx.module_id\', \'=\', \'~ap~\', \'\']]">'
             '<case>'
-              '<compare test="[[\'if\', \'\', \'_ledger.pmt_tran_source\', \'=\', \'~na~\', \'\']]">'
+              '<compare test="[[\'if\', \'\', \'ledger_row_id>pmt_tran_source\', \'=\', \'~na~\', \'\']]">'
                 '<aib_error head="Payment param" body="No payment transactions allowed"/>'
               '</compare>'
             '</case>'

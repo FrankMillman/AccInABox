@@ -110,7 +110,7 @@ cols.append ({
     'col_head'   : 'Pmt no',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.auto_pmt_no', 'is not', '$None', '']],
+    'condition'  : [['where', '', 'supp_row_id>ledger_row_id>auto_pmt_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -121,8 +121,8 @@ cols.append ({
         '<case>'
           '<on_post>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_pmt_no"/>'
+              '<compare test="[[`if`, ``, `supp_row_id>ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="supp_row_id>ledger_row_id>auto_pmt_no"/>'
               '</compare>'
               '<default>'
                 '<fld_val name="tran_number"/>'
@@ -131,11 +131,11 @@ cols.append ({
           '</on_post>'
           '<on_insert>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_temp_no"/>'
+              '<compare test="[[`if`, ``, `supp_row_id>ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="supp_row_id>ledger_row_id>auto_temp_no"/>'
               '</compare>'
-              '<compare test="[[`if`, ``, `_ledger.auto_pmt_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_pmt_no"/>'
+              '<compare test="[[`if`, ``, `supp_row_id>ledger_row_id>auto_pmt_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="supp_row_id>ledger_row_id>auto_pmt_no"/>'
               '</compare>'
             '</case>'
           '</on_insert>'
@@ -202,7 +202,7 @@ cols.append ({
     'col_head'   : 'Currency',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
+    'condition'  : [['where', '', 'supp_row_id>ledger_row_id>alt_curr', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -213,7 +213,7 @@ cols.append ({
     'col_checks' : [
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', '$value', '=', 'supp_row_id>currency_id', ''],
-            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+            ['or', '', 'supp_row_id>ledger_row_id>alt_curr', 'is', '$True', '']
             ]],
         ],
     'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
@@ -361,7 +361,7 @@ actions.append([
         '<case>'
           '<compare test="[[\'if\', \'\', \'_ctx.module_id\', \'=\', \'~ap~\', \'\']]">'
             '<case>'
-              '<compare test="[[\'if\', \'\', \'_ledger.pmt_tran_source\', \'!=\', \'~ap~\', \'\']]">'
+              '<compare test="[[\'if\', \'\', \'supp_row_id>ledger_row_id>pmt_tran_source\', \'!=\', \'~ap~\', \'\']]">'
                 '<aib_error head="Payment param" body="Payment source is not ap module"/>'
               '</compare>'
             '</case>'

@@ -304,10 +304,10 @@ cursors.append({
     'columns': [
         ['period_row_id', 10, True, True],
         ['statement_date', 100, False, True, [
-            ['if', '', '_ledger.separate_stat_close', 'is', '$True', '']
+            ['if', '', 'ledger_row_id>separate_stat_close', 'is', '$True', '']
             ]],
         ['statement_state', 60, False, True, [
-            ['if', '', '_ledger.separate_stat_close', 'is', '$True', '']
+            ['if', '', 'ledger_row_id>separate_stat_close', 'is', '$True', '']
             ]],
         ['closing_date', 100, False, True],
         ['state', 60, False, True],

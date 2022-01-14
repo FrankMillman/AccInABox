@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
-    # 'ledger_col'    : 'ledger_row_id',
+    'ledger_col'    : 'ledger_row_id',
     'ledger_col'    : None,
     'defn_company'  : None,
     'data_company'  : None,
@@ -126,14 +126,15 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-# virt.append ({
-#     'col_name'   : 'ledger_row_id',
-#     'data_type'  : 'INT',
-#     'short_descr': 'Ledger row id',
-#     'long_descr' : 'Ledger row id',
-#     'col_head'   : 'Ledger row id',
-#     'sql'        : '0',
-#    })
+virt.append ({
+    'col_name'   : 'ledger_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Ledger row id',
+    'long_descr' : 'Ledger row id',
+    'col_head'   : 'Ledger row id',
+    'fkey'       : ['gl_ledger_params', 'row_id', None, None, False, None],
+    'sql'        : '0',
+   })
 virt.append ({
     'col_name'   : 'period_row_id',
     'data_type'  : 'INT',
@@ -157,6 +158,26 @@ virt.append ({
         "(SELECT b.period_row_id FROM {company}.adm_yearends b "
         "WHERE b.row_id = a.yearend_row_id)"
         ),
+    })
+virt.append ({
+    'col_name'   : 'year_end',
+    'data_type'  : 'INT',
+    'short_descr': 'Year end',
+    'long_descr' : 'First open year end if exists, else current year_end',
+    'col_head'   : 'Y/end',
+    'sql'        : (
+        "SELECT CASE WHEN EXISTS "
+        "(SELECT * FROM {company}.gl_yearends WHERE state = 'open') "
+        "THEN "
+        "(SELECT yearend_row_id FROM {company}.gl_yearends WHERE state = 'open' "
+        "ORDER BY row_id LIMIT 1) "
+        "ELSE "
+        "(SELECT b.row_id FROM {company}.adm_yearends b "
+        "WHERE b.period_row_id >= "
+        "(SELECT c.period_row_id FROM {company}.gl_ledger_periods c WHERE c.state = 'current') "
+        "ORDER BY b.row_id LIMIT 1) "
+        "END"
+        )
     })
 
 # cursor definitions

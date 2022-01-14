@@ -275,7 +275,7 @@ virt.append ({
     'long_descr' : 'Balance outstanding - whouse currency',
     'col_head'   : 'Balance',
     'db_scale'   : 2,
-    'scale_ptr'  : 'subtran_row_id>wh_prod_row_id>ledger_row_id>currency_id>scale',
+    'scale_ptr'  : 'wh_prod_row_id>ledger_row_id>currency_id>scale',
 #   'sql'        : (
 #       "a.cost_whouse + COALESCE((SELECT SUM(b.cost_whouse) "
 #       "FROM {company}.in_wh_prod_alloc b "

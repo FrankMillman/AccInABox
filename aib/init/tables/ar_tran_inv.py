@@ -87,6 +87,28 @@ cols.append ({
     'data_type'  : 'INT',
     'short_descr': 'Customer row id',
     'long_descr' : 'Customer row id',
+    'long_descr' : (
+        "Customer row id. "
+        "Alt-key is made up of 4 components. "
+        "1. ledger_id - "
+        "     if captured via gui, this is taken from 'context', which is taken "
+        "       from menu_defn, so does not have to be entered. "
+        "     if imported from external source, must be supplied as first field. "
+        "2. cust_id - must be supplied, must exist on org_parties. "
+        "3. location_id - "
+        "     will have a default value in any of these cases - "
+        "       locations not set up (_param.location_row_id is not None). "
+        "       cust_row_id>ledger_row_id>valid_loc_ids is a 'leaf' node - all customers share this location. "
+        "       cust_row_id>ledger_row_id>multiple_locations is False - there can only be one location for this customer. "
+        "     if there is no default, it must be entered/supplied. "
+        "4. function_id - same rules as location_id. "
+        "If captured via gui, there is a 'dummy' field to ensure that cust_row_id exists before continuing. "
+        "If imported from external source, and any required components are missing, this will only be "
+        "   detected on save(), when setup_defaults() tries to get a value for all fields containing None. "
+        "Possible extra validation - check that cust_row_id>ledger_row_id = context.ledger_row_id. "
+        "   Probably not necessary, as they could only differ if cust_row_id was entered directly, and "
+        "   context.ledger_id only exists if captured via gui, so the combination is virtually impossible. "
+        ),
     'col_head'   : 'Customer',
     'key_field'  : 'A',
     'data_source': 'input',
@@ -113,7 +135,7 @@ cols.append ({
     'col_head'   : 'Inv no',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.auto_inv_no', 'is not', '$None', '']],
+    'condition'  : [['where', '', 'cust_row_id>ledger_row_id>auto_inv_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -124,8 +146,8 @@ cols.append ({
         '<case>'
           '<on_post>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_inv_no"/>'
+              '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="cust_row_id>ledger_row_id>auto_inv_no"/>'
               '</compare>'
               '<default>'
                 '<fld_val name="tran_number"/>'
@@ -134,11 +156,11 @@ cols.append ({
           '</on_post>'
           '<on_insert>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_temp_no"/>'
+              '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="cust_row_id>ledger_row_id>auto_temp_no"/>'
               '</compare>'
-              '<compare test="[[`if`, ``, `_ledger.auto_inv_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_inv_no"/>'
+              '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>auto_inv_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="cust_row_id>ledger_row_id>auto_inv_no"/>'
               '</compare>'
             '</case>'
           '</on_insert>'
@@ -173,7 +195,7 @@ cols.append ({
                 'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
             ]],
         ['stat_date', 'Statement period not open', [
-            ['check', '', '_ledger.separate_stat_close', 'is', '$False', ''],
+            ['check', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
             ['or', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
             ]],
         ],
@@ -210,7 +232,7 @@ cols.append ({
     'col_head'   : 'Currency',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
+    'condition'  : [['where', '', 'cust_row_id>ledger_row_id>alt_curr', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -648,7 +670,7 @@ actions.append([
             'Statement period closed',
             [
                 ['check', '', '$exists', 'is', '$True', ''],
-                ['or', '', '_ledger.separate_stat_close', 'is', '$False', ''],
+                ['or', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
                 ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
                 ],
             ],
@@ -659,7 +681,7 @@ actions.append([
         [
             'ar_openitems',  # table name
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ],
 
             True,  # split source?
@@ -730,7 +752,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_trantype_row_id', 'trantype_row_id'],

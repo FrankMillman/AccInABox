@@ -22,7 +22,7 @@ async def setup_openitems(db_obj, conn, return_vals):
     due_rule = await terms_obj.getval('due_rule')
     if not due_rule:
         due_rule = [1, 30, 'd']  # default to '30 days'
-    if await db_obj.getval('_ledger.discount_code_id') is None:
+    if await db_obj.getval('ledger_row_id>discount_code_id') is None:
         discount_rule = None
     else:
         discount_rule = await terms_obj.getval('discount_rule')
@@ -132,7 +132,7 @@ async def setup_inv_alloc(db_obj, conn, return_vals):
 
 async def alloc_oldest(db_obj, conn, return_vals):
     # called as split_src func from ar_subtran_rec.upd_on_save()
-    # only called if _ledger.auto_alloc_oldest is True
+    # only called if ledger_row_id>auto_alloc_oldest is True
     cust_row_id = await db_obj.getval('cust_row_id')
     tot_to_allocate = 0 - await db_obj.getval('rec_cust')
     db_obj.context.as_at_date = await db_obj.getval('tran_date')

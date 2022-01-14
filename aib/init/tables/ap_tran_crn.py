@@ -178,7 +178,7 @@ cols.append ({
     'col_head'   : 'Currency',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
+    'condition'  : [['where', '', 'supp_row_id>ledger_row_id>alt_curr', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -637,7 +637,7 @@ actions.append([
         [
             'ap_openitems',  # table name
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'supp_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ],
 
             True,  # split source?
@@ -713,7 +713,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_trantype_row_id', 'trantype_row_id'],

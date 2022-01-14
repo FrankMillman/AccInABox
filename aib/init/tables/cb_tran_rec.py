@@ -117,7 +117,7 @@ cols.append ({
     'col_head'   : 'Rec no',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.auto_rec_no', 'is not', '$None', '']],
+    'condition'  : [['where', '', 'ledger_row_id>auto_rec_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -128,10 +128,10 @@ cols.append ({
         '<case>'
           '<on_post>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
+              '<compare test="[[`if`, ``, `ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
                 '<case>'
-                  '<compare test="[[`if`, ``, `_ledger.auto_rec_no`, `is not`, `$None`, ``]]">'
-                    '<auto_gen args="_ledger.auto_rec_no"/>'
+                  '<compare test="[[`if`, ``, `ledger_row_id>auto_rec_no`, `is not`, `$None`, ``]]">'
+                    '<auto_gen args="ledger_row_id>auto_rec_no"/>'
                   '</compare>'
                 '</case>'
               '</compare>'
@@ -142,11 +142,11 @@ cols.append ({
           '</on_post>'
           '<on_insert>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_temp_no"/>'
+              '<compare test="[[`if`, ``, `ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="ledger_row_id>auto_temp_no"/>'
               '</compare>'
-              '<compare test="[[`if`, ``, `_ledger.auto_rec_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_rec_no"/>'
+              '<compare test="[[`if`, ``, `ledger_row_id>auto_rec_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="ledger_row_id>auto_rec_no"/>'
               '</compare>'
             '</case>'
           '</on_insert>'
@@ -231,7 +231,7 @@ cols.append ({
     'col_head'   : 'Currency',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
+    'condition'  : [['where', '', 'ledger_row_id>alt_curr', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': True,
     'max_len'    : 0,
@@ -340,10 +340,10 @@ cols.append ({
     'data_source': 'dflt_if',
     'condition'  : [
         ['where', '', 'currency_id', '=', 'ledger_row_id>currency_id', ''],
-        ['or', '', '_ledger.alt_amt_override', 'is', '$False', ''],
+        ['or', '', 'ledger_row_id>alt_amt_override', 'is', '$False', ''],
         ],
     'allow_null' : False,
-    'allow_amend': [['where', '', '_ledger.alt_amt_override', 'is', '$True', '']],
+    'allow_amend': [['where', '', 'ledger_row_id>alt_amt_override', 'is', '$True', '']],
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : 'ledger_row_id>currency_id>scale',
@@ -367,10 +367,10 @@ cols.append ({
     'col_checks' : [
         ['alt_amt_err', 'Outside valid range', [
             ['check', '', '$value', '=', 'amount_cb', ''],
-            ['or', '', '_ledger.alt_amt_perc', '=', '0', ''],
+            ['or', '', 'ledger_row_id>alt_amt_perc', '=', '0', ''],
             ['or', '',
                 '(abs(($value / (amount_cb / tran_exch_rate * cb_exch_rate))'
-                ' - 1) * 100)', '<=', '_ledger.alt_amt_perc', ''],
+                ' - 1) * 100)', '<=', 'ledger_row_id>alt_amt_perc', ''],
             ]],
         ],
     'fkey'       : None,

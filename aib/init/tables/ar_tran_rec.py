@@ -110,7 +110,7 @@ cols.append ({
     'col_head'   : 'Rec no',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.auto_rec_no', 'is not', '$None', '']],
+    'condition'  : [['where', '', 'cust_row_id>ledger_row_id>auto_rec_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -121,8 +121,8 @@ cols.append ({
         '<case>'
           '<on_post>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_rec_no"/>'
+              '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="cust_row_id>ledger_row_id>auto_rec_no"/>'
               '</compare>'
               '<default>'
                 '<fld_val name="tran_number"/>'
@@ -131,11 +131,11 @@ cols.append ({
           '</on_post>'
           '<on_insert>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_temp_no"/>'
+              '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="cust_row_id>ledger_row_id>auto_temp_no"/>'
               '</compare>'
-              '<compare test="[[`if`, ``, `_ledger.auto_rec_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_rec_no"/>'
+              '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>auto_rec_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="cust_row_id>ledger_row_id>auto_rec_no"/>'
               '</compare>'
             '</case>'
           '</on_insert>'
@@ -171,7 +171,7 @@ cols.append ({
                 'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
             ]],
         ['stat_date', 'Statement period not open', [
-            ['check', '', '_ledger.separate_stat_close', 'is', '$False', ''],
+            ['check', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
             ['or', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
             ]],
         ],
@@ -206,7 +206,7 @@ cols.append ({
     'col_head'   : 'Currency',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.alt_curr', 'is', '$False', '']],
+    'condition'  : [['where', '', 'cust_row_id>ledger_row_id>alt_curr', 'is', '$False', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,
@@ -217,7 +217,7 @@ cols.append ({
     'col_checks' : [
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', '$value', '=', 'cust_row_id>currency_id', ''],
-            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+            ['or', '', 'cust_row_id>ledger_row_id>alt_curr', 'is', '$True', '']
             ]],
         ],
     'fkey'       : ['adm_currencies', 'row_id', 'currency', 'currency', False, 'curr'],
@@ -384,7 +384,7 @@ actions.append([
         '<case>'
           '<compare test="[[\'if\', \'\', \'_ctx.module_id\', \'=\', \'~ar~\', \'\']]">'
             '<case>'
-              '<compare test="[[\'if\', \'\', \'_ledger.rec_tran_source\', \'!=\', \'~ar~\', \'\']]">'
+              '<compare test="[[\'if\', \'\', \'cust_row_id>ledger_row_id>rec_tran_source\', \'!=\', \'~ar~\', \'\']]">'
                 '<aib_error head="Receipt param" body="Receipt source is not ar module"/>'
               '</compare>'
             '</case>'
@@ -407,7 +407,7 @@ actions.append([
             'Statement period closed',
             [
                 ['check', '', '$exists', 'is', '$True', ''],
-                ['or', '', '_ledger.separate_stat_close', 'is', '$False', ''],
+                ['or', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
                 ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
                 ],
             ],

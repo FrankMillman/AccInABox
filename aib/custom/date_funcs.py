@@ -184,7 +184,11 @@ async def load_ye_per(caller, xml):
         f'{fin_per.year_per_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
             for fin_per in fin_periods[1:]}
 
-    mod, ledg = context.module_row_id, context.ledger_row_id
+    # mod, ledg = context.module_row_id, context.ledger_row_id
+    if context.module_id in ('nsls', 'npch'):
+        mod, ledg = 8, 0  # use 'gl' periods (not thought through!) does not work if no gl integration!
+    else:
+        mod, ledg = context.module_row_id, context.ledger_row_id
     current_period = await db.cache.get_current_period(context.company, mod, ledg)
 
     var = caller.data_objects['var']

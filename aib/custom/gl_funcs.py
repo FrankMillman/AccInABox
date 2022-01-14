@@ -129,10 +129,9 @@ async def set_per_closed_flag(caller, params):
         await gl_ye.setval('state', 'open')
         await gl_ye.save()
 
-        # force 'year_end' in gl_ledger_params to be re-evaluated
-        ledger_params = await db.cache.get_ledger_params(caller.company,
-            context.module_row_id, context.ledger_row_id)
-        ledger_params.fields['year_end'].must_be_evaluated = True
+        # force virtual field 'year_end' to be re-evaluated
+        ye_fld = await gl_ye.getfld('year_end')
+        ye_fld.must_be_evaluated = True
 
 async def check_ye(caller, xml):
     # called from gl_yearends on_start_row
@@ -142,8 +141,8 @@ async def check_ye(caller, xml):
     await actions.setval('action', 'no_action')  # initial state
     if gl_ye.exists:
         if await gl_ye.getval('state') == 'open':
-            # if > 1, only the first one can be closed - _ledger.year_end.sql tests for this
-            if await gl_ye.getval('yearend_row_id') == await gl_ye.getval('_ledger.year_end'):
+            # if > 1, only the first one can be closed - year_end.sql tests for this
+            if await gl_ye.getval('yearend_row_id') == await gl_ye.getval('year_end'):
                 await actions.setval('action', 'yearend_close')
         elif await gl_ye.getval('state') == 'closed':
             await actions.setval('action', 'yearend_reopen')
@@ -211,10 +210,9 @@ async def set_ye_closed_flag(caller, params):
     await gl_ye.setval('state', 'closed')
     await gl_ye.save()
 
-    # force 'year_end' in gl_ledger_params to be re-evaluated
-    ledger_params = await db.cache.get_ledger_params(caller.company,
-        context.module_row_id, context.ledger_row_id)
-    ledger_params.fields['year_end'].must_be_evaluated = True
+    # force virtual field 'year_end' to be re-evaluated
+    ye_fld = await gl_ye.getfld('year_end')
+    ye_fld.must_be_evaluated = True
 
 async def ye_tfr_jnl(caller, params):
 
@@ -229,7 +227,7 @@ async def ye_tfr_jnl(caller, params):
                 ORDER BY a.tran_date DESC) row_num
             FROM {company}.gl_totals a
             JOIN {company}.gl_codes code ON code.row_id = a.gl_code_id
-            JOIN {company}.gl_groups int ON int.row_id = code.group_id
+            JOIN {company}.gl_groups int ON int.row_id = code.group_row_id
             JOIN {company}.gl_groups maj ON maj.row_id = int.parent_id
             JOIN {company}.gl_groups bs_is ON bs_is.row_id = maj.parent_id
             WHERE a.deleted_id = 0

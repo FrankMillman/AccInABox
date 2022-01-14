@@ -133,6 +133,7 @@ virt.append ({
     'short_descr': 'Ledger row id',
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger row id',
+    'fkey'       : ['gl_ledger_params', 'row_id', None, None, False, None],
     'sql'        : '0',
     })
 virt.append ({

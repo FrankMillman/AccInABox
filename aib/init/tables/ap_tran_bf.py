@@ -372,7 +372,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_trantype_row_id', 'trantype_row_id'],

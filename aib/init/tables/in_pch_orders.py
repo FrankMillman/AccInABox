@@ -86,7 +86,7 @@ cols.append ({
     'col_head'   : 'Pch ord',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.auto_pchord_no', 'is not', '$None', '']],
+    'condition'  : [['where', '', '_param.auto_pchord_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 0,

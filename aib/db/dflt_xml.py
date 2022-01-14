@@ -130,7 +130,7 @@ async def alloc_tran_date(fld, xml, debug):
     item_tran_date = await db_obj.getval('item_row_id>tran_row_id>tran_date')
     item_per_row_id = bisect_left([_.closing_date for _ in adm_periods], item_tran_date)
 
-    if await db_obj.getval('_ledger.separate_stat_close'):
+    if await db_obj.getval('item_row_id>cust_row_id>ledger_row_id>separate_stat_close'):
         if ledger_periods[item_per_row_id].statement_state == 'open':
             return item_tran_date
         else:

@@ -112,7 +112,7 @@ cols.append ({
     'col_head'   : 'Jnl no',
     'key_field'  : 'A',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.auto_jnl_no', 'is not', '$None', '']],
+    'condition'  : [['where', '', 'supp_row_id>ledger_row_id>auto_jnl_no', 'is not', '$None', '']],
     'allow_null' : False,
     'allow_amend': False,
     'max_len'    : 15,
@@ -123,8 +123,8 @@ cols.append ({
         '<case>'
           '<on_post>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_jnl_no"/>'
+              '<compare test="[[`if`, ``, `supp_row_id>ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="supp_row_id>ledger_row_id>auto_jnl_no"/>'
               '</compare>'
               '<default>'
                 '<fld_val name="tran_number"/>'
@@ -133,11 +133,11 @@ cols.append ({
           '</on_post>'
           '<on_insert>'
             '<case>'
-              '<compare test="[[`if`, ``, `_ledger.auto_temp_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_temp_no"/>'
+              '<compare test="[[`if`, ``, `supp_row_id>ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="supp_row_id>ledger_row_id>auto_temp_no"/>'
               '</compare>'
-              '<compare test="[[`if`, ``, `_ledger.auto_jnl_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="_ledger.auto_jnl_no"/>'
+              '<compare test="[[`if`, ``, `supp_row_id>ledger_row_id>auto_jnl_no`, `is not`, `$None`, ``]]">'
+                '<auto_gen args="supp_row_id>ledger_row_id>auto_jnl_no"/>'
               '</compare>'
             '</case>'
           '</on_insert>'
@@ -525,7 +525,7 @@ actions.append([
         [
             'ap_openitems',  # table name
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'supp_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -596,7 +596,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                ['gl_code_id', 'supp_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_trantype_row_id', 'trantype_row_id'],

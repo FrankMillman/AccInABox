@@ -773,7 +773,6 @@ class Conn:
                     # do we get here? - need to check this [2020-05-22]
                     # 1. cannot mix db_obj and mem_obj in sql - does this occur?
                     # 2. if not _param, how to we know to 'join' on 'row_id = 1'?
-                    # 3. may need to check for '_ledger' as well, but then need to build correct join
                     print('get_col_alias', obj_name, col_name)
                     input()
             if obj_name == '_param':

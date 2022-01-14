@@ -144,13 +144,13 @@ cols.append ({
     'col_checks' : [
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', 'supp_row_id>currency_id', '=', 'currency_id', ''],
-            ['or', '', '_ledger.alt_curr', 'is', '$True', ''],
+            ['or', '', 'supp_row_id>ledger_row_id>alt_curr', 'is', '$True', ''],
             ]],
         ['pmt_source', 'Invalid payment source', [
             ['check', '(', 'tran_type', '=', "'ap_pmt'", ''],
-            ['and', '', '_ledger.pmt_tran_source', '=', "'ap'", ')'],
+            ['and', '', 'supp_row_id>ledger_row_id>pmt_tran_source', '=', "'ap'", ')'],
             ['or', '(', 'tran_type', '=', "'cb_pmt'", ''],
-            ['and', '', '_ledger.pmt_tran_source', '=', "'cb'", ')'],
+            ['and', '', 'supp_row_id>ledger_row_id>pmt_tran_source', '=', "'cb'", ')'],
             ]],
         ],
     'fkey'       : [
@@ -287,9 +287,9 @@ cols.append ({
     'col_head'   : 'Pmt supp',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.alt_pmt_override', 'is', '$False', '']],
+    'condition'  : [['where', '', 'supp_row_id>ledger_row_id>alt_pmt_override', 'is', '$False', '']],
     'allow_null' : False,
-    'allow_amend': [['where', '', '_ledger.alt_pmt_override', 'is', '$True', '']],
+    'allow_amend': [['where', '', 'supp_row_id>ledger_row_id>alt_pmt_override', 'is', '$True', '']],
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : 'supp_row_id>currency_id>scale',
@@ -306,10 +306,10 @@ cols.append ({
     'col_checks' : [
         ['alt_pmt_err', 'Outside valid range', [
             ['check', '', '$value', '=', 'pmt_supp', ''],
-            ['or', '', '_ledger.alt_pmt_perc', '=', '0', ''],
+            ['or', '', 'supp_row_id>ledger_row_id>alt_pmt_perc', '=', '0', ''],
             ['or', '',
                 '(abs(($value / (pmt_amount / tran_exch_rate * supp_exch_rate))'
-                ' - 1) * 100)', '<=', '_ledger.alt_pmt_perc', ''],
+                ' - 1) * 100)', '<=', 'supp_row_id>ledger_row_id>alt_pmt_perc', ''],
             ]],
         ],
     'fkey'       : None,
@@ -473,7 +473,7 @@ actions.append([
         [
             'ap_openitems',  # table name
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'supp_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -496,7 +496,7 @@ actions.append([
         [
             'ap_allocations',
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'supp_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ['and', '', '_ctx.tot_alloc_supp', 'pyfunc', 'custom.aptrans_funcs.get_tot_alloc', ''],
                 ],
             False,  # split source?
@@ -513,7 +513,7 @@ actions.append([
         [
             'ap_tran_disc',
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'supp_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ['and', '', '_ctx.tot_disc_supp', '!=', '0', ''],
                 ],
             False,  # split source?

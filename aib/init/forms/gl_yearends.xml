@@ -33,7 +33,7 @@
     <body>
       <block/>
       <grid data_object="gl_ye" growable="false" num_grid_rows="8" cursor_name="gl_ye"
-          start_col="yearend_row_id" start_val="_ledger.year_end" readonly="true">
+          start_col="yearend_row_id" start_val="gl_ye.year_end" readonly="true">
         <toolbar>
           <tool type="nav"/>
         </toolbar>

@@ -292,7 +292,7 @@ actions.append([
         [
             'ar_openitems',  # table name
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'tran_row_id>cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ],
             False,  # split source?
             [  # key fields

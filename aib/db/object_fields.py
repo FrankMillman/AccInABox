@@ -94,8 +94,8 @@ class Field:
             self.foreign_key = None
         else:
             self.foreign_key = {}  # un-initialised foreign key
-            if col_defn.fkey[FK_IS_ALT]:  # why only IS_ALT? can't remember :-( 2021-11-10
-                self.must_get_fkey = True
+            if col_defn.fkey[FK_IS_ALT]:  # cannot get alt value until foreign key is set up
+                self.must_get_fkey = True  # checked in getval() - if True, call get_foreign_key() first
 
         self._value_ = None  # used by 'property' for '_value' - see at end
         self._value = await self.get_dflt(from_init=True)  # eval dflt_val, but not dflt_rule
@@ -800,13 +800,13 @@ class Field:
             obj.set_readonly(state)
 
     async def getval(self):
-        if self.must_be_evaluated:
-            self.must_be_evaluated = False  # reset first, to avoid recursion in some situations
-            await self.recalc(display=True)
-
         if self.must_get_fkey:
             await self.db_obj.get_foreign_key(self)
             self.must_get_fkey = False
+
+        while self.must_be_evaluated:  # possible for it to be reset in recalc, so keep checking
+            self.must_be_evaluated = False  # reset first, to avoid recursion in some situations
+            await self.recalc(display=True)
 
         return self._value
 

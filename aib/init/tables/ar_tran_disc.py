@@ -122,7 +122,7 @@ cols.append ({
     'dflt_rule'  : (
         '<case>'
           '<on_insert>'
-            '<auto_gen args="_ledger.auto_disc_no"/>'
+            '<auto_gen args="cust_row_id>ledger_row_id>auto_disc_no"/>'
           '</on_insert>'
           '<default>'
             '<fld_val name="tran_number"/>'
@@ -520,7 +520,7 @@ actions.append([
             [],  # aggregation
             [  # on insert
                 # ['subparent_row_id', '=', 'row_id'],  # tgt_col, src_col
-                ['nsls_code_id', '=', 'ledger_row_id>discount_code_id'],
+                ['nsls_code_id', '=', 'cust_row_id>ledger_row_id>discount_code_id'],
                 ['nsls_amount', '=', 'discount_cust'],
                 ],
             [],  # on update
@@ -538,7 +538,7 @@ actions.append([
         [
             'ar_openitems',  # table name
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -623,7 +623,7 @@ actions.append([
                 ],
             False,  # split source?
             [  # key fields
-                ['gl_code_id', 'ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                 ['location_row_id', 'location_row_id'],
                 ['function_row_id', 'function_row_id'],
                 ['src_trantype_row_id', 'trantype_row_id'],

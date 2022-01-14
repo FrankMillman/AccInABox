@@ -146,7 +146,7 @@ cols.append ({
     'col_checks' : [
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', 'supp_row_id>currency_id', '=', 'subparent_row_id>currency_id', ''],
-            ['or', '', '_ledger.alt_curr', 'is', '$True', '']
+            ['or', '', 'supp_row_id>ledger_row_id>alt_curr', 'is', '$True', '']
             ]],
         ],
     'fkey'       : [
@@ -392,7 +392,7 @@ actions.append([
         [
             'ap_openitems',  # table name
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'supp_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ],
             False,  # split source?
             [  # key fields

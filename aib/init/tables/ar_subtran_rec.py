@@ -148,13 +148,13 @@ cols.append ({
             ]],
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', 'cust_row_id>currency_id', '=', 'currency_id', ''],
-            ['or', '', '_ledger.alt_curr', 'is', '$True', ''],
+            ['or', '', 'cust_row_id>ledger_row_id>alt_curr', 'is', '$True', ''],
             ]],
         ['rec_source', 'Invalid receipt source', [
             ['check', '(', 'tran_type', '=', "'ar_rec'", ''],
-            ['and', '', '_ledger.rec_tran_source', '=', "'ar'", ')'],
+            ['and', '', 'cust_row_id>ledger_row_id>rec_tran_source', '=', "'ar'", ')'],
             ['or', '(', 'tran_type', '=', "'cb_rec'", ''],
-            ['and', '', '_ledger.rec_tran_source', '=', "'cb'", ')'],
+            ['and', '', 'cust_row_id>ledger_row_id>rec_tran_source', '=', "'cb'", ')'],
             ]],
 
         ],
@@ -292,9 +292,9 @@ cols.append ({
     'col_head'   : 'Rec cust',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
-    'condition'  : [['where', '', '_ledger.alt_rec_override', 'is', '$False', '']],
+    'condition'  : [['where', '', 'cust_row_id>ledger_row_id>alt_rec_override', 'is', '$False', '']],
     'allow_null' : False,
-    'allow_amend': [['where', '', '_ledger.alt_rec_override', 'is', '$True', '']],
+    'allow_amend': [['where', '', 'cust_row_id>ledger_row_id>alt_rec_override', 'is', '$True', '']],
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : 'cust_row_id>currency_id>scale',
@@ -311,10 +311,10 @@ cols.append ({
     'col_checks' : [
         ['alt_rec_err', 'Outside valid range', [
             ['check', '', '$value', '=', 'rec_cust', ''],
-            ['or', '', '_ledger.alt_rec_perc', '=', '0', ''],
+            ['or', '', 'cust_row_id>ledger_row_id>alt_rec_perc', '=', '0', ''],
             ['or', '',
                 '(abs(($value / (rec_amount / tran_exch_rate * cust_exch_rate))'
-                ' - 1) * 100)', '<=', '_ledger.alt_rec_perc', ''],
+                ' - 1) * 100)', '<=', 'cust_row_id>ledger_row_id>alt_rec_perc', ''],
             ]],
         ],
     'fkey'       : None,
@@ -478,8 +478,8 @@ actions.append([
         [
             'ar_allocations',
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
-                ['and', '', '_ledger.auto_alloc_oldest', 'is', '$True', ''],
+                ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
+                ['and', '', 'cust_row_id>ledger_row_id>auto_alloc_oldest', 'is', '$True', ''],
                 ['and', '', '$in_db_post', 'is', '$False', ''],
                 ],
 
@@ -504,7 +504,7 @@ actions.append([
         [
             'ar_openitems',  # table name
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ],
             False,  # split source?
             [  # key fields
@@ -527,7 +527,7 @@ actions.append([
         [
             'ar_allocations',
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ['and', '', '_ctx.tot_alloc_cust', 'pyfunc', 'custom.artrans_funcs.get_tot_alloc', ''],
                 ],
             False,  # split source?
@@ -544,7 +544,7 @@ actions.append([
         [
             'ar_tran_disc',
             [  # condition
-                ['where', '', '_ledger.open_items', 'is', '$True', ''],
+                ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
                 ['and', '', '_ctx.tot_disc_cust', '!=', '0', ''],
                 ],
             False,  # split source?
