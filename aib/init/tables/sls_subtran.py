@@ -276,7 +276,7 @@ cols.append ({
     'col_name'   : 'cost_local',
     'data_type'  : '$RLCL',
     'short_descr': 'Cost',
-    'long_descr' : 'Cost in local currency - updated on_post by in_wh_tran_alloc',
+    'long_descr' : 'Cost in local currency - updated on_post by in_wh_prod_alloc',
     'col_head'   : 'Cost',
     'key_field'  : 'N',
     'data_source': 'ret_split',
