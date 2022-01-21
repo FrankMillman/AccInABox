@@ -2,22 +2,24 @@
   <<case>>
     <<is_readonly/>>
     <<default>>
-      <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_jnl` action=`lock`/>>
+      <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_journal` action=`lock`/>>
     <</default>>
   <</case>>
   " on_close_form="
   <<case>>
     <<is_readonly/>>
     <<default>>
-      <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_jnl` action=`unlock`/>>
+      <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_journal` action=`unlock`/>>
     <</default>>
   <</case>>
   ">
   <db_objects>
-    <db_obj name="ap_jnl" table_name="ap_tran_jnl" is_formview_obj="true"/>
-    <db_obj name="ap_jnldet" table_name="ap_tran_jnl_det" parent="ap_jnl"/>
+    <db_obj name="ap_journal" table_name="ap_tran_jnl" is_formview_obj="true"/>
+    <db_obj name="ap_jnldet" table_name="ap_tran_jnl_det" parent="ap_journal"/>
+    <db_obj name="nsls" table_name="nsls_subtran" parent="ap_jnldet"/>
     <db_obj name="npch" table_name="npch_subtran" parent="ap_jnldet"/>
     <db_obj name="ar_jnl" table_name="ar_subtran_jnl" parent="ap_jnldet"/>
+    <db_obj name="ap_jnl" table_name="ap_subtran_jnl" parent="ap_jnldet"/>
     <db_obj name="gl" table_name="gl_subtran_jnl" parent="ap_jnldet"/>
     <db_obj name="com" table_name="ap_comments" parent="ap_jnldet"/>
   </db_objects>
@@ -26,7 +28,7 @@
   <input_params/>
   <output_params/>
 
-  <frame main_object="ap_jnl">
+  <frame main_object="ap_journal">
     <toolbar/>
     <body>
       <block/>
@@ -36,34 +38,57 @@
       <col/>
       <label value="Supplier Id:"/>
       <col/>
-      <input obj_name="ap_jnl" col_name="supp_id" lng="80" readonly="true" skip="true"/>
-      <display obj_name="ap_jnl" col_name="supp_row_id>party_row_id>display_name" lng="200"/>
-
-      <col/>
-      <label value="Journal no:"/>
-      <col/>
-      <input obj_name="ap_jnl" col_name="tran_number" lng="80" skip="true"/>
+      <input obj_name="ap_journal" col_name="supp_id" lng="80" readonly="true" skip="true"/>
+      <col colspan="2"/>
+      <display obj_name="ap_journal" col_name="supp_row_id>party_row_id>display_name" lng="200"/>
 
       <row/>
       <col/>
+      <label value="Journal no:"/>
+      <col/>
+      <input obj_name="ap_journal" col_name="tran_number" lng="80" readonly="true"/>
+
+      <col/>
       <label value="Journal date:"/>
       <col/>
-      <input obj_name="ap_jnl" col_name="tran_date" lng="84" skip="true"/>
+      <input obj_name="ap_journal" col_name="tran_date" lng="84" readonly="true"/>
+
+      <row/>
+      <col/>
+      <label value="Journal type:"/>
+      <col/>
+      <input obj_name="ap_journal" col_name="jnl_type" lng="120" readonly="true"/>
+
+      <col/>
+      <label value="Amount:"/>
+      <col/>
+      <input obj_name="ap_journal" col_name="amount" lng="120" readonly="true"/>
 
       <row/>
       <col/>
       <label value="Text:"/>
+      <col colspan="2"/>
+      <input obj_name="ap_journal" col_name="text" lng="250" readonly="true"/>
+
       <col/>
-      <input obj_name="ap_jnl" col_name="text" lng="250" skip="true"/>
+	  <button lng="150" btn_id="amd_hdr" btn_label="Amend header"
+		btn_enabled="true" btn_validate="true" action="
+          <<inline_form name=`tran_header`>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`/>>
+            <</on_return>>
+          <</inline_form>>
+        "/>
 
       <block/>
       <vbox/>
       <grid data_object="ap_jnldet" growable="true" num_grid_rows="5" readonly="true"
-          footer_row="[`'Total:'`, `ap_jnl.jnl_amt`]">
+          footer_row="[`'Total:'`, `ap_journal.jnl_amount`]">
         <toolbar template="Grid"/>
         <cur_columns>
           <cur_col col_name="display_descr" lng="80"/>
-          <cur_col col_name="jnl_amt" lng="80"/>
+          <cur_col col_name="jnl_amount" lng="80"/>
         </cur_columns>
         <cur_filter/>
         <cur_sequence>
@@ -96,27 +121,30 @@
     </body>
     <button_row template="Transaction"/>
     <frame_methods template="Transaction">
+      <method name="on_start_frame" action="
+        <<skip_input num=`6`/>>
+        "/>
       <method name="do_post" action="
         <<case>>
-          <<compare test=`[['if', '', 'ap_jnl.jnl_amt', '=', '0', '']]`>>
+          <<compare test=`[['if', '', 'ap_journal.jnl_amount', '=', '0', '']]`>>
             <<ask title=`Journal` enter=`No` escape=`No`
                 question=`No detail lines - sure you want to post?`>>
               <<response ans=`No`>>
               <</response>>
               <<response ans=`Yes`>>
-                <<post_obj obj_name=`ap_jnl`/>>
+                <<post_obj obj_name=`ap_journal`/>>
               <</response>>
             <</ask>>
           <</compare>>
           <<default>>
-            <<post_obj obj_name=`ap_jnl`/>>
+            <<post_obj obj_name=`ap_journal`/>>
           <</default>>
         <</case>>
         "/>
     </frame_methods>
   </frame>
   <inline_form name="tran_header" title="Journal header">
-    <frame main_object="ap_jnl">
+    <frame main_object="ap_journal">
       <toolbar/>
       <body>
         <block/>
@@ -126,8 +154,8 @@
         <col/>
         <label value="Supplier Id:"/>
         <col/>
-        <input obj_name="ap_jnl" col_name="supp_id" lng="80"/>
-        <display obj_name="ap_jnl" col_name="supp_row_id>party_row_id>display_name" lng="200"/>
+        <input obj_name="ap_journal" col_name="supp_id" lng="80"/>
+        <display obj_name="ap_journal" col_name="supp_row_id>party_row_id>display_name" lng="200"/>
 
         <if test="[[`if`, ``, `_ledger.valid_loc_ids>is_leaf`, `is`, `$False`, ``]]"/>
 
@@ -135,14 +163,14 @@
         <col/>
         <label value="Location Id:"/>
         <col/>
-        <input obj_name="ap_jnl" col_name="location_id" lng="80" form_dflt="
+        <input obj_name="ap_journal" col_name="location_id" lng="80" form_dflt="
           <<case>>
-            <<compare test=`[['if', '', 'ap_jnl.supp_row_id>dflt_loc_id', 'is not', '$None', '']]`>>
-              <<fld_val name=`ap_jnl.supp_row_id>dflt_loc_id>location_id`/>>
+            <<compare test=`[['if', '', 'ap_journal.supp_row_id>dflt_loc_id', 'is not', '$None', '']]`>>
+              <<fld_val name=`ap_journal.supp_row_id>dflt_loc_id>location_id`/>>
             <</compare>>
           <</case>>
           "/>
-        <display obj_name="ap_jnl" col_name="supp_row_id>location_id>descr" lng="160"/>
+        <display obj_name="ap_journal" col_name="supp_row_id>location_id>descr" lng="160"/>
 
         <end_if/>
 
@@ -152,21 +180,21 @@
         <col/>
         <label value="Function Id:"/>
         <col/>
-        <input obj_name="ap_jnl" col_name="function_id" lng="80" form_dflt="
+        <input obj_name="ap_journal" col_name="function_id" lng="80" form_dflt="
           <<case>>
-            <<compare test=`[['if', '', 'ap_jnl.supp_row_id>dflt_fun_id', 'is not', '$None', '']]`>>
-              <<fld_val name=`ap_jnl.supp_row_id>dflt_fun_id>function_id`/>>
+            <<compare test=`[['if', '', 'ap_journal.supp_row_id>dflt_fun_id', 'is not', '$None', '']]`>>
+              <<fld_val name=`ap_journal.supp_row_id>dflt_fun_id>function_id`/>>
             <</compare>>
           <</case>>
           "/>
-        <display obj_name="ap_jnl" col_name="supp_row_id>function_id>descr" lng="160"/>
+        <display obj_name="ap_journal" col_name="supp_row_id>function_id>descr" lng="160"/>
 
         <end_if/>
 
         <dummy validation="
             <<validation>>
               <<case>>
-                <<compare test=`[['if', '', 'ap_jnl.supp_row_id', 'is', '$None', '']]`>>
+                <<compare test=`[['if', '', 'ap_journal.supp_row_id', 'is', '$None', '']]`>>
                   <<error head=`Supplier` body=`Supplier does not exist`/>>
                 <</compare>>
               <</case>>
@@ -178,22 +206,34 @@
         <col/>
         <label value="Journal no:"/>
         <col/>
-        <input obj_name="ap_jnl" col_name="tran_number" lng="80"/>
+        <input obj_name="ap_journal" col_name="tran_number" lng="80"/>
         <end_if/>
 
         <row/>
         <col/>
         <label value="Journal date:"/>
         <col/>
-        <input obj_name="ap_jnl" col_name="tran_date" lng="84" form_dflt="
+        <input obj_name="ap_journal" col_name="tran_date" lng="84" form_dflt="
           <<pyfunc name=`custom.date_funcs.get_dflt_date`/>>
           "/>
 
         <row/>
         <col/>
+        <label value="Journal type:"/>
+        <col/>
+        <input obj_name="ap_journal" col_name="jnl_type" lng="120"/>
+
+        <row/>
+        <col/>
+        <label value="Amount:"/>
+        <col/>
+        <input obj_name="ap_journal" col_name="amount" lng="120"/>
+
+        <row/>
+        <col/>
         <label value="Text:"/>
         <col/>
-        <input obj_name="ap_jnl" col_name="text" lng="250" form_dflt="<<prev_value/>>"/>
+        <input obj_name="ap_journal" col_name="text" lng="250" form_dflt="<<prev_value/>>"/>
 
       </body>
 

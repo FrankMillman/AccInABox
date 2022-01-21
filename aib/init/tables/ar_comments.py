@@ -119,6 +119,7 @@ cols.append ({
         ['tran_type', [
             ['ar_inv', 'ar_tran_inv_det'],
             ['ar_crn', 'ar_tran_crn_det'],
+            ['ar_jnl', 'ar_tran_jnl_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,

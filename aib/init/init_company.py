@@ -611,6 +611,7 @@ async def setup_forms(context, conn):
     await setup_form('setup_sell_prices')
     await setup_form('cb_receipt')
     await setup_form('cb_payment')
+    await setup_form('cb_transfer')
     await setup_form('cb_cashbook')
     await setup_form('nsls_ledger_new')
     await setup_form('npch_ledger_new')
@@ -840,8 +841,10 @@ async def setup_menus(context, conn, company_name):
         ['Cb transactions', 'menu', 'cb', [
             ['Cash book receipt', 'form', 'cb_receipt'],
             ['Cash book payment', 'form', 'cb_payment'],
+            ['Transfer to another cb', 'form', 'cb_transfer'],
             ['Review unposted receipts', 'grid', 'cb_tran_rec', 'unposted_rec'],
             ['Review unposted payments', 'grid', 'cb_tran_pmt', 'unposted_pmt'],
+            ['Review unposted transfers', 'grid', 'cb_tran_tfr_out', 'unposted_tfr'],
             ]],
         ['Cb reports', 'menu', 'cb', [
             ['Cash book report', 'form', 'cb_cashbook'],
@@ -862,6 +865,7 @@ async def setup_menus(context, conn, company_name):
             ['Capture receipt', 'form', 'ar_receipt'],
             ['Allocate transaction', 'grid', 'ar_openitems', 'unallocated'],
             ['Review unposted invoices', 'grid', 'ar_tran_inv', 'unposted_inv'],
+            ['Review unposted journals', 'grid', 'ar_tran_jnl', 'unposted_jnl'],
             ['Review unposted receipts', 'grid', 'ar_tran_rec', 'unposted_rec'],
             ]],
         ['Ar enquiries', 'menu', 'ar', [
@@ -883,6 +887,7 @@ async def setup_menus(context, conn, company_name):
             ['Capture journal', 'form', 'ap_journal'],
             ['Capture payment', 'form', 'ap_payment'],
             ['Review unposted invoices', 'grid', 'ap_tran_inv', 'unposted_inv'],
+            ['Review unposted journals', 'grid', 'ap_tran_jnl', 'unposted_jnl'],
             ['Review unposted payments', 'grid', 'ap_tran_pmt', 'unposted_pmt'],
             ]],
         ['Ap payments batch processing', 'menu', 'ap', [
@@ -966,10 +971,6 @@ async def setup_init_data(context, conn, company_name):
     await adm_fun.setval('function_type', 'root')
     await adm_fun.save()
 
-    gl_ledger_params = await db.objects.get_db_object(context, 'gl_ledger_params')
-    await gl_ledger_params.setval('row_id', 1)
-    await gl_ledger_params.save()
-
     gl_group = await db.objects.get_db_object(context, 'gl_groups')
     await gl_group.setval('gl_group', 'all')
     await gl_group.setval('descr', 'All groups')
@@ -1022,8 +1023,8 @@ async def setup_init_data(context, conn, company_name):
     tran_types.append(('gl_bf', 'Gl b/f balance', 'gl', 'gl_tran_bf'))
     tran_types.append(('cb_rec', 'Cb receipt', 'cb', 'cb_tran_rec'))
     tran_types.append(('cb_pmt', 'Cb payment', 'cb', 'cb_tran_pmt'))
-    tran_types.append(('cb_tfr_out', 'Cb tansfer', 'cb', 'cb_tran_tfr_out'))
-    tran_types.append(('cb_tfr_in', 'Cb tansfer', 'cb', 'cb_tran_tfr_in'))
+    tran_types.append(('cb_tfr_out', 'Cb tfr out', 'cb', 'cb_tran_tfr_out'))
+    tran_types.append(('cb_tfr_in', 'Cb tfr in', 'cb', 'cb_tran_tfr_in'))
     tran_types.append(('cb_bf', 'Cb b/f balance', 'cb', 'cb_tran_bf'))
     tran_types.append(('ar_inv', 'Ar invoice', 'ar', 'ar_tran_inv'))
     tran_types.append(('ar_crn', 'Ar cr note', 'ar', 'ar_tran_crn'))

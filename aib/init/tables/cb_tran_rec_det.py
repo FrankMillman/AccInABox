@@ -7,19 +7,19 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['sls', 'Sale of inventory item', 'sls_subtran',
+            ['sls', 'Inventory sale', 'sls_subtran',
                 [  # return values
                     ['rec_tran', '-tot_amt'],  # tgt_col, src_col
                     ],
                 ['wh_prod_row_id>prod_row_id>prod_code'],  # display descr
                 ],
-            ['nsls', 'Sale of non-inventory item', 'nsls_subtran',
+            ['nsls', 'Non-inventory sale', 'nsls_subtran',
                 [  # return values
                     ['rec_tran', '-tot_amt'],  # tgt_col, src_col
                     ],
                 ['nsls_code_id>descr'],  # display descr
                 ],
-            ['npch', 'Purchase of non-inventory item', 'npch_subtran',
+            ['npch', 'Non-inventory purchase', 'npch_subtran',
                 [  # return values
                     ['rec_tran', '-tot_amt'],  # tgt_col, src_col
                     ],

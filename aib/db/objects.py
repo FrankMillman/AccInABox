@@ -1962,6 +1962,9 @@ class DbObject:
 
             async with self.context.db_session.get_connection() as db_mem_conn:
                 if not posting_child:
+                    if self.dirty:
+                        # NB context.in_db_post is currently True - can affect result
+                        await self.save()  # do this first, else audit trail not updated
                     if post_type == 'post':
                         if await self.getval('posted'):
                             raise AibError(head='Post {}'.format(self.table_name),
@@ -3753,7 +3756,7 @@ async def setup_fkey(db_table, context, company, col):
         altsrc_coldefn.col_name = altsrc_name
         altsrc_coldefn.col_type = 'alt'
         altsrc_coldefn.seq = -1
-        altsrc_coldefn.long_descr = col.long_descr
+        # altsrc_coldefn.long_descr = col.long_descr
         altsrc_coldefn.key_field = col.key_field  # to allow data change without perms check
         altsrc_coldefn.condition = col.condition
         altsrc_coldefn.allow_null = col.allow_null

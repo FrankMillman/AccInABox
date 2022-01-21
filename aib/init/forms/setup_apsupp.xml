@@ -26,6 +26,22 @@
       <input obj_name="supp" col_name="currency" lng="60"/>
       <display obj_name="currency" col_name="descr" lng="160"/>
       <end_if/>
+      <if test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``]]"/>
+      <row/>
+      <col/>
+      <label value="Location:"/>
+      <col/>
+      <input obj_name="supp" col_name="location_id" lng="100"/>
+      <display obj_name="supp" col_name="location_row_id>descr" lng="160"/>
+      <end_if/>
+      <if test="[[`if`, ``, `_param.function_row_id`, `is`, `$None`, ``]]"/>
+      <row/>
+      <col/>
+      <label value="Function:"/>
+      <col/>
+      <input obj_name="supp" col_name="function_id" lng="100"/>
+      <display obj_name="supp" col_name="function_row_id>descr" lng="160"/>
+      <end_if/>
     </body>
     <button_row template="Setup_Form"/>
     <frame_methods template="Setup_Form"/>

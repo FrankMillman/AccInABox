@@ -40,25 +40,38 @@
       <col/>
       <label value="Payment no:"/>
       <col/>
-      <input obj_name="cb_pmt" col_name="tran_number" lng="80" readonly="true" skip="true"/>
+      <input obj_name="cb_pmt" col_name="tran_number" lng="80" readonly="true"/>
 
-      <row/>
       <col/>
       <label value="Date:"/>
       <col/>
-      <input obj_name="cb_pmt" col_name="tran_date" lng="84" readonly="true" skip="true"/>
+      <input obj_name="cb_pmt" col_name="tran_date" lng="84" readonly="true"/>
 
       <row/>
       <col/>
       <label value="Paid to:"/>
       <col/>
-      <input obj_name="cb_pmt" col_name="payee" lng="200" readonly="true" skip="true"/>
+      <input obj_name="cb_pmt" col_name="payee" lng="200" readonly="true"/>
 
-      <row/>
       <col/>
       <label value="Amount:"/>
       <col/>
-      <input obj_name="cb_pmt" col_name="amount" lng="100" readonly="true" skip="true"/>
+      <input obj_name="cb_pmt" col_name="amount" lng="100" readonly="true"/>
+
+      <row/>
+      <col/>
+      <col/>
+      <col/>
+      <col/>
+	  <button lng="150" btn_id="amd_hdr" btn_label="Amend header"
+		btn_enabled="true" btn_validate="true" action="
+          <<inline_form name=`tran_header`>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`/>>
+            <</on_return>>
+          <</inline_form>>
+        "/>
 
       <block/>
       <grid data_object="cb_pmt_det" growable="true" num_grid_rows="5" readonly="true"
@@ -95,7 +108,11 @@
 
     </body>
     <button_row template="Transaction"/>
-    <frame_methods template="Transaction"/>
+    <frame_methods template="Transaction">
+      <method name="on_start_frame" action="
+        <<skip_input num=`5`/>>
+        "/>
+    </frame_methods>
   </frame>
   <inline_form name="tran_header" title="Payment header">
     <frame main_object="cb_pmt">

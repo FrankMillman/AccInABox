@@ -33,9 +33,9 @@
 
   <row/>
   <col/>
-  <label value="Charge amount:"/>
+  <label value="Amount:"/>
   <col/>
-  <display obj_name="ar_jnl" col_name="currency_id>symbol" lng="10"/>
+  <!--display obj_name="ar_jnl" col_name="currency_id>symbol" lng="10"/-->
   <input obj_name="ar_jnl" col_name="jnl_amount" lng="84"/>
 
   <!-- this does not work well - if > 1 ledger, alt_curr is $None when form is created -->

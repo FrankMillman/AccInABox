@@ -37,37 +37,42 @@
       <col/>
       <label value="Supplier Id:"/>
       <col/>
-      <input obj_name="ap_inv" col_name="supp_id" lng="80" readonly="true" skip="true"/>
+      <input obj_name="ap_inv" col_name="supp_id" lng="80" readonly="true"/>
       <display obj_name="ap_inv" col_name="supp_row_id>party_row_id>display_name" lng="200"/>
 
       <col/>
       <label value="Invoice no:"/>
       <col/>
-      <input obj_name="ap_inv" col_name="tran_number" lng="100" skip="true"/>
+      <input obj_name="ap_inv" col_name="tran_number" lng="100" readonly="true"/>
 
       <row/>
       <col/>
       <label value="Invoice date:"/>
       <col/>
-      <input obj_name="ap_inv" col_name="tran_date" lng="84" skip="true"/>
+      <input obj_name="ap_inv" col_name="tran_date" lng="84" readonly="true"/>
 
       <row/>
       <col/>
       <label value="Text:"/>
       <col/>
-      <input obj_name="ap_inv" col_name="text" lng="250" skip="true"/>
+      <input obj_name="ap_inv" col_name="text" lng="250" readonly="true"/>
 
       <row/>
       <col/>
       <label value="Amount:"/>
       <col/>
-      <input obj_name="ap_inv" col_name="inv_amount" lng="120" skip="true"/>
+      <input obj_name="ap_inv" col_name="inv_amount" lng="120" readonly="true"/>
 
       <col/>
-      <label value="Invoice total:"/>
-      <col/>
-      <display obj_name="ap_inv" col_name="currency_id>symbol" lng="10"/>
-      <display obj_name="ap_inv" col_name="inv_tot_amt" lng="100"/>
+	  <button lng="150" btn_id="amd_hdr" btn_label="Amend header"
+		btn_enabled="true" btn_validate="true" action="
+          <<inline_form name=`tran_header`>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`/>>
+            <</on_return>>
+          <</inline_form>>
+        "/>
 
       <block/>
       <vbox/>
@@ -117,6 +122,9 @@
     </body>
     <button_row template="Transaction"/>
     <frame_methods template="Transaction">
+      <method name="on_start_frame" action="
+        <<skip_input num=`6`/>>
+        "/>
       <method name="do_post" action="
         <<case>>
           <<compare test=`[['if', '', 'ap_inv.inv_tot_amt', '=', '0', '']]`>>

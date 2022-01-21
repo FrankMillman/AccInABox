@@ -160,8 +160,7 @@ cols.append ({
     'data_source': 'input',
     'condition'  : None,
     'allow_null' : False,
-    # 'allow_amend': False,
-    'allow_amend': [['where', '', 'posted', 'is', '$False', '']],
+    'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
@@ -356,7 +355,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'jnl_amt',
+    'col_name'   : 'jnl_amount',
     'data_type'  : '$RTRN',
     'short_descr': 'Journal amount',
     'long_descr' : 'Journal amount in tran currency - updated from ar_tran_jnl_det',
@@ -412,7 +411,7 @@ cols.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
-          '<fld_val name="jnl_amt"/>'
+          '<fld_val name="jnl_amount"/>'
           '<op type="/"/>'
           '<fld_val name="tran_exch_rate"/>'
           '<op type="*"/>'
@@ -494,7 +493,7 @@ cursors.append({
         # ['cust_row_id>party_row_id>party_id', 80, False, True],
         # ['cust_row_id>party_row_id>display_name', 160, True, True],
         ['tran_date', 80, False, True],
-        ['jnl_amt', 100, False, True],
+        ['amount', 100, False, True],
         ],
     'filter': [
         ['where', '', 'posted', '=', "'0'", ''],
@@ -533,7 +532,7 @@ actions.append([
             'check_totals',
             'Journal amount does not equal total of line items',
             [
-                ['check', '', 'amount', '=', 'jnl_amt', ''],
+                ['check', '', 'amount', '=', 'jnl_amount', ''],
                 ],
             ],
         ],
@@ -556,7 +555,7 @@ actions.append([
                 ['due_date', '=', 'tran_date'],
                 ['cust_row_id', '=', 'cust_row_id'],
                 ['tran_date', '=', 'tran_date'],
-                ['amount_cust', '+', 'jnl_amt'],
+                ['amount_cust', '+', 'jnl_amount'],
                 ['amount_local', '+', 'jnl_local'],
                 ],
             [],  # on unpost
@@ -599,8 +598,8 @@ actions.append([
                 ['tran_date', 'tran_date'],
                 ],
             [  # aggregation
-                ['tran_day_cust', '+', 'jnl_amt'],  # tgt_col, op, src_col
-                ['tran_tot_cust', '+', 'jnl_amt'],
+                ['tran_day_cust', '+', 'jnl_amount'],  # tgt_col, op, src_col
+                ['tran_tot_cust', '+', 'jnl_amount'],
                 ['tran_day_local', '+', 'jnl_local'],
                 ['tran_tot_local', '+', 'jnl_local'],
                 ],

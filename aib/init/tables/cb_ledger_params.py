@@ -427,6 +427,17 @@ cursors.append ({
     'sequence': [['ledger_id', False]],
     'formview_name': 'cb_params',
     })
+cursors.append ({
+    'cursor_name': 'tgt_cb',
+    'title': 'Target cb for transfers',
+    'columns': [
+        ['ledger_id', 80, False, False],
+        ['descr', 160, True, False],
+        ],
+    'filter': [['where', '', 'row_id', '!=', '_ctx.ledger_row_id', '']],
+    'sequence': [['ledger_id', False]],
+    'formview_name': 'cb_params',
+    })
 
 # actions
 actions = []

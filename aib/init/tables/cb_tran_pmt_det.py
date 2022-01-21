@@ -7,13 +7,13 @@ table = {
     'sub_types'     : None,
     'sub_trans'     : [
         ['line_type', 'display_descr', [
-            ['pch', 'Purchase of inventory item', 'pch_subtran',
+            ['pch', 'Inventory purchase', 'pch_subtran',
                 [  # return values
                     ['pmt_tran', '-tot_amt'],  # tgt_col, src_col
                     ],
                 ['wh_prod_row_id>prod_row_id>prod_code'],  # display descr
                 ],
-            ['npch', 'Purchase of non-inventory item', 'npch_subtran',
+            ['npch', 'Non-inventory purchase', 'npch_subtran',
                 [  # return values
                     ['pmt_tran', '-tot_amt'],  # tgt_col, src_col
                     ],

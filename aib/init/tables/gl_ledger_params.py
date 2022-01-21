@@ -173,6 +173,22 @@ virt.append ({
     'sql'        : '0',
     })
 virt.append ({
+    'col_name'   : 'ledger_id',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Ledger id',
+    'long_descr' : 'Ledger id - needed for setup_roles',
+    'col_head'   : 'Ledger id',
+    'sql'        : "'gl'",
+    })
+virt.append ({
+    'col_name'   : 'descr',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Description',
+    'long_descr' : 'Description - needed for setup_roles',
+    'col_head'   : 'Description',
+    'sql'        : "'General ledger'",
+    })
+virt.append ({
     'col_name'   : 'gl_per_setup',
     'data_type'  : 'BOOL',
     'short_descr': 'G/l periods set up?',

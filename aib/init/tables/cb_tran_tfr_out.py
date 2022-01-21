@@ -1,4 +1,3 @@
-
 # table definition
 table = {
     'table_name'    : 'cb_tran_tfr_out',
@@ -206,7 +205,7 @@ cols.append ({
             ['check', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date,"cb",$value', ''],
             ]],
         ],
-    'fkey'       : ['cb_ledger_params', 'row_id', 'target_id', 'ledger_id', False, None],
+    'fkey'       : ['cb_ledger_params', 'row_id', 'target_id', 'ledger_id', False, 'tgt_cb'],
     'choices'    : None,
     })
 cols.append ({

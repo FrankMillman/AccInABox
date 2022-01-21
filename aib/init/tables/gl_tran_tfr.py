@@ -140,7 +140,6 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
     'col_checks' : [
         ['per_date', 'Period not open', [
             ['check', '', '$value', 'pyfunc',
@@ -160,7 +159,7 @@ cols.append ({
     'data_source': 'input',
     'condition'  : None,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': True,
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
@@ -180,7 +179,7 @@ cols.append ({
     'data_source': 'input',
     'condition'  : None,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,

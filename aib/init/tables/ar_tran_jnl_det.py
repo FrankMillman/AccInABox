@@ -9,37 +9,37 @@ table = {
         ['line_type', 'display_descr', [
             ['ar_jnl', 'Ar journal', 'ar_subtran_jnl',
                 [  # return values
-                    ['jnl_amt', '-jnl_amount'],  # tgt_col, src_col
+                    ['jnl_amount', '-jnl_amount'],  # tgt_col, src_col
                     ],
                 # ['cust_row_id>party_row_id>display_name'],  # display descr
                 ['cust_id'],  # display descr
                 ],
             ['ap_jnl', 'Ap journal', 'ap_subtran_jnl',
                 [  # return values
-                    ['jnl_amt', '-jnl_amount'],  # tgt_col, src_col
+                    ['jnl_amount', '-jnl_amount'],  # tgt_col, src_col
                     ],
                 # ['supp_row_id>party_row_id>display_name'],  # display descr
                 ['supp_id'],  # display descr
                 ],
             ['nsls', 'Non-inventory item', 'nsls_subtran',
                 [  # return values
-                    ['jnl_amt', '-tot_amt'],  # tgt_col, src_col
+                    ['jnl_amount', '-tot_amt'],  # tgt_col, src_col
                     ],
                 ['nsls_code_id>descr'],  # display descr
                 ],
             ['npch', 'Non-inventory item', 'npch_subtran',
                 [  # return values
-                    ['jnl_amt', '-tot_amt'],  # tgt_col, src_col
+                    ['jnl_amount', '-tot_amt'],  # tgt_col, src_col
                     ],
                 ['npch_code_id>descr'],  # display descr
                 ],
             ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values
-                    ['jnl_amt', '-gl_amount'],  # tgt_col, src_col
+                    ['jnl_amount', '-gl_amount'],  # tgt_col, src_col
                     ],
                 ['gl_code'],  # display descr
                 ],
-            ['com', 'Comment', 'ap_comments',
+            ['com', 'Comment', 'ar_comments',
                 [],  # return values
                 ['text'],  # display descr
                 ],
@@ -178,7 +178,7 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'jnl_amt',
+    'col_name'   : 'jnl_amount',
     'data_type'  : '$RTRN',
     'short_descr': 'Journal amount',
     'long_descr' : 'Journal amount - updated when subtran is saved',
@@ -333,12 +333,12 @@ virt.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<expr>'
-          '<fld_val name="jnl_amt"/>'
+          '<fld_val name="jnl_amount"/>'
           '<op type="/"/>'
           '<fld_val name="tran_row_id>tran_exch_rate"/>'
         '</expr>'
         ),
-    'sql'        : "a.jnl_amt / a.tran_row_id>tran_exch_rate",
+    'sql'        : "a.jnl_amount / a.tran_row_id>tran_exch_rate",
     })
 
 # cursor definitions
@@ -354,7 +354,7 @@ actions.append([
             False,  # split source?
             [],  # key fields
             [  # aggregation
-                ['jnl_amt', '+', 'jnl_amt'],  # tgt_col, op, src_col
+                ['jnl_amount', '+', 'jnl_amount'],  # tgt_col, op, src_col
                 ['jnl_local', '+', 'jnl_local'],
                 ],
             [],  # on insert

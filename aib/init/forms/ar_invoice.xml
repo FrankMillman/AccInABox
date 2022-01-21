@@ -37,38 +37,51 @@
       <col/>
       <label value="Customer Id:"/>
       <col/>
-      <input obj_name="ar_inv" col_name="cust_id" lng="80" readonly="true" skip="true"/>
+      <input obj_name="ar_inv" col_name="cust_id" lng="80" readonly="true"/>
+      <col colspan="2"/>
       <display obj_name="ar_inv" col_name="cust_row_id>party_row_id>display_name" lng="120"/>
 
+      <row/>
       <col/>
       <label value="Invoice no:"/>
       <col/>
-      <input obj_name="ar_inv" col_name="tran_number" lng="80" readonly="true" skip="true"/>
+      <input obj_name="ar_inv" col_name="tran_number" lng="80" readonly="true"/>
 
       <row/>
       <col/>
       <label value="Invoice date:"/>
       <col/>
-      <input obj_name="ar_inv" col_name="tran_date" lng="84" skip="true"/>
+      <input obj_name="ar_inv" col_name="tran_date" lng="84" readonly="true"/>
 
 <!--
       <col/>
       <label value="Terms code:"/>
       <col/>
-      <input obj_name="ar_inv" col_name="terms_code" lng="60" readonly="true" skip="true"/>
+      <input obj_name="ar_inv" col_name="terms_code" lng="60" readonly="true"/>
 
       <row/>
       <col/>
       <label value="Tax inclusive?"/>
       <col/>
-      <input obj_name="ar_inv" col_name="tax_incl" readonly="true" skip="true"/>
+      <input obj_name="ar_inv" col_name="tax_incl" readonly="true"/>
 -->
 
+      <row/>
       <col/>
-      <label value="Invoice total:"/>
+      <label value="Text:"/>
+      <col colspan="2"/>
+      <input obj_name="ar_inv" col_name="text" lng="250" readonly="true"/>
+
       <col/>
-      <display obj_name="ar_inv" col_name="currency_id>symbol" lng="10"/>
-      <display obj_name="ar_inv" col_name="inv_tot_amt" lng="100"/>
+	  <button lng="150" btn_id="amd_hdr" btn_label="Amend header"
+		btn_enabled="true" btn_validate="true" action="
+          <<inline_form name=`tran_header`>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`/>>
+            <</on_return>>
+          <</inline_form>>
+        "/>
 
       <block/>
       <vbox/>
@@ -117,6 +130,9 @@
     </body>
     <button_row template="Transaction"/>
     <frame_methods template="Transaction">
+      <method name="on_start_frame" action="
+        <<skip_input num=`5`/>>
+        "/>
       <method name="do_post" action="
         <<case>>
           <<compare test=`[['if', '', 'ar_inv.inv_tot_amt', '=', '0', '']]`>>
