@@ -1052,9 +1052,13 @@ class Conn:
         return src_alias, tgt_alias, trail
 
     def calc_next_alias(self):
-        d = {n: chr(97+n) for n in range(10)}  # {0: 'a', 1: 'b', ...}
+        d = {n: chr(97+n) for n in range(10)}  # {0: 'a', 1: 'b', ..., 9: 'j'}
         lng = len(self.joins)  # this assumes there will never be > 999 joins!
         alias = d[lng//100] + d[lng%100//10] + d[lng%10]  # 123 becomes 'bcd'
+        if alias == 'add':  # [033] 'add' is a reserved word in sqlite3!
+            self.joins['dummy'] = None  # necessary so that 'lng' returns correct value on next occurrence
+            lng += 1
+            alias = d[lng//100] + d[lng%100//10] + d[lng%10]
         return alias
 
 #-----------------------------------------------------------------------------

@@ -101,9 +101,9 @@ cols.append ({
 cols.append ({
     'col_name'   : 'ledger_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Account transferred from',
-    'long_descr' : 'Account transferred from',
-    'col_head'   : 'Tfr from',
+    'short_descr': 'Account transferred to',
+    'long_descr' : 'Account transferred to',
+    'col_head'   : 'Tfr to',
     'key_field'  : 'A',
     'data_source': 'prog',
     'condition'  : None,
@@ -158,26 +158,26 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'party',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Party',
-    'long_descr' : 'Party',
-    'col_head'   : 'Party',
-    'key_field'  : 'N',
-    'data_source': 'prog',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 30,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
+# cols.append ({
+#     'col_name'   : 'party',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Party',
+#     'long_descr' : 'Party',
+#     'col_head'   : 'Party',
+#     'key_field'  : 'N',
+#     'data_source': 'prog',
+#     'condition'  : None,
+#     'allow_null' : False,
+#     'allow_amend': False,
+#     'max_len'    : 30,
+#     'db_scale'   : 0,
+#     'scale_ptr'  : None,
+#     'dflt_val'   : None,
+#     'dflt_rule'  : None,
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
 cols.append ({
     'col_name'   : 'text',
     'data_type'  : 'TEXT',
@@ -293,6 +293,22 @@ virt.append ({
     'long_descr' : 'Tran type row id',
     'col_head'   : 'Tran type row id',
     'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'cb_tfr_in'",
+    })
+virt.append ({
+    'col_name'   : 'party',
+    'data_type'  : 'TEXT',
+    'short_descr': 'party',
+    'long_descr' : 'Party',
+    'col_head'   : 'Party',
+    'sql'        : "a.ledger_row_id>ledger_id"
+    })
+virt.append ({
+    'col_name'   : 'text_disp',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text for display',
+    'long_descr' : 'Text for display in reports',
+    'col_head'   : 'Text disp',
+    'sql'        : 'a.text'
     })
 virt.append ({
     'col_name'   : 'rev_sign',

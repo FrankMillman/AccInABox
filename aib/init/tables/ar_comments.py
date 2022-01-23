@@ -147,6 +147,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'text_disp',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text for display',
+    'long_descr' : 'Text for display in reports',
+    'col_head'   : 'Text disp',
+    'sql'        : 'a.text',
+    })
 
 # cursor definitions
 cursors = []

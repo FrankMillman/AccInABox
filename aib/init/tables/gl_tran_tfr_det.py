@@ -275,6 +275,14 @@ virt.append ({
     'sql'        : "a.tran_row_id>tran_date"
     })
 virt.append ({
+    'col_name'   : 'party',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Party',
+    'long_descr' : 'Party',
+    'col_head'   : 'Party',
+    'sql'        : "''"
+    })
+virt.append ({
     'col_name'   : 'text',
     'data_type'  : 'TEXT',
     'short_descr': 'Text',

@@ -188,6 +188,14 @@ virt.append ({
     'sql'        : "a.subtran_row_id>subparent_row_id>tran_number"
     })
 virt.append ({
+    'col_name'   : 'party',
+    'data_type'  : 'TEXT',
+    'short_descr': 'party',
+    'long_descr' : 'Party',
+    'col_head'   : 'Party',
+    'sql'        : "a.subtran_row_id>party"
+    })
+virt.append ({
     'col_name'   : 'text',
     'data_type'  : 'TEXT',
     'short_descr': 'Text',
@@ -195,6 +203,17 @@ virt.append ({
     'col_head'   : 'Text',
     'dflt_val'   : '{subtran_row_id>text}',
     'sql'        : "a.subtran_row_id>text"
+    })
+virt.append ({
+    'col_name'   : 'text_disp',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text for display',
+    'long_descr' : 'Text for display in reports',
+    'col_head'   : 'Text disp',
+    'sql'        : (
+        "CASE WHEN a.text = a.subtran_row_id>subparent_row_id>text THEN a.text "
+        "ELSE a.subtran_row_id>subparent_row_id>text || ' ' || a.text END"
+        ),
     })
 virt.append ({
     'col_name'   : 'trantype_row_id',

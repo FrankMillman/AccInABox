@@ -74,6 +74,8 @@
         long_descr="Transaction type" col_head="Type"/>
       <mem_col col_name="tran_number" data_type="TEXT" short_descr="Transaction number"
         long_descr="Transaction number" col_head="Number"/>
+      <mem_col col_name="party" data_type="TEXT" short_descr="Party"
+        long_descr="Party" col_head="Party"/>
       <mem_col col_name="text" data_type="TEXT" short_descr="Text"
         long_descr="Text" col_head="Text"/>
       <mem_col col_name="value" data_type="$LCL" short_descr="Value"

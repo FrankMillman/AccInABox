@@ -298,6 +298,14 @@ virt.append ({
     'sql'        : 'a.tran_row_id>tran_exch_rate',
     })
 virt.append ({
+    'col_name'   : 'party',
+    'data_type'  : 'TEXT',
+    'short_descr': 'party',
+    'long_descr' : 'Party',
+    'col_head'   : 'Party',
+    'sql'        : "a.tran_row_id>payee"
+    })
+virt.append ({
     'col_name'   : 'rev_sign',
     'data_type'  : 'BOOL',
     'short_descr': 'Reverse sign?',

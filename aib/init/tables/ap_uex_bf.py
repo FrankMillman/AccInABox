@@ -269,6 +269,22 @@ virt.append ({
     'sql'        : 'a.supp_row_id>function_row_id',
     })
 virt.append ({
+    'col_name'   : 'party',
+    'data_type'  : 'TEXT',
+    'short_descr': 'party',
+    'long_descr' : 'Party',
+    'col_head'   : 'Party',
+    'sql'        : "a.supp_row_id>party_row_id>party_id"
+    })
+virt.append ({
+    'col_name'   : 'text_disp',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text for display',
+    'long_descr' : 'Text for display in reports',
+    'col_head'   : 'Text disp',
+    'sql'        : 'a.text'
+    })
+virt.append ({
     'col_name'   : 'rev_sign',
     'data_type'  : 'BOOL',
     'short_descr': 'Reverse sign?',

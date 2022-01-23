@@ -208,26 +208,26 @@ cols.append ({
     'fkey'       : ['cb_ledger_params', 'row_id', 'target_id', 'ledger_id', False, 'tgt_cb'],
     'choices'    : None,
     })
-cols.append ({
-    'col_name'   : 'party',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Party',
-    'long_descr' : 'Party',
-    'col_head'   : 'Party',
-    'key_field'  : 'N',
-    'data_source': 'calc',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': False,
-    'max_len'    : 30,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : '{ledger_id}',
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
+# cols.append ({
+#     'col_name'   : 'party',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Party',
+#     'long_descr' : 'Party',
+#     'col_head'   : 'Party',
+#     'key_field'  : 'N',
+#     'data_source': 'calc',
+#     'condition'  : None,
+#     'allow_null' : False,
+#     'allow_amend': False,
+#     'max_len'    : 30,
+#     'db_scale'   : 0,
+#     'scale_ptr'  : None,
+#     'dflt_val'   : '{ledger_id}',
+#     'dflt_rule'  : None,
+#     'col_checks' : None,
+#     'fkey'       : None,
+#     'choices'    : None,
+#     })
 cols.append ({
     'col_name'   : 'text',
     'data_type'  : 'TEXT',
@@ -486,6 +486,22 @@ virt.append ({
         '</expr>'
         ),
     # 'sql'        : "'Transfer from ' || a.party",
+    })
+virt.append ({
+    'col_name'   : 'party',
+    'data_type'  : 'TEXT',
+    'short_descr': 'party',
+    'long_descr' : 'Party',
+    'col_head'   : 'Party',
+    'sql'        : "a.ledger_row_id>ledger_id"
+    })
+virt.append ({
+    'col_name'   : 'text_disp',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text for display',
+    'long_descr' : 'Text for display in reports',
+    'col_head'   : 'Text disp',
+    'sql'        : 'a.text'
     })
 virt.append ({
     'col_name'   : 'rev_sign',

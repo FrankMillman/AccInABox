@@ -368,6 +368,25 @@ virt.append ({
         ),
     'sql'        : "a.gl_amount / a.subparent_row_id>tran_row_id>tran_exch_rate",
     })
+virt.append ({
+    'col_name'   : 'party',
+    'data_type'  : 'TEXT',
+    'short_descr': 'party',
+    'long_descr' : 'Party',
+    'col_head'   : 'Party',
+    # 'sql'        : "''",
+    'sql'        : "a.subparent_row_id>party"
+    })
+virt.append ({
+    'col_name'   : 'text_disp',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text for display',
+    'long_descr' : 'Text for display in reports',
+    'col_head'   : 'Text disp',
+    'sql'        : (
+        "CASE WHEN a.text = a.subparent_row_id>text THEN a.text ELSE a.subparent_row_id>text || ' ' || a.text END"
+        ),
+    })
 
 # cursor definitions
 cursors = []

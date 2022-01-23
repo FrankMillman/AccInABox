@@ -61,6 +61,7 @@ class TranReport:
                 grp_name, filter = args
                 for (test, lbr, col_name, op, expr, rbr) in filter:
                     where.append([test, lbr, 'src_trantype_row_id>tran_type', op, expr, rbr])
+
         all_sql = []
         all_params = []
 
@@ -94,8 +95,7 @@ class TranReport:
                             where.append([test, lbr, col_name, op, expr, rbr])
 
                     for pos, (tgt, src) in enumerate(key_fields):
-                        # if tgt == f'{module_id}_code_id':
-                        if pos == 0:
+                        if pos == 0:  # this does not cater for dual-codes e.g. nsls_cust_totals
                             group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'code']
                             if group:
                                 filter = group[0][1][1]  # [[dim, [grp_name, filter]]]
@@ -123,9 +123,6 @@ class TranReport:
                                 path_to_code = tots_table.col_dict['path_to_code'].dflt_val[1:-1]
                                 if '>' not in src:
                                     col_name = path_to_code
-                                elif '>' not in path_to_code:
-                                    print('HERE')  # do we get here?
-                                    col_name = src
                                 else:
                                     # construct col_name by combining src and path_to_code
                                     # usually the last part of src == the first part of path
@@ -142,9 +139,7 @@ class TranReport:
                                     #   in this case it is important to use src + path[1:]
                                     #   col_name = cust_row_id>ledger_row_id>gl_rec_code_id>gl_code
                                     # therefore do not change the next line!
-                                    col_name = '>'.join(
-                                        src.split('>') +
-                                        path_to_code.split('>')[1:])
+                                    col_name = '>'.join(src.split('>') + path_to_code.split('>')[1:])
                                 col_names.append(f'{col_name}|code')
                                 if module_id != 'gl':
                                     ledger_col = tots_table.ledger_col
@@ -153,8 +148,7 @@ class TranReport:
                                             src.split('>') +
                                             ledger_col.split('>')[1:])
                                     where.append(['AND', '', ledger_col, '=', ledger_row_id, ''])
-                        # elif tgt == 'location_row_id':
-                        elif pos == 1:  # location_row_id
+                        elif tgt == 'location_row_id':
                             if finrpt_data['single_location'] is not None:
                                 where.append(['AND', '', f'{src}>location_id', '=',
                                     repr(finrpt_data['single_location']), ''])
@@ -169,8 +163,7 @@ class TranReport:
                                         col_name = f'{src}{col_name[pos:]}'
                                         where.append([test, lbr, col_name, op, expr, rbr])
                             col_names.append(f'{src}>location_id|location_id')
-                        # elif tgt == 'function_row_id':
-                        elif pos == 2:  # function_row_id
+                        elif tgt == 'function_row_id':
                             if finrpt_data['single_function'] is not None:
                                 where.append(['AND', '', f'{src}>function_id', '=',
                                     repr(finrpt_data['single_function']), ''])
@@ -185,15 +178,15 @@ class TranReport:
                                         col_name = f'{src}{col_name[pos:]}'
                                         where.append([test, lbr, col_name, op, expr, rbr])
                             col_names.append(f'{src}>function_id|function_id')
-                        # elif tgt == 'tran_date':
-                        elif pos == 6:  # tran_date
+                        elif tgt == 'tran_date':
                             where.append(['AND', '', src, '>=', start_date, ''])
                             where.append(['AND', '', src, '<=', end_date, ''])
                             col_names.append(f'{src}|tran_date')
 
                     col_names.append('tran_type|tran_type')
                     col_names.append('tran_number|tran_number')
-                    col_names.append('text|text')
+                    col_names.append('party|party')
+                    col_names.append('text_disp|text')
                     for tgt, op, src in aggr:
                         if tgt in ('tran_day', 'tran_day_local'):
                             if op == '-':
@@ -228,7 +221,7 @@ class TranReport:
             #     await tranrpt_obj.save()
             #     tot_value += await tranrpt_obj.getval('value')
 
-            rows = await conn.fetchall(sql, all_params)
+            rows = await conn.fetchall(sql, all_params, context)
             tot_value = sum(_[-1] for _ in rows)
 
             conn_mem = db_mem_conn.mem
@@ -259,15 +252,17 @@ class TranReport:
                 else:
                     col_lngs.append(0)
             elif col_name == 'tran_date':
-                col_lngs.append(84)
+                col_lngs.append(80)
             elif col_name == 'tran_type':
-                col_lngs.append(80)
+                col_lngs.append(75)
             elif col_name == 'tran_number':
-                col_lngs.append(100)
-            elif col_name == 'text':
-                col_lngs.append(200)
-            elif col_name == 'value':
                 col_lngs.append(80)
+            elif col_name == 'party':
+                col_lngs.append(80)
+            elif col_name == 'text':
+                col_lngs.append(300)
+            elif col_name == 'value':
+                col_lngs.append(100)
 
         cursor_cols = []
         expand = True  # set first col to 'expand', then set expand = False

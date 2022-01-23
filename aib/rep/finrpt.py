@@ -709,7 +709,7 @@ class FinReport:
                     seq_col=seq_col,
                     parent_col=parent_col,
                     type_colname=link_type_colname,
-                    grp_name=link_grp_name.split('_')[1],
+                    grp_name=link_grp_name.split('_', 1)[1],
                     parent_data=link_parent_data,
                     )
                 self.links_to_subledg.append(link_obj)
@@ -748,17 +748,22 @@ class FinReport:
                     link_params.append(par_grp)
                     link_cols.append(f'{dbc.param_style} AS {par_type}_{seq_col_name}')
                     link_params.append(par_seq)
-                for level in reversed(levels[:-len(link_obj.parent_data)] if link_obj.parent_data else levels):
-                    col_name, seq_name = level_data[level][:2]
-                    link_cols.append(f"{level}_tbl.{col_name.replace('gl', link_obj.module_id)} AS {level}")
-                    if level == link_obj.group_type:
-                        seq = dbc.param_style
-                        link_params.append(link_obj.group_seq)
-                    else:
-                        seq = f'{level}_tbl.{seq_name}'
-                    link_cols.append(f'{seq} AS {level}_{seq_name}')
-                    if level == grp_name:
-                        break
+
+                # exclude 'levels' for link_obj.parent_data - only applies to gl, not to sub_ledger
+                parent_types = [p[2] for p in link_obj.parent_data]
+                for level in reversed(levels):
+                    if level not in parent_types:
+                        col_name, seq_name = level_data[level][:2]
+                        link_cols.append(f"{level}_tbl.{col_name.replace('gl', link_obj.module_id)} AS {level}")
+                        if level == link_obj.group_type:
+                            seq = dbc.param_style
+                            link_params.append(link_obj.group_seq)
+                        else:
+                            seq = f'{level}_tbl.{seq_name}'
+                        link_cols.append(f'{seq} AS {level}_{seq_name}')
+                        if level == grp_name:
+                            break
+
                 link_obj.cols = link_cols
                 link_obj.params = link_params
 
@@ -828,7 +833,7 @@ class FinReport:
                 )
             prev_type = f'{type}'
         self.pivot_sql.append(f'WHERE {toplevel_type}_tbl.{type_colname} = {dbc.param_style}')
-        self.pivot_params.append(toplevel_type.split('_')[1])
+        self.pivot_params.append(toplevel_type.split('_', 1)[1])
 
         for (test, lbr, level, op, expr, rbr) in filter:
             self.pivot_sql.append(
@@ -863,7 +868,7 @@ class FinReport:
         if levels.index(grp_name):  # > 0
             test = 'WHERE'
             cte.append(f'{test} {grp_name}_tbl.{type_colname} = {dbc.param_style}')
-            cte_params.append(grp_name.split('_')[1])  # strip 'code' from grp_name
+            cte_params.append(grp_name.split('_', 1)[1])  # strip 'code' from grp_name
 
         for link_obj in self.links_to_subledg:  # if any
             test = 'WHERE' if test is None else 'AND'
@@ -1067,7 +1072,7 @@ class FinReport:
                 )
             prev_type = f'{type}'
         self.pivot_sql.append(f'WHERE {toplevel_type}_tbl.{type_colname} = {dbc.param_style}')
-        self.pivot_params.append(toplevel_type.split('_')[1])  # strip 'loc' from toplevel_type
+        self.pivot_params.append(toplevel_type.split('_', 1)[1])  # strip 'loc' from toplevel_type
 
         for (test, lbr, level, op, expr, rbr) in filter:
             self.pivot_sql.append(
@@ -1096,7 +1101,7 @@ class FinReport:
             cte.append(' '.join(cte_joins))
 
         cte.append(f'WHERE {grp_name}_tbl.{type_colname} = {dbc.param_style}')
-        cte_params.append(grp_name.split('_')[1])  # strip 'loc' from grp_name
+        cte_params.append(grp_name.split('_', 1)[1])  # strip 'loc' from grp_name
 
         test = None
         for (test2, lbr, level, op, expr, rbr) in filter:
@@ -1235,8 +1240,16 @@ class FinReport:
                 for join in self.sql_joins:
                     part_sql.append(join.replace('gl', link_obj.module_id))
             else:
-                for join in self.sql_joins[:-len(link_obj.parent_data)] if link_obj.parent_data else self.sql_joins:
-                    part_sql.append(join.replace('gl', link_obj.module_id))
+                # exclude 'joins' for link_obj.parent_data - only applies to gl, not to sub_ledger
+                parent_types = [p[2] for p in link_obj.parent_data]
+                for join in self.sql_joins:
+                    skip = False
+                    for parent_type in parent_types:
+                        if parent_type in join:
+                            skip = True
+                            break
+                    if not skip:
+                        part_sql.append(join.replace('gl', link_obj.module_id))
             part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(dbc.param_style))
             sql_params.append(0)
             sql_params.append(end_date)
@@ -1338,8 +1351,20 @@ class FinReport:
             if part_cols:
                 part_sql.append(f", {', '.join(part_cols)}")
             part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
-            for join in self.sql_joins[:-len(link_obj.parent_data)] if link_obj.parent_data else self.sql_joins:
-                part_sql.append(join.replace('gl', link_obj.module_id))
+            if self.ctes:
+                for join in self.sql_joins:
+                    part_sql.append(join.replace('gl', link_obj.module_id))
+            else:
+                # exclude 'joins' for link_obj.parent_data - only applies to gl, not to sub_ledger
+                parent_types = [p[2] for p in link_obj.parent_data]
+                for join in self.sql_joins:
+                    skip = False
+                    for parent_type in parent_types:
+                        if parent_type in join:
+                            skip = True
+                            break
+                    if not skip:
+                        part_sql.append(join.replace('gl', link_obj.module_id))
             part_sql.append(
                 'WHERE a.deleted_id = {0} AND a.tran_date BETWEEN {0} AND {0}'.format(dbc.param_style)
                 )
@@ -1497,8 +1522,20 @@ class FinReport:
                 )
             part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
             part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
-            for join in self.sql_joins[:-len(link_obj.parent_data)] if link_obj.parent_data else self.sql_joins:
-                part_sql.append(join.replace('gl', link_obj.module_id))
+            if self.ctes:
+                for join in self.sql_joins:
+                    part_sql.append(join.replace('gl', link_obj.module_id))
+            else:
+                # exclude 'joins' for link_obj.parent_data - only applies to gl, not to sub_ledger
+                parent_types = [p[2] for p in link_obj.parent_data]
+                for join in self.sql_joins:
+                    skip = False
+                    for parent_type in parent_types:
+                        if parent_type in join:
+                            skip = True
+                            break
+                    if not skip:
+                        part_sql.append(join.replace('gl', link_obj.module_id))
             part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(dbc.param_style))
             sql_params.append(0)
             sql_params.append(end_date)
@@ -1593,8 +1630,20 @@ class FinReport:
                 )
             part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
             part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
-            for join in self.sql_joins[:-len(link_obj.parent_data)] if link_obj.parent_data else self.sql_joins:
-                part_sql.append(join.replace('gl', link_obj.module_id))
+            if self.ctes:
+                for join in self.sql_joins:
+                    part_sql.append(join.replace('gl', link_obj.module_id))
+            else:
+                # exclude 'joins' for link_obj.parent_data - only applies to gl, not to sub_ledger
+                parent_types = [p[2] for p in link_obj.parent_data]
+                for join in self.sql_joins:
+                    skip = False
+                    for parent_type in parent_types:
+                        if parent_type in join:
+                            skip = True
+                            break
+                    if not skip:
+                        part_sql.append(join.replace('gl', link_obj.module_id))
             part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date < {0}'.format(dbc.param_style))
             sql_params.append(0)
             sql_params.append(start_date)

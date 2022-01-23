@@ -406,6 +406,24 @@ virt.append ({
     'sql'        : 'a.subparent_row_id>currency_id',
     })
 virt.append ({
+    'col_name'   : 'party',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Party',
+    'long_descr' : 'Party',
+    'col_head'   : 'Party',
+    'sql'        : "a.subparent_row_id>party"
+    })
+virt.append ({
+    'col_name'   : 'text_disp',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text for display',
+    'long_descr' : 'Text for display in reports',
+    'col_head'   : 'Text disp',
+    'sql'        : (
+        "CASE WHEN a.text = a.subparent_row_id>text THEN a.text ELSE a.subparent_row_id>text || ' ' || a.text END"
+        ),
+    })
+virt.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
     'short_descr': 'Tran exchange rate',

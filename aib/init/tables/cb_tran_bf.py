@@ -276,6 +276,22 @@ virt.append ({
     'col_head'   : 'Tran num',
     'sql'        : "'Balance b/f'",
     })
+virt.append ({
+    'col_name'   : 'party',
+    'data_type'  : 'TEXT',
+    'short_descr': 'party',
+    'long_descr' : 'Party',
+    'col_head'   : 'Party',
+    'sql'        : "a.ledger_row_id>ledger_id"
+    })
+virt.append ({
+    'col_name'   : 'text_disp',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text for display',
+    'long_descr' : 'Text for display in reports',
+    'col_head'   : 'Text disp',
+    'sql'        : 'a.text'
+    })
 
 # cursor definitions
 cursors = []

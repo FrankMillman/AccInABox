@@ -264,11 +264,27 @@ virt.append ({
     'sql'        : "'Balance b/f'",
     })
 virt.append ({
+    'col_name'   : 'party',
+    'data_type'  : 'TEXT',
+    'short_descr': 'party',
+    'long_descr' : 'Party',
+    'col_head'   : 'Party',
+    'sql'        : "''",
+    })
+virt.append ({
     'col_name'   : 'text',
     'data_type'  : 'TEXT',
     'short_descr': 'Text',
     'long_descr' : 'Text',
     'col_head'   : 'Text',
+    'sql'        : "'Balance b/f'",
+    })
+virt.append ({
+    'col_name'   : 'text_disp',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text for display',
+    'long_descr' : 'Text for display in reports',
+    'col_head'   : 'Text disp',
     'sql'        : "'Balance b/f'",
     })
 

@@ -193,7 +193,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'Credit note',
+    'dflt_val'   : '{cust_row_id>party_row_id>display_name}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -552,6 +552,22 @@ virt.append ({
     'long_descr' : 'Function row id',
     'col_head'   : 'Function',
     'sql'        : 'a.cust_row_id>function_row_id',
+    })
+virt.append ({
+    'col_name'   : 'party',
+    'data_type'  : 'TEXT',
+    'short_descr': 'party',
+    'long_descr' : 'Party',
+    'col_head'   : 'Party',
+    'sql'        : "a.cust_row_id>party_row_id>party_id"
+    })
+virt.append ({
+    'col_name'   : 'text_disp',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Text for display',
+    'long_descr' : 'Text for display in reports',
+    'col_head'   : 'Text disp',
+    'sql'        : 'a.text'
     })
 virt.append ({
     'col_name'   : 'rev_sign',
