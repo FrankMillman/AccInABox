@@ -50,7 +50,7 @@
             ,[`tree_frame`, `Tree frame`, [`main_object`, `obj_descr`, `combo_type`], [`main_object`]]
             ,[`subtype_frame`, `Sub-type frame`, [`subtype_obj`, `subtype_col`, `lng`],
                 [`subtype_obj`, `'.'`, `subtype_col`]]
-            ,[`if`, `Condition to skip fields`, [`src`, `op`, `tgt`], []]
+            ,[`if`, `Condition to skip fields`, [`test`], []]
             ,[`end_if`, `End condition`, [], []]
             ]
           ]
@@ -159,12 +159,8 @@
       <mem_col col_name="align" data_type="TEXT" short_descr="Align"
         long_descr="Align for display - left/right" allow_amend="true" dflt_val="left"
         choices="[[`left`, `Left`], [`right`, `Right`]]"/>
-      <mem_col col_name="src" data_type="TEXT" short_descr="Source"
-        long_descr="Source for 'if'" allow_amend="true"/>
-      <mem_col col_name="op" data_type="TEXT" short_descr="Operation"
-        long_descr="Operation for 'if'" allow_amend="true"/>
-      <mem_col col_name="tgt" data_type="TEXT" short_descr="Target"
-        long_descr="Target for 'if'" allow_amend="true"/>
+      <mem_col col_name="test" data_type="JSON" short_descr="Test"
+        long_descr="Test condition for 'if'" allow_amend="true"/>
     </mem_obj>
 
     <mem_obj name="grid_vars" descr="Variables used in grid setup" parent="body">
