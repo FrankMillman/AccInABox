@@ -79,6 +79,7 @@
           <cur_col col_name="tran_date" lng="80"/>
           <cur_col col_name="tran_type" lng="80"/>
           <cur_col col_name="tran_number" lng="100"/>
+          <cur_col col_name="party" lng="150"/>
           <cur_col col_name="text" lng="200"/>
           <cur_col col_name="cb_rec" lng="80"/>
           <cur_col col_name="cb_pmt" lng="80"/>
