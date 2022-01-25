@@ -617,7 +617,7 @@ class GuiGrid:
             data_row = []
             for i, pos in enumerate(self.data_cols):
                 fld = self.obj_list[pos].fld
-                value = cursor_row[i]
+                value = await fld.get_val_from_sql(cursor_row[i])
                 if pos in self.scale_xref:
                     scale = cursor_row[self.scale_xref[pos]]
                     value = await fld.val_to_str(value, scale=scale)
