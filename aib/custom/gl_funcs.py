@@ -688,7 +688,7 @@ async def finrpt_drilldown(caller, xml):
         assert len(filter) == 1 and filter[0][2] == 'code_code'
         level_data = finrpt_data['code_level_data']
         code_data = level_data['code_code']
-        code_obj = await db.objects.get_db_object(caller.context, code_data[2])
+        code_obj = await db.objects.get_db_object(caller.context, code_data[3])
         await code_obj.setval(code_data[0], filter[0][4][1:-1])
         # if not a ctrl a/c, drill down to transactions
         if await code_obj.getval('ctrl_mod_row_id') is None:

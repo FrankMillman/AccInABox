@@ -589,7 +589,7 @@ class FinReport:
                 self.pivot_group_by.append(f'{grp_name}')
                 self.order_by.append(f'{grp_name}')
             level_data['code_code'] = (
-                code, None, code_table_name, self.db_table.col_dict['path_to_code'].dflt_val[1:-1])
+                code, None, None, code_table_name, self.db_table.col_dict['path_to_code'].dflt_val[1:-1])
             finrpt_data['code_level_data'] = level_data
             return
 
@@ -598,7 +598,7 @@ class FinReport:
         code, descr, parent_id, seq = col_names
 
         # assume first level is always 'code' - gl_totals>gl_codes, nsls_totals>nsls_codes, etc
-        level_data['code_code'] = (code, seq, code_table_name, f'{code_col.col_name}>{code}')
+        level_data['code_code'] = (code, descr, seq, code_table_name, f'{code_col.col_name}>{code}')
 
         # get link to 'group' table - gl_codes>gl_groups, nsls_codes>nsls_groups, etc
         link_col = code_table.col_dict[group]
@@ -618,13 +618,13 @@ class FinReport:
         # set up level_data
         # prev_level = None
         path = code_col.col_name
-        for pos, (level, descr) in enumerate(reversed(level_types)):
+        for pos, (level, level_type) in enumerate(reversed(level_types)):
             # if prev_level is None:
             if pos == 0:
                 path += f'>{link_col.col_name}'
             else:
                 path += f'>{parent_col_name}'
-            level_data[f'code_{level}'] = (code, seq_col_name, group_table_name, f'{path}>{code}')
+            level_data[f'code_{level}'] = (code, descr, seq_col_name, group_table_name, f'{path}>{code}')
             # prev_level = f'code_{level}'
         levels = list(level_data.keys())
 
@@ -669,9 +669,10 @@ class FinReport:
                     await grp_obj.init()
                     await grp_obj.setval('row_id', par_id)
                     par_grp = await grp_obj.getval('gl_group')
+                    par_descr = await grp_obj.getval('descr')
                     par_seq = await grp_obj.getval(seq_col_name)
                     par_type = f"code_{await grp_obj.getval('group_type')}"
-                    parent_data = (par_grp, par_seq, par_type)
+                    parent_data = (par_grp, par_descr, par_seq, par_type)
                     link_parent_data.append(parent_data)
                     this_type = par_type
                 link_tree_params = (
@@ -684,7 +685,7 @@ class FinReport:
                 link_level_data = {}
                 # assume first level is always 'code' - gl_totals>gl_codes, nsls_totals>nsls_codes, etc
                 link_level_data['code_code'] = (
-                    f'{link_mod}_code', 'seq',  # should not hardcode 'seq', but it works!
+                    f'{link_mod}_code', 'descr', 'seq',  # should not hardcode 'descr' or 'seq', but it works!
                     level_data['code_code'][2].replace('gl', link_mod),
                     level_data['code_code'][3].replace('gl', link_mod),
                     )
@@ -693,7 +694,7 @@ class FinReport:
                     level = f'code_{level_type[0]}'
                     level_dat = level_data[level]
                     link_level_data[f'code_{link_level_type[0]}'] = (
-                        link_code, link_seq,
+                        link_code, link_descr, link_seq,
                         level_dat[2].replace('gl', link_mod),
                         level_dat[3].replace('gl', link_mod),
                         )
@@ -722,8 +723,9 @@ class FinReport:
                 cte_cols.append("'code' AS type")
             cte_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
             for level in reversed(levels):
-                col_name, seq_name = level_data[level][:2]
+                col_name, descr_name, seq_name = level_data[level][:3]
                 cte_cols.append(f'{level}_tbl.{col_name} AS {level}')
+                cte_cols.append(f'{level}_tbl.{descr_name} AS {level}_{descr_name}')
                 cte_cols.append(f'{level}_tbl.{seq_name} AS {level}_{seq_name}')
                 if self.pivot_on is None:
                     self.order_by.append(f'{level}_{seq_name}')
@@ -743,18 +745,21 @@ class FinReport:
                 link_cols.append(f"'{link_obj.module_id}_{link_obj.ledger_row_id}' AS type")
                 link_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
                 for parent in reversed(link_obj.parent_data):
-                    par_grp, par_seq, par_type = parent
+                    par_grp, par_descr, par_seq, par_type = parent
                     link_cols.append(f'{dbc.param_style} AS {par_type}')
                     link_params.append(par_grp)
+                    link_cols.append(f'{dbc.param_style} AS {par_type}_descr')
+                    link_params.append(par_descr)
                     link_cols.append(f'{dbc.param_style} AS {par_type}_{seq_col_name}')
                     link_params.append(par_seq)
 
                 # exclude 'levels' for link_obj.parent_data - only applies to gl, not to sub_ledger
-                parent_types = [p[2] for p in link_obj.parent_data]
+                parent_types = [p[3] for p in link_obj.parent_data]
                 for level in reversed(levels):
                     if level not in parent_types:
-                        col_name, seq_name = level_data[level][:2]
+                        col_name, descr, seq_name = level_data[level][:3]
                         link_cols.append(f"{level}_tbl.{col_name.replace('gl', link_obj.module_id)} AS {level}")
+                        link_cols.append(f'{level}_tbl.{descr} AS {level}_{descr}')
                         if level == link_obj.group_type:
                             seq = dbc.param_style
                             link_params.append(link_obj.group_seq)
@@ -794,8 +799,9 @@ class FinReport:
                 await self.setup_code_pivot(company,
                     type_colname, levels, level_data, grp_name, parent_col_name, filter, pivot_grp)
 
-        for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
+        for lvl, (col_name, descr_name, seq_name, *data) in reversed(level_data.items()):
             self.combo_cols.append(f'{lvl}')
+            self.combo_cols.append(f'{lvl}_{descr_name}')
             self.combo_cols.append(f'{lvl}_{seq_name}')
             if lvl == grp_name:
                 break
@@ -817,7 +823,7 @@ class FinReport:
         self.pivot_sql.append(f'SELECT {pivot_grp} FROM (')
         self.pivot_sql.append(f'SELECT')
         self.pivot_sql.append(f'{toplevel_type}_tbl.row_id AS {toplevel_type}_id')
-        for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
+        for lvl, (col_name, descr_name, seq_name, *data) in reversed(level_data.items()):
             self.pivot_sql.append(f', {lvl}_tbl.{col_name} AS {lvl}')
             self.pivot_sql.append(f', {lvl}_tbl.{seq_name} AS {lvl}_{seq_name}')
             order_by.append(f'{lvl}_{seq_name}')
@@ -855,7 +861,7 @@ class FinReport:
 
         cte.append(', '.join(cte_cols))
 
-        table_name = level_data[grp_name][2]
+        table_name = level_data[grp_name][3]
         cte_table = await db.objects.get_db_table(self.context, company, table_name)
         cte.append(f'FROM {company}.{table_name} {grp_name}_tbl')
 
@@ -923,15 +929,18 @@ class FinReport:
 
     async def setup_code_sql_without_cte(self, level_data, grp_name, filter):
 
-        for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
+        for lvl, (col_name, descr_name, seq_name, *data) in reversed(level_data.items()):
             self.part_cols.append(f'{lvl}_tbl.{col_name} AS {lvl}')
+            self.part_cols.append(f'{lvl}_tbl.{descr_name} AS {lvl}_{descr_name}')
             self.part_cols.append(f'{lvl}_tbl.{seq_name} AS {lvl}_{seq_name}')
             self.group_by.append(f'{lvl}')
+            self.group_by.append(f'{lvl}_{descr_name}')
             self.group_by.append(f'{lvl}_{seq_name}')
             if self.pivot_on is None:
                 self.order_by.append(f'{lvl}_{seq_name}')
             elif self.pivot_on[0] != 'code':
                 self.pivot_group_by.append(f'{lvl}')
+                self.pivot_group_by.append(f'{lvl}_{descr_name}')
                 self.pivot_group_by.append(f'{lvl}_{seq_name}')
                 self.order_by.append(f'{lvl}_{seq_name}')
                 if self.links_to_subledg:
@@ -976,12 +985,12 @@ class FinReport:
         level_types = level_types[1:]  # exclude 'root'
 
         # set up level_data
-        for pos, (level, descr) in enumerate(reversed(level_types)):
+        for pos, (level, level_type) in enumerate(reversed(level_types)):
             if pos == 0:
                 path = link_col_name
             else:
                 path += f'>{parent_id}'
-            level_data[f'{prefix}_{level}'] = (code, seq, table_name, f'{path}>{code}')
+            level_data[f'{prefix}_{level}'] = (code, descr, seq, table_name, f'{path}>{code}')
         levels = list(level_data.keys())
 
         assert grp_name in levels, f'{grp_name} not in {levels}'
@@ -994,13 +1003,15 @@ class FinReport:
             cte_cols = []
             cte_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
             for level in reversed(levels):
-                col_name, seq_name = level_data[level][:2]
+                col_name, descr_name, seq_name = level_data[level][:3]
                 cte_cols.append(f'{level}_tbl.{col_name} AS {level}')
+                cte_cols.append(f'{level}_tbl.{descr_name} AS {level}_{descr_name}')
                 cte_cols.append(f'{level}_tbl.{seq_name} AS {level}_{seq_name}')
                 if self.pivot_on is None:
                     self.order_by.append(f'{level}_{seq_name}')
                 elif self.pivot_on[0] != prefix:
                     self.pivot_group_by.append(f'{level}')
+                    self.pivot_group_by.append(f'{level}_{descr_name}')
                     self.pivot_group_by.append(f'{level}_{seq_name}')
                     self.order_by.append(f'{level}_{seq_name}')
                 self.cf_join_bf.append(f'{grp_name}_id')
@@ -1034,8 +1045,9 @@ class FinReport:
                 await self.setup_lf_pivot(company, table_name,
                     prefix, type_colname, levels, level_data, grp_name, parent_id, filter, pivot_grp)
 
-        for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
+        for lvl, (col_name, descr_name, seq_name, *data) in reversed(level_data.items()):
             self.combo_cols.append(f'{lvl}')
+            self.combo_cols.append(f'{lvl}_{descr_name}')
             self.combo_cols.append(f'{lvl}_{seq_name}')
             if lvl == grp_name:
                 break
@@ -1056,9 +1068,10 @@ class FinReport:
         self.pivot_sql.append(f'SELECT {pivot_grp} FROM (')
         self.pivot_sql.append(f'SELECT')
         self.pivot_sql.append(f'{toplevel_type}_tbl.row_id AS {toplevel_type}_id')
-        for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
+        for lvl, (col_name, descr_name, seq_name, *data) in reversed(level_data.items()):
             self.pivot_sql.append(f', {lvl}_tbl.{col_name} AS {lvl}')
             self.pivot_sql.append(f', {lvl}_tbl.{seq_name} AS {lvl}_{seq_name}')
+            self.pivot_sql.append(f', {lvl}_tbl.{descr_name} AS {lvl}_{descr_name}')
             order_by.append(f'{lvl}_{seq_name}')
             if lvl == grp_name:
                 break
@@ -1094,7 +1107,7 @@ class FinReport:
 
         cte.append(', '.join(cte_cols))
 
-        table_name = level_data[grp_name][2]
+        table_name = level_data[grp_name][3]
         cte.append(f'FROM {company}.{table_name} {grp_name}_tbl')
 
         if cte_joins:
@@ -1130,15 +1143,18 @@ class FinReport:
                 )
             prev_type = f'{type}'
 
-        for lvl, (col_name, seq_name, *data) in reversed(level_data.items()):
+        for lvl, (col_name, descr_name, seq_name, *data) in reversed(level_data.items()):
             self.part_cols.append(f'{lvl}_tbl.{col_name} AS {lvl}')
+            self.part_cols.append(f'{lvl}_tbl.{descr_name} AS {lvl}_{descr_name}')
             self.part_cols.append(f'{lvl}_tbl.{seq_name} AS {lvl}_{seq_name}')
             self.group_by.append(f'{lvl}')
+            self.group_by.append(f'{lvl}_{descr_name}')
             self.group_by.append(f'{lvl}_{seq_name}')
             if self.pivot_on is None:
                 self.order_by.append(f'{lvl}_{seq_name}')
             elif self.pivot_on[0] != prefix:
                 self.pivot_group_by.append(f'{lvl}')
+                self.pivot_group_by.append(f'{lvl}_{descr_name}')
                 self.pivot_group_by.append(f'{lvl}_{seq_name}')
                 self.order_by.append(f'{lvl}_{seq_name}')
             self.cf_join_bf.append(f'{lvl}_{seq_name}')
@@ -1218,8 +1234,9 @@ class FinReport:
                     part_cols.append(part_col)
             else:
                 for parent in reversed(link_obj.parent_data):
-                    par_grp, par_seq, par_type = parent
+                    par_grp, par_descr, par_seq, par_type = parent
                     part_cols.append(f'{par_grp!r} AS {par_type}')
+                    part_cols.append(f'{par_descr!r} AS {par_type}_descr')
                     part_cols.append(f'{par_seq} AS {par_type}_seq')
                 for part_col in self.part_cols[len(link_obj.parent_data)*2:]:
                     part_col = part_col.replace(
@@ -1339,10 +1356,11 @@ class FinReport:
                     part_cols.append(part_col)
             else:
                 for parent in reversed(link_obj.parent_data):
-                    par_grp, par_seq, par_type = parent
+                    par_grp, par_descr, par_seq, par_type = parent
                     part_cols.append(f'{par_grp!r} AS {par_type}')
+                    part_cols.append(f'{par_descr!r} AS {par_type}_descr')
                     part_cols.append(f'{par_seq} AS {par_type}_seq')
-                for part_col in self.part_cols[len(link_obj.parent_data)*2:]:
+                for part_col in self.part_cols[len(link_obj.parent_data)*3:]:
                     part_col = part_col.replace(
                         'gl', link_obj.module_id).replace(
                         link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
@@ -1356,7 +1374,7 @@ class FinReport:
                     part_sql.append(join.replace('gl', link_obj.module_id))
             else:
                 # exclude 'joins' for link_obj.parent_data - only applies to gl, not to sub_ledger
-                parent_types = [p[2] for p in link_obj.parent_data]
+                parent_types = [p[3] for p in link_obj.parent_data]
                 for join in self.sql_joins:
                     skip = False
                     for parent_type in parent_types:
@@ -1504,8 +1522,9 @@ class FinReport:
                     part_cols.append(part_col)
             else:
                 for parent in reversed(link_obj.parent_data):
-                    par_grp, par_seq, par_type = parent
+                    par_grp, par_descr, par_seq, par_type = parent
                     part_cols.append(f'{par_grp!r} AS {par_type}')
+                    part_cols.append(f'{par_descr} AS {par_type}_descr')
                     part_cols.append(f'{par_seq} AS {par_type}_seq')
                 for part_col in self.part_cols[len(link_obj.parent_data)*2:]:
                     part_col = part_col.replace(
@@ -1612,8 +1631,9 @@ class FinReport:
                     part_cols.append(part_col)
             else:
                 for parent in reversed(link_obj.parent_data):
-                    par_grp, par_seq, par_type = parent
+                    par_grp, par_descr, par_seq, par_type = parent
                     part_cols.append(f'{par_grp!r} AS {par_type}')
+                    part_cols.append(f'{par_descr} AS {par_type}_descr')
                     part_cols.append(f'{par_seq} AS {par_type}_seq')
                 for part_col in self.part_cols[len(link_obj.parent_data)*2:]:
                     part_col = part_col.replace(

@@ -29,5 +29,6 @@ columns = [
     ['code_maj', 'code_maj', 'Maj', 'TEXT', 80, None, 'Total:'],
     ['code_int', 'code_int', 'Int', 'TEXT', 80, None, False],
     ['loc_prop', 'loc_prop', 'Prop', 'TEXT', 80, None, False],
+    ['loc_prop_descr', 'loc_prop_descr', 'Descr', 'TEXT', 160, None, False],
     ['tran_tot', 'tran_tot', 'Total', 'DEC', 100, None, True],
     ]

@@ -1202,6 +1202,7 @@ class StringXml(Xml):
                     body=f'Xml error - {e.args[0]}')
 
     async def val_to_str(self, value=blank):
+        # '\f' is delimiter between xml comment and xml code
         try:
             await self.db_obj.check_perms('view', self)
         except AibDenied:

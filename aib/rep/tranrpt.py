@@ -56,7 +56,7 @@ class TranReport:
                 level_data = finrpt_data[level_data_key]
                 grp_name, filter = args
                 for (test, lbr, level, op, expr, rbr) in filter:
-                    where.append([test, lbr, level_data[level][3], op, expr, rbr])
+                    where.append([test, lbr, level_data[level][4], op, expr, rbr])
             elif dim == 'src':
                 grp_name, filter = args
                 for (test, lbr, col_name, op, expr, rbr) in filter:
