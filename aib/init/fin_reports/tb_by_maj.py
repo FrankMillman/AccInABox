@@ -3,15 +3,14 @@ report_name = 'tb_by_maj'
 table_name = 'gl_totals'
 report_type = 'as_at'
 
-groups = []
-groups.append([
-    'code',  # dim
-    ['code_maj', []],  # grp_name, filter
-    ])
+filters = {}
+
+groups = {}
+groups['code'] = 'code_maj'
 
 include_zeros = True
-# allow_select_loc_fun = True
 expand_subledg = True
+# allow_select_loc_fun = True
 exclude_ye_tfr = True
 
 columns = [

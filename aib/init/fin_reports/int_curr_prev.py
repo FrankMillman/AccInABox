@@ -3,21 +3,15 @@ report_name = 'int_curr_prev'
 table_name = 'gl_totals'
 report_type = 'from_to'
 
-groups = []
-groups.append([
-    'code',  # dim
-    ['code_int',  # grp_name
-        [       # filter
-            ['AND', '(', 'code_maj', '=', "'inc'", ''],
-            ['OR', '', 'code_maj', '=', "'exp'", ')'],
-            ],
-        ],
-    ])
+filters = {}
+filters['code'] = [
+    ['AND', '(', 'code_maj', '=', "'inc'", ''],
+    ['OR', '', 'code_maj', '=', "'exp'", ')'],
+    ]
 
-groups.append([
-    'date',    # dim
-    ['last_n_per', 'd', [1, 2, 0]],  # date_type, date_seq, [grp_size, no_grps, grps_to_skip]
-    ])
+groups = {}
+groups['code'] = 'code_int'
+groups['date'] = ['last_n_per', 'd', [1, 2, 0]]  # grp_size, no_grps, grps_to_skip
 
 include_zeros = True
 expand_subledg = True

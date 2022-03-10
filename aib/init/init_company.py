@@ -659,7 +659,8 @@ async def setup_finrpts(context, conn):
         await db_obj.setval('descr', rpt.report_name)
         await db_obj.setval('table_name', rpt.table_name)
         await db_obj.setval('report_type', rpt.report_type)
-        await db_obj.setval('group_params', rpt.groups)
+        await db_obj.setval('filters', rpt.filters)
+        await db_obj.setval('groups', rpt.groups)
         await db_obj.setval('columns', rpt.columns)
         if hasattr(rpt, 'calc_cols'):
             await db_obj.setval('calc_cols', rpt.calc_cols)
@@ -685,7 +686,7 @@ async def setup_finrpts(context, conn):
         'int_pivot_loc',
         'int_pivot_date',
         'int_curr_prev',
-        'cb_cash_flow',
+        # 'cb_cash_flow',
         'ar_by_src',
         'ar_pivot_src',
         'ar_cust_pivot_src',

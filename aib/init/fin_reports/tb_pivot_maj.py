@@ -3,11 +3,10 @@ report_name = 'tb_pivot_maj'
 table_name = 'gl_totals'
 report_type = 'as_at'
 
-groups = []
-groups.append([
-    'code',  # dim
-    ['code_maj', []],  # grp_name, filter
-    ])
+filters = {}
+
+groups = {}
+groups['code'] = 'code_maj'
 
 pivot_on = ('code', 'code_maj')
 

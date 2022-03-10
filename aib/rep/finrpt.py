@@ -1,4 +1,6 @@
 from types import SimpleNamespace as SN
+from collections import defaultdict as DD, namedtuple as NT
+from itertools import chain, zip_longest
 from datetime import date as dt
 from lxml import etree
 
@@ -15,7 +17,7 @@ from common import AibError
 from common import log, debug
 
 """
-Read in a financial report definition from gl_finrpt_defns.
+Read in a financial report definition from sys_finrpt_defns.
 Generate the SQL to be executed.
 Create a mem table 'finrpt_obj' with a field for each column in the report.
 Execute the SQL, write each row into the mem table.
@@ -29,8 +31,7 @@ Report defn has the following features -
         gl_code (or any higher level user-defined in gl_groups)
         location (or any higher level user-defined in adm_locations)
         function (or any higher level user-defined in adm_functions)
-        source code
-        date
+        source transaction type
 
 3.  Report type -
         'as_at - balance at specified date
@@ -40,6 +41,28 @@ Report defn has the following features -
     Dates can be specified in a variety of ways, taken from financial calendar or literal dates
 
     Report can be for one or more date/date range(s)
+
+3a. Dates -
+        if report is for more than one date range, there are 2 possible approaches -
+            - use a WITH statement to generate the dates, and use LATERAL JOIN
+                (or CROSS APPLY for Sql Server) to generate a row for each date.
+                Unfortunately sqlite3 does not support LATERAL JOIN, so as an alternative -
+            - pre-generate the dates and store them in a list (or generator).
+                When constructing the SQL, loop through the dates, set up
+                separate statements for each one with the date hard-coded, and use
+                UNION ALL to join them together
+            - run with the second option for now
+
+        this program contains functions to generate the dates for the second option -
+            sql_fin_yr to generate all dates for a financial year
+            sql_last_n_per to generate all dates for a specified number of periods
+
+        it is quicker to generate the dates directly from adm_periods, so new functions were created -
+            get_fin_yr
+            get_last_n_per
+
+        however, if sqlite3 supports LATERAL JOIN in the future, the sql versions will be required
+            for the WITH statement, so do not remove them
 
 4.  Include zeros -
         if False, report just selects data that is present
@@ -123,6 +146,8 @@ General format of SQL generated -
 
 """
 
+LevelDatum = NT('LevelDatum', 'code, descr, seq_col_name, type_col_name, parent_col_name, table_name, path_to_code')
+
 class FinReport:
     async def _ainit_(self, parent_form, finrpt_data, session, drilldown=0):
 
@@ -130,43 +155,54 @@ class FinReport:
         company = context.company
         param = dbc.param_style
 
-        self.sql_joins = []
-        self.sql_cols = []
         self.combo_cols = []
-        self.sql_where = []
-        self.sql_params = []
-        self.part_cols = []
-        self.group_by = []
         self.pivot_group_by = []
-        self.order_by = []
         self.cf_join_bf = []
         self.links_to_subledg = []
-        self.ctes = []
+
+        self.base_cols = DD(list)
+        self.base_joins = DD(list)
+        self.base_where = DD(list)
+        self.base_params = DD(list)
+        self.group_cols = DD(list)
+        self.combo_cols = []
+
+        self.cte_cols = DD(list)
+        self.cte_joins = DD(list)
+        self.cte_where = DD(list)
+        self.cte_params = DD(list)
+        self.cte_tables = DD(list)
 
         table_name = finrpt_data['table_name']
         date_params = finrpt_data['date_params']
         include_zeros = finrpt_data['include_zeros']
-        self.expand_subledg = finrpt_data['expand_subledg']
+        finrpt_data['exclude_ye_tfr'] = False
         self.pivot_on = finrpt_data['pivot_on']
         columns = finrpt_data['columns'][:]  # make a copy
         calc_cols = finrpt_data['calc_cols'] or []
-        group_params = finrpt_data['group_params']
+        filters = finrpt_data['filters']
+        groups = finrpt_data['groups']
         self.cflow_param = finrpt_data['cashflow_params']
-        self.ledger_row_id = finrpt_data['ledger_row_id']
+        self.ledger_row_id = finrpt_data['ledger_row_id']  # can't use context.ledger_row_id - could be sub-ledger
+
+        self.order_by = {}
+        for dim in finrpt_data['groups']:  # groups (if any) must be specified in sequence (highest first)
+            self.order_by[dim] = []
+        # NB if > 1 date, must also 'order_by' end_date (asc/desc). Not thought through!
 
         db_table = self.db_table = await db.objects.get_db_table(context, company, table_name)
         if db_table.ledger_col is not None:
             if '>' in db_table.ledger_col:
                 src, tgt = db_table.ledger_col.split('>')  # assume only one '>'
                 tgt_table = db_table.col_dict[src].fkey[0]
-                self.sql_joins.append(
+                self.base_joins['common'].append(
                     f'JOIN {company}.{tgt_table} tgt_tbl ON tgt_tbl.row_id = a.{src}'
                     )
-                self.sql_where.append(f'AND tgt_tbl.{tgt} = {param}')
-                self.sql_params.append(self.ledger_row_id)
+                self.base_where['common'].append(f'AND tgt_tbl.{tgt} = {param}')
+                self.base_params['common'].append(self.ledger_row_id)
             else:
-                self.sql_where.append(f'AND a.{db_table.ledger_col} = {param}')
-                self.sql_params.append(self.ledger_row_id)
+                self.base_where['common'].append(f'AND a.{db_table.ledger_col} = {param}')
+                self.base_params['common'].append(self.ledger_row_id)
 
         if 'tran_tot' in db_table.col_dict:
             suffix = ''
@@ -183,42 +219,52 @@ class FinReport:
         elif report_type == 'bf_cf':
             self.tot_col_name = f'tran_tot{suffix}'
 
-        self.pivot_sql = []
-        self.pivot_params = []
+        if not 'date' in groups:
+            dates = None
+        else:
+            dates = await self.setup_dates(report_type, finrpt_data, date_params)
+            if not dates:
+                raise AibError(
+                    head=finrpt_data['report_name'],
+                    body='No rows found for specified dates.'
+                    )
+            if dbc.servertype == 'mssql':
+                # pyodbc returns a pyodbc.Row object, which can cause problem with pivot
+                # here we turn each row into a regular tuple
+                dates = [tuple(row) for row in dates]
 
-        dates = None
-        for (dim, args) in group_params:
-            if dim == 'date':
-                dates = await self.setup_dates(report_type, args, date_params)
-                if not dates:
-                    raise AibError(
-                        head=finrpt_data['report_name'],
-                        body='No rows found for specified dates.'
-                        )
-                if dbc.servertype == 'mssql':
-                    # pyodbc returns a pyodbc.Row object, which can cause problem with pivot
-                    # here we turn each row into a regular tuple
-                    dates = [tuple(row) for row in dates]
-            elif dim == 'code':
-                await self.setup_grp_code(args, include_zeros, finrpt_data)
-            elif dim == 'loc':
-                await self.setup_loc_fun('loc', args, include_zeros, finrpt_data)
-            elif dim == 'fun':
-                await self.setup_loc_fun('fun', args, include_zeros, finrpt_data)
-            elif dim == 'src':
-                await self.setup_source(args)
+        if 'code' in filters or 'code' in groups:
+            await self.setup_code(finrpt_data)
+
+        if 'loc' in filters or 'loc' in groups:
+            await self.setup_loc_fun(finrpt_data, 'loc')
+
+        if 'fun' in filters or 'fun' in groups:
+            await self.setup_loc_fun(finrpt_data, 'fun')
+
+        if 'src' in filters or 'src' in groups:
+            await self.setup_src(finrpt_data)
+
+        if finrpt_data['expand_subledg'] and 'code' in groups and self.db_table.table_name == 'gl_totals':
+            await self.setup_subledgers(finrpt_data)  # set up links to nsls/npch
+
+        if finrpt_data['exclude_ye_tfr']:
+            self.base_joins.append(
+                f'JOIN {company}.adm_tran_types trantype_tbl ON trantype_tbl.row_id = a.orig_trantype_row_id')
+            self.base_where.append(f'AND trantype_tbl.tran_type != {dbc.param_style}')
+            self.base_params.append('gl_tfr')
 
         if finrpt_data['single_location'] is not None:
-            self.sql_joins.append(f'JOIN {company}.adm_locations loc ON loc.row_id = a.location_row_id')
-            self.sql_where.append(f'AND loc.location_id = {dbc.param_style}')
-            self.sql_params.append(finrpt_data['single_location'])
+            self.base_joins['common'].append(f'JOIN {company}.adm_locations loc ON loc.row_id = a.location_row_id')
+            self.base_where['common'].append(f'AND loc.location_id = {dbc.param_style}')
+            self.base_params['common'].append(finrpt_data['single_location'])
 
         if finrpt_data['single_function'] is not None:
-            self.sql_joins.append(f'JOIN {company}.adm_functions fun ON fun.row_id = a.function_row_id')
-            self.sql_where.append(f'AND fun.function_id = {dbc.param_style}')
-            self.sql_params.append(finrpt_data['single_function'])
+            self.base_joins['common'].append(f'JOIN {company}.adm_functions fun ON fun.row_id = a.function_row_id')
+            self.base_where['common'].append(f'AND fun.function_id = {dbc.param_style}')
+            self.base_params['common'].append(finrpt_data['single_function'])
 
-        if dates is None:  # 'dates' not in group_params - assume 'single date'
+        if dates is None:  # 'dates' not in groups - assume 'single date'
             if date_params is not None:  # tuple of (start_date, end_date)
                 dates = [date_params]  # must be a list
             else:  # no parameters provided
@@ -227,7 +273,7 @@ class FinReport:
                 self.pivot_group_by.append('start_date')
                 self.pivot_group_by.append('end_date')
 
-        if self.ctes:  # a 'cte' has been generated for 'include_zeros = True'
+        if include_zeros:
             self.combo_cols.append('start_date')
             self.combo_cols.append('end_date')
             if report_type == 'as_at':
@@ -238,72 +284,55 @@ class FinReport:
                 self.combo_cols.append('op_bal')
                 self.combo_cols.append('cl_bal')
 
-        if self.cflow_param is not None:
-            if self.cflow_param == '$all':
-                cb_mod_row_id = await db.cache.get_mod_id(company, 'cb')
-                self.cflow_param = cb_mod_row_id
-            else:
-                cb_mod_row_id, cb_ledg_row_id = await db.cache.get_mod_ledg_id(
-                    company, 'cb', self.cflow_param)
-                self.cflow_param = cb_mod_row_id, cb_ledg_row_id
-
-            self.sql_joins.append(
-                f'JOIN {company}.adm_tran_types orig_trantype '
-                'ON orig_trantype.row_id = a.orig_trantype_row_id'
-                )
-
-            if isinstance(self.cflow_param, int):  # all cb - param = module_row_id
-                self.sql_where.append(
-                    f"AND NOT COALESCE(code_code_tbl.ctrl_mod_row_id, 0) = {param}"
-                    )
-                self.sql_params.append(cb_mod_row_id)
-                self.sql_where.append(
-                    f"AND orig_trantype.module_row_id = {param}"
-                    )
-                self.sql_params.append(cb_mod_row_id)
-
-            cflow_sql = []
-            cflow_params = []
-            cflow_sql.append('SELECT bf.tran_tot AS "bf [REAL2]", cf.tran_tot AS "cf [REAL2]" FROM (')
-            cflow_sql.append('SELECT COALESCE(SUM(tran_tot), 0) AS tran_tot FROM (')
-            cflow_sql.append('SELECT a.tran_tot_local AS tran_tot, ROW_NUMBER() OVER (PARTITION BY')
-            cflow_sql.append('a.ledger_row_id, a.location_row_id, a.function_row_id,')
-            cflow_sql.append('a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id')
-            cflow_sql.append(f'ORDER BY a.tran_date DESC) row_num FROM {company}.cb_totals a')
-            cflow_sql.append(f'WHERE a.deleted_id = 0 AND a.tran_date < {param}')
-            cflow_params.append(dates[0][0])
-            if not isinstance(self.cflow_param, int):  # single cb - (module_row_id, ledger_row_id)
-                cflow_sql.append(f'AND a.ledger_row_id = {param}')
-                cflow_params.append(cb_ledg_row_id)
-            cflow_sql.append(f") tot WHERE row_num = 1{' OR row_num IS NULL' if self.ctes else ''}) bf")
-            cflow_sql.append(', (')
-            cflow_sql.append('SELECT COALESCE(SUM(tran_tot), 0) AS tran_tot FROM (')
-            cflow_sql.append('SELECT a.tran_tot_local AS tran_tot, ROW_NUMBER() OVER (PARTITION BY')
-            cflow_sql.append('a.ledger_row_id, a.location_row_id, a.function_row_id,')
-            cflow_sql.append('a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id')
-            cflow_sql.append(f'ORDER BY a.tran_date DESC) row_num FROM {company}.cb_totals a')
-            cflow_sql.append(f'WHERE a.deleted_id = 0 AND a.tran_date <= {param}')
-            cflow_params.append(dates[0][1])
-            if not isinstance(self.cflow_param, int):  # single cb - (module_row_id, ledger_row_id)
-                cflow_sql.append(f'AND a.ledger_row_id = {param}')
-                cflow_params.append(cb_ledg_row_id)
-            cflow_sql.append(f") tot WHERE row_num = 1{' OR row_num IS NULL' if self.ctes else ''}) cf")
-
-            async with context.db_session.get_connection() as db_mem_conn:
-                conn = db_mem_conn.db
-                async for row in await conn.exec_sql(' '.join(cflow_sql), cflow_params):
-                    op_bal, cl_bal = row
-
         if self.pivot_on is not None:
             pivot_dim, pivot_grp = self.pivot_on
             if pivot_grp is not None:  # must generate pivot columns
                 if pivot_dim == 'date':
                     pivot_rows = dates
-                else:  # pivot_sql generated in setup_...() below
-                    pivot_sql = ' '.join(self.pivot_sql)
+                else:
+                    pivot_sql = []
+                    pivot_params = []
+                    order_by = []
+                    level_data = finrpt_data[f'{pivot_dim}_level_data']
+                    levels = list(level_data.keys())
+
+                    pivot_sql.append(f'SELECT {pivot_grp}_tbl.{level_data[pivot_grp].code}')
+
+                    pivot_level = levels.index(pivot_grp)
+                    prev_level = pivot_grp
+                    for level in levels[pivot_level:]:  # start at pivot level
+                        level_datum = level_data[level]
+                        if level == pivot_grp:
+                            pivot_sql.append(f'FROM {company}.{level_datum.table_name} {level}_tbl')
+                        else:
+                            pivot_sql.append(
+                              f'JOIN {company}.{level_datum.table_name} {level}_tbl '
+                              f'ON {level}_tbl.row_id = {prev_level}_tbl.{level_data[prev_level].parent_col_name}'
+                                )
+                        order_by.insert(0, f'{level}_tbl.{level_datum.seq_col_name}')
+                        prev_level = level
+
+                    pivot_sql.append(f'WHERE {pivot_grp}_tbl.deleted_id = {dbc.param_style}')
+                    pivot_params.append(0)
+                    pivot_sql.append(f'AND {pivot_grp}_tbl.{level_data[pivot_grp].type_col_name} = {dbc.param_style}')
+                    pivot_params.append(pivot_grp.split('_', 1)[1])
+
+                    if pivot_dim in finrpt_data['filters']:  # setup filter
+                        filter = finrpt_data['filters'][pivot_dim]
+                        for (test, lbr, level, op, expr, rbr) in filter:
+                            pivot_sql.append(
+                                f'{test} {lbr}{level}_tbl.{level_data[level].code} {op} {dbc.param_style}{rbr}'
+                                )
+                            if expr.startswith("'"):  # literal string
+                                expr = expr[1:-1]
+                            pivot_params.append(expr)
+
+                    pivot_sql.append('ORDER BY ' + ', '.join(order_by))
+
                     async with context.db_session.get_connection() as db_mem_conn:
                         conn = db_mem_conn.db
-                        pivot_rows = [_[0] for _ in await conn.fetchall(pivot_sql, self.pivot_params)]
+                        pivot_rows = [_[0] for _ in await conn.fetchall(' '.join(pivot_sql), pivot_params)]
+
                 pivot_cols = []
                 for pos, col in enumerate(columns):
                     if col[5] == pivot_grp:  # this is the 'placeholder' column for 'all pivot cols'
@@ -340,6 +369,7 @@ class FinReport:
             columns.append(['type', 'type', 'Type', 'TEXT', 0, None, False])
 
         sql, params = self.gen_sql(report_type, columns, dates)
+
         # print(sql)
         # print(params)
         # input()
@@ -361,7 +391,9 @@ class FinReport:
         memobj_defn = []
         memobj_defn.append(f'<mem_obj name="{memobj_name}">')
 
+        translate_table = str.maketrans({'&': '&amp;', '>': '&gt;', '<': '&lt;', '"': '&quot;'})
         for col_name, col_sql, col_head, data_type, lng, pvt, tot in columns:
+            col_head = col_head.translate(translate_table)
             if data_type == 'DEC':
                 memobj_defn.append(
                     f'<mem_col col_name="{col_name}" data_type="{data_type}" short_descr="{col_head}" '
@@ -497,16 +529,13 @@ class FinReport:
                     tot += await mem_obj.getval('tran_tot')
 
         if gen_tots:
-            for tot_colname, tot_value in tots_dict.items():
-                await tots_obj.setval(tot_colname, tot_value)
+            for tot_col_name, tot_value in tots_dict.items():
+                await tots_obj.setval(tot_col_name, tot_value)
 
             for calc_col in calc_cols:
                 col_name = calc_col[0]
                 col_val = await eval_elem(calc_col[1], tots_obj)
                 await tots_obj.setval(col_name, col_val)
-
-        if self.cflow_param is not None and not drilldown:
-            assert op_bal - tot == cl_bal
 
         finrpt_data['drilldown'] = drilldown
 
@@ -514,91 +543,96 @@ class FinReport:
         await form._ainit_(context, session, 'finrpt_grid', data_inputs={'finrpt_data':finrpt_data},
             parent_form=parent_form, grid_params=(memobj_name, tots_footer))
 
-    async def setup_dates(self, report_type, args, date_params):
-        date_type, date_seq, sub_args = args
+    # async def setup_dates(self, report_type, args, date_params):
+    async def setup_dates(self, report_type, finrpt_data, date_params):
+        # date_type, date_seq, sub_args = args
+        date_type, date_seq, sub_args = finrpt_data['groups']['date']
         if date_type == 'fin_yr':
-            rows = await sql_fin_yr(
+            # rows = await sql_fin_yr(
+            rows = await get_fin_yr(
                 self.context, date_seq, sub_args, date_params, self.ledger_row_id)
         elif date_type == 'date_range':
             rows = await sql_date_range(
                 self.context, date_seq, sub_args, date_params, self.ledger_row_id)
         elif date_type == 'last_n_per':
-            rows = await sql_last_n_per(
+            # rows = await sql_last_n_per(
+            rows = await get_last_n_per(
                 self.context, date_seq, sub_args, date_params, self.ledger_row_id)
         elif date_type == 'last_n_days':
             rows = await sql_last_n_days(
                 self.context, date_seq, sub_args, date_params, self.ledger_row_id)
 
         if self.pivot_on is None:
-            self.order_by.append(f"end_date{' DESC' if date_seq == 'd' else ''}")
+            self.order_by['date'] = [f"end_date{' DESC' if date_seq == 'd' else ''}"]
         elif self.pivot_on[0] != 'date':
-            self.order_by.append(f"end_date{' DESC' if date_seq == 'd' else ''}")
+            self.order_by['date'] = [f"end_date{' DESC' if date_seq == 'd' else ''}"]
             self.pivot_group_by.append('start_date')
             self.pivot_group_by.append('end_date')
 
         return rows
 
-    async def setup_grp_code(self, args, include_zeros, finrpt_data):
-        grp_name, filter = args
+    async def setup_code(self, finrpt_data):
         context = self.context
         company = context.company
+        dim = 'code'
 
-        # store data_colname, seq_colname, table_name for each level
-        level_data = {}
-    
-        # N.B. most 'total' tables have a single 'code'
-        #      [n]sls_cust[_uea]_totals and [n]pch_supp[_uex]_totals have 2 codes
-        #      this will need special handling - how??
-
-        path_to_code = self.db_table.col_dict['path_to_code'].dflt_val[1:-1].split('>')
+        path_to_code = self.db_table.col_dict['path_to_code'].dflt_val[1:-1]
+        code_path = path_to_code.split('>')
         src_alias = 'a'  # initial alias is always 'a'
         src_table = self.db_table
-        while len(path_to_code) > 2:
-            code_col_name = path_to_code.pop(0)
+        while len(code_path) > 2:
+            code_col_name = code_path.pop(0)
             code_col = src_table.col_dict[code_col_name]
             # get the code table name from the fkey definition
             code_table_name = code_col.fkey[0]
             code_table = await db.objects.get_db_table(context, company, code_table_name)
             tgt_alias = chr(ord(src_alias)+1)  # 'a' -> 'b' -> 'c' etc
-            self.sql_joins.append(
+            self.base_joins[dim].append(
                 f'JOIN {company}.{code_table_name} {tgt_alias} '
-                f'ON {tgt_alias}.row_id = {src_alias}.{code_col.col_name}'
+                f'ON {tgt_alias}.row_id = {src_alias}.{code_col_name}'
                 )
             src_alias = tgt_alias
             src_table = code_table
-        code_col_name = path_to_code.pop(0)
+        code_col_name = code_path.pop(0)
         code_col = src_table.col_dict[code_col_name]
         # get the code table name from the fkey definition
         code_table_name = code_col.fkey[0]
         code_table = await db.objects.get_db_table(context, company, code_table_name)
         tgt_alias = 'code_code_tbl'
-        self.sql_joins.append(
+        self.base_joins[dim].append(
             f'JOIN {company}.{code_table_name} {tgt_alias} '
-            f'ON {tgt_alias}.row_id = {src_alias}.{code_col.col_name}'
+            f'ON {tgt_alias}.row_id = {src_alias}.{code_col_name}'
             )
 
         tree_params = code_table.tree_params
-        if tree_params is None:
-            code = path_to_code[0]
-            self.part_cols.append(f'code_code_tbl.{code} AS {grp_name}')
-            self.group_by.append(f'{grp_name}')
+        if tree_params is None:  # e.g. ar_cust_totals
+            if dim not in finrpt_data['groups']:
+                return  # filter only
+            grp_name = finrpt_data['groups'][dim]
+            code = code_path[0]
+            self.base_cols[dim].append(f'code_code_tbl.{code} AS {grp_name}')
+            self.group_cols[dim].append(f'{grp_name}')
             self.cf_join_bf.append(f'{grp_name}')
             if self.pivot_on is None:
-                self.order_by.append(f'{grp_name}')
-            elif self.pivot_on[0] != 'code':
+                self.order_by[dim].insert(0, f'{grp_name}')
+            elif self.pivot_on[0] != dim:
                 self.pivot_group_by.append(f'{grp_name}')
-                self.order_by.append(f'{grp_name}')
-            level_data['code_code'] = (
-                code, None, None, code_table_name, self.db_table.col_dict['path_to_code'].dflt_val[1:-1])
+                self.order_by[dim].insert(0, f'{grp_name}')
+            level_data = {}
+            level_data['code_code'] = LevelDatum(
+                code, None, None, None, None, code_table_name, path_to_code)
             finrpt_data['code_level_data'] = level_data
             return
 
         group, col_names, levels = tree_params
         assert levels is None, f'{code_table_name} should not have any levels!'
-        code, descr, parent_id, seq = col_names
+        code, descr, parent_col_name, seq_col_name = col_names
 
-        # assume first level is always 'code' - gl_totals>gl_codes, nsls_totals>nsls_codes, etc
-        level_data['code_code'] = (code, descr, seq, code_table_name, f'{code_col.col_name}>{code}')
+        # store data_colname, seq_colname, table_name for each level
+        level_data = {}
+        #  first level is always 'code' - gl_totals>gl_codes, nsls_totals>nsls_codes, etc
+        level_data['code_code'] = LevelDatum(
+            code, descr, seq_col_name, None, group, code_table_name, path_to_code)
 
         # get link to 'group' table - gl_codes>gl_groups, nsls_codes>nsls_groups, etc
         link_col = code_table.col_dict[group]
@@ -608,361 +642,118 @@ class FinReport:
         tree_params = group_table.tree_params
         group, col_names, levels = tree_params
         code, descr, parent_col_name, seq_col_name = col_names
-        type_colname, level_types, sublevel_type = levels
+        type_col_name, level_types, sublevel_type = levels
 
         if group_table.ledger_col is not None:  # if sub-ledgers, level_types is a dict keyed on ledger_row_id
             level_types = level_types[self.ledger_row_id]  # excludes 'root'
         else:
             level_types = level_types[1:]  # exclude 'root'
-    
-        # set up level_data
-        # prev_level = None
-        path = code_col.col_name
-        for pos, (level, level_type) in enumerate(reversed(level_types)):
-            # if prev_level is None:
-            if pos == 0:
-                path += f'>{link_col.col_name}'
+
+        # set up level_data for level_types (level_data for 'code' already set up)
+        for level, level_type in reversed(level_types):
+            if len(level_data) == 1:  # first
+                path = f'{code_col_name}>{group}'
             else:
                 path += f'>{parent_col_name}'
-            level_data[f'code_{level}'] = (code, descr, seq_col_name, group_table_name, f'{path}>{code}')
-            # prev_level = f'code_{level}'
-        levels = list(level_data.keys())
-
-        assert grp_name in levels, f'{grp_name} not in {levels}'
+            level_data[f'code_{level}'] = LevelDatum(
+                code, descr, seq_col_name, type_col_name, parent_col_name, group_table_name, f'{path}>{code}')
 
         finrpt_data['code_level_data'] = level_data
+        levels = list(level_data.keys())
 
-        if (
-                self.expand_subledg
-                and self.db_table.table_name == 'gl_totals'
-                and self.cflow_param is None
-                ):  # check for link to nsls/npch
-            grp_obj = await db.objects.get_db_object(context, 'gl_groups')
-            where = [['WHERE', '', 'link_to_subledg', 'IS NOT', None, '']]
-            all_grp = grp_obj.select_many(where=where, order=[])
-            async for _ in all_grp:
-                grp_type = f"code_{await grp_obj.getval('group_type')}"
-                if filter:  # if there is a filter, exclude sub_ledger if not included in filter
-                    new_filter = []
-                    for fil in filter:
-                        new_fil = fil[:]  # make a copy
-                        if fil[2] == grp_type:  # include this one
-                            new_fil[2] = 'gl_group'
-                        elif levels.index(fil[2]) > levels.index(grp_type):  # higher group
-                            gap = levels.index(fil[2]) - levels.index(grp_type)
-                            new_fil[2] = f"{(parent_col_name + '>')*gap}gl_group"
-                        else:
-                            new_fil[2] = '$None'  # not for this 'level'
-                        new_filter.append(new_fil)
-                    if not await eval_bool_expr(new_filter, grp_obj):
-                        continue
-                grp_seq = await grp_obj.getval(seq_col_name)
-                grp_parent = await grp_obj.getval(parent_col_name)
-                link_mod_id, link_ledg_id = await grp_obj.getval('link_to_subledg')
-                link_mod = await db.cache.get_mod_id(company, link_mod_id)
-                seq_col = f'{grp_type}_tbl.{seq_col_name}'
-                parent_col = f'{grp_type}_tbl.{parent_col_name}'
-                link_parent_data = []
-                this_type = f"code_{await grp_obj.getval('group_type')}"
-                while this_type != levels[-1]:
-                    par_id = await grp_obj.getval(parent_col_name)
-                    await grp_obj.init()
-                    await grp_obj.setval('row_id', par_id)
-                    par_grp = await grp_obj.getval('gl_group')
-                    par_descr = await grp_obj.getval('descr')
-                    par_seq = await grp_obj.getval(seq_col_name)
-                    par_type = f"code_{await grp_obj.getval('group_type')}"
-                    parent_data = (par_grp, par_descr, par_seq, par_type)
-                    link_parent_data.append(parent_data)
-                    this_type = par_type
-                link_tree_params = (
-                    await db.objects.get_db_table(context, company, f'{link_mod}_groups')
-                    ).tree_params
-                link_group, link_col_names, link_levels = link_tree_params
-                link_code, link_descr, link_parent_id, link_seq = link_col_names
-                link_type_colname, link_level_types, link_sublevel_type = link_levels
-                link_level_types = link_level_types[link_ledg_id]
-                link_level_data = {}
-                # assume first level is always 'code' - gl_totals>gl_codes, nsls_totals>nsls_codes, etc
-                link_level_data['code_code'] = (
-                    f'{link_mod}_code', 'descr', 'seq',  # should not hardcode 'descr' or 'seq', but it works!
-                    level_data['code_code'][2].replace('gl', link_mod),
-                    level_data['code_code'][3].replace('gl', link_mod),
-                    )
-                # set up level_data
-                for level_type, link_level_type in zip(reversed(level_types), reversed(link_level_types)):
-                    level = f'code_{level_type[0]}'
-                    level_dat = level_data[level]
-                    link_level_data[f'code_{link_level_type[0]}'] = (
-                        link_code, link_descr, link_seq,
-                        level_dat[2].replace('gl', link_mod),
-                        level_dat[3].replace('gl', link_mod),
-                        )
-                link_levels = list(link_level_data.keys())
-                link_grp_name = link_levels[levels.index(grp_name)]
-                finrpt_data[f'{link_mod}_{link_ledg_id}_level_data'] = link_level_data
-                link_obj = SN(
-                    module_id=link_mod,
-                    ledger_row_id=link_ledg_id,
-                    group_type=grp_type,
-                    group_seq=grp_seq,
-                    group_parent=grp_parent,
-                    seq_col=seq_col,
-                    parent_col=parent_col,
-                    type_colname=link_type_colname,
-                    grp_name=link_grp_name.split('_', 1)[1],
-                    parent_data=link_parent_data,
-                    )
-                self.links_to_subledg.append(link_obj)
-
-        if include_zeros:
-            cte_joins = []
-            # set up cte columns
-            cte_cols = []
-            if self.links_to_subledg:
-                cte_cols.append("'code' AS type")
-            cte_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
-            for level in reversed(levels):
-                col_name, descr_name, seq_name = level_data[level][:3]
-                cte_cols.append(f'{level}_tbl.{col_name} AS {level}')
-                cte_cols.append(f'{level}_tbl.{descr_name} AS {level}_{descr_name}')
-                cte_cols.append(f'{level}_tbl.{seq_name} AS {level}_{seq_name}')
-                if self.pivot_on is None:
-                    self.order_by.append(f'{level}_{seq_name}')
-                elif self.pivot_on[0] != 'code':
-                    self.pivot_group_by.append(f'{level}')
-                    self.pivot_group_by.append(f'{level}_{seq_name}')
-                    self.order_by.append(f'{level}_{seq_name}')
-                    if self.links_to_subledg and 'type' not in self.pivot_group_by:
-                        self.pivot_group_by.append('type')
-                self.cf_join_bf.append(f'{grp_name}_id')
-                if level == grp_name:
-                    break
-
-            for link_obj in self.links_to_subledg:  # if any
-                link_cols = []
-                link_params = []
-                link_cols.append(f"'{link_obj.module_id}_{link_obj.ledger_row_id}' AS type")
-                link_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
-                for parent in reversed(link_obj.parent_data):
-                    par_grp, par_descr, par_seq, par_type = parent
-                    link_cols.append(f'{dbc.param_style} AS {par_type}')
-                    link_params.append(par_grp)
-                    link_cols.append(f'{dbc.param_style} AS {par_type}_descr')
-                    link_params.append(par_descr)
-                    link_cols.append(f'{dbc.param_style} AS {par_type}_{seq_col_name}')
-                    link_params.append(par_seq)
-
-                # exclude 'levels' for link_obj.parent_data - only applies to gl, not to sub_ledger
-                parent_types = [p[3] for p in link_obj.parent_data]
-                for level in reversed(levels):
-                    if level not in parent_types:
-                        col_name, descr, seq_name = level_data[level][:3]
-                        link_cols.append(f"{level}_tbl.{col_name.replace('gl', link_obj.module_id)} AS {level}")
-                        link_cols.append(f'{level}_tbl.{descr} AS {level}_{descr}')
-                        if level == link_obj.group_type:
-                            seq = dbc.param_style
-                            link_params.append(link_obj.group_seq)
-                        else:
-                            seq = f'{level}_tbl.{seq_name}'
-                        link_cols.append(f'{seq} AS {level}_{seq_name}')
-                        if level == grp_name:
-                            break
-
-                link_obj.cols = link_cols
-                link_obj.params = link_params
+        if dim in finrpt_data['groups']:
+            grp_name = finrpt_data['groups'][dim]
+            include_zeros = finrpt_data['include_zeros']
+        else:  # we are only setting up 'filter'
+            grp_name = None
+            include_zeros = False
 
         # set up joins
-        prev_level = None
+        prev_level = levels[0]
         for level in levels[1:]:  # 'code' join already set up
             if not include_zeros:
-                joins = self.sql_joins
+                joins = self.base_joins[dim]
             elif levels.index(level) <= levels.index(grp_name):
-                joins = self.sql_joins
+                joins = self.base_joins[dim]
             else:
-                joins = cte_joins
-            if prev_level is None:
-                joins.append(
-                    f'JOIN {company}.{group_table_name} {level}_tbl '
-                    f'ON {level}_tbl.row_id = code_code_tbl.{link_col.col_name}'
-                    )
+                joins = self.cte_joins[dim]
+            joins.append(f'JOIN {company}.{level_data[level].table_name} {level}_tbl '
+                f'ON {level}_tbl.row_id = {prev_level}_tbl.{level_data[prev_level].parent_col_name}')
+            prev_level = level
+
+        if grp_name is not None:  # set up columns
+            if include_zeros:
+                self.cte_cols[dim].append(f'{grp_name}_tbl.row_id AS {grp_name}_id')  # for ON clause to JOIN cte with base
+                self.base_cols[dim].append(f'{grp_name}_tbl.row_id AS {grp_name}_id') #                ""  
+                self.group_cols[dim].append(f'code_cte.{grp_name}_id')
+
+                cte_table_name = level_data[grp_name].table_name
+                # self.cte_tables[dim] = f'FROM {company}.{cte_table_name} {grp_name}_tbl'
+                self.cte_tables[dim] = (cte_table_name, grp_name)
+
+                cols = self.cte_cols[dim]
+                group_cols = self.combo_cols
+
             else:
-                joins.append(
-                    f'JOIN {company}.{group_table_name} {level}_tbl '
-                    f'ON {level}_tbl.row_id = {prev_level}_tbl.{parent_col_name}'
-                    )
-            prev_level = f'{level}'
+                cols = self.base_cols[dim]
+                group_cols = self.group_cols[dim]
 
-        if self.pivot_on is not None:
-            pivot_dim, pivot_grp = self.pivot_on
-            if pivot_dim == 'code' and pivot_grp is not None:
-                await self.setup_code_pivot(company,
-                    type_colname, levels, level_data, grp_name, parent_col_name, filter, pivot_grp)
-
-        for lvl, (col_name, descr_name, seq_name, *data) in reversed(level_data.items()):
-            self.combo_cols.append(f'{lvl}')
-            self.combo_cols.append(f'{lvl}_{descr_name}')
-            self.combo_cols.append(f'{lvl}_{seq_name}')
-            if lvl == grp_name:
-                break
-        if self.links_to_subledg:
-            self.combo_cols.append('type')
+            grp_level = levels.index(grp_name)  # only create colummns from grp_level up
+            for level in levels[grp_level:]:
+                level_datum = level_data[level]
+                col_name = level_datum.code
+                descr = level_datum.descr
+                seq_name = level_datum.seq_col_name
+                cols.append(f'{level}_tbl.{col_name} AS {level}')
+                cols.append(f'{level}_tbl.{descr} AS {level}_{descr}')
+                cols.append(f'{level}_tbl.{seq_name} AS {level}_{seq_name}')
+                group_cols.append(f'{level}')
+                group_cols.append(f'{level}_{descr}')
+                group_cols.append(f'{level}_{seq_name}')
+                if self.pivot_on is None:
+                    self.order_by[dim].insert(0, f'{level}_{seq_name}')
+                elif self.pivot_on[0] != dim:
+                    self.pivot_group_by.append(f'{level}')
+                    self.pivot_group_by.append(f'{level}_{descr}')
+                    self.pivot_group_by.append(f'{level}_{seq_name}')
+                    self.order_by[dim].insert(0, f'{level}_{seq_name}')
+                    if self.links_to_subledg and 'type' not in self.pivot_group_by:
+                        self.pivot_group_by.append('type')
+                if include_zeros:
+                    self.cf_join_bf.append(f'{level}_id')
+                else:
+                    self.cf_join_bf.append(f'{level}_{seq_name}')
 
         if include_zeros:
-            await self.setup_code_cte(company, cte_cols, cte_joins,
-                type_colname, levels, level_data, grp_name, filter)
-            self.part_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
-            self.group_by.append(f'codes_cte.{grp_name}_id')
-        else:
-            await self.setup_code_sql_without_cte(level_data, grp_name, filter)
+            self.cte_where[dim].append(f'WHERE {grp_name}_tbl.deleted_id = {dbc.param_style}')
+            self.cte_params[dim].append(0)
 
-    async def setup_code_pivot(self, company, type_colname, levels, level_data,
-            grp_name, parent_col_name, filter, pivot_grp):
-        toplevel_type = levels[-1]  # 'root' has been removed
-        order_by = []
-        self.pivot_sql.append(f'SELECT {pivot_grp} FROM (')
-        self.pivot_sql.append(f'SELECT')
-        self.pivot_sql.append(f'{toplevel_type}_tbl.row_id AS {toplevel_type}_id')
-        for lvl, (col_name, descr_name, seq_name, *data) in reversed(level_data.items()):
-            self.pivot_sql.append(f', {lvl}_tbl.{col_name} AS {lvl}')
-            self.pivot_sql.append(f', {lvl}_tbl.{seq_name} AS {lvl}_{seq_name}')
-            order_by.append(f'{lvl}_{seq_name}')
-            if lvl == grp_name:
-                break
-        self.pivot_sql.append(f'FROM {company}.gl_groups {toplevel_type}_tbl')
-        prev_type = f'{toplevel_type}'
-        for type in levels[-2::-1]:  # ignore 'toplevel', reverse order
-            if prev_type == pivot_grp:
-                break
-            self.pivot_sql.append(
-                f'JOIN {company}.gl_groups {type}_tbl ON {type}_tbl.{parent_col_name} = {prev_type}_tbl.row_id'
-                )
-            prev_type = f'{type}'
-        self.pivot_sql.append(f'WHERE {toplevel_type}_tbl.{type_colname} = {dbc.param_style}')
-        self.pivot_params.append(toplevel_type.split('_', 1)[1])
+            if grp_level > 0:
+                self.cte_where[dim].append(f'AND {grp_name}_tbl.{type_col_name} = {dbc.param_style}')
+                self.cte_params[dim].append(grp_name.split('_', 1)[1])  # strip 'code' from grp_name
 
-        for (test, lbr, level, op, expr, rbr) in filter:
-            self.pivot_sql.append(
-                f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}'
-                )
-            if expr.startswith("'"):  # literal string
-                expr = expr[1:-1]
-            self.pivot_params.append(expr)
+            if group_table.ledger_col is not None:
+                self.cte_where[dim].append(f'AND {grp_name}_tbl.{group_table.ledger_col} = {dbc.param_style}')
+                self.cte_params[dim].append(self.ledger_row_id)
 
-        self.pivot_sql.append(') _')
-        self.pivot_sql.append('ORDER BY ' + ', '.join(order_by))
+        if dim in finrpt_data['filters']:  # setup filter
+            filter = finrpt_data['filters'][dim]
+            for (test, lbr, level, op, expr, rbr) in filter:
+                if not include_zeros:
+                    where = self.base_where[dim]
+                    params = self.base_params[dim]
+                elif levels.index(level) < levels.index(grp_name):
+                    where = self.base_where[dim]
+                    params = self.base_params[dim]
+                else:
+                    where = self.cte_where[dim]
+                    params = self.cte_params[dim]
+                where.append(f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
+                if expr.startswith("'"):  # literal string
+                    expr = expr[1:-1]
+                params.append(expr)
 
-    async def setup_code_cte(self, company, cte_cols, cte_joins,
-                type_colname, levels, level_data, grp_name, filter):
-
-        cte = []
-        cte_params = []
-        cte.append('SELECT DISTINCT')
-
-        cte.append(', '.join(cte_cols))
-
-        table_name = level_data[grp_name][3]
-        cte_table = await db.objects.get_db_table(self.context, company, table_name)
-        cte.append(f'FROM {company}.{table_name} {grp_name}_tbl')
-
-        if cte_joins:
-            cte.append(' '.join(cte_joins))
-
-        test = None
-        # if level is 0, group is 'code' - select all codes
-        # else group is a group - select where code_grp_name = grp_name
-        if levels.index(grp_name):  # > 0
-            test = 'WHERE'
-            cte.append(f'{test} {grp_name}_tbl.{type_colname} = {dbc.param_style}')
-            cte_params.append(grp_name.split('_', 1)[1])  # strip 'code' from grp_name
-
-        for link_obj in self.links_to_subledg:  # if any
-            test = 'WHERE' if test is None else 'AND'
-            cte.append(f'{test} NOT ({link_obj.parent_col} = {dbc.param_style}')
-            cte_params.append(link_obj.group_parent)
-            cte.append(f'AND {link_obj.seq_col} = {dbc.param_style})')
-            cte_params.append(link_obj.group_seq)
-
-        for (test2, lbr, level, op, expr, rbr) in filter:
-            test = 'WHERE' if test is None else test2
-            try:
-                grp_name
-                cte.append(f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
-            except:
-                breakpoint()
-            if expr.startswith("'"):  # literal string
-                expr = expr[1:-1]
-            cte_params.append(expr)
-            # breakpoint()
-
-        if cte_table.ledger_col is not None:
-            test = 'WHERE' if test is None else 'AND'
-            cte.append(f'{test} {grp_name}_tbl.{cte_table.ledger_col} = {dbc.param_style}')
-            cte_params.append(self.ledger_row_id)
-
-        for link_obj in self.links_to_subledg:  # if any
-            cte.append('UNION ALL SELECT DISTINCT')
-            cte.append(', '.join(link_obj.cols))
-            cte_params.extend(link_obj.params)
-
-            cte.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} {grp_name}_tbl")
-
-            for join in cte_joins:
-                cte.append(join.replace('gl', link_obj.module_id))
-
-            test = 'WHERE'
-            # if level is 0, group is 'code' - select all codes
-            # else group is a group - select where code_grp_name = grp_name
-            if levels.index(grp_name):  # > 0
-                cte.append(f'{test} {grp_name}_tbl.{link_obj.type_colname} = {dbc.param_style}')
-                cte_params.append(link_obj.grp_name)
-                test = 'AND'
-            cte.append(f'{test} {grp_name}_tbl.ledger_row_id = {dbc.param_style}')
-            cte_params.append(link_obj.ledger_row_id)
-
-        self.ctes.append(SN(
-            type='codes_cte',
-            cte=' '.join(cte),
-            cte_params=cte_params,
-            join_col=f'{grp_name}_id'
-            ))
-
-    async def setup_code_sql_without_cte(self, level_data, grp_name, filter):
-
-        for lvl, (col_name, descr_name, seq_name, *data) in reversed(level_data.items()):
-            self.part_cols.append(f'{lvl}_tbl.{col_name} AS {lvl}')
-            self.part_cols.append(f'{lvl}_tbl.{descr_name} AS {lvl}_{descr_name}')
-            self.part_cols.append(f'{lvl}_tbl.{seq_name} AS {lvl}_{seq_name}')
-            self.group_by.append(f'{lvl}')
-            self.group_by.append(f'{lvl}_{descr_name}')
-            self.group_by.append(f'{lvl}_{seq_name}')
-            if self.pivot_on is None:
-                self.order_by.append(f'{lvl}_{seq_name}')
-            elif self.pivot_on[0] != 'code':
-                self.pivot_group_by.append(f'{lvl}')
-                self.pivot_group_by.append(f'{lvl}_{descr_name}')
-                self.pivot_group_by.append(f'{lvl}_{seq_name}')
-                self.order_by.append(f'{lvl}_{seq_name}')
-                if self.links_to_subledg:
-                    self.pivot_group_by.append('type')
-            self.cf_join_bf.append(f'{lvl}_{seq_name}')
-            if lvl == grp_name:
-                break
-
-        for (test, lbr, level, op, expr, rbr) in filter:
-            self.sql_where.append(f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
-            if expr.startswith("'"):  # literal string
-                expr = expr[1:-1]
-            self.sql_params.append(expr)
-
-        for link_obj in self.links_to_subledg:  # if any
-            self.sql_where.append(f'AND NOT ({link_obj.parent_col} = {dbc.param_style}')
-            self.sql_params.append(link_obj.group_parent)
-            self.sql_where.append(f'AND {link_obj.seq_col} = {dbc.param_style})')
-            self.sql_params.append(link_obj.group_seq)
-
-    async def setup_loc_fun(self, prefix, args, include_zeros, finrpt_data):
-        grp_name, filter = args
+    async def setup_loc_fun(self, finrpt_data, prefix):
         context = self.context
         company = context.company
 
@@ -973,227 +764,368 @@ class FinReport:
             table_name = 'adm_functions'
             link_col_name = 'function_row_id'
 
-        # store data_colname, seq_colname, table_name for each level
-        level_data = {}
-    
         db_table = await db.objects.get_db_table(context, company, table_name)
         tree_params = db_table.tree_params
         group, col_names, levels = tree_params
-        code, descr, parent_id, seq = col_names
-        type_colname, level_types, sublevel_type = levels
+        code, descr, parent_col_name, seq_col_name = col_names
+        type_col_name, level_types, sublevel_type = levels
 
         level_types = level_types[1:]  # exclude 'root'
 
-        # set up level_data
-        for pos, (level, level_type) in enumerate(reversed(level_types)):
-            if pos == 0:
+        # store data_colname, seq_colname, table_name for each level
+        level_data = {}
+        for level, level_type in reversed(level_types):
+            if not level_data:  # first
                 path = link_col_name
             else:
-                path += f'>{parent_id}'
-            level_data[f'{prefix}_{level}'] = (code, descr, seq, table_name, f'{path}>{code}')
-        levels = list(level_data.keys())
+                path += f'>{parent_col_name}'
+            level_data[f'{prefix}_{level}'] = LevelDatum(
+                code, descr, seq_col_name, type_col_name, parent_col_name, table_name, f'{path}>{code}')
 
-        assert grp_name in levels, f'{grp_name} not in {levels}'
 
         finrpt_data[f'{prefix}_level_data'] = level_data
+        levels = list(level_data.keys())
 
-        if include_zeros:
-            cte_joins = []
-            # set up cte columns
-            cte_cols = []
-            cte_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
-            for level in reversed(levels):
-                col_name, descr_name, seq_name = level_data[level][:3]
-                cte_cols.append(f'{level}_tbl.{col_name} AS {level}')
-                cte_cols.append(f'{level}_tbl.{descr_name} AS {level}_{descr_name}')
-                cte_cols.append(f'{level}_tbl.{seq_name} AS {level}_{seq_name}')
-                if self.pivot_on is None:
-                    self.order_by.append(f'{level}_{seq_name}')
-                elif self.pivot_on[0] != prefix:
-                    self.pivot_group_by.append(f'{level}')
-                    self.pivot_group_by.append(f'{level}_{descr_name}')
-                    self.pivot_group_by.append(f'{level}_{seq_name}')
-                    self.order_by.append(f'{level}_{seq_name}')
-                self.cf_join_bf.append(f'{grp_name}_id')
-                if level == grp_name:
-                    break
+        if prefix in finrpt_data['groups']:
+            grp_name = finrpt_data['groups'][prefix]
+            include_zeros = finrpt_data['include_zeros']
+        else:  # we are only setting up 'filter'
+            grp_name = None
+            include_zeros = False
 
         # set up joins
-        prev_level = None
-        for level in levels:
+        level = levels[0]
+        self.base_joins[prefix].append(
+            f'JOIN {company}.{table_name} {level}_tbl ON {level}_tbl.row_id = a.{link_col_name}')
+        prev_level = level
+        for level in levels[1:]:
             if not include_zeros:
-                joins = self.sql_joins
+                joins = self.base_joins[prefix]
             elif levels.index(level) <= levels.index(grp_name):
-                joins = self.sql_joins
+                joins = self.base_joins[prefix]
             else:
-                joins = cte_joins
-            if prev_level is None:
-                joins.append(
-                    f'JOIN {company}.{table_name} {level}_tbl '
-                    f'ON {level}_tbl.row_id = a.{link_col_name}'
-                    )
-            else:
-                joins.append(
-                    f'JOIN {company}.{table_name} {level}_tbl '
-                    f'ON {level}_tbl.row_id = {prev_level}_tbl.{parent_id}'
-                    )
+                joins = self.cte_joins[prefix]
+            joins.append(
+                f'JOIN {company}.{table_name} {level}_tbl ON {level}_tbl.row_id = {prev_level}_tbl.{parent_col_name}')
             prev_level = level
 
-        if self.pivot_on is not None:
-            pivot_dim, pivot_grp = self.pivot_on
-            if pivot_dim == prefix and pivot_grp is not None:
-                await self.setup_lf_pivot(company, table_name,
-                    prefix, type_colname, levels, level_data, grp_name, parent_id, filter, pivot_grp)
+        if grp_name is not None:  # set up columns
+            if include_zeros:
+                self.cte_cols[prefix].append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
+                self.base_cols[prefix].append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
+                self.group_cols[prefix].append(f'{prefix}_cte.{grp_name}_id')
 
-        for lvl, (col_name, descr_name, seq_name, *data) in reversed(level_data.items()):
-            self.combo_cols.append(f'{lvl}')
-            self.combo_cols.append(f'{lvl}_{descr_name}')
-            self.combo_cols.append(f'{lvl}_{seq_name}')
-            if lvl == grp_name:
-                break
+                cte_table_name = level_data[grp_name].table_name
+                # self.cte_tables[prefix] = f'FROM {company}.{cte_table_name} {grp_name}_tbl'
+                self.cte_tables[prefix] = (cte_table_name, grp_name)
+
+                cols = self.cte_cols[prefix]
+                group_cols = self.combo_cols
+
+            else:
+                cols = self.base_cols[prefix]
+                group_cols = self.group_cols[prefix]
+
+            grp_level = levels.index(grp_name)  # only create colummns from grp_level up
+            for level in levels[grp_level:]:
+                # col_name, descr, seq_name = level_data[level][:3]
+                level_datum = level_data[level]
+                col_name = level_datum.code
+                descr = level_datum.descr
+                seq_name = level_datum.seq_col_name
+                cols.append(f'{level}_tbl.{col_name} AS {level}')
+                cols.append(f'{level}_tbl.{descr} AS {level}_{descr}')
+                cols.append(f'{level}_tbl.{seq_name} AS {level}_{seq_name}')
+                group_cols.append(f'{level}')
+                group_cols.append(f'{level}_{descr}')
+                group_cols.append(f'{level}_{seq_name}')
+                if self.pivot_on is None:
+                    self.order_by[prefix].insert(0, f'{level}_{seq_name}')
+                elif self.pivot_on[0] != prefix:
+                    self.pivot_group_by.append(f'{level}')
+                    self.pivot_group_by.append(f'{level}_{descr}')
+                    self.pivot_group_by.append(f'{level}_{seq_name}')
+                    self.order_by[prefix].insert(0, f'{level}_{seq_name}')
+                    if self.links_to_subledg and 'type' not in self.pivot_group_by:
+                        self.pivot_group_by.append('type')
+                if include_zeros:
+                    self.cf_join_bf.append(f'{level}_id')
+                else:
+                    self.cf_join_bf.append(f'{level}_{seq_name}')
 
         if include_zeros:
-            await self.setup_lf_cte(company, cte_cols, cte_joins, prefix,
-                type_colname, levels, level_data, grp_name, filter)
-            self.part_cols.append(f'{grp_name}_tbl.row_id AS {grp_name}_id')
-            self.group_by.append(f'{prefix}_cte.{grp_name}_id')
-        else:
-            await self.setup_lf_sql_without_cte(company, table_name,
-                prefix, levels, level_data, grp_name, parent_id, filter)
+            self.cte_where[prefix].append(f'WHERE {grp_name}_tbl.deleted_id = {dbc.param_style}')
+            self.cte_params[prefix].append(0)
+            self.cte_where[prefix].append(f'AND {grp_name}_tbl.{type_col_name} = {dbc.param_style}')
+            self.cte_params[prefix].append(grp_name.split('_', 1)[1])  # strip prefix from grp_name
 
-    async def setup_lf_pivot(self, company, table_name,
-            prefix, type_colname, levels, level_data, grp_name, parent_id, filter, pivot_grp):
-        toplevel_type = levels[-1]
-        order_by = []
-        self.pivot_sql.append(f'SELECT {pivot_grp} FROM (')
-        self.pivot_sql.append(f'SELECT')
-        self.pivot_sql.append(f'{toplevel_type}_tbl.row_id AS {toplevel_type}_id')
-        for lvl, (col_name, descr_name, seq_name, *data) in reversed(level_data.items()):
-            self.pivot_sql.append(f', {lvl}_tbl.{col_name} AS {lvl}')
-            self.pivot_sql.append(f', {lvl}_tbl.{seq_name} AS {lvl}_{seq_name}')
-            self.pivot_sql.append(f', {lvl}_tbl.{descr_name} AS {lvl}_{descr_name}')
-            order_by.append(f'{lvl}_{seq_name}')
-            if lvl == grp_name:
-                break
-        self.pivot_sql.append(f'FROM {company}.{table_name} {toplevel_type}_tbl')
-        prev_type = f'{toplevel_type}'
-        for type in levels[-2::-1]:  # ignore 'toplevel', reverse order
-            if prev_type == pivot_grp:
-                break
-            self.pivot_sql.append(
-                f'JOIN {company}.{table_name} {type}_tbl ON {type}_tbl.{parent_id} = {prev_type}_tbl.row_id'
-                )
-            prev_type = f'{type}'
-        self.pivot_sql.append(f'WHERE {toplevel_type}_tbl.{type_colname} = {dbc.param_style}')
-        self.pivot_params.append(toplevel_type.split('_', 1)[1])  # strip 'loc' from toplevel_type
+        if prefix in finrpt_data['filters']:  # setup filter
+            filter = finrpt_data['filters'][prefix]
+            for (test, lbr, level, op, expr, rbr) in filter:
+                if not include_zeros:
+                    where = self.base_where[prefix]
+                    params = self.base_params[prefix]
+                elif levels.index(level) < levels.index(grp_name):
+                    where = self.base_where[prefix]
+                    params = self.base_params[prefix]
+                else:
+                    where = self.cte_where[prefix]
+                    params = self.cte_params[prefix]
+                where.append(f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
+                if expr.startswith("'"):  # literal string
+                    expr = expr[1:-1]
+                params.append(expr)
 
-        for (test, lbr, level, op, expr, rbr) in filter:
-            self.pivot_sql.append(
-                f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}'
-                )
-            if expr.startswith("'"):  # literal string
-                expr = expr[1:-1]
-            self.pivot_params.append(expr)
+    async def setup_src(self, finrpt_data):
+        context = self.context
+        company = context.company
 
-        self.pivot_sql.append(') _')
-        self.pivot_sql.append('ORDER BY ' + ', '.join(order_by))
+        self.base_joins['src'].append(f'JOIN {company}.adm_tran_types src_tbl ON src_tbl.row_id = a.src_trantype_row_id')
 
-    async def setup_lf_cte(self, company, cte_cols, cte_joins, prefix,
-                type_colname, levels, level_data, grp_name, filter):
-
-        cte = []
-        cte_params = []
-        cte.append('SELECT DISTINCT')
-
-        cte.append(', '.join(cte_cols))
-
-        table_name = level_data[grp_name][3]
-        cte.append(f'FROM {company}.{table_name} {grp_name}_tbl')
-
-        if cte_joins:
-            cte.append(' '.join(cte_joins))
-
-        cte.append(f'WHERE {grp_name}_tbl.{type_colname} = {dbc.param_style}')
-        cte_params.append(grp_name.split('_', 1)[1])  # strip 'loc' from grp_name
-
-        test = None
-        for (test2, lbr, level, op, expr, rbr) in filter:
-            test = 'AND' if test is None else test2  # change test to WHERE if no prior WHERE
-            cte.append(f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
-            if expr.startswith("'"):  # literal string
-                expr = expr[1:-1]
-            cte_params.append(expr)
-
-        self.ctes.append(SN(
-            type=f'{prefix}_cte',
-            cte=' '.join(cte),
-            cte_params=cte_params,
-            join_col=f'{grp_name}_id'
-            ))
-
-    async def setup_lf_sql_without_cte(self, company, table_name,
-            prefix, levels, level_data, grp_name, parent_id, filter):
-
-        # set up joins for other levels
-        type = levels[-1]
-        prev_type = f'{type}'
-        for type in reversed(levels[1:-1]):  # ignore 'root' and 'leaf'
-            self.sql_joins.append(
-                f'JOIN {company}.{table_name} {type}_tbl ON {type}_tbl.row_id = {prev_type}_tbl.{parent_id}'
-                )
-            prev_type = f'{type}'
-
-        for lvl, (col_name, descr_name, seq_name, *data) in reversed(level_data.items()):
-            self.part_cols.append(f'{lvl}_tbl.{col_name} AS {lvl}')
-            self.part_cols.append(f'{lvl}_tbl.{descr_name} AS {lvl}_{descr_name}')
-            self.part_cols.append(f'{lvl}_tbl.{seq_name} AS {lvl}_{seq_name}')
-            self.group_by.append(f'{lvl}')
-            self.group_by.append(f'{lvl}_{descr_name}')
-            self.group_by.append(f'{lvl}_{seq_name}')
+        if 'src' in finrpt_data['groups']:  # setup columns
+            self.base_cols['src'].append('src_tbl.tran_type AS src_type')
+            self.base_cols['src'].append('src_tbl.row_id AS src_id')
+            self.group_cols['src'].append('src_type')
+            self.group_cols['src'].append('src_id')
             if self.pivot_on is None:
-                self.order_by.append(f'{lvl}_{seq_name}')
-            elif self.pivot_on[0] != prefix:
-                self.pivot_group_by.append(f'{lvl}')
-                self.pivot_group_by.append(f'{lvl}_{descr_name}')
-                self.pivot_group_by.append(f'{lvl}_{seq_name}')
-                self.order_by.append(f'{lvl}_{seq_name}')
-            self.cf_join_bf.append(f'{lvl}_{seq_name}')
-            if lvl == grp_name:
-                break
+                self.order_by['src'].insert(0, 'src_id')
+            elif self.pivot_on[0] != 'src':
+                self.pivot_group_by.append('src_type')
+                self.pivot_group_by.append('src_id')
+                self.order_by['src'].insert(0, 'src_id')
+            self.cf_join_bf.append('src_id')
 
-        for (test, lbr, level, op, expr, rbr) in filter:
-            self.sql_where.append(
-                f'{test} {lbr}{level}_tbl.{level_data[level][0]} {op} {dbc.param_style}{rbr}')
-            if expr.startswith("'"):  # literal string
-                expr = expr[1:-1]
-            self.sql_params.append(expr)
+        if 'src' in finrpt_data['filters']:  # setup filter
+            filter = finrpt_data['filters']['src']
+            for (test, lbr, col_name, op, expr, rbr) in filter:
+                self.base_where['src'].append(f'{test} {lbr}src_tbl.{col_name} {op} {dbc.param_style}{rbr}')
+                if expr.startswith("'"):  # literal string
+                    expr = expr[1:-1]
+                self.base_params['src'].append(expr)
 
-    async def setup_source(self, args):
-        grp_name, filter = args
-        company = self.context.company
+    async def setup_subledgers(self, finrpt_data):
+        context = self.context
+        company = context.company
+        include_zeros = finrpt_data['include_zeros']
 
-        self.sql_joins.append(f'JOIN {company}.adm_tran_types src_tbl ON src_tbl.row_id = a.src_trantype_row_id')
-        self.part_cols.append('src_tbl.tran_type AS src_type')
-        self.part_cols.append('src_tbl.row_id AS src_id')
-        self.group_by.append('src_type')
-        self.group_by.append('src_id')
-        if self.pivot_on is None:
-            self.order_by.append('src_id')
-        elif self.pivot_on[0] != 'src':
-            self.pivot_group_by.append('src_type')
-            self.pivot_group_by.append('src_id')
-            self.order_by.append('src_id')
-        self.cf_join_bf.append('src_id')
+        grp_name = finrpt_data['groups']['code']
+        grp_obj = await db.objects.get_db_object(context, 'gl_groups')
+        tree_params = grp_obj.db_table.tree_params
+        group, col_names, levels = tree_params
+        code, descr, parent_col_name, seq_col_name = col_names
+        type_col_name, level_types, sublevel_type = levels
 
-        for (test, lbr, col_name, op, expr, rbr) in filter:
-            self.sql_where.append(f'{test} {lbr}src_tbl.{col_name} {op} {dbc.param_style}{rbr}')
-            if expr.startswith("'"):  # literal string
-                expr = expr[1:-1]
-            self.sql_params.append(expr)
+        level_data = finrpt_data['code_level_data']
+        levels = list(level_data.keys())  # think of a better name for 'levels' - clashes with above!
+
+        where = [['WHERE', '', 'link_to_subledg', 'IS NOT', None, '']]
+        all_grp = grp_obj.select_many(where=where, order=[])
+        async for _ in all_grp:
+            grp_type = f"code_{await grp_obj.getval('group_type')}"
+            if 'code' in finrpt_data['filters']:  # if there is a filter, skip sub_ledger if excluded by filter
+                filter = finrpt_data['filters']['code']
+                new_filter = []
+                for fil in filter:
+                    new_fil = fil[:]  # make a copy
+                    if fil[2] == grp_type:  # include this one
+                        new_fil[2] = 'gl_group'
+                    elif levels.index(fil[2]) > levels.index(grp_type):  # higher group
+                        gap = levels.index(fil[2]) - levels.index(grp_type)
+                        new_fil[2] = f"{(parent_col_name + '>')*gap}gl_group"
+                    else:
+                        new_fil[2] = '$None'  # not for this 'level'
+                    new_filter.append(new_fil)
+                if not await eval_bool_expr(new_filter, grp_obj):
+                    continue
+
+            link_module_row_id, link_ledger_row_id = await grp_obj.getval('link_to_subledg')
+            link_module_id = await db.cache.get_mod_id(company, link_module_row_id)
+
+            link_tree_params = (
+                await db.objects.get_db_table(context, company, f'{link_module_id}_groups')
+                ).tree_params
+            link_group, link_col_names, link_levels = link_tree_params
+            link_code, link_descr, link_parent_id, link_seq = link_col_names
+            link_type_col_name, link_level_types, link_sublevel_type = link_levels
+            link_level_types = link_level_types[link_ledger_row_id]
+
+            link_level_data = {}
+            # assume first level is always 'code' - gl_totals>gl_codes, nsls_totals>nsls_codes, etc
+            level_datum = level_data['code_code']
+            link_level_data['code_code'] = LevelDatum(
+                f'{link_module_id}_code', link_descr, link_seq, link_type_col_name, link_parent_id,
+                level_datum.table_name.replace('gl', link_module_id),  # table_name
+                level_datum.path_to_code.replace('gl', link_module_id),  # path_to_code
+                )
+
+            # set up rest of link_level_data - zip stops on shortest, so will ignore level_types > link_level_types
+            for level_type, link_level_type in zip(reversed(level_types), reversed(link_level_types)):
+                level = f'code_{level_type[0]}'
+                level_datum = level_data[level]
+                link_level_data[f'code_{link_level_type[0]}'] = LevelDatum(
+                    link_code, link_descr, link_seq, link_type_col_name, link_parent_id,
+                level_datum.table_name.replace('gl', link_module_id),  # table_name
+                level_datum.path_to_code.replace('gl', link_module_id),  # path_to_code
+                    )
+
+            link_levels = list(link_level_data.keys())
+            finrpt_data[f'{link_module_id}_{link_ledger_row_id}_level_data'] = link_level_data
+
+            grp_seq = await grp_obj.getval(seq_col_name)
+            grp_parent = await grp_obj.getval(parent_col_name)
+            seq_col = f'{grp_type}_tbl.{seq_col_name}'
+            parent_col = f'{grp_type}_tbl.{parent_col_name}'
+
+            link_grp_name = link_levels[levels.index(grp_name)]
+            if include_zeros:
+                cte_table = (link_level_data[link_grp_name].table_name, grp_name)
+            else:
+                cte_table = None
+            link_obj = SN(
+                module_id=link_module_id,
+                ledger_row_id=link_ledger_row_id,
+                group_type=grp_type,
+                group_seq=grp_seq,
+                group_parent=grp_parent,
+                seq_col=seq_col,
+                parent_col=parent_col,
+                type_col_name=link_type_col_name,
+                grp_name=link_grp_name.split('_', 1)[1],
+                base_cols=[],
+                base_col_params=[],
+                group_cols=[],
+                base_joins=[],
+                base_where=[],
+                base_params=[],
+                cte_cols=[],
+                cte_col_params=[],
+                cte_joins=[],
+                cte_where=[],
+                cte_params=[],
+                cte_table=cte_table,
+               )
+            self.links_to_subledg.append(link_obj)
+
+            # set up joins - copy from 'code' joins, change 'gl' to module_id
+            src_base = iter(self.base_joins['code'])
+            src_cte = iter(self.cte_joins['code'])
+            for link_level, level in zip(link_levels, levels):  # stop on shortest
+                if not include_zeros:
+                    joins = link_obj.base_joins
+                    src_join = next(src_base)
+                elif levels.index(level) <= levels.index(grp_name):
+                    joins = link_obj.base_joins
+                    src_join = next(src_base)
+                else:
+                    joins = link_obj.cte_joins
+                    src_join = next(src_cte)
+                joins.append(src_join.replace('gl', link_module_id))
+
+            # set up columns - copy from 'code' columns
+            link_obj.group_cols[:] = self.group_cols['code'][:]  # group_cols are always the same
+            src_base = iter(self.base_cols['code'])
+            if include_zeros:
+                src_cte = iter(self.cte_cols['code'])
+
+            if include_zeros:
+                link_obj.cte_cols.append(f"'{link_module_id}_{link_ledger_row_id}' AS type")
+                link_obj.cte_cols.append(next(src_cte))   # row_id, for ON clause to JOIN cte with base
+                link_obj.base_cols.append(next(src_base)) #                    ""  
+            else:
+                link_obj.base_cols.insert(0, f"'{link_module_id}_{link_ledger_row_id}' AS type")
+                link_obj.group_cols.insert(0, 'type')
+
+            grp_level = levels.index(grp_name)  # only create colummns from grp_level up
+            missing = object()  # there can be more 'levels' than 'link_levels' - this is used to detect extra levels
+            if include_zeros:
+                cols = link_obj.cte_cols
+                params = link_obj.cte_col_params
+                src_col = src_cte
+            else:
+                cols = link_obj.base_cols
+                params = link_obj.base_col_params
+                src_col = src_base
+            for level, link_level in zip_longest(levels[grp_level:], link_levels[grp_level:], fillvalue=missing):
+                if link_level is missing:
+                    # first time, get parent from grp_obj with link_to_subledg - if more, get next parent ...
+                    await grp_obj.init(init_vals={'row_id': await grp_obj.getval(parent_col_name)})
+                    par_grp = await grp_obj.getval('gl_group')
+                    par_descr = await grp_obj.getval('descr')
+                    par_seq = await grp_obj.getval(seq_col_name)
+                    par_type = f'code_{await grp_obj.getval(type_col_name)}'
+                    cols.append(f'{dbc.param_style} AS {par_type}')
+                    cols.append(f'{dbc.param_style} AS {par_type}_descr')
+                    cols.append(f'{dbc.param_style} AS {par_type}_seq')
+                    params.append(par_grp)
+                    params.append(par_descr)
+                    params.append(par_seq)
+                else:
+                    cols.append(next(src_col).replace('gl', link_module_id))  # code
+                    cols.append(next(src_col))  # descr
+                    cols.append(next(src_col))  # seq
+                    if level == grp_type:  # replace seq col name with actual sequence
+                        new_col = cols[-1].split(' ')  # col_name AS col_alias
+                        new_col[0] = dbc.param_style
+                        cols[-1] = ' '.join(new_col)
+                        params.append(grp_seq)
+
+            if include_zeros:
+                link_obj.cte_where.append(f'WHERE {grp_name}_tbl.deleted_id = {dbc.param_style}')
+                link_obj.cte_params.append(0)
+                if grp_level > 0:  # else select all codes
+                    link_obj.cte_where.append(f'AND {grp_name}_tbl.{type_col_name} = {dbc.param_style}')
+                    link_obj.cte_params.append(link_grp_name.split('_', 1)[1])  # strip prefix from grp_name
+                link_obj.cte_where.append(f'AND {grp_name}_tbl.ledger_row_id = {dbc.param_style}')
+                link_obj.cte_params.append(link_ledger_row_id)
+            else:
+                link_obj.base_where.append(f'AND code_code_tbl.ledger_row_id = {dbc.param_style}')
+                link_obj.base_params.append(link_ledger_row_id)
+
+            if include_zeros:
+                where = self.cte_where['code']
+                params = self.cte_params['code']
+            else:
+                where = self.base_where['code']
+                params = self.base_params['code']
+            where.append(f'AND NOT ({parent_col} = {dbc.param_style}')
+            params.append(grp_parent)
+            where.append(f'AND {seq_col} = {dbc.param_style})')
+            params.append(grp_seq)
+
+        if self.links_to_subledg:  # else none were found
+            if include_zeros:
+                self.cte_cols['code'].insert(0, "'code' AS type")
+                self.combo_cols.insert(0, 'type')
+            else:
+                self.base_cols['code'].insert(0, "'code' AS type")
+                self.group_cols['code'].insert(0, 'type')
 
     def gen_as_at(self, start_date, end_date, sql_params, link_obj):
         company = self.context.company
-        table_name = self.db_table.table_name
+
+        if link_obj:
+            table_name = self.db_table.table_name.replace('gl', link_obj.module_id)
+            group_cols = link_obj.group_cols + [  # must be a list - used twice below
+                col for dim, cols in self.group_cols.items() if dim != 'code' for col in cols]
+            base_cols = chain(link_obj.base_cols, (
+                col for dim, cols in self.base_cols.items() if dim != 'code' for col in cols))
+            base_col_params = link_obj.base_col_params
+            base_joins = chain(link_obj.base_joins, (
+                join for dim, joins in self.base_joins.items() if dim != 'code' for join in joins))
+            base_where = chain(link_obj.base_where, (
+                where for dim, wheres in self.base_where.items() if dim != 'code' for where in wheres))
+            base_params = chain(link_obj.base_params, (
+                param for dim, params in self.base_params.items() if dim != 'code' for param in params))
+            first_partition_col = self.db_table.col_list[3].col_name.replace('gl', link_obj.module_id)
+        else:
+            table_name = self.db_table.table_name
+            group_cols = [col for cols in self.group_cols.values() for col in cols]  # must be a list - used twice below
+            base_cols = (col for cols in self.base_cols.values() for col in cols)
+            base_col_params = ()
+            base_joins = (join for joins in self.base_joins.values() for join in joins)
+            base_where = (where for wheres in self.base_where.values() for where in wheres)
+            base_params = (param for params in self.base_params.values() for param in params)
+            first_partition_col = self.db_table.col_list[3].col_name
 
         part_sql = []
         part_sql.append('COALESCE(SUM(tran_tot), 0) AS tran_tot')
@@ -1201,122 +1133,87 @@ class FinReport:
         sql_params.append(start_date)
         sql_params.append(end_date)
 
-        if self.links_to_subledg and not self.ctes:
-            if link_obj:
-                part_sql.append(f", '{link_obj.module_id}_{link_obj.ledger_row_id}' AS type")
-            else:
-                part_sql.append(", 'code' AS type")
-
-        if self.group_by:
-            part_sql.append(f", {', '.join(self.group_by)}")
+        if group_cols:
+            part_sql.append(f", {', '.join(group_cols)}")
 
         part_sql.append('FROM')
 
-        if self.ctes:
-            for pos, cte in enumerate(self.ctes):
+        if self.cte_cols:
+            for pos, dim in enumerate(self.cte_cols):  # only interested in self.cte_cols.keys()
                 if pos:
-                    part_sql.append(f'LEFT JOIN {cte.type} ON 1=1')
+                    # part_sql.append(f'LEFT JOIN {cte.type} ON 1=1')
+                    part_sql.append(f'JOIN {dim}_cte ON 1=1')
                 else:
-                    part_sql.append(cte.type)
+                    part_sql.append(f'{dim}_cte')
             part_sql.append('LEFT JOIN')
         part_sql.append('(')
 
-        first_partition_col = self.db_table.col_list[3].col_name
-        if link_obj:
-            part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
-            part_cols = []
+        part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
+        if base_cols:
+            part_sql.append(f", {', '.join(base_cols)}")
+            sql_params.extend(base_col_params)
 
-            if self.ctes:
-                for part_col in self.part_cols:
-                    part_col = part_col.replace(
-                        'gl', link_obj.module_id).replace(
-                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
-                    part_cols.append(part_col)
-            else:
-                for parent in reversed(link_obj.parent_data):
-                    par_grp, par_descr, par_seq, par_type = parent
-                    part_cols.append(f'{par_grp!r} AS {par_type}')
-                    part_cols.append(f'{par_descr!r} AS {par_type}_descr')
-                    part_cols.append(f'{par_seq} AS {par_type}_seq')
-                for part_col in self.part_cols[len(link_obj.parent_data)*2:]:
-                    part_col = part_col.replace(
-                        'gl', link_obj.module_id).replace(
-                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
-                    part_cols.append(part_col)
+        part_sql.append(', ROW_NUMBER() OVER (PARTITION BY')
+        part_sql.append(
+            f'a.{first_partition_col}, a.location_row_id, a.function_row_id, '
+            'a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id'
+            )
+        part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
+        part_sql.append(f'FROM {company}.{table_name} a')
 
-            if part_cols:
-                part_sql.append(f", {', '.join(part_cols)}")
-            part_sql.append(', ROW_NUMBER() OVER (PARTITION BY')
-            part_sql.append(
-                f"a.{first_partition_col.replace('gl', link_obj.module_id)}, a.location_row_id, a.function_row_id, "
-                'a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id'
-                )
-            part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
-            part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
-            if self.ctes:
-                for join in self.sql_joins:
-                    part_sql.append(join.replace('gl', link_obj.module_id))
-            else:
-                # exclude 'joins' for link_obj.parent_data - only applies to gl, not to sub_ledger
-                parent_types = [p[2] for p in link_obj.parent_data]
-                for join in self.sql_joins:
-                    skip = False
-                    for parent_type in parent_types:
-                        if parent_type in join:
-                            skip = True
-                            break
-                    if not skip:
-                        part_sql.append(join.replace('gl', link_obj.module_id))
-            part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(dbc.param_style))
-            sql_params.append(0)
-            sql_params.append(end_date)
-            for pos, where in enumerate(self.sql_where):
-                if 'code_' not in where:  # omit 'code' filter, include other filters
-                    part_sql.append(where)
-                    sql_params.append(self.sql_params[pos])
-            part_sql.append(f'AND code_code_tbl.ledger_row_id = {dbc.param_style}')
-            sql_params.append(link_obj.ledger_row_id)
-        else:
-            part_sql.append(f'SELECT a.{self.tot_col_name} AS tran_tot')
-            if self.part_cols:
-                part_sql.append(f", {', '.join(self.part_cols)}")
-            part_sql.append(', ROW_NUMBER() OVER (PARTITION BY')
-            part_sql.append(
-                f'a.{first_partition_col}, a.location_row_id, a.function_row_id, '
-                'a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id'
-                )
-            part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
-            part_sql.append(f'FROM {company}.{table_name} a')
-            for join in self.sql_joins:
-                part_sql.append(join)
-            part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(dbc.param_style))
-            sql_params.append(0)
-            sql_params.append(end_date)
-            part_sql.extend(self.sql_where)
-            sql_params.extend(self.sql_params)
+        part_sql.append(f"{' '.join(base_joins)}")
+
+        part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(dbc.param_style))
+        sql_params.append(0)
+        sql_params.append(end_date)
+
+        part_sql.append(f"{' '.join(base_where)}")
+        sql_params.extend(base_params)
 
         part_sql.append(f') bal')
 
-        if self.ctes:
+        if self.cte_cols:
             on_clause = 'ON'
-            for cte in self.ctes:
-                part_sql.append(f'{on_clause} bal.{cte.join_col} = {cte.type}.{cte.join_col}')
+            for grp_col in group_cols:
+                grp_tbl, grp_col = grp_col.split('.')
+                part_sql.append(f'{on_clause} bal.{grp_col} = {grp_tbl}.{grp_col}')
                 on_clause = 'AND'
             if self.links_to_subledg:
                 link_val = 'code' if link_obj is None else f'{link_obj.module_id}_{link_obj.ledger_row_id}'
-                part_sql.append(f'{on_clause} codes_cte.type = {dbc.param_style}')
+                part_sql.append(f'{on_clause} code_cte.type = {dbc.param_style}')
                 sql_params.append(link_val)
 
-        part_sql.append(f"WHERE row_num = 1{' OR row_num IS NULL' if self.ctes else ''}")
+        part_sql.append(f"WHERE row_num = 1{' OR row_num IS NULL' if self.cte_cols else ''}")
 
-        if self.group_by:
-            part_sql.append('GROUP BY ' + ', '.join(self.group_by))
+        if group_cols:
+            part_sql.append('GROUP BY ' + ', '.join(group_cols))
 
         return part_sql
 
     def gen_from_to(self, start_date, end_date, sql_params, link_obj):
         company = self.context.company
-        table_name = self.db_table.table_name
+
+        if link_obj:
+            table_name = self.db_table.table_name.replace('gl', link_obj.module_id)
+            group_cols = link_obj.group_cols + [  # must be a list - used twice below
+                col for dim, cols in self.group_cols.items() if dim != 'code' for col in cols]
+            base_cols = chain(link_obj.base_cols, (
+                col for dim, cols in self.base_cols.items() if dim != 'code' for col in cols))
+            base_col_params = link_obj.base_col_params
+            base_joins = chain(link_obj.base_joins, (
+                join for dim, joins in self.base_joins.items() if dim != 'code' for join in joins))
+            base_where = chain(link_obj.base_where, (
+                where for dim, wheres in self.base_where.items() if dim != 'code' for where in wheres))
+            base_params = chain(link_obj.base_params, (
+                param for dim, params in self.base_params.items() if dim != 'code' for param in params))
+        else:
+            table_name = self.db_table.table_name
+            group_cols = [col for cols in self.group_cols.values() for col in cols]  # must be a list - used twice below
+            base_cols = (col for cols in self.base_cols.values() for col in cols)
+            base_col_params = ()
+            base_joins = (join for joins in self.base_joins.values() for join in joins)
+            base_where = (where for wheres in self.base_where.values() for where in wheres)
+            base_params = (param for params in self.base_params.values() for param in params)
 
         part_sql = []
         part_sql.append('COALESCE(SUM(tran_tot), 0) AS tran_tot')
@@ -1324,392 +1221,166 @@ class FinReport:
         sql_params.append(start_date)
         sql_params.append(end_date)
 
-        if self.links_to_subledg and not self.ctes:
-            if link_obj:
-                part_sql.append(f", '{link_obj.module_id}_{link_obj.ledger_row_id}' AS type")
-            else:
-                part_sql.append(", 'code' AS type")
-
-        if self.group_by:
-            part_sql.append(f", {', '.join(self.group_by)}")
+        if group_cols:
+            part_sql.append(f", {', '.join(group_cols)}")
 
         part_sql.append('FROM')
 
-        if self.ctes:
-            for pos, cte in enumerate(self.ctes):
+        if self.cte_cols:
+            for pos, dim in enumerate(self.cte_cols):  # only interested in self.cte_cols.keys()
                 if pos:
-                    part_sql.append(f'LEFT JOIN {cte.type} ON 1=1')
+                    # part_sql.append(f'LEFT JOIN {cte.type} ON 1=1')
+                    part_sql.append(f'JOIN {dim}_cte ON 1=1')
                 else:
-                    part_sql.append(cte.type)
+                    part_sql.append(f'{dim}_cte')
             part_sql.append('LEFT JOIN')
         part_sql.append('(')
 
-        if link_obj:
-            part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
-            part_cols = []
+        part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
+        if base_cols:
+            part_sql.append(f", {', '.join(base_cols)}")
+            sql_params.extend(base_col_params)
+        part_sql.append(f'FROM {company}.{table_name} a')
+        part_sql.append(f"{' '.join(base_joins)}")
+        part_sql.append(
+            'WHERE a.deleted_id = {0} AND a.tran_date BETWEEN {0} AND {0}'.format(dbc.param_style)
+            )
+        sql_params.append(0)
+        sql_params.append(start_date)
+        sql_params.append(end_date)
 
-            if self.ctes:
-                for part_col in self.part_cols:
-                    part_col = part_col.replace(
-                        'gl', link_obj.module_id).replace(
-                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
-                    part_cols.append(part_col)
-            else:
-                for parent in reversed(link_obj.parent_data):
-                    par_grp, par_descr, par_seq, par_type = parent
-                    part_cols.append(f'{par_grp!r} AS {par_type}')
-                    part_cols.append(f'{par_descr!r} AS {par_type}_descr')
-                    part_cols.append(f'{par_seq} AS {par_type}_seq')
-                for part_col in self.part_cols[len(link_obj.parent_data)*3:]:
-                    part_col = part_col.replace(
-                        'gl', link_obj.module_id).replace(
-                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
-                    part_cols.append(part_col)
-
-            if part_cols:
-                part_sql.append(f", {', '.join(part_cols)}")
-            part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
-            if self.ctes:
-                for join in self.sql_joins:
-                    part_sql.append(join.replace('gl', link_obj.module_id))
-            else:
-                # exclude 'joins' for link_obj.parent_data - only applies to gl, not to sub_ledger
-                parent_types = [p[3] for p in link_obj.parent_data]
-                for join in self.sql_joins:
-                    skip = False
-                    for parent_type in parent_types:
-                        if parent_type in join:
-                            skip = True
-                            break
-                    if not skip:
-                        part_sql.append(join.replace('gl', link_obj.module_id))
-            part_sql.append(
-                'WHERE a.deleted_id = {0} AND a.tran_date BETWEEN {0} AND {0}'.format(dbc.param_style)
-                )
-            sql_params.append(0)
-            sql_params.append(start_date)
-            sql_params.append(end_date)
-            for pos, where in enumerate(self.sql_where):
-                if 'code_' not in where:  # omit 'code' filter, include other filters
-                    part_sql.append(where)
-                    sql_params.append(self.sql_params[pos])
-            part_sql.append(f'AND code_code_tbl.ledger_row_id = {dbc.param_style}')
-            sql_params.append(link_obj.ledger_row_id)
-        else:
-            part_sql.append(f'SELECT a.{self.tot_col_name} AS tran_tot')
-            if self.part_cols:
-                part_sql.append(f", {', '.join(self.part_cols)}")
-            part_sql.append(f'FROM {company}.{table_name} a')
-            for join in self.sql_joins:
-                part_sql.append(join)
-            part_sql.append(
-                'WHERE a.deleted_id = {0} AND a.tran_date BETWEEN {0} AND {0}'.format(dbc.param_style)
-                )
-            sql_params.append(0)
-            sql_params.append(start_date)
-            sql_params.append(end_date)
-
-            part_sql.extend(self.sql_where)
-            sql_params.extend(self.sql_params)
-
-            if isinstance(self.cflow_param, tuple):  # single cb - (module_row_id, ledger_row_id)
-                cb_mod_row_id, cb_ledg_row_id = self.cflow_param
-                part_sql.append(f"AND NOT (COALESCE(code_code_tbl.ctrl_mod_row_id, 0) = {dbc.param_style}")
-                sql_params.append(cb_mod_row_id)
-                part_sql.append(f"AND COALESCE(code_code_tbl.ctrl_ledg_row_id, 0) = {dbc.param_style})")
-                sql_params.append(cb_ledg_row_id)
-                part_sql.append(f"AND (orig_trantype.module_row_id = {dbc.param_style}")
-                sql_params.append(cb_mod_row_id)
-                part_sql.append(f"AND a.orig_ledger_row_id = {dbc.param_style})")
-                sql_params.append(cb_ledg_row_id)
-
-                part_sql.append('UNION ALL')
-
-                part_sql.append(f'SELECT 0-a.{self.tot_col_name} AS tran_tot')
-                if self.part_cols:
-                    part_sql.append(f", {', '.join(self.part_cols)}")
-                part_sql.append(f'FROM {company}.{table_name} a')
-                for join in self.sql_joins:
-                    part_sql.append(join)
-                part_sql.append(
-                    'WHERE a.deleted_id = {0} AND a.tran_date BETWEEN {0} AND {0}'.format(dbc.param_style)
-                    )
-                sql_params.append(0)
-                sql_params.append(start_date)
-                sql_params.append(end_date)
-
-                part_sql.extend(self.sql_where)
-                sql_params.extend(self.sql_params)
-
-                part_sql.append(f"AND (code_code_tbl.ctrl_mod_row_id = {dbc.param_style}")
-                sql_params.append(cb_mod_row_id)
-                part_sql.append(f"AND code_code_tbl.ctrl_ledg_row_id = {dbc.param_style})")
-                sql_params.append(cb_ledg_row_id)
-                part_sql.append(f"AND NOT (orig_trantype.module_row_id = {dbc.param_style}")
-                sql_params.append(cb_mod_row_id)
-                part_sql.append(f"AND a.orig_ledger_row_id = {dbc.param_style})")
-                sql_params.append(cb_ledg_row_id)
+        part_sql.append(f"{' '.join(base_where)}")
+        sql_params.extend(base_params)
 
         part_sql.append(f') bal')
 
-        if self.ctes:
+        if self.cte_cols:
             on_clause = 'ON'
-            for cte in self.ctes:
-                part_sql.append(f'{on_clause} bal.{cte.join_col} = {cte.type}.{cte.join_col}')
+            for grp_col in group_cols:
+                grp_tbl, grp_col = grp_col.split('.')
+                part_sql.append(f'{on_clause} bal.{grp_col} = {grp_tbl}.{grp_col}')
                 on_clause = 'AND'
             if self.links_to_subledg:
                 link_val = 'code' if link_obj is None else f'{link_obj.module_id}_{link_obj.ledger_row_id}'
-                part_sql.append(f'{on_clause} codes_cte.type = {dbc.param_style}')
+                part_sql.append(f'{on_clause} code_cte.type = {dbc.param_style}')
                 sql_params.append(link_val)
 
-        if self.group_by:
-            part_sql.append('GROUP BY ' + ', '.join(self.group_by))
+        if group_cols:
+            part_sql.append('GROUP BY ' + ', '.join(group_cols))
 
         return part_sql
 
     def gen_bf_cf(self, start_date, end_date, sql_params, link_obj):
         company = self.context.company
-        table_name = self.db_table.table_name
+
+        if link_obj:
+            table_name = self.db_table.table_name.replace('gl', link_obj.module_id)
+            group_cols = link_obj.group_cols + [
+                col for dim, cols in self.group_cols.items() if dim != 'code' for col in cols]
+            base_cols = link_obj.base_cols + [
+                col for dim, cols in self.base_cols.items() if dim != 'code' for col in cols]
+            base_col_params = link_obj.base_col_params
+            base_joins = link_obj.base_joins + [
+                join for dim, joins in self.base_joins.items() if dim != 'code' for join in joins]
+            base_where = link_obj.base_where + [
+                where for dim, wheres in self.base_where.items() if dim != 'code' for where in wheres]
+            base_params = link_obj.base_params + [
+                param for dim, params in self.base_params.items() if dim != 'code' for param in params]
+            first_partition_col = self.db_table.col_list[3].col_name.replace('gl', link_obj.module_id)
+        else:
+            table_name = self.db_table.table_name
+            group_cols = [col for cols in self.group_cols.values() for col in cols]
+            base_cols = [col for cols in self.base_cols.values() for col in cols]
+            base_col_params = []
+            base_joins = [join for joins in self.base_joins.values() for join in joins]
+            base_where = [where for wheres in self.base_where.values() for where in wheres]
+            base_params = [param for params in self.base_params.values() for param in params]
+            first_partition_col = self.db_table.col_list[3].col_name
+
+        # must generate 2 x part_sql, one for op_bal, one for cl_bal
+        # they are virtually identical, so create function, call it twice with args (< op_date or <= cl_date)
+        def gen_part_sql(op, date):
+            part_sql.append('COALESCE(SUM(tran_tot), 0) AS tran_tot')
+
+            if group_cols:
+                part_sql.append(f", {', '.join(group_cols)}")
+
+            part_sql.append('FROM')
+
+            if self.cte_cols:
+                for pos, dim in enumerate(self.cte_cols):  # only interested in self.cte_cols.keys()
+                    if pos:
+                        # part_sql.append(f'LEFT JOIN {cte.type} ON 1=1')
+                        part_sql.append(f'JOIN {dim}_cte ON 1=1')
+                    else:
+                        part_sql.append(f'{dim}_cte')
+                part_sql.append('LEFT JOIN')
+            part_sql.append('(')
+
+            part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
+            if base_cols:
+                part_sql.append(f", {', '.join(base_cols)}")
+                sql_params.extend(base_col_params)
+
+            part_sql.append(', ROW_NUMBER() OVER (PARTITION BY')
+            part_sql.append(
+                f'a.{first_partition_col}, a.location_row_id, a.function_row_id, '
+                'a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id'
+                )
+            part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
+            part_sql.append(f'FROM {company}.{table_name} a')
+
+            part_sql.append(f"{' '.join(base_joins)}")
+
+            part_sql.append(
+                'WHERE a.deleted_id = {0} AND a.tran_date {1} {0}'
+                .format(dbc.param_style, '<=' if op == 'le' else '<')
+                )
+            sql_params.append(0)
+            sql_params.append(date)
+
+            part_sql.append(f"{' '.join(base_where)}")
+            sql_params.extend(base_params)
+
+            part_sql.append(f') tot')
+
+            if self.cte_cols:
+                on_clause = 'ON'
+                for grp_col in group_cols:
+                    grp_tbl, grp_col = grp_col.split('.')
+                    part_sql.append(f'{on_clause} bal.{grp_col} = {grp_tbl}.{grp_col}')
+                    on_clause = 'AND'
+                if self.links_to_subledg:
+                    link_val = 'code' if link_obj is None else f'{link_obj.module_id}_{link_obj.ledger_row_id}'
+                    part_sql.append(f'{on_clause} code_cte.type = {dbc.param_style}')
+                    sql_params.append(link_val)
+
+            part_sql.append(f"WHERE row_num = 1{' OR row_num IS NULL' if self.cte_cols else ''}")
+
+            if group_cols:
+                part_sql.append('GROUP BY ' + ', '.join(group_cols))
 
         part_sql = []
-
         part_sql.append('COALESCE(bf.tran_tot, 0) AS op_bal, COALESCE(cf.tran_tot, 0) AS cl_bal')
         part_sql.append(', {0} AS start_date, {0} AS end_date'.format(dbc.param_style))
         sql_params.append(start_date)
         sql_params.append(end_date)
 
-        if self.links_to_subledg and not self.ctes:
-            if link_obj:
-                part_sql.append(f", '{link_obj.module_id}_{link_obj.ledger_row_id}' AS type")
-            else:
-                part_sql.append(", 'code' AS type")
-
-        if self.group_by:
-            if self.ctes:
-                # if using ctes, self.group_by already has a prefix of 'codes'
+        if group_cols:
+            if self.cte_cols:
+                # if using ctes, group_cols already has a prefix of 'codes'
                 # must remove the prefix and replace it with 'cf'
-                part_sql.append(f""", {', '.join(f'cf.{_.split(".")[-1]}' for _ in self.group_by)}""")
+                part_sql.append(f""", {', '.join(f'cf.{_.split(".")[-1]}' for _ in group_cols)}""")
             else:
-                part_sql.append(f", {', '.join(f'cf.{_}' for _ in self.group_by)}")
+                part_sql.append(f", {', '.join(f'cf.{_}' for _ in group_cols)}")
 
         part_sql.append('FROM (SELECT')
+        gen_part_sql('le', end_date)
+        part_sql.append(') cf')
+        part_sql.append(' LEFT JOIN (SELECT')
+        gen_part_sql('lt', start_date)
+        part_sql.append(') bf')
 
-        part_sql.append('COALESCE(SUM(tran_tot), 0) AS tran_tot')
-        if self.group_by:
-            part_sql.append(f", {', '.join(self.group_by)}")
-
-        part_sql.append('FROM')
-
-        if self.ctes:
-            for pos, cte in enumerate(self.ctes):
-                if pos:
-                    part_sql.append(f'LEFT JOIN {cte.type} ON 1=1')
-                else:
-                    part_sql.append(cte.type)
-            part_sql.append('LEFT JOIN')
-        part_sql.append('(')
-
-        first_partition_col = self.db_table.col_list[3].col_name
-        if link_obj:
-            part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
-            part_cols = []
-
-            if self.ctes:
-                for part_col in self.part_cols:
-                    part_col = part_col.replace(
-                        'gl', link_obj.module_id).replace(
-                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
-                    part_cols.append(part_col)
-            else:
-                for parent in reversed(link_obj.parent_data):
-                    par_grp, par_descr, par_seq, par_type = parent
-                    part_cols.append(f'{par_grp!r} AS {par_type}')
-                    part_cols.append(f'{par_descr} AS {par_type}_descr')
-                    part_cols.append(f'{par_seq} AS {par_type}_seq')
-                for part_col in self.part_cols[len(link_obj.parent_data)*2:]:
-                    part_col = part_col.replace(
-                        'gl', link_obj.module_id).replace(
-                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
-                    part_cols.append(part_col)
-
-            if part_cols:
-                part_sql.append(f", {', '.join(part_cols)}")
-            part_sql.append(', ROW_NUMBER() OVER (PARTITION BY')
-            part_sql.append(
-                f"a.{first_partition_col.replace('gl', link_obj.module_id)}, a.location_row_id, a.function_row_id, "
-                'a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id'
-                )
-            part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
-            part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
-            if self.ctes:
-                for join in self.sql_joins:
-                    part_sql.append(join.replace('gl', link_obj.module_id))
-            else:
-                # exclude 'joins' for link_obj.parent_data - only applies to gl, not to sub_ledger
-                parent_types = [p[2] for p in link_obj.parent_data]
-                for join in self.sql_joins:
-                    skip = False
-                    for parent_type in parent_types:
-                        if parent_type in join:
-                            skip = True
-                            break
-                    if not skip:
-                        part_sql.append(join.replace('gl', link_obj.module_id))
-            part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(dbc.param_style))
-            sql_params.append(0)
-            sql_params.append(end_date)
-            for pos, where in enumerate(self.sql_where):
-                if 'code_' not in where:  # omit 'code' filter, include other filters
-                    part_sql.append(where)
-                    sql_params.append(self.sql_params[pos])
-            part_sql.append(f'AND code_code_tbl.ledger_row_id = {dbc.param_style}')
-            sql_params.append(link_obj.ledger_row_id)
-        else:
-            part_sql.append(f'SELECT a.{self.tot_col_name} AS tran_tot')
-            if self.part_cols:
-                part_sql.append(f", {', '.join(self.part_cols)}")
-            part_sql.append(', ROW_NUMBER() OVER (PARTITION BY')
-            part_sql.append(
-                f'a.{first_partition_col}, a.location_row_id, a.function_row_id, '
-                'a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id'
-                )
-            part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
-            part_sql.append(f'FROM {company}.{table_name} a')
-            for join in self.sql_joins:
-                part_sql.append(join)
-            part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(dbc.param_style))
-            sql_params.append(0)
-            sql_params.append(end_date)
-            part_sql.extend(self.sql_where)
-            sql_params.extend(self.sql_params)
-
-        part_sql.append(f') tot')
-
-        if self.ctes:
-            on_clause = 'ON'
-            for cte in self.ctes:
-                part_sql.append(f'{on_clause} tot.{cte.join_col} = {cte.type}.{cte.join_col}')
-                on_clause = 'AND'
-            if self.links_to_subledg:
-                link_val = 'code' if link_obj is None else f'{link_obj.module_id}_{link_obj.ledger_row_id}'
-                part_sql.append(f'{on_clause} codes_cte.type = {dbc.param_style}')
-                sql_params.append(link_val)
-
-        part_sql.append(f"WHERE row_num = 1{' OR row_num IS NULL' if self.ctes else ''}")
-
-        if self.group_by:
-            part_sql.append('GROUP BY ' + ', '.join(self.group_by))
-
-        part_sql.append(f') cf')
-
-        part_sql.append('LEFT JOIN (SELECT')
-
-        part_sql.append('COALESCE(SUM(tran_tot), 0) AS tran_tot')
-        if self.group_by:
-            part_sql.append(f", {', '.join(self.group_by)}")
-
-        part_sql.append('FROM')
-
-        if self.ctes:
-            for pos, cte in enumerate(self.ctes):
-                if pos:
-                    part_sql.append(f'LEFT JOIN {cte.type} ON 1=1')
-                else:
-                    part_sql.append(cte.type)
-            part_sql.append('LEFT JOIN')
-        part_sql.append('(')
-
-        if link_obj:
-            part_sql.append(f"SELECT a.{self.tot_col_name} AS tran_tot")
-            part_cols = []
-
-            if self.ctes:
-                for part_col in self.part_cols:
-                    part_col = part_col.replace(
-                        'gl', link_obj.module_id).replace(
-                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
-                    part_cols.append(part_col)
-            else:
-                for parent in reversed(link_obj.parent_data):
-                    par_grp, par_descr, par_seq, par_type = parent
-                    part_cols.append(f'{par_grp!r} AS {par_type}')
-                    part_cols.append(f'{par_descr} AS {par_type}_descr')
-                    part_cols.append(f'{par_seq} AS {par_type}_seq')
-                for part_col in self.part_cols[len(link_obj.parent_data)*2:]:
-                    part_col = part_col.replace(
-                        'gl', link_obj.module_id).replace(
-                        link_obj.seq_col, str(link_obj.group_seq))  # replace seq_col with actual seq
-                    part_cols.append(part_col)
-
-            if part_cols:
-                part_sql.append(f", {', '.join(part_cols)}")
-            part_sql.append(', ROW_NUMBER() OVER (PARTITION BY')
-            part_sql.append(
-                f"a.{first_partition_col.replace('gl', link_obj.module_id)}, a.location_row_id, a.function_row_id, "
-                'a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id'
-                )
-            part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
-            part_sql.append(f"FROM {company}.{table_name.replace('gl', link_obj.module_id)} a")
-            if self.ctes:
-                for join in self.sql_joins:
-                    part_sql.append(join.replace('gl', link_obj.module_id))
-            else:
-                # exclude 'joins' for link_obj.parent_data - only applies to gl, not to sub_ledger
-                parent_types = [p[2] for p in link_obj.parent_data]
-                for join in self.sql_joins:
-                    skip = False
-                    for parent_type in parent_types:
-                        if parent_type in join:
-                            skip = True
-                            break
-                    if not skip:
-                        part_sql.append(join.replace('gl', link_obj.module_id))
-            part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date < {0}'.format(dbc.param_style))
-            sql_params.append(0)
-            sql_params.append(start_date)
-            for pos, where in enumerate(self.sql_where):
-                if 'code_' not in where:  # omit 'code' filter, include other filters
-                    part_sql.append(where)
-                    sql_params.append(self.sql_params[pos])
-            part_sql.append(f'AND code_code_tbl.ledger_row_id = {dbc.param_style}')
-            sql_params.append(link_obj.ledger_row_id)
-        else:
-            part_sql.append(f'SELECT a.{self.tot_col_name} AS tran_tot')
-            if self.part_cols:
-                part_sql.append(f", {', '.join(self.part_cols)}")
-            part_sql.append(', ROW_NUMBER() OVER (PARTITION BY')
-            part_sql.append(
-                f'a.{first_partition_col}, a.location_row_id, a.function_row_id, '
-                'a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id'
-                )
-            part_sql.append(f'ORDER BY a.tran_date DESC) row_num')
-            part_sql.append(f'FROM {company}.{table_name} a')
-            for join in self.sql_joins:
-                part_sql.append(join)
-            part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date < {0}'.format(dbc.param_style))
-            sql_params.append(0)
-            sql_params.append(start_date)
-            part_sql.extend(self.sql_where)
-            sql_params.extend(self.sql_params)
-
-        part_sql.append(f') tot')
-
-        if self.ctes:
-            on_clause = 'ON'
-            for cte in self.ctes:
-                part_sql.append(f'{on_clause} tot.{cte.join_col} = {cte.type}.{cte.join_col}')
-                on_clause = 'AND'
-            if self.links_to_subledg:
-                link_val = 'code' if link_obj is None else f'{link_obj.module_id}_{link_obj.ledger_row_id}'
-                part_sql.append(f'{on_clause} codes_cte.type = {dbc.param_style}')
-                sql_params.append(link_val)
-
-        part_sql.append(f"WHERE row_num = 1{' OR row_num IS NULL' if self.ctes else ''}")
-
-        if self.group_by:
-            part_sql.append('GROUP BY ' + ', '.join(self.group_by))
-
-        part_sql.append(f') bf')
         on_clause = 'ON'
         for join in self.cf_join_bf:
             part_sql.append(f'{on_clause} bf.{join} = cf.{join}')
@@ -1719,16 +1390,17 @@ class FinReport:
 
     def gen_sql_body(self, report_type, sql, sql_params, date_param, link_obj=None):
 
-        if self.ctes:
+        if self.cte_cols:
             sql.append('SELECT')
             sql.append(', '.join(self.combo_cols))
             sql.append('FROM')
 
-            for pos, cte in enumerate(self.ctes):
+            for pos, dim in enumerate(self.cte_cols):
                 if pos:
-                    sql.append(f'LEFT JOIN {cte.type} ON 1=1')
+                    # sql.append(f'LEFT JOIN {cte.type} ON 1=1')
+                    sql.append(f'JOIN {dim}_cte ON 1=1')
                 else:
-                    sql.append(cte.type)
+                    sql.append(f'{dim}_cte')
             sql.append('JOIN (')
 
         sql.append('SELECT')
@@ -1741,39 +1413,76 @@ class FinReport:
         elif report_type == 'bf_cf':
             sql += self.gen_bf_cf(start_date, end_date, sql_params, link_obj)
 
-        if self.ctes:
+
+        if self.cte_cols:
             sql.append(') dum')
             on_clause = 'ON'
-            for cte in self.ctes:
+            # for grp_col in self.group_cols:
+            for grp_col in (col for cols in self.group_cols.values() for col in cols):
+                grp_tbl, grp_col = grp_col.split('.')
+                sql.append(f'{on_clause} dum.{grp_col} = {grp_tbl}.{grp_col}')
+                on_clause = 'AND'
+            if self.links_to_subledg:
+                link_val = 'code' if link_obj is None else f'{link_obj.module_id}_{link_obj.ledger_row_id}'
+                sql.append(f'{on_clause} code_cte.type = {dbc.param_style}')
+                sql_params.append(link_val)
+
+        """
+        if self.cte_cols:
+            sql.append(') dum')
+            on_clause = 'ON'
+            for cte in self.cte_cols:
                 sql.append(f'{on_clause} dum.{cte.join_col} = {cte.type}.{cte.join_col}')
                 on_clause = 'AND'
             if self.links_to_subledg:
                 link_val = 'code' if link_obj is None else f'{link_obj.module_id}_{link_obj.ledger_row_id}'
-                sql.append(f'{on_clause} codes_cte.type = {dbc.param_style}')
+                sql.append(f'{on_clause} code_cte.type = {dbc.param_style}')
                 sql_params.append(link_val)
+        """
 
     def gen_sql(self, report_type, columns, dates):
+        context = self.context
+        company = context.company
+
         sql = []
         sql_params = []
 
         cte_prefix = 'WITH'  # in case there is a cte
-        for cte in self.ctes:
-            sql.append(f'{cte_prefix} {cte.type} AS (')
-            sql.append(cte.cte)
+        for cte_dim in self.cte_tables:  # if any
+            sql.append(f'{cte_prefix} {cte_dim}_cte AS (')
+            # sql.append(f'SELECT DISTINCT')
+            sql.append(f'SELECT')  # do we need DISTINCT?
+            sql.append(', '.join(self.cte_cols[cte_dim]))
+            cte_table, cte_alias = self.cte_tables[cte_dim]
+            sql.append(f'FROM {company}.{cte_table} {cte_alias}_tbl')
+            for join in self.cte_joins[cte_dim]:
+                sql.append(join)
+            sql.extend(self.cte_where[cte_dim])
+            sql_params.extend(self.cte_params[cte_dim])
+            if cte_dim == 'code':
+                for link_obj in self.links_to_subledg:
+                    sql.append('UNION ALL SELECT')
+                    sql.append(', '.join(link_obj.cte_cols))
+                    sql_params.extend(link_obj.cte_col_params)
+                    cte_table, cte_alias = link_obj.cte_table
+                    sql.append(f'FROM {company}.{cte_table} {cte_alias}_tbl')
+                    for join in link_obj.cte_joins:
+                        sql.append(join)
+                    sql.extend(link_obj.cte_where)
+                    sql_params.extend(link_obj.cte_params)
             sql.append(')')
             cte_prefix = ','  # in case there is another one
-            sql_params.extend(cte.cte_params)
 
         sql.append('SELECT')
-        sql_cols = []
+        base_cols = []
         for col_name, col_sql, col_head, data_type, lng, pvt, tot in columns:
             if pvt is None:
-                sql_cols.append(f'{col_sql} AS "{col_head}"')
+                base_cols.append(f'{col_sql} AS "{col_head}"')
             elif pvt == '*':
-                sql_cols.append(f'SUM({col_sql}) AS "{col_head}"')
+                base_cols.append(f'SUM({col_sql}) AS "{col_head}"')
             else:
                 pivot_grp, pivot_val = pvt
-                sql_cols.append(
+                base_cols.append(
                     f'SUM(CASE WHEN {pivot_grp} = {dbc.param_style} '
                     f'THEN {col_sql} ELSE 0 END) AS "{col_head}"'
                     )
@@ -1783,7 +1492,7 @@ class FinReport:
                     elif pivot_grp == 'end_date':
                         pivot_val = pivot_val[1]
                 sql_params.append(pivot_val)
-        sql.append(', '.join(sql_cols))
+        sql.append(', '.join(base_cols))
 
         sql.append('FROM (')
 
@@ -1803,10 +1512,23 @@ class FinReport:
         if self.pivot_group_by:
             sql.append(f"GROUP BY {', '.join(self.pivot_group_by)}")
 
-        if self.order_by:
-            sql.append(f"ORDER BY {', '.join(self.order_by)}")
+        order_by = ', '.join(x for y in self.order_by.values() for x in y)
+        if order_by:
+            sql.append(f"ORDER BY {order_by}")
 
         return (' '.join(sql), sql_params)
+
+async def get_fin_yr(context, date_seq, sub_args, date_params, ledger_row_id):
+    company = context.company
+    periods = await db.cache.get_adm_periods(company)
+
+    if date_params is not None:
+        fin_yr = date_params
+    else:
+        curr_per = await db.cache.get_current_period(company, context.module_row_id, context.ledger_row_id)
+        fin_yr = periods[curr_per].year_no
+
+    return [(per.opening_date, per.closing_date) for per in periods if per.year_no == fin_yr]
 
 async def sql_fin_yr(context, date_seq, sub_args, date_params, ledger_row_id):
     company = context.company
@@ -1921,6 +1643,32 @@ async def sql_curr_per(context):
         conn = db_mem_conn.db
         rows = await conn.fetchall(' '.join(sql), params)
     return rows
+
+async def get_last_n_per(context, date_seq, sub_args, date_params, ledger_row_id):
+    (
+        grp_size,      # e.g. 1 x p = period, 3 x p = quarter
+        no_of_grps,    # number of groups
+        grps_to_skip,  # e.g. 11 x p = same period previous year
+        ) = sub_args
+    company = context.company
+    periods = await db.cache.get_adm_periods(company)
+
+    if date_params is not None:
+        start_from = date_params
+    else:
+        start_from = await db.cache.get_current_period(company, context.module_row_id, context.ledger_row_id)
+
+    result = []
+    for grp in range(no_of_grps):
+        closing_date = periods[start_from].closing_date
+        opening_date = periods[start_from - grp_size + 1].opening_date
+        result.append((opening_date, closing_date))
+        start_from -= (grp_size + (grp_size * grps_to_skip))
+
+    if date_seq == 'd':
+        return result
+    else:
+        return result[::-1]
 
 async def sql_last_n_per(context, date_seq, sub_args, date_params, ledger_row_id):
     (

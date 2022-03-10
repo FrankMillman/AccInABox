@@ -3,12 +3,10 @@ report_name = 'tb_by_code'
 table_name = 'gl_totals'
 report_type = 'as_at'
 
-groups = []
-groups.append([
-    'code',  # dim
-    ['code_code', []],  # grp_name, filter
-#   ['code_code', [['AND', '', 'int', '=', "'crs'", '']]],  # grp_name, filter
-    ])
+filters = {}
+
+groups = {}
+groups['code'] = 'code_code'
 
 include_zeros = True
 expand_subledg = True

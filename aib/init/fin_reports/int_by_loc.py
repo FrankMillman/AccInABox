@@ -3,23 +3,18 @@ report_name = 'int_by_loc'
 table_name = 'gl_totals'
 report_type = 'from_to'
 
-groups = []
-groups.append([
-    'code',  # dim
-    ['code_int',  # grp_name
-        [        # filter
-            ['AND', '(', 'code_maj', '=', "'inc'", ''],
-            ['OR', '', 'code_maj', '=', "'exp'", ')'],
-            ],
-        ],
-    ])
+filters = {}
+filters['code'] = [
+    ['AND', '(', 'code_maj', '=', "'inc'", ''],
+    ['OR', '', 'code_maj', '=', "'exp'", ')'],
+    ]
+filters['loc'] = [
+    ['AND', '', 'loc_type', '=', "'PROP'", ''],
+    ]
 
-groups.append([
-    'loc',   # dim
-    ['loc_prop', # grp_name
-        [['AND', '', 'loc_type', '=', "'PROP'", '']],  # filter
-        ],
-    ])
+groups = {}
+groups['code'] = 'code_int'
+groups['loc'] = 'loc_prop'
 
 include_zeros = True
 # expand_subledg = True

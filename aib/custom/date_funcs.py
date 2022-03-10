@@ -190,6 +190,8 @@ async def load_ye_per(caller, xml):
     else:
         mod, ledg = context.module_row_id, context.ledger_row_id
     current_period = await db.cache.get_current_period(context.company, mod, ledg)
+    if current_period is None:
+        raise AibError(head=caller.company, body='Ledger periods not set up')
 
     var = caller.data_objects['var']
 

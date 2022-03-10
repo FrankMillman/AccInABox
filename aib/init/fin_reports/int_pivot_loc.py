@@ -3,26 +3,23 @@ report_name = 'int_pivot_loc'
 table_name = 'gl_totals'
 report_type = 'from_to'
 
-groups = []
-groups.append([
-    'code',  # dim
-    ['code_int',  # grp_name
-        [       # filter
-            ['AND', '(', 'code_maj', '=', "'inc'", ''],
-            ['OR', '', 'code_maj', '=', "'exp'", ')'],
-            ],
-        ],
-    ])
+filters = {}
+filters['code'] = [
+        ['AND', '(', 'code_maj', '=', "'inc'", ''],
+        ['OR', '', 'code_maj', '=', "'exp'", ')'],
+        ]
+filters['loc'] = [
+        ['AND', '', 'loc_type', '=', "'PROP'", ''],
+        ['AND', '', 'loc_prop', '!=', "'TSK'", ''],
+        ]
+filters['src'] = [
+        ['AND', '', 'tran_type', '!=', "'gl_adj'", ''],
+        ['AND', '', 'tran_type', '!=', "'gl_tfr'", ''],
+        ]
 
-groups.append([
-    'loc',   # dim
-    ['loc_prop',  # grp_name
-        [        # filter
-            ['AND', '', 'loc_type', '=', "'PROP'", ''],
-            ['AND', '', 'loc_prop', '!=', "'TSK'", ''],
-            ],
-        ],
-    ])
+groups = {}
+groups['code'] = 'code_int'
+groups['loc'] = 'loc_prop'
 
 include_zeros = True
 expand_subledg = True

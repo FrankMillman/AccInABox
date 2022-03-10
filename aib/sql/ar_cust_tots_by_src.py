@@ -2,66 +2,66 @@ def get_sql(cte, params, company, conn, cust_row_id):
 
     common = f"""
             (
-            SELECT a.source_code_id, SUM(a.tran_tot_local) AS cl_tot FROM 
+            SELECT a.src_trantype_row_id, SUM(a.tran_tot_local) AS cl_tot FROM 
                 (
-                SELECT source_code_id, tran_tot_local, 
+                SELECT src_trantype_row_id, tran_tot_local, 
                 ROW_NUMBER() OVER (PARTITION BY cust_row_id, location_row_id, 
-                function_row_id, source_code_id 
+                function_row_id, src_trantype_row_id, orig_trantype_row_id, orig_ledger_row_id
                 ORDER BY tran_date DESC) row_num 
                 FROM {company}.ar_cust_totals WHERE deleted_id = 0 AND tran_date <= dates.cl_date
                     AND cust_row_id = {conn.constants.param_style}
                 ) AS a 
             WHERE a.row_num = 1 
-            GROUP BY a.source_code_id -- to aggregate locations/functions
+            GROUP BY a.src_trantype_row_id -- to aggregate locations/functions
             ) as cl_bal 
         LEFT JOIN 
             (
-            SELECT a.source_code_id, SUM(a.tran_tot_local) AS op_tot FROM 
+            SELECT a.src_trantype_row_id, SUM(a.tran_tot_local) AS op_tot FROM 
                 (
-                SELECT source_code_id, tran_tot_local, 
+                SELECT src_trantype_row_id, tran_tot_local, 
                 ROW_NUMBER() OVER (PARTITION BY cust_row_id, location_row_id, 
-                function_row_id, source_code_id 
+                function_row_id, src_trantype_row_id, orig_trantype_row_id, orig_ledger_row_id
                 ORDER BY tran_date DESC) row_num 
                 FROM {company}.ar_cust_totals WHERE deleted_id = 0 AND tran_date < dates.op_date
                     AND cust_row_id = {conn.constants.param_style}
                 ) AS a 
             WHERE a.row_num = 1 
-            GROUP BY a.source_code_id -- to aggregate locations/functions 
+            GROUP BY a.src_trantype_row_id -- to aggregate locations/functions 
             ) as op_bal 
-        ON op_bal.source_code_id = cl_bal.source_code_id 
-        JOIN {company}.gl_source_codes b ON b.row_id = cl_bal.source_code_id 
+        ON op_bal.src_trantype_row_id = cl_bal.src_trantype_row_id 
+        JOIN {company}.adm_tran_types b ON b.row_id = cl_bal.src_trantype_row_id 
         """
 
     op_bal = """
         SUM(COALESCE(op_bal.op_tot, 0))
         """
     inv_tot = """
-        SUM(CASE WHEN b.source_code in ('ar_inv_net', 'ar_inv_tax') THEN
+        SUM(CASE WHEN b.tran_type = 'ar_inv' THEN
             COALESCE(cl_bal.cl_tot, 0) - COALESCE(op_bal.op_tot, 0)
             ELSE 0 END)
         """
     crn_tot = """
-        SUM(CASE WHEN b.source_code in ('ar_crn_net', 'ar_crn_tax') THEN
+        SUM(CASE WHEN b.tran_type = 'ar_crn' THEN
             COALESCE(cl_bal.cl_tot, 0) - COALESCE(op_bal.op_tot, 0)
             ELSE 0 END)
         """
     chg = """
-        SUM(CASE WHEN b.source_code in ('ar_chg_cb', 'ar_chg_ap') THEN
+        SUM(CASE WHEN b.tran_type = 'ar_subjnl' THEN
             COALESCE(cl_bal.cl_tot, 0) - COALESCE(op_bal.op_tot, 0)
             ELSE 0 END)
         """
     jnl = """
-        SUM(CASE WHEN b.source_code = 'ar_jnl' THEN
+        SUM(CASE WHEN b.tran_type = 'ar_jnl' THEN
             COALESCE(cl_bal.cl_tot, 0) - COALESCE(op_bal.op_tot, 0)
             ELSE 0 END)
         """
     rec = """
-        SUM(CASE WHEN b.source_code in ('ar_rec_cb', 'ar_rec_ar') THEN
+        SUM(CASE WHEN b.tran_type = 'ar_subrec' THEN
             COALESCE(cl_bal.cl_tot, 0) - COALESCE(op_bal.op_tot, 0)
             ELSE 0 END)
         """
     disc_tot = """
-        SUM(CASE WHEN b.source_code in ('ar_disc_net', 'ar_disc_tax') THEN
+        SUM(CASE WHEN b.tran_type = 'ar_disc' THEN
             COALESCE(cl_bal.cl_tot, 0) - COALESCE(op_bal.op_tot, 0)
             ELSE 0 END)
         """

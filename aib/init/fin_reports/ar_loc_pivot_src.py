@@ -3,18 +3,11 @@ report_name = 'ar_loc_pivot_src'
 table_name = 'ar_totals'
 report_type = 'bf_cf'
 
-groups = []
-groups.append([
-    'loc',    # dim
-    ['loc_prop', # grp_name
-        [['AND', '', 'loc_type', '=', "'PROP'", '']],  # filter
-        ],
-    ])
+filters = {}
 
-groups.append([
-    'src',  # dim
-    ['src_type', []],  # grp_name, filter
-    ])
+groups = {}
+groups['loc'] = 'loc_prop'
+groups['src'] = 'src_type'
 
 pivot_on = ('src', None)
 

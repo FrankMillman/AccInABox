@@ -3,21 +3,11 @@ report_name = 'npch_uex_code_src'
 table_name = 'npch_uex_totals'
 report_type = 'bf_cf'
 
-groups = []
-# groups.append([
-#     'date',    # dim
-#     ['fin_yr', 'a', []],  # date_type, date_seq, sub_args
-#     ])
+filters = {}
 
-groups.append([
-    'code',  # dim
-    ['code_code', []],  # grp_name, filter
-    ])
-
-groups.append([
-    'src',  # dim
-    ['src_type', []],  # grp_name, filter
-    ])
+groups = {}
+groups['code'] = 'code_code'
+groups['src'] = 'src_type'
 
 pivot_on = ('src', None)
 

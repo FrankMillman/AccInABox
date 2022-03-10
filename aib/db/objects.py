@@ -503,7 +503,7 @@ class DbObject:
                     if col_name.startswith('_ctx'):
                         col_name = col_name.split('.')[1]
                         context.notify_recalc(col_name, field)
-                    else:
+                    elif col_name in self.fields:  # else must be 'virt' - will be set up if virt added
                         fld = await self.getfld(col_name)
                         fld.notify_recalc(field)
 

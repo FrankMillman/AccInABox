@@ -3,18 +3,11 @@ report_name = 'ar_cust_pivot_src'
 table_name = 'ar_cust_totals'
 report_type = 'bf_cf'
 
-groups = []
-groups.append([
-    'code',    # dim
-    ['code_code', # grp_name
-        [],  # filter
-        ],
-    ])
+filters = {}
 
-groups.append([
-    'src',  # dim
-    ['src_type', []],  # grp_name, filter
-    ])
+groups = {}
+groups['code'] = 'code_code'
+groups['src'] = 'src_type'
 
 pivot_on = ('src', None)
 

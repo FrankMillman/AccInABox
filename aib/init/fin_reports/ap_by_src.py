@@ -3,16 +3,11 @@ report_name = 'ap_by_src'
 table_name = 'ap_totals'
 report_type = 'bf_cf'
 
-groups = []
-groups.append([
-    'src',  # dim
-    ['src_type', []],  # grp_name, filter
-    ])
+filters = {}
 
-groups.append([
-    'date',    # dim
-    ['last_n_per', 'd', [1, 2, 0]],  # date_type, date_seq, [grp_size, no_grps, grps_to_skip]
-    ])
+groups = {}
+groups['src'] = 'src_type'
+groups['date'] = ['last_n_per', 'd', [1, 2, 0]]  # grp_size, no_grps, grps_to_skip
 
 columns = [
     ['start_date', 'start_date', 'Start date', 'DTE', 85, None, False],

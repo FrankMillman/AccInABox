@@ -3,18 +3,11 @@ report_name = 'nsls_pivot_date'
 table_name = 'nsls_totals'
 report_type = 'from_to'
 
-groups = []
-groups.append([
-    'code',  # dim
-    ['code_grp',  # grp_name
-        [],       # filter
-        ],
-    ])
+filters = {}
 
-groups.append([
-    'date',  # dim
-    ['fin_yr', 'a', []],
-    ])
+groups = {}
+groups['code'] = 'code_grp'
+groups['date'] = ['fin_yr', 'a', []]
 
 allow_select_loc_fun = True
 pivot_on = ('date', 'end_date')

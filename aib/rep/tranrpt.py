@@ -46,21 +46,23 @@ class TranReport:
         if module_id != 'gl':
             where.append(['AND', '', tots_table.ledger_col, '=', ledger_row_id, ''])
 
-        for group in finrpt_data['group_params']:
-            dim, args = group
+        for dim in finrpt_data['filters']:
             if dim == 'code' and expand_subledg and module_id != 'gl':
                 level_data_key = f'{module_id}_{ledger_row_id}_level_data'
             else:
                 level_data_key = f'{dim}_level_data'
             if level_data_key in finrpt_data:  # level_data exists
                 level_data = finrpt_data[level_data_key]
-                grp_name, filter = args
+                filter = finrpt_data['filters'][dim]
                 for (test, lbr, level, op, expr, rbr) in filter:
-                    where.append([test, lbr, level_data[level][4], op, expr, rbr])
-            elif dim == 'src':
-                grp_name, filter = args
-                for (test, lbr, col_name, op, expr, rbr) in filter:
-                    where.append([test, lbr, 'src_trantype_row_id>tran_type', op, expr, rbr])
+                    where.append([test, lbr, level_data[level].path_to_code, op, expr, rbr])
+
+        if finrpt_data['exclude_ye_tfr']:
+            exclude_ye_tfr = True
+            await types.select_row({'tran_type': 'gl_tfr'})
+            gl_tfr_code = await types.getval('row_id')
+        else:
+            exclude_ye_tfr = False
 
         all_sql = []
         all_params = []
@@ -96,16 +98,15 @@ class TranReport:
 
                     for pos, (tgt, src) in enumerate(key_fields):
                         if pos == 0:  # this does not cater for dual-codes e.g. nsls_cust_totals
-                            group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'code']
-                            if group:
-                                filter = group[0][1][1]  # [[dim, [grp_name, filter]]]
+                            if 'code' in finrpt_data['filters']:
+                                filter = finrpt_data['filters']['code']
                                 if expand_subledg and module_id != 'gl':
                                     level_data = finrpt_data[f'{module_id}_{ledger_row_id}_level_data']
                                     where.append(['AND', '', f'{src}>ledger_row_id', '=', ledger_row_id, ''])
                                 else:
                                     level_data = finrpt_data['code_level_data']
                                 for (test, lbr, level, op, expr, rbr) in filter:
-                                    col_name = level_data[level][-1]
+                                    col_name = level_data[level].path_to_code
                                     pos = col_name.find('>')
                                     col_name = f'{src}{col_name[pos:]}'
                                     where.append([test, lbr, col_name, op, expr, rbr])
@@ -153,12 +154,11 @@ class TranReport:
                                 where.append(['AND', '', f'{src}>location_id', '=',
                                     repr(finrpt_data['single_location']), ''])
                             else:
-                                group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'loc']
-                                if group:
-                                    filter = group[0][1][1]
+                                if 'loc' in finrpt_data['filters']:
+                                    filter = finrpt_data['filters']['loc']
                                     level_data = finrpt_data['loc_level_data']
                                     for (test, lbr, level, op, expr, rbr) in filter:
-                                        col_name = level_data[level][-1]
+                                        col_name = level_data[level].path_to_code
                                         pos = col_name.find('>')
                                         col_name = f'{src}{col_name[pos:]}'
                                         where.append([test, lbr, col_name, op, expr, rbr])
@@ -168,16 +168,18 @@ class TranReport:
                                 where.append(['AND', '', f'{src}>function_id', '=',
                                     repr(finrpt_data['single_function']), ''])
                             else:
-                                group = [grp for grp in finrpt_data['group_params'] if grp[0] == 'fun']
-                                if group:
-                                    filter = group[0][1][1]
+                                if 'fun' in finrpt_data['filters']:
+                                    filter = finrpt_data['filters']['fun']
                                     level_data = finrpt_data['fun_level_data']
                                     for (test, lbr, level, op, expr, rbr) in filter:
-                                        col_name = level_data[level][-1]
+                                        col_name = level_data[level].path_to_code
                                         pos = col_name.find('>')
                                         col_name = f'{src}{col_name[pos:]}'
                                         where.append([test, lbr, col_name, op, expr, rbr])
                             col_names.append(f'{src}>function_id|function_id')
+                        elif tgt == 'orig_trantype_row_id':
+                            if exclude_ye_tfr:
+                                where.append(['AND', '', src, '!=', gl_tfr_code, ''])
                         elif tgt == 'tran_date':
                             where.append(['AND', '', src, '>=', start_date, ''])
                             where.append(['AND', '', src, '<=', end_date, ''])
