@@ -749,6 +749,7 @@ async def handle_client(client_reader, client_writer):
             pdf_fd = session.pdf_dict.pop(pdf_name)  # pointer to created pdf - BytesIO object
             response = Response(client_writer, 200)
             response.add_header('Content-type', 'application/pdf')
+            response.add_header('Transfer-Encoding', 'chunked')
             await response.send_headers()
             await response.write_file(pdf_fd)
             await response.write_eof()
