@@ -102,3 +102,10 @@ def deserialise(value):
     elif isinstance(value, dict):
         value = deserialise_dict(value)
     return value
+
+# thanks to Ian Kelly for this one
+from itertools import count
+async def aenumerate(aiterable, start=0):
+    counter = count(start)
+    async for x in aiterable:
+        yield next(counter), x
