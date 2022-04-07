@@ -338,7 +338,7 @@ class GuiNumCtrl(GuiCtrl):
                 type = 'choice'
                 if value == '':
                     if choices[1]:
-                        value = next(iter(choices[1].keys()))  # the first key
+                        value = next(iter(choices[1]))  # the first key
             else:
                 type = 'num'
             input = {'type': type, 'lng': lng, 'ref': self.ref,

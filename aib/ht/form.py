@@ -18,6 +18,7 @@ import ht.htc
 import ht.gui_objects
 import ht.gui_grid
 import ht.gui_tree
+import ht.gui_finrpt
 import ht.gui_bpmn
 import ht.form_xml
 import ht.templates
@@ -994,6 +995,9 @@ class Frame:
             elif element.tag == 'subtran_frame':
                 await self.setup_subtran(element, element.get('subtran_obj'),
                     element.get('subtran_col'), gui)
+            elif element.tag == 'finrpt':
+                finrpt = ht.gui_finrpt.GuiFinrpt()
+                await finrpt._ainit_(self, gui)
             elif element.tag == 'bpmn':
                 action = etree.fromstring(
                     f'<_>{element.get("action")}</_>', parser=parser)
