@@ -394,13 +394,22 @@ function render_bpmn(svg, nodes, edges) {
       case 'event':
         var event = document.createElementNS(NS, 'use');
         shape.appendChild(event);
-        var event_types = {};
-        event_types['startEvent'] = 'start';
-        event_types['endEvent'] = 'end';
-        event_types['intermediateCatchEvent'] = 'inter';
-        event_types['intermediateThrowEvent'] = 'inter';
-        event_types['boundaryEvent'] = 'boundary';
-        event.setAttributeNS(null, 'href', '#' + event_types[node_args.event_type]);
+        switch (node_args.event_type) {
+          case 'startEvent':
+            var event_type = 'start';
+            break;
+          case 'endEvent':
+            var event_type = 'end';
+            break;
+          case 'intermediateCatchEvent':
+          case 'intermediateThrowEvent':
+            var event_type = 'inter';
+            break;
+          case 'boundaryEvent':
+            var event_type = 'boundary';
+            break;
+            }
+        event.setAttributeNS(null, 'href', '#' + event_type);
         event.setAttributeNS(null, 'width', w);
         event.setAttributeNS(null, 'height', h);
         if (node_args.event_defn !== null) {

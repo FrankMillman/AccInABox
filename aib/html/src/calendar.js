@@ -270,7 +270,7 @@ cal_page.style.height = '126px';
 cal_page.style.width = cal_page_width + 'px';
 cal_page.style.borderTop = '1px solid grey';
 cal_page.style.borderBottom = '1px solid grey';
-cal_page.style.outline = '0px solid transparent';  // suppress outline on focus
+cal_page.style.outline = 'none';  // suppress outline on focus
 
 cal_page.ref = '2';
 cal_page.pos = frame.obj_list.length;

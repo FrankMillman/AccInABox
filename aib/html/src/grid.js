@@ -1,7 +1,7 @@
 function create_grid(frame, main_grid, json_elem, col_defns) {
 
   var grid = document.createElement('div');
-  grid.style.outline = '0px solid transparent';  // disable highlight on focus
+  grid.style.outline = 'none';  // disable highlight on focus
 //  grid.style.border = '1px solid lightgrey';
   grid.style[cssFloat] = 'left';  // in case we add a scrollbar
   main_grid.appendChild(grid);
@@ -396,7 +396,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
     col_span.style.textAlign = 'center';
     col_span.style.fontWeight = 'bold';
     if (col_defn.head === '')
-  	  col_defn.head = '\xa0';
+      col_defn.head = '\xa0';
     col_span.appendChild(document.createTextNode(col_defn.head));
     col_span.title = col_defn.help_msg;
     grid_head.appendChild(col_span);

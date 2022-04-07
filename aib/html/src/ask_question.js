@@ -47,7 +47,7 @@ function ask_question(args) {
 
     button.style.border = '1px solid darkgrey';
     button.style.color = 'navy';
-    button.style.outline = '0px solid transparent';
+    button.style.outline = 'none';
     button.style.height = '22px';
     button.style.borderRadius = '4px';
 

@@ -3,7 +3,7 @@ function create_cell_input(grid) {
   var input = document.createElement('input');
   input.className = 'focus_background';
   input.style.border = 'none';
-  input.style.outline = '0px solid transparent';  // disable highlight on focus
+  input.style.outline = 'none';  // disable highlight on focus
   input.style.height = '17px';
   input.style.padding = '1px';
   input.style.font = '10pt Verdana,sans-serif';
@@ -99,7 +99,7 @@ function create_cell_input(grid) {
     input.className = cell.className;
     input.focus();
     };
-  
+
   input.end_edit = function(update, reset_focus) {
     var cell = this.cell, grid = this.grid;
     grid.edit_in_progress = false;

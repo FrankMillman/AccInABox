@@ -195,7 +195,7 @@ setup_bpmn_defs = function(svg) {
   // <path d="M25,25 L29,25 L40,38
   // L51,25 L55,25 L42,40
   // L55,55 L50,55 L40,42
-  // L29,55 L25,55 L38,40 Z" stroke="black" stroke-width="2"/> 
+  // L29,55 L25,55 L38,40 Z" stroke="black" stroke-width="2"/>
   var path = document.createElementNS(NS, 'path')
   excl_gateway.appendChild(path);
   var path_data = '';
@@ -330,7 +330,7 @@ setup_bpmn_defs = function(svg) {
   line.setAttributeNS(null, 'stroke-width', 5);
   line.setAttributeNS(null, 'fill', 'transparent');
   grp.setAttributeNS(null, 'transform', 'scale(0.125), translate(10,20)');
-  
+
   var recv_task = document.createElementNS(NS, 'symbol')
   defs.appendChild(recv_task);
   recv_task.id = 'recv_task';
@@ -371,7 +371,7 @@ setup_bpmn_defs = function(svg) {
   path.setAttributeNS(null, 'stroke-width', 2);
   path.setAttributeNS(null, 'fill', 'black');
   grp.setAttributeNS(null, 'transform', 'scale(0.6), translate(10,8)');
-  
+
   var service_defn = document.createElementNS(NS, 'g');
   defs.appendChild(service_defn);
   service_defn.id = 'service_defn';
@@ -388,54 +388,54 @@ setup_bpmn_defs = function(svg) {
     var end_y = Math.round((y + (r+10) * Math.cos(angle)));
     points.push([start_x, start_y, end_x, end_y]);
     };
-  
+
   path_data += ' M ' + points[5][0] + ',' + points[5][1];
   path_data += ' L ' + (points[5][0]+4) + ',' + (points[5][1]-4);
   path_data += ' L ' + (points[9][0]+4) + ',' + (points[9][1]-4);
   path_data += ' L ' + points[9][0] + ',' + points[9][1];
-  
+
   path_data += ' L ' + points[13][0] + ',' + points[13][1];
   path_data += ' L ' + (points[13][0]+6) + ',' + (points[13][1]);
   path_data += ' L ' + (points[16][0]+6) + ',' + (points[16][1]);
   path_data += ' L ' + points[16][0] + ',' + points[16][1];
-  
+
   path_data += ' L ' + points[21][0] + ',' + points[21][1];
   path_data += ' L ' + (points[21][0]+4) + ',' + (points[21][1]+4);
   path_data += ' L ' + (points[25][0]+4) + ',' + (points[25][1]+4);
   path_data += ' L ' + points[25][0] + ',' + points[25][1];
-  
+
   path_data += ' L ' + points[29][0] + ',' + points[29][1];
   path_data += ' L ' + (points[29][0]) + ',' + (points[29][1]+6);
   path_data += ' L ' + (points[32][0]) + ',' + (points[32][1]+6);
   path_data += ' L ' + points[32][0] + ',' + points[32][1];
-  
+
   path_data += ' L ' + points[37][0] + ',' + points[37][1];
   path_data += ' L ' + (points[37][0]-4) + ',' + (points[37][1]+4);
   path_data += ' L ' + (points[41][0]-4) + ',' + (points[41][1]+4);
   path_data += ' L ' + points[41][0] + ',' + points[41][1];
-  
+
   path_data += ' L ' + points[45][0] + ',' + points[45][1];
   path_data += ' L ' + (points[45][0]-6) + ',' + (points[45][1]);
   path_data += ' L ' + (points[48][0]-6) + ',' + (points[48][1]);
   path_data += ' L ' + points[48][0] + ',' + points[48][1];
-  
+
   path_data += ' L ' + points[53][0] + ',' + points[53][1];
   path_data += ' L ' + (points[53][0]-4) + ',' + (points[53][1]-4);
   path_data += ' L ' + (points[57][0]-4) + ',' + (points[57][1]-4);
   path_data += ' L ' + points[57][0] + ',' + points[57][1];
-  
+
   path_data += ' L ' + points[61][0] + ',' + points[61][1];
   path_data += ' L ' + (points[61][0]) + ',' + (points[61][1]-6);
   path_data += ' L ' + (points[0][0]) + ',' + (points[0][1]-6);
   path_data += ' L ' + points[0][0] + ',' + points[0][1];
-  
+
   path_data += ' Z';
-  
+
   path.setAttributeNS(null, 'd', path_data);
   path.setAttributeNS(null, 'fill', 'white');
   path.setAttributeNS(null, 'stroke', 'black');
   path.setAttributeNS(null, 'stroke-width', '1');
-  
+
   var circ = document.createElementNS(NS, 'circle');
   service_defn.appendChild(circ);
   circ.setAttributeNS(null, 'cx', x);
@@ -444,7 +444,7 @@ setup_bpmn_defs = function(svg) {
   circ.setAttributeNS(null, 'fill', 'white');
   circ.setAttributeNS(null, 'stroke', 'black');
   circ.setAttributeNS(null, 'stroke-width', 1);
-  
+
   var service_task = document.createElementNS(NS, 'symbol');
   defs.appendChild(service_task);
   service_task.id = 'service_task';

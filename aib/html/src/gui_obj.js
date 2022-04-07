@@ -83,6 +83,7 @@ function create_page() {
     for (var j=0; j<page.nb_pages.length; j++)
       page.nb_pages[j].end_page();
     };
+
   return page;
   };
 
@@ -114,7 +115,7 @@ function create_input(frame, page, json_elem, label) {
 //        input.style.border = '1px solid black';
 //        input.style.font = '10pt Verdana,sans-serif';
 //        input.style.color = 'navy';
-//        input.style.outline = '0px solid transparent';  // disable highlight on focus
+//        input.style.outline = 'none';  // disable highlight on focus
         input.style[cssFloat] = 'left';
 
 //        input.form_value = '';
@@ -128,7 +129,7 @@ function create_input(frame, page, json_elem, label) {
       input.style.border = '1px solid black';
       input.style.font = '10pt Verdana,sans-serif';
       input.style.color = 'navy';
-      input.style.outline = '0px solid transparent';  // disable highlight on focus
+      input.style.outline = 'none';  // disable highlight on focus
 
       input.form_value = '';
       input.current_value = '';
@@ -144,7 +145,7 @@ function create_input(frame, page, json_elem, label) {
       input.style.border = '1px solid black';
       input.style.font = '10pt Verdana,sans-serif';
       input.style.color = 'navy';
-      input.style.outline = '0px solid transparent';  // disable highlight on focus
+      input.style.outline = 'none';  // disable highlight on focus
       input.style.textAlign = 'right';
       input.style[cssFloat] = 'left';
 
@@ -162,7 +163,7 @@ function create_input(frame, page, json_elem, label) {
       input.style.border = '1px solid black';
       input.style.font = '10pt Verdana,sans-serif';
       input.style.color = 'navy';
-      input.style.outline = '0px solid transparent';  // disable highlight on focus
+      input.style.outline = 'none';  // disable highlight on focus
       input.style[cssFloat] = 'left';
 
       input.form_value = null;
@@ -221,7 +222,7 @@ function create_input(frame, page, json_elem, label) {
     input.style.width = json_elem.lng + 'px';
   // input.style.font = '10pt Verdana,sans-serif';
   // input.style.color = 'navy';
-  // input.style.outline = '0px solid transparent';  // disable highlight on focus
+  // input.style.outline = 'none';  // disable highlight on focus
 
   if (json_elem.skip)
     input.tabIndex = -1;  // remove from tab order
@@ -385,8 +386,8 @@ function create_input(frame, page, json_elem, label) {
 
   input.set_readonly = function(state) {
     // debug3(input.ref + ' readonly');
-	if (input.frame.form.readonly)
-	  return;
+    if (input.frame.form.readonly)
+      return;
     this.readonly = state;
     if (this.label)
       if (state)
@@ -680,7 +681,7 @@ function setup_bool(bool, label, json_elem) {
   bool.style.width = '16px';
   bool.style.height = '16px';
   bool.style.border = '1px solid black';
-  bool.style.outline = '0px solid transparent';  // disable highlight on focus
+  bool.style.outline = 'none';  // disable highlight on focus
 
   bool.onmousedown = function() {bool.mouse_down = true};
   bool.onmouseup = function() {bool.mouse_down = false};
@@ -731,7 +732,7 @@ function setup_choice(choice, json_elem) {
   choice.style.border = '1px solid black';
   choice.style.font = '10pt Verdana,sans-serif';
   choice.style.color = 'navy';
-  choice.style.outline = '0px solid transparent';  // disable highlight on focus
+  choice.style.outline = 'none';  // disable highlight on focus
 
   choice.data = [];
   choice.values = [];
@@ -815,7 +816,7 @@ function setup_radio(radio, json_elem) {
   radio.style.border = '1px solid grey';
   radio.style.font = '10pt Verdana,sans-serif';
   radio.style.color = 'navy';
-  radio.style.outline = '0px solid transparent';  // disable highlight on focus
+  radio.style.outline = 'none';  // disable highlight on focus
   radio.tabIndex = 0;
 
   radio.data = [];
@@ -896,7 +897,7 @@ function setup_spin(spin, json_elem) {
   spin.style.border = '1px solid black';
   spin.style.font = '10pt Verdana,sans-serif';
   spin.style.color = 'navy';
-  spin.style.outline = '0px solid transparent';  // disable highlight on focus
+  spin.style.outline = 'none';  // disable highlight on focus
 
   spin.aib_obj = new AibSpin();
 
@@ -1021,7 +1022,7 @@ function setup_sxml(sxml, json_elem) {
   sxml.style.background = button_background(sxml);
   sxml.style.border = '1px solid darkgrey';
   sxml.style.color = 'navy';
-  sxml.style.outline = '0px solid transparent';
+  sxml.style.outline = 'none';
   sxml.style.height = '22px';
   sxml.style.borderRadius = '4px';
 
@@ -1168,7 +1169,7 @@ function create_button(frame, json_elem) {
   button.style.background = button_background(button);
   button.style.border = '1px solid darkgrey';
   button.style.color = 'navy';
-  button.style.outline = '0px solid transparent';
+  button.style.outline = 'none';
   button.style.height = '22px';
   button.style.borderRadius = '4px';
 
@@ -1325,8 +1326,8 @@ function create_button(frame, json_elem) {
     };
 
   button.set_readonly = function(state) {
-	if (button.frame.form.readonly)
-	  return;
+    if (button.frame.form.readonly)
+      return;
     button.readonly = state;
     if (state) {
       button.style.color = 'darkgrey';  //'#b8b8b8';

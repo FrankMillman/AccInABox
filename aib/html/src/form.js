@@ -17,6 +17,8 @@ function setup_form(args) {
   var notebook = null;  // to detect if we are on a notebook page
   var last_parent = null;  // keep track of last parent to decide where to append 'dummy'
 
+  var finrpt = false;
+
   // for (var elem of args) {  // v. cute, but does not work with Galaxy Note 2
   for (var i=0, args_length=args.length; i<args_length; i++) {
     var elem = args[i];
@@ -1256,6 +1258,11 @@ function setup_form(args) {
         subtype_name = null;
         break;
 
+      case 'finrpt':
+        setup_finrpt(frame, elem_args.ref, elem_args.args);
+        finrpt = true;
+        break;
+
       case 'bpmn':
         setup_bpmn(frame, elem_args.ref, elem_args.nodes, elem_args.edges);
         break;
@@ -1263,13 +1270,15 @@ function setup_form(args) {
       };
     };
 
-  var help_msg = document.createElement('div');
-  page.appendChild(help_msg);
-  help_msg.appendChild(document.createTextNode(''));
-  help_msg.style.clear = 'left';
-  help_msg.style.padding = '10px';
-  help_msg.style.height = '18px';
-  form.help_msg = help_msg.firstChild;
+  if (!finrpt) {
+    var help_msg = document.createElement('div');
+    page.appendChild(help_msg);
+    help_msg.appendChild(document.createTextNode(''));
+    help_msg.style.clear = 'left';
+    help_msg.style.padding = '10px';
+    help_msg.style.height = '18px';
+    form.help_msg = help_msg.firstChild;
+    };
 
   frame.page.end_page();
 

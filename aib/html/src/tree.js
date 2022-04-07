@@ -91,7 +91,7 @@ function create_tree(container, frame, page, toolbar){
   tree.allow_edit = false;  // can override
 
   tree.tabIndex = 0;  // so that it will accept 'focus'
-  tree.style.outline = '0px solid transparent';
+  tree.style.outline = 'none';  // disable highlight on focus
   tree.style.height = container.height + 'px';
   tree.style.width = container.offsetWidth + 'px';
   tree.style.overflow = 'auto';
@@ -677,7 +677,7 @@ function create_tree_report(container, frame, page){
   tree.has_focus = false;
 
   tree.tabIndex = 0;  // so that it will accept 'focus'
-  tree.style.outline = '0px solid transparent';
+  tree.style.outline = 'none';  // disable highlight on focus
   tree.style.height = container.height + 'px';
   tree.style.width = container.offsetWidth + 'px';
   tree.style.overflow = 'auto';

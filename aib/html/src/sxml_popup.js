@@ -87,14 +87,14 @@ function get_sxml_popup(sxml) {
       return false;
       };
     if (e.key === 'Escape') {
-  	  if (this.value === popup.comment) {
+      if (this.value === popup.comment) {
         popup.close_window();
       } else {
         this.value = popup.comment;
         this.scrollTop = 0;
         this.selectionEnd = 0;
         };
-  	  };
+      };
     };
 
   var xml_div = document.createElement('div');
@@ -120,14 +120,14 @@ function get_sxml_popup(sxml) {
       return false;
       };
     if (e.key === 'Escape') {
-  	  if (this.value === popup.xml_code) {
+      if (this.value === popup.xml_code) {
         popup.close_window();
       } else {
         this.value = popup.xml_code;
         this.scrollTop = 0;
         this.selectionEnd = 0;
         };
-	  };
+    };
     };
 
   var popup_button_row = document.createElement('div');
