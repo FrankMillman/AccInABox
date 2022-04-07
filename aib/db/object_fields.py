@@ -1131,6 +1131,8 @@ class Xml(Text):
         return xml
 
     async def get_val_from_sql(self, value):
+        if value is None:
+            return None
         value = gzip.decompress(value)
         return etree.fromstring(value, parser=self.parser)
 

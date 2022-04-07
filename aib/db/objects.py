@@ -665,7 +665,7 @@ class DbObject:
             else:
                 col_val = await self.getval(col_name)
                 if col_val is None:  # added 2018-03-28
-                    col_val = next(iter(vals_fkeys.keys()))  # assume the first one
+                    col_val = next(iter(vals_fkeys))  # assume the first one
                 if col_val not in vals_fkeys:
                     errmsg = '{} not a valid value for {}.{}'.format(
                         col_val, self.table_name, col_name)
@@ -1107,8 +1107,7 @@ class DbObject:
                 fld._value = await fld.check_val(col_defn.sql[1:-1])
                 fld._init = fld._orig = fld._value
 
-        # for fld in self.fields.values():
-        for col_name in list(self.fields.keys()):  # rev_sign might be added - cannot change dict size!
+        for col_name in list(self.fields):  # rev_sign might be added - cannot change dict size!
             fld = self.fields[col_name]
             if display:
                 for obj in fld.gui_obj:

@@ -138,7 +138,7 @@ class Cursor:
         if row_no in self.new_rows:
             del self.new_rows[row_no]
 
-        for dict_key in sorted(self.new_rows.keys()):
+        for dict_key in sorted(self.new_rows):
             if dict_key > row_no:
                 self.new_rows[dict_key-1] = self.new_rows[dict_key]
                 del self.new_rows[dict_key]
