@@ -158,6 +158,7 @@
   <xs:group name="body_elements">
     <xs:choice>
       <xs:element name="block"/>
+      <xs:element name="finrpt"/>
       <xs:element name="vbox"/>
       <xs:element name="vbox_end"/>
       <xs:element ref="if"/>

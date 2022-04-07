@@ -37,11 +37,6 @@
       <input obj_name="params" col_name="auto_party_id" lng="250"/>
       <row/>
       <col/>
-      <label value="Change effective date?"/>
-      <col/>
-      <input obj_name="params" col_name="eff_date_nsls"/>
-      <row/>
-      <col/>
       <label value="Allow receipt allocation?"/>
       <col/>
       <input obj_name="params" col_name="allow_alloc_rec"/>
