@@ -795,7 +795,8 @@ class DbObject:
         if col_defn.sql is not None:
             self.select_cols.append(field)
 
-        field.must_be_evaluated = True  # ensure it is evaluated the first time it is accessed
+        if col_defn.dflt_rule is not None or col_defn.sql is not None:
+            field.must_be_evaluated = True  # ensure it is evaluated the first time it is accessed
 
     async def select_row_from_cursor(self, row, display):
         if row == -1:  # on blank row
@@ -920,9 +921,9 @@ class DbObject:
             if not self.dirty:
                 if where == self.where:
                     for fld in self.fields.values():
-                        if fld._orig  != fld._value_:  # do we get here?
-                            # fld._orig = await fld.getval()  # in case set to None before select
-                            fld._init = fld._orig = fld._value_  # virtual fld added after select?
+                        value = await fld.getval()
+                        if fld._orig != value:
+                            fld._init = fld._orig = value  # virtual fld added after select?
                     return  # row not changed since last select
         self.where = where
 
@@ -1059,7 +1060,8 @@ class DbObject:
                             tgt_field = foreign_key['tgt_field']
                             await tgt_field.db_obj.init(display=display)
             if fld.col_defn.col_type == 'virt':
-                fld.must_be_evaluated = True
+                if fld.col_defn.dflt_rule is not None or fld.col_defn.sql is not None:
+                    fld.must_be_evaluated = True
 
         self.exists = False
         self.active_subtypes = {}
@@ -1083,12 +1085,12 @@ class DbObject:
                 self.init_vals = {}  # to prevent re-use on restore()
                 return
 
-            fld._orig = fld._value
+            fld._orig = await fld.getval()
 
         for fld in self.flds_to_update:  # excludes subtype and virtual fields
             await init_fld(fld)
             if self.exists:
-                return
+                break
 
         for active_subtype in self.active_subtype_flds:
             for fld in self.active_subtype_flds[active_subtype]:
@@ -1103,6 +1105,8 @@ class DbObject:
                 else:
                     fld._value = await fld.get_dflt(from_init=True)
                     fld._init = fld._orig = fld._value
+                    if fld.col_defn.dflt_rule is not None or fld.col_defn.sql is not None:
+                        fld.must_be_evaluated = True
             elif col_defn.sql is not None and col_defn.sql.startswith("'"):
                 fld._value = await fld.check_val(col_defn.sql[1:-1])
                 fld._init = fld._orig = fld._value
@@ -1284,7 +1288,7 @@ class DbObject:
                         await db.hooks_xml.table_hook(self, after_save)
 
                 for fld in self.fields.values():
-                    fld._orig = fld._value_
+                    fld._orig = await fld.getval()
 
         save_lock_acquired = False
         if not self.context.in_db_save:
@@ -1314,7 +1318,7 @@ class DbObject:
         self.init_vals = {}  # to prevent re-use on restore()
 
         for fld in self.fields.values():
-            fld._init = fld._value_
+            fld._init = await fld.getval()
 
         if not from_upd_on_save:
             for caller_ref in list(self.on_clean_func.keyrefs()):

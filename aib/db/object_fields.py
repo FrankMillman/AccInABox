@@ -678,7 +678,6 @@ class Field:
         # if we get here, all validations have passed
 
         if not changed:
-            self.must_be_evaluated = False  # reset in case it was True
             return
 
         self._value = value
@@ -913,8 +912,7 @@ class Field:
     async def value_changed(self, value=blank):
         if value is blank:
             value = self._orig
-        # return await self.getval() != value
-        return self._value_ != value
+        return value != await self.getval()
 
     def concurrency_check(self):  # self._curr_val has just been read in from database
         if self._curr_val == self._orig:  # value has not been changed - ok
@@ -1019,7 +1017,10 @@ class Json(Text):
         dflt_val = await Field.get_dflt(self, from_init)
         if dflt_val is None:
             return None
-        return deserialise(dflt_val)
+        if isinstance(dflt_val, str):  # e.g. db_columns.allow_amend = 'false'
+            return deserialise(dflt_val)
+        else:  # e.g. ar_subtran_rec.allocations
+            return dflt_val
 
     async def check_val(self, value):
         if value is None:
@@ -1055,17 +1056,17 @@ class Json(Text):
             value = await self.getval()
         if value is None:
             return ''
-        # return self.serialise(value)
         return dumps(value, default=repr)
 
     async def get_val_for_sql(self):
-        # return None if self._value is None else self.serialise(self._value)
+        if self.must_be_evaluated:
+            self.must_be_evaluated = False
+            await self.recalc()
         return None if self._value is None else dumps(self._value, default=repr)
 
     async def get_val_for_xml(self):
         if self._value is None:
             return None
-        # value = self.serialise(self._value)
         value = dumps(self._value, default=repr)
         if value == self.col_defn.dflt_val:
             return None
@@ -1102,6 +1103,9 @@ class Xml(Text):
         return self.parse_xml(value)
 
     async def get_val_for_sql(self):
+        if self.must_be_evaluated:
+            self.must_be_evaluated = False
+            await self.recalc()
         return (None if self._value is None else
             gzip.compress(etree.tostring(self._value)))
 
@@ -1151,7 +1155,7 @@ class Xml(Text):
     async def value_changed(self, value=blank):
         if value is blank:
             value = self._orig
-        return not self._equal(self._value, value)
+        return not self._equal(value, await self.getval())
 
     def _equal(self, a, b):
         if a is None:
@@ -1216,6 +1220,9 @@ class StringXml(Xml):
         return self.to_string(value, for_gui=True)
 
     async def get_val_for_sql(self):
+        if self.must_be_evaluated:
+            self.must_be_evaluated = False
+            await self.recalc()
         return None if self._value is None else self.to_string(self._value)
 
     async def get_val_for_xml(self):
@@ -1675,10 +1682,6 @@ class Boolean(Field):
         if self._prev is None:
             return ''
         return str(int(self._prev))
-
-    # removed [2021-01-21] - True/False should be handled correctly by all databases
-    # async def get_val_for_sql(self):
-    #     return '1' if self._value else '0'
 
     async def get_val_for_xml(self):
         if self._value is None:
