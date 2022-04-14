@@ -146,7 +146,7 @@ cols.append ({
     'col_checks' : [
         ['match_supp_id', 'Must have same supplier id', [
             ['check', '', 'item_row_id>supp_row_id', '=',
-                'tran_row_id>supp_row_id', ''],
+                'tran_row_id>item_row_id>supp_row_id', ''],
             ]],
         ],
     'fkey'       : ['ap_openitems', 'row_id', None, None, False, None],
@@ -185,7 +185,7 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>supp_row_id>currency_id>scale',
+    'scale_ptr'  : 'item_row_id>supp_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : [
@@ -210,7 +210,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>supp_row_id>currency_id>scale',
+    'scale_ptr'  : 'item_row_id>supp_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<!--'

@@ -5,31 +5,41 @@
   </db_objects>
   <mem_objects>
 
+    <mem_obj name="var" descr="Form variables">
+      <mem_col col_name="scale" data_type="DEC" short_descr="Scale"
+        long_descr="Scale" allow_amend="true"/>
+      <mem_col col_name="amount_to_alloc" data_type="DEC" short_descr="Amount to allocate"
+        long_descr="Amount to allocate" db_scale="2" scale_ptr="scale"/>
+      <mem_col col_name="unallocated" data_type="DEC" short_descr="Unallocated"
+        long_descr="Unallocated" allow_amend="true"
+        db_scale="2" scale_ptr="scale"/>
+      </mem_obj>
+
     <mem_obj name="due_bal" descr="Balance due in customer currency">
       <mem_col col_name="due_total" data_type="DEC" short_descr="Total"
         long_descr="Total" col_head="Total" allow_null="true"
         allow_amend="true" db_scale="2"
-        scale_ptr="alloc_header.cust_row_id>currency_id>scale"/>
+        scale_ptr="var.scale"/>
       <mem_col col_name="due_curr" data_type="DEC" short_descr="Current"
         long_descr="Current" col_head="Current" allow_null="true"
         allow_amend="true" db_scale="2"
-        scale_ptr="alloc_header.cust_row_id>currency_id>scale"/>
+        scale_ptr="var.scale"/>
       <mem_col col_name="due_30" data_type="DEC" short_descr="30 days"
         long_descr="30 days" col_head="30 days" allow_null="true"
         allow_amend="true" db_scale="2"
-        scale_ptr="alloc_header.cust_row_id>currency_id>scale"/>
+        scale_ptr="var.scale"/>
       <mem_col col_name="due_60" data_type="DEC" short_descr="60 days"
         long_descr="60 days" col_head="60 days" allow_null="true"
         allow_amend="true" db_scale="2"
-        scale_ptr="alloc_header.cust_row_id>currency_id>scale"/>
+        scale_ptr="var.scale"/>
       <mem_col col_name="due_90" data_type="DEC" short_descr="90 days"
         long_descr="90 days" col_head="90 days" allow_null="true"
         allow_amend="true" db_scale="2"
-        scale_ptr="alloc_header.cust_row_id>currency_id>scale"/>
+        scale_ptr="var.scale"/>
       <mem_col col_name="due_120" data_type="DEC" short_descr="120 days"
         long_descr="120 days" col_head="120 days" allow_null="true"
         allow_amend="true" db_scale="2"
-        scale_ptr="alloc_header.cust_row_id>currency_id>scale"/>
+        scale_ptr="var.scale"/>
     </mem_obj>
 
     <mem_obj name="bal_vars" descr="Due balance variables">
@@ -58,15 +68,35 @@
       <mem_col col_name="alloc_120" data_type="BOOL" short_descr="Allocate to 120 day trans due"
         long_descr="Allocate balance of 120 day transactions due" allow_amend="true"/>
     </mem_obj>
+
+    <mem_obj name="mem_items" descr="In-memory table of outstanding items">
+      <mem_col col_name="item_row_id" data_type="INT" short_descr="Item row id"
+        long_descr="Item row id" key_field="A"/>
+      <mem_col col_name="tran_number" data_type="TEXT" short_descr="Tran number"
+        long_descr="Transaction number" col_head="Tran no"/>
+      <mem_col col_name="tran_date" data_type="DTE" short_descr="Tran date"
+        long_descr="Transaction date" col_head="Date"/>
+      <mem_col col_name="amount_cust" data_type="DEC" short_descr="Orig amount cust"
+        long_descr="Original item amount - cust" col_head="Orig cust"
+        db_scale="2" scale_ptr="var.scale"/>
+      <mem_col col_name="due_cust" data_type="DEC" short_descr="Amount due cust"
+        long_descr="Amount due after discount - cust" col_head="Due cust"
+        db_scale="2" scale_ptr="var.scale"/>
+      <mem_col col_name="alloc_cust" data_type="DEC" short_descr="Amount alloc cust"
+        long_descr="Amount allocated - cust" col_head="Alloc cust" allow_null="true"
+        allow_amend="true" db_scale="2" scale_ptr="var.scale"/>
+    </mem_obj>
+
   </mem_objects>
 
   <input_params>
     <input_param name="alloc_header" type="data_obj" target="alloc_header" required="true"/>
+    <input_param name="amount_to_alloc" type="data_attr" target="var.amount_to_alloc" required="true"/>
   </input_params>
 
   <output_params/>
 
-  <frame main_object="ar_subrec">
+  <frame main_object="var">
     <toolbar/>
 
     <body>
@@ -84,13 +114,13 @@
       <col/>
       <label value="Amount to allocate:"/>
       <col/>
-      <input obj_name="ar_subrec" col_name="rec_cust" lng="84" readonly="true" skip="true"/>
+      <input obj_name="var" col_name="amount_to_alloc" lng="84" readonly="true" skip="true"/>
 
       <row/>
       <col/>
       <label value="Unallocated:"/>
       <col/>
-      <input obj_name="ar_subrec" col_name="unallocated" lng="84" readonly="true" skip="true"/>
+      <input obj_name="var" col_name="unallocated" lng="84" readonly="true" skip="true"/>
 
       <block/>
       <panel/>
@@ -132,8 +162,7 @@
       <text value="Show/Alloc: "/>
       <col/>
       <input obj_name="bal_vars" col_name="show_120" after="
-        <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`4`/>>
-        <<!-- restart_grid obj_name=`ar_items`/ -->>
+        <<pyfunc name=`custom.artrans_funcs.show_ageing` age=`4`/>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_120" validation="
           <<validation>>
@@ -144,8 +173,7 @@
         "/>
       <col/>
       <input obj_name="bal_vars" col_name="show_90" after="
-        <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`3`/>>
-        <<!-- restart_grid obj_name=`ar_items`/ -->>
+        <<pyfunc name=`custom.artrans_funcs.show_ageing` age=`3`/>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_90" validation="
           <<validation>>
@@ -156,8 +184,7 @@
         "/>
       <col/>
       <input obj_name="bal_vars" col_name="show_60" after="
-        <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`2`/>>
-        <<!-- restart_grid obj_name=`ar_items`/ -->>
+        <<pyfunc name=`custom.artrans_funcs.show_ageing` age=`2`/>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_60" validation="
           <<validation>>
@@ -168,8 +195,7 @@
         "/>
       <col/>
       <input obj_name="bal_vars" col_name="show_30" after="
-        <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`1`/>>
-        <<!-- restart_grid obj_name=`ar_items`/ -->>
+        <<pyfunc name=`custom.artrans_funcs.show_ageing` age=`1`/>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_30" validation="
           <<validation>>
@@ -180,8 +206,7 @@
         "/>
       <col/>
       <input obj_name="bal_vars" col_name="show_curr" after="
-        <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`0`/>>
-        <<!-- restart_grid obj_name=`ar_items`/ -->>
+        <<pyfunc name=`custom.artrans_funcs.show_ageing` age=`0`/>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_curr" validation="
           <<validation>>
@@ -192,8 +217,7 @@
         "/>
       <col/>
       <input obj_name="bal_vars" col_name="show_tot" after="
-        <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`-1`/>>
-        <<!-- restart_grid obj_name=`ar_items`/ -->>
+        <<pyfunc name=`custom.artrans_funcs.show_ageing` age=`-1`/>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_tot" validation="
           <<validation>>
@@ -204,7 +228,7 @@
         "/>
 
       <block/>
-      <grid data_object="ar_items" growable="false" num_grid_rows="5" auto_start="true">
+      <grid data_object="mem_items" growable="false" num_grid_rows="5" auto_start="true">
         <toolbar>
           <tool type="nav"/>
         </toolbar>
@@ -213,19 +237,13 @@
           <cur_col col_name="tran_date" lng="80" readonly="true" skip="true"/>
           <cur_col col_name="amount_cust" lng="80" readonly="true" skip="true"/>
           <cur_col col_name="due_cust" lng="80" readonly="true" skip="true"/>
-          <cur_col col_name="alloc_cust_gui" lng="80"/>
+          <cur_col col_name="alloc_cust" lng="80"/>
         </cur_columns>
         <cur_filter>
-          <cur_fil test="WHERE" lbr="" col_name="cust_row_id"
-            op="=" expr="alloc_header.cust_row_id" rbr=""/>
-          <cur_fil test="AND" lbr="" col_name="tran_date"
+          <cur_fil test="WHERE" lbr="" col_name="tran_date"
             op=">>" expr="_ctx.first_date" rbr=""/>
           <cur_fil test="AND" lbr="" col_name="tran_date"
             op="<<=" expr="_ctx.last_date" rbr=""/>
-          <cur_fil test="AND" lbr="" col_name="due_cust"
-            op="!=" expr="0" rbr=""/>
-          <cur_fil test="AND" lbr="" col_name="row_id"
-            op="!=" expr="_ctx.this_item_rowid" rbr=""/>
         </cur_filter>
         <cur_sequence>
           <cur_seq col_name="tran_date"/>
@@ -243,17 +261,19 @@
       <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
         btn_validate="true" btn_default="true" lng="60" action="
           <<case>>
-            <<compare test=`[['if', '', 'ar_subrec.unallocated', '!=', '0', '']]`>>
+            <<compare test=`[['if', '', 'var.unallocated', '!=', '0', '']]`>>
               <<ask title=`Unallocated` enter=`No` escape=`No`
                   question=`Not fully allocated - sure you want to return?`>>
                 <<response ans=`No`>>
                 <</response>>
                 <<response ans=`Yes`>>
+                  <<pyfunc name=`custom.artrans_funcs.save_allocations`/>>
                   <<end_form state=`completed`/>>
                 <</response>>
               <</ask>>
             <</compare>>
             <<default>>
+              <<pyfunc name=`custom.artrans_funcs.save_allocations`/>>
               <<end_form state=`completed`/>>
             <</default>>
           <</case>>
@@ -262,13 +282,14 @@
     <frame_methods>
       <method name="on_start_frame" action="
         <<assign src=`alloc_header.tran_date` tgt=`_ctx.as_at_date`/>>
-        <<assign src=`alloc_header.row_id` tgt=`_ctx.tran_row_id`/>>
+        <<assign src=`alloc_header.cust_row_id>currency_id>scale` tgt=`var.scale`/>>
+        <<pyfunc name=`custom.artrans_funcs.setup_mem_items`/>>
         <<pyfunc name=`custom.artrans_funcs.get_due_bal`/>>
         <<skip_input num=`10`/>>
         "/>
       <method name="on_req_cancel" action="
           <<case>>
-            <<compare test=`[['if', '', 'ar_subrec.unallocated', '!=', '0', '']]`>>
+            <<compare test=`[['if', '', 'var.unallocated', '!=', '0', '']]`>>
               <<ask title=`Unallocated` enter=`No` escape=`No`
                   question=`Not fully allocated - sure you want to return?`>>
                 <<response ans=`No`>>

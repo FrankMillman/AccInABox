@@ -275,6 +275,36 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'allocations',
+    'data_type'  : 'JSON',
+    'short_descr': 'Allocations',
+    'long_descr' : 'Allocations (if any) - list of (item_row_id, alloc_cust) - alloc_cust must be a string.',
+    'col_head'   : 'Alloc',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `allocations`, `is not`, `$None`, ``]]">'
+            '<fld_val name="allocations"/>'
+          '</compare>'
+          '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>open_items`, `is`, `$True`, ``],'
+              '[`and`, ``, `cust_row_id>ledger_row_id>auto_alloc_oldest`, `is`, `$True`, ``]]">'
+            '<pyfunc name="custom.artrans_funcs.alloc_oldest"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : None,  # add check that it is a list of (int, str) tuples
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
     'short_descr': 'Posted?',
@@ -439,9 +469,11 @@ actions.append([
             [  # on insert
                 ['cust_row_id', '=', 'cust_row_id'],  # tgt_col, op, src_col
                 ['rec_amount', '=', '-rec_amt'],
+                ['allocations', '=', 'allocations'],
                 ],
             [  # on update
                 ['rec_amount', '=', '-rec_amt'],  # tgt_col, op, src_col
+                ['allocations', '=', 'allocations'],
                 ],
             [],  # on delete
             ],

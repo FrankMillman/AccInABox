@@ -6,7 +6,6 @@
   <db_objects>
     <db_obj name="ar_this_item" table_name="ar_openitems" is_formview_obj="true"/>
     <db_obj name="ar_alloc" table_name="ar_tran_alloc"/>
-    <db_obj name="ar_allocations" table_name="ar_allocations" parent="ar_alloc"/>
   </db_objects>
   <mem_objects/>
   <input_params/>
@@ -44,7 +43,7 @@
       <col/>
       <label value="Original amount:"/>
       <col/>
-      <input obj_name="ar_this_item" col_name="balance_cust" lng="84" readonly="true" skip="true"/>
+      <input obj_name="ar_this_item" col_name="unallocated" lng="84" readonly="true" skip="true"/>
 
       <col/>
       <label value="Amount to allocate:"/>
@@ -61,11 +60,9 @@
           <<sub_form name=`ar_alloc_item`>>
             <<call_params>>
               <<call_param name=`alloc_header` type=`data_obj` source=`ar_alloc`/>>
-              <<call_param name=`amount_to_alloc` type=`data_attr` source=`0-ar_this_item.balance_cust`/>>
-              <<call_param name=`unallocated` type=`data_attr` source=`0-ar_this_item.unallocated`/>>
+              <<call_param name=`amount_to_alloc` type=`data_attr` source=`ar_this_item.unallocated`/>>
             <</call_params>>
             <<return_params>>
-              <<return_param name=`unallocated` type=`data_attr` target=`0-ar_this_item.unallocated`/>>
             <</return_params>>
             <<on_return>>
               <<return state=`cancelled`>>
@@ -82,12 +79,13 @@
     <button_row>
       <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
           btn_validate="true" btn_default="false" lng="60" action="
+        <<req_save/>>
         <<call method=`on_req_close`/>>
         "/>
       <button btn_id="btn_post" btn_label="Post" btn_enabled="true"
           btn_validate="true" btn_default="true" lng="60" action="
         <<case>>
-          <<compare test=`[['if', '', 'ar_alloc.det_exists', '=', '0', '']]`>>
+          <<compare test=`[['if', '', 'ar_alloc.allocations', '=', '$ar_alloc.allocations$orig', '']]`>>
             <<ask title=`Allocation` enter=`Ok` escape=`Ok`
                 question=`No allocations entered`>>
               <<response ans=`Ok`>>

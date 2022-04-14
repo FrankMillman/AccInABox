@@ -130,17 +130,20 @@ async def setup_inv_alloc(db_obj, conn, return_vals):
         # however, we have not decided how to handle 'fifo' if it does go negative
         raise AibError(head='Error', body='Insufficient stock')
 
-async def alloc_oldest(db_obj, conn, return_vals):
-    # called as split_src func from ar_subtran_rec.upd_on_save()
+async def alloc_oldest(fld, xml):
+    # called as dflt_rule from ar_tran_rec/ar_subtran_rec.allocations
     # only called if ledger_row_id>auto_alloc_oldest is True
+
+    db_obj = fld.db_obj
+    context = db_obj.context
     cust_row_id = await db_obj.getval('cust_row_id')
     tot_to_allocate = 0 - await db_obj.getval('rec_cust')
-    db_obj.context.as_at_date = await db_obj.getval('tran_date')
+    context.as_at_date = await db_obj.getval('tran_date')
 
-    if 'ar_openitems' not in db_obj.context.data_objects:
-        db_obj.context.data_objects['ar_openitems'] = await db.objects.get_db_object(
-            db_obj.context, 'ar_openitems')
-    ar_items = db_obj.context.data_objects['ar_openitems']
+    if 'ar_openitems' not in context.data_objects:
+        context.data_objects['ar_openitems'] = await db.objects.get_db_object(
+            context, 'ar_openitems')
+    ar_items = context.data_objects['ar_openitems']
 
     cols_to_select = ['row_id', 'due_cust']
     where = [
@@ -149,58 +152,35 @@ async def alloc_oldest(db_obj, conn, return_vals):
         ]
     order = [('tran_date', False), ('row_id', False)]
 
-    async for row_id, due_cust in await conn.full_select(
-            ar_items, cols_to_select, where=where, order=order):
-        if tot_to_allocate > due_cust:
-            amt_allocated = 0 - due_cust
-        else:
-            amt_allocated = 0 - tot_to_allocate
-        yield (row_id, amt_allocated)
-        tot_to_allocate += amt_allocated
-        if not tot_to_allocate:
-            break # fully allocated
+    allocations = []
 
-async def get_tot_alloc(db_obj, fld, src):
-    # called from ar_tran_alloc/ar_subtran_rec in 'condition' for upd_on_post 'ar_allocations'
-    # get total allocations for this transaction and save in 'context'
-    # used to create 'double-entry' allocation for item being allocated
-    row_id = await db_obj.getval('row_id')
-    if db_obj.table_name == 'ar_tran_alloc':
-        tran_type = 'ar_alloc'
-    elif db_obj.table_name == 'ar_subtran_rec':
-        tran_type = 'ar_subrec'
-
-    sql = (
-        'SELECT SUM(a.alloc_cust) AS "[REAL2]", SUM(a.discount_cust) AS "[REAL2]", '
-        'SUM(a.alloc_local) AS "[REAL2]", SUM(a.discount_local) AS "[REAL2]" '
-        f'FROM {db_obj.company}.ar_allocations a '
-        f'JOIN {db_obj.company}.adm_tran_types b ON b.row_id = a.trantype_row_id '
-        f'WHERE b.tran_type = {tran_type!r} AND a.tran_row_id = {row_id} AND a.deleted_id = 0'
-        )
-
-    async with db_obj.context.db_session.get_connection() as db_mem_conn:
+    async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
-        async for alloc_cust, disc_cust, alloc_local, disc_local in await conn.exec_sql(sql):
-            db_obj.context.tot_alloc_cust = alloc_cust or 0
-            db_obj.context.tot_disc_cust = disc_cust or 0
-            db_obj.context.tot_alloc_local = alloc_local or 0
-            db_obj.context.tot_disc_local = disc_local or 0
 
-    return bool(alloc_cust)  # False if alloc_cust == 0, else True
+        async for row_id, due_cust in await conn.full_select(
+                ar_items, cols_to_select, where=where, order=order):
+            if tot_to_allocate > due_cust:
+                amt_allocated = due_cust
+            else:
+                amt_allocated = tot_to_allocate
+            allocations.append((row_id, str(amt_allocated)))
+            tot_to_allocate -= amt_allocated
+            if not tot_to_allocate:
+                break  # fully allocated
+
+    return allocations
+
+async def get_allocations(db_obj, conn, return_vals):
+    allocations = await db_obj.getval('allocations')
+    for item_row_id, alloc_cust in allocations:
+        yield item_row_id, 0 - D(alloc_cust)  # stored in JSON as str pos, return to caller as DEC neg
 
 async def get_due_bal(caller, xml):
     """
     called from form ar_alloc_item, which is used to 'allocate' an item against outstanding items
 
-    ar_alloc_item is called from form.ar_alloc or form.ar_receipt or subtran_body.arec
+    ar_alloc_item is called from form.ar_alloc or form.ar_receipt or subtran_body.ar_rec
         when user selects 'Allocate now'.
-
-    if called from form.ar_alloc, we are allocating an item that has already been posted. In this
-        case, it is necessary to exclude the item being allocated from the list of items
-        to allocated against.
-
-    otherwise we are allocating an item 'realtime', while it is being
-        captured. In this case no 'exclude' is necessary as the item has not yet been posted.
 
     the form ar_alloc_item presents a grid of items to allocate using a cursor, with the
         appropriate exclusion in the filter.
@@ -211,69 +191,24 @@ async def get_due_bal(caller, xml):
     NB shouldn't this be grouped by 'due_date'? [2020-11-06]
     """
 
-    alloc_hdr = caller.data_objects['alloc_header']
-    cust_row_id = await alloc_hdr.getval('cust_row_id')
-
-    this_item_rowid = caller.context.this_item_rowid
-    # if allocation is done realtime, ar_openitems has not been updated, so item_rowid is None
-    # if allocation is done after transaction is posted, item_rowid is not None
-
+    mem_items = caller.data_objects['mem_items']
     due_bal = caller.data_objects['due_bal']
     await due_bal.init()
-
-    as_at_date = caller.context.as_at_date
-
-    # this uses period-end dates for ageing dates
-    # instead, simply subtract 30, 60, 90, 120 from 'as_at_date'
-    # any preference?
-    # periods = await db.cache.get_adm_periods(caller.company)
-    # # locate period containing transaction date
-    # period_row_id = bisect_left([_.closing_date for _ in periods], as_at_date)
-    # # select as_at_date and previous 4 closing dates for ageing buckets
-    # dates = [as_at_date]
-    # period_row_id -= 1
-    # for _ in range(4):
-    #     dates.append(periods[period_row_id].closing_date)
-    #     if period_row_id > 0:  # else repeat first 'dummy' period
-    #         period_row_id -= 1
-    # dates.append(periods[0].closing_date)  # nothing can be lower!
-
-    dates = [as_at_date]
-    for _ in range(5):
-        dates.append(dates[-1] - td(30))
-
-    caller.context.dates = dates
-    caller.context.first_date = dates[5]
-    caller.context.last_date = dates[0]
-
-    company = caller.company  # used in sql statement below
+    dates = caller.context.dates
 
     sql = f"""
         SELECT
-        sum(q.due), 
-        SUM(CASE WHEN q.tran_date > '{dates[1]}' THEN q.due ELSE 0 END),
-        SUM(CASE WHEN q.tran_date BETWEEN '{dates[2] + td(1)}' AND '{dates[1]}' THEN q.due ELSE 0 END),
-        SUM(CASE WHEN q.tran_date BETWEEN '{dates[3] + td(1)}' AND '{dates[2]}' THEN q.due ELSE 0 END),
-        SUM(CASE WHEN q.tran_date BETWEEN '{dates[4] + td(1)}' AND '{dates[3]}' THEN q.due ELSE 0 END),
-        SUM(CASE WHEN q.tran_date <= '{dates[4]}' THEN q.due ELSE 0 END)
-        FROM
-        (SELECT
-            a.cust_row_id, a.tran_date, `a.{company}.ar_openitems.due_cust` AS due
-            FROM {company}.ar_openitems a
-            WHERE a.cust_row_id = {cust_row_id}
-                AND a.tran_date <= '{as_at_date}'
-                {'' if this_item_rowid is None else f'AND a.row_id != {this_item_rowid}'}
-        ) AS q
-        GROUP BY q.cust_row_id
+        sum(due_cust), 
+        SUM(CASE WHEN tran_date > '{dates[1]}' THEN due_cust ELSE 0 END),
+        SUM(CASE WHEN tran_date BETWEEN '{dates[2] + td(1)}' AND '{dates[1]}' THEN due_cust ELSE 0 END),
+        SUM(CASE WHEN tran_date BETWEEN '{dates[3] + td(1)}' AND '{dates[2]}' THEN due_cust ELSE 0 END),
+        SUM(CASE WHEN tran_date BETWEEN '{dates[4] + td(1)}' AND '{dates[3]}' THEN due_cust ELSE 0 END),
+        SUM(CASE WHEN tran_date <= '{dates[4]}' THEN due_cust ELSE 0 END)
+        FROM {mem_items.table_name}
         """
 
-        # GROUP BY is necessary in case inner select returns no rows
-        #   without it, SELECT returns a single row containing NULLs
-        #   with it, SELECT returns no rows
-        #   have not figured out why, but it works [2019-01-09]
-
     async with caller.db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
+        conn = db_mem_conn.mem
         async for row in await conn.exec_sql(sql, context=caller.context):
             await due_bal.setval('due_total', row[0], validate=False)
             await due_bal.setval('due_curr', row[1], validate=False)
@@ -281,7 +216,7 @@ async def get_due_bal(caller, xml):
             await due_bal.setval('due_60', row[3], validate=False)
             await due_bal.setval('due_90', row[4], validate=False)
             await due_bal.setval('due_120', row[5], validate=False)
-            # assert not necessary if above sql verified - must be equal by definition
+            # assert not necessary if above sql verified? - must be equal by definition
             assert await due_bal.getval('due_total') == (
                 await due_bal.getval('due_curr') +
                 await due_bal.getval('due_30') +
@@ -290,37 +225,169 @@ async def get_due_bal(caller, xml):
                 await due_bal.getval('due_120')
                 )
 
+async def show_ageing(caller, xml):
+    # called from ar_alloc_item after show/hide ageing 'bucket'
+
+    context = caller.context
+    age = xml.get('age')
+    bal_vars = caller.data_objects['bal_vars']
+
+    if age == '4':
+        fld = await bal_vars.getfld('show_120')
+    elif age == '3':
+        fld = await bal_vars.getfld('show_90')
+    elif age == '2':
+        fld = await bal_vars.getfld('show_60')
+    elif age == '1':
+        fld = await bal_vars.getfld('show_30')
+    elif age == '0':
+        fld = await bal_vars.getfld('show_curr')
+    elif age == '-1':
+        fld = await bal_vars.getfld('show_tot')
+    if fld.val_before_input == await fld.getval():
+        return
+
+    if not await fld.getval():
+        age = '-1'  # assume user wants to reset to 'all'
+
+    await bal_vars.setval('show_120', False)
+    await bal_vars.setval('show_90', False)
+    await bal_vars.setval('show_60', False)
+    await bal_vars.setval('show_30', False)
+    await bal_vars.setval('show_curr', False)
+    await bal_vars.setval('show_tot', False)
+
+    dates = context.dates
+
+    if age == '4':
+        await bal_vars.setval('show_120', True)
+        context.first_date = dates[5]
+        context.last_date = dates[4]
+    elif age == '3':
+        await bal_vars.setval('show_90', True)
+        context.first_date = dates[4]
+        context.last_date = dates[3]
+    elif age == '2':
+        await bal_vars.setval('show_60', True)
+        context.first_date = dates[3]
+        context.last_date = dates[2]
+    elif age == '1':
+        await bal_vars.setval('show_30', True)
+        context.first_date = dates[2]
+        context.last_date = dates[1]
+    elif age == '0':
+        await bal_vars.setval('show_curr', True)
+        context.first_date = dates[1]
+        context.last_date = dates[0]
+    elif age == '-1':
+        await bal_vars.setval('show_tot', True)
+        context.first_date = dates[5]
+        context.last_date = dates[0]
+
+    await caller.start_grid('mem_items')
+
 async def confirm_alloc(ctx, fld, value, xml):
     # called from ar_alloc_item after various 'alloc' check boxes
+    # for now, do not ask for confirmation
+    # leave method here in case it is required in the future
     return
+
+async def setup_mem_items(caller, xml):
+    # called from ar_alloc_item on_start_frame
+    context = caller.context
+
+    # old method uses period-end dates for ageing dates
+    # new method simply subtracts 30, 60, 90, 120 from 'as_at_date'
+    # any preference?
+    # periods = await db.cache.get_adm_periods(caller.company)
+    # # locate period containing transaction date
+    # period_row_id = bisect_left([_.closing_date for _ in periods], as_at_date)
+    # # select as_at_date and previous 4 closing dates for ageing buckets
+    # dates = [context.as_at_date]
+    # period_row_id -= 1
+    # for _ in range(4):
+    #     dates.append(periods[period_row_id].closing_date)
+    #     if period_row_id > 0:  # else repeat first 'dummy' period
+    #         period_row_id -= 1
+    # dates.append(periods[0].closing_date)  # nothing can be lower!
+
+    dates = [context.as_at_date]
+    for _ in range(5):
+        dates.append(dates[-1] - td(30))
+
+    context.dates = dates
+    context.first_date = dates[5]
+    context.last_date = dates[0]
+
+    alloc_header = caller.data_objects['alloc_header']  # ar_tran_rec or ar_tran_alloc
+    ar_items = caller.data_objects['ar_items']
+    mem_items = caller.data_objects['mem_items']
+    await mem_items.delete_all()
+
+    await ar_items.getfld('tran_number')  # set up virtual to ensure included in select
+    await ar_items.getfld('due_cust')     #                    ""
+    where = []
+    where.append(['WHERE', '', 'cust_row_id', '=', await alloc_header.getval('cust_row_id'), ''])
+    where.append(['AND', '', 'tran_date', '>', context.first_date, ''])
+    where.append(['AND', '', 'tran_date', '<=', context.last_date, ''])
+    where.append(['AND', '', 'due_cust', '!=', 0, ''])
+    if context.this_item_rowid is not None:  # allocation after transaction posted - exclude this transaction
+        where.append(['AND', '', 'row_id', '!=', context.this_item_rowid, ''])
+
+    all_items = ar_items.select_many(where=where, order=[])
+    async for _ in all_items:
+        await mem_items.init()
+        await mem_items.setval('item_row_id', await ar_items.getval('row_id'))
+        await mem_items.setval('tran_number', await ar_items.getval('tran_number'))
+        await mem_items.setval('tran_date', await ar_items.getval('tran_date'))
+        await mem_items.setval('amount_cust', await ar_items.getval('amount_cust'))
+        await mem_items.setval('due_cust', await ar_items.getval('due_cust'))
+        await mem_items.save()
+
+    var = caller.data_objects['var']
+    unallocated = await var.getval('amount_to_alloc')
+
+    allocations = await alloc_header.getval('allocations')
+    if allocations is not None:
+        for item_row_id, alloc_cust in allocations:
+            await mem_items.init(init_vals={'item_row_id': item_row_id})
+            alloc_cust = D(alloc_cust)
+            await mem_items.setval('alloc_cust', alloc_cust)
+            await mem_items.save()
+            unallocated -= alloc_cust
+
+    var = caller.data_objects['var']
+    await var.setval('unallocated', unallocated)
+
+async def save_allocations(caller, xml):
+    # called from ar_alloc_item - 'Ok' button action
+    mem_items = caller.data_objects['mem_items']
+    allocations = []
+    where = [
+        ['WHERE', '', 'alloc_cust', 'is not', None, ''],
+        ['AND', '', 'alloc_cust', '!=', 0, '']
+        ]
+    all_mem_items = mem_items.select_many(where=where, order=[])
+    async for _ in all_mem_items:
+        allocations.append([
+            await mem_items.getval('item_row_id'),
+            str(await mem_items.getval('alloc_cust')),
+            ])
+    alloc_header = caller.data_objects['alloc_header']
+    await alloc_header.setval('allocations', allocations or None)
 
 async def after_save_alloc(caller, xml):
     # called from ar_alloc_item grid row after_save
-
-    ar_item = caller.data_objects['ar_items']
-    alloc_cust_fld = await ar_item.getfld('alloc_cust_gui')
+    mem_items = caller.data_objects['mem_items']
+    alloc_cust_fld = await mem_items.getfld('alloc_cust')
     alloc_cust = await alloc_cust_fld.getval() or 0
     alloc_init = await alloc_cust_fld.get_init() or 0
     if alloc_cust == alloc_init:
         return
 
-    ar_alloc = caller.data_objects['ar_allocations']
-    await ar_alloc.init()
-    await ar_alloc.setval('item_row_id', await ar_item.getval('row_id'))
-
-    if ar_alloc.exists and not alloc_cust:
-        # if alloc_cust has been cleared, delete the row in the allocations table
-        await ar_alloc.delete(from_upd_on_save=True)  # actually delete
-    else:
-        await ar_alloc.setval('alloc_cust', alloc_cust)
-        await ar_alloc.save(from_upd_on_save=True)  # do not update audit trail
-
-    alloc_cust_fld._init = alloc_cust
-
-    ar_subrec = caller.data_objects['ar_subrec']
-    unalloc_fld = await ar_subrec.getfld('unallocated')
-    unallocated = await unalloc_fld.getval()
-    await unalloc_fld.setval(unallocated - (alloc_cust - alloc_init))
+    var = caller.data_objects['var']
+    unallocated = await var.getval('unallocated') + alloc_init - alloc_cust
+    await var.setval('unallocated', unallocated)
 
 async def alloc_ageing(caller, xml):
     # called from ar_alloc_item after select/deselect 'allocate bucket'
@@ -384,65 +451,34 @@ async def alloc_ageing(caller, xml):
             await bal_vars.setval('alloc_30', False)
             await bal_vars.setval('alloc_curr', False)
 
-    ar_items = caller.data_objects['ar_items']
-    alloc_hdr = caller.data_objects['alloc_header']
-    ar_alloc = caller.data_objects['ar_allocations']
+    mem_items = await db.objects.get_mem_object(caller.context, 'mem_items')  # get a new reference
+    tot_change = 0
+    if do_alloc:
+        where = [
+            ['WHERE', '', 'alloc_cust', 'is', None, ''],
+            ['OR', '', 'alloc_cust', '!= ', 'due_cust', ''],
+            ]
+    else:
+        where = [
+            ['WHERE', '', 'alloc_cust', 'is not', None, ''],
+            ['AND', '', 'alloc_cust', '!= ', 0, ''],
+            ]
+    all_mem_items = mem_items.select_many(where=where, order=[])
+    async for _ in all_mem_items:
+        alloc_cust = await mem_items.getval('alloc_cust') or 0
+        if do_alloc:
+            change = await mem_items.getval('due_cust') - alloc_cust
+        else:
+            change = 0 - alloc_cust
+        await mem_items.setval('alloc_cust', alloc_cust + change)
+        await mem_items.save()
+        tot_change += change
 
-    cust_row_id = await alloc_hdr.getval('cust_row_id')
-    this_item_rowid = caller.context.this_item_rowid
+    var = caller.data_objects['var']
+    unallocated = await var.getval('unallocated')
+    await var.setval('unallocated', unallocated - tot_change)
 
-    ar_subrec = caller.data_objects['ar_subrec']
-    unalloc_fld = await ar_subrec.getfld('unallocated')
-    unallocated = await unalloc_fld.getval()
-
-    async def alloc(conn):
-        nonlocal unallocated
-        where = []
-        where.append(['WHERE', '', 'cust_row_id', '=', cust_row_id, ''])
-        where.append(['AND', '', 'tran_date', '>', prev_end_date, ''])
-        where.append(['AND', '', 'tran_date', '<=', curr_end_date, ''])
-        where.append(['AND', '', 'row_id', '!=', this_item_rowid, ''])
-        where.append(['AND', '', 'due_cust', '!=', 0, ''])
-        all_alloc = ar_items.select_many(where=where, order=[])
-        async for _ in all_alloc:
-            await ar_alloc.init(init_vals={
-                'item_row_id': await ar_items.getval('row_id'),
-                })
-            # cannot include alloc_cust in init_vals
-            # in db.objects.init(), _orig is set to _value for init_vals
-            # ar_allocations.discount_cust uses 'if _orig = _value' in dflt_rule
-            await ar_alloc.setval('alloc_cust', 0 - (await ar_items.getval('due_cust')))
-            await ar_alloc.save()
-            await ar_items.setval('alloc_cust_gui', await ar_alloc.getval('alloc_cust'))
-            unallocated -= await ar_alloc.getval('alloc_cust')
-            await unalloc_fld.setval(unallocated)
-
-    async def unalloc(conn):
-        nonlocal unallocated
-        where = []
-        where.append(['WHERE', '', 'cust_row_id', '=', cust_row_id, ''])
-        where.append(['AND', '', 'tran_date', '>', prev_end_date, ''])
-        where.append(['AND', '', 'tran_date', '<=', curr_end_date, ''])
-        where.append(['AND', '', 'row_id', '!=', this_item_rowid, ''])
-        where.append(['AND', '', 'due_cust', '!=', 0, ''])
-        all_alloc = ar_items.select_many(where=where, order=[])
-        async for _ in all_alloc:
-            await ar_alloc.init(init_vals={
-                'item_row_id': await ar_items.getval('row_id'),
-                })
-            if ar_alloc.exists:
-                unallocated += await ar_items.getval('alloc_cust_gui')
-                await unalloc_fld.setval(unallocated)
-                await ar_alloc.delete()
-                await ar_items.setval('alloc_cust_gui', None)
-
-    async with caller.db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
-        await unalloc(conn)  # always unallocate any allocations first
-        if do_alloc:  # if 'allocate' selected, perform allocation
-            await alloc(conn)
-
-    await caller.start_grid('ar_items')
+    await caller.start_grid('mem_items')
 
 async def posted_check(caller, params):
 

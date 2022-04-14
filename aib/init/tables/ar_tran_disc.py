@@ -520,6 +520,46 @@ virt.append ({
         ),
     'sql'        : "a.disc_net_local + a.disc_tax_local"
     })
+virt.append ({
+    'col_name'   : 'tot_alloc_cust',
+    'data_type'  : '$RPTY',
+    'short_descr': 'Total allocations - cust',
+    'long_descr' : 'Total allocations - cust - aggregated from ar_allocations on save.',
+    'col_head'   : 'Alloc cust',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    })
+virt.append ({
+    'col_name'   : 'tot_disc_cust',
+    'data_type'  : '$RPTY',
+    'short_descr': 'Total discount - cust',
+    'long_descr' : 'Total discount - cust - aggregated from ar_allocations on save.',
+    'col_head'   : 'Disc cust',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    })
+virt.append ({
+    'col_name'   : 'tot_alloc_local',
+    'data_type'  : '$RLCL',
+    'short_descr': 'Total allocations - local',
+    'long_descr' : 'Total allocations - local - aggregated from ar_allocations on save.',
+    'col_head'   : 'Alloc local',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    })
+virt.append ({
+    'col_name'   : 'tot_disc_local',
+    'data_type'  : '$RLCL',
+    'short_descr': 'Total discount - local',
+    'long_descr' : 'Total discount - local - aggregated from ar_allocations on save.',
+    'col_head'   : 'Disc local',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    })
 
 # cursor definitions
 cursors = []
@@ -530,12 +570,13 @@ actions.append([
     'upd_on_save', [
         [
             'nsls_subtran',  # table name
-            None,  # condition
+            [  # condition
+                ['where', '', 'posted', 'is', '$False', ''],
+                ],
             False,  # split source?
             [],  # key fields
             [],  # aggregation
             [  # on insert
-                # ['subparent_row_id', '=', 'row_id'],  # tgt_col, src_col
                 ['nsls_code_id', '=', 'cust_row_id>ledger_row_id>discount_code_id'],
                 ['nsls_amount', '=', 'discount_cust'],
                 ],
@@ -580,7 +621,6 @@ actions.append([
             None,  # condition
             False,  # split source?
             [  # key fields
-                # ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
                 ['item_row_id', 'item_row_id'],  # tgt_col, op, src_col
                 ],
             [],  # aggregation
@@ -590,7 +630,7 @@ actions.append([
                 ],
             [],  # on unpost
             ],
-        [
+    [
             'ar_totals',  # table name
             None,  # condition
             False,  # split source?

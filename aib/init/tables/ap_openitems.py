@@ -368,7 +368,7 @@ virt.append ({
                                     "WHERE e.row_id = b.tran_row_id)) "
                     "ELSE "
                         "(SELECT row_id FROM {company}.ap_openitems d "
-                            "WHERE d.trantype_row_id = d.trantype_row_id AND c.tran_row_id = b.tran_row_id) "
+                            "WHERE d.trantype_row_id = b.trantype_row_id AND d.tran_row_id = b.tran_row_id) "
                 "END IS NOT NULL "
             "), 0)"
         )

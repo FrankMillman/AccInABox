@@ -148,6 +148,36 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'allocations',
+    'data_type'  : 'JSON',
+    'short_descr': 'Allocations',
+    'long_descr' : 'Allocations (if any) - list of (item_row_id, alloc_cust) - alloc_cust must be a string.',
+    'col_head'   : 'Alloc',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `allocations`, `is not`, `$None`, ``]]">'
+            '<fld_val name="allocations"/>'
+          '</compare>'
+          '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>open_items`, `is`, `$True`, ``],'
+              '[`and`, ``, `cust_row_id>ledger_row_id>auto_alloc_oldest`, `is`, `$True`, ``]]">'
+            '<pyfunc name="custom.artrans_funcs.alloc_oldest"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : None,  # add check that it is a list of (int, str) tuples
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'posted',
     'data_type'  : 'BOOL',
     'short_descr': 'Posted?',
@@ -170,6 +200,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'cust_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Cust row id',
+    'long_descr' : 'Customer row id',
+    'col_head'   : 'Cust',
+    'sql'        : 'a.item_row_id>cust_row_id',
+    })
 virt.append ({
     'col_name'   : 'tran_exch_rate',
     'data_type'  : 'DEC',
@@ -212,10 +250,51 @@ virt.append ({
         "a.item_row_id>amount_cust "
         "+ "
         "COALESCE(("
-            "SELECT b.alloc_cust FROM {company}.ar_allocations b "
-            "WHERE b.tran_row_id = a.row_id AND b.deleted_id = 0"
+            "SELECT (b.alloc_cust + b.discount_cust) "
+            "FROM {company}.ar_allocations b "
+            "WHERE b.item_row_id = a.item_row_id AND b.deleted_id = 0 "
         "), 0)"
         ),
+    })
+virt.append ({
+    'col_name'   : 'tot_alloc_cust',
+    'data_type'  : '$RPTY',
+    'short_descr': 'Total allocations - cust',
+    'long_descr' : 'Total allocations - cust - aggregated from ar_allocations on save.',
+    'col_head'   : 'Alloc cust',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    })
+virt.append ({
+    'col_name'   : 'tot_disc_cust',
+    'data_type'  : '$RPTY',
+    'short_descr': 'Total discount - cust',
+    'long_descr' : 'Total discount - cust - aggregated from ar_allocations on save.',
+    'col_head'   : 'Disc cust',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'cust_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    })
+virt.append ({
+    'col_name'   : 'tot_alloc_local',
+    'data_type'  : '$RLCL',
+    'short_descr': 'Total allocations - local',
+    'long_descr' : 'Total allocations - local - aggregated from ar_allocations on save.',
+    'col_head'   : 'Alloc local',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    })
+virt.append ({
+    'col_name'   : 'tot_disc_local',
+    'data_type'  : '$RLCL',
+    'short_descr': 'Total discount - local',
+    'long_descr' : 'Total discount - local - aggregated from ar_allocations on save.',
+    'col_head'   : 'Disc local',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
     })
 
 # cursor definitions
@@ -245,17 +324,36 @@ actions.append([
         [
             'ar_allocations',
             [  # condition
-                ['where', '', '_ctx.tot_alloc_cust', 'pyfunc', 'custom.artrans_funcs.get_tot_alloc', ''],
+                ['where', '', 'allocations', 'is not', '$None', ''],
+                ],
+
+            True,  # split source?
+
+             'custom.artrans_funcs.get_allocations',  # function to populate table
+
+             [  # fkey to this table
+                 ['tran_row_id', 'row_id'],  # tgt_col, src_col
+                 ],
+
+             ['item_row_id', 'alloc_cust'],  # fields to be updated
+
+             [],  # return values
+
+             [],  # check totals
+             ],
+        [
+            'ar_allocations',
+            [  # condition
+                ['where', '', 'allocations', 'is not', '$None', ''],
                 ],
             False,  # split source?
             [  # key fields
-                # ['tran_row_id', 'row_id'],  # tgt_col, op, src_col
                 ['item_row_id', 'item_row_id'],  # tgt_col, op, src_col
                 ],
             [],  # aggregation
             [  # on post
-                ['alloc_cust', '-', '_ctx.tot_alloc_cust'],  # tgt_col, op, src_col
-                ['alloc_local', '-', '_ctx.tot_alloc_local'],
+                ['alloc_cust', '-', 'tot_alloc_cust'],  # tgt_col, op, src_col
+                ['alloc_local', '-', 'tot_alloc_local'],
                 ],
             [],  # on unpost
             ],
@@ -272,8 +370,8 @@ actions.append([
             [  # on post
                 ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
                 ['tran_exch_rate', '=', 'tran_exch_rate'],
-                ['discount_cust', '=', '_ctx.tot_disc_cust'],
-                ['discount_local', '=', '_ctx.tot_disc_local'],
+                ['discount_cust', '=', 'tot_disc_cust'],
+                ['discount_local', '=', 'tot_disc_local'],
                 ['orig_item_id', '=', 'item_row_id'],
                 ],
             [],  # on unpost

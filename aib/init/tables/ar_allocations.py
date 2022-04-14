@@ -146,7 +146,7 @@ cols.append ({
     'col_checks' : [
         ['match_cust_id', 'Must have same customer id', [
             ['check', '', 'item_row_id>cust_row_id', '=',
-                'tran_row_id>cust_row_id', ''],
+                'tran_row_id>item_row_id>cust_row_id', ''],
             ]],
         ],
     'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
@@ -185,7 +185,7 @@ cols.append ({
     'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'item_row_id>cust_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : [
@@ -210,7 +210,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>cust_row_id>currency_id>scale',
+    'scale_ptr'  : 'item_row_id>cust_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : (
         '<!--'
@@ -374,3 +374,22 @@ cursors = []
 
 # actions
 actions = []
+actions.append([
+    'upd_on_save', [
+        [
+            '_parent',
+            None,  # condition
+            False,  # split source?
+            [],  # key fields
+            [  # aggregation
+                ['tot_alloc_cust', '+', 'alloc_cust'],  # tgt_col, op, src_col
+                ['tot_disc_cust', '+', 'discount_cust'],
+                ['tot_alloc_local', '+', 'alloc_local'],
+                ['tot_disc_local', '+', 'discount_local'],
+                ],
+            [],  # on insert
+            [],  # on update
+            [],  # on delete
+            ],
+        ],
+    ])

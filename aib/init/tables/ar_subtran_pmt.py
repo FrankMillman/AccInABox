@@ -265,7 +265,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'pmt_amount',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Payment amount',
     'long_descr' : 'Payment amount in transaction currency',
     'col_head'   : 'Pmt amount',
@@ -285,7 +285,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'pmt_cust',
-    'data_type'  : '$PTY',
+    'data_type'  : '$RPTY',
     'short_descr': 'Payment cust',
     'long_descr' : 'Payment amount in customer currency',
     'col_head'   : 'Pmt cust',
@@ -321,7 +321,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'pmt_local',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Payment local',
     'long_descr' : 'Payment amount in local currency',
     'col_head'   : 'Pmt local',
@@ -446,30 +446,9 @@ virt.append ({
       '</expr>'
       ),
     })
-
-virt.append ({
-    'col_name'   : 'unallocated',
-    'data_type'  : '$PTY',
-    'short_descr': 'Unallocated',
-    'long_descr' : 'Balance of receipt not allocated',
-    'col_head'   : 'Unalloc',
-    'db_scale'   : 2,
-    'scale_ptr'  : 'cust_row_id>currency_id>scale',
-    'dflt_val'   : '0',
-    'dflt_rule'  : None,
-    'sql'        : (
-        "a.rec_cust "
-        "- "
-        "COALESCE(("
-            "SELECT SUM(b.alloc_cust) FROM {company}.ar_allocations b "
-            "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
-            "WHERE c.tran_type = 'ar_rec' AND b.tran_row_id = a.row_id AND b.deleted_id = 0"
-            "), 0)"
-        ),
-    })
 virt.append ({
     'col_name'   : 'discount_allowed',
-    'data_type'  : '$LCL',
+    'data_type'  : '$RLCL',
     'short_descr': 'Discount allowed',
     'long_descr' : 'Discount allowed - local currency. Used in form ar_rec_day.',
     'col_head'   : 'Disc',
@@ -482,7 +461,7 @@ virt.append ({
         "FROM {company}.ar_openitems b "
         "JOIN {company}.ar_allocations c ON c.item_row_id = b.row_id "
         "JOIN {company}.adm_tran_types d ON d.row_id = b.trantype_row_id "
-        "WHERE d.tran_type = 'ar_rec' and b.tran_row_id = a.row_id"
+        "WHERE d.tran_type = 'ar_subrec' and b.tran_row_id = a.row_id"
         ),
     })
 
@@ -491,32 +470,6 @@ cursors = []
 
 # actions
 actions = []
-actions.append([
-    'upd_on_save', [
-        [
-            'ar_allocations',
-            [  # condition
-                ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
-                ['and', '', 'cust_row_id>ledger_row_id>auto_alloc_oldest', 'is', '$True', ''],
-                ['and', '', '$in_db_post', 'is', '$False', ''],
-                ],
-
-            True,  # split source?
-
-            'custom.artrans_funcs.alloc_oldest',  # function to populate table
-
-            [  # fkey to this table
-                ['tran_row_id', 'row_id'],  # tgt_col, src_col
-                ],
-
-            ['item_row_id', 'alloc_cust'],  # fields to be updated
-
-            [],  # return values
-
-            [],  # check totals
-            ],
-        ],
-    ])
 actions.append([
     'upd_on_post', [
         [

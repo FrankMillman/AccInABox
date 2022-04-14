@@ -58,6 +58,7 @@
       <<sub_form name=`ar_alloc_item`>>
         <<call_params>>
           <<call_param name=`alloc_header` type=`data_obj` source=`ar_subrec`/>>
+          <<call_param name=`amount_to_alloc` type=`data_attr` source=`0-ar_subrec.rec_cust`/>>
         <</call_params>>
         <<return_params/>>
         <<on_return>>
