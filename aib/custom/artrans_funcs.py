@@ -174,6 +174,7 @@ async def get_allocations(db_obj, conn, return_vals):
     allocations = await db_obj.getval('allocations')
     for item_row_id, alloc_cust in allocations:
         yield item_row_id, 0 - D(alloc_cust)  # stored in JSON as str pos, return to caller as DEC neg
+    await db_obj.setval('allocations', None, validate=False)  # allocations no longer required
 
 async def get_due_bal(caller, xml):
     """
@@ -832,6 +833,8 @@ async def get_stat_date(fld, xml):
     company = db_obj.company
     adm_periods = await db.cache.get_adm_periods(company)
     period_row_id = await db_obj.getval('period_row_id')
+    if period_row_id is None:
+        return None
     stmt_date_param = await db_obj.getval('ledger_row_id>stmt_date')
     if stmt_date_param[0] == 2:  # fixed day per month
         closing_date = adm_periods[period_row_id].closing_date

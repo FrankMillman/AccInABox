@@ -1011,7 +1011,7 @@ class Json(Text):
     async def getval(self):
         # must return deepcopy because value is mutable, so
         #   we would not be able to detect if it was changed
-        return deepcopy(self._value)
+        return deepcopy(self._value_)
 
     async def get_dflt(self, from_init=False):
         dflt_val = await Field.get_dflt(self, from_init)

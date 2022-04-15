@@ -589,7 +589,7 @@ actions.append([
         [
             'ar_allocations',
             [  # condition
-                ['where', '', 'allocations', 'is not', '$None', ''],
+                ['where', '', 'tot_alloc_cust', '!=', '0', ''],
                 ],
             False,  # split source?
             [  # key fields
