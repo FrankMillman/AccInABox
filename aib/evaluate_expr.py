@@ -133,7 +133,11 @@ async def eval_elem(elem, db_obj, fld=None, value=None):
         return await fld2.getval()
     if elem.startswith('_ctx.'):
         return getattr(db_obj.context, elem[5:], None)
-    return await db_obj.getval(elem)
+    fld = await db_obj.getfld(elem)
+    value = await fld.getval()
+    if value is None and fld.col_defn.dflt_val is not None:  # dflt not yet evaluated
+        value = await fld.get_dflt()  # e.g. ap_pmt_batch.currency_id
+    return value
 
 async def eval_bool(src, chk, tgt, db_obj, fld, value):
     if chk == 'pyfunc':
