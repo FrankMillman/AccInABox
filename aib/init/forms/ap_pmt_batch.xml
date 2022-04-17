@@ -3,7 +3,7 @@
     <<case>>
       <<obj_exists obj_name=`batch_hdr`>>
         <<continue_form/>>
-      <</obj_exists>>      
+      <</obj_exists>>
       <<default>>
         <<inline_form name=`batch_header`>>
           <<on_return>>
@@ -35,8 +35,7 @@
   <db_objects>
     <db_obj name="batch_hdr" table_name="ap_pmt_batch"/>
     <db_obj name="batch_det" table_name="ap_pmt_batch_det" parent="batch_hdr"/>
-    <db_obj name="supp" table_name="ap_suppliers"/>
-    <db_obj name="items" table_name="ap_openitems"/>
+    <db_obj name="ap_items" table_name="ap_openitems"/>
   </db_objects>
   <mem_objects>
     <mem_obj name="var" descr="Form variables">
@@ -287,7 +286,7 @@
           btn_validate="false" action="
             <<end_form state=`cancelled`/>>
           "/>
-        <button btn_id="btn_ok" btn_label="Authorise" lng="80" btn_enabled="true"
+        <button btn_id="btn_ok" btn_label="Ok" lng="80" btn_enabled="true"
           btn_validate="true" btn_default="true" action="
             <<end_form state=`completed`/>>
           "/>

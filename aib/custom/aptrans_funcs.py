@@ -203,6 +203,7 @@ async def check_ledg_per(caller, xml):
             return
 """
 
+"""
 async def get_tot_alloc(db_obj, fld, src):
     # called from ap_tran_alloc/ap_subtran_pmt in 'condition' for upd_on_post 'ap_allocations'
     # get total allocations for this transaction and save in 'context'
@@ -230,67 +231,86 @@ async def get_tot_alloc(db_obj, fld, src):
             db_obj.context.tot_disc_local = disc_local or 0
 
     return bool(alloc_supp)  # False if alloc_supp == 0, else True
+"""
+
+async def alloc_oldest(fld, xml):
+    # called as dflt_rule from ap_tran_pmt/ap_subtran_pmt.allocations
+    # only called if ledger_row_id>auto_alloc_oldest is True
+
+    db_obj = fld.db_obj
+    context = db_obj.context
+    supp_row_id = await db_obj.getval('supp_row_id')
+    tot_to_allocate = 0 - await db_obj.getval('pmt_supp')
+    context.as_at_date = await db_obj.getval('tran_date')
+
+    if 'ap_openitems' not in context.data_objects:
+        context.data_objects['ap_openitems'] = await db.objects.get_db_object(
+            context, 'ap_openitems')
+    ap_items = context.data_objects['ap_openitems']
+
+    col_names = ['row_id', 'due_supp']
+    where = [
+        ['WHERE', '', 'supp_row_id', '=', supp_row_id, ''],
+        ['AND', '', 'due_supp', '!=', '0', ''],
+        ]
+    order = [('tran_date', False), ('row_id', False)]
+
+    allocations = []
+
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+
+        async for row_id, due_supp in await conn.full_select(
+                ap_items, col_names, where=where, order=order):
+            if tot_to_allocate > due_supp:
+                amt_allocated = due_supp
+            else:
+                amt_allocated = tot_to_allocate
+            allocations.append((row_id, str(amt_allocated)))
+            tot_to_allocate -= amt_allocated
+            if not tot_to_allocate:
+                break  # fully allocated
+
+    return allocations
+
+async def get_allocations(db_obj, conn, return_vals):
+    allocations = await db_obj.getval('allocations')
+    for item_row_id, alloc_supp in allocations:
+        yield item_row_id, 0 - D(alloc_supp)  # stored in JSON as str pos, return to caller as DEC neg
+    await db_obj.setval('allocations', None, validate=False)  # allocations no longer required
 
 async def setup_pmts_due(caller, xml):
     # called after inline form 'batch_header' in ap_pmt_batch.xml
     context = caller.context
     batch_hdr = context.data_objects['batch_hdr']
     batch_det = context.data_objects['batch_det']
-
-    sql = (
-        "SELECT a.supp_row_id, a.row_id, a.amount_supp - "
-        "COALESCE(alloc.tot_alloc, 0) - "
-        "CASE "
-            "WHEN a.discount_date IS NULL THEN 0 "
-            "WHEN a.discount_date < {_ctx.as_at_date} THEN 0 "
-            "ELSE a.discount_supp - COALESCE(alloc.disc_alloc, 0) "
-        "END AS \"[REAL2]\" "
-        "FROM {company}.ap_openitems a "
-        "LEFT JOIN {company}.ap_suppliers b ON b.row_id = a.supp_row_id "
-        "LEFT JOIN {company}.org_parties x ON x.row_id = b.party_row_id "
-        "LEFT JOIN {company}.adm_locations y ON y.row_id = b.location_row_id "
-        "LEFT JOIN {company}.adm_functions z ON z.row_id = b.function_row_id "
-        "LEFT JOIN (SELECT c.item_row_id, "
-            "SUM(c.alloc_supp + c.discount_supp) AS tot_alloc, "
-            "SUM(c.discount_supp) AS disc_alloc "
-            "FROM {company}.ap_allocations c "
-            "WHERE "
-                "CASE "
-                    "WHEN c.tran_type = 'ap_alloc' THEN "
-                        "(SELECT d.row_id FROM {company}.ap_allocations d "
-                            "WHERE d.tran_type = c.tran_type AND "
-                                "d.tran_row_id = c.tran_row_id AND "
-                                "d.item_row_id = "
-                                "(SELECT e.item_row_id FROM {company}.ap_tran_alloc e "
-                                    "WHERE e.row_id = c.tran_row_id)) "
-                    "ELSE "
-                        "(SELECT d.row_id FROM {company}.ap_openitems d "
-                            "WHERE d.tran_type = c.tran_type AND d.tran_row_id = c.tran_row_id) "
-                "END IS NOT NULL "
-            "GROUP BY c.item_row_id "
-            ") AS alloc "
-            "ON alloc.item_row_id = a.row_id "
-        "WHERE a.due_date <= {_ctx.as_at_date} AND a.deleted_id = 0 AND "
-            "b.ledger_row_id = {_ctx.ledger_row_id} AND "
-            "a.amount_supp - "
-                "COALESCE(alloc.tot_alloc, 0) - "
-                "CASE "
-                    "WHEN a.discount_date IS NULL THEN 0 "
-                    "WHEN a.discount_date < {_ctx.as_at_date} THEN 0 "
-                    "ELSE a.discount_supp - COALESCE(alloc.disc_alloc, 0) "
-                "END "
-            "!= 0 "
-        "ORDER BY x.party_id, y.parent_id, y.seq, z.parent_id, z.seq "
-        )
+    ap_items = context.data_objects['ap_items']
 
     last_supp_row_id = None
     due_tot = 0
     allocations = []
 
+    col_names = ['supp_row_id', 'row_id', 'due_supp']
+
+    where = []
+    where.append(['WHERE', '', 'due_date', '<=', context.as_at_date, ''])
+    where.append(['AND', '', 'supp_row_id>ledger_row_id', '=', context.ledger_row_id, ''])
+    where.append(['AND', '', 'due_supp', '!=', 0, ''])
+    where.append(['AND', '', 'deleted_id', '=', 0, ''])
+
+    order = []
+    order.append(('supp_row_id>party_row_id>party_id', False))
+    order.append(('supp_row_id>location_row_id>parent_id', False))
+    order.append(('supp_row_id>location_row_id>seq', False))
+    order.append(('supp_row_id>function_row_id>parent_id', False))
+    order.append(('supp_row_id>function_row_id>seq', False))
+
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
-        cur = await conn.exec_sql(sql, context=caller.context)
-        async for supp_row_id, item_row_id, due_amt in cur:
+
+        async for supp_row_id, item_row_id, due_supp in await conn.full_select(
+                ap_items, col_names, where=where, order=order):
+            due_supp = 0-due_supp
             if not batch_hdr.exists:  # only save batch_hdr if any rows are selected
                 await batch_hdr.save()
             if supp_row_id != last_supp_row_id:
@@ -303,8 +323,8 @@ async def setup_pmts_due(caller, xml):
                     due_tot = 0
                     allocations = []
                 last_supp_row_id = supp_row_id
-            due_tot += due_amt
-            allocations.append((item_row_id, str(due_amt), 0))  # convert Decimal to str (shorter!)
+            allocations.append((item_row_id, str(due_supp), 0))  # convert Decimal to str (shorter!)
+            due_tot += due_supp
         if last_supp_row_id is not None:
             await batch_det.init()
             await batch_det.setval('supp_row_id', last_supp_row_id)
@@ -317,20 +337,20 @@ async def setup_items_due(caller, xml):
     context = caller.context
 
     batch_det = context.data_objects['batch_det']
-    items = context.data_objects['items']
+    ap_items = context.data_objects['ap_items']
     items_due = context.data_objects['items_due']
     await items_due.delete_all()
 
     allocations = await batch_det.getval('allocations')
     for item_row_id, due_amt, pmt_amt in allocations:
-        await items.init(init_vals={'row_id': item_row_id})
+        await ap_items.init(init_vals={'row_id': item_row_id})
         await items_due.init()
         await items_due.setval('item_row_id', item_row_id)
-        await items_due.setval('tran_type', await items.getval('tran_type'))
-        await items_due.setval('tran_number', await items.getval('tran_number'))
-        await items_due.setval('tran_date', await items.getval('tran_date'))
-        await items_due.setval('due_date', await items.getval('due_date'))
-        await items_due.setval('amount_supp', await items.getval('amount_supp'))
+        await items_due.setval('tran_type', await ap_items.getval('tran_type'))
+        await items_due.setval('tran_number', await ap_items.getval('tran_number'))
+        await items_due.setval('tran_date', await ap_items.getval('tran_date'))
+        await items_due.setval('due_date', await ap_items.getval('due_date'))
+        await items_due.setval('amount_supp', await ap_items.getval('amount_supp'))
         await items_due.setval('due_supp', due_amt)
         await items_due.setval('pmt_supp', pmt_amt)
         await items_due.save()
@@ -343,7 +363,7 @@ async def auth_pmt(caller, xml):
         return
 
     allocations = []
-    pmt_amt = 0
+    pmt_amt = D(0)
     items_due = context.data_objects['items_due']
     all_items = items_due.select_many(where=[], order=[['row_id', False]])
     async for _ in all_items:
@@ -352,7 +372,7 @@ async def auth_pmt(caller, xml):
             str(await items_due.getval('due_supp')),  # convert Decimal to str (shorter!)
             str(await items_due.getval('pmt_supp')),
             ))
-        pmt_amt += await items_due.getval('pmt_supp')
+        pmt_amt += D(await items_due.getval('pmt_supp'))
 
     batch_det = context.data_objects['batch_det']
     await batch_det.setval('pmt_amt', pmt_amt)
@@ -369,7 +389,7 @@ async def on_pmt_auth(caller, xml):
     else:
         auth = False
 
-    pmt_amt = 0
+    pmt_amt = D(0)
     allocations = await batch_det.getval('allocations')
     for alloc in allocations:  # [item_row_id, due_amt, pmt_amt]
         if auth:
@@ -436,32 +456,33 @@ async def post_pmt_batch(caller, xml):
         order = [('row_id', False)]
         all_dets = batch_det.select_many(where=where, order=order)
         async for _ in all_dets:
+            allocations = []
+            for item_row_id, due_amt, pmt_amt in await batch_det.getval('allocations'):
+                if pmt_amt:
+                    allocations.append((item_row_id, pmt_amt))
+
+            pmt_amt = 0 - (await batch_det.getval('pmt_amt'))
+
             if pmt_tran == 'cb':
                 await cb_pmt.init()
                 await cb_pmt.setval('tran_date', tran_date)
                 await cb_pmt.setval('payee', await batch_det.getval('supp_row_id>party_row_id>display_name'))
-                await cb_pmt.setval('amount', await batch_det.getval('pmt_amt'))
+                await cb_pmt.setval('amount', pmt_amt)
                 await cb_pmt.save()
                 await cb_det.init()
-                await cb_det.setval('line_type', 'apmt')
+                await cb_det.setval('line_type', 'ap_pmt')
                 await ap_sub.setval('supp_row_id', await batch_det.getval('supp_row_id'))
-                await ap_sub.setval('pmt_amount', await batch_det.getval('pmt_amt'))
+                await ap_sub.setval('pmt_amount', 0 - pmt_amt)
+                await ap_sub.setval('allocations', allocations)
                 await cb_det.save()
 
             else:  # must be 'ap'
                 await ap_pmt.init()
                 await ap_pmt.setval('supp_row_id', await batch_det.getval('supp_row_id'))
                 await ap_pmt.setval('tran_date', tran_date)
-                await ap_pmt.setval('pmt_amt', await batch_det.getval('pmt_amt'))
+                await ap_pmt.setval('pmt_amt', pmt_amt)
+                await ap_pmt.setval('allocations', allocations)
                 await ap_pmt.save()
-
-            for item_row_id, due_amt, pmt_amt in await batch_det.getval('allocations'):
-                pmt_amt = D(pmt_amt)  # convert str back to Decimal
-                if pmt_amt:
-                    await ap_alloc.init()
-                    await ap_alloc.setval('item_row_id', item_row_id)
-                    await ap_alloc.setval('alloc_supp', pmt_amt)
-                    await ap_alloc.save()
 
             if pmt_tran == 'cb':
                 await cb_pmt.post()

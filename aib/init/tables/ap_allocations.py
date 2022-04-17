@@ -174,7 +174,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'alloc_supp',
-    'data_type'  : '$RPTY',
+    'data_type'  : '$PTY',
     'short_descr': 'Amount allocated - supp',
     'long_descr' : 'Amount allocated - supplier currency',
     'col_head'   : 'Alloc supp',
@@ -199,7 +199,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'discount_supp',
-    'data_type'  : '$RPTY',
+    'data_type'  : '$PTY',
     'short_descr': 'Discount allowed - supp',
     'long_descr' : 'Discount allowed - supplier currency - programmatically calculated',
     'col_head'   : 'Disc supp',
@@ -262,7 +262,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'alloc_local',
-    'data_type'  : '$RLCL',
+    'data_type'  : '$LCL',
     'short_descr': 'Amount allocated - local',
     'long_descr' : 'Amount allocated - local currency - programmatically calculated',
     'col_head'   : 'Alloc local',
@@ -305,7 +305,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'discount_local',
-    'data_type'  : '$RLCL',
+    'data_type'  : '$LCL',
     'short_descr': 'Discount allowed - local',
     'long_descr' : 'Discount allowed - local currency - programmatically calculated',
     'col_head'   : 'Disc local',
@@ -353,24 +353,28 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'rev_sign',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign?',
-    'col_head'   : 'Reverse sign?',
-    'dflt_rule'  : (
-      '<literal value="$False"/>'
-      # '<expr>'
-      #   '<literal value="dummy"/>'
-      #   '<op type="not"/>'
-      #   '<fld_val name="subparent_row_id>rev_sign"/>'
-      # '</expr>'
-      ),
-    })
 
 # cursor definitions
 cursors = []
 
 # actions
 actions = []
+actions.append([
+    'upd_on_save', [
+        [
+            '_parent',
+            None,  # condition
+            False,  # split source?
+            [],  # key fields
+            [  # aggregation
+                ['tot_alloc_supp', '+', 'alloc_supp'],  # tgt_col, op, src_col
+                ['tot_disc_supp', '+', 'discount_supp'],
+                ['tot_alloc_local', '+', 'alloc_local'],
+                ['tot_disc_local', '+', 'discount_local'],
+                ],
+            [],  # on insert
+            [],  # on update
+            [],  # on delete
+            ],
+        ],
+    ])

@@ -12,6 +12,7 @@ import weakref
 from weakref import WeakKeyDictionary as WKD
 from collections import OrderedDict as OD
 from itertools import zip_longest
+from decimal import Decimal as D
 import importlib
 import asyncio
 
@@ -569,7 +570,12 @@ class DbObject:
         for col_defn in self.db_table.col_list:
             if col_defn.col_name in self.fields:  # else virtual field not set up
                 field = self.fields[col_defn.col_name]
-                descr.append('{}={!s};'.format(field.col_name, field._value_))
+                # descr.append('{}={!s};'.format(field.col_name, field._value_))
+                value = field._value_
+                if isinstance(value, D):
+                    fmt = f'{{:.{col_defn.db_scale}f}}'
+                    value = f'D({fmt.format(value)})'
+                descr.append(f'{col_defn.col_name}={value};')
         return ' '.join(descr)
 
     async def _str(self):  # async version - must be called manually

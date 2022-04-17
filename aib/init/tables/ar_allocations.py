@@ -174,7 +174,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'alloc_cust',
-    'data_type'  : '$RPTY',
+    'data_type'  : '$PTY',
     'short_descr': 'Amount allocated - cust',
     'long_descr' : 'Amount allocated - customer currency',
     'col_head'   : 'Alloc cust',
@@ -199,7 +199,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'discount_cust',
-    'data_type'  : '$RPTY',
+    'data_type'  : '$PTY',
     'short_descr': 'Discount allowed - cust',
     'long_descr' : 'Discount allowed - customer currency - programmatically calculated',
     'col_head'   : 'Disc cust',
@@ -262,7 +262,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'alloc_local',
-    'data_type'  : '$RLCL',
+    'data_type'  : '$LCL',
     'short_descr': 'Amount allocated - local',
     'long_descr' : 'Amount allocated - local currency - programmatically calculated',
     'col_head'   : 'Alloc local',
@@ -305,7 +305,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'discount_local',
-    'data_type'  : '$RLCL',
+    'data_type'  : '$LCL',
     'short_descr': 'Discount allowed - local',
     'long_descr' : 'Discount allowed - local currency - programmatically calculated',
     'col_head'   : 'Disc local',
@@ -353,21 +353,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'rev_sign',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign?',
-    'col_head'   : 'Reverse sign?',
-    'dflt_rule'  : (
-      '<literal value="$True"/>'
-      # '<expr>'
-      #   '<literal value="dummy"/>'
-      #   '<op type="not"/>'
-      #   '<fld_val name="subparent_row_id>rev_sign"/>'
-      # '</expr>'
-      ),
-    })
 
 # cursor definitions
 cursors = []

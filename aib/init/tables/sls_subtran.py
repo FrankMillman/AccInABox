@@ -424,7 +424,7 @@ virt.append ({
     'dflt_rule'  : (
         '<case>'
           '<compare test="[[`if`, ``, `tran_type`, `=`, `~gl_jnl~`, ``]]">'
-            '<literal value="$True"/>'
+            '<literal value="$False"/>'
           '</compare>'
           '<default>'
             '<expr>'

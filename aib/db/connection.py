@@ -950,11 +950,9 @@ class Conn:
             if tgt_company == '{mem}':
                 # if mem_obj is part of a form definition, get full table_name from db_table
                 tgt_tblname = context.data_objects[tgt_tblname].table_name
-                tgt_tbl = await db.objects.get_mem_table(
-                    context, tgt_company, tgt_tblname)
+                tgt_tbl = await db.objects.get_mem_table(context, tgt_tblname)
             else:
-                tgt_tbl = await db.objects.get_db_table(
-                    context, tgt_company, tgt_tblname)
+                tgt_tbl = await db.objects.get_db_table(context, tgt_company, tgt_tblname)
 
             tgt_col = tgt_tbl.col_dict[tgt_colname]
             src_alias, tgt_alias, trail = self.get_alias(src_col, tgt_col, current_alias, trail)

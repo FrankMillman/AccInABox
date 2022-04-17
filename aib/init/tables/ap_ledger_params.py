@@ -575,6 +575,26 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'auto_alloc_oldest',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Auto allocate against oldest?',
+    'long_descr' : 'Automatically allocate payment against oldest balance?',
+    'col_head'   : 'Auto alloc?',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'pmt_tran_source',
     'data_type'  : 'TEXT',
     'short_descr': 'Payment transactions source',

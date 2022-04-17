@@ -184,7 +184,7 @@ cols.append ({
     'col_name'   : 'supp_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Supplier row id',
-    'long_descr' : 'Supplier row id',
+    'long_descr' : 'Supplier row id. Could be derived using fkey, but denormalised for performance.',
     'col_head'   : 'Supplier',
     'key_field'  : 'N',
     'data_source': 'repl',
@@ -204,7 +204,7 @@ cols.append ({
     'col_name'   : 'tran_date',
     'data_type'  : 'DTE',
     'short_descr': 'Transaction date',
-    'long_descr' : 'Transaction date',
+    'long_descr' : 'Transaction date. Could be derived using fkey, but denormalised for performance.',
     'col_head'   : 'Date',
     'key_field'  : 'N',
     'data_source': 'repl',
@@ -313,7 +313,7 @@ cols.append ({
     'allow_amend': False,
     'max_len'    : 0,
     'db_scale'   : 2,
-    'scale_ptr'  : 'tran_row_id>supp_row_id>currency_id>scale',
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
@@ -356,20 +356,7 @@ virt.append ({
         "COALESCE(("
             "SELECT SUM(b.alloc_supp + b.discount_supp) "
             "FROM {company}.ap_allocations b "
-            "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
-            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "CASE "
-                    "WHEN c.tran_type = 'ap_alloc' THEN "
-                        "(SELECT row_id FROM {company}.ap_allocations d "
-                            "WHERE d.trantype_row_id = b.trantype_row_id AND "
-                                "d.tran_row_id = b.tran_row_id AND "
-                                "d.item_row_id = "
-                                    "(SELECT e.item_row_id FROM {company}.ap_tran_alloc e "
-                                    "WHERE e.row_id = b.tran_row_id)) "
-                    "ELSE "
-                        "(SELECT row_id FROM {company}.ap_openitems d "
-                            "WHERE d.trantype_row_id = b.trantype_row_id AND d.tran_row_id = b.tran_row_id) "
-                "END IS NOT NULL "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
             "), 0)"
         )
     })
@@ -377,7 +364,12 @@ virt.append ({
     'col_name'   : 'balance_supp_as_at',
     'data_type'  : '$PTY',
     'short_descr': 'Balance',
-    'long_descr' : 'Balance outstanding at specified date - supplier currency',
+    'long_descr' : (
+        'Balance outstanding at specified date - supplier currency. '
+        'The assumption is that any SQL that includes this virtual column will also include '
+            'WHERE tran_date <= {_ctx.as_at_date} in its selection criteria. '
+        'Used in ap_supp_funcs.get_aged_bal, which is called from form ap_supp_bal. '
+        ),
     'col_head'   : 'Balance',
     'db_scale'   : 2,
     'scale_ptr'  : 'supp_row_id>currency_id>scale',
@@ -387,21 +379,8 @@ virt.append ({
         "COALESCE(("
             "SELECT SUM(b.alloc_supp + b.discount_supp) "
             "FROM {company}.ap_allocations b "
-            "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "b.tran_date <= {_ctx.as_at_date} AND "
-                    "CASE "
-                        "WHEN c.tran_type = 'ap_alloc' THEN "
-                            "(SELECT row_id FROM {company}.ap_allocations d "
-                                "WHERE d.trantype_row_id = b.trantype_row_id AND "
-                                    "d.tran_row_id = b.tran_row_id AND "
-                                    "d.item_row_id = "
-                                        "(SELECT e.item_row_id FROM {company}.ap_tran_alloc e "
-                                        "WHERE e.row_id = b.tran_row_id)) "
-                        "ELSE "
-                            "(SELECT row_id FROM {company}.ap_openitems d "
-                                "WHERE d.trantype_row_id = b.trantype_row_id AND d.tran_row_id = b.tran_row_id) "
-                    "END IS NOT NULL "
+                "b.tran_date <= {_ctx.as_at_date} "
             "), 0)"
         ),
     })
@@ -419,20 +398,7 @@ virt.append ({
         "COALESCE(("
             "SELECT SUM(b.alloc_local) "
             "FROM {company}.ap_allocations b "
-            "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
-            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "CASE "
-                    "WHEN c.tran_type = 'ap_alloc' THEN "
-                        "(SELECT row_id FROM {company}.ap_allocations d "
-                            "WHERE d.trantype_row_id = b.trantype_row_id AND "
-                                "d.tran_row_id = b.tran_row_id AND "
-                                "d.item_row_id = "
-                                    "(SELECT e.item_row_id FROM {company}.ap_tran_alloc e "
-                                    "WHERE e.row_id = b.tran_row_id)) "
-                    "ELSE "
-                        "(SELECT row_id FROM {company}.ap_openitems d "
-                            "WHERE d.trantype_row_id = b.trantype_row_id AND d.tran_row_id = b.tran_row_id) "
-                "END IS NOT NULL "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
             "), 0)"
         )
     })
@@ -440,7 +406,11 @@ virt.append ({
     'col_name'   : 'balance_local_as_at',
     'data_type'  : '$LCL',
     'short_descr': 'Balance',
-    'long_descr' : 'Balance outstanding at specified date - local currency',
+    'long_descr' : (
+        'Balance outstanding at specified date - local currency. '
+        'The assumption is that any SQL that includes this virtual column will also include '
+            'WHERE tran_date <= {_ctx.as_at_date} in its selection criteria. '
+        ),
     'col_head'   : 'Balance',
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
@@ -450,21 +420,8 @@ virt.append ({
         "COALESCE(("
             "SELECT SUM(b.alloc_local + b.discount_local) "
             "FROM {company}.ap_allocations b "
-            "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
             "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "b.tran_date <= {_ctx.as_at_date} AND "
-                    "CASE "
-                        "WHEN c.tran_type = 'ap_alloc' THEN "
-                            "(SELECT row_id FROM {company}.ap_allocations d "
-                                "WHERE d.trantype_row_id = b.trantype_row_id AND "
-                                    "d.tran_row_id = b.tran_row_id AND "
-                                    "d.item_row_id = "
-                                        "(SELECT e.item_row_id FROM {company}.ap_tran_alloc e "
-                                        "WHERE e.row_id = b.tran_row_id)) "
-                        "ELSE "
-                            "(SELECT row_id FROM {company}.ap_openitems d "
-                                "WHERE d.trantype_row_id = b.trantype_row_id AND d.tran_row_id = b.tran_row_id) "
-                    "END IS NOT NULL "
+                "b.tran_date <= {_ctx.as_at_date} "
             "), 0)"
         )
     })
@@ -486,20 +443,7 @@ virt.append ({
         "COALESCE(("
             "SELECT SUM(b.discount_supp) "
             "FROM {company}.ap_allocations b "
-            "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
-            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "CASE "
-                    "WHEN c.tran_type = 'ap_alloc' THEN "
-                        "(SELECT row_id FROM {company}.ap_allocations d "
-                            "WHERE d.trantype_row_id = b.trantype_row_id AND "
-                                "d.tran_row_id = b.tran_row_id AND "
-                                "d.item_row_id = "
-                                    "(SELECT e.item_row_id FROM {company}.ap_tran_alloc e "
-                                    "WHERE e.row_id = b.tran_row_id)) "
-                    "ELSE "
-                        "(SELECT row_id FROM {company}.ap_openitems d "
-                            "WHERE d.trantype_row_id = b.trantype_row_id AND d.tran_row_id = b.tran_row_id) "
-                "END IS NOT NULL "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
             "), 0) "
         ),
     })
@@ -518,20 +462,7 @@ virt.append ({
         "COALESCE(("
             "SELECT SUM(b.alloc_supp + b.discount_supp) "
             "FROM {company}.ap_allocations b "
-            "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
-            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                "CASE "
-                    "WHEN c.tran_type = 'ap_alloc' THEN "
-                        "(SELECT row_id FROM {company}.ap_allocations d "
-                            "WHERE d.trantype_row_id = b.trantype_row_id AND "
-                                "d.tran_row_id = b.tran_row_id AND "
-                                "d.item_row_id = "
-                                    "(SELECT e.item_row_id FROM {company}.ap_tran_alloc e "
-                                    "WHERE e.row_id = b.tran_row_id)) "
-                    "ELSE "
-                        "(SELECT row_id FROM {company}.ap_openitems d "
-                            "WHERE d.trantype_row_id = b.trantype_row_id AND d.tran_row_id = b.tran_row_id) "
-                "END IS NOT NULL "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
             "), 0) "
         "- "
         "CASE "
@@ -540,20 +471,7 @@ virt.append ({
             "ELSE a.discount_supp + COALESCE(("
                 "SELECT SUM(b.discount_supp) "
                 "FROM {company}.ap_allocations b "
-                "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
-                "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 AND "
-                    "CASE "
-                        "WHEN c.tran_type = 'ap_alloc' THEN "
-                            "(SELECT row_id FROM {company}.ap_allocations d "
-                                "WHERE d.trantype_row_id = b.trantype_row_id AND "
-                                    "d.tran_row_id = b.tran_row_id AND "
-                                    "d.item_row_id = "
-                                        "(SELECT e.item_row_id FROM {company}.ap_tran_alloc e "
-                                        "WHERE e.row_id = b.tran_row_id)) "
-                        "ELSE "
-                            "(SELECT row_id FROM {company}.ap_openitems d "
-                                "WHERE d.trantype_row_id = b.trantype_row_id AND d.tran_row_id = b.tran_row_id) "
-                    "END IS NOT NULL "
+                "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
                 "), 0) "
             "END"
         ),

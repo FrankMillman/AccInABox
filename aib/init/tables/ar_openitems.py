@@ -479,16 +479,6 @@ virt.append ({
         ),
     })
 virt.append ({
-    'col_name'   : 'rev_sign',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Reverse sign?',
-    'long_descr' : 'Reverse sign? - needed for alloc_cust_gui',
-    'col_head'   : 'Reverse sign?',
-    'dflt_rule'  : (
-      '<literal value="$True"/>'
-      ),
-    })
-virt.append ({
     'col_name'   : 'no_of_allocations',
     'data_type'  : 'INT',
     'short_descr': 'Number of allocations',

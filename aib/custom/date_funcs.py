@@ -387,14 +387,24 @@ async def get_due_date(caller, obj, xml):
     return dt.today()
 
 async def check_bf_date(db_obj, fld, value):
+    module_row_id = db_obj.db_table.module_row_id
+    if db_obj.db_table.ledger_col is not None:
+        ledger_row_id = await db_obj.getval(db_obj.db_table.ledger_col)
+    else:
+        ledger_row_id = 0  # 'gl'
+    ledger_periods = await db.cache.get_ledger_periods(db_obj.company, module_row_id, ledger_row_id)
+    if ledger_periods == {}:
+        if ledger_row_id == 0:
+            ledger_id = 'gl'
+        else:
+            ledg_obj = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
+            ledger_id = await ledg_obj.getval('ledger_id')
+        raise AibError(head='Transaction date', body=f'{ledger_id} - ledger periods not set up')
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
-    period_row_id = bisect_left([_.closing_date for _ in adm_periods], value)
-
-    # not correct that it must be prior to start of financial calendar
-    #   - could be adding new sub-ledger to existing system
-    # needs more thought [2020-07-02]
-    if period_row_id != 0:  # date is <= first period (and first period is dummy)
-        raise AibError(head='Transaction date', body='Date must be prior to start of financial calendar')
+    first_ledger_period = next(iter(ledger_periods))  # get first dictionary key, which is the period_row_id
+    first_ledger_date = adm_periods[first_ledger_period].opening_date
+    if value >= first_ledger_date:
+        raise AibError(head='Transaction date', body=f'Date must be prior to {first_ledger_date}')
 
     return True
 

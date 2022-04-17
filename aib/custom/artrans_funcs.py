@@ -145,7 +145,7 @@ async def alloc_oldest(fld, xml):
             context, 'ar_openitems')
     ar_items = context.data_objects['ar_openitems']
 
-    cols_to_select = ['row_id', 'due_cust']
+    col_names = ['row_id', 'due_cust']
     where = [
         ['WHERE', '', 'cust_row_id', '=', cust_row_id, ''],
         ['AND', '', 'due_cust', '!=', '0', ''],
@@ -158,7 +158,7 @@ async def alloc_oldest(fld, xml):
         conn = db_mem_conn.db
 
         async for row_id, due_cust in await conn.full_select(
-                ar_items, cols_to_select, where=where, order=order):
+                ar_items, col_names, where=where, order=order):
             if tot_to_allocate > due_cust:
                 amt_allocated = due_cust
             else:
@@ -325,8 +325,8 @@ async def setup_mem_items(caller, xml):
     mem_items = caller.data_objects['mem_items']
     await mem_items.delete_all()
 
-    await ar_items.getfld('tran_number')  # set up virtual to ensure included in select
-    await ar_items.getfld('due_cust')     #                    ""
+    col_names = ['row_id', 'tran_number', 'tran_date', 'amount_cust', 'due_cust']
+
     where = []
     where.append(['WHERE', '', 'cust_row_id', '=', await alloc_header.getval('cust_row_id'), ''])
     where.append(['AND', '', 'tran_date', '>', context.first_date, ''])
@@ -334,16 +334,20 @@ async def setup_mem_items(caller, xml):
     where.append(['AND', '', 'due_cust', '!=', 0, ''])
     if context.this_item_rowid is not None:  # allocation after transaction posted - exclude this transaction
         where.append(['AND', '', 'row_id', '!=', context.this_item_rowid, ''])
+    where.append(['AND', '', 'deleted_id', '=', 0, ''])
 
-    all_items = ar_items.select_many(where=where, order=[])
-    async for _ in all_items:
-        await mem_items.init()
-        await mem_items.setval('item_row_id', await ar_items.getval('row_id'))
-        await mem_items.setval('tran_number', await ar_items.getval('tran_number'))
-        await mem_items.setval('tran_date', await ar_items.getval('tran_date'))
-        await mem_items.setval('amount_cust', await ar_items.getval('amount_cust'))
-        await mem_items.setval('due_cust', await ar_items.getval('due_cust'))
-        await mem_items.save()
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+
+        async for row_id, tran_number, tran_date, amount_cust, due_cust in await conn.full_select(
+                ar_items, col_names, where=where, order=[]):
+            await mem_items.init()
+            await mem_items.setval('item_row_id', row_id)
+            await mem_items.setval('tran_number', tran_number)
+            await mem_items.setval('tran_date', tran_date)
+            await mem_items.setval('amount_cust', amount_cust)
+            await mem_items.setval('due_cust', due_cust)
+            await mem_items.save()
 
     var = caller.data_objects['var']
     unallocated = await var.getval('amount_to_alloc')

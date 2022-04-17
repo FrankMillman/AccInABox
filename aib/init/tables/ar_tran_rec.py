@@ -333,9 +333,7 @@ virt.append ({
     'short_descr': 'Transaction type',
     'long_descr' : 'Transaction type - used in gui to ask "Post another?"',
     'col_head'   : 'Tran type',
-    # 'dflt_rule'  : '<trantype_row_id tran_type="ar_rec"/>',
     'sql'        : "'ar_rec'",
-    # 'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'ar_rec'",
     })
 virt.append ({
     'col_name'   : 'module_row_id',
@@ -343,7 +341,6 @@ virt.append ({
     'short_descr': 'Module row id',
     'long_descr' : 'Module row id',
     'col_head'   : 'Module row id',
-    # 'dflt_rule'  : '<module_row_id module_id="ar"/>',
     'sql'        : "SELECT row_id FROM {company}.db_modules WHERE module_id = 'ar'",
     })
 virt.append ({
@@ -361,22 +358,6 @@ virt.append ({
     'long_descr' : 'Ledger row id',
     'col_head'   : 'Ledger',
     'sql'        : 'a.cust_row_id>ledger_row_id',
-    })
-virt.append ({
-    'col_name'   : 'location_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Location row id',
-    'long_descr' : 'Location row id',
-    'col_head'   : 'Location',
-    'sql'        : 'a.cust_row_id>location_row_id',
-    })
-virt.append ({
-    'col_name'   : 'function_row_id',
-    'data_type'  : 'INT',
-    'short_descr': 'Function row id',
-    'long_descr' : 'Function row id',
-    'col_head'   : 'Function',
-    'sql'        : 'a.cust_row_id>function_row_id',
     })
 virt.append ({
     'col_name'   : 'party',

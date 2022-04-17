@@ -254,10 +254,10 @@ cols.append ({
     'col_name'   : 'pmt_amt',
     'data_type'  : '$RTRN',
     'short_descr': 'Payment amount',
-    'long_descr' : 'Payment amount in transaction currency - updated from ap_allocations',
+    'long_descr' : 'Payment amount in transaction currency',
     'col_head'   : 'Pmt amt',
     'key_field'  : 'N',
-    'data_source': 'aggr',
+    'data_source': 'input',
     'condition'  : None,
     'allow_null' : False,
     'allow_amend': False,
@@ -267,6 +267,36 @@ cols.append ({
     'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'allocations',
+    'data_type'  : 'JSON',
+    'short_descr': 'Allocations',
+    'long_descr' : 'Allocations (if any) - list of (item_row_id, alloc_supp) - alloc_supp must be a string.',
+    'col_head'   : 'Alloc',
+    'key_field'  : 'N',
+    'data_source': 'input',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : (
+        '<case>'
+          '<compare test="[[`if`, ``, `allocations`, `is not`, `$None`, ``]]">'
+            '<fld_val name="allocations"/>'
+          '</compare>'
+          '<compare test="[[`if`, ``, `supp_row_id>ledger_row_id>open_items`, `is`, `$True`, ``],'
+              '[`and`, ``, `supp_row_id>ledger_row_id>auto_alloc_oldest`, `is`, `$True`, ``]]">'
+            '<pyfunc name="custom.aptrans_funcs.alloc_oldest"/>'
+          '</compare>'
+        '</case>'
+        ),
+    'col_checks' : None,  # add check that it is a list of (int, str) tuples
     'fkey'       : None,
     'choices'    : None,
     })
@@ -406,10 +436,12 @@ actions.append([
             [],  # aggregation
             [  # on insert
                 ['supp_row_id', '=', 'supp_row_id'],  # tgt_col, op, src_col
-                ['pmt_amount', '=', 'pmt_amt'],
+                ['pmt_amount', '=', '-pmt_amt'],
+                ['allocations', '=', 'allocations'],
                 ],
             [  # on update
-                ['pmt_amount', '=', 'pmt_amt'],  # tgt_col, op, src_col
+                ['pmt_amount', '=', '-pmt_amt'],  # tgt_col, op, src_col
+                ['allocations', '=', 'allocations'],
                 ],
             [],  # on delete
             ],
