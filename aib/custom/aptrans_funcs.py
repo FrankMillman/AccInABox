@@ -83,156 +83,6 @@ async def setup_openitems(db_obj, conn, return_vals):
             discount_supp,
             )
 
-async def set_per_closing_flag(caller, params):
-    print('set_closing_flag')
-
-    period_to_close = params['period_to_close']
-    context = caller.manager.process.root.context
-    current_period = await db.cache.get_current_period(
-        context.company, context.module_row_id, context.ledger_row_id)
-
-    if 'ledg_per' not in context.data_objects:
-        context.data_objects['ledg_per'] = await db.objects.get_db_object(
-            context, 'ap_ledger_periods')
-    ledg_per = context.data_objects['ledg_per']
-    await ledg_per.init()
-    await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-    await ledg_per.setval('period_row_id', period_to_close)
-    if await ledg_per.getval('state') not in ('current', 'open'):
-        raise AibError(head='Closing flag', body='Period is not open')
-    await ledg_per.setval('state', 'closing')
-    await ledg_per.save()
-
-    if period_to_close == current_period:
-        # set next month state to 'current'
-        await ledg_per.init()
-        await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-        await ledg_per.setval('period_row_id', period_to_close + 1)
-        await ledg_per.setval('state', 'current')
-        await ledg_per.save()
-
-        # set following month state to 'open'
-        await ledg_per.init()
-        await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-        await ledg_per.setval('period_row_id', period_to_close + 2)
-        await ledg_per.setval('state', 'open')
-        await ledg_per.save()
-
-async def posted_check(caller, params):
-    context = caller.manager.process.root.context
-
-    async with context.db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
-        check_date = params['check_date']
-        where = []
-        where.append(['WHERE', '', 'tran_date', '<=', check_date, ''])
-        where.append(['AND', '', 'deleted_id', '=', 0, ''])
-        where.append(['AND', '', 'posted', '=', False, ''])
-
-        params = []
-        sql = 'SELECT CASE WHEN EXISTS ('
-
-        table_names = [
-            'ap_tran_inv',
-            'ap_tran_crn',
-            'ap_tran_jnl',
-            'ap_tran_pmt',
-            'ap_tran_disc',
-            'ap_subtran_rec',
-            'ap_subtran_pmt',
-            'ap_subtran_jnl',
-            ]
-
-        for table_name in table_names:
-            db_table = await db.objects.get_db_table(context, caller.company, table_name)
-            s, p = await conn.build_select(context, db_table, ['row_id'], where=where, order=[])
-            sql += s
-            params += p
-            if table_name != table_names[-1]:
-                sql += ' UNION ALL '
-
-        sql += ') THEN $True ELSE $False END'
-
-        cur = await conn.exec_sql(sql, params)
-        exists, = await cur.__anext__()
-
-    return_params = {'all_posted': not bool(exists)}
-    print('check all posted:', return_params)
-    return return_params
-
-async def set_per_closed_flag(caller, params):
-    print('set_per_closed_flag')
-
-    context = caller.manager.process.root.context
-    if 'ledg_per' not in context.data_objects:
-        context.data_objects['ledg_per'] = await db.objects.get_db_object(
-            context, 'ap_ledger_periods')
-    ledg_per = context.data_objects['ledg_per']
-    await ledg_per.init()
-    await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-    await ledg_per.setval('period_row_id', params['period_to_close'])
-    if await ledg_per.getval('state') != 'closing':
-        raise AibError(head='Closing flag', body='Closing flag not set')
-    await ledg_per.setval('state', 'closed')
-    await ledg_per.save()
-
-async def notify_manager(caller, params):
-    print('notify', params)
-
-"""
-async def check_ledg_per(caller, xml):
-    # called from ap_ledg_per.on_start_row
-    ledg_per = caller.data_objects['ledg_per']
-    actions = caller.data_objects['actions']
-
-    await actions.setval('action', 'no_action')  # initial state
-    if ledg_per.exists:
-
-        if await ledg_per.getval('payment_state') == 'open':
-            if await ledg_per.getval('payment_date') <= dt.today():
-                await actions.setval('action', 'payment_close')
-            return
-
-        if await ledg_per.getval('state') == 'current':
-            if await ledg_per.getval('closing_date') <= dt.today():
-                await actions.setval('action', 'period_close')
-            return
-
-        if await ledg_per.getval('state') == 'closed':
-            await actions.setval('action', 'reopen')
-            return
-"""
-
-"""
-async def get_tot_alloc(db_obj, fld, src):
-    # called from ap_tran_alloc/ap_subtran_pmt in 'condition' for upd_on_post 'ap_allocations'
-    # get total allocations for this transaction and save in 'context'
-    # used to create 'double-entry' allocation for item being allocated
-    row_id = await db_obj.getval('row_id')
-    if db_obj.table_name == 'ap_tran_alloc':
-        tran_type = 'ap_alloc'
-    elif db_obj.table_name == 'ap_subtran_pmt':
-        tran_type = 'ap_subpmt'
-
-    sql = (
-        'SELECT SUM(a.alloc_supp) AS "[REAL2]", SUM(a.discount_supp) AS "[REAL2]", '
-        'SUM(a.alloc_local) AS "[REAL2]", SUM(a.discount_local) AS "[REAL2]" '
-        f'FROM {db_obj.company}.ap_allocations a '
-        f'JOIN {db_obj.company}.adm_tran_types b ON b.row_id = a.trantype_row_id '
-        f'WHERE b.tran_type = {tran_type!r} AND a.tran_row_id = {row_id} AND a.deleted_id = 0'
-        )
-
-    async with db_obj.context.db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
-        async for alloc_supp, disc_supp, alloc_local, disc_local in await conn.exec_sql(sql):
-            db_obj.context.tot_alloc_supp = alloc_supp or 0
-            db_obj.context.tot_disc_supp = disc_supp or 0
-            db_obj.context.tot_alloc_local = alloc_local or 0
-            db_obj.context.tot_disc_local = disc_local or 0
-
-    return bool(alloc_supp)  # False if alloc_supp == 0, else True
-"""
-
 async def alloc_oldest(fld, xml):
     # called as dflt_rule from ap_tran_pmt/ap_subtran_pmt.allocations
     # only called if ledger_row_id>auto_alloc_oldest is True
@@ -262,7 +112,7 @@ async def alloc_oldest(fld, xml):
 
         async for row_id, due_supp in await conn.full_select(
                 ap_items, col_names, where=where, order=order):
-            if tot_to_allocate > due_supp:
+            if tot_to_allocate < due_supp:
                 amt_allocated = due_supp
             else:
                 amt_allocated = tot_to_allocate
@@ -276,7 +126,7 @@ async def alloc_oldest(fld, xml):
 async def get_allocations(db_obj, conn, return_vals):
     allocations = await db_obj.getval('allocations')
     for item_row_id, alloc_supp in allocations:
-        yield item_row_id, 0 - D(alloc_supp)  # stored in JSON as str pos, return to caller as DEC neg
+        yield item_row_id, 0 - D(alloc_supp)  # stored in JSON as str neg, return to caller as DEC pos
     await db_obj.setval('allocations', None, validate=False)  # allocations no longer required
 
 async def setup_pmts_due(caller, xml):

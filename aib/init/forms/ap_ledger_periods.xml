@@ -2,7 +2,6 @@
 
   <db_objects>
     <db_obj name="ledg_per" table_name="ap_ledger_periods"/>
-    <db_obj name="bpm_det" table_name="bpm_details"/>
   </db_objects>
   <mem_objects>
     <mem_obj name="actions" descr="Possible actions"
@@ -58,7 +57,7 @@
         </toolbar>
         <grid_methods template="Grid">
           <method name="on_start_row" action="
-            <<pyfunc name=`custom.date_funcs.check_ledg_per`/>>
+            <<pyfunc name=`custom.period_end_funcs.check_ledg_per`/>>
           "/>
         </grid_methods>
       </grid>
@@ -103,7 +102,8 @@
                       <<ask title=`Period close` enter=`Ok` escape=`Ok`
                           question=`Close period process started`>>
                         <<response ans=`Ok`>>
-                          <<end_form state=`completed`/>>
+                          <<!--end_form state=`completed`/-->>
+                          <<btn_set_focus btn_id=`btn_ok`/>>
                         <</response>>
                       <</ask>>
                     <</response>>
@@ -122,14 +122,20 @@
               <button btn_id="reopen_period" btn_label="Reopen period"
                 help_msg = "Reopen period if permitted"
                 btn_enabled="true" btn_validate="true" action="
-                  <<pyfunc name=`custom.artrans_funcs.reopen_period`/>>
+                  <<pyfunc name=`custom.period_end_funcs.reopen_period`/>>
+                  <<ask title=`Reopen period` enter=`Ok` escape=`Ok`
+                      question=`Period reopened`>>
+                    <<response ans=`Ok`>>
+                      <<btn_set_focus btn_id=`btn_ok`/>>
+                    <</response>>
+                  <</ask>>
                 "/>
             </subtype_body>
           </subtype_frame>
 
         </body>
         <button_row>
-          <button btn_id="btn_ok" btn_label="Close" btn_enabled="true"
+          <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
             btn_validate="true" btn_default="true" lng="60" action="
               <<end_form state=`completed`/>>
             "/>

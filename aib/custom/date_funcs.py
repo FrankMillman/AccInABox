@@ -548,16 +548,3 @@ async def check_stat_date(db_obj, fld, value):
                 return False
 
     return True
-
-async def check_ledg_per(caller, xml):
-    # called from various ledg_per.on_start_row
-    ledg_per = caller.data_objects['ledg_per']
-    actions = caller.data_objects['actions']
-
-    await actions.setval('action', 'no_action')  # initial state
-    if ledg_per.exists:
-        if await ledg_per.getval('state') == 'current':
-            if await ledg_per.getval('closing_date') <= dt.today():
-                await actions.setval('action', 'period_close')
-        elif await ledg_per.getval('state') == 'closed':
-            await actions.setval('action', 'reopen')

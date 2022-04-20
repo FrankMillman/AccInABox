@@ -127,7 +127,7 @@ cols.append ({
           '<on_insert>'
             '<case>'
               '<compare test="[[`if`, ``, `ledger_row_id>auto_pmt_batch_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="ledger_row_id>auto_batch_pmt_no"/>'
+                '<auto_gen args="ledger_row_id>auto_pmt_batch_no"/>'
               '</compare>'
             '</case>'
           '</on_insert>'

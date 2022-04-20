@@ -1266,10 +1266,12 @@ function create_button(frame, json_elem) {
     if (button.frame.form.disable_count) return;
     if (button.frame.form.readonly) return;
     // removed - 2020-11-24 - there may be a pending event to enable the button
-    // if (button.readonly) {
-    //   button.frame.form.current_focus.focus();
-    //   return;
-    //   };
+    // replaced - 2022-04-19 - must not send 'click' event to server if button disabled
+    // implications?
+    if (button.readonly) {
+      button.frame.form.current_focus.focus();
+      return;
+      };
     if (button.frame.form.current_focus !== button) {
       button.after_focus = button.after_click;
       if (button.has_focus)  // can't call focus() - it will be ignored!

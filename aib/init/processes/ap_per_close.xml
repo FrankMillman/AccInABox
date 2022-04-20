@@ -26,7 +26,7 @@
           <semantic:sourceRef>var.period_to_close</semantic:sourceRef>
           <semantic:targetRef>period_to_close</semantic:targetRef>
         </semantic:dataInputAssociation>
-        <semantic:script>custom.aptrans_funcs.set_per_closing_flag</semantic:script>
+        <semantic:script>custom.period_end_funcs.set_per_closing_flag</semantic:script>
       </semantic:scriptTask>
       <semantic:subProcess id="ap_per_close_61" name="Check all transactions posted">
         <semantic:incoming>ap_per_close_19</semantic:incoming>
@@ -46,7 +46,7 @@
             <semantic:sourceRef>all_posted</semantic:sourceRef>
             <semantic:targetRef>var.all_posted</semantic:targetRef>
           </semantic:dataOutputAssociation>
-          <semantic:script>custom.aptrans_funcs.posted_check</semantic:script>
+          <semantic:script>custom.period_end_funcs.posted_check</semantic:script>
         </semantic:scriptTask>
         <semantic:exclusiveGateway id="ap_per_close_9" name="All posted?" default="ap_per_close_57">
           <semantic:incoming>ap_per_close_21</semantic:incoming>
@@ -78,7 +78,7 @@
           <semantic:sourceRef>var.period_to_close</semantic:sourceRef>
           <semantic:targetRef>period_to_close</semantic:targetRef>
         </semantic:dataInputAssociation>
-        <semantic:script>custom.aptrans_funcs.set_per_closed_flag</semantic:script>
+        <semantic:script>custom.period_end_funcs.set_per_closed_flag</semantic:script>
       </semantic:scriptTask>
       <semantic:endEvent id="ap_per_close_15" name="Done">
         <semantic:incoming>ap_per_close_87</semantic:incoming>
@@ -96,7 +96,7 @@
           <semantic:sourceRef>ctx.user_row_id</semantic:sourceRef>
           <semantic:targetRef>user_row_id</semantic:targetRef>
         </semantic:dataInputAssociation>
-        <semantic:script>custom.aptrans_funcs.notify_manager</semantic:script>
+        <semantic:script>custom.period_end_funcs.notify_manager</semantic:script>
       </semantic:scriptTask>
       <semantic:endEvent id="ap_per_close_75" name="Manager notified">
         <semantic:incoming>ap_per_close_79</semantic:incoming>

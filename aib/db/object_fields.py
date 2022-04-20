@@ -912,7 +912,7 @@ class Field:
     async def value_changed(self, value=blank):
         if value is blank:
             value = self._orig
-        return value != await self.getval()
+        return value != self._value_  # don't call getval() - if must_be_evaluated, can be evaluated twice!
 
     def concurrency_check(self):  # self._curr_val has just been read in from database
         if self._curr_val == self._orig:  # value has not been changed - ok

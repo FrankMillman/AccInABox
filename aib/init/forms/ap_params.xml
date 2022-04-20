@@ -58,6 +58,11 @@
       <label value="Parameters for payment no"/>
       <col/>
       <input obj_name="ledger" col_name="auto_pmt_no" lng="250"/>
+      <row/>
+      <col/>
+      <label value="Parameters for payment batch"/>
+      <col/>
+      <input obj_name="ledger" col_name="auto_pmt_batch_no" lng="250"/>
 
     </body>
     <button_row template="Setup_Form_Single"/>

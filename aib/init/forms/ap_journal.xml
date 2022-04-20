@@ -71,8 +71,8 @@
       <input obj_name="ap_journal" col_name="text" lng="250" readonly="true"/>
 
       <col/>
-	  <button lng="150" btn_id="amd_hdr" btn_label="Amend header"
-		btn_enabled="true" btn_validate="true" action="
+      <button lng="150" btn_id="amd_hdr" btn_label="Amend header"
+        btn_enabled="true" btn_validate="true" action="
           <<inline_form name=`tran_header`>>
             <<on_return>>
               <<return state=`cancelled`/>>

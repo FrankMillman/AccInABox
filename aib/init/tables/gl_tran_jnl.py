@@ -98,7 +98,7 @@ cols.append ({
           '<on_post>'
             '<case>'
               '<compare test="[[`if`, ``, `ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
-                '<auto_gen args="ledger_row_id>auto_rec_no"/>'
+                '<auto_gen args="ledger_row_id>auto_jnl_no"/>'
               '</compare>'
               '<default>'
                 '<fld_val name="tran_number"/>'

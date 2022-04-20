@@ -88,6 +88,7 @@
 
   <end_if/>
 
+  <if test="[[`if`, ``, `ap_subpmt.supp_row_id>ledger_row_id>auto_alloc_oldest`, `is`, `$False`, ``]]"/>
   <row/>
   <col/>
   <col/>
@@ -114,5 +115,6 @@
         <</on_return>>
       <</sub_form>>
     "/>
+  <end_if/>
 
 </subtype_body>

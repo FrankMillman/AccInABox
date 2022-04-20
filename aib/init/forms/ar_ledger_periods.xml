@@ -1,8 +1,7 @@
 <form name="ar_ledger_per" title="Ar ledger periods">
 
   <db_objects>
-    <db_obj name="ar_ledg_per" table_name="ar_ledger_periods"/>
-    <db_obj name="bpm_det" table_name="bpm_details"/>
+    <db_obj name="ledg_per" table_name="ar_ledger_periods"/>
   </db_objects>
   <mem_objects>
 
@@ -63,7 +62,7 @@
     <toolbar/>
     <body>
       <block/>
-      <grid data_object="ar_ledg_per" growable="false" num_grid_rows="8" cursor_name="ar_per"
+      <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="ar_per"
           start_col="period_row_id" start_val="current_period" readonly="true">
         <toolbar>
           <tool type="nav"/>
@@ -74,7 +73,7 @@
           "/>
         </grid_methods>
       </grid>
-      <grid_frame main_object="ar_ledg_per">
+      <grid_frame main_object="ledg_per">
         <toolbar/>
         <body>
           <block/>
@@ -91,8 +90,8 @@
               <row/>
               <col/>
               <label value="Period"/>
-              <display obj_name="ar_ledg_per" col_name="period_row_id" lng="20"/>
-              <display obj_name="ar_ledg_per" col_name="closing_date" lng="85"/>
+              <display obj_name="ledg_per" col_name="period_row_id" lng="20"/>
+              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
             </subtype_body>
 
             <subtype_body subtype_id="statement_close">
@@ -101,14 +100,14 @@
               <row/>
               <col/>
               <label value="Period"/>
-              <display obj_name="ar_ledg_per" col_name="period_row_id" lng="10"/>
+              <display obj_name="ledg_per" col_name="period_row_id" lng="10"/>
               <col/>
-              <display obj_name="ar_ledg_per" col_name="closing_date" lng="85"/>
+              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
               <row/>
               <col/>
               <label value="Statement date"/>
               <col/>
-              <display obj_name="ar_ledg_per" col_name="statement_date" lng="85"/>
+              <display obj_name="ledg_per" col_name="statement_date" lng="85"/>
               <block/>
               <panel/>
               <row/>
@@ -143,14 +142,14 @@
               <row/>
               <col/>
               <label value="Period"/>
-              <display obj_name="ar_ledg_per" col_name="period_row_id" lng="10"/>
+              <display obj_name="ledg_per" col_name="period_row_id" lng="10"/>
               <col/>
-              <display obj_name="ar_ledg_per" col_name="closing_date" lng="85"/>
+              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
               <row/>
               <col/>
               <label value="Statement date"/>
               <col/>
-              <display obj_name="ar_ledg_per" col_name="statement_date" lng="85"/>
+              <display obj_name="ledg_per" col_name="statement_date" lng="85"/>
               <block/>
               <panel/>
               <row/>
@@ -178,9 +177,9 @@
               <row/>
               <col/>
               <label value="Period"/>
-              <display obj_name="ar_ledg_per" col_name="period_row_id" lng="10"/>
+              <display obj_name="ledg_per" col_name="period_row_id" lng="10"/>
               <col/>
-              <display obj_name="ar_ledg_per" col_name="closing_date" lng="85"/>
+              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
               <block/>
               <panel/>
               <row/>
@@ -201,7 +200,8 @@
                       <<ask title=`Started` enter=`Ok` escape=`Ok`
                           question=`Period close procedure started`>>
                         <<response ans=`Ok`>>
-                          <<end_form state=`completed`/>>
+                          <<!--end_form state=`completed`/-->>
+                          <<btn_set_focus btn_id=`btn_ok`/>>
                         <</response>>
                       <</ask>>
                     <</response>>
@@ -215,12 +215,18 @@
               <row/>
               <col/>
               <label value="Period"/>
-              <display obj_name="ar_ledg_per" col_name="period_row_id" lng="20"/>
-              <display obj_name="ar_ledg_per" col_name="closing_date" lng="85"/>
+              <display obj_name="ledg_per" col_name="period_row_id" lng="20"/>
+              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
               <button btn_id="reopen_period" btn_label="Reopen period"
                 help_msg = "Reopen period if permitted"
                 btn_enabled="true" btn_validate="true" action="
-                  <<pyfunc name=`custom.artrans_funcs.reopen_period`/>>
+                  <<pyfunc name=`custom.period_end_funcs.reopen_period`/>>
+                  <<ask title=`Reopen period` enter=`Ok` escape=`Ok`
+                      question=`Period reopened`>>
+                    <<response ans=`Ok`>>
+                      <<btn_set_focus btn_id=`btn_ok`/>>
+                    <</response>>
+                  <</ask>>
                 "/>
             </subtype_body>
           </subtype_frame>
