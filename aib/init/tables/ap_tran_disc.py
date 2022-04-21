@@ -656,3 +656,11 @@ actions.append([
             ],
         ],
     ])
+actions.append([
+    'after_save',
+        '<case>'
+          '<compare test="[[`if`, ``, `posted`, `=`, `$False`, ``]]">'
+            '<do_post/>'
+          '</compare>'
+        '</case>'
+    ])

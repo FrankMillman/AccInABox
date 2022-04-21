@@ -126,6 +126,9 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
+          '<on_unpost>'
+            '<fld_val name="tran_number"/>'
+          '</on_unpost>'
           '<on_post>'
             '<case>'
               '<compare test="[[`if`, ``, `ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
@@ -593,17 +596,4 @@ actions.append([
             [],  # on unpost
             ],
         ],
-    ])
-actions.append([
-    'before_post',
-        '<assign src="[]" tgt="_ctx.disc_to_post"/>'
-        '<assign src="$None" tgt="_ctx.disc_row_id"/>'
-    ])
-actions.append([
-    'after_post',
-        '<case>'
-            '<compare test="[[`if`, ``, `_ctx.disc_to_post`, `!=`, `[]`, ``]]">'
-                '<pyfunc name="custom.aptrans_funcs.post_disc_crn"/>'
-            '</compare>'
-        '</case>'
     ])

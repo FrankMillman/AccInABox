@@ -345,25 +345,3 @@ async def post_pmt_batch(caller, xml):
         batch_hdr.context = context
 
     return f"Batch {await batch_hdr.getval('batch_number')} posted"
-
-async def post_disc_crn(db_obj, xml):
-    # called from ap_tran_pmt/cb_tran_pmt - after_post
-    # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
-    #    or create new column on ap_tran_rec/cb_tran_pmt 'crn_check_complete'?
-    #    any tran with 'posted' = True and 'crn_check_complete' = False must be re-run
-    context = db_obj.context
-    disc_objname = [x for x in context.data_objects if x.endswith('ap_tran_disc')][0]
-    disc = context.data_objects[disc_objname]
-    for row_id in context.disc_to_post:
-        await disc.setval('row_id', row_id)
-        await disc.post()
-
-async def post_alloc_crn(db_obj, xml):
-    # called from ap_tran_alloc - after_post
-    # NB this is a new transaction, so vulnerable to a crash - create process to handle(?)
-    #    or create new column on ap_tran_alloc 'crn_check_complete'?
-    #    any tran with 'posted' = True and 'crn_check_complete' = False must be re-run
-    context = db_obj.context
-    disc = context.data_objects[f'{id(db_obj)}.ap_tran_disc']
-    await disc.setval('row_id', context.disc_row_id)
-    await disc.post()

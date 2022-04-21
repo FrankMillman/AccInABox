@@ -1289,9 +1289,14 @@ class DbObject:
                 if self.dirty:  # could have been updated in upd_on_save/post or from sub_tran
                     await self.update(conn, from_upd_on_save=True)
 
-                if not from_upd_on_save:
-                    for after_save in self.db_table.actions.after_save:
-                        await db.hooks_xml.table_hook(self, after_save)
+                # what was the reason for 'not from_upd_on_save' ?
+                # it prevents 'do_post' being called on ar/ap_tran_disc
+                # remove for now, monitor [2022-04-21]
+                # if not from_upd_on_save:
+                #     for after_save in self.db_table.actions.after_save:
+                #         await db.hooks_xml.table_hook(self, after_save)
+                for after_save in self.db_table.actions.after_save:
+                    await db.hooks_xml.table_hook(self, after_save)
 
                 for fld in self.fields.values():
                     fld._orig = await fld.getval()
@@ -1607,7 +1612,7 @@ class DbObject:
                 if tgt_fkey.is_child:
                     if tgt_fkey.src_tbl == tbl_name:
                         for child in self.children:  # list of children already set up
-                            if child.table_name == tgt_fkey.src_tbl:
+                            if child.table_name == tbl_name:
                                 break  # use this one
                         else:  # child not set up - next line will set it up
                             child = await get_db_object(self.context,

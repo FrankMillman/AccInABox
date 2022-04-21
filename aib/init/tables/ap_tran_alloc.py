@@ -277,21 +277,6 @@ actions.append([
                 ['orig_item_id', '=', 'item_row_id'],
                 ],
             [],  # on unpost
-            [  # return values
-                ['_ctx.disc_row_id', 'row_id'],  # tgt_col, src_col
-                ],
             ],
         ],
-    ])
-actions.append([
-    'before_post',
-        '<assign src="$None" tgt="_ctx.disc_row_id"/>'
-    ])
-actions.append([
-    'after_post',
-        '<case>'
-            '<compare test="[[`if`, ``, `_ctx.disc_row_id`, `is not`, `$None`, ``]]">'
-                '<pyfunc name="custom.aptrans_funcs.post_alloc_crn"/>'
-            '</compare>'
-        '</case>'
     ])

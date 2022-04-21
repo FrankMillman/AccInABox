@@ -77,6 +77,9 @@ async def reset_table_defn(db_obj, xml):
     if table_key in db.objects.tables_open:
         del db.objects.tables_open[table_key]
 
+async def do_post(db_obj, xml):
+    await db_obj.post()
+
 async def on_post(db_obj, xml):
     return db_obj.context.in_db_post
 

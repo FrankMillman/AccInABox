@@ -635,9 +635,6 @@ actions.append([
                 ['orig_item_id', '=', 'item_row_id'],
                 ],
             [],  # on unpost
-            [  # return values
-                ['_ctx.disc_row_id', 'row_id'],  # tgt_col, src_col
-                ],
             ],
         [
             'ap_totals',  # table name
@@ -727,17 +724,4 @@ actions.append([
             [],  # on unpost
             ],
         ],
-    ])
-actions.append([
-    'after_update',
-        '<case>'
-            '<on_post>'
-                '<case>'
-                    '<compare test="[[`if`, ``, `_ctx.disc_row_id`, `is not`, `$None`, ``]]">'
-                        '<append src="_ctx.disc_row_id" tgt="_ctx.disc_to_post"/>'
-                        '<assign src="$None" tgt="_ctx.disc_row_id"/>'
-                    '</compare>'
-                '</case>'
-            '</on_post>'
-        '</case>'
     ])
