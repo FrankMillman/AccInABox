@@ -2264,6 +2264,7 @@ if (grid.header_row.length) {
           btn.onclick = function(e) {
             var grid = this.parentNode.grid;
             if (grid.frame.form.disable_count) return false;
+            if (grid.active_row === -1) return false;
             //var args = [grid.ref, grid.active_row];
             var args = [this.ref, grid.active_row];
             send_request('clicked', args);
@@ -2295,6 +2296,7 @@ if (grid.header_row.length) {
           btn.title = tool.tip;
           btn.onclick = function(e) {
             var grid = this.parentNode.grid;
+            if (grid.active_row === -1) return false;
             if (grid.frame.form.disable_count) return false;
             //var args = [grid.ref, grid.active_row];
             var args = [this.ref, grid.active_row];

@@ -301,10 +301,10 @@ async def setup_other_tables(context, conn):
         'ar_tran_jnl',
         'ar_tran_jnl_det',
         'ar_tran_rec',
+        'ar_tran_disc',
         'ar_subtran_rec',
         'ar_subtran_pmt',
         'ar_subtran_jnl',
-        'ar_tran_disc',
         'ar_tran_alloc',
         'ar_tran_bf',
         'ar_tran_bf_det',
@@ -326,10 +326,10 @@ async def setup_other_tables(context, conn):
         'ap_pmt_batch',
         'ap_pmt_batch_det',
         'ap_tran_pmt',
+        'ap_tran_disc',
         'ap_subtran_pmt',
         'ap_subtran_rec',
         'ap_subtran_jnl',
-        'ap_tran_disc',
         'ap_tran_alloc',
         'ap_tran_bf',
         'ap_tran_bf_det',
@@ -598,15 +598,20 @@ async def setup_forms(context, conn):
     await setup_form('ar_receipt')
     await setup_form('ar_alloc_item')
     await setup_form('ar_alloc')
+    await setup_form('ar_alloc_openitem')
     await setup_form('setup_nsls_codes')
     await setup_form('sls_report')
     await setup_form('setup_apsupp')
     await setup_form('ap_supp_bal')
-    await setup_form('setup_npch_codes')
+    await setup_form('ap_balances')
     await setup_form('ap_invoice')
     await setup_form('ap_journal')
+    await setup_form('ap_payment')
+    await setup_form('ap_alloc_item')
+    await setup_form('ap_alloc')
+    await setup_form('ap_alloc_openitem')
     await setup_form('ap_pmt_batch')
-    await setup_form('ap_balances')
+    await setup_form('setup_npch_codes')
     await setup_form('setup_prod_codes')
     await setup_form('setup_sell_prices')
     await setup_form('cb_receipt')
@@ -618,8 +623,16 @@ async def setup_forms(context, conn):
     await setup_form('finrpt_list')
     await setup_form('finrpt_run')
     await setup_form('finrpt_grid')
+    await setup_form('finrpt_page')
     await setup_form('tranrpt_grid')
     await setup_form('all_captured')
+    await setup_form('cb_rec_posted')
+    await setup_form('cb_pmt_posted')
+    await setup_form('cb_tfr_posted')
+    await setup_form('ar_inv_posted')
+    await setup_form('ar_alloc_posted')
+    await setup_form('ap_inv_posted')
+    await setup_form('ap_alloc_posted')
 
 async def setup_reports(context, conn):
     # schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
@@ -657,6 +670,7 @@ async def setup_finrpts(context, conn):
         await db_obj.setval('module_id', rpt.module_id)
         await db_obj.setval('report_name', rpt.report_name)
         await db_obj.setval('descr', rpt.report_name)
+        await db_obj.setval('title', rpt.title)
         await db_obj.setval('table_name', rpt.table_name)
         await db_obj.setval('report_type', rpt.report_type)
         await db_obj.setval('filters', rpt.filters)
@@ -674,36 +688,39 @@ async def setup_finrpts(context, conn):
             await db_obj.setval('pivot_on', rpt.pivot_on)
         if hasattr(rpt, 'cashflow_params'):
             await db_obj.setval('cashflow_params', rpt.cashflow_params)
+        if hasattr(rpt, 'finrpt_defn'):
+            await db_obj.setval('finrpt_defn', rpt.finrpt_defn)
         await db_obj.save()
 
     finrpt_names = [
-        'tb_by_maj',
-        'tb_by_int',
-        'tb_by_code',
-        'tb_pivot_maj',
-        'int_by_loc',
-        'int_by_loc',
-        'int_pivot_loc',
-        'int_pivot_date',
-        'int_curr_prev',
-        # 'cb_cash_flow',
-        'ar_by_src',
-        'ar_pivot_src',
-        'ar_cust_pivot_src',
-        'ar_loc_pivot_src',
-        'ap_by_src',
-        'ap_pivot_src',
-        'ap_supp_pivot_src',
-        'ap_loc_pivot_src',
-        'cb_pivot_src',
-        'npch_pivot_date',
-        'nsls_pivot_date',
-        'npch_per',
-        'nsls_per',
-        'npch_uex_code_src',
-        'npch_uex_pivot_src',
-        'nsls_uea_code_src',
-        'nsls_uea_pivot_src',
+#       'tb_by_maj',
+#       'tb_by_int',
+#       'tb_by_code',
+#       'tb_pivot_maj',
+#       'int_by_loc',
+#       'int_by_loc',
+#       'int_pivot_loc',
+#       'int_pivot_date',
+#       'int_curr_prev',
+#       'int_is_curr_prev',
+#       'cb_cash_flow',
+#       'ar_by_src',
+#       'ar_pivot_src',
+#       'ar_cust_pivot_src',
+#       'ar_loc_pivot_src',
+#       'ap_by_src',
+#       'ap_pivot_src',
+#       'ap_supp_pivot_src',
+#       'ap_loc_pivot_src',
+#       'cb_pivot_src',
+#       'npch_pivot_date',
+#       'nsls_pivot_date',
+#       'npch_per',
+#       'nsls_per',
+#       'npch_uex_code_src',
+#       'npch_uex_pivot_src',
+#       'nsls_uea_code_src',
+#       'nsls_uea_pivot_src',
         ]
 
     for name in finrpt_names:
@@ -840,12 +857,21 @@ async def setup_menus(context, conn, company_name):
             ['Cash book parameters', 'form', 'cb_params'],
             ]],
         ['Cb transactions', 'menu', 'cb', [
-            ['Cash book receipt', 'form', 'cb_receipt'],
-            ['Cash book payment', 'form', 'cb_payment'],
-            ['Transfer to another cb', 'form', 'cb_transfer'],
-            ['Review unposted receipts', 'grid', 'cb_tran_rec', 'unposted_rec'],
-            ['Review unposted payments', 'grid', 'cb_tran_pmt', 'unposted_pmt'],
-            ['Review unposted transfers', 'grid', 'cb_tran_tfr_out', 'unposted_tfr'],
+            ['Cb receipts', 'menu', 'cb', [
+                ['Capture receipt', 'form', 'cb_receipt'],
+                ['List of receipts posted', 'form', 'cb_rec_posted'],
+                ['Review unposted receipts', 'grid', 'cb_tran_rec', 'unposted_rec'],
+                ]],
+            ['Cb payments', 'menu', 'cb', [
+                ['Capture payment', 'form', 'cb_payment'],
+                ['List of payments posted', 'form', 'cb_pmt_posted'],
+                ['Review unposted payments', 'grid', 'cb_tran_pmt', 'unposted_pmt'],
+                ]],
+            ['Cb transfers', 'menu', 'cb', [
+                ['Capture transfer to another cb', 'form', 'cb_transfer'],
+                ['List of transfers posted', 'form', 'cb_tfr_posted'],
+                ['Review unposted transfers', 'grid', 'cb_tran_tfr_out', 'unposted_tfr'],
+                ]],
             ]],
         ['Cb reports', 'menu', 'cb', [
             ['Cash book report', 'form', 'cb_cashbook'],
@@ -861,13 +887,31 @@ async def setup_menus(context, conn, company_name):
             ['Terms codes', 'grid', 'ar_terms_codes', 'terms_codes'],
             ]],
         ['Ar transactions', 'menu', 'ar', [
-            ['Capture invoice', 'form', 'ar_invoice'],
-            ['Capture journal', 'form', 'ar_journal'],
-            ['Capture receipt', 'form', 'ar_receipt'],
-            ['Allocate transaction', 'grid', 'ar_openitems', 'unallocated'],
-            ['Review unposted invoices', 'grid', 'ar_tran_inv', 'unposted_inv'],
-            ['Review unposted journals', 'grid', 'ar_tran_jnl', 'unposted_jnl'],
-            ['Review unposted receipts', 'grid', 'ar_tran_rec', 'unposted_rec'],
+            ['Invoices', 'menu', 'ar', [
+                ['Capture invoice', 'form', 'ar_invoice'],
+                ['List of invoices posted', 'form', 'ar_inv_posted'],
+                ['Review unposted invoices', 'grid', 'ar_tran_inv', 'unposted_inv'],
+                ]],
+            ['Credit notes', 'menu', 'ar', [
+                ['Capture credit note', 'form', 'ar_crnote'],
+                ['List of credit notes posted', 'form', 'ar_crn_posted'],
+                ['Review unposted credit notes', 'grid', 'ar_tran_crn', 'unposted_crn'],
+                ]],
+            ['Journals', 'menu', 'ar', [
+                ['Capture journal', 'form', 'ar_journal'],
+                ['List of journals posted', 'form', 'ar_jnl_posted'],
+                ['Review unposted journals', 'grid', 'ar_tran_jnl', 'unposted_jnl'],
+                ]],
+            ['Receipts', 'menu', 'ar', [
+                ['Capture receipt', 'form', 'ar_receipt'],
+                ['List of receipts posted', 'form', 'ar_rec_posted'],
+                ['Review unposted receipts', 'grid', 'ar_tran_rec', 'unposted_rec'],
+                ]],
+            ['Allocations', 'menu', 'ar', [
+                ['Allocate transaction', 'grid', 'ar_openitems', 'unallocated'],
+                ['List of allocations posted', 'form', 'ar_alloc_posted'],
+                ['Review unposted allocations', 'grid', 'ar_tran_alloc', 'unposted_alloc'],
+                ]],
             ]],
         ['Ar enquiries', 'menu', 'ar', [
             ['AR balances', 'form', 'ar_balances'],
@@ -884,12 +928,31 @@ async def setup_menus(context, conn, company_name):
             ['Terms codes', 'grid', 'ap_terms_codes', 'terms_codes'],
             ]],
         ['AP transactions', 'menu', 'ap', [
-            ['Capture invoice', 'form', 'ap_invoice'],
-            ['Capture journal', 'form', 'ap_journal'],
-            ['Capture payment', 'form', 'ap_payment'],
-            ['Review unposted invoices', 'grid', 'ap_tran_inv', 'unposted_inv'],
-            ['Review unposted journals', 'grid', 'ap_tran_jnl', 'unposted_jnl'],
-            ['Review unposted payments', 'grid', 'ap_tran_pmt', 'unposted_pmt'],
+            ['Invoices', 'menu', 'ap', [
+                ['Capture invoice', 'form', 'ap_invoice'],
+                ['List of invoices posted', 'form', 'ap_inv_posted'],
+                ['Review unposted invoices', 'grid', 'ap_tran_inv', 'unposted_inv'],
+                ]],
+            ['Credit notes', 'menu', 'ap', [
+                ['Capture credit note', 'form', 'ap_crnote'],
+                ['List of credit notes posted', 'form', 'ap_crn_posted'],
+                ['Review unposted credit notes', 'grid', 'ap_tran_crn', 'unposted_crn'],
+                ]],
+            ['Journals', 'menu', 'ap', [
+                ['Capture journal', 'form', 'ap_journal'],
+                ['List of journals posted', 'form', 'ap_jnl_posted'],
+                ['Review unposted journals', 'grid', 'ap_tran_jnl', 'unposted_jnl'],
+                ]],
+            ['Payments', 'menu', 'ap', [
+                ['Capture payment', 'form', 'ap_payment'],
+                ['List of payments posted', 'form', 'ap_pmt_posted'],
+                ['Review unposted payments', 'grid', 'ap_tran_pmt', 'unposted_pmt'],
+                ]],
+            ['Allocations', 'menu', 'ap', [
+                ['Allocate transaction', 'grid', 'ap_openitems', 'unallocated'],
+                ['List of allocations posted', 'form', 'ap_alloc_posted'],
+                ['Review unposted allocations', 'grid', 'ap_tran_alloc', 'unposted_alloc'],
+                ]],
             ]],
         ['Ap payments batch processing', 'menu', 'ap', [
             ['Set up payment batch', 'form', 'ap_pmt_batch'],

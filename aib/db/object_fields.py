@@ -438,6 +438,7 @@ class Field:
                     body='Table is read only - no amendments allowed')
             elif (
                 col_defn.col_type != 'virt'  # e.g. ar_openitems.alloc_cust_gui is ok
+                    and db_obj.context.in_db_post != 'unpost'  # can amend if we are unposting
                     and 'posted' in db_obj.db_table.col_dict
                     # 'posted' in db_obj.db_table.col_dict
                     #     # next line added 2019-08-20
@@ -447,8 +448,8 @@ class Field:
                     #     #   but that is ok because we use it to update ar_allocations
                     #     # any implications?
                     #     # and db_obj.db_table.col_dict['posted'].col_type != 'virt'
-                    and await db_obj.getval('posted')
-                    and await db_obj.get_orig('posted')
+                    and await db_obj.getval('posted') == '1'  # 0/1/2 = not posted/posted/unposted
+                    and await db_obj.get_orig('posted') == '1'
                     ):
                 raise AibError(head=f'Amend {self.table_name}.{col_name}',
                     body='Transaction posted - no amendments allowed')
@@ -678,6 +679,8 @@ class Field:
         # if we get here, all validations have passed
 
         if not changed:
+            if from_init:
+                self.must_be_evaluated = False  # in case set by another field in init()
             return
 
         self._value = value

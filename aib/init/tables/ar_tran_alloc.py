@@ -99,7 +99,7 @@ cols.append ({
             ['check', '', 'item_row_id>tran_type', '!=', "'ar_inv'", ''],
             ]],
         ['check_posted', 'Transaction must be posted', [
-            ['check', '', 'item_row_id>tran_row_id>posted', 'is', '$True', ''],
+            ['check', '', 'item_row_id>tran_row_id>posted', '=', "'1'", ''],
             ]],
         ],
     'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
@@ -178,8 +178,28 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
+    'col_name'   : 'discount_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'Discount row id',
+    'long_descr' : 'Discount row id (if ar_tran_disc created) Only used if we unpost.',
+    'col_head'   : 'Disc row id',
+    'key_field'  : 'N',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : ['ar_tran_disc', 'row_id', None, None, False, None],
+    'choices'    : None,
+    })
+cols.append ({
     'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'TEXT',
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
@@ -191,11 +211,15 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
+    'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
-    'choices'    : None,
+    'choices'    : [
+            ['0', 'Not posted'],
+            ['1', 'Posted'],
+            ['2', 'Unposted'],
+        ],
     })
 
 # virtual column definitions
@@ -235,6 +259,14 @@ virt.append ({
         "CASE WHEN EXISTS(SELECT * FROM {company}.ar_allocations b "
         "WHERE b.tran_row_id = a.row_id) THEN $True ELSE $False END"
         ),
+    })
+virt.append ({
+    'col_name'   : 'this_trantype_row_id',
+    'data_type'  : 'INT',
+    'short_descr': 'This tran type row id',
+    'long_descr' : 'This tran type row id',
+    'col_head'   : 'This tran type row id',
+    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'ar_alloc'",
     })
 virt.append ({
     'col_name'   : 'unallocated',
@@ -300,18 +332,37 @@ virt.append ({
 # cursor definitions
 cursors = []
 cursors.append({
+    'cursor_name': 'posted_alloc',
+    'title': 'Posted ar allocations',
+    'columns': [
+        ['item_row_id>cust_row_id>party_row_id>party_id', 80, False, True],
+        ['item_row_id>cust_row_id>party_row_id>display_name', 160, True, True],
+        ['tran_date', 80, False, True],
+        ['item_row_id>tran_type', 80, False, True],
+        ['item_row_id>tran_number', 80, False, True],
+        ['item_row_id>balance_cust', 120, False, True],
+        ],
+    'filter': [
+        ['where', '', 'posted', '=', "'1'", ''],
+        ['and', '', 'tran_date', '>=', '_ctx.start_date', ''],
+        ['and', '', 'tran_date', '<=', '_ctx.end_date', ''],
+        ],
+    'sequence': [['tran_date', False]],
+    'formview_name': 'ar_alloc',
+    })
+cursors.append({
     'cursor_name': 'unposted_alloc',
     'title': 'Unposted ar allocations',
     'columns': [
         ['item_row_id>cust_row_id>party_row_id>party_id', 80, False, True],
         ['item_row_id>cust_row_id>party_row_id>display_name', 160, True, True],
         ['tran_date', 80, False, True],
-        ['item_row_id>tran_type', 60, False, True],
+        ['item_row_id>tran_type', 80, False, True],
         ['item_row_id>tran_number', 80, False, True],
         ['item_row_id>balance_cust', 120, False, True],
         ],
     'filter': [
-        ['where', '', 'posted', '=', "'0'", ''],
+        ['where', '', 'posted', '!=', "'1'", ''],
         ],
     'sequence': [['tran_date', False]],
     'formview_name': 'ar_alloc',
@@ -320,61 +371,103 @@ cursors.append({
 # actions
 actions = []
 actions.append([
-    'upd_on_post', [
-        [
-            'ar_allocations',
-            [  # condition
-                ['where', '', 'allocations', 'is not', '$None', ''],
-                ],
-
-            True,  # split source?
-
-             'custom.artrans_funcs.get_allocations',  # function to populate table
-
-             [  # fkey to this table
-                 ['tran_row_id', 'row_id'],  # tgt_col, src_col
-                 ],
-
-             ['item_row_id', 'alloc_cust'],  # fields to be updated
-
-             [],  # return values
-
-             [],  # check totals
-             ],
-        [
-            'ar_allocations',
-            [  # condition
-                ['where', '', 'tot_alloc_cust', '!=', '0', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['item_row_id', 'item_row_id'],  # tgt_col, op, src_col
-                ],
-            [],  # aggregation
-            [  # on post
-                ['alloc_cust', '-', 'tot_alloc_cust'],  # tgt_col, op, src_col
-                ['alloc_local', '-', 'tot_alloc_local'],
-                ],
-            [],  # on unpost
+    'upd_on_post', {
+        'aggr': [
             ],
-        [
-            'ar_tran_disc',
-            [  # condition
-                ['where', '', '_ctx.tot_disc_cust', '!=', '0', ''],
+        'on_post': [
+            [
+                'ar_allocations',
+                [  # condition
+                    ['where', '', 'allocations', 'is not', '$None', ''],
+                    ],
+
+                True,  # split source?
+
+                'custom.artrans_funcs.get_allocations',  # function to populate table
+
+                [  # fkey to this table
+                    ['tran_row_id', 'row_id'],  # tgt_col, src_col
+                    ],
+
+                ['item_row_id', 'alloc_cust'],  # fields to be updated
+
+                [],  # return values
+
+                [],  # check totals
                 ],
-            False,  # split source?
-            [  # key fields
-                ['cust_row_id', 'item_row_id>cust_row_id'],  # tgt_col, op, src_col
+            [
+                'ar_allocations',
+                [  # condition
+                    ['where', '', 'tot_alloc_cust', '!=', '0', ''],
+                    ],
+                False,  # split source?
+                [  # key fields
+                    ['item_row_id', 'item_row_id'],  # tgt_col, op, src_col
+                    ],
+                [  # on post
+                    ['alloc_cust', '-', 'tot_alloc_cust'],  # tgt_col, op, src_col
+                    ['alloc_local', '-', 'tot_alloc_local'],
+                    ],
+                [],  # return values
                 ],
-            [],  # aggregation
-            [  # on post
-                ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
-                ['tran_exch_rate', '=', 'tran_exch_rate'],
-                ['discount_cust', '=', 'tot_disc_cust'],
-                ['discount_local', '=', 'tot_disc_local'],
-                ['orig_item_id', '=', 'item_row_id'],
+            [
+                'ar_tran_disc',
+                [  # condition
+                    ['where', '', 'tot_disc_cust', '!=', '0', ''],
+                    ],
+                False,  # split source?
+                [  # key fields
+                    ['cust_row_id', 'item_row_id>cust_row_id'],  # tgt_col, op, src_col
+                    ],
+                [  # on post
+                    ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
+                    ['tran_exch_rate', '=', 'tran_exch_rate'],
+                    ['discount_cust', '=', 'tot_disc_cust'],
+                    ['discount_local', '=', 'tot_disc_local'],
+                    ['orig_item_id', '=', 'item_row_id'],
+                    ['gen_trantype_row_id', '=', 'this_trantype_row_id'],
+                    ['gen_tran_row_id', '=', 'row_id'],
+                    ],
+                [  # return values
+                    ['discount_row_id', 'row_id'],  # tgt_col, src_col
+                    ],
                 ],
-            [],  # on unpost
             ],
-        ],
+        'on_unpost': [
+            [
+                'ar_tran_disc',
+                [  # condition
+                    ['where', '', 'discount_row_id', 'is not', '$None', ''],
+                    ],
+                [  # key fields
+                    ['row_id', 'discount_row_id'],  # tgt_col, op, src_col
+                    ],
+                [  # on unpost
+                    ['delete', '', ''],  # tgt_col, op, src_col
+                    ],
+                ],
+            [
+                'ar_allocations',
+                [  # condition
+                    ['where', '', 'item_row_id', 'is not', '$None', ''],
+                    ],
+                [  # key fields
+                    ['item_row_id', 'item_row_id'],  # tgt_col, op, src_col
+                    ],
+                [  # on unpost
+                    ['delete', '', ''],  # tgt_col, op, src_col
+                    ],
+                ],
+            [
+                'ar_allocations',
+                [  # condition
+                    ['where', '', 'item_row_id', 'is not', '$None', ''],
+                    ],
+                [],  # key fields
+                [  # on unpost
+                    ['pyfunc', 'custom.artrans_funcs.restore_allocations', ''],  # tgt_col, op, src_col
+                    ],
+                ],
+            ],
+        },
     ])

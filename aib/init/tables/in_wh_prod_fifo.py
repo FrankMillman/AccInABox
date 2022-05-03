@@ -287,7 +287,7 @@ virt.append ({
             "FROM {company}.in_wh_prod_alloc b "
             "LEFT JOIN {company}.in_trans c ON c.tran_type = b.tran_type "
                 "AND c.tran_row_id = b.tran_row_id "
-            "WHERE b.item_row_id = a.row_id AND c.posted = $True AND c.tran_date <= {_ctx.balance_date}"
+            "WHERE b.item_row_id = a.row_id AND c.posted = '1' AND c.tran_date <= {_ctx.balance_date}"
         "), 0)"
         )
     })
@@ -310,7 +310,7 @@ virt.append ({
             "FROM {company}.in_wh_prod_alloc b "
             "LEFT JOIN {company}.in_trans c ON c.tran_type = b.tran_type "
                 "AND c.tran_row_id = b.tran_row_id "
-            "WHERE b.fifo_row_id = a.row_id AND c.posted = $True AND c.tran_date <= {_ctx.balance_date}"
+            "WHERE b.fifo_row_id = a.row_id AND c.posted = '1' AND c.tran_date <= {_ctx.balance_date}"
         "), 0)"
         )
     })

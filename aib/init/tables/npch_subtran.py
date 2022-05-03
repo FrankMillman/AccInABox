@@ -385,7 +385,7 @@ cols.append ({
 virt = []
 virt.append ({
     'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'TEXT',
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
@@ -557,150 +557,138 @@ actions.append([
         ],
     ])
 actions.append([
-    'upd_on_post', [
-        [
-            'npch_totals',  # table name
-            [  # condition
-                # ['where', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
-                ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+    'upd_on_post', {
+        'aggr': [
+            [
+                'npch_totals',  # table name
+                [  # condition
+                    # ['where', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
+                    ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                    ],
+                [  # key fields
+                    ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'location_row_id'],
+                    ['function_row_id', 'function_row_id'],
+                    ['src_tran_type', "'npch'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'net_local'],
+                    ],
                 ],
-            False,  # split source?
-            [  # key fields
-                ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                ['src_tran_type', "'npch'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
+            [
+                'npch_uex_totals',  # table name
+                [  # condition
+                    # ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
+                    ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                    ],
+                [  # key fields
+                    ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'location_row_id'],
+                    ['function_row_id', 'function_row_id'],
+                    ['src_tran_type', "'npch'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'net_local'],
+                    ],
                 ],
-            [  # aggregation
-                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'net_local'],
+            [
+                'npch_supp_totals',  # table name
+                [  # condition
+                    # ['where', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
+                    ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                    ['and', '', 'subparent_row_id>module_id', '=', "'ap'", ''],
+                    ],
+                [  # key fields
+                    ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
+                    ['supp_row_id', 'subparent_row_id>supp_row_id'],
+                    ['location_row_id', 'location_row_id'],
+                    ['function_row_id', 'function_row_id'],
+                    ['src_tran_type', "'npch'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'net_local'],
+                    ],
                 ],
-            [],  # on post
-            [],  # on unpost
+            [
+                'npch_supp_uex_totals',  # table name
+                [  # condition
+                    # ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
+                    ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                    ['and', '', 'subparent_row_id>module_id', '=', "'ap'", ''],
+                    ],
+                [  # key fields
+                    ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
+                    ['supp_row_id', 'subparent_row_id>supp_row_id'],
+                    ['location_row_id', 'location_row_id'],
+                    ['function_row_id', 'function_row_id'],
+                    ['src_tran_type', "'npch'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'net_local'],
+                    ],
+                ],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    # ['and', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
+                    ['and', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'npch_code_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'location_row_id'],
+                    ['function_row_id', 'function_row_id'],
+                    ['src_tran_type', "'npch'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'net_local'],
+                    ],
+                ],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    # ['and', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
+                    ['and', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'npch_code_id>ledger_row_id>uex_gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'location_row_id'],
+                    ['function_row_id', 'function_row_id'],
+                    ['src_tran_type', "'npch'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'net_local'],
+                    ],
+                ],
             ],
-        [
-            'npch_uex_totals',  # table name
-            [  # condition
-                # ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
-                ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                ['src_tran_type', "'npch'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
+        'on_post': [
             ],
-        [
-            'npch_supp_totals',  # table name
-            [  # condition
-                # ['where', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
-                ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
-                ['and', '', 'subparent_row_id>module_id', '=', "'ap'", ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
-                ['supp_row_id', 'subparent_row_id>supp_row_id'],
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                ['src_tran_type', "'npch'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
+        'on_unpost': [
             ],
-        [
-            'npch_supp_uex_totals',  # table name
-            [  # condition
-                # ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
-                ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
-                ['and', '', 'subparent_row_id>module_id', '=', "'ap'", ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
-                ['supp_row_id', 'subparent_row_id>supp_row_id'],
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                ['src_tran_type', "'npch'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                # ['and', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
-                ['and', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'npch_code_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                ['src_tran_type', "'npch'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                # ['and', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
-                ['and', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'npch_code_id>ledger_row_id>uex_gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                ['src_tran_type', "'npch'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        ],
+        },
     ])

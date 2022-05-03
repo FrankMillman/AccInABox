@@ -632,27 +632,6 @@ cursors.append({
     'sequence': [['supp_id', False]],
     'formview_name': 'ap_supp_bal',
     })
-cursors.append({
-    'cursor_name': 'supp_due_as_at',
-    'title': 'Supplier balance due at date',
-    'columns': [
-        ['supp_id', 80, False, True],
-        ['party_row_id>display_name', 150, True, True],
-        ['currency_id>symbol', 40, False, True, [
-            ['if', '', 'ledger_row_id>currency_id', 'is', '$None', '']
-            ]],
-        ['location_row_id>location_id', 60, False, True, [
-            ['if', '', 'ledger_row_id>valid_loc_ids>is_leaf', 'is', '$False', '']
-            ]],
-        ['function_row_id>function_id', 60, False, True, [
-            ['if', '', 'ledger_row_id>valid_fun_ids>is_leaf', 'is', '$False', '']
-            ]],
-        ['bal_due_sup', 100, False, True],
-        ],
-    'filter': [['WHERE', '', 'bal_due_sup', '!=', '0', '']],
-    'sequence': [['supp_id', False]],
-    'formview_name': 'ap_supp_pmt',
-    })
 
 # actions
 actions = []

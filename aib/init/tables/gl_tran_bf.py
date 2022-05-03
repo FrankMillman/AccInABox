@@ -218,7 +218,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'TEXT',
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
@@ -230,11 +230,15 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
+    'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
-    'choices'    : None,
+    'choices'    : [
+            ['0', 'Not posted'],
+            ['1', 'Posted'],
+            ['2', 'Unposted'],
+        ],
     })
 
 # virtual column definitions
@@ -294,26 +298,29 @@ cursors = []
 # actions
 actions = []
 actions.append([
-    'upd_on_post', [
-        [
-            'gl_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                ['src_trantype_row_id', 'trantype_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', '0'],
-                ['tran_date', 'tran_date'],
+    'upd_on_post', {
+        'aggr': [
+            [
+                'gl_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['gl_code_id', 'gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'location_row_id'],
+                    ['function_row_id', 'function_row_id'],
+                    ['src_trantype_row_id', 'trantype_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', '0'],
+                    ['tran_date', 'tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'bf_bal'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'bf_bal'],
+                    ],
                 ],
-            [  # aggregation
-                ['tran_day', '+', 'bf_bal'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'bf_bal'],
-                ],
-            [],  # on post
-            [],  # on unpost
             ],
-        ],
+        'on_post': [
+            ],
+        'on_unpost': [
+            ],
+        },
     ])

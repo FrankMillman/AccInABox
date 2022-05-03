@@ -1,0 +1,92 @@
+<form name="cb_tfr_posted" title="List of posted cb transfers" before_start_form="
+  <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
+  ">
+  <db_objects>
+    <db_obj name="cb_tfr" table_name="cb_tran_tfr_out"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="date_range_vars" descr="Variables for date range">
+      <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
+        long_descr="Settings, passed between main form and subform" allow_amend="true"/>
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Date from"
+        long_descr="From which date" allow_amend="true"/>
+      <mem_col col_name="end_date" data_type="DTE" short_descr="Date to"
+        long_descr="To which date" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params/>
+  <output_params/>
+  <frame main_object="cb_tfr">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="From:"/>
+      <col/>
+      <input obj_name="date_range_vars" col_name="start_date" lng="84" readonly="true" skip="true"/>
+      <col/>
+      <label value="To:"/>
+      <col/>
+      <input obj_name="date_range_vars" col_name="end_date" lng="84" readonly="true" skip="true"/>
+      <col/>
+      <button btn_id="change_dates" btn_label="Change" help_msg = "Change dates"
+        btn_enabled="true" btn_validate="true" action="
+          <<sub_form name=`_sys.select_date_range`>>
+            <<call_params>>
+              <<call_param name=`settings` type=`data_attr` source=`date_range_vars.settings`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`settings` type=`data_attr` target=`date_range_vars.settings`/>>
+              <<return_param name=`start_date` type=`data_attr` target=`date_range_vars.start_date`/>>
+              <<return_param name=`end_date` type=`data_attr` target=`date_range_vars.end_date`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`>>
+                <<restart_grid obj_name=`cb_tfr`/>>
+              <</return>>
+            <</on_return>>
+          <</sub_form>>
+        "/>
+      <block/>
+      <grid data_object="cb_tfr" growable="false" num_grid_rows="15" readonly="true">
+        <toolbar>
+          <tool type="btn" label="Unpost" action="
+            <<start_row/>>
+            <<case>>
+              <<obj_exists obj_name=`cb_tfr`>>
+                <<unpost_tran/>>
+                <<restart_grid obj_name=`cb_tfr`/>>
+              <</obj_exists>>
+            <</case>>
+            "/>
+          <tool type="nav"/>
+        </toolbar>
+        <cur_columns>
+          <cur_col col_name="tran_number" lng="80"/>
+          <cur_col col_name="tran_date" lng="80"/>
+          <cur_col col_name="target_id" lng="200"/>
+          <cur_col col_name="tfr_amount" lng="80"/>
+        </cur_columns>
+        <cur_filter>
+          <cur_fil test="WHERE" lbr="" col_name="posted"
+            op="=" expr="'1'" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op=">>=" expr="date_range_vars.start_date" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op="<<=" expr="date_range_vars.end_date" rbr=""/>
+        </cur_filter>
+        <cur_sequence>
+          <cur_seq col_name="tran_date"/>
+          <cur_seq col_name="tran_number"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+
+    </body>
+    <button_row/>
+    <frame_methods template="Grid"/>
+  </frame>
+</form>

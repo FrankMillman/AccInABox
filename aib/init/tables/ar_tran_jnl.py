@@ -121,6 +121,9 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
+          '<on_repost>'
+            '<fld_val name="tran_number"/>'
+          '</on_repost>'
           '<on_post>'
             '<case>'
               '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
@@ -316,7 +319,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'TEXT',
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
@@ -328,11 +331,15 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
+    'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
-    'choices'    : None,
+    'choices'    : [
+            ['0', 'Not posted'],
+            ['1', 'Posted'],
+            ['2', 'Unposted'],
+        ],
     })
 cols.append ({
     'col_name'   : 'amount',
@@ -512,7 +519,7 @@ cursors.append({
         ['amount', 100, False, True],
         ],
     'filter': [
-        ['where', '', 'posted', '=', "'0'", ''],
+        ['where', '', 'posted', '!=', "'1'", ''],
         ],
     'sequence': [['tran_number', False]],
     'formview_name': 'ar_journal',
@@ -554,95 +561,87 @@ actions.append([
         ],
     ])
 actions.append([
-    'upd_on_post', [
-        [
-            'ar_openitems',  # table name
-            [  # condition
-                ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
+    'upd_on_post', {
+        'aggr': [
+            [
+                'ar_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
+                    ['location_row_id', 'location_row_id'],
+                    ['function_row_id', 'function_row_id'],
+                    ['src_trantype_row_id', 'trantype_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'ledger_row_id'],
+                    ['tran_date', 'tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'jnl_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'jnl_local'],
+                    ],
                 ],
-            False,  # split source?
-            [  # key fields
-                ['tran_row_id', 'row_id'],  # tgt_col, src_col
-                ['split_no', '0'],
+            [
+                'ar_cust_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
+                    ['location_row_id', 'location_row_id'],
+                    ['function_row_id', 'function_row_id'],
+                    ['src_trantype_row_id', 'trantype_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'ledger_row_id'],
+                    ['tran_date', 'tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day_cust', '+', 'jnl_amount'],  # tgt_col, op, src_col
+                    ['tran_tot_cust', '+', 'jnl_amount'],
+                    ['tran_day_local', '+', 'jnl_local'],
+                    ['tran_tot_local', '+', 'jnl_local'],
+                    ],
                 ],
-            [],  # aggregation
-            [  # on post
-                ['item_type', '=', "'jnl'"],  # tgt_col, op, src_col
-                ['due_date', '=', 'tran_date'],
-                ['cust_row_id', '=', 'cust_row_id'],
-                ['tran_date', '=', 'tran_date'],
-                ['amount_cust', '+', 'jnl_amount'],
-                ['amount_local', '+', 'jnl_local'],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'location_row_id'],
+                    ['function_row_id', 'function_row_id'],
+                    ['src_trantype_row_id', 'trantype_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'ledger_row_id'],
+                    ['tran_date', 'tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'jnl_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'jnl_local'],
+                    ],
                 ],
-            [],  # on unpost
-            # [  # return values
-            #     ['item_row_id', 'row_id'],  # tgt_col, src_col
-            #     ],
             ],
-
-        [
-            'ar_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                ['src_trantype_row_id', 'trantype_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'ledger_row_id'],
-                ['tran_date', 'tran_date'],
+        'on_post': [
+            [
+                'ar_openitems',  # table name
+                [  # condition
+                    ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
+                    ],
+                False,  # split source?
+                [  # key fields
+                    ['tran_row_id', 'row_id'],  # tgt_col, src_col
+                    ['split_no', '0'],
+                    ],
+                [  # on post
+                    ['item_type', '=', "'jnl'"],  # tgt_col, op, src_col
+                    ['due_date', '=', 'tran_date'],
+                    ['cust_row_id', '=', 'cust_row_id'],
+                    ['tran_date', '=', 'tran_date'],
+                    ['amount_cust', '+', 'jnl_amount'],
+                    ['amount_local', '+', 'jnl_local'],
+                    ],
+                [],  # return values
                 ],
-            [  # aggregation
-                ['tran_day', '+', 'jnl_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'jnl_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
             ],
-        [
-            'ar_cust_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                ['src_trantype_row_id', 'trantype_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'ledger_row_id'],
-                ['tran_date', 'tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day_cust', '+', 'jnl_amount'],  # tgt_col, op, src_col
-                ['tran_tot_cust', '+', 'jnl_amount'],
-                ['tran_day_local', '+', 'jnl_local'],
-                ['tran_tot_local', '+', 'jnl_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
+        'on_unpost': [
             ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                ['src_trantype_row_id', 'trantype_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'ledger_row_id'],
-                ['tran_date', 'tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'jnl_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'jnl_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        ],
+        },
     ])

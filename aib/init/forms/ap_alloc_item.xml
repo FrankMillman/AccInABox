@@ -1,0 +1,310 @@
+<form name="ap_alloc_item" title="Allocate ap open item">
+
+  <db_objects>
+    <db_obj name="ap_items" table_name="ap_openitems"/>
+  </db_objects>
+  <mem_objects>
+
+    <mem_obj name="var" descr="Form variables">
+      <mem_col col_name="scale" data_type="DEC" short_descr="Scale"
+        long_descr="Scale" allow_amend="true"/>
+      <mem_col col_name="amount_to_alloc" data_type="DEC" short_descr="Amount to allocate"
+        long_descr="Amount to allocate" db_scale="2" scale_ptr="scale"/>
+      <mem_col col_name="unallocated" data_type="DEC" short_descr="Unallocated"
+        long_descr="Unallocated" allow_amend="true"
+        db_scale="2" scale_ptr="scale"/>
+      </mem_obj>
+
+    <mem_obj name="due_bal" descr="Balance due in supplier currency">
+      <mem_col col_name="due_total" data_type="DEC" short_descr="Total"
+        long_descr="Total" col_head="Total" allow_null="true"
+        allow_amend="true" db_scale="2"
+        scale_ptr="var.scale"/>
+      <mem_col col_name="due_curr" data_type="DEC" short_descr="Current"
+        long_descr="Current" col_head="Current" allow_null="true"
+        allow_amend="true" db_scale="2"
+        scale_ptr="var.scale"/>
+      <mem_col col_name="due_30" data_type="DEC" short_descr="30 days"
+        long_descr="30 days" col_head="30 days" allow_null="true"
+        allow_amend="true" db_scale="2"
+        scale_ptr="var.scale"/>
+      <mem_col col_name="due_60" data_type="DEC" short_descr="60 days"
+        long_descr="60 days" col_head="60 days" allow_null="true"
+        allow_amend="true" db_scale="2"
+        scale_ptr="var.scale"/>
+      <mem_col col_name="due_90" data_type="DEC" short_descr="90 days"
+        long_descr="90 days" col_head="90 days" allow_null="true"
+        allow_amend="true" db_scale="2"
+        scale_ptr="var.scale"/>
+      <mem_col col_name="due_120" data_type="DEC" short_descr="120 days"
+        long_descr="120 days" col_head="120 days" allow_null="true"
+        allow_amend="true" db_scale="2"
+        scale_ptr="var.scale"/>
+    </mem_obj>
+
+    <mem_obj name="bal_vars" descr="Due balance variables">
+      <mem_col col_name="show_tot" data_type="BOOL" short_descr="Show all trans due"
+        long_descr="Show all transactions due" allow_amend="true" dflt_val="true"/>
+      <mem_col col_name="alloc_tot" data_type="BOOL" short_descr="Allocate to all trans due"
+        long_descr="Allocate balance of all transactions due" allow_amend="true"/>
+      <mem_col col_name="show_curr" data_type="BOOL" short_descr="Show current trans due"
+        long_descr="Show current transactions due" allow_amend="true"/>
+      <mem_col col_name="alloc_curr" data_type="BOOL" short_descr="Allocate to current trans due"
+        long_descr="Allocate balance of current transactions due" allow_amend="true"/>
+      <mem_col col_name="show_30" data_type="BOOL" short_descr="Show 30 day trans due"
+        long_descr="Show 30 day transactions due" allow_amend="true"/>
+      <mem_col col_name="alloc_30" data_type="BOOL" short_descr="Allocate to 30 day trans due"
+        long_descr="Allocate balance of 30 day transactions due" allow_amend="true"/>
+      <mem_col col_name="show_60" data_type="BOOL" short_descr="Show 60 day trans due"
+        long_descr="Show 60 day transactions due" allow_amend="true"/>
+      <mem_col col_name="alloc_60" data_type="BOOL" short_descr="Allocate to 60 day trans due"
+        long_descr="Allocate balance of 60 day transactions due" allow_amend="true"/>
+      <mem_col col_name="show_90" data_type="BOOL" short_descr="Show 90 day trans due"
+        long_descr="Show 90 day transactions due" allow_amend="true"/>
+      <mem_col col_name="alloc_90" data_type="BOOL" short_descr="Allocate to 90 day trans due"
+        long_descr="Allocate balance of 90 day transactions due" allow_amend="true"/>
+      <mem_col col_name="show_120" data_type="BOOL" short_descr="Show 120 day trans due"
+        long_descr="Show 120 day transactions due" allow_amend="true"/>
+      <mem_col col_name="alloc_120" data_type="BOOL" short_descr="Allocate to 120 day trans due"
+        long_descr="Allocate balance of 120 day transactions due" allow_amend="true"/>
+    </mem_obj>
+
+    <mem_obj name="mem_items" descr="In-memory table of outstanding items">
+      <mem_col col_name="item_row_id" data_type="INT" short_descr="Item row id"
+        long_descr="Item row id" key_field="A"/>
+      <mem_col col_name="tran_number" data_type="TEXT" short_descr="Tran number"
+        long_descr="Transaction number" col_head="Tran no"/>
+      <mem_col col_name="tran_date" data_type="DTE" short_descr="Tran date"
+        long_descr="Transaction date" col_head="Date"/>
+      <mem_col col_name="amount_supp" data_type="DEC" short_descr="Orig amount supp"
+        long_descr="Original item amount - supp" col_head="Orig supp"
+        db_scale="2" scale_ptr="var.scale"/>
+      <mem_col col_name="due_supp" data_type="DEC" short_descr="Amount due supp"
+        long_descr="Amount due after discount - supp" col_head="Due supp"
+        db_scale="2" scale_ptr="var.scale"/>
+      <mem_col col_name="alloc_supp" data_type="DEC" short_descr="Amount alloc supp"
+        long_descr="Amount allocated - supp" col_head="Alloc supp" allow_null="true"
+        allow_amend="true" db_scale="2" scale_ptr="var.scale"/>
+    </mem_obj>
+
+  </mem_objects>
+
+  <input_params>
+    <input_param name="alloc_header" type="data_obj" target="alloc_header" required="true"/>
+    <input_param name="amount_to_alloc" type="data_attr" target="var.amount_to_alloc" required="true"/>
+  </input_params>
+
+  <output_params/>
+
+  <frame main_object="var">
+    <toolbar/>
+
+    <body>
+      <block/>
+      <panel/>
+
+      <row/>
+      <col/>
+      <label value="Supplier Id:"/>
+      <col/>
+      <input obj_name="alloc_header" col_name="supp_row_id>supp_id" lng="84" readonly="true" skip="true"/>
+      <display obj_name="alloc_header" col_name="supp_row_id>party_row_id>display_name" lng="160"/>
+
+      <row/>
+      <col/>
+      <label value="Amount to allocate:"/>
+      <col/>
+      <input obj_name="var" col_name="amount_to_alloc" lng="84" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <label value="Unallocated:"/>
+      <col/>
+      <input obj_name="var" col_name="unallocated" lng="84" readonly="true" skip="true"/>
+
+      <block/>
+      <panel/>
+
+      <row/>
+      <col/>
+      <text value="Ageing: "/>
+      <col/>
+      <label value="120 days"/>
+      <col/>
+      <label value="90 days"/>
+      <col/>
+      <label value="60 days"/>
+      <col/>
+      <label value="30 days"/>
+      <col/>
+      <label value="Current"/>
+      <col/>
+      <label value="Total"/>
+
+      <row/>
+      <col/>
+      <text value="Balance: "/>
+      <col/>
+      <input obj_name="due_bal" col_name="due_120" lng="80" readonly="true" skip="true"/>
+      <col/>
+      <input obj_name="due_bal" col_name="due_90" lng="80" readonly="true" skip="true"/>
+      <col/>
+      <input obj_name="due_bal" col_name="due_60" lng="80" readonly="true" skip="true"/>
+      <col/>
+      <input obj_name="due_bal" col_name="due_30" lng="80" readonly="true" skip="true"/>
+      <col/>
+      <input obj_name="due_bal" col_name="due_curr" lng="80" readonly="true" skip="true"/>
+      <col/>
+      <input obj_name="due_bal" col_name="due_total" lng="80" readonly="true" skip="true"/>
+
+      <row/>
+      <col/>
+      <text value="Show/Alloc: "/>
+      <col/>
+      <input obj_name="bal_vars" col_name="show_120" after="
+        <<pyfunc name=`custom.aptrans_funcs.show_ageing` age=`4`/>>
+        "/>
+      <input obj_name="bal_vars" col_name="alloc_120" validation="
+          <<validation>>
+            <<pyfunc name=`custom.aptrans_funcs.confirm_alloc` age=`4`/>>
+          <</validation>>
+        " after="
+        <<pyfunc name=`custom.aptrans_funcs.alloc_ageing` age=`4`/>>
+        "/>
+      <col/>
+      <input obj_name="bal_vars" col_name="show_90" after="
+        <<pyfunc name=`custom.aptrans_funcs.show_ageing` age=`3`/>>
+        "/>
+      <input obj_name="bal_vars" col_name="alloc_90" validation="
+          <<validation>>
+            <<pyfunc name=`custom.aptrans_funcs.confirm_alloc` age=`3`/>>
+          <</validation>>
+        " after="
+        <<pyfunc name=`custom.aptrans_funcs.alloc_ageing` age=`3`/>>
+        "/>
+      <col/>
+      <input obj_name="bal_vars" col_name="show_60" after="
+        <<pyfunc name=`custom.aptrans_funcs.show_ageing` age=`2`/>>
+        "/>
+      <input obj_name="bal_vars" col_name="alloc_60" validation="
+          <<validation>>
+            <<pyfunc name=`custom.aptrans_funcs.confirm_alloc` age=`2`/>>
+          <</validation>>
+        " after="
+        <<pyfunc name=`custom.aptrans_funcs.alloc_ageing` age=`2`/>>
+        "/>
+      <col/>
+      <input obj_name="bal_vars" col_name="show_30" after="
+        <<pyfunc name=`custom.aptrans_funcs.show_ageing` age=`1`/>>
+        "/>
+      <input obj_name="bal_vars" col_name="alloc_30" validation="
+          <<validation>>
+            <<pyfunc name=`custom.aptrans_funcs.confirm_alloc` age=`1`/>>
+          <</validation>>
+        " after="
+        <<pyfunc name=`custom.aptrans_funcs.alloc_ageing` age=`1`/>>
+        "/>
+      <col/>
+      <input obj_name="bal_vars" col_name="show_curr" after="
+        <<pyfunc name=`custom.aptrans_funcs.show_ageing` age=`0`/>>
+        "/>
+      <input obj_name="bal_vars" col_name="alloc_curr" validation="
+          <<validation>>
+            <<pyfunc name=`custom.aptrans_funcs.confirm_alloc` age=`0`/>>
+          <</validation>>
+        " after="
+        <<pyfunc name=`custom.aptrans_funcs.alloc_ageing` age=`0`/>>
+        "/>
+      <col/>
+      <input obj_name="bal_vars" col_name="show_tot" after="
+        <<pyfunc name=`custom.aptrans_funcs.show_ageing` age=`-1`/>>
+        "/>
+      <input obj_name="bal_vars" col_name="alloc_tot" validation="
+          <<validation>>
+            <<pyfunc name=`custom.aptrans_funcs.confirm_alloc` age=`-1`/>>
+          <</validation>>
+        " after="
+        <<pyfunc name=`custom.aptrans_funcs.alloc_ageing` age=`-1`/>>
+        "/>
+
+      <block/>
+      <grid data_object="mem_items" growable="false" num_grid_rows="5" auto_start="true">
+        <toolbar>
+          <tool type="nav"/>
+        </toolbar>
+        <cur_columns>
+          <cur_col col_name="tran_number" lng="80" readonly="true" skip="true"/>
+          <cur_col col_name="tran_date" lng="80" readonly="true" skip="true"/>
+          <cur_col col_name="amount_supp" lng="80" readonly="true" skip="true"/>
+          <cur_col col_name="due_supp" lng="80" readonly="true" skip="true"/>
+          <cur_col col_name="alloc_supp" lng="80"/>
+        </cur_columns>
+        <cur_filter>
+          <cur_fil test="WHERE" lbr="" col_name="tran_date"
+            op=">>" expr="_ctx.first_date" rbr=""/>
+          <cur_fil test="AND" lbr="" col_name="tran_date"
+            op="<<=" expr="_ctx.last_date" rbr=""/>
+        </cur_filter>
+        <cur_sequence>
+          <cur_seq col_name="tran_date"/>
+          <cur_seq col_name="tran_number"/>
+        </cur_sequence>
+        <grid_methods template="Grid">
+          <method name="after_save" action="
+            <<pyfunc name=`custom.aptrans_funcs.after_save_alloc`/>>
+            "/>
+        </grid_methods>
+      </grid>
+
+    </body>
+    <button_row>
+      <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
+        btn_validate="true" btn_default="true" lng="60" action="
+          <<case>>
+            <<compare test=`[['if', '', 'var.unallocated', '!=', '0', '']]`>>
+              <<ask title=`Unallocated` enter=`No` escape=`No`
+                  question=`Not fully allocated - sure you want to return?`>>
+                <<response ans=`No`>>
+                <</response>>
+                <<response ans=`Yes`>>
+                  <<pyfunc name=`custom.aptrans_funcs.save_allocations`/>>
+                  <<end_form state=`completed`/>>
+                <</response>>
+              <</ask>>
+            <</compare>>
+            <<default>>
+              <<pyfunc name=`custom.aptrans_funcs.save_allocations`/>>
+              <<end_form state=`completed`/>>
+            <</default>>
+          <</case>>
+        "/>
+    </button_row>
+    <frame_methods>
+      <method name="on_start_frame" action="
+        <<assign src=`alloc_header.tran_date` tgt=`_ctx.as_at_date`/>>
+        <<assign src=`alloc_header.supp_row_id>currency_id>scale` tgt=`var.scale`/>>
+        <<pyfunc name=`custom.aptrans_funcs.setup_mem_items`/>>
+        <<pyfunc name=`custom.aptrans_funcs.get_due_bal`/>>
+        <<skip_input num=`10`/>>
+        "/>
+      <method name="on_req_cancel" action="
+          <<case>>
+            <<compare test=`[['if', '', 'var.unallocated', '!=', '0', '']]`>>
+              <<ask title=`Unallocated` enter=`No` escape=`No`
+                  question=`Not fully allocated - sure you want to return?`>>
+                <<response ans=`No`>>
+                <</response>>
+                <<response ans=`Yes`>>
+                  <<end_form state=`completed`/>>
+                <</response>>
+              <</ask>>
+            <</compare>>
+            <<default>>
+              <<end_form state=`completed`/>>
+            <</default>>
+          <</case>>
+        "/>
+    </frame_methods>
+
+  </frame>
+</form>

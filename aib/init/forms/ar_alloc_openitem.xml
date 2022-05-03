@@ -1,11 +1,11 @@
-<form name="ar_alloc" title="Ar allocation" before_start_form="
+<form name="ar_alloc_openitem" title="Ar allocation from openitem" before_start_form="
   <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_alloc` action=`lock`/>>
   " on_close_form="
   <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_alloc` action=`unlock`/>>
   ">
   <db_objects>
-    <db_obj name="ar_alloc" table_name="ar_tran_alloc" is_formview_obj="true"/>
-    <db_obj name="ar_this_item" table_name="ar_openitems"/>
+    <db_obj name="ar_this_item" table_name="ar_openitems" is_formview_obj="true"/>
+    <db_obj name="ar_alloc" table_name="ar_tran_alloc"/>
   </db_objects>
   <mem_objects/>
   <input_params/>
@@ -104,11 +104,14 @@
     </button_row>
     <frame_methods template="Form">
       <method name="on_start_frame" action="
-        <<assign src=`ar_alloc.item_row_id` tgt=`ar_this_item.row_id`/>>
-        "/>
+          <<recalc obj_name=`ar_this_item` col_name=`no_of_allocations`/>>
+          <<init_obj obj_name=`ar_alloc`/>>
+          <<assign src=`ar_this_item.row_id` tgt=`ar_alloc.item_row_id`/>>
+          <<assign src=`ar_this_item.no_of_allocations` tgt=`ar_alloc.alloc_no`/>>
+      "/>
       <method name="do_save" action="
         <<save_obj obj_name=`ar_alloc`/>>
-        "/>
+      "/>
     </frame_methods>
   </frame>
 </form>

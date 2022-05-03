@@ -171,7 +171,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'TEXT',
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted? Only here to satisfy diag.py',
     'col_head'   : 'Posted?',
@@ -230,148 +230,136 @@ cursors = []
 # actions
 actions = []
 actions.append([
-    'upd_on_post', [
-        [
-            'npch_uex_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['npch_code_id', 'subtran_row_id>npch_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'subtran_row_id>location_row_id'],
-                ['function_row_id', 'subtran_row_id>function_row_id'],
-                ['src_tran_type', "'npch_exp'"],
-                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
-                ['tran_date', 'eff_date'],
+    'upd_on_post', {
+        'aggr': [
+            [
+                'npch_uex_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['npch_code_id', 'subtran_row_id>npch_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'subtran_row_id>location_row_id'],
+                    ['function_row_id', 'subtran_row_id>function_row_id'],
+                    ['src_tran_type', "'npch_exp'"],
+                    # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                    # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
+                    ['tran_date', 'eff_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '-', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                    ['tran_tot', '-', 'npch_expensed_loc'],
+                    ],
                 ],
-            [  # aggregation
-                ['tran_day', '-', 'npch_expensed_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'npch_expensed_loc'],
+            [
+                'npch_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['npch_code_id', 'subtran_row_id>npch_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'subtran_row_id>location_row_id'],
+                    ['function_row_id', 'subtran_row_id>function_row_id'],
+                    ['src_tran_type', "'npch_exp'"],
+                    # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                    # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
+                    ['tran_date', 'eff_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'npch_expensed_loc'],
+                    ],
                 ],
-            [],  # on post
-            [],  # on unpost
+            [
+                'npch_supp_uex_totals',  # table name
+                [  # condition
+                    ['where', '', 'subtran_row_id>subparent_row_id>module_id', '=', "'ap'", ''],
+                    ],
+                [  # key fields
+                    ['npch_code_id', 'subtran_row_id>npch_code_id'],  # tgt_col, src_col
+                    ['supp_row_id', 'subtran_row_id>subparent_row_id>supp_row_id'],
+                    ['location_row_id', 'subtran_row_id>location_row_id'],
+                    ['function_row_id', 'subtran_row_id>function_row_id'],
+                    ['src_tran_type', "'npch_exp'"],
+                    # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                    # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
+                    ['tran_date', 'eff_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '-', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                    ['tran_tot', '-', 'npch_expensed_loc'],
+                    ],
+                ],
+            [
+                'npch_supp_totals',  # table name
+                [  # condition
+                    ['where', '', 'subtran_row_id>subparent_row_id>module_id', '=', "'ap'", ''],
+                    ],
+                [  # key fields
+                    ['npch_code_id', 'subtran_row_id>npch_code_id'],  # tgt_col, src_col
+                    ['supp_row_id', 'subtran_row_id>subparent_row_id>supp_row_id'],
+                    ['location_row_id', 'subtran_row_id>location_row_id'],
+                    ['function_row_id', 'subtran_row_id>function_row_id'],
+                    ['src_tran_type', "'npch_exp'"],
+                    # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                    # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
+                    ['tran_date', 'eff_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'npch_expensed_loc'],
+                    ],
+                ],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'subtran_row_id>npch_code_id>ledger_row_id>uex_gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'subtran_row_id>location_row_id'],
+                    ['function_row_id', 'subtran_row_id>function_row_id'],
+                    ['src_tran_type', "'npch_exp'"],
+                    # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                    # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
+                    ['tran_date', 'eff_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '-', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                    ['tran_tot', '-', 'npch_expensed_loc'],
+                    ],
+                ],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'subtran_row_id>npch_code_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'subtran_row_id>location_row_id'],
+                    ['function_row_id', 'subtran_row_id>function_row_id'],
+                    ['src_tran_type', "'npch_exp'"],
+                    # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                    # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
+                    ['tran_date', 'eff_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'npch_expensed_loc'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'npch_expensed_loc'],
+                    ],
+                ],
             ],
-        [
-            'npch_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['npch_code_id', 'subtran_row_id>npch_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'subtran_row_id>location_row_id'],
-                ['function_row_id', 'subtran_row_id>function_row_id'],
-                ['src_tran_type', "'npch_exp'"],
-                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
-                ['tran_date', 'eff_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'npch_expensed_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'npch_expensed_loc'],
-                ],
-            [],  # on post
-            [],  # on unpost
+        'on_post': [
             ],
-        [
-            'npch_supp_uex_totals',  # table name
-            [  # condition
-                ['where', '', 'subtran_row_id>subparent_row_id>module_id', '=', "'ap'", ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['npch_code_id', 'subtran_row_id>npch_code_id'],  # tgt_col, src_col
-                ['supp_row_id', 'subtran_row_id>subparent_row_id>supp_row_id'],
-                ['location_row_id', 'subtran_row_id>location_row_id'],
-                ['function_row_id', 'subtran_row_id>function_row_id'],
-                ['src_tran_type', "'npch_exp'"],
-                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
-                ['tran_date', 'eff_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '-', 'npch_expensed_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'npch_expensed_loc'],
-                ],
-            [],  # on post
-            [],  # on unpost
+        'on_unpost': [
             ],
-        [
-            'npch_supp_totals',  # table name
-            [  # condition
-                ['where', '', 'subtran_row_id>subparent_row_id>module_id', '=', "'ap'", ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['npch_code_id', 'subtran_row_id>npch_code_id'],  # tgt_col, src_col
-                ['supp_row_id', 'subtran_row_id>subparent_row_id>supp_row_id'],
-                ['location_row_id', 'subtran_row_id>location_row_id'],
-                ['function_row_id', 'subtran_row_id>function_row_id'],
-                ['src_tran_type', "'npch_exp'"],
-                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
-                ['tran_date', 'eff_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'npch_expensed_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'npch_expensed_loc'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'subtran_row_id>npch_code_id>ledger_row_id>uex_gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'subtran_row_id>location_row_id'],
-                ['function_row_id', 'subtran_row_id>function_row_id'],
-                ['src_tran_type', "'npch_exp'"],
-                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
-                ['tran_date', 'eff_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '-', 'npch_expensed_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'npch_expensed_loc'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'subtran_row_id>npch_code_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'subtran_row_id>location_row_id'],
-                ['function_row_id', 'subtran_row_id>function_row_id'],
-                ['src_tran_type', "'npch_exp'"],
-                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>npch_code_id>ledger_row_id'],
-                ['tran_date', 'eff_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'npch_expensed_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'npch_expensed_loc'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        ],
+        },
     ])

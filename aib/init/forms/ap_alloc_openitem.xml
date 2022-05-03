@@ -1,16 +1,16 @@
-<form name="ar_alloc" title="Ar allocation" before_start_form="
-  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_alloc` action=`lock`/>>
+<form name="ap_alloc_openitem" title="Ap allocation from openitem" before_start_form="
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_alloc` action=`lock`/>>
   " on_close_form="
-  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ar_alloc` action=`unlock`/>>
+  <<pyfunc name=`db.cache.set_tran_lock` obj_name=`ap_alloc` action=`unlock`/>>
   ">
   <db_objects>
-    <db_obj name="ar_alloc" table_name="ar_tran_alloc" is_formview_obj="true"/>
-    <db_obj name="ar_this_item" table_name="ar_openitems"/>
+    <db_obj name="ap_this_item" table_name="ap_openitems" is_formview_obj="true"/>
+    <db_obj name="ap_alloc" table_name="ap_tran_alloc"/>
   </db_objects>
   <mem_objects/>
   <input_params/>
   <output_params/>
-  <frame main_object="ar_alloc">
+  <frame main_object="ap_alloc">
     <toolbar/>
     <body>
       <block/>
@@ -20,35 +20,35 @@
       <col/>
       <label value="Transaction type:"/>
       <col/>
-      <input obj_name="ar_this_item" col_name="tran_type" lng="60" readonly="true" skip="true"/>
+      <input obj_name="ap_this_item" col_name="tran_type" lng="60" readonly="true" skip="true"/>
 
       <col/>
       <label value="Transaction number:"/>
       <col/>
-      <input obj_name="ar_this_item" col_name="tran_number" lng="80" readonly="true" skip="true"/>
+      <input obj_name="ap_this_item" col_name="tran_number" lng="80" readonly="true" skip="true"/>
 
       <row/>
       <col/>
       <label value="Transaction date:"/>
       <col/>
-      <input obj_name="ar_this_item" col_name="tran_date" lng="84" readonly="true" skip="true"/>
+      <input obj_name="ap_this_item" col_name="tran_date" lng="84" readonly="true" skip="true"/>
 
       <col/>
-      <label value="Customer Id:"/>
+      <label value="Supplier Id:"/>
       <col/>
-      <input obj_name="ar_this_item" col_name="cust_row_id>party_row_id>party_id" lng="84" readonly="true" skip="true"/>
-      <display obj_name="ar_this_item" col_name="cust_row_id>party_row_id>display_name" lng="160"/>
+      <input obj_name="ap_this_item" col_name="supp_row_id>party_row_id>party_id" lng="84" readonly="true" skip="true"/>
+      <display obj_name="ap_this_item" col_name="supp_row_id>party_row_id>display_name" lng="160"/>
 
       <row/>
       <col/>
       <label value="Original amount:"/>
       <col/>
-      <input obj_name="ar_this_item" col_name="unallocated" lng="84" readonly="true" skip="true"/>
+      <input obj_name="ap_this_item" col_name="unallocated" lng="84" readonly="true" skip="true"/>
 
       <col/>
       <label value="Amount to allocate:"/>
       <col/>
-      <input obj_name="ar_this_item" col_name="unallocated" lng="84" readonly="true" skip="true"/>
+      <input obj_name="ap_this_item" col_name="unallocated" lng="84" readonly="true" skip="true"/>
 
       <row/>
       <col/>
@@ -56,11 +56,11 @@
       <button lng="150" btn_id="alloc" btn_label="Allocate now"
         btn_enabled="true" btn_validate="true" action="
           <<req_save/>>
-          <<assign src=`ar_this_item.row_id` tgt=`_ctx.this_item_rowid`/>>
-          <<sub_form name=`ar_alloc_item`>>
+          <<assign src=`ap_this_item.row_id` tgt=`_ctx.this_item_rowid`/>>
+          <<sub_form name=`ap_alloc_item`>>
             <<call_params>>
-              <<call_param name=`alloc_header` type=`data_obj` source=`ar_alloc`/>>
-              <<call_param name=`amount_to_alloc` type=`data_attr` source=`ar_this_item.unallocated`/>>
+              <<call_param name=`alloc_header` type=`data_obj` source=`ap_alloc`/>>
+              <<call_param name=`amount_to_alloc` type=`data_attr` source=`ap_this_item.unallocated`/>>
             <</call_params>>
             <<return_params>>
             <</return_params>>
@@ -85,7 +85,7 @@
       <button btn_id="btn_post" btn_label="Post" btn_enabled="true"
           btn_validate="true" btn_default="true" lng="60" action="
         <<case>>
-          <<compare test=`[['if', '', 'ar_alloc.allocations', 'is', '$None', '']]`>>
+          <<compare test=`[['if', '', 'ap_alloc.allocations', 'is', '$None', '']]`>>
             <<ask title=`Allocation` enter=`Ok` escape=`Ok`
                 question=`No allocations entered`>>
               <<response ans=`Ok`>>
@@ -94,8 +94,8 @@
           <</compare>>
           <<default>>
             <<req_save/>>
-            <<post_obj obj_name=`ar_alloc`/>>
-            <<init_obj obj_name=`ar_alloc`/>>
+            <<post_obj obj_name=`ap_alloc`/>>
+            <<init_obj obj_name=`ap_alloc`/>>
             <<call method=`on_req_close`/>>
             <<restart_grid obj_name=`grid_obj`/>>'
           <</default>>
@@ -104,11 +104,14 @@
     </button_row>
     <frame_methods template="Form">
       <method name="on_start_frame" action="
-        <<assign src=`ar_alloc.item_row_id` tgt=`ar_this_item.row_id`/>>
-        "/>
+          <<recalc obj_name=`ap_this_item` col_name=`no_of_allocations`/>>
+          <<init_obj obj_name=`ap_alloc`/>>
+          <<assign src=`ap_this_item.row_id` tgt=`ap_alloc.item_row_id`/>>
+          <<assign src=`ap_this_item.no_of_allocations` tgt=`ap_alloc.alloc_no`/>>
+      "/>
       <method name="do_save" action="
-        <<save_obj obj_name=`ar_alloc`/>>
-        "/>
+        <<save_obj obj_name=`ap_alloc`/>>
+      "/>
     </frame_methods>
   </frame>
 </form>

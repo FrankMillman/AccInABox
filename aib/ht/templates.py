@@ -671,7 +671,7 @@ class Transaction:  # template for capturing transactions
               '&lt;case&gt;'
 
                 "&lt;compare test=&quot;[['if', '', '[obj_name].posted', "
-                    "'=',  '$True', '']]&quot;&gt;"  # check 'post' successful
+                    "'=',  '~1~', '']]&quot;&gt;"  # check 'post' successful
 
                   '&lt;case&gt;'
                     '&lt;has_ctrl_grid&gt;'  # if ctrl grid, restart grid

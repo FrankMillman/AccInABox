@@ -641,6 +641,10 @@ async def run_report(caller, xml):
     caller.session.pdf_dict[pdf_name] = pdf_fd  # pointer to pdf created
     caller.session.responder.send_pdf(pdf_key)  # browser 'opens' pdf, ht.htc writes pdf
 
+async def unpost_tran(grid, xml):
+    # called from various 'posted' reports on 'Unpost' toolbar button clicked
+    await grid.db_obj.post(post_type="unpost")
+
 async def find_row(caller, xml):
     grid_ref, row = caller.btn_args
     print('FIND ROW', xml.get('name'), 'row={}'.format(row))

@@ -322,7 +322,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'TEXT',
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
@@ -394,29 +394,29 @@ cursors = []
 # actions
 actions = []
 actions.append([
-    'upd_on_post', [
-        [
-            'gl_totals',  # table name
-            # [  # condition
-            #     ['where', '', '_param.gl_integration', 'is', '$True', ''],
-            #     ],
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'location_row_id'],
-                ['function_row_id', 'function_row_id'],
-                ['src_tran_type', "'gl_subjnl'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'tran_date'],
+    'upd_on_post', {
+        'aggr': [
+            [
+                'gl_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['gl_code_id', 'gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'location_row_id'],
+                    ['function_row_id', 'function_row_id'],
+                    ['src_tran_type', "'gl_subjnl'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'gl_amount'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'gl_amount'],
+                    ],
                 ],
-            [  # aggregation
-                ['tran_day', '+', 'gl_amount'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'gl_amount'],
-                ],
-            [],  # on post
-            [],  # on unpost
             ],
-        ],
+        'on_post': [
+            ],
+        'on_unpost': [
+            ],
+        },
     ])

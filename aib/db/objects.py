@@ -1091,7 +1091,9 @@ class DbObject:
                 self.init_vals = {}  # to prevent re-use on restore()
                 return
 
-            fld._orig = await fld.getval()
+            # changed back [2022-04-23] - don't want to evaluate dflt_rule if must_be_evaluated
+            # fld._orig = await fld.getval()
+            fld._orig = fld._value_
 
         for fld in self.flds_to_update:  # excludes subtype and virtual fields
             await init_fld(fld)
@@ -1289,9 +1291,7 @@ class DbObject:
                 if self.dirty:  # could have been updated in upd_on_save/post or from sub_tran
                     await self.update(conn, from_upd_on_save=True)
 
-                # what was the reason for 'not from_upd_on_save' ?
-                # it prevents 'do_post' being called on ar/ap_tran_disc
-                # remove for now, monitor [2022-04-21]
+                # changed [2022-04-22] - implications?
                 # if not from_upd_on_save:
                 #     for after_save in self.db_table.actions.after_save:
                 #         await db.hooks_xml.table_hook(self, after_save)
@@ -1439,9 +1439,10 @@ class DbObject:
         if not self.exists:
             raise AibError(head=f'Delete {self.table_name}', body='No current row - cannot delete')
 
-        if 'posted' in self.fields:
-            if await self.getval('posted'):
-                raise AibError(head='Delete', body='Transaction posted - cannot delete')
+        if self.context.in_db_post != 'unpost':  # can delete ap/ar_tran_disc while unposting
+            if 'posted' in self.fields:
+                if await self.getval('posted') == '1':  # 0/1/2 = not posted/posted/unposted
+                    raise AibError(head='Delete', body='Transaction posted - cannot delete')
 
         if not from_upd_on_save:
             await self.check_perms('delete')
@@ -1459,6 +1460,9 @@ class DbObject:
                 if await self.getval('children') > 0:
                     raise AibError(head='Delete {}'.format(self.table_name),
                         body='Children exist - cannot delete')
+
+        for before_delete in self.db_table.actions.before_delete:
+            await db.hooks_xml.table_hook(self, before_delete)
 
         # moved from inside transaction to outside [2021-11-19] - monitor
         for descr, errmsg, del_chk in self.db_table.actions.del_checks:
@@ -1507,8 +1511,14 @@ class DbObject:
                             where.append(
                                 ('WHERE', '', tgt_fkey.test[0], '=', "'{}'".format(tgt_fkey.test[1]), '')
                             )
-                        all_children = child.select_many(where=where, order=[])
-                        async for _ in all_children:
+                        # cannot use select_many here - if child has been deleted, it will still be found
+                        #   because select_many uses a different connection
+                        # all_children = child.select_many(where=where, order=[])
+                        # async for _ in all_children:
+                        #     await child.delete(from_upd_on_save=from_upd_on_save)
+                        row_ids = await child.fetch_row_ids(where=where, order=[])
+                        for row_id, in row_ids:
+                            await child.init(init_vals={'row_id': row_id})
                             await child.delete(from_upd_on_save=from_upd_on_save)
                     else:  # check that no fkey references exist
                         src_tbl = await get_db_table(self.context, self.company, tgt_fkey.src_tbl)
@@ -1537,8 +1547,8 @@ class DbObject:
 
             self.context.db_session.after_commit.append((self.after_delete_committed,))
 
-            for before_delete in self.db_table.actions.before_delete:
-                await db.hooks_xml.table_hook(self, before_delete)
+            # for before_delete in self.db_table.actions.before_delete:
+            #     await db.hooks_xml.table_hook(self, before_delete)
 
             try:
                 await conn.delete_row(self, from_upd_on_save)
@@ -1901,15 +1911,16 @@ class DbObject:
                     check_totals[pos][1], check_val, await self.getval(check_totals[pos][0]))
                 raise AibError(head=self.table_name, body=errmsg)
 
-    async def post(self, post_type='post', posting_child=False, src_col=None, test=None):
+    async def post(self, post_type='post', posting_child=False, src_col=None, test=None, from_upd_on_save=False):
 
-        for before_post in self.db_table.actions.before_post:
-            if self.context.in_db_post:
-                raise AibError(
-                    head=f'Post {self.table_name}',
-                    body='Cannot run before_post inside transaction'
-                    )
-            await db.hooks_xml.table_hook(self, before_post)
+        if post_type == 'post':
+            for before_post in self.db_table.actions.before_post:
+                if self.context.in_db_post == 'post':
+                    raise AibError(
+                        head=f'Post {self.table_name}',
+                        body='Cannot run before_post inside transaction'
+                        )
+                await db.hooks_xml.table_hook(self, before_post)
 
         if post_type == 'unpost':
             for descr, errmsg, unpost_chk in self.db_table.actions.unpost_checks:
@@ -1958,15 +1969,22 @@ class DbObject:
                                 post_child = await check_children(child)
 
                             if post_child:
-                                # await child.init()  # should not be necessary
                                 await child.post(post_type, posting_child=True,
                                     src_col=tgt_fkey.src_col, test=tgt_fkey.test)
 
                 if posting_child:
                     await self.setup_defaults()  # in case any calculated fields depend on 'post'
 
-                for upd_on_post in self.db_table.actions.upd_on_post:
-                    await self.upd_on_post(upd_on_post, conn, post_type)
+                if self.db_table.actions.upd_on_post:  # else an empty tuple
+                    if post_type == 'post':
+                        for on_post in self.db_table.actions.upd_on_post['on_post']:
+                            await self.upd_on_post(on_post, conn)
+                    else:  # must be 'unpost'
+                        for on_unpost in self.db_table.actions.upd_on_post['on_unpost']:
+                            await self.upd_on_unpost(on_unpost, conn)
+                    # must do aggr after post, as post can set up values for aggr (e.g. sls_subtran:in_wh_prod_alloc)
+                    for aggr in self.db_table.actions.upd_on_post['aggr']:
+                        await self.aggr_on_post(aggr, conn, post_type)
 
                 if self.dirty:  # could be updated from setup_defaults or upd_on_post
                     await self.update(conn, from_upd_on_save=True)
@@ -1977,25 +1995,28 @@ class DbObject:
             async with self.context.db_session.get_connection() as db_mem_conn:
                 if not posting_child:
                     if self.dirty:
-                        # NB context.in_db_post is currently True - can affect result
+                        # NB context.in_db_post is currently not None - can affect result
                         await self.save()  # do this first, else audit trail not updated
                     if post_type == 'post':
-                        if await self.getval('posted'):
+                        if await self.getval('posted') == '1':  # 0/1/2 = not posted/posted/unposted
                             raise AibError(head='Post {}'.format(self.table_name),
                                 body='Already posted')
                         if self.parent:
                             raise AibError(head='Post {}'.format(self.table_name),
                                 body='Cannot post child object - can only post parent')
-                        await self.setval('posted', True, validate=False)  # do this first - could be relevant
+                        await self.setval('posted', '1', validate=False)  # do this first - could be relevant
                     else:  # must be 'unpost'
-                        if not await self.getval('posted'):
+                        if await self.getval('posted') != '1':  # 0/1/2 = not posted/posted/unposted
                             raise AibError(head='Unpost {}'.format(self.table_name),
                                 body='Not posted')
                         if self.parent:
                             raise AibError(head='Unpost {}'.format(self.table_name),
                                 body='Cannot unpost child object - can only unpost parent')
-                        await self.setval('posted', False, validate=False)  # do this first - could be relevant
-                    await self.save(from_upd_on_save=post_type)  # audit trail is updated with post_type
+                        await self.setval('posted', '2', validate=False)  # do this first - could be relevant
+                    if from_upd_on_save is True:  # called from hooks.do_post/unpost (e.g. ar/ap_tran_disc)
+                        await self.save(from_upd_on_save=True)  # do not update audit trail
+                    else:
+                        await self.save(from_upd_on_save=post_type)  # audit trail is updated with post_type
 
                 if self.mem_obj:  # would we ever post a mem_obj ??
                     conn = db_mem_conn.mem
@@ -2030,9 +2051,9 @@ class DbObject:
                         await post_obj(conn)
 
         post_lock_acquired = False
-        if not self.context.in_db_post:
+        if self.context.in_db_post is None:
             await post_lock.acquire()  # ensure only one 'post' active at a time
-            self.context.in_db_post = True
+            self.context.in_db_post = post_type
             post_lock_acquired = True
 
         try:  # no 'except' clause, but a 'finally' clause to release post_lock if applicable
@@ -2040,170 +2061,197 @@ class DbObject:
         finally:
             if post_lock_acquired:
                 post_lock.release()
-                self.context.in_db_post = False
+                self.context.in_db_post = None
 
-        for after_post in self.db_table.actions.after_post:
-            if self.context.in_db_post:
-                raise AibError(
-                    head=f'Post {self.table_name}',
-                    body='Cannot run after_post inside transaction'
-                    )
-            await db.hooks_xml.table_hook(self, after_post)
+        if post_type == 'post':
+            for after_post in self.db_table.actions.after_post:
+                if self.context.in_db_post == 'post':
+                    raise AibError(
+                        head=f'Post {self.table_name}',
+                        body='Cannot run after_post inside transaction'
+                        )
+                await db.hooks_xml.table_hook(self, after_post)
 
     async def unpost(self):
         await self.post(post_type='unpost')
 
-    async def upd_on_post(self, upd_on_post, conn, post_type):
-        tbl_name, condition, split_src, *upd_on_post = upd_on_post
+    async def aggr_on_post(self, aggr, conn, post_type):
+        tbl_name, condition, key_fields, flds_to_aggr = aggr
+
+        if condition is not None:
+            if not await eval_bool_expr(condition, self, None):
+                return
+
+        param_style = self.db_table.constants.param_style
+        tgt_obj = await self.get_tgt_obj(tbl_name)
+        roll_params = tgt_obj.db_table.roll_params
+        if roll_params is not None:
+            roll_keyfields, roll_columns = roll_params
+            test = 'WHERE'
+            where = []  # used in full_select at start
+            order = []  # used in full_select at start
+            where_clause = ''  # used in 'UPDATE' at end
+            params = []  # used in 'UPDATE' at end
+
+        for tgt_col, src_col in key_fields:
+            src_val = await self.get_src_val(src_col)
+            tgt_fld = await tgt_obj.getfld(tgt_col)
+            if tgt_fld.col_defn.col_type == 'alt':
+                await tgt_fld.setval(src_val, validate=True)
+                foreign_key = await tgt_obj.get_foreign_key(tgt_fld)
+                tgt_col = foreign_key['true_src'].col_name
+                src_val = foreign_key['true_src']._value
+            else:
+                await tgt_fld.setval(src_val, validate=False)
+            if roll_params is not None:
+                if tgt_col in roll_keyfields:
+                    # at the start, we look for 'less than'
+                    where.append((test, '', tgt_col, '<', src_val, ''))
+                    order.append((tgt_col, True))  # descending sequence
+                    # at the end, we look for 'greater than'
+                    where_clause += ' {} {} > {}'.format(test, tgt_col, param_style)
+                else:
+                    where.append((test, '', tgt_col, '=',
+                        f"'{src_val}'" if isinstance(src_val, str) else src_val, ''))
+                    where_clause += ' {} {} = {}'.format(test, tgt_col, param_style)
+                params.append(src_val)
+                test = 'AND'
+
+        if roll_params is not None:
+            if not tgt_obj.exists:  # find previous values
+                cur = await conn.full_select(
+                    tgt_obj, roll_columns, where=where, order=order, limit=1)
+                try:
+                    row = await anext(cur)
+                    for col_name, col_val in zip(roll_columns, row):
+                        fld = await tgt_obj.getfld(col_name)
+                        await fld.setval(col_val, display=False, validate=False)
+                except StopAsyncIteration:  # no previous values
+                    pass
+
+        for tgt_col, op, src_col in flds_to_aggr:
+            src_val = await self.getval(src_col)
+            if src_val:
+                if post_type == 'unpost':
+                    src_val = 0 - src_val
+                tgt_fld = await tgt_obj.getfld(tgt_col)
+                tgt_val = await tgt_fld.getval()
+                if op == '+':
+                    await tgt_fld.setval(tgt_val + src_val, validate=False)
+                elif op == '-':
+                    await tgt_fld.setval(tgt_val - src_val, validate=False)
+                else:
+                    raise NotImplementedError
+
+        if roll_params is not None:
+            sql = 'UPDATE {0}.{1} SET '.format(tgt_obj.company, tbl_name)
+            upd_params = []
+            for tgt_col, op, src_col in flds_to_aggr:
+                if tgt_col in roll_columns:
+                    tgt_fld = await tgt_obj.getfld(tgt_col)
+                    src_val = await self.getval(src_col)
+                    if post_type == 'unpost':
+                        src_val = 0 - src_val
+                    sql += f'{tgt_col} = {tgt_col} {op} {param_style}, '
+                    upd_params += [src_val]
+
+            sql = sql[:-2] + ' ' + where_clause
+            upd_params.extend(params)
+            await conn.exec_cmd(sql, upd_params)
+
+        await tgt_obj.save(from_upd_on_save=True)
+
+    async def upd_on_post(self, on_post, conn):
+        tbl_name, condition, split_src, *on_post = on_post
 
         if condition is not None:
             if not await eval_bool_expr(condition, self, None):
                 return
 
         if split_src:
-            await self.upd_split_src(tbl_name, upd_on_post, conn, post_type)
+            await self.upd_split_src(tbl_name, on_post, conn, upd_type='post')
             return
 
-        param_style = self.db_table.constants.param_style
-        key_fields, aggr, on_post, on_unpost, *return_vals = upd_on_post
+        key_fields, on_post, return_vals = on_post
 
-        if tbl_name == '_parent':  # don't think this can happen on 'post'
-            tgt_obj = self.parent[1].db_obj
-            roll_params = None
-        else:
-            tgt_obj = await self.get_tgt_obj(tbl_name)
-            roll_params = tgt_obj.db_table.roll_params
-            if roll_params is not None:
-                roll_keyfields, roll_columns = roll_params
-                test = 'WHERE'
-                where = []  # used in full_select at start
-                order = []  # used in full_select at start
-                where_clause = ''  # used in 'UPDATE' at end
-                params = []  # used in 'UPDATE' at end
-
-            for tgt_col, src_col in key_fields:
-                src_val = await self.get_src_val(src_col)
-                # await tgt_obj.setval(tgt_col, src_val, validate=False)
-                tgt_fld = await tgt_obj.getfld(tgt_col)
-                if tgt_fld.col_defn.col_type == 'alt':
-                    await tgt_fld.setval(src_val, validate=True)
-                    foreign_key = await tgt_obj.get_foreign_key(tgt_fld)
-                    tgt_col = foreign_key['true_src'].col_name
-                    src_val = foreign_key['true_src']._value
-                else:
-                    await tgt_fld.setval(src_val, validate=False)
-                if roll_params is not None:
-                    if tgt_col in roll_keyfields:
-                        # at the start, we look for 'less than'
-                        where.append((test, '', tgt_col, '<', src_val, ''))
-                        order.append((tgt_col, True))  # descending sequence
-                        # at the end, we look for 'greater than'
-                        where_clause += ' {} {} > {}'.format(test, tgt_col, param_style)
-                    else:
-                        where.append((test, '', tgt_col, '=',
-                            f"'{src_val}'" if isinstance(src_val, str) else src_val, ''))
-                        where_clause += ' {} {} = {}'.format(test, tgt_col, param_style)
-                    params.append(src_val)
-                    test = 'AND'
-
-        save_obj = False
-        delete_obj = False
-
-        if aggr:
-            save_obj = True
-
-            if roll_params is not None:  # assume we will never 'roll' a parent [2015-10-21]
-                if not tgt_obj.exists:  # find previous values
-                    cur = await conn.full_select(
-                        tgt_obj, roll_columns, where=where, order=order, limit=1)
-                    try:
-                        row = await anext(cur)
-                        for col_name, col_val in zip(roll_columns, row):
-                            fld = await tgt_obj.getfld(col_name)
-                            await fld.setval(col_val, display=False, validate=False)
-                    except StopAsyncIteration:  # no previous values
-                        pass
-
-            for tgt_col, op, src_col in aggr:
-                src_val = await self.getval(src_col)
-                if post_type == 'unpost':
-                    src_val = 0 - src_val
-                if src_val:
-                    tgt_fld = await tgt_obj.getfld(tgt_col)
-                    tgt_val = await tgt_fld.getval()
-                    if op == '+':
-                        await tgt_fld.setval(tgt_val + src_val, validate=False)
-                    elif op == '-':
-                        await tgt_fld.setval(tgt_val - src_val, validate=False)
-                    else:
-                        raise NotImplementedError
-
-            if roll_params is not None:
-                sql = 'UPDATE {0}.{1} SET '.format(tgt_obj.company, tbl_name)
-                upd_params = []
-                for tgt_col, op, src_col in aggr:
-                    if tgt_col in roll_columns:
-                        tgt_fld = await tgt_obj.getfld(tgt_col)
-                        src_val = await self.getval(src_col)
-                        if post_type == 'unpost':
-                            src_val = 0 - src_val
-                        sql += f'{tgt_col} = {tgt_col} {op} {param_style}, '
-                        upd_params += [src_val]
-
-                sql = sql[:-2] + ' ' + where_clause
-                upd_params.extend(params)
-                await conn.exec_cmd(sql, upd_params)
-
-        if post_type == 'post':
-            if len(on_post) == 1 and on_post[0][0] == 'delete':
-                delete_obj = True
+        tgt_obj = await self.get_tgt_obj(tbl_name)
+        for tgt_col, src_col in key_fields:
+            src_val = await self.get_src_val(src_col)
+            tgt_fld = await tgt_obj.getfld(tgt_col)
+            if tgt_fld.col_defn.col_type == 'alt':
+                await tgt_fld.setval(src_val, validate=True)
+                foreign_key = await tgt_obj.get_foreign_key(tgt_fld)
+                tgt_col = foreign_key['true_src'].col_name
+                src_val = foreign_key['true_src']._value
             else:
-                if on_post:
-                    save_obj = True
-                for tgt_col, op, src_col in on_post:
-                    if src_col.startswith('-'):
-                        src_val = 0 - (await self.get_src_val(src_col[1:]))
-                    else:
-                        src_val = await self.get_src_val(src_col)
-                    tgt_fld = await tgt_obj.getfld(tgt_col)
-                    if op == '=':
-                        await tgt_fld.setval(src_val, validate=False)
-                    elif op == '+':
-                        await tgt_fld.setval(await tgt_fld.getval() + src_val, validate=False)
-                    elif op == '-':
-                        await tgt_fld.setval(await tgt_fld.getval() - src_val, validate=False)
+                await tgt_fld.setval(src_val, validate=False)
 
-        elif post_type == 'unpost':
-            if len(on_unpost) == 1 and on_unpost[0][0] == 'delete':
-                delete_obj = True
-            else:
-                if on_unpost:
-                    save_obj = True
-                for tgt_col, op, src_col in on_unpost:
-                    if src_col.startswith('-'):
-                        src_val = 0 - (await self.get_src_val(src_col[1:]))
-                    else:
-                        src_val = await self.get_src_val(src_col)
-                    tgt_fld = await tgt_obj.getfld(tgt_col)
-                    if op == '=':
-                        await tgt_fld.setval(src_val, validate=False)
-                    elif op == '+':
-                        await tgt_fld.setval(await tgt_fld.getval() + src_val, validate=False)
-                    elif op == '-':
-                        await tgt_fld.setval(await tgt_fld.getval() - src_val, validate=False)
-
-        if save_obj:
-            await tgt_obj.save(from_upd_on_save=True)
-        elif delete_obj:
+        if len(on_post) == 1 and on_post[0][0] == 'delete':
             await tgt_obj.delete(from_upd_on_save=True)
-
-        if return_vals:
-            for tgt, src in return_vals[0]:
-                if tgt.startswith('_ctx.'):
-                    tgt = tgt[5:]
-                    setattr(self.context, tgt, await tgt_obj.getval(src))
+        elif on_post:  # can it ever be empty?
+            for tgt_col, op, src_col in on_post:
+                if src_col.startswith('-'):
+                    src_val = 0 - (await self.get_src_val(src_col[1:]))
                 else:
-                    await self.setval(tgt, await tgt_obj.getval(src), validate=False)
+                    src_val = await self.get_src_val(src_col)
+                tgt_fld = await tgt_obj.getfld(tgt_col)
+                if op == '=':
+                    await tgt_fld.setval(src_val, validate=False)
+                elif op == '+':
+                    await tgt_fld.setval(await tgt_fld.getval() + src_val, validate=False)
+                elif op == '-':
+                    await tgt_fld.setval(await tgt_fld.getval() - src_val, validate=False)
+            await tgt_obj.save(from_upd_on_save=True)
+
+        for tgt, src in return_vals:
+            return_val = await tgt_obj.getval(src)
+            if tgt.startswith('_ctx.'):
+                tgt = tgt[5:]
+                setattr(self.context, tgt, return_val)
+            else:
+                await self.setval(tgt, return_val, validate=False)
+
+    async def upd_on_unpost(self, on_unpost, conn):
+        tbl_name, condition, key_fields, on_unpost = on_unpost
+
+        if condition is not None:
+            if not await eval_bool_expr(condition, self, None):
+                return
+
+        tgt_obj = await self.get_tgt_obj(tbl_name)
+        for tgt_col, src_col in key_fields:
+            src_val = await self.get_src_val(src_col)
+            tgt_fld = await tgt_obj.getfld(tgt_col)
+            if tgt_fld.col_defn.col_type == 'alt':
+                await tgt_fld.setval(src_val, validate=True)
+                foreign_key = await tgt_obj.get_foreign_key(tgt_fld)
+                tgt_col = foreign_key['true_src'].col_name
+                src_val = foreign_key['true_src']._value
+            else:
+                await tgt_fld.setval(src_val, validate=False)
+
+        if len(on_unpost) == 1 and on_unpost[0][0] == 'delete':
+            await tgt_obj.delete(from_upd_on_save=True)
+        elif len(on_unpost) == 1 and on_unpost[0][0] == 'pyfunc':
+            func_name = on_unpost[0][1]
+            module_name, func_name = func_name.rsplit('.', 1)
+            module = importlib.import_module(module_name)
+            delete_func = getattr(module, func_name)
+            await delete_func(self, tgt_obj, conn)
+        elif on_unpost:  # can it ever be empty?
+            for tgt_col, op, src_col in on_unpost:
+                if src_col.startswith('-'):
+                    src_val = 0 - (await self.get_src_val(src_col[1:]))
+                else:
+                    src_val = await self.get_src_val(src_col)
+                tgt_fld = await tgt_obj.getfld(tgt_col)
+                if op == '=':
+                    await tgt_fld.setval(src_val, validate=False)
+                elif op == '+':
+                    await tgt_fld.setval(await tgt_fld.getval() + src_val, validate=False)
+                elif op == '-':
+                    await tgt_fld.setval(await tgt_fld.getval() - src_val, validate=False)
+            await tgt_obj.save(from_upd_on_save=True)
 
     async def increment_seq(self, conn):  # called before save
         param_style = self.db_table.constants.param_style

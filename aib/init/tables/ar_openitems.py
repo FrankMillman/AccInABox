@@ -486,7 +486,7 @@ virt.append ({
     'col_head'   : 'Alloc num',
     'sql'        : (
         "SELECT count(*) FROM {company}.ar_tran_alloc b "
-        "WHERE b.item_row_id = a.row_id AND b.posted = $True"
+        "WHERE b.item_row_id = a.row_id AND b.posted = '1'"
         )
     })
 virt.append ({
@@ -515,6 +515,18 @@ virt.append ({
           "), 0))"
       ),
   })
+virt.append ({
+    'col_name'   : 'allocations_exist',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Do allocations exist?',
+    'long_descr' : 'Do allocations exist? If so, cannot delete',
+    'col_head'   : 'Allocs?',
+    'sql'        : (
+        "CASE WHEN EXISTS(SELECT * FROM {company}.ar_allocations b "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0) "
+        "THEN $True ELSE $False END"
+        )
+    })
 
 # cursor definitions
 cursors = []
@@ -522,13 +534,14 @@ cursors.append({
     'cursor_name': 'unallocated',
     'title': 'Unallocated items',
     'columns': [
-        # ['cust_id', 80,
         ['cust_row_id>party_row_id>party_id', 80, False, True],
         ['cust_row_id>party_row_id>display_name', 120, True, True],
-        ['tran_type', 60, False, True],
+        ['tran_type', 80, False, True],
         ['tran_number', 80, False, True],
         ['tran_row_id>tran_date', 80, False, True],
-        ['unallocated', 100, False, True],
+        ['cust_row_id>currency_id>symbol', 40, False, True, [
+            ['if', '', 'cust_row_id>ledger_row_id>currency_id', 'is', '$None', '']
+            ]],
         ['unallocated', 100, False, True],
         ],
     'filter': [
@@ -538,8 +551,14 @@ cursors.append({
     'sequence': [
         ['tran_number', False],
         ],
-    'formview_name': 'ar_alloc',
+    'formview_name': 'ar_alloc_openitem',
     })
 
 # actions
 actions = []
+actions.append([
+    'del_checks',
+    [
+        ['allocs_exist', 'Allocations exist - cannot delete', [['check', '', 'allocations_exist', 'is', '$False', '']]],
+        ],
+    ])

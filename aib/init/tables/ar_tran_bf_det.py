@@ -296,25 +296,30 @@ actions.append([
         ],
     ])
 actions.append([
-    'upd_on_post', [
-        [
-            'ar_openitems',  # table name
-            [  # condition
-                ['where', '', 'tran_row_id>cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['tran_row_id', 'row_id'],  # tgt_col, src_col
-                ['split_no', '0'],
-                ],
-            [],  # aggregation
-            [  # on post
-                ['item_type', '=', "'bf'"],  # tgt_col, op, src_col
-                ['due_date', '=', 'due_date'],
-                ['amount_cust', '=', 'bf_cust'],
-                ['amount_local', '=', 'bf_local'],
-                ],
-            [],  # on unpost
+    'upd_on_post', {
+        'aggr': [
             ],
-        ],
+        'on_post': [
+            [
+                'ar_openitems',  # table name
+                [  # condition
+                    ['where', '', 'tran_row_id>cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
+                    ],
+                False,  # split source?
+                [  # key fields
+                    ['tran_row_id', 'row_id'],  # tgt_col, src_col
+                    ['split_no', '0'],
+                    ],
+                [  # on post
+                    ['item_type', '=', "'bf'"],  # tgt_col, op, src_col
+                    ['due_date', '=', 'due_date'],
+                    ['amount_cust', '=', 'bf_cust'],
+                    ['amount_local', '=', 'bf_local'],
+                    ],
+                [],  # return values
+                ],
+            ],
+        'on_unpost': [
+            ],
+        },
     ])

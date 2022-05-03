@@ -62,7 +62,7 @@ async def posted_check(caller, params):
         where = []
         where.append(['WHERE', '', 'tran_date', '<=', check_date, ''])
         where.append(['AND', '', 'deleted_id', '=', 0, ''])
-        where.append(['AND', '', 'posted', '=', False, ''])
+        where.append(['AND', '', 'posted', '!=', "'1'", ''])
 
         params = []
         sql = 'SELECT CASE WHEN EXISTS ('

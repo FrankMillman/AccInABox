@@ -78,10 +78,28 @@ async def reset_table_defn(db_obj, xml):
         del db.objects.tables_open[table_key]
 
 async def do_post(db_obj, xml):
-    await db_obj.post()
+    await db_obj.post(from_upd_on_save=True)
+
+async def do_unpost(db_obj, xml):
+    # called from ar/ap_tran_disc before_delete
+    await db_obj.post(post_type='unpost', from_upd_on_save=True)
 
 async def on_post(db_obj, xml):
-    return db_obj.context.in_db_post
+    return db_obj.context.in_db_post == 'post'
+
+async def on_unpost(db_obj, xml):
+    return db_obj.context.in_db_post == 'unpost'
+
+async def save_obj(caller, xml):
+    obj_name = xml.get('obj_name')
+    if obj_name.endswith(':db_obj'):
+        col_name = obj_name[:-7]
+        fld = await caller.getfld(col_name)
+        db_obj = fld.db_obj
+    else:
+        db_obj = caller.data_objects[obj_name]
+    from_upd_on_save = (xml.get('from_upd_on_save') == 'true')
+    await db_obj.save(from_upd_on_save=from_upd_on_save)
 
 async def append(db_obj, xml):
     source = xml.get('src')
@@ -103,12 +121,11 @@ async def assign(db_obj, xml):
 
     value_to_assign = await get_val(db_obj, source)
 
-    target_objname, target_colname = target.split('.')
-    if target_objname == '_ctx':
-        setattr(db_obj.context, target_colname, value_to_assign)
+    if target.startswith('_ctx.'):
+        setattr(db_obj.context, target[5:], value_to_assign)
     else:
-        target_obj = db_obj.data_objects[target_objname]
-        await target_obj.setval(target_colname, value_to_assign)
+        tgt_fld = await db_obj.getfld(target)
+        await tgt_fld.setval(value_to_assign)
 
 async def get_val(db_obj, value):
     if value.startswith('('):  # expression

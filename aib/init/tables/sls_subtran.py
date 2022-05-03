@@ -390,7 +390,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'TEXT',
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
@@ -569,227 +569,208 @@ actions.append([
         ],
     ])
 actions.append([
-    'upd_on_post', [
-        [
-            'in_wh_prod_unposted',
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['wh_prod_row_id', 'wh_prod_row_id'],  # tgt_col, src_col
-                ['subtran_row_id', 'row_id'],
+    'upd_on_post', {
+        'aggr': [
+            [
+                'in_wh_prod_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
+                    ['prod_row_id', 'wh_prod_row_id>prod_row_id'],
+                    ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                    ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                    ['src_tran_type', "'sls'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
+                    ['qty_tot', '+', 'qty'],
+                    ['tran_day_wh', '+', 'cost_whouse'],
+                    ['tran_tot_wh', '+', 'cost_whouse'],
+                    ['tran_day_loc', '+', 'cost_local'],
+                    ['tran_tot_loc', '+', 'cost_local'],
+                    ],
                 ],
-            [],  # aggregation
-            [  # on post
-                ['delete', '', ''],  # tgt_col, op, src_col
+            [
+                'in_wh_class_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
+                    ['class_row_id', 'wh_prod_row_id>prod_row_id>class_row_id'],
+                    ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                    ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                    ['src_tran_type', "'sls'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day_wh', '+', 'cost_whouse'],  # tgt_col, op, src_col
+                    ['tran_tot_wh', '+', 'cost_whouse'],
+                    ['tran_day_loc', '+', 'cost_local'],
+                    ['tran_tot_loc', '+', 'cost_local'],
+                    ],
                 ],
-            [],  # on unpost
+            [
+                'sls_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['prod_row_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
+                    ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                    ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                    ['src_tran_type', "'sls'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
+                    ['qty_tot', '+', 'qty'],
+                    ['sales_day', '+', 'net_local'],
+                    ['sales_tot', '+', 'net_local'],
+                    ['cos_day', '+', 'cost_local'],
+                    ['cos_tot', '+', 'cost_local'],
+                    ],
+                ],
+            [
+                'sls_class_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['class_row_id', 'wh_prod_row_id>prod_row_id>class_row_id'],  # tgt_col, src_col
+                    ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                    ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                    ['src_tran_type', "'sls'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['sales_day', '+', 'net_local'],  # tgt_col, op, src_col
+                    ['sales_tot', '+', 'net_local'],
+                    ['cos_day', '+', 'cost_local'],
+                    ['cos_tot', '+', 'cost_local'],
+                    ],
+                ],
+            [
+                'sls_cust_totals',  # table name
+                [  # condition
+                    ['where', '', 'subparent_row_id>module_id', '=', "'ar'", ''],
+                    ],
+                [  # key fields
+                    ['prod_row_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
+                    ['cust_row_id', 'subparent_row_id>cust_row_id'],
+                    ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                    ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                    ['src_tran_type', "'sls'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
+                    ['qty_tot', '+', 'qty'],
+                    ['sales_day', '+', 'net_local'],
+                    ['sales_tot', '+', 'net_local'],
+                    ['cos_day', '+', 'cost_local'],
+                    ['cos_tot', '+', 'cost_local'],
+                    ],
+                ],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'wh_prod_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                    ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                    ['src_tran_type', "'sls'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'cost_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'cost_local'],
+                    ],
+                ],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'wh_prod_row_id>prod_row_id>class_row_id>gl_sales_id'],  # tgt_col, src_col
+                    ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                    ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                    ['src_tran_type', "'sls'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'net_local'],
+                    ],
+                ],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'wh_prod_row_id>prod_row_id>class_row_id>gl_cos_id'],  # tgt_col, src_col
+                    ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                    ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                    ['src_tran_type', "'sls'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '-', 'cost_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '-', 'cost_local'],
+                    ],
+                ],
             ],
-        [
-            'in_wh_prod_alloc',  # table name
-            None,  # condition
+        'on_post': [
+            [
+                'in_wh_prod_unposted',
+                None,  # condition
+                False,  # split source?
+                [  # key fields
+                    ['wh_prod_row_id', 'wh_prod_row_id'],  # tgt_col, src_col
+                    ['subtran_row_id', 'row_id'],
+                    ],
+                [  # on post
+                    ['delete', '', ''],  # tgt_col, op, src_col
+                    ],
+                [],  # return values
+                ],
+            [
+                'in_wh_prod_alloc',  # table name
+                None,  # condition
 
-            True,  # split source?
+                True,  # split source?
 
-            'custom.artrans_funcs.setup_inv_alloc',  # function to populate table
+                'custom.artrans_funcs.setup_inv_alloc',  # function to populate table
 
-            [  # fkey to this table
-                ['subtran_row_id', 'row_id'],  # tgt_col, src_col
-                ],
+                [  # fkey to this table
+                    ['subtran_row_id', 'row_id'],  # tgt_col, src_col
+                    ],
 
-            ['fifo_row_id', 'qty', 'cost_whouse', 'cost_local'],  # fields to be updated
+                ['fifo_row_id', 'qty', 'cost_whouse', 'cost_local'],  # fields to be updated
 
-            ['cost_whouse', 'cost_local'],  # return values
+                ['cost_whouse', 'cost_local'],  # return values
 
-            [  # check totals
-                ['qty', 'qty'],  # src_col == sum(tgt_col)
+                [  # check totals
+                    ['qty', 'qty'],  # src_col == sum(tgt_col)
+                    ],
                 ],
             ],
-        [
-            'in_wh_prod_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
-                ['prod_row_id', 'wh_prod_row_id>prod_row_id'],
-                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
-                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['src_tran_type', "'sls'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
-                ['qty_tot', '+', 'qty'],
-                ['tran_day_wh', '+', 'cost_whouse'],
-                ['tran_tot_wh', '+', 'cost_whouse'],
-                ['tran_day_loc', '+', 'cost_local'],
-                ['tran_tot_loc', '+', 'cost_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
+        'on_unpost': [
             ],
-        [
-            'in_wh_class_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
-                ['class_row_id', 'wh_prod_row_id>prod_row_id>class_row_id'],
-                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
-                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['src_tran_type', "'sls'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day_wh', '+', 'cost_whouse'],  # tgt_col, op, src_col
-                ['tran_tot_wh', '+', 'cost_whouse'],
-                ['tran_day_loc', '+', 'cost_local'],
-                ['tran_tot_loc', '+', 'cost_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'sls_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['prod_row_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
-                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['src_tran_type', "'sls'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
-                ['qty_tot', '+', 'qty'],
-                ['sales_day', '+', 'net_local'],
-                ['sales_tot', '+', 'net_local'],
-                ['cos_day', '+', 'cost_local'],
-                ['cos_tot', '+', 'cost_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'sls_class_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['class_row_id', 'wh_prod_row_id>prod_row_id>class_row_id'],  # tgt_col, src_col
-                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
-                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['src_tran_type', "'sls'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['sales_day', '+', 'net_local'],  # tgt_col, op, src_col
-                ['sales_tot', '+', 'net_local'],
-                ['cos_day', '+', 'cost_local'],
-                ['cos_tot', '+', 'cost_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'sls_cust_totals',  # table name
-            [  # condition
-                ['where', '', 'subparent_row_id>module_id', '=', "'ar'", ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['prod_row_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
-                ['cust_row_id', 'subparent_row_id>cust_row_id'],
-                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
-                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['src_tran_type', "'sls'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
-                ['qty_tot', '+', 'qty'],
-                ['sales_day', '+', 'net_local'],
-                ['sales_tot', '+', 'net_local'],
-                ['cos_day', '+', 'cost_local'],
-                ['cos_tot', '+', 'cost_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'wh_prod_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
-                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['src_tran_type', "'sls'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'cost_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'cost_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'wh_prod_row_id>prod_row_id>class_row_id>gl_sales_id'],  # tgt_col, src_col
-                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
-                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['src_tran_type', "'sls'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'wh_prod_row_id>prod_row_id>class_row_id>gl_cos_id'],  # tgt_col, src_col
-                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
-                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['src_tran_type', "'sls'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '-', 'cost_local'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'cost_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        ],
+        },
     ])

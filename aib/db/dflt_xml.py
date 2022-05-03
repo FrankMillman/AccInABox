@@ -19,7 +19,7 @@ async def get_db_dflt(fld, orig=False):
     calc_orig_value = orig
     debug = False
 
-    # debug = (f'{fld.table_name}.{fld.col_name}' == 'ar_tran_disc.tran_number')
+    # debug = (f'{fld.table_name}.{fld.col_name}' == 'cb_tran_rec.tran_number')
 
     for xml in fld.col_defn.dflt_rule:
         if isinstance(xml, etree._Comment):
@@ -242,6 +242,11 @@ async def fld_val(fld, xml, debug):
         if debug:
             print(f'dbg: {fld_name} {getattr(fld.db_obj.context, fld_name[5:])}')
         return getattr(fld.db_obj.context, fld_name[5:])
+    # next 2 lines added [2022-04-28]
+    # if fld_name = col_name, it is the same field - just return its value without evaluating (we are evaluating)
+    # not thought through 100%
+    if fld_name == fld.col_name:
+        return fld._value_
     tgt_fld = await fld.db_obj.getfld(fld_name)
     if calc_orig_value:
         return await tgt_fld.get_orig()
@@ -299,7 +304,13 @@ async def on_insert(fld, xml, debug):
     return fld.db_obj.context.in_db_save and not fld.db_obj.exists
 
 async def on_post(fld, xml, debug):
-    return fld.db_obj.context.in_db_post
+    return fld.db_obj.context.in_db_post == 'post'
+
+async def on_unpost(fld, xml, debug):
+    return fld.db_obj.context.in_db_post == 'unpost'
+
+async def on_repost(fld, xml, debug):
+    return await fld.db_obj.get_orig('posted') == '2'
 
 async def compare(fld, xml, debug):
     test = loads(xml.get('test').replace("'", '"').replace('~', "'"))

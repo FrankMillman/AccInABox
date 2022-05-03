@@ -171,10 +171,30 @@ async def alloc_oldest(fld, xml):
     return allocations
 
 async def get_allocations(db_obj, conn, return_vals):
+    # called from ar_subtran_rec/ar_tran_alloc upd_on_post:ar_allocations:split_src
     allocations = await db_obj.getval('allocations')
     for item_row_id, alloc_cust in allocations:
         yield item_row_id, 0 - D(alloc_cust)  # stored in JSON as str pos, return to caller as DEC neg
     await db_obj.setval('allocations', None, validate=False)  # allocations no longer required
+
+async def restore_allocations(db_obj, ar_allocations, conn):
+    # called from ar_subtran_rec/ar_tran_alloc upd_on_unpost:ar_allocations
+    # ar_allocations is the tgt_obj passed in
+    # read ar_allocations, get item_row_id, alloc_cust to rebuild the JSON allocations field, then delete ar_allocations
+
+    sql = (
+        "SELECT row_id, item_row_id, alloc_cust FROM {company}.ar_allocations "
+        f"WHERE trantype_row_id = {conn.constants.param_style} AND tran_row_id = {conn.constants.param_style}"
+        )
+    params = [await db_obj.getval('this_trantype_row_id'), await db_obj.getval('row_id')]
+
+    allocations = []
+    async for row_id, item_row_id, alloc_cust in await conn.exec_sql(sql, params, context=db_obj.context):
+        allocations.append((item_row_id, str(0 - alloc_cust)))
+        await ar_allocations.select_row({'row_id': row_id})
+        await ar_allocations.delete(from_upd_on_save=True)
+
+    await db_obj.setval('allocations', allocations)
 
 async def get_due_bal(caller, xml):
     """
@@ -494,7 +514,7 @@ async def posted_check(caller, params):
         where = []
         where.append(['WHERE', '', 'tran_date', '<=', check_date, ''])
         where.append(['AND', '', 'deleted_id', '=', 0, ''])
-        where.append(['AND', '', 'posted', '=', False, ''])
+        where.append(['AND', '', 'posted', '!=', "'1'", ''])
         # if params['single_cust']:
         #     cust_row_id = params['cust_row_id']
         #     where.append(['AND', '', 'cust_row_id', '=', cust_row_id, ''])

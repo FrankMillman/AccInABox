@@ -47,7 +47,7 @@ class Context:
         self._data_objects = {}  # dictionary of shared data objects
         self._mem_tables_open = {}  # dictionary of mem tables opened
         self.in_db_save = False
-        self.in_db_post = False
+        self.in_db_post = None  # can be set to 'post' or 'unpost'
 
         self._del = delwatcher(self)
 

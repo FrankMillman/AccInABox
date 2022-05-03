@@ -97,21 +97,25 @@
           <tool type="img" name="formview" tip="View/edit details (Ctrl+Enter)"
             shortcut="ctrl,Enter" action="
               <<start_row/>>
-              <<assign src=`0` tgt=`var.tot_due`/>>
-              <<assign src=`0` tgt=`var.tot_pmt`/>>
-              <<assign src=`batch_det.supp_row_id>currency_id>scale` tgt=`var.scale`/>>
-              <<save_obj obj_name=`var`/>>
-              <<pyfunc name=`custom.aptrans_funcs.setup_items_due`/>>
-              <<inline_form name=`view_edit`>>
-                <<on_return>>
-                  <<return state=`cancelled`>>
-                  <</return>>
-                  <<return state=`completed`>>
-                    <<pyfunc name=`custom.aptrans_funcs.auth_pmt`/>>
-                    <<restart_grid obj_name=`batch_det` start_col=`row_id` start_val=`{batch_det.row_id}`/>>
-                  <</return>>
-                <</on_return>>
-              <</inline_form>>
+              <<case>>
+                <<obj_exists obj_name=`batch_det`>>
+                  <<assign src=`0` tgt=`var.tot_due`/>>
+                  <<assign src=`0` tgt=`var.tot_pmt`/>>
+                  <<assign src=`batch_det.supp_row_id>currency_id>scale` tgt=`var.scale`/>>
+                  <<save_obj obj_name=`var`/>>
+                  <<pyfunc name=`custom.aptrans_funcs.setup_items_due`/>>
+                  <<inline_form name=`view_edit`>>
+                    <<on_return>>
+                      <<return state=`cancelled`>>
+                      <</return>>
+                      <<return state=`completed`>>
+                        <<pyfunc name=`custom.aptrans_funcs.auth_pmt`/>>
+                        <<restart_grid obj_name=`batch_det` start_col=`row_id` start_val=`{batch_det.row_id}`/>>
+                      <</return>>
+                    <</on_return>>
+                  <</inline_form>>
+                <</obj_exists>>
+              <</case>>
               "/>
           <tool type="nav"/>
           <tool type="img" name="download" tip="" action="<<download/>>"/>

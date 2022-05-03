@@ -335,7 +335,7 @@ cols.append ({
 virt = []
 virt.append ({
     'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'TEXT',
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
@@ -495,117 +495,110 @@ actions.append([
         ],
     ])
 actions.append([
-    'upd_on_post', [
-        [
-            'in_wh_prod_fifo',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['wh_prod_row_id', 'wh_prod_row_id'],  # tgt_col, src_col
-                ['subtran_row_id', 'row_id'],
+    'upd_on_post', {
+        'aggr': [
+            [
+                'in_wh_prod_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
+                    ['prod_row_id', 'wh_prod_row_id>prod_row_id'],
+                    ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                    ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                    ['src_tran_type', "'pch'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
+                    ['tran_day_wh', '+', 'net_whouse'],
+                    ['tran_day_loc', '+', 'net_local'],
+                    ['qty_tot', '+', 'qty'],
+                    ['tran_tot_wh', '+', 'net_whouse'],
+                    ['tran_tot_loc', '+', 'net_local'],
+                    ],
                 ],
-            [],  # aggregation
-            [  # on post
-                ['orig_qty', '=', 'qty'],  # tgt_col, op, src_col
-                ['orig_whouse', '=', 'net_whouse'],
-                ['orig_local', '=', 'net_local'],
+            [
+                'in_wh_class_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
+                    ['class_row_id', 'wh_prod_row_id>prod_row_id>class_row_id'],
+                    ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                    ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                    ['src_tran_type', "'pch'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day_wh', '+', 'net_whouse'],  # tgt_col, op, src_col
+                    ['tran_day_loc', '+', 'net_local'],
+                    ['tran_tot_wh', '+', 'net_whouse'],
+                    ['tran_tot_loc', '+', 'net_local'],
+                    ],
                 ],
-            [],  # on unpost
+            [
+                'pch_supp_totals',  # table name
+                [  # condition
+                    ['where', '', 'subparent_row_id>module_id', '=', "'ap'", ''],
+                    ],
+                [  # key fields
+                    ['prod_row_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
+                    ['supp_row_id', 'subparent_row_id>supp_row_id'],
+                    ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                    ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                    ['src_tran_type', "'pch'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
+                    ['qty_tot', '+', 'qty'],
+                    ['pchs_day', '+', 'net_local'],
+                    ['pchs_tot', '+', 'net_local'],
+                    ],
+                ],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'wh_prod_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
+                    ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
+                    ['src_tran_type', "'pch'"],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'net_local'],
+                    ],
+                ],
             ],
-        [
-            'in_wh_prod_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
-                ['prod_row_id', 'wh_prod_row_id>prod_row_id'],
-                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
-                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['src_tran_type', "'pch'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
+        'on_post': [
+            [
+                'in_wh_prod_fifo',  # table name
+                None,  # condition
+                False,  # split source?
+                [  # key fields
+                    ['wh_prod_row_id', 'wh_prod_row_id'],  # tgt_col, src_col
+                    ['subtran_row_id', 'row_id'],
+                    ],
+                [  # on post
+                    ['orig_qty', '=', 'qty'],  # tgt_col, op, src_col
+                    ['orig_whouse', '=', 'net_whouse'],
+                    ['orig_local', '=', 'net_local'],
+                    ],
+                [],  # return values
                 ],
-            [  # aggregation
-                ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
-                ['tran_day_wh', '+', 'net_whouse'],
-                ['tran_day_loc', '+', 'net_local'],
-                ['qty_tot', '+', 'qty'],
-                ['tran_tot_wh', '+', 'net_whouse'],
-                ['tran_tot_loc', '+', 'net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
             ],
-        [
-            'in_wh_class_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['ledger_row_id', 'wh_prod_row_id>ledger_row_id'],  # tgt_col, src_col
-                ['class_row_id', 'wh_prod_row_id>prod_row_id>class_row_id'],
-                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
-                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['src_tran_type', "'pch'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day_wh', '+', 'net_whouse'],  # tgt_col, op, src_col
-                ['tran_day_loc', '+', 'net_local'],
-                ['tran_tot_wh', '+', 'net_whouse'],
-                ['tran_tot_loc', '+', 'net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
+        'on_unpost': [
             ],
-        [
-            'pch_supp_totals',  # table name
-            [  # condition
-                ['where', '', 'subparent_row_id>module_id', '=', "'ap'", ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['prod_row_id', 'wh_prod_row_id>prod_row_id'],  # tgt_col, src_col
-                ['supp_row_id', 'subparent_row_id>supp_row_id'],
-                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
-                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['src_tran_type', "'pch'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['qty_day', '+', 'qty'],  # tgt_col, op, src_col
-                ['qty_tot', '+', 'qty'],
-                ['pchs_day', '+', 'net_local'],
-                ['pchs_tot', '+', 'net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'wh_prod_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'wh_prod_row_id>ledger_row_id>location_row_id'],
-                ['function_row_id', 'wh_prod_row_id>prod_row_id>class_row_id>function_row_id'],
-                ['src_tran_type', "'pch'"],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'net_local'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        ],
+        },
     ])

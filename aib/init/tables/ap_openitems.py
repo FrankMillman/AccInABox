@@ -451,7 +451,7 @@ virt.append ({
     'col_name'   : 'due_supp',
     'data_type'  : '$PTY',
     'short_descr': 'Amount due - supp curr',
-    'long_descr' : 'Amount due after discount - supplier currency - at specified date',
+    'long_descr' : 'Amount due after discount - supplier currency - at specified date (to check discount)',
     'col_head'   : 'Due supp',
     'db_scale'   : 2,
     'scale_ptr'  : 'supp_row_id>currency_id>scale',
@@ -476,32 +476,87 @@ virt.append ({
             "END"
         ),
     })
+virt.append ({
+    'col_name'   : 'no_of_allocations',
+    'data_type'  : 'INT',
+    'short_descr': 'Number of allocations',
+    'long_descr' : 'Number of allocations for this item',
+    'col_head'   : 'Alloc num',
+    'sql'        : (
+        "SELECT count(*) FROM {company}.ap_tran_alloc b "
+        "WHERE b.item_row_id = a.row_id AND b.posted = '1'"
+        )
+    })
+virt.append ({
+  'col_name'   : 'unallocated',
+  'data_type'  : '$PTY',
+  'short_descr': 'Amount unallocated',
+  'long_descr' : (
+      'Amount still to be allocated. '
+      'Take amount to be allocated as calculated in balance_supp. '
+      'Deduct any allocations made from this item against other items (c.item_row_id = a.row_id) '
+      'where ar_tran_alloc is unposted. The assumption is that they all relate to the allocation '
+      'being entered. If two users are allocating the same item at the same time this would be '
+      'incorrect, but very unlikely. '
+      'NB Only used in ar_alloc.xml.'
+      ),
+  'col_head'   : 'Amt unalloc',
+  'db_scale'   : 2,
+  'scale_ptr'  : 'supp_row_id>currency_id>scale',
+  'sql'        : (
+      "0 - (a.amount_supp "
+      "+ "
+      "COALESCE(("
+          "SELECT SUM(b.alloc_supp + b.discount_supp) "
+          "FROM {company}.ar_allocations b "
+          "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0 "
+          "), 0))"
+      ),
+  })
+virt.append ({
+    'col_name'   : 'allocations_exist',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Do allocations exist?',
+    'long_descr' : 'Do allocations exist? If so, cannot delete',
+    'col_head'   : 'Allocs?',
+    'sql'        : (
+        "CASE WHEN EXISTS(SELECT * FROM {company}.ap_allocations b "
+            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0) "
+        "THEN $True ELSE $False END"
+        )
+    })
 
 # cursor definitions
 cursors = []
 cursors.append({
-    'cursor_name': 'supp_due_as_at',
-    'title': 'Supplier balance due at date',
+    'cursor_name': 'unallocated',
+    'title': 'Unallocated items',
     'columns': [
-        ['row_id', 80, False, True],
-        ['supp_row_id', 80, False, True],
-        # ['supp_row_id>supp_id', 80, False, True],
-        # ['supp_row_id>party_row_id>display_name', 150, True, True],
-        # ['supp_row_id>location_row_id>location_id', 60, False, True, [
-        #     ['if', '', 'supp_row_id>ledger_row_id>valid_loc_ids>is_leaf', 'is', '$False', '']
-        #     ]],
-        # ['supp_row_id>function_row_id>function_id', 60, False, True, [
-        #     ['if', '', 'supp_row_id>ledger_row_id>valid_fun_ids>is_leaf', 'is', '$False', '']
-        #     ]],
-        ['due_supp', 100, False, True],
+        ['supp_row_id>party_row_id>party_id', 80, False, True],
+        ['supp_row_id>party_row_id>display_name', 120, True, True],
+        ['tran_type', 80, False, True],
+        ['tran_number', 80, False, True],
+        ['tran_row_id>tran_date', 80, False, True],
+        ['supp_row_id>currency_id>symbol', 40, False, True, [
+            ['if', '', 'supp_row_id>ledger_row_id>currency_id', 'is', '$None', '']
+            ]],
+        ['unallocated', 100, False, True],
         ],
     'filter': [
-        ['WHERE', '', 'due_date', '<=', '_ctx.as_at_date', ''],
-        ['AND', '', 'due_supp', '!=', '0', ''],
+        ['WHERE', '', 'tran_type', '!=', "'ap_inv'", ''],
+        ['AND', '', 'unallocated', '!=', '0', ''],
         ],
-    'sequence': [['supp_row_id', False]],
-    'formview_name': None,
+    'sequence': [
+        ['tran_number', False],
+        ],
+    'formview_name': 'ap_alloc_openitem',
     })
 
 # actions
 actions = []
+actions.append([
+    'del_checks',
+    [
+        ['allocs_exist', 'Allocations exist - cannot delete', [['check', '', 'allocations_exist', 'is', '$False', '']]],
+        ],
+    ])

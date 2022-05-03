@@ -119,6 +119,9 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : (
         '<case>'
+          '<on_repost>'
+            '<fld_val name="tran_number"/>'
+          '</on_repost>'
           '<on_post>'
             '<case>'
               '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>auto_temp_no`, `is not`, `$None`, ``]]">'
@@ -306,7 +309,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'TEXT',
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
@@ -318,11 +321,15 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'false',
+    'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
-    'choices'    : None,
+    'choices'    : [
+            ['0', 'Not posted'],
+            ['1', 'Posted'],
+            ['2', 'Unposted'],
+        ],
     })
 
 # virtual column definitions
@@ -397,7 +404,7 @@ cursors.append({
         ['rec_amt', 100, False, True],
         ],
     'filter': [
-        ['where', '', 'posted', '=', "'0'", ''],
+        ['where', '', 'posted', '!=', "'1'", ''],
         ],
     'sequence': [['tran_number', False]],
     'formview_name': 'ar_receipt',

@@ -124,10 +124,30 @@ async def alloc_oldest(fld, xml):
     return allocations
 
 async def get_allocations(db_obj, conn, return_vals):
+    # called from ap_subtran_pmt/ap_tran_alloc upd_on_post:ap_allocations:split_src
     allocations = await db_obj.getval('allocations')
     for item_row_id, alloc_supp in allocations:
         yield item_row_id, 0 - D(alloc_supp)  # stored in JSON as str neg, return to caller as DEC pos
     await db_obj.setval('allocations', None, validate=False)  # allocations no longer required
+
+async def restore_allocations(db_obj, ap_allocations, conn):
+    # called from ap_subtran_pmt/ap_tran_alloc upd_on_unpost:ap_allocations
+    # ap_allocations is the tgt_obj passed in
+    # read ap_allocations, get item_row_id, alloc_supp to rebuild the JSON allocations field, then delete ap_allocations
+
+    sql = (
+        "SELECT row_id, item_row_id, alloc_supp FROM {company}.ap_allocations "
+        f"WHERE trantype_row_id = {conn.constants.param_style} AND tran_row_id = {conn.constants.param_style}"
+        )
+    params = [await db_obj.getval('this_trantype_row_id'), await db_obj.getval('row_id')]
+
+    allocations = []
+    async for row_id, item_row_id, alloc_supp in await conn.exec_sql(sql, params, context=db_obj.context):
+        allocations.append((item_row_id, str(0 - alloc_supp)))
+        await ap_allocations.select_row({'row_id': row_id})
+        await ap_allocations.delete(from_upd_on_save=True)
+
+    await db_obj.setval('allocations', allocations)
 
 async def setup_pmts_due(caller, xml):
     # called after inline form 'batch_header' in ap_pmt_batch.xml
@@ -340,7 +360,7 @@ async def post_pmt_batch(caller, xml):
                 await ap_pmt.post()
 
         batch_hdr.context = post_ctx  # ugly!
-        await batch_hdr.setval('posted', True, validate=False)
+        await batch_hdr.setval('posted', '1', validate=False)
         await batch_hdr.save(from_upd_on_save='post')
         batch_hdr.context = context
 

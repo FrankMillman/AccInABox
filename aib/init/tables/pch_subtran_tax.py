@@ -199,7 +199,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'TEXT',
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted?',
     'col_head'   : 'Posted?',
@@ -235,50 +235,50 @@ cursors = []
 # actions
 actions = []
 actions.append([
-    'upd_on_post', [
-        [
-            'pch_tax_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['tax_code_id', 'tax_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'tax_code_id>tax_cat_id>location_row_id'],
-                ['function_row_id', 'tax_code_id>tax_cat_id>function_row_id'],
-                ['src_tran_type', "'pch_tax'"],
-                ['orig_trantype_row_id', 'subtran_row_id>trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subtran_row_id>subparent_row_id>tran_date'],
+    'upd_on_post', {
+        'aggr': [
+            [
+                'pch_tax_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['tax_code_id', 'tax_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'tax_code_id>tax_cat_id>location_row_id'],
+                    ['function_row_id', 'tax_code_id>tax_cat_id>function_row_id'],
+                    ['src_tran_type', "'pch_tax'"],
+                    ['orig_trantype_row_id', 'subtran_row_id>trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subtran_row_id>subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['pchs_day', '+', 'subtran_row_id>net_local'],  # tgt_col, op, src_col
+                    ['pchs_tot', '+', 'subtran_row_id>net_local'],
+                    ['tax_day', '+', 'tax_amt'],
+                    ['tax_tot', '+', 'tax_amt'],
+                    ],
                 ],
-            [  # aggregation
-                ['pchs_day', '+', 'subtran_row_id>net_local'],  # tgt_col, op, src_col
-                ['pchs_tot', '+', 'subtran_row_id>net_local'],
-                ['tax_day', '+', 'tax_amt'],
-                ['tax_tot', '+', 'tax_amt'],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'tax_code_id>tax_cat_id>gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'tax_code_id>tax_cat_id>location_row_id'],
+                    ['function_row_id', 'tax_code_id>tax_cat_id>function_row_id'],
+                    ['src_tran_type', "'pch_tax'"],
+                    ['orig_trantype_row_id', 'subtran_row_id>trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['tran_date', 'subtran_row_id>subparent_row_id>tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'tax_amt'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'tax_amt'],
+                    ],
                 ],
-            [],  # on post
-            [],  # on unpost
             ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'tax_code_id>tax_cat_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'tax_code_id>tax_cat_id>location_row_id'],
-                ['function_row_id', 'tax_code_id>tax_cat_id>function_row_id'],
-                ['src_tran_type', "'pch_tax'"],
-                ['orig_trantype_row_id', 'subtran_row_id>trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['tran_date', 'subtran_row_id>subparent_row_id>tran_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'tax_amt'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'tax_amt'],
-                ],
-            [],  # on post
-            [],  # on unpost
+        'on_post': [
             ],
-        ],
+        'on_unpost': [
+            ],
+        },
     ])

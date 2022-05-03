@@ -171,7 +171,7 @@ virt.append ({
     })
 virt.append ({
     'col_name'   : 'posted',
-    'data_type'  : 'BOOL',
+    'data_type'  : 'TEXT',
     'short_descr': 'Posted?',
     'long_descr' : 'Has transaction been posted? Only here to satisfy diag.py',
     'col_head'   : 'Posted?',
@@ -230,148 +230,136 @@ cursors = []
 # actions
 actions = []
 actions.append([
-    'upd_on_post', [
-        [
-            'nsls_uea_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['nsls_code_id', 'subtran_row_id>nsls_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'subtran_row_id>location_row_id'],
-                ['function_row_id', 'subtran_row_id>function_row_id'],
-                ['src_tran_type', "'nsls_ear'"],
-                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>nsls_code_id>ledger_row_id'],
-                ['tran_date', 'eff_date'],
+    'upd_on_post', {
+        'aggr': [
+            [
+                'nsls_uea_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['nsls_code_id', 'subtran_row_id>nsls_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'subtran_row_id>location_row_id'],
+                    ['function_row_id', 'subtran_row_id>function_row_id'],
+                    ['src_tran_type', "'nsls_ear'"],
+                    # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                    # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>nsls_code_id>ledger_row_id'],
+                    ['tran_date', 'eff_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                    ['tran_tot', '-', 'nsls_earned_loc'],
+                    ],
                 ],
-            [  # aggregation
-                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'nsls_earned_loc'],
+            [
+                'nsls_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['nsls_code_id', 'subtran_row_id>nsls_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'subtran_row_id>location_row_id'],
+                    ['function_row_id', 'subtran_row_id>function_row_id'],
+                    ['src_tran_type', "'nsls_ear'"],
+                    # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                    # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>nsls_code_id>ledger_row_id'],
+                    ['tran_date', 'eff_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'nsls_earned_loc'],
+                    ],
                 ],
-            [],  # on post
-            [],  # on unpost
+            [
+                'nsls_cust_uea_totals',  # table name
+                [  # condition
+                    ['where', '', 'subtran_row_id>subparent_row_id>module_id', '=', "'ar'", ''],
+                    ],
+                [  # key fields
+                    ['nsls_code_id', 'subtran_row_id>nsls_code_id'],  # tgt_col, src_col
+                    ['cust_row_id', 'subtran_row_id>subparent_row_id>cust_row_id'],
+                    ['location_row_id', 'subtran_row_id>location_row_id'],
+                    ['function_row_id', 'subtran_row_id>function_row_id'],
+                    ['src_tran_type', "'nsls_ear'"],
+                    # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                    # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>nsls_code_id>ledger_row_id'],
+                    ['tran_date', 'eff_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                    ['tran_tot', '-', 'nsls_earned_loc'],
+                    ],
+                ],
+            [
+                'nsls_cust_totals',  # table name
+                [  # condition
+                    ['where', '', 'subtran_row_id>subparent_row_id>module_id', '=', "'ar'", ''],
+                    ],
+                [  # key fields
+                    ['nsls_code_id', 'subtran_row_id>nsls_code_id'],  # tgt_col, src_col
+                    ['cust_row_id', 'subtran_row_id>subparent_row_id>cust_row_id'],
+                    ['location_row_id', 'subtran_row_id>location_row_id'],
+                    ['function_row_id', 'subtran_row_id>function_row_id'],
+                    ['src_tran_type', "'nsls_ear'"],
+                    # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                    # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>nsls_code_id>ledger_row_id'],
+                    ['tran_date', 'eff_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'nsls_earned_loc'],
+                    ],
+                ],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'subtran_row_id>nsls_code_id>ledger_row_id>uea_gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'subtran_row_id>location_row_id'],
+                    ['function_row_id', 'subtran_row_id>function_row_id'],
+                    ['src_tran_type', "'nsls_ear'"],
+                    # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                    # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>nsls_code_id>ledger_row_id'],
+                    ['tran_date', 'eff_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                    ['tran_tot', '-', 'nsls_earned_loc'],
+                    ],
+                ],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'subtran_row_id>nsls_code_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'subtran_row_id>location_row_id'],
+                    ['function_row_id', 'subtran_row_id>function_row_id'],
+                    ['src_tran_type', "'nsls_ear'"],
+                    # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
+                    # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
+                    ['orig_trantype_row_id', 'trantype_row_id'],
+                    ['orig_ledger_row_id', 'subtran_row_id>nsls_code_id>ledger_row_id'],
+                    ['tran_date', 'eff_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'nsls_earned_loc'],
+                    ],
+                ],
             ],
-        [
-            'nsls_totals',  # table name
-            None,  # condition
-            False,  # split source?
-            [  # key fields
-                ['nsls_code_id', 'subtran_row_id>nsls_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'subtran_row_id>location_row_id'],
-                ['function_row_id', 'subtran_row_id>function_row_id'],
-                ['src_tran_type', "'nsls_ear'"],
-                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>nsls_code_id>ledger_row_id'],
-                ['tran_date', 'eff_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'nsls_earned_loc'],
-                ],
-            [],  # on post
-            [],  # on unpost
+        'on_post': [
             ],
-        [
-            'nsls_cust_uea_totals',  # table name
-            [  # condition
-                ['where', '', 'subtran_row_id>subparent_row_id>module_id', '=', "'ar'", ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['nsls_code_id', 'subtran_row_id>nsls_code_id'],  # tgt_col, src_col
-                ['cust_row_id', 'subtran_row_id>subparent_row_id>cust_row_id'],
-                ['location_row_id', 'subtran_row_id>location_row_id'],
-                ['function_row_id', 'subtran_row_id>function_row_id'],
-                ['src_tran_type', "'nsls_ear'"],
-                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>nsls_code_id>ledger_row_id'],
-                ['tran_date', 'eff_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'nsls_earned_loc'],
-                ],
-            [],  # on post
-            [],  # on unpost
+        'on_unpost': [
             ],
-        [
-            'nsls_cust_totals',  # table name
-            [  # condition
-                ['where', '', 'subtran_row_id>subparent_row_id>module_id', '=', "'ar'", ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['nsls_code_id', 'subtran_row_id>nsls_code_id'],  # tgt_col, src_col
-                ['cust_row_id', 'subtran_row_id>subparent_row_id>cust_row_id'],
-                ['location_row_id', 'subtran_row_id>location_row_id'],
-                ['function_row_id', 'subtran_row_id>function_row_id'],
-                ['src_tran_type', "'nsls_ear'"],
-                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>nsls_code_id>ledger_row_id'],
-                ['tran_date', 'eff_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'nsls_earned_loc'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'subtran_row_id>nsls_code_id>ledger_row_id>uea_gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'subtran_row_id>location_row_id'],
-                ['function_row_id', 'subtran_row_id>function_row_id'],
-                ['src_tran_type', "'nsls_ear'"],
-                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>nsls_code_id>ledger_row_id'],
-                ['tran_date', 'eff_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '-', 'nsls_earned_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '-', 'nsls_earned_loc'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        [
-            'gl_totals',  # table name
-            [  # condition
-                ['where', '', '_param.gl_integration', 'is', '$True', ''],
-                ],
-            False,  # split source?
-            [  # key fields
-                ['gl_code_id', 'subtran_row_id>nsls_code_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
-                ['location_row_id', 'subtran_row_id>location_row_id'],
-                ['function_row_id', 'subtran_row_id>function_row_id'],
-                ['src_tran_type', "'nsls_ear'"],
-                # ['orig_trantype_row_id', 'subtran_row_id>subparent_row_id>trantype_row_id'],
-                # ['orig_ledger_row_id', 'subtran_row_id>subparent_row_id>ledger_row_id'],
-                ['orig_trantype_row_id', 'trantype_row_id'],
-                ['orig_ledger_row_id', 'subtran_row_id>nsls_code_id>ledger_row_id'],
-                ['tran_date', 'eff_date'],
-                ],
-            [  # aggregation
-                ['tran_day', '+', 'nsls_earned_loc'],  # tgt_col, op, src_col
-                ['tran_tot', '+', 'nsls_earned_loc'],
-                ],
-            [],  # on post
-            [],  # on unpost
-            ],
-        ],
+        },
     ])
