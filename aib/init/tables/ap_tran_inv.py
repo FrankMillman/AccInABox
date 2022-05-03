@@ -164,7 +164,7 @@ cols.append ({
     'data_source': 'input',
     'condition'  : None,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
@@ -668,7 +668,7 @@ cursors.append({
         ['tran_number', 100, False, True],
         ['tran_date', 84, False, True],
         ['currency_id>symbol', 40, False, True, [
-            ['if', '', 'cust_row_id>ledger_row_id>currency_id', 'is', '$None', '']
+            ['if', '', 'supp_row_id>ledger_row_id>currency_id', 'is', '$None', '']
             ]],
         ['inv_amount', 100, False, True],
         ],
