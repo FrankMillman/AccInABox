@@ -166,7 +166,7 @@ cols.append ({
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'Journal',
+    'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,

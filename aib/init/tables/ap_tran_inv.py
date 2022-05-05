@@ -193,7 +193,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{supp_row_id>party_row_id>display_name}',
+    'dflt_val'   : 'Invoice',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -701,6 +701,18 @@ actions.append([
             'Total amount does not equal total of line items',
             [
                 ['check', '', 'inv_amount', '=', 'inv_tot_amt', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'unpost_checks', [
+        [
+            'check_date',
+            'Period is closed',
+            [
+                ['check', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ap",ledger_row_id', ''],
                 ],
             ],
         ],

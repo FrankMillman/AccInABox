@@ -549,6 +549,18 @@ actions.append([
         ],
     ])
 actions.append([
+    'unpost_checks', [
+        [
+            'check_date',
+            'Period is closed',
+            [
+                ['check', '(', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date,"cb",ledger_row_id', ''],
+                ['and', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_tran_date,"cb",tgt_ledg_row_id', ')'],
+                ],
+            ],
+        ],
+    ])
+actions.append([
     'upd_on_save', [
         [
             'cb_tran_tfr_in',  # table name

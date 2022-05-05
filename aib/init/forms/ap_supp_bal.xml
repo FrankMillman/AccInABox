@@ -286,7 +286,7 @@
         <cur_columns>
           <cur_col col_name="tran_date" lng="80" readonly="true"/>
           <cur_col col_name="tran_type" lng="80" readonly="true"/>
-          <cur_col col_name="tran_number" lng="100" readonly="true"/>
+          <cur_col col_name="tran_number" lng="80" readonly="true"/>
           <cur_col col_name="text" lng="160" readonly="true"/>
           <cur_col col_name="amount_supp" lng="80" readonly="true"/>
           <cur_col col_name="balance_supp" lng="80" readonly="true"/>

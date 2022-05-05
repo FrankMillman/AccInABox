@@ -174,10 +174,6 @@ cols.append ({
             ['check', '', '$value', 'pyfunc',
                 'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
             ]],
-        ['stat_date', 'Statement period not open', [
-            ['check', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
-            ['or', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
-            ]],
         ],
     'fkey'       : None,
     'choices'    : None,
@@ -192,11 +188,11 @@ cols.append ({
     'data_source': 'input',
     'condition'  : None,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{cust_row_id>party_row_id>display_name}',
+    'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -671,13 +667,16 @@ actions.append([
                     'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
                 ],
             ],
+        ],
+    ])
+actions.append([
+    'unpost_checks', [
         [
-            'recheck_stat_date',
-            'Statement period closed',
+            'check_tran_date',
+            'Period is closed',
             [
-                ['check', '', '$exists', 'is', '$True', ''],
-                ['or', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
-                ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
+                ['check', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
                 ],
             ],
         ],

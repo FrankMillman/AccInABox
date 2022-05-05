@@ -174,10 +174,6 @@ cols.append ({
             ['check', '', '$value', 'pyfunc',
                 'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
             ]],
-        ['stat_date', 'Statement period not open', [
-            ['check', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
-            ['or', '', '$value', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
-            ]],
         ],
     'fkey'       : None,
     'choices'    : None,
@@ -219,7 +215,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{cust_row_id>party_row_id>display_name}',
+    'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -351,7 +347,7 @@ cols.append ({
     'data_source': 'input',
     'condition'  : None,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
@@ -509,12 +505,30 @@ virt.append ({
 # cursor definitions
 cursors = []
 cursors.append({
+    'cursor_name': 'posted_jnl',
+    'title': 'Posted ar journals',
+    'columns': [
+        ['tran_number', 100, False, True],
+        ['cust_row_id>party_row_id>party_id', 80, False, True],
+        ['cust_row_id>party_row_id>display_name', 160, True, True],
+        ['tran_date', 80, False, True],
+        ['amount', 100, False, True],
+        ],
+    'filter': [
+        ['where', '', 'posted', '=', "'1'", ''],
+        ['and', '', 'tran_date', '>=', '_ctx.start_date', ''],
+        ['and', '', 'tran_date', '<=', '_ctx.end_date', ''],
+        ],
+    'sequence': [['tran_number', False]],
+    'formview_name': 'ar_journal',
+    })
+cursors.append({
     'cursor_name': 'unposted_jnl',
     'title': 'Unposted ar journals',
     'columns': [
         ['tran_number', 100, False, True],
-        # ['cust_row_id>party_row_id>party_id', 80, False, True],
-        # ['cust_row_id>party_row_id>display_name', 160, True, True],
+        ['cust_row_id>party_row_id>party_id', 80, False, True],
+        ['cust_row_id>party_row_id>display_name', 160, True, True],
         ['tran_date', 80, False, True],
         ['amount', 100, False, True],
         ],
@@ -538,15 +552,6 @@ actions.append([
                     'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
                 ],
             ],
-        [
-            'recheck_stat_date',
-            'Statement period closed',
-            [
-                ['check', '', '$exists', 'is', '$True', ''],
-                ['or', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
-                ['or', '', 'tran_date', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
-                ],
-            ],
         ],
     ])
 actions.append([
@@ -556,6 +561,18 @@ actions.append([
             'Journal amount does not equal total of line items',
             [
                 ['check', '', 'amount', '=', 'jnl_amount', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'unpost_checks', [
+        [
+            'check_date',
+            'Period is closed',
+            [
+                ['check', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ar",ledger_row_id', ''],
                 ],
             ],
         ],
@@ -627,8 +644,7 @@ actions.append([
                     ],
                 False,  # split source?
                 [  # key fields
-                    ['tran_row_id', 'row_id'],  # tgt_col, src_col
-                    ['split_no', '0'],
+                    ['split_no', '0'],  # tgt_col, src_col
                     ],
                 [  # on post
                     ['item_type', '=', "'jnl'"],  # tgt_col, op, src_col
@@ -642,6 +658,18 @@ actions.append([
                 ],
             ],
         'on_unpost': [
+            [
+                'ar_openitems',  # table name
+                [  # condition
+                    ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['split_no', '0'],  # tgt_col, src_col
+                    ],
+                [  # on unpost
+                    ['delete', '', ''],  # tgt_col, op, src_col
+                    ],
+                ],
             ],
         },
     ])

@@ -630,8 +630,10 @@ async def setup_forms(context, conn):
     await setup_form('cb_pmt_posted')
     await setup_form('cb_tfr_posted')
     await setup_form('ar_inv_posted')
+    await setup_form('ar_jnl_posted')
     await setup_form('ar_alloc_posted')
     await setup_form('ap_inv_posted')
+    await setup_form('ap_jnl_posted')
     await setup_form('ap_alloc_posted')
 
 async def setup_reports(context, conn):

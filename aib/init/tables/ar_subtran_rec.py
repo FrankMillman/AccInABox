@@ -129,7 +129,7 @@ cols.append ({
     'col_name'   : 'cust_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Customer row id',
-    'long_descr' : 'Customer row id. In theory, should check if statement period still open. Leave for now.',
+    'long_descr' : 'Customer row id',
     'col_head'   : 'Customer',
     'key_field'  : 'N',
     'data_source': 'input',
@@ -142,9 +142,9 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : [
-        ['stat_date', 'Statement period not open', [
-            ['check', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
-            ['or', '', 'subparent_row_id>tran_date', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
+        ['per_date', 'Period not open', [
+            ['check', '', 'subparent_row_id>tran_date', 'pyfunc',
+                'custom.date_funcs.check_tran_date,"ar",cust_row_id>ledger_row_id', ''],
             ]],
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', 'cust_row_id>currency_id', '=', 'currency_id', ''],
@@ -221,7 +221,7 @@ cols.append ({
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{subparent_row_id>text}',
+    'dflt_val'   : '{_ledger.rec_text}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -575,6 +575,31 @@ cursors = []
 
 # actions
 actions = []
+actions.append([
+    'upd_checks', [
+        [
+            'recheck_tran_date',
+            'Period is closed',
+            [
+                ['check', '', '$exists', 'is', '$True', ''],
+                ['or', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ar",cust_row_id>ledger_row_id', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'unpost_checks', [
+        [
+            'check_tran_date',
+            'Period is closed',
+            [
+                ['check', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ar",cust_row_id>ledger_row_id', ''],
+                ],
+            ],
+        ],
+    ])
 actions.append([
     'upd_on_post', {
         'aggr': [

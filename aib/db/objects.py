@@ -696,8 +696,11 @@ class DbObject:
             if obj_name == '_param':
                 db_obj = await db.cache.get_adm_params(self.company)
             elif obj_name == '_ledger':
-                db_obj = await db.cache.get_ledger_params(
-                    self.company, self.context.module_row_id, self.context.ledger_row_id)
+                # module_row_id = self.context.module_row_id
+                # ledger_row_id = self.context.ledger_row_id
+                module_row_id = self.db_table.module_row_id
+                ledger_row_id = await self.getval(self.db_table.ledger_col)
+                db_obj = await db.cache.get_ledger_params(self.company, module_row_id, ledger_row_id)
             elif obj_name in self.context.data_objects:
                 db_obj = self.context.data_objects[obj_name]
             elif obj_name.startswith('subtran:'):
@@ -705,7 +708,7 @@ class DbObject:
                 # it is set up in DbTable.get_sub_trans() below
                 # e.g. 'subtran:line_type=sls'
                 # use 'line_type' to get the subcol_name, 'sls' to get the subcol_val,
-                #   then loook for the db_obj in self.sub_trans
+                #   then look for the db_obj in self.sub_trans
                 subcol_name, subcol_val = obj_name[8:].split('=')
                 db_obj = self.sub_trans[subcol_name][subcol_val][0]
             else:

@@ -189,11 +189,11 @@ cols.append ({
     'data_source': 'input',
     'condition'  : None,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{supp_row_id>party_row_id>display_name}',
+    'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -677,6 +677,18 @@ actions.append([
             'Total amount does not equal total of line items',
             [
                 ['check', '', 'crn_amount', '=', 'crn_tot_amt', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'unpost_checks', [
+        [
+            'check_date',
+            'Period is closed',
+            [
+                ['check', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ap",ledger_row_id', ''],
                 ],
             ],
         ],

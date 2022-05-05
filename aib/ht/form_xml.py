@@ -643,7 +643,17 @@ async def run_report(caller, xml):
 
 async def unpost_tran(grid, xml):
     # called from various 'posted' reports on 'Unpost' toolbar button clicked
-    await grid.db_obj.post(post_type="unpost")
+
+    title = grid.db_obj.table_name.split('__')[-1]
+    question = f'Sure you want to unpost {repr(await grid.obj_list[0].fld.getval())}?'
+    answers = ['No', 'Yes']
+    default = 'No'
+    escape = 'No'
+
+    ans = await grid.session.responder.ask_question(
+        grid, title, question, answers, default, escape)
+    if ans == 'Yes':
+        await grid.db_obj.post(post_type="unpost")
 
 async def find_row(caller, xml):
     grid_ref, row = caller.btn_args

@@ -434,6 +434,18 @@ actions.append([
         ],
     ])
 actions.append([
+    'unpost_checks', [
+        [
+            'check_date',
+            'Period is closed',
+            [
+                ['check', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ap",ledger_row_id', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
     'upd_on_save', [
         [
             'ap_subtran_pmt',  # table name

@@ -284,8 +284,8 @@
 
       <block/>
       <grid data_object="ar_trans" growable="false" num_grid_rows="8"
-          header_row="[`date_range_vars.start_date`, `'Bal b/f'`, null, null, `tran_vars.op_bal`]"
-          footer_row="[`date_range_vars.end_date`, `'Bal c/f'`, null, null, `tran_vars.cl_bal`]">
+          header_row="[`date_range_vars.start_date`, `'Bal b/f'`, `...`, `tran_vars.op_bal`]"
+          footer_row="[`date_range_vars.end_date`, `'Bal c/f'`, `...`, `tran_vars.cl_bal`]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,Enter" action="
@@ -297,7 +297,8 @@
         <cur_columns>
           <cur_col col_name="tran_date" lng="80" readonly="true"/>
           <cur_col col_name="tran_type" lng="80" readonly="true"/>
-          <cur_col col_name="tran_number" lng="100" readonly="true"/>
+          <cur_col col_name="tran_number" lng="80" readonly="true"/>
+          <cur_col col_name="text" lng="160" readonly="true"/>
           <cur_col col_name="amount_cust" lng="80" readonly="true"/>
           <cur_col col_name="balance_cust" lng="80" readonly="true"/>
         </cur_columns>

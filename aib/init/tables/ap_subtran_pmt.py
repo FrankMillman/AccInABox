@@ -129,7 +129,7 @@ cols.append ({
     'col_name'   : 'supp_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Supplier row id',
-    'long_descr' : 'Supplier row id. In theory, should check if statement period still open. Leave for now.',
+    'long_descr' : 'Supplier row id',
     'col_head'   : 'Supplier',
     'key_field'  : 'N',
     'data_source': 'input',
@@ -142,6 +142,10 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : [
+        ['per_date', 'Period not open', [
+            ['check', '', 'subparent_row_id>tran_date', 'pyfunc',
+                'custom.date_funcs.check_tran_date,"ap",supp_row_id>ledger_row_id', ''],
+            ]],
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', 'supp_row_id>currency_id', '=', 'currency_id', ''],
             ['or', '', 'supp_row_id>ledger_row_id>alt_curr', 'is', '$True', ''],
@@ -216,7 +220,7 @@ cols.append ({
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{subparent_row_id>text}',
+    'dflt_val'   : '{_ledger.pmt_text}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -570,6 +574,31 @@ cursors = []
 
 # actions
 actions = []
+actions.append([
+    'upd_checks', [
+        [
+            'recheck_tran_date',
+            'Period is closed',
+            [
+                ['check', '', '$exists', 'is', '$True', ''],
+                ['or', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ap",supp_row_id>ledger_row_id', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'unpost_checks', [
+        [
+            'check_tran_date',
+            'Period is closed',
+            [
+                ['check', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ap",supp_row_id>ledger_row_id', ''],
+                ],
+            ],
+        ],
+    ])
 actions.append([
     'upd_on_post', {
         'aggr': [

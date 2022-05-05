@@ -457,6 +457,39 @@ async def check_tran_date(db_obj, fld, value, module_id, ledger_row_id=0):
             ledger_id = await ledg_obj.getval('ledger_id')
         raise AibError(head='Transaction date', body=f'{ledger_id} - period is closed')
 
+    if module_id == 'ar':
+        # if await db_obj.getval('cust_row_id>ledger_row_id>separate_stat_close'):
+        if await db_obj.getval('_ledger.separate_stat_close'):
+
+            statement_state = ledger_periods[period_row_id].statement_state
+            if statement_state != 'open':
+                statement_date = ledger_periods[period_row_id].statement_date
+                if value <= statement_date:
+                    if ledger_row_id == 0:
+                        ledger_id = 'gl'
+                    else:
+                        ledg_obj = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
+                        ledger_id = await ledg_obj.getval('ledger_id')
+                    raise AibError(head='Transaction date', body=f'{ledger_id} - statement period is closed')
+
+            if await db_obj.getval('_ledger.separate_stat_cust'):
+                if 'stat_dates' not in db_obj.context.data_objects:
+                    db_obj.context.data_objects['stat_dates'] = await db.objects.get_db_object(
+                        db_obj.context, 'ar_stat_dates')
+                stat_dates = db_obj.context.data_objects['stat_dates']
+                await stat_dates.init(init_vals={
+                    'cust_row_id': await db_obj.getval('cust_row_id'),
+                    'period_row_id': period_row_id,
+                    })
+                if stat_dates.exists:
+                    if value <= await stat_dates.getval('statement_date'):
+                        if ledger_row_id == 0:
+                            ledger_id = 'gl'
+                        else:
+                            ledg_obj = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
+                            ledger_id = await ledg_obj.getval('ledger_id')
+                        raise AibError(head='Transaction date', body=f'{ledger_id} - statement period is closed')
+
     return True
 
 async def check_ye_adj_date(db_obj, fld, value):

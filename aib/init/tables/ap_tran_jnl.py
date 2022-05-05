@@ -215,7 +215,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : '{supp_row_id>party_row_id>display_name}',
+    'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -342,7 +342,7 @@ cols.append ({
     'data_source': 'input',
     'condition'  : None,
     'allow_null' : False,
-    'allow_amend': False,
+    'allow_amend': True,
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
@@ -515,6 +515,24 @@ cursors.append({
     'sequence': [['supp_row_id>party_row_id>party_id', False], ['tran_number', False]],
     'formview_name': 'ap_journal',
     })
+cursors.append({
+    'cursor_name': 'posted_jnl',
+    'title': 'Posted ap journals',
+    'columns': [
+        ['supp_row_id>party_row_id>party_id', 80, False, True],
+        ['supp_row_id>party_row_id>display_name', 160, True, True],
+        ['tran_number', 100, False, True],
+        ['tran_date', 80, False, True],
+        ['amount', 100, False, True],
+        ],
+    'filter': [
+        ['where', '', 'posted', '=', "'1'", ''],
+        ['and', '', 'tran_date', '>=', '_ctx.start_date', ''],
+        ['and', '', 'tran_date', '<=', '_ctx.end_date', ''],
+        ],
+    'sequence': [['supp_row_id>party_row_id>party_id', False], ['tran_number', False]],
+    'formview_name': 'ap_journal',
+    })
 
 # actions
 actions = []
@@ -538,6 +556,18 @@ actions.append([
             'Journal amount does not equal total of line items',
             [
                 ['check', '', 'amount', '=', 'jnl_amount', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'unpost_checks', [
+        [
+            'check_date',
+            'Period is closed',
+            [
+                ['check', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ap",ledger_row_id', ''],
                 ],
             ],
         ],
@@ -609,8 +639,7 @@ actions.append([
                     ],
                 False,  # split source?
                 [  # key fields
-                    ['tran_row_id', 'row_id'],  # tgt_col, src_col
-                    ['split_no', '0'],
+                    ['split_no', '0'],  # tgt_col, src_col
                     ],
                 [  # on post
                     ['item_type', '=', "'jnl'"],  # tgt_col, op, src_col
@@ -624,6 +653,18 @@ actions.append([
                 ],
             ],
         'on_unpost': [
+            [
+                'ap_openitems',  # table name
+                [  # condition
+                    ['where', '', 'supp_row_id>ledger_row_id>open_items', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['split_no', '0'],  # tgt_col, src_col
+                    ],
+                [  # on unpost
+                    ['delete', '', ''],  # tgt_col, op, src_col
+                    ],
+                ],
             ],
         },
     ])

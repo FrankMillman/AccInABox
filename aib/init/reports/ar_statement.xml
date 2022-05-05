@@ -32,7 +32,8 @@
     <block x1="15" y1="15" x2="-16" y2="-16" border="0.5" stroke="red">
       <block x1="15" y1="15" x2="-16" y2="37" border="0">
         <panel>
-          <string x="c" y="22" value="Blackbird Properties" align="centre" font="Helvetica-Bold 22"/>
+          <!--string x="c" y="22" value="Blackbird Properties" align="centre" font="Helvetica-Bold 22"/-->
+          <field x="c" y="22" name="_param.company_name" align="centre" font="Helvetica-Bold 22"/>
         </panel>
       </block>
 

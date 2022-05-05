@@ -166,7 +166,7 @@ cols.append ({
     'max_len'    : 30,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'Y/e adjustment',
+    'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -330,6 +330,18 @@ actions.append([
             'Debits do not equal credits',
             [
                 ['check', '', 'tot_amount', '=', '0', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'unpost_checks', [
+        [
+            'check_date',
+            'Period is closed',
+            [
+                ['check', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_ye_adj_date', ''],
                 ],
             ],
         ],

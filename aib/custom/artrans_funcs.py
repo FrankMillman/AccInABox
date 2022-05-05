@@ -767,7 +767,7 @@ async def set_per_closed_flag(caller, params):
 
 async def check_ledg_per(caller, xml):
     # called from form ar_ledger_periods on_start_row
-    ledg_per = caller.data_objects['ar_ledg_per']
+    ledg_per = caller.data_objects['ledg_per']
     actions = caller.data_objects['actions']
 
     if not ledg_per.exists:  # on bottom 'blank' row
