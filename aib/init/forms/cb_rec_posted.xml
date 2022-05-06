@@ -7,6 +7,13 @@
     <db_obj name="cb_rec" table_name="cb_tran_rec"/>
   </db_objects>
   <mem_objects>
+    <mem_obj name="var" descr="Form variables">
+      <mem_col col_name="rec_tot" data_type="$RPTY" short_descr="Receipt total"
+        long_descr="Receipt total" allow_amend="true"
+        db_scale="2" scale_ptr="cb_rec.currency_id>scale"/>
+      <mem_col col_name="rev_sign" data_type="BOOL" short_descr="Reverse sign?"
+        long_descr="Reverse sign?" dflt_val="{cb_rec.rev_sign}"/>
+    </mem_obj>
     <mem_obj name="date_range_vars" descr="Variables for date range">
       <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
         long_descr="Settings, passed between main form and subform" allow_amend="true"/>
@@ -55,7 +62,9 @@
           <</sub_form>>
         "/>
       <block/>
-      <grid data_object="cb_rec" growable="false" cursor_name="posted_rec">
+      <grid data_object="cb_rec" growable="false" cursor_name="posted_rec"
+          footer_row="[`'Total:'`, `...`, `var.rec_tot`]"
+          get_tots="[[`amount`, `var.rec_tot`]]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,Enter" action="

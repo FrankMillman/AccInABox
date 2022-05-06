@@ -7,6 +7,13 @@
     <db_obj name="ar_inv" table_name="ar_tran_inv"/>
   </db_objects>
   <mem_objects>
+    <mem_obj name="var" descr="Form variables">
+      <mem_col col_name="inv_tot" data_type="$RPTY" short_descr="Invoice total"
+        long_descr="Invoice total" allow_amend="true"
+        db_scale="2" scale_ptr="ar_inv.cust_row_id>currency_id>scale"/>
+      <mem_col col_name="rev_sign" data_type="BOOL" short_descr="Reverse sign?"
+        long_descr="Reverse sign?" dflt_val="{ar_inv.rev_sign}"/>
+    </mem_obj>
     <mem_obj name="date_range_vars" descr="Variables for date range">
       <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
         long_descr="Settings, passed between main form and subform" allow_amend="true"/>
@@ -55,7 +62,9 @@
           <</sub_form>>
         "/>
       <block/>
-      <grid data_object="ar_inv" growable="false" cursor_name="posted_inv">
+      <grid data_object="ar_inv" growable="false" cursor_name="posted_inv"
+          footer_row="[`'Total:'`, `...`, `var.inv_tot`]"
+          get_tots="[[`inv_tot_amt`, `var.inv_tot`]]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,Enter" action="

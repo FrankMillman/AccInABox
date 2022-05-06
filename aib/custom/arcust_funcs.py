@@ -219,28 +219,6 @@ async def show_ageing(caller, xml):
 
     await caller.start_grid('ar_items')
 
-async def setup_cust_tots(caller, xml):
-    var = caller.context.data_objects['var']
-    sql = (
-        "SELECT COALESCE((SELECT SUM(c.tran_tot_local) FROM ( "
-            "SELECT a.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
-                "a.cust_row_id, a.location_row_id, a.function_row_id, "
-                "a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id "
-                "ORDER BY a.tran_date DESC) row_num "
-            "FROM {company}.ar_cust_totals a "
-            "JOIN {company}.ar_customers b ON b.row_id = a.cust_row_id "
-            "WHERE b.ledger_row_id = {_ctx.ledger_row_id} "
-            "AND a.deleted_id = 0 "
-            "AND a.tran_date <= {_ctx.bal_date_cust} "
-            ") as c "
-            "WHERE c.row_num = 1 "
-            "), 0)"
-        )
-    async with caller.db_session.get_connection() as db_mem_conn:
-        conn = db_mem_conn.db
-        async for bal_loc_tot, in await conn.exec_sql(sql, context=caller.context):
-            await var.setval('bal_loc_tot', bal_loc_tot)
-
 async def get_data(caller, node_id, node_total):
     var = caller.data_objects['var']
     invdet = caller.data_objects['ar_invdet']

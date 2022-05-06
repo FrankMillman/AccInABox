@@ -1,7 +1,6 @@
 <form name="ap_balances" title="Supplier balances" before_start_form="
   <<pyfunc name=`custom.date_funcs.setup_balance_date`/>>
   <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.bal_date_supp`/>>
-  <<pyfunc name=`custom.apsupp_funcs.setup_supp_tots`/>>
   ">
   <db_objects>
     <db_obj name="supp" table_name="ap_suppliers"/>
@@ -52,7 +51,6 @@
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
                 <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.bal_date_supp`/>>
-                <<pyfunc name=`custom.apsupp_funcs.setup_supp_tots`/>>
                 <<restart_grid obj_name=`supp`/>>
               <</return>>
             <</on_return>>
@@ -61,7 +59,8 @@
 
       <block/>
       <grid data_object="supp" growable="false" cursor_name="supp_bal"
-          footer_row="[`'Total:'`, `...`, `var.bal_loc_tot`]">
+          footer_row="[`'Total:'`, `...`, `var.bal_loc_tot`]"
+          get_tots="[[`balance_loc`, `var.bal_loc_tot`]]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)" action="
             <<assign src=`balance_date_vars.settings` tgt=`var.settings`/>>

@@ -325,7 +325,7 @@ cols.append ({
     'data_type'  : '$RPTY',
     'short_descr': 'Amount transferred - cb curr',
     'long_descr' : 'Amount transferred in cb currency',
-    'col_head'   : 'Amt tfrd cb',
+    'col_head'   : 'Amount',
     'key_field'  : 'N',
     'data_source': 'input',
     'condition'  : None,
@@ -517,6 +517,23 @@ virt.append ({
 
 # cursor definitions
 cursors = []
+cursors.append({
+    'cursor_name': 'posted_tfr',
+    'title': 'Posted cb transfers',
+    'columns': [
+        ['tran_number', 100, False, True],
+        ['tran_date', 80, False, True],
+        ['target_id', 100, False, True],
+        ['tfr_amount', 100, False, True],
+        ],
+    'filter': [
+        ['where', '', 'posted', '!=', "'1'", ''],
+        ['and', '', 'tran_date', '>=', '_ctx.start_date', ''],
+        ['and', '', 'tran_date', '<=', '_ctx.end_date', ''],
+        ],
+    'sequence': [['tran_number', False]],
+    'formview_name': 'cb_payment',
+    })
 cursors.append({
     'cursor_name': 'unposted_tfr',
     'title': 'Unposted cb transfers',

@@ -296,6 +296,10 @@ class GuiGrid:
         else:
             footer_row = loads(footer_row)
 
+        self.get_tots = element.get('get_tots')
+        if self.get_tots is not None:
+            self.get_tots = loads(self.get_tots)
+
         self.assert_tots = element.get('assert_tots')
         if self.assert_tots is not None:
             self.assert_tots = loads(self.assert_tots)
@@ -557,8 +561,22 @@ class GuiGrid:
             sub_filter.append((test, '', parent[0], '=', parent_val, ''))
             test = 'AND'  # in case there is another one
 
+        if self.get_tots is not None:
+            srcs = [_[0] for _ in self.get_tots]  # column names to be summed
+            tgts = [_[1] for _ in self.get_tots]  # 'total' col_names to store results
+            conn = await db.connection._get_connection()
+            col_names = [f"SUM({src})" for src in srcs]
+            where = self.cursor_filter + sub_filter
+            order = []
+            cur = await conn.full_select(self.db_obj, col_names, where, order)
+            row = await cur.__anext__()
+            for src_val, tgt in zip(row, tgts):
+                obj_name, col_name = tgt.split('.')
+                tgt_obj = self.context.data_objects[obj_name]
+                await tgt_obj.setval(col_name, src_val or 0)  # change None to 0 in case no rows exist
+
         if self.assert_tots is not None:
-            srcs = [_[0] for _ in self.assert_tots]  # column names to be 'summed'
+            srcs = [_[0] for _ in self.assert_tots]  # column names to be summed
             tgts = [_[1] for _ in self.assert_tots]  # 'total' col_names to assert against
             conn = await db.connection._get_connection()
             col_names = [f"SUM({src})" for src in srcs]

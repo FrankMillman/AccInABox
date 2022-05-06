@@ -7,6 +7,13 @@
     <db_obj name="cb_pmt" table_name="cb_tran_pmt"/>
   </db_objects>
   <mem_objects>
+    <mem_obj name="var" descr="Form variables">
+      <mem_col col_name="pmt_tot" data_type="$RPTY" short_descr="Payment total"
+        long_descr="Payment total" allow_amend="true"
+        db_scale="2" scale_ptr="cb_pmt.currency_id>scale"/>
+      <mem_col col_name="rev_sign" data_type="BOOL" short_descr="Reverse sign?"
+        long_descr="Reverse sign?" dflt_val="{cb_pmt.rev_sign}"/>
+    </mem_obj>
     <mem_obj name="date_range_vars" descr="Variables for date range">
       <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
         long_descr="Settings, passed between main form and subform" allow_amend="true"/>
@@ -55,7 +62,9 @@
           <</sub_form>>
         "/>
       <block/>
-      <grid data_object="cb_pmt" growable="false" cursor_name="posted_pmt">
+      <grid data_object="cb_pmt" growable="false" cursor_name="posted_pmt"
+          footer_row="[`'Total:'`, `...`, `var.pmt_tot`]"
+          get_tots="[[`amount`, `var.pmt_tot`]]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,Enter" action="
