@@ -696,15 +696,16 @@ class DbObject:
             if obj_name == '_param':
                 db_obj = await db.cache.get_adm_params(self.company)
             elif obj_name == '_ledger':
-                # module_row_id = self.context.module_row_id
-                # ledger_row_id = self.context.ledger_row_id
                 module_row_id = self.db_table.module_row_id
-                ledger_row_id = await self.getval(self.db_table.ledger_col)
+                if self.db_table.ledger_col is not None:
+                    ledger_row_id = await self.getval(self.db_table.ledger_col)
+                else:
+                    ledger_row_id = self.context.ledger_row_id
                 db_obj = await db.cache.get_ledger_params(self.company, module_row_id, ledger_row_id)
             elif obj_name in self.context.data_objects:
                 db_obj = self.context.data_objects[obj_name]
             elif obj_name.startswith('subtran:'):
-                # this is used to value for a 'display_col' in a subtran
+                # this is used to obtain a value for a 'display_col' in a subtran
                 # it is set up in DbTable.get_sub_trans() below
                 # e.g. 'subtran:line_type=sls'
                 # use 'line_type' to get the subcol_name, 'sls' to get the subcol_val,

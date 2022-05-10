@@ -508,10 +508,11 @@ cursors.append({
     'cursor_name': 'posted_jnl',
     'title': 'Posted ar journals',
     'columns': [
-        ['tran_number', 100, False, True],
+        ['tran_number', 80, False, True],
+        ['tran_date', 80, False, True],
         ['cust_row_id>party_row_id>party_id', 80, False, True],
         ['cust_row_id>party_row_id>display_name', 160, True, True],
-        ['tran_date', 80, False, True],
+        ['text', 200, False, True],
         ['amount', 100, False, True],
         ],
     'filter': [
@@ -526,10 +527,11 @@ cursors.append({
     'cursor_name': 'unposted_jnl',
     'title': 'Unposted ar journals',
     'columns': [
-        ['tran_number', 100, False, True],
+        ['tran_number', 80, False, True],
+        ['tran_date', 80, False, True],
         ['cust_row_id>party_row_id>party_id', 80, False, True],
         ['cust_row_id>party_row_id>display_name', 160, True, True],
-        ['tran_date', 80, False, True],
+        ['text', 200, False, True],
         ['amount', 100, False, True],
         ],
     'filter': [

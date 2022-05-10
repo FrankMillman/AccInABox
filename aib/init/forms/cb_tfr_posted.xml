@@ -62,16 +62,17 @@
           footer_row="[`'Total:'`, `...`, `var.tfr_tot`]"
           get_tots="[[`tfr_amount`, `var.tfr_tot`]]">
         <toolbar>
-          <tool type="btn" label="Unpost" action="
-            <<start_row/>>
-            <<case>>
-              <<obj_exists obj_name=`cb_tfr`>>
-                <<unpost_tran/>>
-                <<restart_grid obj_name=`cb_tfr`/>>
-              <</obj_exists>>
-            <</case>>
-            "/>
           <tool type="nav"/>
+          <tool type="btn" label="Unpost" tip="Unpost transaction (Alt+U)"
+            shortcut="alt,KeyU" action="
+              <<start_row/>>
+              <<case>>
+                <<obj_exists obj_name=`cb_tfr`>>
+                  <<unpost_tran/>>
+                  <<restart_grid obj_name=`cb_tfr`/>>
+                <</obj_exists>>
+              <</case>>
+            "/>
         </toolbar>
         <cur_columns>
           <cur_col col_name="tran_number" lng="80"/>

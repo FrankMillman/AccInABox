@@ -396,13 +396,13 @@ class Conn:
             raise
         return cur
 
-    async def full_select(self, db_obj, col_names, where, order=None, group=None,
+    async def full_select(self, db_obj, col_names, where, order=None, group=None, incl_col_types=True,
             limit=0, offset=0, lock=False, param=None, distinct=False, debug=False):
 
         await db_obj.check_perms('select')
 
         sql, params = await self.build_select(db_obj.context, db_obj.db_table,
-            col_names, where, order, group, limit, offset, lock, param, distinct, debug)
+            col_names, where, order, group, incl_col_types, limit, offset, lock, param, distinct, debug)
 
         # print('FULL', sql, params, '\n\n')
 
@@ -417,11 +417,14 @@ class Conn:
             raise
         return cur
 
-    async def build_select(self, context, db_table, col_names, where, order, group=None,
+    async def build_select(self, context, db_table, col_names, where, order, group=None, incl_col_types=True,
             limit=0, offset=0, lock=False, param=None, distinct=False, debug=False):
 
         if self.tablenames is not None:  # existing build is in progress
             self.save_tablenames.append(self.tablenames)
+
+        # sqlite3 needs COLTYPES, but only in SELECT, not in WHERE clause or WITH clause
+        self.incl_col_types = (incl_col_types is True and self.constants.servertype == 'sqlite3')
 
         if debug:
             col_names = list(col_names)  # preserve gen expr
@@ -649,8 +652,7 @@ class Conn:
                 if as_clause is not None:
                     if as_clause.startswith("'"):
                         # a literal cannot be included in an ORDER BY clause
-                        if as_clause.startswith("'"):
-                            as_clause = f'(SELECT {as_clause})'
+                        as_clause = f'(SELECT {as_clause})'
                     order_list.append(f'{as_clause}{desc}')
                 elif build_sum:
                     order_list.append(f'SUM({alias}.{col.col_name}){desc}')
@@ -716,7 +718,7 @@ class Conn:
         if col is None:
             col_text = f'NULL AS {col_name}'
         elif as_clause is not None:
-            if self.constants.servertype == 'sqlite3':  # sqlite3 needs COLTYPES
+            if self.incl_col_types:  # sqlite3 needs COLTYPES
                 if (col.data_type == 'DEC' or col.data_type.startswith('$')) and not self.grouping:
                     # force sqlite3 to return Decimal type
                     col_name = f'"{col.col_name} AS [REAL{col.db_scale}]"'

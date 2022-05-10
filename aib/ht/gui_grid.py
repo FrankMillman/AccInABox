@@ -562,28 +562,53 @@ class GuiGrid:
             test = 'AND'  # in case there is another one
 
         if self.get_tots is not None:
+            # srcs, tgts = zip(*self.get_tots)  # clever but obscure!
             srcs = [_[0] for _ in self.get_tots]  # column names to be summed
             tgts = [_[1] for _ in self.get_tots]  # 'total' col_names to store results
             conn = await db.connection._get_connection()
-            col_names = [f"SUM({src})" for src in srcs]
             where = self.cursor_filter + sub_filter
             order = []
-            cur = await conn.full_select(self.db_obj, col_names, where, order)
-            row = await cur.__anext__()
+            cte_sql = []
+            cte_params = []
+            cte_select = []
+            for src in srcs:
+                sql, params = await conn.build_select(
+                    self.context, self.db_obj.db_table, [src], where, order, incl_col_types=False)
+                cte_sql.append(f'{src} AS ({sql})')
+                cte_params.extend(params)
+                cte_select.append(f'(SELECT SUM({src}) FROM {src})')
+            cte = f"WITH {', '.join(cte_sql)} SELECT {', '.join(cte_select)}"
+            cur = await conn.exec_sql(cte, cte_params, context=self.context)
+            try:
+                row = await cur.__anext__()
+            except StopAsyncIteration:  # no rows selected
+                row = [0] * len(srcs)
             for src_val, tgt in zip(row, tgts):
                 obj_name, col_name = tgt.split('.')
                 tgt_obj = self.context.data_objects[obj_name]
                 await tgt_obj.setval(col_name, src_val or 0)  # change None to 0 in case no rows exist
 
         if self.assert_tots is not None:
+            # srcs, tgts = zip(*self.assert_tots)  # clever but obscure!
             srcs = [_[0] for _ in self.assert_tots]  # column names to be summed
             tgts = [_[1] for _ in self.assert_tots]  # 'total' col_names to assert against
             conn = await db.connection._get_connection()
-            col_names = [f"SUM({src})" for src in srcs]
             where = self.cursor_filter + sub_filter
-            order = []
-            cur = await conn.full_select(self.db_obj, col_names, where, order)
-            row = await cur.__anext__()
+            cte_sql = []
+            cte_params = []
+            cte_select = []
+            for src in srcs:
+                sql, params = await conn.build_select(
+                    self.context, self.db_obj.db_table, [src], where, order, incl_col_types=False)
+                cte_sql.append(f'{src} AS ({sql})')
+                cte_params.extend(params)
+                cte_select.append(f'(SELECT SUM({src}) FROM {src})')
+            cte = f"WITH {', '.join(cte_sql)} SELECT {', '.join(cte_select)}"
+            cur = await conn.exec_sql(cte, cte_params, context=self.context)
+            try:
+                row = await cur.__anext__()
+            except StopAsyncIteration:  # no rows selected
+                row = [0] * len(srcs)
             for src_val, tgt in zip(row, tgts):
                 obj_name, col_name = tgt.split('.')
                 tgt_obj = self.context.data_objects[obj_name]

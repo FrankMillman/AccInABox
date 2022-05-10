@@ -500,29 +500,14 @@ virt.append ({
 # cursor definitions
 cursors = []
 cursors.append({
-    'cursor_name': 'unposted_jnl',
-    'title': 'Unposted ap journals',
-    'columns': [
-        ['supp_row_id>party_row_id>party_id', 80, False, True],
-        ['supp_row_id>party_row_id>display_name', 160, True, True],
-        ['tran_number', 100, False, True],
-        ['tran_date', 80, False, True],
-        ['amount', 100, False, True],
-        ],
-    'filter': [
-        ['where', '', 'posted', '!=', "'1'", ''],
-        ],
-    'sequence': [['supp_row_id>party_row_id>party_id', False], ['tran_number', False]],
-    'formview_name': 'ap_journal',
-    })
-cursors.append({
     'cursor_name': 'posted_jnl',
     'title': 'Posted ap journals',
     'columns': [
+        ['tran_number', 80, False, True],
+        ['tran_date', 80, False, True],
         ['supp_row_id>party_row_id>party_id', 80, False, True],
         ['supp_row_id>party_row_id>display_name', 160, True, True],
-        ['tran_number', 100, False, True],
-        ['tran_date', 80, False, True],
+        ['text', 200, False, True],
         ['amount', 100, False, True],
         ],
     'filter': [
@@ -530,7 +515,24 @@ cursors.append({
         ['and', '', 'tran_date', '>=', '_ctx.start_date', ''],
         ['and', '', 'tran_date', '<=', '_ctx.end_date', ''],
         ],
-    'sequence': [['supp_row_id>party_row_id>party_id', False], ['tran_number', False]],
+    'sequence': [['tran_number', False]],
+    'formview_name': 'ap_journal',
+    })
+cursors.append({
+    'cursor_name': 'unposted_jnl',
+    'title': 'Unposted ap journals',
+    'columns': [
+        ['tran_number', 80, False, True],
+        ['tran_date', 80, False, True],
+        ['supp_row_id>party_row_id>party_id', 80, False, True],
+        ['supp_row_id>party_row_id>display_name', 160, True, True],
+        ['text', 200, False, True],
+        ['amount', 100, False, True],
+        ],
+    'filter': [
+        ['where', '', 'posted', '!=', "'1'", ''],
+        ],
+    'sequence': [['tran_number', False]],
     'formview_name': 'ap_journal',
     })
 
