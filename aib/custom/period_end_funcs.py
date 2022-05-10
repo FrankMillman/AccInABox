@@ -16,31 +16,35 @@ async def set_per_closing_flag(caller, params):
         context.data_objects['ledg_per'] = await db.objects.get_db_object(
             context, f'{module_id}_ledger_periods')
     ledg_per = context.data_objects['ledg_per']
-    await ledg_per.init()
-    if module_id != 'gl':
-        await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-    await ledg_per.setval('period_row_id', period_to_close)
-    if await ledg_per.getval('state') not in ('current', 'open', 'reopened'):
-        raise AibError(head='Closing flag', body='Period is not open')
-    await ledg_per.setval('state', 'closing')
-    await ledg_per.save()
 
-    if period_to_close == current_period:
-        # set next month state to 'current'
+    # start a transaction
+    async with context.db_session.get_connection() as db_mem_conn:
+
         await ledg_per.init()
         if module_id != 'gl':
             await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-        await ledg_per.setval('period_row_id', period_to_close + 1)
-        await ledg_per.setval('state', 'current')
+        await ledg_per.setval('period_row_id', period_to_close)
+        if await ledg_per.getval('state') not in ('current', 'open', 'reopened'):
+            raise AibError(head='Closing flag', body='Period is not open')
+        await ledg_per.setval('state', 'closing')
         await ledg_per.save()
 
-        # set following month state to 'open'
-        await ledg_per.init()
-        if module_id != 'gl':
-            await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-        await ledg_per.setval('period_row_id', period_to_close + 2)
-        await ledg_per.setval('state', 'open')
-        await ledg_per.save()
+        if period_to_close == current_period:
+            # set next month state to 'current'
+            await ledg_per.init()
+            if module_id != 'gl':
+                await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+            await ledg_per.setval('period_row_id', period_to_close + 1)
+            await ledg_per.setval('state', 'current')
+            await ledg_per.save()
+
+            # set following month state to 'open'
+            await ledg_per.init()
+            if module_id != 'gl':
+                await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+            await ledg_per.setval('period_row_id', period_to_close + 2)
+            await ledg_per.setval('state', 'open')
+            await ledg_per.save()
 
 async def posted_check(caller, params):
     context = caller.manager.process.root.context
@@ -95,25 +99,29 @@ async def set_per_closed_flag(caller, params):
         context.data_objects['ledg_per'] = await db.objects.get_db_object(
             context, f'{module_id}_ledger_periods')
     ledg_per = context.data_objects['ledg_per']
-    await ledg_per.init()
-    if module_id != 'gl':
-        await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-    await ledg_per.setval('period_row_id', period_to_close)
-    if await ledg_per.getval('state') != 'closing':
-        raise AibError(head='Closing flag', body='Closing flag not set')
-    await ledg_per.setval('state', 'closed')
-    await ledg_per.save()
 
-    if module_id == 'gl':
-        if await ledg_per.getval('is_year_end'):
-            gl_ye = await db.objects.get_db_object(context, 'gl_yearends')
-            await gl_ye.setval('yearend_row_id', await ledg_per.getval('year_no'))
-            await gl_ye.setval('state', 'open')
-            await gl_ye.save()
+    # start a transaction
+    async with context.db_session.get_connection() as db_mem_conn:
 
-            # force virtual field 'year_end' to be re-evaluated
-            ye_fld = await gl_ye.getfld('year_end')
-            ye_fld.must_be_evaluated = True
+        await ledg_per.init()
+        if module_id != 'gl':
+            await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+        await ledg_per.setval('period_row_id', period_to_close)
+        if await ledg_per.getval('state') != 'closing':
+            raise AibError(head='Closing flag', body='Closing flag not set')
+        await ledg_per.setval('state', 'closed')
+        await ledg_per.save()
+
+        if module_id == 'gl':
+            if await ledg_per.getval('is_year_end'):
+                gl_ye = await db.objects.get_db_object(context, 'gl_yearends')
+                await gl_ye.setval('yearend_row_id', await ledg_per.getval('year_no'))
+                await gl_ye.setval('state', 'open')
+                await gl_ye.save()
+
+                # force virtual field 'year_end' to be re-evaluated
+                ye_fld = await gl_ye.getfld('year_end')
+                ye_fld.must_be_evaluated = True
 
 async def notify_manager(caller, params):
     print('notify', params)
