@@ -2,56 +2,291 @@
 
   <db_objects>
     <db_obj name="ledg_per" table_name="ap_ledger_periods"/>
+    <db_obj name="pmt_per" table_name="ap_ledger_periods"/>
   </db_objects>
   <mem_objects>
     <mem_obj name="actions" descr="Possible actions"
         sub_types="[
         [`action`, null,
           [
+            [`no_period`, `No period`, [], []],
             [`no_action`, `No action available`, [], []],
             [`period_close`, `Start period close`, [], []],
-            [`reopen`, `Reopen period`, [], []]
+            [`period_reopen`, `Reopen period`, [], []]
             ]
           ]
         ]">
       <mem_col col_name="action" data_type="TEXT" short_descr="Action"
         long_descr="Action" col_head="Action" allow_null="true" allow_amend="true"/>
     </mem_obj>
-    <mem_obj name="var" descr="Form variables" module_id="ap">
-      <mem_col col_name="module_id" data_type="TEXT" short_descr="Module id"
-        long_descr="Module id"/>
-      <mem_col col_name="module_descr" data_type="TEXT" short_descr="Module descr"
-        long_descr="Module descr"/>
-      <mem_col col_name="ledger_id" data_type="TEXT" short_descr="Ledger id"
-        long_descr="Ledger id" dflt_val="{ledg_per.ledger_id}"/>
-      <mem_col col_name="ledger_descr" data_type="TEXT" short_descr="Ledger descr"
-        long_descr="Ledger descr" dflt_val="{ledg_per.ledger_id>descr}"/>
-      <mem_col col_name="close_period" data_type="BOOL" short_descr="Close period?"
-        long_descr="Close period?" allow_amend="true"/>
-      <mem_col col_name="reopen_period" data_type="BOOL" short_descr="Reopen period?"
-        long_descr="Reopen period?" allow_amend="true"/>
+    <mem_obj name="pmt_actions" descr="Possible actions for payment period close"
+        sub_types="[
+        [`action`, null,
+          [
+            [`no_period`, `No period`, [], []],
+            [`no_action`, `No action available`, [], []],
+            [`payment_close`, `Start payment close`, [], []],
+            [`payment_reopen`, `Reopen payment period`, [], []]
+            ]
+          ]
+        ]">
+      <mem_col col_name="action" data_type="TEXT" short_descr="Action"
+        long_descr="Action" col_head="Action" allow_null="true" allow_amend="true"/>
     </mem_obj>
   </mem_objects>
 
   <input_params/>
   <output_params/>
 
-  <frame main_object="var">
+  <frame main_object="ledg_per">
     <toolbar/>
     <body>
       <block/>
       <panel/>
       <row/>
-      <!--col/>
-      <label value="Module:"/>
-      <display obj_name="var" col_name="module_descr" lng="150"/-->
       <col/>
       <label value="Ledger:"/>
-      <display obj_name="var" col_name="ledger_id" lng="50"/>
-      <!--display obj_name="var" col_name="ledger_descr" lng="150"/-->
+      <display obj_name="ledg_per" col_name="ledger_id" lng="50"/>
+
+      <if test="[[`if`, ``, `_ledger.separate_pmt_close`, `is`, `$True`, ``]]"/>
+
+      <block/>
+      <nb_start/>
+      <nb_page nb_label="payment period"/>
+
+      <block/>
+      <grid data_object="pmt_per" growable="false" num_grid_rows="8" cursor_name="ap_pmt_per"
+          start_col="period_row_id" start_val="active_period" readonly="true">
+        <toolbar>
+          <tool type="nav"/>
+        </toolbar>
+        <grid_methods template="Grid">
+          <method name="on_start_row" action="
+            <<pyfunc name=`custom.aptrans_funcs.check_per` pmt_period=`true`/>>
+          "/>
+        </grid_methods>
+      </grid>
+      <grid_frame main_object="pmt_per">
+        <toolbar/>
+        <body>
+          <block/>
+          <subtype_frame subtype_obj="pmt_actions" subtype_col="action">
+
+            <subtype_body subtype_id="no_period">
+              <block/>
+              <panel/>
+            </subtype_body>
+
+            <subtype_body subtype_id="no_action">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Period"/>
+              <display obj_name="pmt_per" col_name="period_row_id" lng="20"/>
+              <display obj_name="pmt_per" col_name="closing_date" lng="85"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="payment_close">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Period"/>
+              <display obj_name="pmt_per" col_name="period_row_id" lng="20"/>
+              <col/>
+              <display obj_name="pmt_per" col_name="closing_date" lng="85"/>
+              <row/>
+              <col/>
+              <label value="Payment date"/>
+              <col/>
+              <display obj_name="pmt_per" col_name="payment_date" lng="85"/>
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <button btn_id="pmt_per" btn_label="Close payment period"
+                help_msg = "Close payment period"
+                btn_enabled="true" btn_validate="true" action="
+                  <<ask title=`Payment period close` enter=`No` escape=`No`
+                      question=`Ok to close payment period?`>>
+                    <<response ans=`No`/>>
+                    <<response ans=`Yes`>>
+                      <<pyfunc name=`custom.aptrans_funcs.close_period` pmt_period=`true`/>>
+                      <<restart_grid obj_name=`pmt_per`/>>
+                      <<restart_grid obj_name=`ledg_per`/>>
+                      <<ask title=`Payment period close` enter=`Ok` escape=`Ok`
+                          question=`Payment period closed`>>
+                        <<response ans=`Ok`>>
+                          <<btn_set_focus btn_id=`btn_ok`/>>
+                        <</response>>
+                      <</ask>>
+                    <</response>>
+                  <</ask>>
+                  "/>
+            </subtype_body>
+
+            <subtype_body subtype_id="payment_reopen">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Period"/>
+              <display obj_name="pmt_per" col_name="period_row_id" lng="20"/>
+              <display obj_name="pmt_per" col_name="closing_date" lng="85"/>
+              <button btn_id="reopen_period" btn_label="Reopen period"
+                help_msg = "Reopen period if permitted"
+                btn_enabled="true" btn_validate="true" action="
+                  <<ask title=`Payment period reopen` enter=`No` escape=`No`
+                      question=`Ok to reopen payment period?`>>
+                    <<response ans=`No`/>>
+                    <<response ans=`Yes`>>
+                      <<pyfunc name=`custom.aptrans_funcs.reopen_period` pmt_period=`true`/>>
+                      <<restart_grid obj_name=`pmt_per`/>>
+                      <<restart_grid obj_name=`ledg_per`/>>
+                      <<ask title=`Reopen period` enter=`Ok` escape=`Ok`
+                          question=`Period reopened`>>
+                        <<response ans=`Ok`>>
+                          <<btn_set_focus btn_id=`btn_ok`/>>
+                        <</response>>
+                      <</ask>>
+                    <</response>>
+                  <</ask>>
+                "/>
+            </subtype_body>
+
+          </subtype_frame>
+
+        </body>
+
+        <button_row>
+          <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
+            btn_validate="true" btn_default="true" lng="60" action="
+              <<end_form state=`completed`/>>
+            "/>
+        </button_row>
+        <frame_methods/>
+      </grid_frame>
+
+      <nb_page nb_label="Financial period"/>
+
       <block/>
       <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="ap_per"
-          start_col="period_row_id" start_val="current_period" readonly="true">
+          start_col="period_row_id" start_val="active_period" readonly="true">
+        <toolbar>
+          <tool type="nav"/>
+        </toolbar>
+        <grid_methods template="Grid">
+          <method name="on_start_row" action="
+            <<pyfunc name=`custom.aptrans_funcs.check_per`/>>
+          "/>
+        </grid_methods>
+      </grid>
+      <grid_frame main_object="ledg_per">
+        <toolbar/>
+        <body>
+          <block/>
+          <subtype_frame subtype_obj="actions" subtype_col="action">
+
+            <subtype_body subtype_id="no_period">
+              <block/>
+              <panel/>
+            </subtype_body>
+
+            <subtype_body subtype_id="no_action">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Period"/>
+              <display obj_name="ledg_per" col_name="period_row_id" lng="20"/>
+              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
+            </subtype_body>
+
+            <subtype_body subtype_id="period_close">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Period"/>
+              <display obj_name="ledg_per" col_name="period_row_id" lng="10"/>
+              <col/>
+              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <button btn_id="close_per" btn_label="Close financial period"
+                help_msg = "Close financial period"
+                btn_enabled="true" btn_validate="true" action="
+                  <<ask title=`Period close` enter=`No` escape=`No`
+                      question=`Ok to close period?`>>
+                    <<response ans=`No`/>>
+                    <<response ans=`Yes`>>
+                      <<pyfunc name=`custom.aptrans_funcs.close_period`/>>
+                      <<restart_grid obj_name=`ledg_per`/>>
+                      <<restart_grid obj_name=`pmt_per`/>>
+                      <<ask title=`Period close` enter=`Ok` escape=`Ok`
+                          question=`Period closed`>>
+                        <<response ans=`Ok`>>
+                          <<btn_set_focus btn_id=`btn_ok`/>>
+                        <</response>>
+                      <</ask>>
+                    <</response>>
+                  <</ask>>
+                "/>
+            </subtype_body>
+
+            <subtype_body subtype_id="period_reopen">
+              <block/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Period"/>
+              <display obj_name="ledg_per" col_name="period_row_id" lng="20"/>
+              <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
+              <button btn_id="reopen_period" btn_label="Reopen period"
+                help_msg = "Reopen period if permitted"
+                btn_enabled="true" btn_validate="true" action="
+                  <<ask title=`Period reopen` enter=`No` escape=`No`
+                      question=`Ok to reopen period?`>>
+                    <<response ans=`No`/>>
+                    <<response ans=`Yes`>>
+                      <<pyfunc name=`custom.aptrans_funcs.reopen_period`/>>
+                      <<restart_grid obj_name=`ledg_per`/>>
+                      <<restart_grid obj_name=`pmt_per`/>>
+                      <<ask title=`Reopen period` enter=`Ok` escape=`Ok`
+                          question=`Period reopened`>>
+                        <<response ans=`Ok`>>
+                          <<btn_set_focus btn_id=`btn_ok`/>>
+                        <</response>>
+                      <</ask>>
+                    <</response>>
+                  <</ask>>
+                "/>
+            </subtype_body>
+          </subtype_frame>
+
+        </body>
+
+        <button_row>
+          <button btn_id="btn_ok" btn_label="Ok" btn_enabled="true"
+            btn_validate="true" btn_default="true" lng="60" action="
+              <<end_form state=`completed`/>>
+            "/>
+        </button_row>
+        <frame_methods/>
+      </grid_frame>
+
+      <nb_end/>
+
+      <end_if/>
+
+      <if test="[[`if`, ``, `_ledger.separate_pmt_close`, `is`, `$False`, ``]]"/>
+
+      <block/>
+      <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="ap_per"
+          start_col="period_row_id" start_val="active_period" readonly="true">
         <toolbar>
           <tool type="nav"/>
         </toolbar>
@@ -67,6 +302,11 @@
 
           <block/>
           <subtype_frame subtype_obj="actions" subtype_col="action">
+
+            <subtype_body subtype_id="no_period">
+              <block/>
+              <panel/>
+            </subtype_body>
 
             <subtype_body subtype_id="no_action">
               <block/>
@@ -87,22 +327,16 @@
               <display obj_name="ledg_per" col_name="period_row_id" lng="20"/>
               <display obj_name="ledg_per" col_name="closing_date" lng="85"/>
               <button btn_id="close_period" btn_label="Close period"
-                help_msg = "Start 'period close' process"
+                help_msg = "Close period"
                 btn_enabled="true" btn_validate="true" action="
                   <<ask title=`Period close` enter=`No` escape=`No`
-                      question=`Ok to start period end process?`>>
+                      question=`Ok to close period?`>>
                     <<response ans=`No`/>>
                     <<response ans=`Yes`>>
-                      <<start_process name=`ap_per_close`>>
-                        <<call_params>>
-                          <<call_param name=`period_to_close` type=`data_attr` source=`ledg_per.period_row_id`/>>
-                          <<call_param name=`check_date` type=`data_attr` source=`ledg_per.closing_date`/>>
-                        <</call_params>>
-                      <</start_process>>
+                      <<pyfunc name=`custom.period_end_funcs.close_period`/>>
                       <<ask title=`Period close` enter=`Ok` escape=`Ok`
-                          question=`Close period process started`>>
+                          question=`Period closed`>>
                         <<response ans=`Ok`>>
-                          <<!--end_form state=`completed`/-->>
                           <<btn_set_focus btn_id=`btn_ok`/>>
                         <</response>>
                       <</ask>>
@@ -111,7 +345,7 @@
                   "/>
             </subtype_body>
 
-            <subtype_body subtype_id="reopen">
+            <subtype_body subtype_id="period_reopen">
               <block/>
               <panel/>
               <row/>
@@ -122,11 +356,17 @@
               <button btn_id="reopen_period" btn_label="Reopen period"
                 help_msg = "Reopen period if permitted"
                 btn_enabled="true" btn_validate="true" action="
-                  <<pyfunc name=`custom.period_end_funcs.reopen_period`/>>
-                  <<ask title=`Reopen period` enter=`Ok` escape=`Ok`
-                      question=`Period reopened`>>
-                    <<response ans=`Ok`>>
-                      <<btn_set_focus btn_id=`btn_ok`/>>
+                  <<ask title=`Period reopen` enter=`No` escape=`No`
+                      question=`Ok to reopen period?`>>
+                    <<response ans=`No`/>>
+                    <<response ans=`Yes`>>
+                      <<pyfunc name=`custom.period_end_funcs.reopen_period`/>>
+                      <<ask title=`Reopen period` enter=`Ok` escape=`Ok`
+                          question=`Period reopened`>>
+                        <<response ans=`Ok`>>
+                          <<btn_set_focus btn_id=`btn_ok`/>>
+                        <</response>>
+                      <</ask>>
                     <</response>>
                   <</ask>>
                 "/>
@@ -142,6 +382,9 @@
         </button_row>
         <frame_methods/>
       </grid_frame>
+
+      <end_if/>
+
     </body>
     <button_row/>
     <frame_methods/>

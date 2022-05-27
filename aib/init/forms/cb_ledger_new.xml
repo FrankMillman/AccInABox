@@ -33,6 +33,13 @@
       <label value="Description:"/>
       <col/>
       <input obj_name="ledger" col_name="descr" lng="160"/>
+      <if test="[[`if`, ``, `_param.gl_integration`, `is`, `$True`, ``]]"/>
+      <row/>
+      <col/>
+      <label value="G/l control a/c:"/>
+      <col/>
+      <input obj_name="ledger" col_name="gl_code"/>
+      <end_if/>
 
       <block/>
       <panel/>

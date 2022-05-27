@@ -4,6 +4,7 @@ import rep.finrpt as rep_finrpt
 import rep.tranrpt
 from common import AibError
 
+"""
 async def check_subledg(caller, params):
     # called from gl_per_close process - check that all sub-ledgers for this period have been closed
     context = caller.manager.process.root.context
@@ -40,6 +41,7 @@ async def check_subledg(caller, params):
     return_params = {'all_closed': not exists, 'module_id': module_id, 'ledger_id': ledger_id}
     print('check all closed:', return_params)
     return return_params
+"""
 
 async def check_ye(caller, xml):
     # called from gl_yearends on_start_row

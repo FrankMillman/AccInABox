@@ -199,7 +199,7 @@ async def get_ledger_params(company, module_row_id, ledger_row_id):
 
         if module_row_id not in ledger_params[company]:
             ledger_params[company][module_row_id] = {}
-            module_id = (await get_mod_id(company, module_row_id))
+            module_id = await get_mod_id(company, module_row_id)
             table_name = f'{module_id}_ledger_params'
 
             # create 'blank' ledg_obj for use if db_obj.exists is False
@@ -209,7 +209,7 @@ async def get_ledger_params(company, module_row_id, ledger_row_id):
             ledger_params[company][module_row_id][None] = ledg_obj
 
         if ledger_row_id not in ledger_params[company][module_row_id]:
-            module_id = (await get_mod_id(company, module_row_id))
+            module_id = await get_mod_id(company, module_row_id)
             table_name = f'{module_id}_ledger_params'
             context = await get_new_context(1, True, company, None, module_row_id, ledger_row_id)
             ledg_obj = await db.objects.get_db_object(context, table_name)
@@ -541,7 +541,7 @@ the value for each company is a dictionary -
   key: module_row_id
   value: a dictionary of all ledgers -
     key: ledger_row_id
-    value: a dictionary of all periods, where each period is a namedtuple
+    value: a (subclassed) dictionary of all periods, where each period is a namedtuple
       key: period_row_id
       value: PerObj(state=state
              if module_id == 'ar' -
@@ -551,16 +551,29 @@ the value for each company is a dictionary -
                   payment_date=payment_date
                   payment_state=payment_state
              )
+      reason for subclass - add additional attributes (can't do this with normal dict) -
+      'current_period' - period_row_id of current period, detected while selecting all periods
+                           used in get_current_period() below
+      'closing'        - list of period_row_id's where state = 'closing'
+                           used in get_active_period() below
 """
 
 async def get_current_period(company, module_row_id, ledger_row_id):
-    ledg_per = await get_ledger_periods(company, module_row_id, ledger_row_id)
-    for per in ledg_per:
-        if ledg_per[per].state == 'current':
-            return per
+    ledger_periods = await get_ledger_periods(company, module_row_id, ledger_row_id)
+    return ledger_periods.current_period
+
+async def get_active_period(company, module_row_id, ledger_row_id):
+    # if there is one or more periods with a state of 'closing', return the first one
+    # else return 'current' period
+    ledger_periods = await get_ledger_periods(company, module_row_id, ledger_row_id)
+    if ledger_periods.closing:
+        return ledger_periods.closing[0]
+    else:
+        return ledger_periods.current_period
 
 ledger_periods = {}
 ledg_per_lock = asyncio.Lock()
+class Ledg_Per(dict): pass  # a subclass to allow attributes for 'current_period' and 'closing'
 async def get_ledger_periods(company, module_row_id, ledger_row_id):
     async with ledg_per_lock:
         if company not in ledger_periods:
@@ -568,11 +581,14 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
         if module_row_id not in ledger_periods[company]:
             ledger_periods[company][module_row_id] = {}
         if ledger_row_id not in ledger_periods[company][module_row_id]:
-            ledger_periods[company][module_row_id][ledger_row_id] = {}
-            module_id = (await get_mod_id(company, module_row_id))
+            ledg_per = Ledg_Per()
+            ledger_periods[company][module_row_id][ledger_row_id] = ledg_per
+            current_period = None
+            closing_periods = []  # could be more than one
+            module_id = await get_mod_id(company, module_row_id)
 
-            conn = await db.connection._get_connection()
             # select all periods for module/ledger combination, with their current state
+            conn = await db.connection._get_connection()
             col_names = ['period_row_id', 'state']
             if module_id == 'ar':
                 col_names.append('statement_date')
@@ -580,8 +596,6 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
             elif module_id == 'ap':
                 col_names.append('payment_date')
                 col_names.append('payment_state')
-            # elif module_id == 'gl':
-            #     col_names.append('ye_state')
             PerObj = NT('Period', col_names)
             sql = []
             params = []
@@ -596,7 +610,15 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
             async for row in await conn.exec_sql(' '.join(sql), params):
                 period_data = PerObj(**{k: v for k, v in zip(col_names, row)})
                 period_row_id = period_data.period_row_id
-                ledger_periods[company][module_row_id][ledger_row_id][period_row_id] = period_data
+                ledg_per[period_row_id] = period_data
+                if period_data.state == 'current':
+                    if current_period is not None:  # should never happen
+                        raise AibError(head=f'{company} {module_id}', body='Cannot have more than one current_period')
+                    current_period = period_row_id
+                elif period_data.state == 'closing':
+                    closing_periods.append(period_row_id)
+            ledg_per.current_period = current_period
+            ledg_per.closing = closing_periods
 
     return ledger_periods[company][module_row_id][ledger_row_id]
 

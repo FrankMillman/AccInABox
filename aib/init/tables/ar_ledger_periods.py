@@ -158,7 +158,7 @@ cols.append ({
     'col_name'   : 'statement_state',
     'data_type'  : 'TEXT',
     'short_descr': 'State for statement run',
-    'long_descr' : 'State for statement run - open/closing/closed',
+    'long_descr' : 'State for statement run - open/closing/closed/reopened',
     'col_head'   : 'State',
     'key_field'  : 'N',
     'data_source': 'null_if',
@@ -169,19 +169,14 @@ cols.append ({
     'db_scale'   : 0,
     'scale_ptr'  : None,
     'dflt_val'   : None,
-    'dflt_rule'  : (
-        '<case>'
-          '<compare test="[[`if`, ``, `ledger_row_id>separate_stat_close`, `is`, `$True`, ``]]">'
-            '<literal value="open"/>'
-          '</compare>'
-        '</case>'
-        ),
+    'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
             ['open', 'Open'],
             ['closing', 'Closing'],
             ['closed', 'Closed'],
+            ['reopened', 'Reopened'],
         ],
     })
 cols.append ({
@@ -208,7 +203,7 @@ cols.append ({
     'col_name'   : 'state',
     'data_type'  : 'TEXT',
     'short_descr': 'State',
-    'long_descr' : 'State - current/open/re-opened/closing/closed',
+    'long_descr' : 'State - open/current/closing/closed/reopened',
     'col_head'   : 'State',
     'key_field'  : 'N',
     'data_source': 'proc',
@@ -218,13 +213,13 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 0,
     'scale_ptr'  : None,
-    'dflt_val'   : 'open',
+    'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-            ['current', 'Current'],
             ['open', 'Open'],
+            ['current', 'Current'],
             ['closing', 'Closing'],
             ['closed', 'Closed'],
             ['reopened', 'Reopened'],
@@ -295,6 +290,19 @@ virt.append ({
         "WHERE b.period_row_id >= a.period_row_id ORDER BY b.row_id LIMIT 1) "
         )
     })
+virt.append ({
+    'col_name'   : 'year_per_no',
+    'data_type'  : 'INT',
+    'short_descr': 'Period number in fin year',
+    'long_descr' : 'Period number in financial year',
+    'col_head'   : 'Period',
+    'sql'        : (
+        "SELECT "
+            "a.row_id - "
+            "COALESCE((SELECT b.period_row_id FROM {company}.adm_yearends b "
+            "WHERE b.period_row_id < a.row_id ORDER BY b.row_id DESC LIMIT 1), 0)"
+        )
+    })
 
 # cursor definitions
 cursors = []
@@ -303,14 +311,20 @@ cursors.append({
     'title': 'Maintain ar ledger periods',
     'columns': [
         ['period_row_id', 10, True, True],
-        ['statement_date', 100, False, True, [
-            ['if', '', 'ledger_row_id>separate_stat_close', 'is', '$True', '']
-            ]],
-        ['statement_state', 60, False, True, [
-            ['if', '', 'ledger_row_id>separate_stat_close', 'is', '$True', '']
-            ]],
         ['closing_date', 100, False, True],
         ['state', 60, False, True],
+        ],
+    'filter': [],
+    'sequence': [['row_id', False]],
+    'formview_name': None,
+    })
+cursors.append({
+    'cursor_name': 'ar_stat_per',
+    'title': 'Maintain ar statement periods',
+    'columns': [
+        ['period_row_id', 10, True, True],
+        ['statement_date', 100, False, True],
+        ['statement_state', 60, False, True],
         ],
     'filter': [],
     'sequence': [['row_id', False]],

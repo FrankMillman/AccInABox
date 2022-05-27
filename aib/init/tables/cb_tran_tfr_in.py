@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
-    'ledger_col'    : None,  # must be None - could be any ledger_id
+    'ledger_col'    : 'ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,

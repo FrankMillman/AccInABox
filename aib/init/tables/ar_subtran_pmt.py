@@ -142,9 +142,9 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : [
-        ['stat_date', 'Statement period not open', [
-            ['check', '', 'cust_row_id>ledger_row_id>separate_stat_close', 'is', '$False', ''],
-            ['or', '', 'subparent_row_id>tran_date', 'pyfunc', 'custom.date_funcs.check_stat_date', ''],
+        ['per_date', 'Period not open', [
+            ['check', '', 'subparent_row_id>tran_date', 'pyfunc',
+                'custom.date_funcs.check_tran_date,"ar",cust_row_id>ledger_row_id', ''],
             ]],
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', 'cust_row_id>currency_id', '=', 'currency_id', ''],
@@ -477,6 +477,31 @@ cursors = []
 
 # actions
 actions = []
+actions.append([
+    'upd_checks', [
+        [
+            'recheck_tran_date',
+            'Period is closed',
+            [
+                ['check', '', '$exists', 'is', '$True', ''],
+                ['or', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ar",cust_row_id>ledger_row_id', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'unpost_checks', [
+        [
+            'check_tran_date',
+            'Period is closed',
+            [
+                ['check', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ar",cust_row_id>ledger_row_id', ''],
+                ],
+            ],
+        ],
+    ])
 actions.append([
     'upd_on_post', {
         'aggr': [

@@ -144,6 +144,10 @@ cols.append ({
     'dflt_val'   : None,
     'dflt_rule'  : None,
     'col_checks' : [
+        ['per_date', 'Period not open', [
+            ['check', '', 'subparent_row_id>tran_date', 'pyfunc',
+                'custom.date_funcs.check_tran_date,"ap",supp_row_id>ledger_row_id', ''],
+            ]],
         ['alt_curr', 'Alternate currency not allowed', [
             ['check', '', 'supp_row_id>currency_id', '=', 'subparent_row_id>currency_id', ''],
             ['or', '', 'supp_row_id>ledger_row_id>alt_curr', 'is', '$True', '']
@@ -412,6 +416,31 @@ cursors = []
 
 # actions
 actions = []
+actions.append([
+    'upd_checks', [
+        [
+            'recheck_tran_date',
+            'Period is closed',
+            [
+                ['check', '', '$exists', 'is', '$True', ''],
+                ['or', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ap",supp_row_id>ledger_row_id', ''],
+                ],
+            ],
+        ],
+    ])
+actions.append([
+    'unpost_checks', [
+        [
+            'check_tran_date',
+            'Period is closed',
+            [
+                ['check', '', 'tran_date', 'pyfunc',
+                    'custom.date_funcs.check_tran_date,"ap",supp_row_id>ledger_row_id', ''],
+                ],
+            ],
+        ],
+    ])
 actions.append([
     'upd_on_post', {
         'aggr': [

@@ -519,9 +519,9 @@ class GuiGrid:
             start_col =  self.start_col
             if self.start_val.startswith("'"):  # either literal or column name
                 start_val = self.start_val[1:-1]
-            elif self.start_val == 'current_period':
+            elif self.start_val == 'active_period':  # 'closing' if exists, else 'current'
                 context = self.context
-                start_val = await db.cache.get_current_period(
+                start_val = await db.cache.get_active_period(
                     context.company, context.module_row_id, context.ledger_row_id)
             else:
                 start_val = await self.db_obj.getval(self.start_val)

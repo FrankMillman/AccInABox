@@ -866,8 +866,7 @@ function setup_form(args) {
           if (block.childNodes.length)
             box.style.marginLeft = '10px';
           block.appendChild(box);
-          if (notebook === null)  // causes a problem on notebook page - don't know why [2017-08-19]
-            box.style[cssFloat] = 'left';
+          box.style[cssFloat] = 'left';
           };
         var main_grid = document.createElement('span');
         main_grid.style.display = 'inline-block';

@@ -100,11 +100,12 @@ cols.append ({
             'Cannot change ledger id',
             [
                 ['check', '', '$value', '=', '_ctx.ledger_row_id', ''],
+                ['or', '', '_ctx.ledger_row_id', 'is', '$None', ''],
                 ['or', '', '$module_row_id', '!=', '_ctx.module_row_id', ''],
                 ],
             ],
         ],
-    'fkey'       : ['in_ledger_params', 'row_id', None, None, False, None],
+    'fkey'       : ['in_ledger_params', 'row_id', 'ledger_id', 'ledger_id', False, None],
     'choices'    : None,
     })
 cols.append ({
@@ -131,7 +132,7 @@ cols.append ({
     'col_name'   : 'state',
     'data_type'  : 'TEXT',
     'short_descr': 'State',
-    'long_descr' : 'State - current/open/re-opened/closing/closed',
+    'long_descr' : 'State - open/current/closing/closed/reopened',
     'col_head'   : 'State',
     'key_field'  : 'N',
     'data_source': 'proc',
@@ -146,8 +147,8 @@ cols.append ({
     'col_checks' : None,
     'fkey'       : None,
     'choices'    : [
-            ['current', 'Current period'],
             ['open', 'Period open'],
+            ['current', 'Current period'],
             ['closing', 'Period-end started'],
             ['closed', 'Period closed'],
             ['reopened', 'Period reopened'],

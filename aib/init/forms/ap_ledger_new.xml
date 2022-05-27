@@ -42,6 +42,13 @@
       <label value="Description:"/>
       <col/>
       <input obj_name="ledger" col_name="descr" lng="160"/>
+      <if test="[[`if`, ``, `_param.gl_integration`, `is`, `$True`, ``]]"/>
+      <row/>
+      <col/>
+      <label value="G/l control a/c:"/>
+      <col/>
+      <input obj_name="ledger" col_name="gl_code"/>
+      <end_if/>
       <row/>
       <col/>
       <label value="Separate payment close?"/>
@@ -82,7 +89,7 @@
         <</validation>>
         <<validation>>
           <<case>>
-            <<compare test=`[['if', 'ledger.separate_pmt_close', 'is', '$True', '']]`>>
+            <<compare test=`[['if', '', 'ledger.separate_pmt_close', 'is', '$True', '']]`>>
               <<case>>
                 <<compare test=`[['if', '', 'var.first_pmt_date', 'is', '$None', '']]`>>
                   <<error head=`Opening period` body=`Please enter first payment date`/>>

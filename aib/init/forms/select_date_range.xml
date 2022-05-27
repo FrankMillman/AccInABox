@@ -7,7 +7,7 @@
         sub_types="[
         [`select_method`, null,
           [
-            [`P`, `Select period`, [`start_period`, `end_period`], []],
+            [`P`, `Select period`, [`start_period`, `num_periods`], []],
             [`D`, `Select date`, [`start_date`, `end_date`], []]
             ]
           ]
@@ -17,10 +17,10 @@
 
       <mem_col col_name="start_period" data_type="INT" short_descr="Start period no"
         long_descr="Start period no" allow_amend="true" choices="[]"/>
-      <mem_col col_name="end_period" data_type="INT" short_descr="End period no"
-        long_descr="End period no" allow_amend="true" choices="[]"
-        col_checks="[[`range_check`, `Cannot be before start period`,
-          [[`check`, ``, `$value`, `>>=`, `var.start_period`, ``]]]]"/>
+      <mem_col col_name="num_periods" data_type="INT" short_descr="Number of periods"
+        long_descr="Number of periods" allow_amend="true" dflt_val="1"
+        col_checks="[[`range_check`, `Cannot be less than one`,
+          [[`check`, ``, `$value`, `>>=`, `1`, ``]]]]"/>
       <mem_col col_name="start_date" data_type="DTE" short_descr="Start date"
         long_descr="Start date" allow_amend="true"/>
       <mem_col col_name="end_date" data_type="DTE" short_descr="End date"
@@ -57,17 +57,11 @@
           <col/>
           <text value="From period:"/>
           <col/>
-          <input obj_name="var" col_name="start_period" lng="120" after="
-            <<case>>
-              <<compare test=`[['if', '', 'var.start_period', '>', 'var.end_period', '']]`>>
-                <<assign src=`var.start_period` tgt=`var.end_period`/>>
-              <</compare>>
-            <</case>>
-            "/>
+          <input obj_name="var" col_name="start_period" lng="180"/>
           <col/>
-          <text value="To period:"/>
+          <text value="Number of periods:"/>
           <col/>
-          <input obj_name="var" col_name="end_period" lng="120"/>
+          <input obj_name="var" col_name="num_periods" lng="40"/>
         </subtype_body>
 
         <subtype_body subtype_id="D">

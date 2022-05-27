@@ -37,13 +37,15 @@ adj_curr_per = 1  # for reports, default initial period can be adjusted by 1 if 
 
 async def setup_balance_date(caller, xml):
     # called from ar_balances, ap_balances, finrpt_run before_start_form
+
     context = caller.context
-    fin_periods = await db.cache.get_adm_periods(caller.company)
+    company = context.company
+    fin_periods = await db.cache.get_adm_periods(company)
     if context.module_id in ('nsls', 'npch'):
         mod, ledg = 8, 0  # use 'gl' periods (not thought through!)
     else:
         mod, ledg = context.module_row_id, context.ledger_row_id
-    adjusted_curr_per = await db.cache.get_current_period(context.company, mod, ledg)
+    adjusted_curr_per = await db.cache.get_current_period(company, mod, ledg)
     if adjusted_curr_per is None:
         raise AibError(head='Periods',
             body=f'No periods set up for {caller.context.module_row_id}.{caller.context.ledger_row_id}')
@@ -51,6 +53,12 @@ async def setup_balance_date(caller, xml):
         adjusted_curr_per -= adj_curr_per
 
     balance_date = fin_periods[adjusted_curr_per].closing_date
+    if context.module_id == 'ar':
+        ledger_params = await db.cache.get_ledger_params(company, mod, ledg)
+        if await ledger_params.getval('separate_stat_close'):
+            ledger_periods = await db.cache.get_ledger_periods(company, mod, ledg)
+            balance_date = ledger_periods[adjusted_curr_per].statement_date
+
     if balance_date > dt.today():
         balance_date = dt.today()
 
@@ -64,28 +72,59 @@ async def setup_balance_date(caller, xml):
 
 async def load_bal_settings(caller, xml):
     # called from select_balance_date before_start_form
+
     var = caller.data_objects['var']
     select_method, period_no, balance_date = await var.getval('settings')
     await var.setval('select_method', select_method)
     await var.setval('balance_date', balance_date)
 
-    if not hasattr(caller.context, 'cl_dt_choices'):
-        fin_periods = await db.cache.get_adm_periods(caller.company)
-        caller.context.cl_dt_choices = {fin_per.period_no:
-            f'{fin_per.year_per_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
-                for fin_per in fin_periods[1:]}
+    context = caller.context
+    company = context.company
+
+    if not hasattr(context, 'bal_dates'):
+
+        if context.module_id in ('nsls', 'npch'):
+            mod, ledg = 8, 0  # use 'gl' periods (not thought through!)
+        else:
+            mod, ledg = context.module_row_id, context.ledger_row_id
+
+        fin_periods = await db.cache.get_adm_periods(company)
+        ledger_periods = await db.cache.get_ledger_periods(company, mod, ledg)
+
+        balance_date = 'closing_date'
+        if context.module_id == 'ar':
+            ledger_params = await db.cache.get_ledger_params(company, mod, ledg)
+            if await ledger_params.getval('separate_stat_close'):
+                balance_date = 'statement_date'
+
+        if balance_date == 'closing_date':
+            context.bal_dates = {ledg_per: fin_periods[ledg_per].closing_date
+                for ledg_per in ledger_periods}
+            context.bal_date_choices = {ledg_per:
+                f'{fin_periods[ledg_per].year_per_no:\xa0>2}: '
+                f'{fin_periods[ledg_per].closing_date:%d/%m/%Y}'
+                    for ledg_per in ledger_periods}
+        else:
+            context.bal_dates = {ledg_per: ledger_periods[ledg_per].statement_date
+                for ledg_per in ledger_periods}
+            context.bal_date_choices = {ledg_per:
+#               f'{ledger_periods[ledg_per].year_per_no:\xa0>2}: '
+                f'{ledger_periods[ledg_per].statement_date:%d/%m/%Y}'
+                    for ledg_per in ledger_periods}
 
     fld = await var.getfld('period_no')
-    fld.col_defn.choices = caller.context.cl_dt_choices
+    fld.col_defn.choices = context.bal_date_choices
     await fld.setval(period_no)
 
 async def save_bal_settings(caller, xml):
+    # called from select_balance_date 'Ok' button
+
     var = caller.data_objects['var']
 
     if await var.getval('select_method') == 'P':
         fin_periods = await db.cache.get_adm_periods(caller.company)
         period_selected = await var.getval('period_no')
-        await var.setval('balance_date', fin_periods[period_selected].closing_date)
+        await var.setval('balance_date', caller.context.bal_dates[period_selected])
 
     await var.setval('settings', [
         await var.getval('select_method'),
@@ -95,8 +134,10 @@ async def save_bal_settings(caller, xml):
 
 async def setup_date_range(caller, xml):
     # called from various before_start_form
+
     context = caller.context
-    fin_periods = await db.cache.get_adm_periods(context.company)
+    company = context.company
+    fin_periods = await db.cache.get_adm_periods(company)
 
     start_period = None
     if 'balance_date_vars' in caller.data_objects:
@@ -110,10 +151,29 @@ async def setup_date_range(caller, xml):
     if start_period is None:
         # use current_period as the inital value for date_range
         start_period = await db.cache.get_current_period(
-            context.company, context.module_row_id, context.ledger_row_id)
+            company, context.module_row_id, context.ledger_row_id)
 
-    start_date = fin_periods[start_period].opening_date
-    end_date = fin_periods[start_period].closing_date
+    if context.module_id in ('nsls', 'npch'):
+        mod, ledg = 8, 0  # use 'gl' periods (not thought through!)
+    else:
+        mod, ledg = context.module_row_id, context.ledger_row_id
+
+    balance_date = 'closing_date'
+    if context.module_id == 'ar':
+        ledger_params = await db.cache.get_ledger_params(company, mod, ledg)
+        if await ledger_params.getval('separate_stat_close'):
+            balance_date = 'statement_date'
+
+    if balance_date == 'closing_date':
+        start_date = fin_periods[start_period].opening_date
+        end_date = fin_periods[start_period].closing_date
+    else:
+        ledger_periods = await db.cache.get_ledger_periods(company, mod, ledg)
+        end_date = ledger_periods[start_period].statement_date
+        try:
+            start_date = ledger_periods[start_period-1].statement_date + td(1)
+        except KeyError:  # no prior period - must be ledger's first period
+            start_date = fin_periods[start_period].opening_date
 
     var = caller.data_objects['date_range_vars']
     await var.setval('start_date', start_date)
@@ -121,13 +181,17 @@ async def setup_date_range(caller, xml):
     await var.setval('settings', [
         'P',  # select_method
         start_period,
-        start_period,
+        1, # num_periods
         start_date,
         end_date,
         ])
 
 async def load_range_settings(caller, xml):
     # called from select_date_range before_start_form
+
+    context = caller.context
+    company = context.company
+
     var = caller.data_objects['var']
 
     select_method, start_period, end_period, start_date, end_date = await var.getval('settings')
@@ -136,43 +200,75 @@ async def load_range_settings(caller, xml):
     await var.setval('start_date', start_date)
     await var.setval('end_date', end_date)
 
-    if not hasattr(caller.context, 'op_dt_choices'):
-        fin_periods = await db.cache.get_adm_periods(caller.company)
-        caller.context.op_dt_choices = {fin_per.period_no:
-            f'{fin_per.year_per_no:\xa0>2}: {fin_per.opening_date:%d/%m/%Y}'
-                for fin_per in fin_periods[1:]}
-        caller.context.cl_dt_choices = {fin_per.period_no:
-            f'{fin_per.year_per_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
-                for fin_per in fin_periods[1:]}
+    if not hasattr(context, 'date_ranges'):
+
+        if context.module_id in ('nsls', 'npch'):
+            mod, ledg = 8, 0  # use 'gl' periods (not thought through!)
+        else:
+            mod, ledg = context.module_row_id, context.ledger_row_id
+
+        fin_periods = await db.cache.get_adm_periods(company)
+        ledger_periods = await db.cache.get_ledger_periods(company, mod, ledg)
+
+        balance_date = 'closing_date'
+        if context.module_id == 'ar':
+            ledger_params = await db.cache.get_ledger_params(company, mod, ledg)
+            if await ledger_params.getval('separate_stat_close'):
+                balance_date = 'statement_date'
+
+        if balance_date == 'closing_date':
+            context.date_ranges = {ledg_per:
+                (fin_periods[ledg_per].opening_date, fin_periods[ledg_per].closing_date)
+                    for ledg_per in ledger_periods}
+            context.op_per_choices = {ledg_per:
+                f'{fin_periods[ledg_per].year_per_no:\xa0>2}: '
+                f'{fin_periods[ledg_per].opening_date:%d/%m/%y} - {fin_periods[ledg_per].closing_date:%d/%m/%y}'
+                    for ledg_per in ledger_periods}
+        else:
+            context.date_ranges = {ledg_per:
+                (ledger_periods[ledg_per-1].statement_date+td(1) if ledg_per-1 in ledger_periods
+                        else fin_periods[ledg_per].opening_date,
+                    ledger_periods[ledg_per].statement_date)
+                    for ledg_per in ledger_periods}
+            context.op_per_choices = {ledg_per:
+                f'{fin_periods[ledg_per].year_per_no:\xa0>2}: '
+                # next line is very long - don't know how to make it multi-line [2022-03-23]
+                f'{ledger_periods[ledg_per-1].statement_date + td(1) if ledg_per-1 in ledger_periods else fin_periods[ledg_per].opening_date:%d/%m/%y}'
+                f' - {ledger_periods[ledg_per].statement_date:%d/%m/%y}'
+                    for ledg_per in ledger_periods}
 
     fld = await var.getfld('start_period')
-    fld.col_defn.choices = caller.context.op_dt_choices
+    fld.col_defn.choices = context.op_per_choices
     await fld.setval(start_period)
 
-    fld = await var.getfld('end_period')
-    fld.col_defn.choices = caller.context.cl_dt_choices
-    await fld.setval(end_period)
-
 async def save_range_settings(caller, xml):
+    # called from select_date_range 'Ok' button
+
     var = caller.data_objects['var']
 
     if await var.getval('select_method') == 'P':
         fin_periods = await db.cache.get_adm_periods(caller.company)
         start_period = await var.getval('start_period')
-        await var.setval('start_date', fin_periods[start_period].opening_date)
-        end_period = await var.getval('end_period')
-        await var.setval('end_date', fin_periods[end_period].closing_date)
+        await var.setval('start_date', caller.context.date_ranges[start_period][0])
+        # end_period = await var.getval('end_period')
+        # await var.setval('end_date', caller.context.date_ranges[end_period][1])
+        num_periods = await var.getval('num_periods')
+        end_period = start_period + num_periods - 1
+        if end_period not in caller.context.date_ranges:
+            end_period = list(caller.context.date_ranges)[-1]
+        await var.setval('end_date', caller.context.date_ranges[end_period][1])
 
     await var.setval('settings', [
         await var.getval('select_method'),
         await var.getval('start_period'),
-        await var.getval('end_period'),
+        await var.getval('num_periods'),
         await var.getval('start_date'),
         await var.getval('end_date'),
         ])
     
 async def load_ye_per(caller, xml):
     # called from various ledger_summary's and finrpt_run before_start_form
+
     context = caller.context
     fin_periods = await db.cache.get_adm_periods(context.company)
 
@@ -184,7 +280,6 @@ async def load_ye_per(caller, xml):
         f'{fin_per.year_per_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
             for fin_per in fin_periods[1:]}
 
-    # mod, ledg = context.module_row_id, context.ledger_row_id
     if context.module_id in ('nsls', 'npch'):
         mod, ledg = 8, 0  # use 'gl' periods (not thought through!) does not work if no gl integration!
     else:
@@ -208,6 +303,7 @@ async def load_ye_per(caller, xml):
 
 async def setup_choices(caller, xml):
     # called from sls_report on_start_frame
+
     fin_periods = await db.cache.get_adm_periods(caller.company)
     y_ends = []
     for year_no, periods in groupby(fin_periods, attrgetter('year_no')):
@@ -387,6 +483,8 @@ async def get_due_date(caller, obj, xml):
     return dt.today()
 
 async def check_bf_date(db_obj, fld, value):
+    # called from various tran_date col_checks for b/f balances
+
     module_row_id = db_obj.db_table.module_row_id
     if db_obj.db_table.ledger_col is not None:
         ledger_row_id = await db_obj.getval(db_obj.db_table.ledger_col)
@@ -422,9 +520,6 @@ async def check_tran_date(db_obj, fld, value, module_id, ledger_row_id=0):
        if does not exist, errmsg='period not open'
     """
 
-    # if value > dt.today():
-    #     raise AibError(head='Transaction date', body='Future dates not allowed')
-
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
     period_row_id = bisect_left([_.closing_date for _ in adm_periods], value)
 
@@ -442,6 +537,27 @@ async def check_tran_date(db_obj, fld, value, module_id, ledger_row_id=0):
             ledg_obj = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
             ledger_id = await ledg_obj.getval('ledger_id')
         raise AibError(head='Transaction date', body=f'{ledger_id} - ledger periods not set up')
+
+    if period_row_id not in ledger_periods:
+        current_period = await db.cache.get_current_period(db_obj.company, module_row_id, ledger_row_id)
+        if period_row_id == current_period + 1:  # create new open period
+            module_id = (await db.cache.get_mod_id(db_obj.company, db_obj.db_table.module_row_id))
+            ledger_period = await db.objects.get_db_object(db_obj.context, f'{module_id}_ledger_periods')
+            init_vals={
+               'ledger_row_id': ledger_row_id,
+               'period_row_id': period_row_id,
+               'state': 'open',
+                }
+            if module_id == 'ar':
+                if await db_obj.getval('_ledger.separate_stat_close'):
+                    init_vals['statement_state'] = 'open'
+            elif module_id == 'ap':
+                if await db_obj.getval('_ledger.separate_pmt_close'):
+                    init_vals['payment_state'] = 'open'
+            await ledger_period.init(init_vals=init_vals)
+            await ledger_period.save()
+            ledger_periods = await db.cache.get_ledger_periods(db_obj.company, module_row_id, ledger_row_id)
+
     if period_row_id not in ledger_periods:
         if ledger_row_id == 0:
             ledger_id = 'gl'
@@ -458,20 +574,14 @@ async def check_tran_date(db_obj, fld, value, module_id, ledger_row_id=0):
         raise AibError(head='Transaction date', body=f'{ledger_id} - period is closed')
 
     if module_id == 'ar':
-        # if await db_obj.getval('cust_row_id>ledger_row_id>separate_stat_close'):
         if await db_obj.getval('_ledger.separate_stat_close'):
-
             statement_state = ledger_periods[period_row_id].statement_state
             if statement_state != 'open':
                 statement_date = ledger_periods[period_row_id].statement_date
                 if value <= statement_date:
-                    if ledger_row_id == 0:
-                        ledger_id = 'gl'
-                    else:
-                        ledg_obj = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
-                        ledger_id = await ledg_obj.getval('ledger_id')
+                    ledg_obj = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
+                    ledger_id = await ledg_obj.getval('ledger_id')
                     raise AibError(head='Transaction date', body=f'{ledger_id} - statement period is closed')
-
             if await db_obj.getval('_ledger.separate_stat_cust'):
                 if 'stat_dates' not in db_obj.context.data_objects:
                     db_obj.context.data_objects['stat_dates'] = await db.objects.get_db_object(
@@ -483,20 +593,24 @@ async def check_tran_date(db_obj, fld, value, module_id, ledger_row_id=0):
                     })
                 if stat_dates.exists:
                     if value <= await stat_dates.getval('statement_date'):
-                        if ledger_row_id == 0:
-                            ledger_id = 'gl'
-                        else:
-                            ledg_obj = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
-                            ledger_id = await ledg_obj.getval('ledger_id')
+                        ledg_obj = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
+                        ledger_id = await ledg_obj.getval('ledger_id')
                         raise AibError(head='Transaction date', body=f'{ledger_id} - statement period is closed')
+    elif module_id == 'ap':
+        if await db_obj.getval('_ledger.separate_pmt_close'):
+            payment_state = ledger_periods[period_row_id].payment_state
+            if payment_state != 'open':
+                payment_date = ledger_periods[period_row_id].payment_date
+                if value <= payment_date:
+                    ledg_obj = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
+                    ledger_id = await ledg_obj.getval('ledger_id')
+                    raise AibError(head='Transaction date', body=f'{ledger_id} - payment period is closed')
 
     return True
 
 async def check_ye_adj_date(db_obj, fld, value):
-    """
-    called from gl_tran_adj.tran_date col_checks
-    called again before inserting, in case period closed between 'capture' and 'save'
-    """
+    # called from gl_tran_adj.tran_date col_checks
+    # called again before inserting, in case period closed between 'capture' and 'save'
 
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
     period_row_id = bisect_left([_.closing_date for _ in adm_periods], value)
@@ -522,9 +636,7 @@ async def check_ye_adj_date(db_obj, fld, value):
     return True
 
 async def check_ye_tfr_date(db_obj, fld, value):
-    """
-    called from gl_tran_tfr.tran_date col_checks
-    """
+    # called from gl_tran_tfr.tran_date col_checks
 
     adm_periods = await db.cache.get_adm_periods(db_obj.company)
     period_row_id = bisect_left([_.closing_date for _ in adm_periods], value)
@@ -546,38 +658,5 @@ async def check_ye_tfr_date(db_obj, fld, value):
         raise AibError(head='Transaction date', body='Year end not started')
     if rows[0][0] != 'closing':
         raise AibError(head='Transaction date', body='Year end is closed')
-
-    return True
-
-async def check_stat_date(db_obj, fld, value):
-    # called as col_check from tran_date
-
-    module_row_id = db_obj.db_table.module_row_id
-    ledger_row_id = await db_obj.getval(db_obj.db_table.ledger_col)
-    ledger_params = await db.cache.get_ledger_params(db_obj.company, module_row_id, ledger_row_id)
-
-    adm_periods = await db.cache.get_adm_periods(db_obj.company)
-    period_row_id = bisect_left([_.closing_date for _ in adm_periods], value)
-    ledger_periods = await db.cache.get_ledger_periods(db_obj.company, module_row_id, ledger_row_id)
-    statement_state = ledger_periods[period_row_id].statement_state
-    if statement_state != 'open':
-        statement_date = ledger_periods[period_row_id].statement_date
-        if value <= statement_date:
-            # raise AibError(head='Transaction date', body='Statement period is closed')
-            return False
-
-    if await ledger_params.getval('separate_stat_cust'):
-        if 'stat_dates' not in db_obj.context.data_objects:
-            db_obj.context.data_objects['stat_dates'] = await db.objects.get_db_object(
-                db_obj.context, 'ar_stat_dates')
-        stat_dates = db_obj.context.data_objects['stat_dates']
-        await stat_dates.init(init_vals={
-            'cust_row_id': await db_obj.getval('cust_row_id'),
-            'period_row_id': period_row_id,
-            })
-        if stat_dates.exists:
-            if value <= await stat_dates.getval('statement_date'):
-                # raise AibError(head='Transaction date', body='Statement period closed')
-                return False
 
     return True

@@ -8,49 +8,33 @@
         sub_types="[
         [`action`, null,
           [
+            [`no_period`, `No period`, [], []],
             [`no_action`, `No action available`, [], []],
             [`period_close`, `Start period close`, [], []],
-            [`reopen`, `Reopen period`, [], []]
+            [`period_reopen`, `Reopen period`, [], []]
             ]
           ]
         ]">
       <mem_col col_name="action" data_type="TEXT" short_descr="Action"
         long_descr="Action" col_head="Action" allow_null="true" allow_amend="true"/>
     </mem_obj>
-    <mem_obj name="var" descr="Form variables" module_id="in">
-      <mem_col col_name="module_id" data_type="TEXT" short_descr="Module id"
-        long_descr="Module id"/>
-      <mem_col col_name="module_descr" data_type="TEXT" short_descr="Module descr"
-        long_descr="Module descr"/>
-      <mem_col col_name="ledger_id" data_type="TEXT" short_descr="Ledger id"
-        long_descr="Ledger id"/>
-      <mem_col col_name="ledger_descr" data_type="TEXT" short_descr="Ledger descr"
-        long_descr="Ledger descr"/>
-      <mem_col col_name="close_period" data_type="BOOL" short_descr="Close period?"
-        long_descr="Close period?" allow_amend="true"/>
-      <mem_col col_name="reopen_period" data_type="BOOL" short_descr="Reopen period?"
-        long_descr="Reopen period?" allow_amend="true"/>
-    </mem_obj>
   </mem_objects>
 
   <input_params/>
   <output_params/>
 
-  <frame main_object="var">
+  <frame main_object="ledg_per">
     <toolbar/>
     <body>
       <block/>
       <panel/>
       <row/>
       <col/>
-      <label value="Module:"/>
-      <display obj_name="var" col_name="module_descr" lng="150"/>
-      <col/>
       <label value="Ledger:"/>
-      <display obj_name="var" col_name="ledger_descr" lng="150"/>
+      <display obj_name="ledg_per" col_name="ledger_id" lng="50"/>
       <block/>
       <grid data_object="ledg_per" growable="false" num_grid_rows="8" cursor_name="in_per"
-          start_col="period_row_id" start_val="current_period" readonly="true">
+          start_col="period_row_id" start_val="active_period" readonly="true">
         <toolbar>
           <tool type="nav"/>
         </toolbar>
@@ -66,6 +50,11 @@
 
           <block/>
           <subtype_frame subtype_obj="actions" subtype_col="action">
+
+            <subtype_body subtype_id="no_period">
+              <block/>
+              <panel/>
+            </subtype_body>
 
             <subtype_body subtype_id="no_action">
               <block/>
@@ -88,18 +77,24 @@
               <button btn_id="close_period" btn_label="Close period"
                 help_msg = "Start 'period close' process"
                 btn_enabled="true" btn_validate="true" action="
-                  <<inline_form name=`period_close`>>
-                    <<on_return>>
-                      <<return state=`cancelled`>>
-                      <</return>>
-                      <<return state=`completed`>>
-                      <</return>>
-                    <</on_return>>
-                  <</inline_form>>
-                "/>
+                  <<ask title=`Period close` enter=`No` escape=`No`
+                      question=`Ok to close period?`>>
+                    <<response ans=`No`/>>
+                    <<response ans=`Yes`>>
+                      <<pyfunc name=`custom.period_end_funcs.close_period`/>>
+                      <<restart_grid obj_name=`ledg_per`/>>
+                      <<ask title=`Period close` enter=`Ok` escape=`Ok`
+                          question=`Period closed`>>
+                        <<response ans=`Ok`>>
+                          <<btn_set_focus btn_id=`btn_ok`/>>
+                        <</response>>
+                      <</ask>>
+                    <</response>>
+                  <</ask>>
+                  "/>
             </subtype_body>
 
-            <subtype_body subtype_id="reopen">
+            <subtype_body subtype_id="period_reopen">
               <block/>
               <panel/>
               <row/>
@@ -110,14 +105,21 @@
               <button btn_id="reopen_period" btn_label="Reopen period"
                 help_msg = "Reopen period if permitted"
                 btn_enabled="true" btn_validate="true" action="
-                  <<pyfunc name=`custom.period_end_funcs.reopen_period`/>>
-                  <<ask title=`Reopen period` enter=`Ok` escape=`Ok`
-                      question=`Period reopened`>>
-                    <<response ans=`Ok`>>
-                      <<btn_set_focus btn_id=`btn_ok`/>>
+                  <<ask title=`Period reopen` enter=`No` escape=`No`
+                      question=`Ok to reopen period?`>>
+                    <<response ans=`No`/>>
+                    <<response ans=`Yes`>>
+                      <<pyfunc name=`custom.period_end_funcs.reopen_period`/>>
+                      <<restart_grid obj_name=`ledg_per`/>>
+                      <<ask title=`Reopen period` enter=`Ok` escape=`Ok`
+                          question=`Period reopened`>>
+                        <<response ans=`Ok`>>
+                          <<btn_set_focus btn_id=`btn_ok`/>>
+                        <</response>>
+                      <</ask>>
                     <</response>>
                   <</ask>>
-                "/>
+                  "/>
             </subtype_body>
           </subtype_frame>
 
@@ -134,38 +136,4 @@
     <button_row/>
     <frame_methods/>
   </frame>
-  <inline_form name="period_close" title="Start period close process">
-    <frame main_object="var">
-      <toolbar/>
-      <body>
-        <block/>
-        <panel/>
-        <row/>
-        <col/>
-        <label value="Start period close process?"/>
-        <col/>
-        <button btn_id="start_period_close" btn_label="Start"
-          btn_enabled="true" btn_validate="true" action="
-            <<start_process name=`period_end`>>
-              <<call_params/>>
-              <<return_params>>
-              <</return_params>>
-              <<on_return>>
-                <<return state=`cancelled`/>>
-                <<return state=`completed`/>>
-              <</on_return>>
-            <</start_process>>
-          "/>
-      </body>
-      <button_row/>
-      <frame_methods>
-        <method name="on_req_cancel" action="
-          <<end_form state=`cancelled`/>>
-        "/>
-        <method name="on_req_close" action="
-          <<end_form state=`cancelled`/>>
-        "/>
-      </frame_methods>
-    </frame>
-  </inline_form>
 </form>
