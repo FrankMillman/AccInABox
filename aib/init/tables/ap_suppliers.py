@@ -299,6 +299,46 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'first_tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Date of first transaction',
+    'long_descr' : 'Date of first transaction - used to include/exclude account from date selection',
+    'col_head'   : 'First tran date',
+    'key_field'  : 'N',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'last_tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Date of last transaction',
+    'long_descr' : 'Date of last transaction - used to include/exclude account from date selection',
+    'col_head'   : 'Last tran date',
+    'key_field'  : 'N',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 
 # virtual column definitions
 virt = []
@@ -587,6 +627,14 @@ virt.append ({
             ", 0)"
         )
     })
+virt.append ({
+    'col_name'   : 'days_since_last_tran',
+    'data_type'  : 'INT',
+    'short_descr': 'Days since last transaction',
+    'long_descr' : 'No of days since last transaction',
+    'col_head'   : 'Last tran days',
+    'sql'        : "SELECT $fx_date_diff(a.last_tran_date, {_ctx.bal_date_supp})",
+    })
 
 # cursor definitions
 cursors = []
@@ -628,7 +676,11 @@ cursors.append({
         ['balance_sup', 100, False, True],
         ['balance_loc', 100, False, True],
         ],
-    'filter': [],
+    'filter': [
+        ['WHERE', '', 'first_tran_date', '<=', '_ctx.bal_date_supp', ''],
+        ['AND', '(', 'days_since_last_tran', '<', 32, ''],
+        ['OR', '', 'balance_sup', '!=', '0', ')'],
+        ],
     'sequence': [['supp_id', False]],
     'formview_name': 'ap_supp_bal',
     })

@@ -503,6 +503,38 @@ actions.append([
             ],
         'on_post': [
             [
+                'ar_customers',  # table name
+                [  # condition
+                    ['where', '', 'cust_row_id>first_tran_date', 'is', '$None', ''],
+                    ['or', '', 'cust_row_id>first_tran_date', '>', 'tran_date', ''],
+                    ],
+                False,  # split source?
+                [  # key fields
+                    ['row_id', 'cust_row_id'],  # tgt_col, src_col
+                    ],
+                [  # on post
+                    ['first_tran_date', '=', 'tran_date'],
+                    ],
+                [  # return values
+                    ],
+                ],
+            [
+                'ar_customers',  # table name
+                [  # condition
+                    ['where', '', 'cust_row_id>last_tran_date', 'is', '$None', ''],
+                    ['or', '', 'cust_row_id>last_tran_date', '<', 'tran_date', ''],
+                    ],
+                False,  # split source?
+                [  # key fields
+                    ['row_id', 'cust_row_id'],  # tgt_col, src_col
+                    ],
+                [  # on post
+                    ['last_tran_date', '=', 'tran_date'],
+                    ],
+                [  # return values
+                    ],
+                ],
+            [
                 'ar_openitems',  # table name
                 [  # condition
                     ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],

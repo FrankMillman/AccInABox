@@ -339,6 +339,46 @@ cols.append ({
     'fkey'       : None,
     'choices'    : None,
     })
+cols.append ({
+    'col_name'   : 'first_tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Date of first transaction',
+    'long_descr' : 'Date of first transaction - used to include/exclude account from date selection',
+    'col_head'   : 'First tran date',
+    'key_field'  : 'N',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'last_tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Date of last transaction',
+    'long_descr' : 'Date of last transaction - used to include/exclude account from date selection',
+    'col_head'   : 'Last tran date',
+    'key_field'  : 'N',
+    'data_source': 'prog',
+    'condition'  : None,
+    'allow_null' : True,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
+    'choices'    : None,
+    })
 # statement_closing_date INT [?]
 
 # virtual column definitions
@@ -719,6 +759,14 @@ virt.append ({
         """
         ),
     })
+virt.append ({
+    'col_name'   : 'days_since_last_tran',
+    'data_type'  : 'INT',
+    'short_descr': 'Days since last transaction',
+    'long_descr' : 'No of days since last transaction',
+    'col_head'   : 'Last tran days',
+    'sql'        : "SELECT $fx_date_diff(a.last_tran_date, {_ctx.bal_date_cust})",
+    })
 
 # cursor definitions
 cursors = []
@@ -760,7 +808,11 @@ cursors.append({
         ['balance_cus', 100, False, True],
         ['balance_loc', 100, False, True],
         ],
-    'filter': [],
+    'filter': [
+        ['WHERE', '', 'first_tran_date', '<=', '_ctx.bal_date_cust', ''],
+        ['AND', '(', 'days_since_last_tran', '<', 32, ''],
+        ['OR', '', 'balance_cus', '!=', '0', ')'],
+        ],
     'sequence': [['cust_id', False]],
     'formview_name': 'ar_cust_bal',
     })

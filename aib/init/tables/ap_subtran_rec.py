@@ -583,6 +583,38 @@ actions.append([
             ],
         'on_post': [
             [
+                'ap_suppliers',  # table name
+                [  # condition
+                    ['where', '', 'supp_row_id>first_tran_date', 'is', '$None', ''],
+                    ['or', '', 'supp_row_id>first_tran_date', '>', 'tran_date', ''],
+                    ],
+                False,  # split source?
+                [  # key fields
+                    ['row_id', 'supp_row_id'],  # tgt_col, src_col
+                    ],
+                [  # on post
+                    ['first_tran_date', '=', 'tran_date'],
+                    ],
+                [  # return values
+                    ],
+                ],
+            [
+                'ap_suppliers',  # table name
+                [  # condition
+                    ['where', '', 'supp_row_id>last_tran_date', 'is', '$None', ''],
+                    ['or', '', 'supp_row_id>last_tran_date', '<', 'tran_date', ''],
+                    ],
+                False,  # split source?
+                [  # key fields
+                    ['row_id', 'supp_row_id'],  # tgt_col, src_col
+                    ],
+                [  # on post
+                    ['last_tran_date', '=', 'tran_date'],
+                    ],
+                [  # return values
+                    ],
+                ],
+            [
                 'ap_openitems',  # table name
                 [  # condition
                     ['where', '', 'supp_row_id>ledger_row_id>open_items', 'is', '$True', ''],
