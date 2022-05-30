@@ -163,7 +163,7 @@ async def alloc_oldest(fld, xml):
                 amt_allocated = due_cust
             else:
                 amt_allocated = tot_to_allocate
-            allocations.append((row_id, str(amt_allocated)))
+            allocations.append([row_id, str(amt_allocated)])
             tot_to_allocate -= amt_allocated
             if not tot_to_allocate:
                 break  # fully allocated
@@ -219,12 +219,12 @@ async def get_due_bal(caller, xml):
 
     sql = f"""
         SELECT
-        sum(due_cust), 
-        SUM(CASE WHEN tran_date > '{dates[1]}' THEN due_cust ELSE 0 END),
-        SUM(CASE WHEN tran_date BETWEEN '{dates[2] + td(1)}' AND '{dates[1]}' THEN due_cust ELSE 0 END),
-        SUM(CASE WHEN tran_date BETWEEN '{dates[3] + td(1)}' AND '{dates[2]}' THEN due_cust ELSE 0 END),
-        SUM(CASE WHEN tran_date BETWEEN '{dates[4] + td(1)}' AND '{dates[3]}' THEN due_cust ELSE 0 END),
-        SUM(CASE WHEN tran_date <= '{dates[4]}' THEN due_cust ELSE 0 END)
+        COALESCE(SUM(due_cust), 0), 
+        COALESCE(SUM(CASE WHEN tran_date > '{dates[1]}' THEN due_cust ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN tran_date BETWEEN '{dates[2] + td(1)}' AND '{dates[1]}' THEN due_cust ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN tran_date BETWEEN '{dates[3] + td(1)}' AND '{dates[2]}' THEN due_cust ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN tran_date BETWEEN '{dates[4] + td(1)}' AND '{dates[3]}' THEN due_cust ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN tran_date <= '{dates[4]}' THEN due_cust ELSE 0 END), 0)
         FROM {mem_items.table_name}
         """
 

@@ -133,7 +133,7 @@
           <cur_col col_name="due_amt" lng="100" readonly="true"/>
           <cur_col col_name="authorised" lng="60" after="
             <<pyfunc name=`custom.aptrans_funcs.on_pmt_auth`/>>
-            <<restart_grid obj_name=`batch_det` start_col=`row_id` start_val=`{batch_det.row_id}`/>>
+            <<!--restart_grid obj_name=`batch_det` start_col=`row_id` start_val=`{batch_det.row_id}`/-->>
             "/>
           <cur_col col_name="pmt_amt" lng="100" readonly="true"/>
         </cur_columns>

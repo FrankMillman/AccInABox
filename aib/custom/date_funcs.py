@@ -32,7 +32,7 @@ database date functions -
         SELECT to_char(closing_date, 'dd') as day
 """
 
-adj_curr_per = 1  # for reports, default initial period can be adjusted by 1 if required, else set to 0
+adj_curr_per = 0  # for reports, default initial period can be adjusted by 1 if required, else set to 0
                   # if this works, make it a parameter in adm_params [2021-09-23]
 
 async def setup_balance_date(caller, xml):

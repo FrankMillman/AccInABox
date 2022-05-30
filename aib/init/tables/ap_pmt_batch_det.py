@@ -189,7 +189,7 @@ cols.append ({
     })
 cols.append ({
     'col_name'   : 'pmt_amt',
-    'data_type'  : '$TRN',
+    'data_type'  : '$RTRN',
     'short_descr': 'Payment amount',
     'long_descr' : 'Payment amount in supplier currency',
     'col_head'   : 'Pmt amt',
@@ -230,6 +230,14 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'rev_sign',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Reverse sign?',
+    'long_descr' : 'Reverse sign?',
+    'col_head'   : 'Reverse sign?',
+    'dflt_val'   : 'true',
+    })
 
 # cursor definitions
 cursors = []

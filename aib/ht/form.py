@@ -318,7 +318,7 @@ class Form:
                     table_name)
             else:
                 db_obj = await db.objects.get_db_object(self.context,
-                    table_name, db_parent)
+                    table_name, parent=db_parent)
 
             self.data_objects[obj_name] = db_obj
 

@@ -1466,22 +1466,7 @@ class RevDec(Decimal): # reversible decimal
     async def str_to_val(self, value):
         if value in (None, ''):
             return None
-        try:
-            value = D(value)
-        except DecimalException:
-            errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Decimal type'
-            raise AibError(head=self.col_defn.short_descr, body=errmsg)
-        scale = await self.get_scale()
-        quant = D(str(10**-scale))
-        try:
-            value = D(value).quantize(
-                quant, context=Context(traps=[Inexact]))
-        except Inexact:
-            if scale:
-                errmsg = f'{self.table_name}.{self.col_name} - cannot exceed {scale} decimals'
-            else:
-                errmsg = f'{self.table_name}.{self.col_name} - no decimals allowed'
-            raise AibError(head=self.col_defn.short_descr, body=errmsg)
+        value = await Decimal.str_to_val(self, value)
         try:
             rev_sign = await self.db_obj.getval('rev_sign')
         except KeyError:

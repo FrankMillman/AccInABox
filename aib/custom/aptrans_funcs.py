@@ -116,7 +116,7 @@ async def alloc_oldest(fld, xml):
                 amt_allocated = due_supp
             else:
                 amt_allocated = tot_to_allocate
-            allocations.append((row_id, str(amt_allocated)))
+            allocations.append([row_id, str(amt_allocated)])
             tot_to_allocate -= amt_allocated
             if not tot_to_allocate:
                 break  # fully allocated
@@ -209,7 +209,7 @@ async def setup_pmts_due(caller, xml):
                     due_tot = 0
                     allocations = []
                 last_supp_row_id = supp_row_id
-            allocations.append((item_row_id, str(due_supp), 0))  # convert Decimal to str (shorter!)
+            allocations.append((item_row_id, str(0-due_supp), 0))  # convert Decimal to str (shorter!)
             due_tot += due_supp
         if last_supp_row_id is not None:
             await batch_det.init()
@@ -236,9 +236,9 @@ async def setup_items_due(caller, xml):
         await items_due.setval('tran_number', await ap_items.getval('tran_number'))
         await items_due.setval('tran_date', await ap_items.getval('tran_date'))
         await items_due.setval('due_date', await ap_items.getval('due_date'))
-        await items_due.setval('amount_supp', await ap_items.getval('amount_supp'))
-        await items_due.setval('due_supp', due_amt)
-        await items_due.setval('pmt_supp', pmt_amt)
+        await items_due.setval('amount_supp', 0 - (await ap_items.getval('amount_supp')))
+        await items_due.setval('due_supp', 0 - D(due_amt))
+        await items_due.setval('pmt_supp', 0 - D(pmt_amt))
         await items_due.save()
 
 async def auth_pmt(caller, xml):
@@ -255,13 +255,13 @@ async def auth_pmt(caller, xml):
     async for _ in all_items:
         allocations.append((
             await items_due.getval('item_row_id'),
-            str(await items_due.getval('due_supp')),  # convert Decimal to str (shorter!)
-            str(await items_due.getval('pmt_supp')),
+            str(0 - (await items_due.getval('due_supp'))),  # convert Decimal to str (shorter!)
+            str(0 - (await items_due.getval('pmt_supp'))),
             ))
         pmt_amt += D(await items_due.getval('pmt_supp'))
 
     batch_det = context.data_objects['batch_det']
-    await batch_det.setval('pmt_amt', pmt_amt)
+    await batch_det.setval('pmt_amt', 0 - pmt_amt)
     await batch_det.setval('allocations', allocations)
     await batch_det.setval('authorised', True)
     await batch_det.save(from_upd_on_save=True)  # do not update audit trail
@@ -324,14 +324,14 @@ async def post_pmt_batch(caller, xml):
         cb_pmt = await db.objects.get_db_object(post_ctx, 'cb_tran_pmt')
         cb_det = await db.objects.get_db_object(post_ctx, 'cb_tran_pmt_det', parent=cb_pmt)
         ap_sub = await db.objects.get_db_object(post_ctx, 'ap_subtran_pmt', parent=cb_det)
-        ap_alloc = await db.objects.get_db_object(post_ctx, 'ap_allocations', ap_sub)
+        ap_alloc = await db.objects.get_db_object(post_ctx, 'ap_allocations', parent=ap_sub)
     elif await batch_hdr.getval('ledger_row_id>pmt_tran_source') == 'ap':
         pmt_tran = 'ap'
         post_ctx = await db.cache.get_new_context(context.user_row_id, context.sys_admin,
             context.company, context.mem_id, context.module_row_id, context.ledger_row_id)
         ap_pmt = await db.objects.get_db_object(post_ctx, 'ap_tran_pmt')
         ap_sub = await db.objects.get_db_object(post_ctx, 'ap_subtran_pmt', parent=ap_pmt)
-        ap_alloc = await db.objects.get_db_object(post_ctx, 'ap_allocations', ap_sub)
+        ap_alloc = await db.objects.get_db_object(post_ctx, 'ap_allocations', parent=ap_sub)
 
     async with post_ctx.db_session.get_connection():  # starts a transaction
 
@@ -345,9 +345,9 @@ async def post_pmt_batch(caller, xml):
             allocations = []
             for item_row_id, due_amt, pmt_amt in await batch_det.getval('allocations'):
                 if pmt_amt:
-                    allocations.append((item_row_id, pmt_amt))
+                    allocations.append([item_row_id, pmt_amt])
 
-            pmt_amt = 0 - (await batch_det.getval('pmt_amt'))
+            pmt_amt = await batch_det.getval('pmt_amt')
 
             if pmt_tran == 'cb':
                 await cb_pmt.init()
