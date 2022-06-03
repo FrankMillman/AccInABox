@@ -131,13 +131,20 @@ async def setup_inv_alloc(db_obj, conn, return_vals):
         raise AibError(head='Error', body='Insufficient stock')
 
 async def alloc_oldest(fld, xml):
-    # called as dflt_rule from ar_tran_rec/ar_subtran_rec.allocations
+    # called as dflt_rule from ar_tran_rec/ar_subtran_rec/ar_tran_alloc.allocations
     # only called if ledger_row_id>auto_alloc_oldest is True
 
     db_obj = fld.db_obj
     context = db_obj.context
+
     cust_row_id = await db_obj.getval('cust_row_id')
-    tot_to_allocate = 0 - await db_obj.getval('rec_cust')
+    amount_to_alloc = xml.get('amount_to_alloc')
+    if amount_to_alloc.startswith('0-'):
+        amount_to_alloc = 0 - (await db_obj.getval(amount_to_alloc[2:]))
+    else:
+        amount_to_alloc = await db_obj.getval(amount_to_alloc)
+
+    tot_to_allocate = 0 - amount_to_alloc
     context.as_at_date = await db_obj.getval('tran_date')
 
     if 'ar_openitems' not in context.data_objects:
@@ -150,6 +157,8 @@ async def alloc_oldest(fld, xml):
         ['WHERE', '', 'cust_row_id', '=', cust_row_id, ''],
         ['AND', '', 'due_cust', '!=', '0', ''],
         ]
+    if db_obj.table_name == 'ar_tran_alloc':
+        where.append(['AND', '', 'row_id', '!=', await db_obj.getval('item_row_id'), ''])
     order = [('tran_date', False), ('row_id', False)]
 
     allocations = []
@@ -352,9 +361,9 @@ async def setup_mem_items(caller, xml):
     where.append(['AND', '', 'tran_date', '>', context.first_date, ''])
     where.append(['AND', '', 'tran_date', '<=', context.last_date, ''])
     where.append(['AND', '', 'due_cust', '!=', 0, ''])
+    where.append(['AND', '', 'deleted_id', '=', 0, ''])
     if context.this_item_rowid is not None:  # allocation after transaction posted - exclude this transaction
         where.append(['AND', '', 'row_id', '!=', context.this_item_rowid, ''])
-    where.append(['AND', '', 'deleted_id', '=', 0, ''])
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db

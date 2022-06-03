@@ -47,6 +47,8 @@
         db_scale="2" scale_ptr="scale"/>
       <mem_col col_name="scale" data_type="INT" short_descr="Scale"
         long_descr="Scale"/>
+      <mem_col col_name="post_msg" data_type="TEXT" short_descr="Message to display while posting"
+        long_descr="Message to display while posting" allow_amend="true" dflt_val="Posting batch - please wait ..."/>
     </mem_obj>
     <mem_obj name="items_due" descr="In-memory table for items due" parent="var"
         actions="[[`upd_on_save`, [[`_parent`, null, false, [],
@@ -313,12 +315,14 @@
         <panel/>
         <row/>
         <col/>
-        <text value="Posting batch - please wait ..."/>
+        <!--text value="Posting batch - please wait ..."/-->
+        <display obj_name="var" col_name="post_msg" lng="200"/>
         <dummy after="
           <<pyfunc name=`custom.aptrans_funcs.post_pmt_batch`/>>
           <<change_button>>
             <<btn_enabled btn_id=`btn_ok` state=`true`/>>
           <</change_button>>
+          <<assign src=`'Posting batch - completed'` tgt=`var.post_msg`/>>
           "/>
       </body>
       <button_row>

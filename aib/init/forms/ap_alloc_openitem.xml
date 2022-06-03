@@ -43,7 +43,7 @@
       <col/>
       <label value="Original amount:"/>
       <col/>
-      <input obj_name="ap_this_item" col_name="unallocated" lng="84" readonly="true" skip="true"/>
+      <input obj_name="ap_this_item" col_name="orig_alloc" lng="84" readonly="true" skip="true"/>
 
       <col/>
       <label value="Amount to allocate:"/>

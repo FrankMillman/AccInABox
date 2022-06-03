@@ -368,7 +368,7 @@ cols.append ({
           '</compare>'
           '<compare test="[[`if`, ``, `supp_row_id>ledger_row_id>open_items`, `is`, `$True`, ``],'
               '[`and`, ``, `supp_row_id>ledger_row_id>auto_alloc_oldest`, `is`, `$True`, ``]]">'
-            '<pyfunc name="custom.aptrans_funcs.alloc_oldest"/>'
+            '<pyfunc name="custom.aptrans_funcs.alloc_oldest" amount_to_alloc="pmt_supp"/>'
           '</compare>'
         '</case>'
         ),

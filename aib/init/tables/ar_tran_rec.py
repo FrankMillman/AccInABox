@@ -295,7 +295,7 @@ cols.append ({
           '</compare>'
           '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>open_items`, `is`, `$True`, ``],'
               '[`and`, ``, `cust_row_id>ledger_row_id>auto_alloc_oldest`, `is`, `$True`, ``]]">'
-            '<pyfunc name="custom.artrans_funcs.alloc_oldest"/>'
+            '<pyfunc name="custom.artrans_funcs.alloc_oldest" amount_to_alloc="rec_amt"/>'
           '</compare>'
         '</case>'
         ),

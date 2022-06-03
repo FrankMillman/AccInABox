@@ -84,13 +84,20 @@ async def setup_openitems(db_obj, conn, return_vals):
             )
 
 async def alloc_oldest(fld, xml):
-    # called as dflt_rule from ap_tran_pmt/ap_subtran_pmt.allocations
+    # called as dflt_rule from ap_tran_pmt/ap_subtran_pmt/ap_tran_alloc.allocations
     # only called if ledger_row_id>auto_alloc_oldest is True
 
     db_obj = fld.db_obj
     context = db_obj.context
+
     supp_row_id = await db_obj.getval('supp_row_id')
-    tot_to_allocate = 0 - await db_obj.getval('pmt_supp')
+    amount_to_alloc = xml.get('amount_to_alloc')
+    if amount_to_alloc.startswith('0-'):
+        amount_to_alloc = 0 - (await db_obj.getval(amount_to_alloc[2:]))
+    else:
+        amount_to_alloc = await db_obj.getval(amount_to_alloc)
+
+    tot_to_allocate = 0 - amount_to_alloc
     context.as_at_date = await db_obj.getval('tran_date')
 
     if 'ap_openitems' not in context.data_objects:
@@ -103,6 +110,8 @@ async def alloc_oldest(fld, xml):
         ['WHERE', '', 'supp_row_id', '=', supp_row_id, ''],
         ['AND', '', 'due_supp', '!=', '0', ''],
         ]
+    if db_obj.table_name == 'ap_tran_alloc':
+        where.append(['AND', '', 'row_id', '!=', await db_obj.getval('item_row_id'), ''])
     order = [('tran_date', False), ('row_id', False)]
 
     allocations = []

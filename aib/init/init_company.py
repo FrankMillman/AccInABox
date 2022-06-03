@@ -597,7 +597,7 @@ async def setup_forms(context, conn):
     await setup_form('ar_journal')
     await setup_form('ar_receipt')
     await setup_form('ar_alloc_item')
-    await setup_form('ar_alloc')
+    # await setup_form('ar_alloc')
     await setup_form('ar_alloc_openitem')
     await setup_form('setup_nsls_codes')
     await setup_form('sls_report')
@@ -608,7 +608,7 @@ async def setup_forms(context, conn):
     await setup_form('ap_journal')
     await setup_form('ap_payment')
     await setup_form('ap_alloc_item')
-    await setup_form('ap_alloc')
+    # await setup_form('ap_alloc')
     await setup_form('ap_alloc_openitem')
     await setup_form('ap_pmt_batch')
     await setup_form('setup_npch_codes')
@@ -910,7 +910,7 @@ async def setup_menus(context, conn, company_name):
                 ['Review unposted receipts', 'grid', 'ar_tran_rec', 'unposted_rec'],
                 ]],
             ['Allocations', 'menu', 'ar', [
-                ['Allocate transaction', 'grid', 'ar_openitems', 'unallocated'],
+                ['Allocate item', 'grid', 'ar_openitems', 'unallocated'],
                 ['List of allocations posted', 'form', 'ar_alloc_posted'],
                 ['Review unposted allocations', 'grid', 'ar_tran_alloc', 'unposted_alloc'],
                 ]],
@@ -951,7 +951,7 @@ async def setup_menus(context, conn, company_name):
                 ['Review unposted payments', 'grid', 'ap_tran_pmt', 'unposted_pmt'],
                 ]],
             ['Allocations', 'menu', 'ap', [
-                ['Allocate transaction', 'grid', 'ap_openitems', 'unallocated'],
+                ['Allocate item', 'grid', 'ap_openitems', 'unallocated'],
                 ['List of allocations posted', 'form', 'ap_alloc_posted'],
                 ['Review unposted allocations', 'grid', 'ap_tran_alloc', 'unposted_alloc'],
                 ]],

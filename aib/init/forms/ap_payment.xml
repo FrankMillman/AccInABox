@@ -5,7 +5,6 @@
   ">
   <db_objects>
     <db_obj name="ap_pmt" table_name="ap_tran_pmt" is_formview_obj="true"/>
-    <db_obj name="ap_subpmt" table_name="ap_subtran_pmt" parent="ap_pmt"/>
   </db_objects>
   <mem_objects/>
 
@@ -104,12 +103,11 @@
         <col/>
         <button lng="150" btn_id="alloc" btn_label="Allocate now"
           btn_enabled="true" btn_validate="true" action="
-            <<req_save/>>
             <<assign src=`$None` tgt=`_ctx.this_item_rowid`/>>
             <<sub_form name=`ap_alloc_item`>>
               <<call_params>>
                 <<call_param name=`alloc_header` type=`data_obj` source=`ap_pmt`/>>
-                <<call_param name=`amount_to_alloc` type=`data_attr` source=`0-ap_subpmt.pmt_supp`/>>
+                <<call_param name=`amount_to_alloc` type=`data_attr` source=`ap_pmt.pmt_amt`/>>
               <</call_params>>
               <<return_params/>>
               <<on_return>>

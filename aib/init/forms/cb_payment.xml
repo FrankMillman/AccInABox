@@ -20,7 +20,6 @@
     <db_obj name="npch" table_name="npch_subtran" parent="cb_pmt_det"/>
     <db_obj name="ar_jnl" table_name="ar_subtran_jnl" parent="cb_pmt_det"/>
     <db_obj name="ap_subpmt" table_name="ap_subtran_pmt" parent="cb_pmt_det"/>
-    <db_obj name="ap_allocations" table_name="ap_allocations" parent="ap_subpmt"/>
     <db_obj name="gl" table_name="gl_subtran_jnl" parent="cb_pmt_det"/>
     <db_obj name="com" table_name="cb_comments" parent="cb_pmt_det"/>
   </db_objects>
@@ -63,8 +62,8 @@
       <col/>
       <col/>
       <col/>
-	  <button lng="150" btn_id="amd_hdr" btn_label="Amend header"
-		btn_enabled="true" btn_validate="true" action="
+    <button lng="150" btn_id="amd_hdr" btn_label="Amend header"
+    btn_enabled="true" btn_validate="true" action="
           <<inline_form name=`tran_header`>>
             <<on_return>>
               <<return state=`cancelled`/>>

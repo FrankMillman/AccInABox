@@ -81,8 +81,8 @@ cols.append ({
 cols.append ({
     'col_name'   : 'item_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Trans item id',
-    'long_descr' : 'Transaction item row id',
+    'short_descr': 'Open item id',
+    'long_descr' : 'Open item row id',
     'col_head'   : 'Item id',
     'key_field'  : 'A',
     'data_source': 'input',
@@ -169,7 +169,7 @@ cols.append ({
           '</compare>'
           '<compare test="[[`if`, ``, `supp_row_id>ledger_row_id>open_items`, `is`, `$True`, ``],'
               '[`and`, ``, `supp_row_id>ledger_row_id>auto_alloc_oldest`, `is`, `$True`, ``]]">'
-            '<pyfunc name="custom.aptrans_funcs.alloc_oldest"/>'
+            '<pyfunc name="custom.aptrans_funcs.alloc_oldest" amount_to_alloc="item_row_id>unallocated"/>'
           '</compare>'
         '</case>'
         ),
@@ -389,7 +389,7 @@ actions.append([
                     ['tran_row_id', 'row_id'],  # tgt_col, src_col
                     ],
 
-                ['item_row_id', 'alloc_cust'],  # fields to be updated
+                ['item_row_id', 'alloc_supp'],  # fields to be updated
 
                 [],  # return values
 

@@ -490,17 +490,22 @@ virt.append ({
         )
     })
 virt.append ({
+  'col_name'   : 'orig_alloc',
+  'data_type'  : '$PTY',
+  'short_descr': 'Orig amt of unallocated',
+  'long_descr' : 'Orig amt of unallocated',
+  'col_head'   : 'Orig amt',
+  'db_scale'   : 2,
+  'scale_ptr'  : 'cust_row_id>currency_id>scale',
+  'sql'        : '0 - a.amount_cust',
+  })
+virt.append ({
   'col_name'   : 'unallocated',
   'data_type'  : '$PTY',
   'short_descr': 'Amount unallocated',
   'long_descr' : (
-      'Amount still to be allocated. '
-      'Take amount to be allocated as calculated in balance_cust. '
-      'Deduct any allocations made from this item against other items (c.item_row_id = a.row_id) '
-      'where ar_tran_alloc is unposted. The assumption is that they all relate to the allocation '
-      'being entered. If two users are allocating the same item at the same time this would be '
-      'incorrect, but very unlikely. '
-      'NB Only used in ar_alloc.xml.'
+      "Amount still to be allocated. "
+      "Used in cursor 'unallocated', which is used in ar transaction menu 'Allocate item'."
       ),
   'col_head'   : 'Amt unalloc',
   'db_scale'   : 2,
@@ -542,13 +547,16 @@ cursors.append({
         ['cust_row_id>currency_id>symbol', 40, False, True, [
             ['if', '', 'cust_row_id>ledger_row_id>currency_id', 'is', '$None', '']
             ]],
+        ['orig_alloc', 100, False, True],
         ['unallocated', 100, False, True],
         ],
     'filter': [
-        ['WHERE', '', 'tran_type', '!=', "'ar_inv'", ''],
-        ['AND', '', 'unallocated', '!=', '0', ''],
+        # ['WHERE', '', 'tran_type', '!=', "'ar_inv'", ''],
+        # ['AND', '', 'unallocated', '!=', '0', ''],
+        ['WHERE', '', 'unallocated', '>', '0', ''],
         ],
     'sequence': [
+        ['cust_row_id>party_row_id>party_id', False],
         ['tran_number', False],
         ],
     'formview_name': 'ar_alloc_openitem',

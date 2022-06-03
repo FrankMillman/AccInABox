@@ -81,8 +81,8 @@ cols.append ({
 cols.append ({
     'col_name'   : 'item_row_id',
     'data_type'  : 'INT',
-    'short_descr': 'Trans item id',
-    'long_descr' : 'Transaction item row id',
+    'short_descr': 'Open item id',
+    'long_descr' : 'Open item row id',
     'col_head'   : 'Item id',
     'key_field'  : 'A',
     'data_source': 'input',
@@ -169,7 +169,7 @@ cols.append ({
           '</compare>'
           '<compare test="[[`if`, ``, `cust_row_id>ledger_row_id>open_items`, `is`, `$True`, ``],'
               '[`and`, ``, `cust_row_id>ledger_row_id>auto_alloc_oldest`, `is`, `$True`, ``]]">'
-            '<pyfunc name="custom.artrans_funcs.alloc_oldest"/>'
+            '<pyfunc name="custom.artrans_funcs.alloc_oldest" amount_to_alloc="0-item_row_id>unallocated"/>'
           '</compare>'
         '</case>'
         ),

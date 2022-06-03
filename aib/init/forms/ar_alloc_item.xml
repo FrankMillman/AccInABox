@@ -13,7 +13,7 @@
       <mem_col col_name="unallocated" data_type="DEC" short_descr="Unallocated"
         long_descr="Unallocated" allow_amend="true"
         db_scale="2" scale_ptr="scale"/>
-      </mem_obj>
+    </mem_obj>
 
     <mem_obj name="due_bal" descr="Balance due in customer currency">
       <mem_col col_name="due_total" data_type="DEC" short_descr="Total"
