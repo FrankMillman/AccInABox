@@ -508,9 +508,9 @@ virt.append ({
                 "WHERE d.item_row_id = b.row_id), 0) AS balances "
             # "FROM {company}.ar_openitems b, {company}.ar_trans c "
             # "WHERE b.tran_type = c.tran_type  AND b.tran_row_id = c.tran_row_id "
-            #     "AND c.tran_date <= {_ctx.bal_date_cust} "
+            #     "AND c.tran_date <= {_ctx.as_at_date} "
             "FROM {company}.ar_openitems b "
-            "WHERE b.tran_date <= {_ctx.bal_date_cust} "
+            "WHERE b.tran_date <= {_ctx.as_at_date} "
             ") AS temp_openitems "
         "WHERE temp_openitems.cust_row_id = a.row_id "
         )
@@ -531,9 +531,9 @@ virt.append ({
                 "WHERE d.item_row_id = b.row_id), 0) AS balances "
             # "FROM {company}.ar_openitems b, {company}.ar_trans c "
             # "WHERE b.tran_type = c.tran_type  AND b.tran_row_id = c.tran_row_id "
-            #     "AND c.tran_date <= {_ctx.bal_date_cust} "
+            #     "AND c.tran_date <= {_ctx.as_at_date} "
             "FROM {company}.ar_openitems b "
-            "WHERE b.tran_date <= {_ctx.bal_date_cust} "
+            "WHERE b.tran_date <= {_ctx.as_at_date} "
             ") AS temp_openitems "
         "WHERE temp_openitems.cust_row_id = a.row_id "
         )
@@ -675,7 +675,6 @@ virt.append ({
                 "ORDER BY b.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals b "
             "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {_ctx.bal_date_cust} "
             "AND b.cust_row_id = a.row_id "
             ") as c "
             "WHERE c.row_num = 1 "
@@ -699,7 +698,54 @@ virt.append ({
                 "ORDER BY b.tran_date DESC) row_num "
             "FROM {company}.ar_cust_totals b "
             "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {_ctx.bal_date_cust} "
+            "AND b.cust_row_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            ")"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'bal_cus_as_at',
+    'data_type'  : '$PTY',
+    'short_descr': 'Balance - cust',
+    'long_descr' : 'Balance - cust',
+    'col_head'   : 'Balance cust',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'currency_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        "(SELECT SUM(c.tran_tot_cust) FROM ( "
+            "SELECT b.tran_tot_cust, ROW_NUMBER() OVER (PARTITION BY "
+                "b.cust_row_id, b.location_row_id, b.function_row_id, "
+                "b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id "
+                "ORDER BY b.tran_date DESC) row_num "
+            "FROM {company}.ar_cust_totals b "
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date <= {_ctx.as_at_date} "
+            "AND b.cust_row_id = a.row_id "
+            ") as c "
+            "WHERE c.row_num = 1 "
+            ")"
+        ),
+    })
+virt.append ({
+    'col_name'   : 'bal_loc_as_at',
+    'data_type'  : '$LCL',
+    'short_descr': 'Balance - local',
+    'long_descr' : 'Balance - local',
+    'col_head'   : 'Balance loc',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        "(SELECT SUM(c.tran_tot_local) FROM ( "
+            "SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
+                "b.cust_row_id, b.location_row_id, b.function_row_id, "
+                "b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id "
+                "ORDER BY b.tran_date DESC) row_num "
+            "FROM {company}.ar_cust_totals b "
+            "WHERE b.deleted_id = 0 "
+            "AND b.tran_date <= {_ctx.as_at_date} "
             "AND b.cust_row_id = a.row_id "
             ") as c "
             "WHERE c.row_num = 1 "
@@ -765,7 +811,7 @@ virt.append ({
     'short_descr': 'Days since last transaction',
     'long_descr' : 'No of days since last transaction',
     'col_head'   : 'Last tran days',
-    'sql'        : "SELECT $fx_date_diff(a.last_tran_date, {_ctx.bal_date_cust})",
+    'sql'        : "SELECT $fx_date_diff(a.last_tran_date, {_ctx.as_at_date})",
     })
 
 # cursor definitions
@@ -805,13 +851,13 @@ cursors.append({
         ['function_row_id>function_id', 60, False, True, [
             ['if', '', 'ledger_row_id>valid_fun_ids>is_leaf', 'is', '$False', '']
             ]],
-        ['balance_cus', 100, False, True],
-        ['balance_loc', 100, False, True],
+        ['bal_cus_as_at', 100, False, True],
+        ['bal_loc_as_at', 100, False, True],
         ],
     'filter': [
-        ['WHERE', '', 'first_tran_date', '<=', '_ctx.bal_date_cust', ''],
+        ['WHERE', '', 'first_tran_date', '<=', '_ctx.as_at_date', ''],
         ['AND', '(', 'days_since_last_tran', '<', 32, ''],
-        ['OR', '', 'balance_cus', '!=', '0', ')'],
+        ['OR', '', 'bal_cus_as_at', '!=', '0', ')'],
         ],
     'sequence': [['cust_id', False]],
     'formview_name': 'ar_cust_bal',

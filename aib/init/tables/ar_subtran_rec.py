@@ -443,15 +443,15 @@ virt.append ({
     'col_name'   : 'item_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Open item row id',
-    'long_descr' : 'Open item row id',
+    'long_descr' : 'Open item row id - return value from ar_openitems.on_post',
     'col_head'   : 'Item id',
     'fkey'       : ['ar_openitems', 'row_id', None, None, False, None],
-    'sql'        : (
-        "SELECT b.row_id FROM {company}.ar_openitems b "
-        "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
-        "WHERE c.tran_type = 'ar_subrec' AND b.tran_row_id = a.row_id "
-        "AND b.split_no = 0 AND b.deleted_id = 0"
-        ),
+    # 'sql'        : (
+    #     "SELECT b.row_id FROM {company}.ar_openitems b "
+    #     "JOIN {company}.adm_tran_types c ON c.row_id = b.trantype_row_id "
+    #     "WHERE c.tran_type = 'ar_subrec' AND b.tran_row_id = a.row_id "
+    #     "AND b.split_no = 0 AND b.deleted_id = 0"
+    #     ),
     })
 virt.append ({
     'col_name'   : 'this_trantype_row_id',

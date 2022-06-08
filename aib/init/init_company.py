@@ -306,6 +306,7 @@ async def setup_other_tables(context, conn):
         'ar_subtran_pmt',
         'ar_subtran_jnl',
         'ar_tran_alloc',
+        'ar_tran_alloc_tot',
         'ar_tran_bf',
         'ar_tran_bf_det',
         'ar_uea_bf',
@@ -331,6 +332,7 @@ async def setup_other_tables(context, conn):
         'ap_subtran_rec',
         'ap_subtran_jnl',
         'ap_tran_alloc',
+        'ap_tran_alloc_tot',
         'ap_tran_bf',
         'ap_tran_bf_det',
         'ap_uex_bf',
@@ -1098,6 +1100,7 @@ async def setup_init_data(context, conn, company_name):
     tran_types.append(('ar_rec', 'Ar receipt', 'ar', 'ar_tran_rec'))
     tran_types.append(('ar_disc', 'Ar discount', 'ar', 'ar_tran_disc'))
     tran_types.append(('ar_alloc', 'Ar allocation', 'ar', 'ar_tran_alloc'))
+    tran_types.append(('ar_alloc_tot', 'Ar allocation on zero balance', 'ar', 'ar_tran_alloc_tot'))
     tran_types.append(('ar_subrec', 'Ar subtran receipt', 'ar', 'ar_subtran_rec'))
     tran_types.append(('ar_subpmt', 'Ar subtran payment', 'ar', 'ar_subtran_pmt'))
     tran_types.append(('ar_subjnl', 'Ar subtran journal', 'ar', 'ar_subtran_jnl'))
@@ -1109,6 +1112,7 @@ async def setup_init_data(context, conn, company_name):
     tran_types.append(('ap_pmt', 'Ap payment', 'ap', 'ap_tran_pmt'))
     tran_types.append(('ap_disc', 'Ap discount', 'ap', 'ap_tran_disc'))
     tran_types.append(('ap_alloc', 'Ap allocation', 'ap', 'ap_tran_alloc'))
+    tran_types.append(('ap_alloc_tot', 'Ap allocation on zero balance', 'ar', 'ap_tran_alloc_tot'))
     tran_types.append(('ap_subpmt', 'Ap subtran payment', 'ap', 'ap_subtran_pmt'))
     tran_types.append(('ap_subrec', 'Ap subtran receipt', 'ap', 'ap_subtran_rec'))
     tran_types.append(('ap_subjnl', 'Ap subtran journal', 'ap', 'ap_subtran_jnl'))

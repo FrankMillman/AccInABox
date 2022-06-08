@@ -123,6 +123,7 @@ cols.append ({
             ['ap_subpmt', 'ap_subtran_pmt'],
             ['ap_disc', 'ap_tran_disc'],
             ['ap_alloc', 'ap_tran_alloc'],
+            ['ap_alloc_tot', 'ap_tran_alloc_tot'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,

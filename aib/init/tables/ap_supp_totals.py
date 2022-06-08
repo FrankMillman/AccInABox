@@ -333,9 +333,46 @@ virt.append ({
     'col_head'   : 'Code',
     'dflt_val'   : '{supp_row_id>party_row_id>party_id}',
     })
+virt.append ({
+    'col_name'   : 'balance_supp',
+    'data_type'  : '$PTY',
+    'short_descr': 'Balance - supp curr',
+    'long_descr' : 'Balance - supplier currency',
+    'col_head'   : 'Bal supp',
+    'db_scale'   : 2,
+    'scale_ptr'  : 'supp_row_id>currency_id>scale',
+    'dflt_val'   : '0',
+    'sql'        : (
+        """
+        (SELECT SUM(c.tran_tot_supp) FROM (
+            SELECT b.tran_tot_supp, ROW_NUMBER() OVER (PARTITION BY
+                b.supp_row_id, b.location_row_id, b.function_row_id,
+                b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id
+                ORDER BY b.tran_date DESC) row_num
+            FROM {company}.ap_supp_totals b
+            WHERE b.deleted_id = 0
+            AND b.supp_row_id = a.supp_row_id
+            ) as c
+            WHERE c.row_num = 1
+            )
+        """
+        ),
+    })
 
 # cursor definitions
 cursors = []
 
 # actions
 actions = []
+actions.append([
+    'after_save',
+      '<case>'
+        '<compare test="[[`if`, ``, `supp_row_id>ledger_row_id>open_items`, `is`, `$True`, ``]]">'
+          '<case>'
+            '<compare test="[[`if`, ``, `recalc(balance_supp)`, `=`, `0`, ``]]">'
+              '<pyfunc name=`custom.aptrans_funcs.alloc_all`/>'
+            '</compare>'
+          '</case>'
+        '</compare>'
+      '</case>'
+    ])

@@ -334,8 +334,7 @@
       <method name="on_start_frame" action="
         <<init_obj obj_name=`bal_vars`/>>
         <<assign src=`var.settings` tgt=`balance_date_vars.settings`/>>
-        <<assign src=`_ctx.bal_date_cust` tgt=`balance_date_vars.balance_date`/>>
-        <<assign src=`_ctx.bal_date_cust` tgt=`_ctx.as_at_date`/>>
+        <<assign src=`_ctx.as_at_date` tgt=`balance_date_vars.balance_date`/>>
         <<assign src=`ar_cust.row_id` tgt=`_ctx.cust_row_id`/>>
         <<pyfunc name=`custom.arcust_funcs.get_aged_bal`/>>
         <<restart_grid obj_name=`ar_items`/>>

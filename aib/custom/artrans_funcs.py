@@ -179,6 +179,53 @@ async def alloc_oldest(fld, xml):
 
     return allocations
 
+async def alloc_all(db_obj, xml):
+    # called from ar_cust_totals.after_save
+    # if balance becomes zero, create allocations for any openitems with a balance
+
+    context = db_obj.context
+    cust_row_id = await db_obj.getval('cust_row_id')
+    tran_date = await db_obj.getval('tran_date')
+
+    if 'ar_openitems' not in context.data_objects:
+        context.data_objects['ar_openitems'] = await db.objects.get_db_object(
+            context, 'ar_openitems')
+    if 'ar_tran_alloc_tot' not in context.data_objects:
+        context.data_objects['ar_tran_alloc_tot'] = await db.objects.get_db_object(
+            context, 'ar_tran_alloc_tot')
+        context.data_objects['ar_allocations'] = await db.objects.get_db_object(
+            context, 'ar_allocations', parent=context.data_objects['ar_tran_alloc_tot'])
+    ar_items = context.data_objects['ar_openitems']
+    ar_tran_alloc_tot = context.data_objects['ar_tran_alloc_tot']
+    ar_allocations = context.data_objects['ar_allocations']
+
+    col_names = ['row_id', 'balance_cust', 'balance_local']
+    where = [
+        ['WHERE', '', 'cust_row_id', '=', cust_row_id, ''],
+        ['AND', '', 'balance_cust', '!=', '0', ''],
+        ]
+    order = [('balance_cust', True), ('tran_date', False), ('row_id', False)]  # ensure credits come before debits
+
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        async for row_id, balance_cust, balance_local in await conn.full_select(
+                ar_items, col_names, where=where, order=order):
+            if not ar_tran_alloc_tot.exists:
+                await ar_tran_alloc_tot.setval('item_row_id', row_id)
+                await ar_tran_alloc_tot.setval('tran_date', tran_date)
+                await ar_tran_alloc_tot.save()
+            init_vals = {
+                'tran_row_id': await ar_tran_alloc_tot.getval('row_id'),
+                'item_row_id': row_id,
+                'alloc_cust': 0 - balance_cust,
+#               'alloc_local': balance_local,
+                }
+            await ar_allocations.init(init_vals=init_vals)
+            await ar_allocations.save()
+        if ar_tran_alloc_tot.exists:
+            await ar_tran_alloc_tot.setval('posted', '1', validate=False)
+            await ar_tran_alloc_tot.save()
+
 async def get_allocations(db_obj, conn, return_vals):
     # called from ar_subtran_rec/ar_tran_alloc upd_on_post:ar_allocations:split_src
     allocations = await db_obj.getval('allocations')
@@ -342,8 +389,9 @@ async def setup_mem_items(caller, xml):
     # dates.append(periods[0].closing_date)  # nothing can be lower!
 
     dates = [context.as_at_date]
-    for _ in range(5):
+    for _ in range(4):
         dates.append(dates[-1] - td(30))
+    dates.append(dt(1900, 1, 1))  # arbitrary lowest possible date
 
     context.dates = dates
     context.first_date = dates[5]

@@ -1,6 +1,6 @@
 <form name="ar_balances" title="Customer balances" before_start_form="
   <<pyfunc name=`custom.date_funcs.setup_balance_date`/>>
-  <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.bal_date_cust`/>>
+  <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.as_at_date`/>>
   ">
   <db_objects>
     <db_obj name="cust" table_name="ar_customers"/>
@@ -50,7 +50,7 @@
             <<on_return>>
               <<return state=`cancelled`/>>
               <<return state=`completed`>>
-                <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.bal_date_cust`/>>
+                <<assign src=`balance_date_vars.balance_date` tgt=`_ctx.as_at_date`/>>
                 <<restart_grid obj_name=`cust`/>>
               <</return>>
             <</on_return>>

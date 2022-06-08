@@ -121,8 +121,10 @@ cols.append ({
         ['tran_type', [
             ['ar_crn', 'ar_tran_crn'],
             ['ar_subrec', 'ar_subtran_rec'],
+            ['ar_subjnl', 'ar_subtran_jnl'],
             ['ar_disc', 'ar_tran_disc'],
             ['ar_alloc', 'ar_tran_alloc'],
+            ['ar_alloc_tot', 'ar_tran_alloc_tot'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
@@ -225,6 +227,9 @@ cols.append ({
         'Else pro-rata item_row_id>os_disc_cust - divide by item_row_id>due_cust, multiply by alloc_cust.'
         '-->'
         '<case>'
+            '<compare test="[[`if`, ``, `tran_type`, `=`, `~ar_alloc_tot~`, ``]]">'
+                '<fld_val name="discount_cust"/>'
+            '</compare>'
             '<compare test="[[`if`, ``, `alloc_cust`, `=`, `alloc_cust$orig`, ``]]">'
                 '<fld_val name="discount_cust"/>'
             '</compare>'
@@ -282,6 +287,9 @@ cols.append ({
         'If item_row_id = tran_row_id>item_row_id, this is the double-entry allocation '
             'generated programmatically on_post - use existing value, updated by on_post.\n'
         'Else calculate by dividing alloc_cust by tran_row_id>tran_exch_rate.'
+            '<compare test="[[`if`, ``, `tran_type`, `=`, `~ar_alloc_tot~`, ``]]">'
+                '<fld_val name="alloc_local"/>'
+            '</compare>'
         '-->'
         '<case>'
             '<compare test="[[`if`, ``, `alloc_cust`, `=`, `alloc_cust$orig`, ``]]">'
@@ -328,6 +336,9 @@ cols.append ({
         'Else calculate by dividing discount_cust by tran_row_id>tran_exch_rate.'
         '-->'
         '<case>'
+            '<compare test="[[`if`, ``, `tran_type`, `=`, `~ar_alloc_tot~`, ``]]">'
+                '<fld_val name="discount_local"/>'
+            '</compare>'
             '<compare test="[[`if`, ``, `alloc_cust`, `=`, `alloc_cust$orig`, ``]]">'
                 '<fld_val name="discount_local"/>'
             '</compare>'
@@ -363,7 +374,9 @@ actions.append([
     'upd_on_save', [
         [
             '_parent',
-            None,  # condition
+            [  # condition
+                ['where', '', 'tran_type', '!=', "'ar_alloc_tot'", ''],
+                ],
             False,  # split source?
             [],  # key fields
             [  # aggregation

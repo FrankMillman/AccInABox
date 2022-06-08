@@ -132,6 +132,53 @@ async def alloc_oldest(fld, xml):
 
     return allocations
 
+async def alloc_all(db_obj, xml):
+    # called from ap_supp_totals.after_save
+    # if balance becomes zero, create allocations for any openitems with a balance
+
+    context = db_obj.context
+    supp_row_id = await db_obj.getval('supp_row_id')
+    tran_date = await db_obj.getval('tran_date')
+
+    if 'ap_openitems' not in context.data_objects:
+        context.data_objects['ap_openitems'] = await db.objects.get_db_object(
+            context, 'ap_openitems')
+    if 'ap_tran_alloc_tot' not in context.data_objects:
+        context.data_objects['ap_tran_alloc_tot'] = await db.objects.get_db_object(
+            context, 'ap_tran_alloc_tot')
+        context.data_objects['ap_allocations'] = await db.objects.get_db_object(
+            context, 'ap_allocations', parent=context.data_objects['ap_tran_alloc_tot'])
+    ap_items = context.data_objects['ap_openitems']
+    ap_tran_alloc_tot = context.data_objects['ap_tran_alloc_tot']
+    ap_allocations = context.data_objects['ap_allocations']
+
+    col_names = ['row_id', 'balance_supp', 'balance_local']
+    where = [
+        ['WHERE', '', 'supp_row_id', '=', supp_row_id, ''],
+        ['AND', '', 'balance_supp', '!=', '0', ''],
+        ]
+    order = [('balance_supp', True), ('tran_date', False), ('row_id', False)]  # ensure credits come before debits
+
+    async with context.db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        async for row_id, balance_supp, balance_local in await conn.full_select(
+                ap_items, col_names, where=where, order=order):
+            if not ap_tran_alloc_tot.exists:
+                await ap_tran_alloc_tot.setval('item_row_id', row_id)
+                await ap_tran_alloc_tot.setval('tran_date', tran_date)
+                await ap_tran_alloc_tot.save()
+            init_vals = {
+                'tran_row_id': await ap_tran_alloc_tot.getval('row_id'),
+                'item_row_id': row_id,
+                'alloc_supp': 0 - balance_supp,
+#               'alloc_local': balance_local,
+                }
+            await ap_allocations.init(init_vals=init_vals)
+            await ap_allocations.save()
+        if ap_tran_alloc_tot.exists:
+            await ap_tran_alloc_tot.setval('posted', '1', validate=False)
+            await ap_tran_alloc_tot.save()
+
 async def get_allocations(db_obj, conn, return_vals):
     # called from ap_subtran_pmt/ap_tran_alloc upd_on_post:ap_allocations:split_src
     allocations = await db_obj.getval('allocations')
