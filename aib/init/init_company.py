@@ -1112,7 +1112,7 @@ async def setup_init_data(context, conn, company_name):
     tran_types.append(('ap_pmt', 'Ap payment', 'ap', 'ap_tran_pmt'))
     tran_types.append(('ap_disc', 'Ap discount', 'ap', 'ap_tran_disc'))
     tran_types.append(('ap_alloc', 'Ap allocation', 'ap', 'ap_tran_alloc'))
-    tran_types.append(('ap_alloc_tot', 'Ap allocation on zero balance', 'ar', 'ap_tran_alloc_tot'))
+    tran_types.append(('ap_alloc_tot', 'Ap allocation on zero balance', 'ap', 'ap_tran_alloc_tot'))
     tran_types.append(('ap_subpmt', 'Ap subtran payment', 'ap', 'ap_subtran_pmt'))
     tran_types.append(('ap_subrec', 'Ap subtran receipt', 'ap', 'ap_subtran_rec'))
     tran_types.append(('ap_subjnl', 'Ap subtran journal', 'ap', 'ap_subtran_jnl'))

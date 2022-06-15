@@ -316,8 +316,7 @@ actions.append([
             'recheck_date',
             'Period is closed',
             [
-                ['check', '', '$exists', 'is', '$True', ''],
-                ['or', '', 'tran_date', 'pyfunc',
+                ['check', '', 'tran_date', 'pyfunc',
                     'custom.date_funcs.check_ye_adj_date', ''],
                 ],
             ],

@@ -44,8 +44,7 @@
             <</call_params>>
             <<return_params>>
               <<return_param name=`settings` type=`data_attr` target=`balance_date_vars.settings`/>>
-              <<return_param name=`balance_date` type=`data_attr`
-                target=`balance_date_vars.balance_date`/>>
+              <<return_param name=`balance_date` type=`data_attr` target=`balance_date_vars.balance_date`/>>
             <</return_params>>
             <<on_return>>
               <<return state=`cancelled`/>>
@@ -60,7 +59,7 @@
       <block/>
       <grid data_object="cust" growable="false" cursor_name="cust_bal"
           footer_row="[`'Total:'`, `...`, `var.bal_loc_tot`]"
-          get_tots="[[`balance_loc`, `var.bal_loc_tot`]]">
+          get_tots="[[`bal_loc_as_at`, `var.bal_loc_tot`]]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)" action="
             <<assign src=`balance_date_vars.settings` tgt=`var.settings`/>>

@@ -505,7 +505,7 @@ actions.append([
         [
             'nsls_subtran_tax',
             [  # condition
-                ['where', '', 'tran_type', '!=', "'ar_ueabf'", ''],
+                ['where', '', 'tran_type', '!=', "'ar_uea_bf'", ''],
                 ],
 
             True,  # split source?

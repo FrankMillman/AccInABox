@@ -511,7 +511,7 @@ actions.append([
         [
             'npch_subtran_tax',
             [  # condition
-                ['where', '', 'tran_type', '!=', "'ap_uexbf'", ''],
+                ['where', '', 'tran_type', '!=', "'ap_uex_bf'", ''],
                 ],
 
             True,  # split source?

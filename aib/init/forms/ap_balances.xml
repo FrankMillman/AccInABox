@@ -60,7 +60,7 @@
       <block/>
       <grid data_object="supp" growable="false" cursor_name="supp_bal"
           footer_row="[`'Total:'`, `...`, `var.bal_loc_tot`]"
-          get_tots="[[`balance_loc`, `var.bal_loc_tot`]]">
+          get_tots="[[`bal_loc_as_at`, `var.bal_loc_tot`]]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)" action="
             <<assign src=`balance_date_vars.settings` tgt=`var.settings`/>>
