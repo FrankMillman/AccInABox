@@ -284,7 +284,8 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : 'subparent_row_id>currency_id>scale',
-    'dflt_val'   : '0',
+    # 'dflt_val'   : '0',
+    'dflt_val'   : '{pch_amount}',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -473,7 +474,9 @@ actions.append([
     'upd_on_save', [
         [
             'pch_subtran_tax',
-            None,  # condition
+            [  # condition
+                ['where', '', 'wh_prod_row_id>prod_row_id>any_tax_codes', 'is', '$True', ''],
+                ],
 
             True,  # split source?
 

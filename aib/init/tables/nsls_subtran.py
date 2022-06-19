@@ -274,7 +274,7 @@ cols.append ({
             '<fld_val name="eff_date"/>'
           '</compare>'
           '<compare test="[[`where`, ``, `nsls_code_id>chg_eff_date`, `=`, `~0~`, ``]]">'
-            '<fld_val name="subparent_row_id>tran_date"/>'
+            '<fld_val name="tran_date"/>'
           '</compare>'
           '<compare test="[[`where`, ``, `nsls_code_id>chg_eff_date`, `=`, `~1~`, ``]]">'
             '<first_next_per/>'
@@ -283,11 +283,11 @@ cols.append ({
         ),
     'col_checks' : [
         # ['cannot_change', 'Cannot change effective date', [
-        #     ['check', '', '$value', '=', 'subparent_row_id>tran_date', ''],
+        #     ['check', '', '$value', '=', 'tran_date', ''],
         #     ['or', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
         #     ]],
         ['per_date', 'Period is closed', [
-            ['check', '', '$value', '=', 'subparent_row_id>tran_date', ''],
+            ['check', '', '$value', '=', 'tran_date', ''],
             ['or', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date,"gl"', ''],
             ]],
         ],
@@ -385,6 +385,15 @@ virt.append ({
     'col_head'   : 'Posted?',
     'dflt_val'   : '{subparent_row_id>posted}',
     'sql'        : "a.subparent_row_id>posted"
+    })
+virt.append ({
+    'col_name'   : 'tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Transaction date',
+    'long_descr' : 'Transaction date',
+    'col_head'   : 'Tran date',
+    'dflt_val'   : '{subparent_row_id>tran_date}',
+    'sql'        : "a.subparent_row_id>tran_date"
     })
 virt.append ({
     'col_name'   : 'party',
@@ -506,6 +515,7 @@ actions.append([
             'nsls_subtran_tax',
             [  # condition
                 ['where', '', 'tran_type', '!=', "'ar_uea_bf'", ''],
+                ['and', '', 'nsls_code_id>any_tax_codes', 'is', '$True', ''],
                 ],
 
             True,  # split source?
@@ -529,7 +539,7 @@ actions.append([
             'nsls_subtran_uea',
             [  # condition
                 # ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
-                ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                ['where', '', 'eff_date', '!=', 'tran_date', ''],
                 ],
 
             True,  # split source?
@@ -557,7 +567,7 @@ actions.append([
                 'nsls_totals',  # table name
                 [  # condition
                     # ['where', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
-                    ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                    ['where', '', 'eff_date', '=', 'tran_date', ''],
                     ],
                 [  # key fields
                     ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
@@ -566,7 +576,7 @@ actions.append([
                     ['src_tran_type', "'nsls'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ['tran_date', 'tran_date'],
                     ],
                 [  # aggregation
                     ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
@@ -577,7 +587,7 @@ actions.append([
                 'nsls_uea_totals',  # table name
                 [  # condition
                     # ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
-                    ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                    ['where', '', 'eff_date', '!=', 'tran_date', ''],
                     ],
                 [  # key fields
                     ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
@@ -586,7 +596,7 @@ actions.append([
                     ['src_tran_type', "'nsls'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ['tran_date', 'tran_date'],
                     ],
                 [  # aggregation
                     ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
@@ -597,7 +607,7 @@ actions.append([
                 'nsls_cust_totals',  # table name
                 [  # condition
                     # ['where', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
-                    ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                    ['where', '', 'eff_date', '=', 'tran_date', ''],
                     ['and', '', 'subparent_row_id>module_id', '=', "'ar'", ''],
                     ],
                 [  # key fields
@@ -608,7 +618,7 @@ actions.append([
                     ['src_tran_type', "'nsls'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ['tran_date', 'tran_date'],
                     ],
                 [  # aggregation
                     ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
@@ -619,7 +629,7 @@ actions.append([
                 'nsls_cust_uea_totals',  # table name
                 [  # condition
                     # ['where', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
-                    ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                    ['where', '', 'eff_date', '!=', 'tran_date', ''],
                     ['and', '', 'subparent_row_id>module_id', '=', "'ar'", ''],
                     ],
                 [  # key fields
@@ -630,7 +640,7 @@ actions.append([
                     ['src_tran_type', "'nsls'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ['tran_date', 'tran_date'],
                     ],
                 [  # aggregation
                     ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
@@ -642,7 +652,7 @@ actions.append([
                 [  # condition
                     ['where', '', '_param.gl_integration', 'is', '$True', ''],
                     # ['and', '', 'nsls_code_id>chg_eff_date', '=', "'0'", ''],
-                    ['and', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                    ['and', '', 'eff_date', '=', 'tran_date', ''],
                     ],
                 [  # key fields
                     ['gl_code_id', 'nsls_code_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
@@ -651,7 +661,7 @@ actions.append([
                     ['src_tran_type', "'nsls'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ['tran_date', 'tran_date'],
                     ],
                 [  # aggregation
                     ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
@@ -663,7 +673,7 @@ actions.append([
                 [  # condition
                     ['where', '', '_param.gl_integration', 'is', '$True', ''],
                     # ['and', '', 'nsls_code_id>chg_eff_date', '!=', "'0'", ''],
-                    ['and', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                    ['and', '', 'eff_date', '!=', 'tran_date', ''],
                     ],
                 [  # key fields
                     ['gl_code_id', 'nsls_code_id>ledger_row_id>uea_gl_code_id'],  # tgt_col, src_col
@@ -672,7 +682,7 @@ actions.append([
                     ['src_tran_type', "'nsls'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ['tran_date', 'tran_date'],
                     ],
                 [  # aggregation
                     ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col

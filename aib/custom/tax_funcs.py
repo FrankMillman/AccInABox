@@ -174,10 +174,6 @@ async def calc_tax(db_obj, conn, return_vals):
     else:
         raise NotImplementedError
 
-    if not await db_obj.getval(f'{tax_code_src}>any_tax_codes'):
-        return_vals[0] = inv_amt
-        return
-
     tax_incl = await db_obj.getval('subparent_row_id>tax_incl')
     tran_exch_rate = await db_obj.getval('subparent_row_id>tran_exch_rate')
     tran_date = await db_obj.getval('subparent_row_id>tran_date')
