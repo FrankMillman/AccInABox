@@ -256,21 +256,21 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'cb_bf'",
-    })
+# virt.append ({
+#     'col_name'   : 'tran_type',
+#     'data_type'  : 'TEXT',
+#     'short_descr': 'Transaction type',
+#     'long_descr' : 'Transaction type',
+#     'col_head'   : 'Tran type',
+#     'sql'        : "'cb_rec'",
+#     })
 virt.append ({
     'col_name'   : 'trantype_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Tran type row id',
     'long_descr' : 'Tran type row id',
     'col_head'   : 'Tran type row id',
-    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'cb_bf'",
+    'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'cb_rec'",
     })
 virt.append ({
     'col_name'   : 'tran_number',
@@ -345,6 +345,26 @@ actions.append([
                 ],
             ],
         'on_post': [
+            [
+                'cb_tran_rec',  # table name
+                None,  # condition
+                False,  # split source?
+                [  # key fields
+                    ['ledger_row_id', 'ledger_row_id'],  # tgt_col, src_col
+                    ['tran_number', 'tran_number'],
+                    ],
+                [  # on post
+                    ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
+                    ['payer', '=', 'text'],
+                    ['text', '=', 'text'],
+                    ['amount', '=', 'amount_cb'],
+                    ['amount_tran', '=', 'amount_cb'],
+                    ['amount_cb', '=', 'amount_cb'],
+                    ['amount_local', '=', 'amount_local'],
+                    ['posted', '=', '1'],
+                    ],
+                [],  # return values
+                ],
             ],
         'on_unpost': [
             ],

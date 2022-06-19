@@ -4,7 +4,10 @@ from reportlab.lib import pagesizes, colors
 import db.objects
 from common import AibError
 
-PT_TO_PX = 96 / 72
+def pt_to_px(pagesize):
+    # reportlab stores pagesizes in points (1"/72) - we want pixels (1"/96)
+    wd, ht = pagesize
+    return (wd * 96 / 72), (ht * 96 / 72)
 
 #----------------------------------------------------------------------------
 
@@ -23,7 +26,7 @@ class GuiFinrpt:
         self.row_dict = await var.getval('row_dict')
         self.title = await var.getval('title')
 
-        wd, ht = (_ * PT_TO_PX for _ in getattr(pagesizes, finrpt_defn.get('pagesize')))
+        wd, ht = pt_to_px(getattr(pagesizes, finrpt_defn.get('pagesize')))
         if finrpt_defn.get('layout') == 'landscape':  # default to 'portrait'
             wd, ht = ht, wd
         coords = (0, 0, wd, ht)

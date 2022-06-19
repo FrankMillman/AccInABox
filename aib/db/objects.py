@@ -1267,9 +1267,12 @@ class DbObject:
 
                 await self.setup_defaults()  # can raise AibError if 'required' and no dflt_val
 
-                for descr, errmsg, upd_chk in self.db_table.actions.upd_checks:
-                    if not await eval_bool_expr(upd_chk, self):
-                        raise AibError(head=self.db_table.short_descr, body=errmsg)
+                # do not call if from_upd_on_save is True
+                # reason - don't check tran_date if transaction was generated from tran_bf
+                if not from_upd_on_save:
+                    for descr, errmsg, upd_chk in self.db_table.actions.upd_checks:
+                        if not await eval_bool_expr(upd_chk, self):
+                            raise AibError(head=self.db_table.short_descr, body=errmsg)
 
                 if self.exists:  # update row
                     await self.update(conn, from_upd_on_save)

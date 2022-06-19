@@ -230,14 +230,6 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
-    'col_name'   : 'tran_type',
-    'data_type'  : 'TEXT',
-    'short_descr': 'Transaction type',
-    'long_descr' : 'Transaction type',
-    'col_head'   : 'Tran type',
-    'sql'        : "'ar_bf'",
-    })
-virt.append ({
     'col_name'   : 'cust_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Customer row id',
@@ -253,6 +245,14 @@ virt.append ({
     'long_descr' : 'Party',
     'col_head'   : 'Party',
     'sql'        : "a.tran_row_id>cust_row_id>party_row_id>party_id"
+    })
+virt.append ({
+    'col_name'   : 'posted',
+    'data_type'  : 'BOOL',
+    'short_descr': 'Posted?',
+    'long_descr' : 'Has transaction been posted?',
+    'col_head'   : 'Posted?',
+    'sql'        : "a.tran_row_id>posted"
     })
 virt.append ({
     'col_name'   : 'rev_sign',
@@ -306,8 +306,80 @@ actions.append([
 actions.append([
     'upd_on_post', {
         'aggr': [
+            [
+                'ar_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['ledger_row_id', 'tran_row_id>cust_row_id>ledger_row_id'],  # tgt_col, src_col
+                    ['location_row_id', 'tran_row_id>cust_row_id>location_row_id'],
+                    ['function_row_id', 'tran_row_id>cust_row_id>function_row_id'],
+                    ['src_tran_type', "'ar_inv'"],
+                    ['orig_tran_type', "'ar_inv'"],
+                    ['orig_ledger_row_id', 'tran_row_id>cust_row_id>ledger_row_id'],
+                    ['tran_date', 'tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'bf_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'bf_local'],
+                    ],
+                ],
+            [
+                'ar_cust_totals',  # table name
+                None,  # condition
+                [  # key fields
+                    ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
+                    ['location_row_id', 'tran_row_id>cust_row_id>location_row_id'],
+                    ['function_row_id', 'tran_row_id>cust_row_id>function_row_id'],
+                    ['src_tran_type', "'ar_inv'"],
+                    ['orig_tran_type', "'ar_inv'"],
+                    ['orig_ledger_row_id', 'tran_row_id>cust_row_id>ledger_row_id'],
+                    ['tran_date', 'tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day_cust', '+', 'bf_cust'],  # tgt_col, op, src_col
+                    ['tran_tot_cust', '+', 'bf_cust'],
+                    ['tran_day_local', '+', 'bf_local'],
+                    ['tran_tot_local', '+', 'bf_local'],
+                    ],
+                ],
+            [
+                'gl_totals',  # table name
+                [  # condition
+                    ['where', '', '_param.gl_integration', 'is', '$True', ''],
+                    ],
+                [  # key fields
+                    ['gl_code_id', 'tran_row_id>cust_row_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
+                    ['location_row_id', 'tran_row_id>cust_row_id>location_row_id'],
+                    ['function_row_id', 'tran_row_id>cust_row_id>function_row_id'],
+                    ['src_tran_type', "'ar_inv'"],
+                    ['orig_tran_type', "'ar_inv'"],
+                    ['orig_ledger_row_id', 'tran_row_id>cust_row_id>ledger_row_id'],
+                    ['tran_date', 'tran_date'],
+                    ],
+                [  # aggregation
+                    ['tran_day', '+', 'bf_local'],  # tgt_col, op, src_col
+                    ['tran_tot', '+', 'bf_local'],
+                    ],
+                ],
             ],
         'on_post': [
+            [
+                'ar_tran_inv',  # table name
+                None,  # condition
+                False,  # split source?
+                [  # key fields
+                    ['cust_row_id', 'cust_row_id'],  # tgt_col, src_col
+                    ['tran_number', 'tran_number'],
+                    ],
+                [  # on post
+                    ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
+                    ['text', '=', 'text'],
+                    ['inv_net_amt', '=', 'bf_cust'],
+                    ['inv_net_local', '=', 'bf_local'],
+                    ['posted', '=', '1'],
+                    ],
+                [],  # return values
+                ],
             [
                 'ar_openitems',  # table name
                 [  # condition
@@ -315,7 +387,8 @@ actions.append([
                     ],
                 False,  # split source?
                 [  # key fields
-                    ['tran_row_id', 'row_id'],  # tgt_col, src_col
+                    ['tran_type', "'ar_inv'"],  # tgt_col, src_col
+                    ['tran_row_id', 'ar_tran_inv.row_id'],
                     ['split_no', '0'],
                     ],
                 [  # on post

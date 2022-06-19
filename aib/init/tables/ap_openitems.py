@@ -127,7 +127,6 @@ cols.append ({
             ['ap_jnl', 'ap_tran_jnl'],
             ['ap_subjnl', 'ap_subtran_jnl'],
             ['ap_disc', 'ap_tran_disc'],
-            ['ap_bf', 'ap_tran_bf_det'],
             ]],
         'row_id', None, None, True, None],
     'choices'    : None,
