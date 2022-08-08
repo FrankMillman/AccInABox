@@ -122,6 +122,7 @@ async def setup_companies():
     conn = await db.connection._get_connection()
     async for comp_id, comp_name in await conn.exec_sql(sql):
         companies[comp_id] = comp_name
+    await conn.release()
 
 # callback to update 'companies' - dir_companies.actions.after_commit
 async def company_changed(db_obj, xml):
@@ -163,6 +164,7 @@ async def get_mod_id(company, mod_id):
             async for row_id, module_id in await conn.exec_sql(sql):
                 mod_ids[company][row_id] = module_id
                 mod_ids[company][module_id] = row_id
+            await conn.release()
     try:
         return mod_ids[company][mod_id]
     except KeyError:
@@ -184,6 +186,7 @@ async def get_mod_ledg_id(company, module_id, ledger_id):
             conn = await db.connection._get_connection()
             async for ledger_row_id, ledger_id2 in await conn.exec_sql(sql):
                 mod_ledg_ids[company][(module_id, ledger_id2)] = module_row_id, ledger_row_id
+            await conn.release()
     try:
         return mod_ledg_ids[company][(module_id, ledger_id)]
     except KeyError:
@@ -339,6 +342,8 @@ async def ledger_inserted(db_obj, xml):
         await menu.setval('module_row_id', module_row_id)
         await menu.setval('ledger_row_id', ledger_row_id)
         await menu.save()
+
+    await conn.release()
 
     if module_id == 'nsls':  # set up top-level 'group'
         context = db_obj.context
@@ -619,6 +624,7 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
                     closing_periods.append(period_row_id)
             ledg_per.current_period = current_period
             ledg_per.closing = closing_periods
+            await conn.release()
 
     return ledger_periods[company][module_row_id][ledger_row_id]
 
@@ -821,6 +827,8 @@ async def get_user_perms(user_row_id, company):
                             table_dict[key] = (sel_now, ins_now, upd_now, del_now)
                         else:
                             table_dict[key] = (sel_new, ins_new, upd_new, del_new)
+
+                await conn.release()
 
             user_table_perms[user_row_id][company] = table_perms
 

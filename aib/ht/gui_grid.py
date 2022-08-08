@@ -587,6 +587,7 @@ class GuiGrid:
                 obj_name, col_name = tgt.split('.')
                 tgt_obj = self.context.data_objects[obj_name]
                 await tgt_obj.setval(col_name, src_val or 0)  # change None to 0 in case no rows exist
+            await conn.release()
 
         if self.assert_tots is not None:
             # srcs, tgts = zip(*self.assert_tots)  # clever but obscure!
@@ -616,6 +617,7 @@ class GuiGrid:
                 if tgt_val != (src_val or 0):  # change None to 0 in case no rows exist
                     raise AibError(head='Assertion Error',
                         body=f'{tgt}: total = {tgt_val}, s/b {src_val}')
+            await conn.release()
 
         await self.cursor.start_cursor(self.col_names, self.cursor_filter+sub_filter,
             self.cursor_sequence, param)
