@@ -1154,12 +1154,16 @@ class DbSession:
         self.num_connections = 0
         self.after_commit = []
         self.after_rollback = []
+        self.read_lock_set = False
 
     @asynccontextmanager
-    async def get_connection(self):
+    async def get_connection(self, read_lock=False):
         if not self.num_connections:  # get connection, set up
             timestamp = datetime.now()  # all updates in same transaction use same timestamp
             db_conn = await _get_connection()
+            if read_lock:
+                await db_conn.set_read_lock(True)
+                self.read_lock_set = True
             db_conn.timestamp = timestamp
             if self.mem_id is not None:
                 mem_conn = await _get_mem_connection(self.mem_id)
@@ -1180,6 +1184,9 @@ class DbSession:
             self.num_connections -= 1
             if not self.num_connections:
                 await db_conn.release()  # commit, return connection to pool
+                if self.read_lock_set:
+                    await db_conn.set_read_lock(False)
+                    self.read_lock_set = False
                 if mem_conn is not None:
                     await mem_conn.release()  # commit, return connection to pool
                 self.db_mem_conn = None
@@ -1197,6 +1204,9 @@ class DbSession:
             self.num_connections -= 1
             if not self.num_connections:
                 await db_conn.release(rollback=True)  # rollback, return connection to pool
+                if self.read_lock_set:
+                    await db_conn.set_read_lock(False)
+                    self.read_lock_set = False
                 if mem_conn is not None:
                     await mem_conn.release(rollback=True)  # rollback, return connection to pool
                 self.db_mem_conn = None

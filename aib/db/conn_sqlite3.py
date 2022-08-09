@@ -45,6 +45,7 @@ def customise(constants, DbConn, db_params):
     DbConn.create_foreign_key = create_foreign_key
     DbConn.create_alt_index = create_alt_index
     DbConn.create_index = create_index
+    DbConn.set_read_lock = set_read_lock
     DbConn.get_lower_colname = get_lower_colname
     DbConn.tree_select = tree_select
     DbConn.get_view_names = get_view_names
@@ -572,6 +573,12 @@ def create_index(self, company, table_name, index):
         f'CREATE {unique}INDEX {company}.{ndx_name} '
         f'ON {table_name} ({ndx_cols}) {filter}'
         )
+
+async def set_read_lock(self, enable):
+    if enable:  # set lock
+        await self.exec_cmd('BEGIN IMMEDIATE')
+    else:  # unset lock
+        self.conn.commit()
 
 def get_lower_colname(self, col_name, alias):
     return f'LOWER({alias}.{col_name})'

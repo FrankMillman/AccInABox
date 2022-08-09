@@ -1,3 +1,4 @@
+
 import psycopg2
 import psycopg2.extensions  # so that strings are returned as unicode
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
@@ -49,6 +50,7 @@ def customise(constants, DbConn, db_params):
     DbConn.create_foreign_key = create_foreign_key
     DbConn.create_alt_index = create_alt_index
     DbConn.create_index = create_index
+    DbConn.set_read_lock = set_read_lock
     DbConn.get_lower_colname = get_lower_colname
     DbConn.tree_select = tree_select
     DbConn.get_view_names = get_view_names
@@ -398,6 +400,12 @@ def create_index(self, company, table_name, index):
         f'CREATE {unique}INDEX {ndx_name} '
         f'ON {company}.{table_name} ({ndx_cols}) {filter}'
         )
+
+async def set_read_lock(self, enable):
+    if enable:  # set lock
+        self.conn.set_session(isolation_level='REPEATABLE READ')
+    else:  # unset lock
+        self.conn.set_session(isolation_level='READ COMMITTED')
 
 def get_lower_colname(self, col_name, alias):
     return f'LOWER({alias}.{col_name})'
