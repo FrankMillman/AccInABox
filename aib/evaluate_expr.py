@@ -1,9 +1,20 @@
 import importlib
-# from decimal import Decimal as D, DecimalException
 from decimal import Decimal as D
+import operator as op
 import re
 
 from common import AibError
+
+operator_map = {
+    '<': op.lt,
+    '>': op.gt,
+    '[': op.le,
+    ']': op.ge,
+    '+': op.add,
+    '-': op.sub,
+    '*': op.mul,
+    '/': op.truediv,
+    }
 
 async def eval_infix(elem, db_obj, fld, value):
     # avoiding simple things like ' '*(10**200) seems quite difficult [Robin Becker, ReportLab]
@@ -11,8 +22,10 @@ async def eval_infix(elem, db_obj, fld, value):
 
     # Step 1 - convert infix expression to postfix notation
 
-    end_char = ' ()+-*/'  # characters that denote end of value/function
-    ops = {'+': 0, '-': 0, '*': 1, '/': 1}  # operators with precedence
+    elem = elem.replace('<=', '[').replace('>=', ']')  # reduce to single character
+
+    end_char = ' ()+-*/<>[]'  # characters that denote end of value/function
+    ops = {'<': 0, '>': 0, '[': 0, ']': 0, '+': 1, '-': 1, '*': 2, '/': 2}  # operators with precedence
 
     operand = ''
     function = ''
@@ -54,27 +67,19 @@ async def eval_infix(elem, db_obj, fld, value):
     # Step 2 - evaluate postfix expression
     stack = []
     for elem in postfix:
-        if elem not in ('+', '-', '*', '/', 'abs'):
-            # try:
-            #     elem = D(elem)  # short-circuit if elem is a digit
-            # except DecimalException:
-            #     elem, _ = await eval_elem(elem, db_obj, fld, value)
-            elem = await eval_elem(elem, db_obj, fld, value)
+        if elem not in ('+', '-', '*', '/', 'abs', '<', '>', '[', ']'):
+            if hasattr(db_obj, elem):  # in case db_obj is a db_row from finrpt
+                elem = getattr(db_obj, elem)
+            else:
+                elem = await eval_elem(elem, db_obj, fld, value)
             stack.append(elem)
         elif elem == 'abs':
             op1 = stack.pop()
             stack.append(abs(op1))
         else:
-            op1 = stack.pop()
             op2 = stack.pop()
-            if elem == '+':
-                stack.append(op2 + op1)
-            elif elem == '-':
-                stack.append(op2 - op1)
-            elif elem == '*':
-                stack.append(op2 * op1)
-            elif elem == '/':
-                stack.append(op2 / op1)
+            op1 = stack.pop()
+            stack.append(operator_map[elem](op1, op2))
 
     return stack.pop()
 
@@ -119,7 +124,7 @@ async def eval_elem(elem, db_obj, fld=None, value=None):
             try:
                 return await eval_infix(expr[1:-1], db_obj, fld, value)
             except Exception:
-                return exc_value
+                return D(exc_value)
         return await eval_infix(elem[1:-1], db_obj, fld, value)
     if '$exists' in elem:  # e.g. db_table$exists in form setup_table
         obj_name = elem.split('$')[0]
@@ -133,11 +138,15 @@ async def eval_elem(elem, db_obj, fld=None, value=None):
         return await fld2.getval()
     if elem.startswith('_ctx.'):
         return getattr(db_obj.context, elem[5:], None)
-    fld = await db_obj.getfld(elem)
-    value = await fld.getval()
-    if value is None and fld.col_defn.dflt_val is not None:  # dflt not yet evaluated
-        value = await fld.get_dflt()  # e.g. ap_pmt_batch.currency_id
-    return value
+
+    if hasattr(db_obj, elem):  # in case db_obj is a db_row from finrpt
+        return getattr(db_obj, elem)
+    else:
+        fld = await db_obj.getfld(elem)
+        value = await fld.getval()
+        if value is None and fld.col_defn.dflt_val is not None:  # dflt not yet evaluated
+            value = await fld.get_dflt()  # e.g. ap_pmt_batch.currency_id
+        return value
 
 async def eval_bool(src, chk, tgt, db_obj, fld, value):
     if chk == 'pyfunc':
