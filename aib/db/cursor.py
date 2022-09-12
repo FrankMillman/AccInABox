@@ -48,7 +48,7 @@ class Cursor:
         self.cursor_pos = -1
         self.num_rows = 0
 
-    async def start_cursor(self, col_names, where, order, param=None):
+    async def start_cursor(self, col_names, where, order):
         await self.db_obj.check_perms('select')
         self.col_names = col_names
 
@@ -61,14 +61,14 @@ class Cursor:
         if log_db:
             db_log.write(f'{id(self.conn)}: START cursor\n')
 
-        sql, params = await self.build_sql(where, order, param)
+        sql, params = await self.build_sql(where, order)
         await self.create_cursor(sql, params)
 
         self.where = where
 
         self.cursor_active = True
 
-    async def build_sql(self, where, order, param):
+    async def build_sql(self, where, order):
 
         # build list of primary keys  - (position in cursor, col_defn)
         self.key_cols = []
@@ -103,11 +103,8 @@ class Cursor:
 
         self.no_cols = len(self.col_names)
 
-        # return await self.conn.build_select(self.db_obj, self.col_names,
-        #     where, order, param=param)
-
         return await self.conn.build_select(self.db_obj.context, self.db_obj.db_table,
-            self.col_names, where, order, param=param)
+            self.col_names, where, order)
 
     async def insert_row(self, row_no):
         row_no = await self.find_gap(row_no)  # where to insert new row

@@ -397,7 +397,7 @@ class Conn:
         return cur
 
     async def full_select(self, db_obj, col_names, where, order=None, group=None, incl_col_types=True,
-            limit=0, offset=0, lock=False, param=None, distinct=False, debug=False):
+            limit=0, offset=0, lock=False, distinct=False, debug=False):
 
         await db_obj.check_perms('select')
 
@@ -418,7 +418,7 @@ class Conn:
         return cur
 
     async def build_select(self, context, db_table, col_names, where, order, group=None, incl_col_types=True,
-            limit=0, offset=0, lock=False, param=None, distinct=False, debug=False):
+            limit=0, offset=0, lock=False, distinct=False, debug=False):
 
         if self.tablenames is not None:  # existing build is in progress
             self.save_tablenames.append(self.tablenames)

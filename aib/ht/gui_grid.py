@@ -490,7 +490,7 @@ class GuiGrid:
         if self.auto_startrow or self.formview_frame or self.grid_frame:
             await self.start_row(start_row, display=True)
 
-    async def start_grid(self, param=None, start_col=None, start_val=None):
+    async def start_grid(self, start_col=None, start_val=None):
 
         # not sure if next line is necessary, as we call it on start_row() as well [2019-06-29]
         # see db.objects.delete - when deleting children, check if cursor is not None
@@ -620,7 +620,7 @@ class GuiGrid:
             await conn.release()
 
         await self.cursor.start_cursor(self.col_names, self.cursor_filter+sub_filter,
-            self.cursor_sequence, param)
+            self.cursor_sequence)
 
         if parent is not None:
             if not parent[1].db_obj.exists:
