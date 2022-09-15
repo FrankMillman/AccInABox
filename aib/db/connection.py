@@ -402,7 +402,7 @@ class Conn:
         await db_obj.check_perms('select')
 
         sql, params = await self.build_select(db_obj.context, db_obj.db_table,
-            col_names, where, order, group, incl_col_types, limit, offset, lock, param, distinct, debug)
+            col_names, where, order, group, incl_col_types, limit, offset, lock, distinct, debug)
 
         # print('FULL', sql, params, '\n\n')
 
