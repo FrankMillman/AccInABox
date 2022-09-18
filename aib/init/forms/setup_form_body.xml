@@ -32,6 +32,7 @@
             ,[`display`, `Display field`, [`obj_name`, `col_name`, `lng`, `prev`, `align`],
                 [`obj_name`, `'.'`, `col_name`]]
             ,[`string`, `String value`, [`value`, `lng`], [`value`]]
+            ,[`dummy`, `Dummy field`, [`before`, `validation`, `after`], []]
             ,[`button`, `Button`, [`btn_id`, `btn_label`, `lng`, `btn_enabled`,
                 `btn_validate`, `action`, `validation`, `help_msg`], [`btn_label`]]
             ,[`nb_start`, `Notebook start`, [], []]
