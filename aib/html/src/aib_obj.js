@@ -45,6 +45,7 @@ AibCtrl.prototype.set_cell_value_from_server = function(grid, row, col, value) {
 ////////////////////
 function AibText() {};
 AibText.prototype = new AibCtrl();
+AibText.prototype.type = 'text';
 AibText.prototype.after_got_focus = function(text) {
   if (!text.amendable()) {
     setInsertionPoint(text, 0);
@@ -199,6 +200,7 @@ AibText.prototype.convert_prev_cell_value = function(cell, prev_value) {
 ////////////////////
 function AibNum() {};
 AibNum.prototype = new AibCtrl();
+AibNum.prototype.type = 'num';
 AibNum.prototype.after_got_focus = function(num) {
   if (!num.amendable()) {  // reset in case set_dflt, retain display format
     num.value = this.num_to_string(num, num.current_value);
@@ -359,6 +361,7 @@ AibNum.prototype.convert_prev_cell_value = function(cell, prev_value) {
 ////////////////////
 function AibDate() {};
 AibDate.prototype = new AibCtrl();
+AibDate.prototype.type = 'date';
 AibDate.prototype.after_got_focus = function(date) {
   if (!date.amendable()) {
     setInsertionPoint(date, 0, 0);
@@ -807,6 +810,7 @@ AibDate.prototype.grid_after_cal = function(date, new_date) {
 ////////////////////
 function AibBool() {};
 AibBool.prototype = new AibCtrl();
+AibBool.prototype.type = 'bool';
 AibBool.prototype.after_got_focus = function(bool) {
   if (bool.frame.err_flag)
     bool.className = 'error_background'
@@ -1030,6 +1034,7 @@ AibBool.prototype.draw_unchk = function(bool) {
 ////////////////////
 function AibChoice() {};
 AibChoice.prototype = new AibCtrl();
+AibChoice.prototype.type = 'choice';
 AibChoice.prototype.after_got_focus = function(choice) {
   if (!choice.amendable())
     return
@@ -1052,6 +1057,10 @@ AibChoice.prototype.setup_choices = function(choice, choices) {
     choice.data.push(key);
     choice.values.push(value)
     };
+  choice.value = choice.data[0];
+  choice.ndx = 0;
+  choice.callback(choice.value);
+  choice.innerHTML = html_esc(choice.values[choice.ndx]);
   };
 AibChoice.prototype.set_dflt_val = function(choice, value) {
   if (typeof(value) === 'number')
@@ -1382,6 +1391,7 @@ AibChoice.prototype.grid_after_selection = function(choice, option_selected) {
 ////////////////////
 function AibRadio() {};
 AibRadio.prototype = new AibCtrl();
+AibRadio.prototype.type = 'radio';
 AibRadio.prototype.after_got_focus = function(radio) {
 //  if (radio.current_value === '')
 //    this.onselection(radio, 0);
@@ -1463,6 +1473,7 @@ AibRadio.prototype.set_value_from_server = function(radio, value) {
 ////////////////////
 function AibSpin() {};
 AibSpin.prototype = new AibCtrl();
+AibSpin.prototype.type = 'spin';
 AibSpin.prototype.after_got_focus = function(spin) {
   if (spin.amendable())  // why?
     spin.innerHTML = spin.current_value;
@@ -1530,6 +1541,7 @@ AibSpin.prototype.set_value_from_server = function(spin, value) {
 ////////////////////
 function AibSxml() {};
 AibSxml.prototype = new AibCtrl();
+AibSxml.prototype.type = 'sxml';
 AibSxml.prototype.after_got_focus = function(sxml) {
   sxml.style.border = '1px solid black';
   if (sxml.frame.err_flag)
@@ -1646,6 +1658,7 @@ AibSxml.prototype.grid_popup_callback = function(cell, input, row) {
 ////////////////////
 function AibDummy() {};
 AibDummy.prototype = new AibCtrl();
+AibDummy.prototype.type = 'dummy';
 AibDummy.prototype.after_got_focus = function(dummy) {
   if (!(dummy.frame.form.current_focus === dummy) &&
       !(dummy.frame.form.setting_focus === dummy))
