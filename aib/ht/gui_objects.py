@@ -98,6 +98,7 @@ class GuiCtrl:
         await fld.setval(value, form_vlds=self.form_vlds)  # can raise AibError
 
         if self.after_input is not None:  # steps to perform after input
+            # if AibError is raised, the effect is the same as if the validation failed
             await ht.form_xml.after_input(self)
             del fld.val_before_input
 
@@ -256,7 +257,8 @@ class GuiCtrl:
                     # place filter in tgt_obj.context - it will be picked up in ht.gui_grid.start_grid
                     tgt_obj.context.lkup_filter = (lkup_filter, col_val)
 
-        if tgt_obj.db_table.tree_params:
+        tree_params =  tgt_obj.db_table.tree_params
+        if tree_params and not (tree_params[0] is None and tree_params[1][2] is None):  # if no parent_id, cannot use tree_lookup
             form_name = '_sys.tree_lookup'
             cursor_name = None
         else:
@@ -314,6 +316,10 @@ class GuiTextCtrl(GuiCtrl):
                     type = 'radio'
                 else:
                     type = 'choice'
+                if value is None:  # added 2022-10-02
+                    if choices[1]:  # can be empty
+                        if not fld.col_defn.allow_null:  # if allow_null, leave value as None
+                            value = next(iter(choices[1]))  # prevent 'frame_amended' on client when first 'choice' displayed
             else:
                 type = 'text'
             input = {'type': type, 'lng': lng,
@@ -435,7 +441,7 @@ class GuiDisplay:
             value = (self.parent.current_row, value)
         self.parent.session.responder.obj_to_redisplay.append((self.ref, value))
 
-class GuiDummy:  # dummy field to force validation of last real field
+class GuiDummy:  # dummy field to trigger validation/after_input during form execution
     def __init__(self, parent, gui):
         self.parent = parent
         self.pwd = ''
@@ -452,8 +458,10 @@ class GuiDummy:  # dummy field to force validation of last real field
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
         self.pos = pos
-        gui.append(('dummy', {'type': 'dummy', 'ref': self.ref,
-            'lng': None, 'help_msg': '', 'value': ''}))
+        # next 2 lines removed on 2022-09-24
+        # when happy that it is stable, remove *all* references to Dummy in html/src/*.js
+        # gui.append(('dummy', {'type': 'dummy', 'ref': self.ref,
+        #     'lng': None, 'help_msg': '', 'value': ''}))
 
     def __str__(self):
         return '{} dummy'.format(self.ref)
@@ -467,6 +475,7 @@ class GuiDummy:  # dummy field to force validation of last real field
         for vld in self.form_vlds:
             await check_vld(self, self.parent, vld)
         if self.after_input is not None:  # steps to perform after input
+            # if AibError is raised, the effect is the same as if the validation failed
             await ht.form_xml.after_input(self)
 
 class GuiButton:

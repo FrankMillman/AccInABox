@@ -242,10 +242,13 @@ class GuiGrid:
                     self, fld, readonly, skip, choices, lkup, pwd,
                     lng, height, label, action, gui_cols, grid=True)
 
+                if before is not None:
+                    gui_obj.before_input = etree.fromstring(
+                        f'<_>{before}</_>', parser=parser)
+
                 if form_dflt is not None:
-                    form_dflt = etree.fromstring(
+                    gui_obj.form_dflt = etree.fromstring(
                         f'<_>{form_dflt}</_>', parser=parser)
-                gui_obj.form_dflt = form_dflt
 
                 if validation is not None:
                     validations = etree.fromstring(
@@ -490,7 +493,7 @@ class GuiGrid:
         if self.auto_startrow or self.formview_frame or self.grid_frame:
             await self.start_row(start_row, display=True)
 
-    async def start_grid(self, start_col=None, start_val=None):
+    async def start_grid(self, start_col=None, start_val=None, set_focus=False):
 
         # not sure if next line is necessary, as we call it on start_row() as well [2019-06-29]
         # see db.objects.delete - when deleting children, check if cursor is not None
@@ -696,7 +699,7 @@ class GuiGrid:
         #         assert self.formview_frame is None
 
         self.session.responder.send_start_grid(self.ref,
-            (self.num_rows, first_row, gui_rows, append_row, focus_row))
+            (self.num_rows, first_row, gui_rows, append_row, focus_row, set_focus))
 
         if self.auto_startrow or self.formview_frame or self.grid_frame:
             await self.start_row(focus_row, display=True)
@@ -761,6 +764,9 @@ class GuiGrid:
             await self.db_obj.select_row_from_cursor(row, display=display)
             self.last_vld = len(self.obj_list)
 
+        # when could we have > 1 'on_start_row' method??
+        if len(self.on_start_row) > 1:
+            print('DO WE GET HERE??', self)
         for method in self.on_start_row:
             await ht.form_xml.exec_xml(self, method)
 
@@ -927,14 +933,20 @@ class GuiGrid:
         else:
             await self.validate_data(obj.pos)
 
-        replies = [reply[0] for reply in self.session.responder.reply
-            if reply[0] in ('cell_set_focus', 'start_grid')]
-        # 'cell_set_focus' can be set in save_row() if row was inserted
-        #   and then re-positioned
-        # 'start_grid' can be set by any function which modifies the
-        #   content of the grid and wants to redisplay it from scratch
-        if replies:
-            return  # don't send cell_set_focus message
+        if obj.before_input is not None:  # steps to perform before input
+            await ht.form_xml.before_input(obj)
+
+        for reply in self.session.responder.reply:
+            if reply[0] == 'start_grid':
+                # 'start_grid' can be set by any function which modifies the
+                #   content of the grid and wants to redisplay it from scratch
+                if reply[1] == self.ref:  # else starting a different grid - ignore
+                    return  # don't send 'cell_set_focus' message
+            elif reply[0] == 'cell_set_focus':
+                # 'cell_set_focus' can be set in save_row() if row was inserted
+                #   and then re-positioned
+                if reply[1] == self.ref:  # can it ever be different?
+                    return  # don't send 'cell_set_focus' message
 
         if row != self.current_row:
             if self.auto_startrow or self.grid_frame is not None:

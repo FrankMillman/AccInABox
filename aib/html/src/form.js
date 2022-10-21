@@ -486,6 +486,7 @@ function setup_form(args) {
         var table = document.createElement('table');
         table.style.borderSpacing = '10px';
         panel.appendChild(table);
+        last_parent = table;
 //        panel.style.background = 'lightgreen';
         break;
       case 'row':
@@ -499,7 +500,6 @@ function setup_form(args) {
           col.rowSpan = elem_args.rowspan;
         if (elem_args.align)
           col.style.textAlign = elem_args.align;
-        last_parent = col;
         break;
       case 'text':
         var text = document.createElement('span');
@@ -552,7 +552,6 @@ function setup_form(args) {
           button.style.marginTop = '10px';
           button.style.marginRight = '10px';
           };
-        last_parent = button_row;
         break;
       case 'button':
         var button = create_button(frame, elem_args);
@@ -600,7 +599,7 @@ function setup_form(args) {
           current_page.style.display = 'none';
           var current_tab = this.tabs.childNodes[this.current_pos-1]
           current_tab.style.borderBottom = '1px solid lightgrey';
-          current_tab.style.color = 'grey';
+          current_tab.style.color = 'lightgrey';
           var new_page = this.childNodes[new_pos];
           new_page.style.display = 'block';
           var new_tab = this.tabs.childNodes[new_pos-1];
@@ -622,7 +621,7 @@ function setup_form(args) {
         tab.style.height = '20px';
         tab.style.padding = '3px 0px';
         tab.style.fontWeight = 'bold';
-        tab.style.color = 'grey';
+        tab.style.color = 'lightgrey';
         tab.style.borderBottom = '1px solid lightgrey';
         tab.style.textAlign = 'center';
         tab.style.cursor = 'default';
@@ -727,11 +726,11 @@ function setup_form(args) {
           nb_btn.onfocus = function() {
             if (this.frame.form.disable_count) return;
             this.style.border = '1px solid grey'
-            got_focus(this);
+            // got_focus(this);
             };
           nb_btn.onblur = function() {this.style.border = '1px solid transparent'};
-          nb_btn.got_focus = function() {};
-          nb_btn.lost_focus = function() {return true};
+          // nb_btn.got_focus = function() {};
+          // nb_btn.lost_focus = function() {return true};
 
           nb_btn.onclick = function(e) {
             if (this.frame.form.disable_count) return false;
@@ -873,7 +872,7 @@ function setup_form(args) {
         box.appendChild(main_grid);
         //box.style.textAlign = 'center';
         main_grid.style.textAlign = 'left';
-        create_grid(frame, main_grid, elem_args, elem[2]);
+        create_grid(frame, main_grid, page, elem_args, elem[2]);
         break;
       case 'grid_toolbar':
         main_grid.create_grid_toolbar(elem_args);
@@ -1195,7 +1194,16 @@ function setup_form(args) {
         var subtype_div = document.createElement('span');
         subtype_div.style.display = 'inline-block';
         subtype_div.style.marginTop = '10px';
-        block.appendChild(subtype_div);
+
+        // block.appendChild(subtype_div);
+        if (vbox !== null)
+          vbox.appendChild(subtype_div)
+        else {
+          if (block.childNodes.length)
+            subtype_div.style.marginLeft = '10px';
+          block.appendChild(subtype_div);
+          subtype_div.style[cssFloat] = 'left';
+          };
 
         subtype_div.style.border = '1px solid lightgrey';
 

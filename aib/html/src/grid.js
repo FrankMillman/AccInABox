@@ -1,4 +1,4 @@
-function create_grid(frame, main_grid, json_elem, col_defns) {
+function create_grid(frame, main_grid, page, json_elem, col_defns) {
 
   var grid = document.createElement('div');
   grid.style.outline = 'none';  // disable highlight on focus
@@ -11,6 +11,7 @@ function create_grid(frame, main_grid, json_elem, col_defns) {
   frame.obj_list.push(grid);
   frame.form.obj_dict[json_elem.ref] = grid;
   grid.frame = frame;
+  grid.nb_page = page.nb_page;
   grid.active_frame = frame;  // can be over-ridden by grid_frame
   grid.ref = json_elem.ref;
   grid.growable = json_elem.growable;
@@ -831,7 +832,7 @@ if (grid.header_row.length) {
 
     };
 
-    grid.lost_focus = function() {
+  grid.lost_focus = function() {
     //debug3('grid lost focus ' + grid.ref + ' ' + grid.num_grid_rows +
     //  ' row_amd=' + grid.amended() + ' frame_amd=' + grid.frame.amended());
 
@@ -938,6 +939,8 @@ if (grid.header_row.length) {
 
     grid.focus_row = args[4];
 
+    var set_focus = args[5];
+
     if (grid.num_data_rows >= grid.num_grid_rows)
       grid.show_scrollbar();
     else
@@ -984,6 +987,9 @@ if (grid.header_row.length) {
     grid.active_row = -1;
     grid.active_col = -1;
     grid.set_amended(false);
+
+    if (set_focus)  // added 2022-09-27 - grid got focus, then server adds rows and restarts grid - reset active_row/col
+      grid.req_cell_focus(grid.focus_row, 0);
 
 //    // when cell gets focus, treat the same as if we had tabbed there
 //    grid.tabbing = true;
@@ -1152,9 +1158,11 @@ if (grid.header_row.length) {
   grid.set_amended = function(state) {
     //debug3('gset ' + grid.ref + ' ' + state);
     this._amended = state;
-    if (state === true)
+    if (state === true) {
+      grid.frame.set_amended(true);  // to force sending lost/got focus for other objects in grid.frame
       if (this.grid_frame !== null)
         this.grid_frame.set_amended(true);
+      };
     };
 
   grid.amended = function() {

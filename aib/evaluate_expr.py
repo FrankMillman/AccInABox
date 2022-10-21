@@ -159,7 +159,6 @@ async def eval_bool(src, chk, tgt, db_obj, fld, value):
         args = []
         if ',' in tgt:
             func_name, args_str = tgt.split(',', 1)
-            # db_obj.context.pyfunc_args = args
             for arg in args_str.split(','):
                 if arg.startswith('"'):
                     args.append(arg[1:-1])

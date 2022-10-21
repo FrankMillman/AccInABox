@@ -613,7 +613,7 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
                 params.append(ledger_row_id)
             sql.append(f'ORDER BY period_row_id')
             async for row in await conn.exec_sql(' '.join(sql), params):
-                period_data = PerObj(**{k: v for k, v in zip(col_names, row)})
+                period_data = PerObj(*row)  # create instance from tuple
                 period_row_id = period_data.period_row_id
                 ledg_per[period_row_id] = period_data
                 if period_data.state == 'current':

@@ -161,21 +161,20 @@ class Form:
         title = title.replace('{comp_name}', db.cache.companies[self.company])
 
         if grid_params is not None:
-            table_name, arg = grid_params
-            if arg is None:  # finrpt passed in from rep.finrpt
-                grid_obj = self.data_objects['finrpt_obj']
-                title = 'Fin report'
-            elif isinstance(arg, list):  # finrpt with footer_row passed in from rep.finrpt
-                grid_obj = self.data_objects['finrpt_obj']
-                title = 'Fin report'
-                footer_row = dumps(arg)
-                grid = form_defn.find('frame').find('body').find('grid')
-                grid.attrib['footer_row'] = footer_row
-            else:  # passed in from menu_defn if setup_grid
+            if len(grid_params) == 2:  # passed in from menu_defn
+                table_name, cursor_name = grid_params
                 grid_obj = await db.objects.get_db_object(self.context, table_name)
                 self.data_objects['grid_obj'] = grid_obj
-                cursor_name = arg
                 title = await grid_obj.setup_cursor_defn(cursor_name)
+            elif len(grid_params) == 3:  # passed in from rep.finrpt
+                table_name, title, footer_row = grid_params
+                grid_obj = self.data_objects[table_name]
+                if footer_row:
+                    grid = form_defn.find('frame').find('body').find('grid')
+                    grid.attrib['footer_row'] = dumps(footer_row)
+            else:
+                print('SHOULD NOT GET HERE')
+                breakpoint()
 
         self.title = title
 
@@ -448,7 +447,7 @@ class Form:
         if after_start_form is not None:
             action = etree.fromstring(f'<_>{after_start_form}</_>', parser=parser)
             try:
-                await ht.form_xml.exec_xml(self, action)
+                await ht.form_xml.exec_xml(frame, action)
             except AibError:
                 await self.end_form(state='cancelled')
                 raise
@@ -1480,6 +1479,9 @@ class Frame:
 
             obj = self.obj_list[i]
 
+            if obj.before_input is not None:  # steps to perform before input
+                await ht.form_xml.before_input(obj)
+
             if first_to_validate < i < pos:  # object 'skipped' by user
                 if obj.readonly:
                     pass  # do not try to calculate dflt_val for a readonly field
@@ -1497,6 +1499,7 @@ class Frame:
                     elif await fld.getval() is None:
                         self.temp_data[obj.ref] = await fld.val_to_str(await fld.get_dflt())
 
+
             try:
                 self.last_vld += 1  # preset, for 'after_input'
                 assert self.last_vld == i, f'Form: last={self.last_vld} i={i}'
@@ -1513,6 +1516,9 @@ class Frame:
                 self.last_vld -= 1  # reset
                 if err.head is not None:
                     if not isinstance(obj, ht.gui_grid.GuiGrid):  # cell_set_focus already sent
+                        while obj.readonly:  # find previous 'input' object
+                            i -= 1
+                            obj = self.obj_list[i]
                         self.session.responder.send_set_focus(obj.ref, err_flag=True)
                     print()
                     print('-'*20)
@@ -1661,10 +1667,10 @@ class Frame:
         # notify client that data_obj is now clean - may or may not exist
         self.session.responder.obj_to_redisplay.append((self.ref, (True, set_obj_exists)))
 
-    async def start_grid(self, obj_name, start_col=None, start_val=None):
+    async def start_grid(self, obj_name, start_col=None, start_val=None, set_focus=False):
         grid = self.grid_dict[obj_name]
         await grid.db_obj.close_cursor()
-        await grid.start_grid(start_col=start_col, start_val=start_val)
+        await grid.start_grid(start_col=start_col, start_val=start_val, set_focus=set_focus)
 
     async def init_grid(self, obj_name):
         grid = self.grid_dict[obj_name]

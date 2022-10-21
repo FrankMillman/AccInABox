@@ -33,7 +33,6 @@ async def before_input(obj):
 
 async def after_input(obj):
     for xml in obj.after_input:
-        # obj.parent._after_input = obj
         await globals()[xml.tag](obj.parent, xml)
 
 #----------------------------------------------------------------------
@@ -146,7 +145,7 @@ async def restore_obj(caller, xml):
         await db_obj.restore()
 
 async def continue_form(caller, xml):
-    await caller.continue_form()
+    await caller.form.continue_form()
 
 async def restart_frame(caller, xml):
     await caller.restart_frame()
@@ -184,8 +183,9 @@ async def recalc(caller, xml):
 async def restart_grid(caller, xml):
     obj_name = xml.get('obj_name')
     start_col = xml.get('start_col')  # else None
-    start_val = xml.get('start_val')  # else None
-    await caller.start_grid(obj_name, start_col=start_col, start_val=start_val)
+    start_val = xml.get('start_val')  #  ""   ""
+    set_focus = xml.get('set_focus', False)
+    await caller.start_grid(obj_name, start_col=start_col, start_val=start_val, set_focus=set_focus)
 
 async def init_grid(caller, xml):
     obj_name = xml.get('obj_name')

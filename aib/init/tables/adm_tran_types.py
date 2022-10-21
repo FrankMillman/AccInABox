@@ -123,26 +123,6 @@ cols.append ({
     'choices'    : None,
     })
 cols.append ({
-    'col_name'   : 'seq',
-    'data_type'  : 'INT',
-    'short_descr': 'Sequence',
-    'long_descr' : 'Sequence',
-    'col_head'   : 'Seq',
-    'key_field'  : 'N',
-    'data_source': 'seq',
-    'condition'  : None,
-    'allow_null' : False,
-    'allow_amend': True,
-    'max_len'    : 0,
-    'db_scale'   : 0,
-    'scale_ptr'  : None,
-    'dflt_val'   : None,
-    'dflt_rule'  : None,
-    'col_checks' : None,
-    'fkey'       : None,
-    'choices'    : None,
-    })
-cols.append ({
     'col_name'   : 'module_row_id',
     'data_type'  : 'INT',
     'short_descr': 'Module row id',
@@ -160,6 +140,26 @@ cols.append ({
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : ['db_modules', 'row_id', 'module_id', 'module_id', False, None],
+    'choices'    : None,
+    })
+cols.append ({
+    'col_name'   : 'seq',
+    'data_type'  : 'INT',
+    'short_descr': 'Sequence',
+    'long_descr' : 'Sequence',
+    'col_head'   : 'Seq',
+    'key_field'  : 'N',
+    'data_source': 'seq',
+    'condition'  : None,
+    'allow_null' : False,
+    'allow_amend': True,
+    'max_len'    : 0,
+    'db_scale'   : 0,
+    'scale_ptr'  : None,
+    'dflt_val'   : None,
+    'dflt_rule'  : None,
+    'col_checks' : None,
+    'fkey'       : None,
     'choices'    : None,
     })
 cols.append ({

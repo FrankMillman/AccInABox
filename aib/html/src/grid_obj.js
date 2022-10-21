@@ -131,11 +131,6 @@ function create_cell_input(grid) {
     return true;
     }
 
-  input.onkeypress = function(e) {
-    if (!e) e=window.event;
-    return input.aib_obj.onpresskey(input, e);
-    };
-
   input.onkeydown = function(e) {
     if (!e) e=window.event;
     switch (e.key) {

@@ -359,7 +359,6 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
     'col_checks' : [
         ['cond_reqd', 'Condition required', [
             ['check', '(', "'_if'", 'in', 'data_source', ''],

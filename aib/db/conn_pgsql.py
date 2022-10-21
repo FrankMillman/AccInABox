@@ -1,4 +1,3 @@
-
 import psycopg2
 import psycopg2.extensions  # so that strings are returned as unicode
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
@@ -240,7 +239,8 @@ def convert_string(self, string, db_scale=None, text_key=False):
         .replace('$RTRN', f'DEC (21,{db_scale})')
         .replace('$RPTY', f'DEC (21,{db_scale})')
         .replace('$RLCL', f'DEC (21,{db_scale})')
-        .replace('AUTO', 'SERIAL PRIMARY KEY')
+        # .replace('AUTO', 'SERIAL PRIMARY KEY')
+        .replace('AUTO', 'INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY')
         .replace('AUT0', 'INT GENERATED ALWAYS AS IDENTITY (minvalue 0) PRIMARY KEY')
         .replace('JSON', 'VARCHAR')
         .replace('FXML', 'BYTEA')

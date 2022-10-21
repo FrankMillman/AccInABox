@@ -287,6 +287,15 @@ function create_input(frame, page, json_elem, label) {
       e.cancelBubble = true;
       return false;
       };
+
+    // [TODO] On Ctrl+Enter, open edit box full screen width, load input.value, dump input.value on 'Ok'
+    //if (e.ctrlKey && e.key === 'Enter') {
+    //  if (this.aib_obj.type === 'text')
+    //    debug3('HERE ' + this.aib_obj.type + ' ' + this.label.firstChild.data);
+    //  e.cancelBubble = true;
+    //  return false;
+    //  };
+
     switch(e.key) {
       case 'Escape':
         if (input.aib_obj.data_changed(input)) {  //, input.childNodes[0].value)) {

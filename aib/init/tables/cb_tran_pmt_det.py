@@ -38,12 +38,12 @@ table = {
                     ],
                 ['supp_id'],  # display descr
                 ],
-            # ['ar_pmt', 'Ar payment', 'ar_subtran_pmt',
-            #     [  # return values
-            #         ['pmt_tran', '-pmt_amount'],  # tgt_col, src_col
-            #         ],
-            #     ['cust_id'],  # display descr
-            #     ],
+            ['ar_pmt', 'Ar payment', 'ar_subtran_pmt',
+                [  # return values
+                    ['pmt_tran', '-pmt_amount'],  # tgt_col, src_col
+                    ],
+                ['cust_id'],  # display descr
+                ],
             ['gl', 'Post to g/l', 'gl_subtran_jnl',
                 [  # return values
                     ['pmt_tran', '-gl_amount'],  # tgt_col, src_col

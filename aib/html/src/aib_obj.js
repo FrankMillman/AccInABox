@@ -1318,6 +1318,8 @@ AibChoice.prototype.set_value_from_server = function(choice, value) {
     value += '';
   choice.form_value = value;  // set this before adjusting for ''
   // choice.current_value = value;
+  if (value === null)  // added 2022-10-02
+    return;  // choice_data will also be null
   if (value === '')
     value = choice.data[0];
   choice.current_value = value;

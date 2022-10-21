@@ -132,8 +132,6 @@ async def valid_loc_id(db_obj, fld, src_val, ctrl_fld):
     #      get value of 'prov_id' for location_id 12 - 5 (B)
     #      validate that (A) = (B)
 
-    # ctrl_fld = db_obj.context.pyfunc_args  # args taken from col_checks in col_defn
-
     valid_loc_fld = await db_obj.getfld(f'{ctrl_fld}>valid_loc_ids')
 
     if src_val == valid_loc_fld._value:
@@ -154,8 +152,6 @@ async def valid_loc_id(db_obj, fld, src_val, ctrl_fld):
 
 async def valid_fun_id(db_obj, fld, src_val, ctrl_fld):
     # see notes above in valid_loc_id() - all references to 'locations' apply equally to 'functions'
-
-    # ctrl_fld = db_obj.context.pyfunc_args  # args taken from col_checks in col_defn
 
     valid_fun_fld = await db_obj.getfld(f'{ctrl_fld}>valid_fun_ids')
 

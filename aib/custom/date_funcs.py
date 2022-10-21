@@ -267,7 +267,7 @@ async def save_range_settings(caller, xml):
         ])
     
 async def load_ye_per(caller, xml):
-    # called from various ledger_summary's and finrpt_run before_start_form
+    # called from finrpt_run before_start_form
 
     context = caller.context
     fin_periods = await db.cache.get_adm_periods(context.company)
@@ -288,7 +288,7 @@ async def load_ye_per(caller, xml):
     if current_period is None:
         raise AibError(head=caller.company, body='Ledger periods not set up')
 
-    var = caller.data_objects['var']
+    var = caller.data_objects['runtime_vars']
 
     fld = await var.getfld('year_no')
     fld.col_defn.choices = ye_choices
