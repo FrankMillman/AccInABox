@@ -1,19 +1,18 @@
 from common import log_db, db_log
 
-def customise(DbMemCursor):
+def customise(Cursor):  # Cursor could be either a DbCursor or a MemCursor - treatment is identical
     # add db-specific methods to DbCursor or MemCursor class
-    DbMemCursor.create_cursor = create_cursor
-    DbMemCursor.insert_row = insert_row
-    DbMemCursor.update_row = update_row
-    DbMemCursor.delete_row = delete_row
-    DbMemCursor._fetch_row = _fetch_row
-    DbMemCursor.get_rows = get_rows
-    DbMemCursor.close = close
+    Cursor.create_cursor = create_cursor
+    Cursor.insert_row = insert_row
+    Cursor.update_row = update_row
+    Cursor.delete_row = delete_row
+    Cursor._fetch_row = _fetch_row
+    Cursor.get_rows = get_rows
+    Cursor.close = close
 
 async def create_cursor(self, sql, params):
     if self.debug:
         print(sql, params)
-    self.rows = []
     self.rows = await self.conn.fetchall(sql, params, context=self.db_obj.context)
     self.num_rows = len(self.rows)
     await self.conn.release()

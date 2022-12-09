@@ -320,9 +320,10 @@ class Conn:
             expr = sql[pos_1+1: pos_2]
             if expr == 'company':
                 sql = sql[:pos_1] + context.company + sql[pos_2+1:]
+            elif not '.' in expr:  # added [2022-11-11] - assume expr is a mem_obj table_name
+                db_obj = context.data_objects[expr]  # get full table_name from table alias
+                sql = sql[:pos_1] + db_obj.table_name + sql[pos_2+1:]
             else:
-                if not '.' in expr:
-                    breakpoint()
                 table_name, col_name = expr.split('.')
                 if table_name == '_ctx':
                     val = getattr(context, col_name)

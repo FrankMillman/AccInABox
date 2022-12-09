@@ -584,9 +584,11 @@ def get_lower_colname(self, col_name, alias):
     return f'LOWER({alias}.{col_name})'
 
 async def tree_select(self, context, table_name, tree_params, level=None,
-        start_row=1, filter=None, sort=False, up=False):
+        start_row=1, filter=None, sort=False, up=False, mem_obj=False):
 
     company = context.company
+    if not mem_obj:
+        table_name = f'{company}.{table_name}'
     group, col_names, fixed_levels = tree_params
     code, descr, parent_id, seq = col_names
     if fixed_levels is not None:
@@ -660,10 +662,10 @@ async def tree_select(self, context, table_name, tree_params, level=None,
     cte = (
         "WITH RECURSIVE _tree AS ("
           f"SELECT {select_1} "
-          f"FROM {company}.{table_name} {where_1} "
+          f"FROM {table_name} {where_1} "
           f"UNION ALL "
           f"SELECT {select_2} "
-          f"FROM _tree, {company}.{table_name} AS _tree2 {where_2}) "
+          f"FROM _tree, {table_name} AS _tree2 {where_2}) "
         )
     return cte
 
