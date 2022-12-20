@@ -14,7 +14,7 @@ from common import log, debug
 
 async def on_click(caller, btn):  # caller can be frame or grid
     for xml in btn.action:
-        if debug: log.write('CLICK {} {}\n\n'.format(caller, xml.tag))
+        if debug: log.write(f'CLICK {caller} {xml.tag}\n\n')
         await globals()[xml.tag](caller, xml)
 
 async def on_answer(caller, elem):
@@ -24,7 +24,7 @@ async def on_answer(caller, elem):
 async def exec_xml(caller, elem):  # caller can be frame or grid
     for xml in elem:
         # print(xml.tag)
-        if debug: log.write('EXEC {} {}\n\n'.format(caller, xml.tag))
+        if debug: log.write(f'EXEC {caller} {xml.tag}\n\n')
         await globals()[xml.tag](caller, xml)
 
 async def before_input(obj):
@@ -44,7 +44,7 @@ async def case(caller, xml):
     for child in xml:
         if child.tag == 'default' or await globals()[child.tag](caller, child):
             for step in child:
-                if debug: log.write('STEP {} {}\n\n'.format(caller, step.tag))
+                if debug: log.write(f'STEP {caller} {step.tag}\n\n')
                 await globals()[step.tag](caller, step)
             break
 
@@ -184,15 +184,25 @@ async def restart_grid(caller, xml):
     obj_name = xml.get('obj_name')
     start_col = xml.get('start_col')  # else None
     start_val = xml.get('start_val')  #  ""   ""
-    set_focus = xml.get('set_focus', False)
-    await caller.start_grid(obj_name, start_col=start_col, start_val=start_val, set_focus=set_focus)
+    if isinstance(caller, ht.gui_grid.GuiGrid):
+        grid = caller
+    else:
+        grid = caller.grid_dict[obj_name]
+    await grid.db_obj.close_cursor()
+    await grid.start_grid(start_col=start_col, start_val=start_val)
+
+    if xml.get('reset_focus') == 'true':
+        # added 2022-12-07, to solve the following problem
+        # grid gets focus, then a server-side function modifies the grid and calls restart_frame
+        # this leaves the grid in an invalid state - it has focus, but active row/col are -1/-1
+        # this resets the grid to a valid state
+        # grid already has focus, so sending set_focus has no effect
+        # sending cell_set_focus(0, 0) works, but is it always the right thing to do?
+        caller.session.responder.send_cell_set_focus(grid.ref, 0, grid.obj_list[0].ref)
 
 async def init_grid(caller, xml):
     obj_name = xml.get('obj_name')
     await caller.init_grid(obj_name)
-
-async def validate_all(caller, xml):
-    await caller.validate_all()
 
 async def req_save(caller, xml):
     await caller.req_save()
@@ -292,7 +302,7 @@ async def do_navigate(caller, xml):
     await caller.do_navigate()
 
 async def delete_node(caller, xml):
-    await caller.tree.on_req_delete_node()
+    await caller.ctrl_tree.on_req_delete_node()
 
 async def change_button(caller, xml):
     """
@@ -383,7 +393,7 @@ async def assign(caller, xml):
                 format_arg = await arg_field.getval()
             else:
                 raise AibError(head='Error',
-                    body='Unknown format argument {}'.format(arg.text))
+                    body=f'Unknown format argument {arg.text}')
             format_args.append(format_arg)
         value_to_assign = format_string.format(*format_args)
     else:
@@ -414,12 +424,12 @@ async def btn_set_focus(caller, xml):
 async def call(caller, xml):
     method = caller.methods[xml.get('method')]
     for xml in method:
-        if debug: log.write('CALL {} {}\n\n'.format(caller, xml.tag))
+        if debug: log.write(f'CALL {caller} {xml.tag}\n\n')
         await globals()[xml.tag](caller, xml)
 
 async def pyfunc(caller, xml):
     func_name = xml.get('name')
-    if debug: log.write('PYCALL {} {}\n\n'.format(caller, func_name))
+    if debug: log.write(f'PYCALL {caller} {func_name}\n\n')
     module_name, func_name = func_name.rsplit('.', 1)
     module = importlib.import_module(module_name)
     await getattr(module, func_name)(caller, xml)
@@ -491,11 +501,11 @@ async def inline_form(caller, xml, form_name=None, callback=None):
         parent_form=caller.form, callback=callback, inline=form_xml)
 
 async def return_from_inlineform(caller, state, output_params, xml):
-    # from xml, find steps with attribute 'state' = state
+    # from xml, find return_xml with attribute 'state' = state
     on_return = xml.find('on_return')
     if on_return is not None:
-        steps = on_return.find("return[@state='{}']".format(state))
-        for step in steps:
+        return_xml = on_return.find(f"return[@state='{state}']")
+        for step in return_xml:
             await globals()[step.tag](caller, step)
 
 async def sub_form(caller, xml):
@@ -564,10 +574,13 @@ async def return_from_subform(caller, state, output_params, xml):
                 tgt_fld = await caller.data_objects[data_obj_name].getfld(col_name)
                 await tgt_fld.setval(value, validate=(tgt_fld.col_defn.col_type != 'virt'))
 
-    # find 'return' element in 'on_return' with attribute 'state' = state
-    on_return = xml.find('on_return').find("return[@state='{}']".format(state))
-    for xml in on_return:
-        await globals()[xml.tag](caller, xml)
+    # from xml, find return_xml with attribute 'state' = state
+    on_return = xml.find('on_return')
+    if on_return is not None:
+        return_xml = on_return.find(f"return[@state='{state}']")
+        for step in return_xml:
+            await globals()[step.tag](caller, step)
+
 
 async def start_process(caller, xml):
     data_inputs = {}  # input parameters to be passed to process
@@ -657,7 +670,7 @@ async def unpost_tran(grid, xml):
 
 async def find_row(caller, xml):
     grid_ref, row = caller.btn_args
-    print('FIND ROW', xml.get('name'), 'row={}'.format(row))
+    print('FIND ROW', xml.get('name'), f'row={row}')
 
 async def raise_error(caller, xml):
     raise AibError(head=xml.get('head'), body=xml.get('body'))
@@ -775,4 +788,4 @@ async def get_val(caller, value):
         return int(value)
     if value.startswith('-') and value[1:].isdigit():
         return int(value)
-    raise AibError(head='Get value', body='Unknown value "{}"'.format(value))
+    raise AibError(head='Get value', body=f'Unknown value "{value}"')

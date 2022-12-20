@@ -431,7 +431,7 @@ class Form:
 
         frame = Frame()
         frame_xml = form_defn.find('frame')
-        await frame._ainit_(self, frame_xml, self.ctrl_grid, gui)
+        await frame._ainit_(self, frame_xml, gui, ctrl_grid=self.ctrl_grid)
 
         if 'reset_buttons' in frame.methods:  # see ht.templates.Setup_Form
             await ht.form_xml.exec_xml(frame, frame.methods['reset_buttons'])
@@ -605,9 +605,8 @@ class Form:
 
     #-------------------------------------------------------------------------
     # the following attributes are shared between all forms with the same root
+    # make shared properties read-only (only implement getters)
     #-------------------------------------------------------------------------
-
-    # Make shared properties read-only (only implement getters)
 
     @property
     def session(self):
@@ -628,11 +627,12 @@ class Form:
 #----------------------------------------------------------------------------
 
 class Frame:
-    async def _ainit_(self, form, frame_xml, ctrl_grid, gui,
-            grid_frame=False, tree=None):
+    async def _ainit_(self, form, frame_xml, gui, ctrl_grid=None,
+            grid_frame=False, ctrl_tree=None):
 
         self.form = form
         self.ctrl_grid = ctrl_grid
+        self.ctrl_tree = ctrl_tree
 
         if ctrl_grid is None:
             ctrl_grid_ref = None
@@ -642,17 +642,16 @@ class Frame:
         if grid_frame:
             self.frame_type = 'grid_frame'
             self.parent = ctrl_grid
-        elif tree is not None:
+        elif ctrl_tree is not None:
             self.frame_type = 'tree_frame'
-            self.parent = tree
+            self.parent = ctrl_tree
         else:
             self.frame_type = 'frame'
             self.parent = form
-        self.tree = tree  # either None or a reference to the Tree object
 
         combo_type = frame_xml.get('combo_type')  # only used by tree_frame
         if combo_type is not None:  # must be 'group' or 'member'
-            tree.tree_frames[combo_type] = self
+            ctrl_tree.tree_frames[combo_type] = self
 
         ref, pos = form.add_obj(form, self)
         self.ref = ref  # used when sending 'start_frame'
@@ -664,7 +663,6 @@ class Frame:
 
         # self.data_objects = form.data_objects
 
-        self.non_amendable = []
         self.btn_dict = {}
         # self.grid_dict = form.grid_dict
         self.last_vld = -1
@@ -853,9 +851,6 @@ class Frame:
                 await gui_obj._ainit_(self, fld, readonly, skip,
                     choices, lkup, pwd, lng, height, label, action, gui)
                 fld.notify_form(gui_obj)
-                # self.flds_notified.append((fld, gui_obj))
-                if not fld.col_defn.allow_amend:
-                    self.non_amendable.append(gui_obj)
 
                 before = element.get('before')
                 if before is not None:
@@ -960,32 +955,35 @@ class Frame:
                 self.grid_dict[element.get('data_object')] = grid
                 if self.first_input is None:
                     self.first_input = grid
-
+                if subtype is not None:
+                    subtype_guiobj, active = subtype
+                    subtype_guiobj.append(grid)
+                    grid.hidden = not active
             elif element.tag == 'grid_frame':
                 grid.grid_frame = Frame()
                 await grid.grid_frame._ainit_(
-                    self.form, element, grid, gui, grid_frame=True)
+                    self.form, element, gui, ctrl_grid=grid, grid_frame=True)
                 gui.append(('grid_frame_end', None))
             elif element.tag == 'tree':
-                self.tree = ht.gui_tree.GuiTree()
-                await self.tree._ainit_(self, gui, element)
-                self.trees.append(self.tree)
+                tree = ht.gui_tree.GuiTree()
+                await tree._ainit_(self, gui, element)
+                self.trees.append(tree)
             elif element.tag == 'tree_lkup':
-                self.tree = ht.gui_tree.GuiTreeLkup()
-                await self.tree._ainit_(self, gui, element)
-                self.trees.append(self.tree)
+                tree = ht.gui_tree.GuiTreeLkup()
+                await tree._ainit_(self, gui, element)
+                self.trees.append(tree)
             elif element.tag == 'tree_combo':
-                self.tree = ht.gui_tree.GuiTreeCombo()
-                await self.tree._ainit_(self, gui, element)
-                self.trees.append(self.tree)
+                tree = ht.gui_tree.GuiTreeCombo()
+                await tree._ainit_(self, gui, element)
+                self.trees.append(tree)
             elif element.tag == 'tree_report':
-                self.tree = ht.gui_tree.GuiTreeReport()
-                await self.tree._ainit_(self, gui, element)
-                self.trees.append(self.tree)
+                tree = ht.gui_tree.GuiTreeReport()
+                await tree._ainit_(self, gui, element)
+                self.trees.append(tree)
             elif element.tag == 'tree_frame':
-                self.tree.tree_frame = Frame()
-                await self.tree.tree_frame._ainit_(
-                    self.form, element, None, gui, tree=self.tree)
+                tree.tree_frame = Frame()
+                await tree.tree_frame._ainit_(
+                    self.form, element, gui, ctrl_tree=tree)
                 gui.append(('tree_frame_end', None))
             elif element.tag == 'subtype_frame':
                 lng = int(element.get('lng', '120'))  # field length 120 if not specified
@@ -1127,7 +1125,7 @@ class Frame:
         subtype_fld.gui_subtype[self] = sub_colname
         # self.subtype_records = dict - key=sub_colname name, value=list, of which -
         #   1st element = active subtype (used to hide/show objects when active subtype changes)
-        #       initial value '' - no active sbutype
+        #       initial value '' - no active subtype
         #   2nd element = dict - key=subtype value, value=list of gui objects for subtype
         #       initial value OD() - OrderedDict will be populated below
         self.subtype_records[sub_colname] = ['', OD()]
@@ -1362,7 +1360,6 @@ class Frame:
         if debug:
             log.write(f'lost focus {obj} "{value}"\n\n')
         if isinstance(obj, ht.gui_grid.GuiGrid):
-            # call gui_grid.validate_grid() when grid loses focus
             self.set_last_vld(obj)
         else:
             if value is None:  # value was not changed on client
@@ -1383,16 +1380,17 @@ class Frame:
             log.write(f'set_last_vld ref={self.ref} pos={obj.pos} last={self.last_vld}\n\n')
         if self.last_vld >= obj.pos:
             self.last_vld = obj.pos-1  # this one needs validating
-            # frame = self
-            # while frame.frame_type == 'grid_frame':
-            #     ctrl_grid = frame.ctrl_grid
-            #     frame = ctrl_grid.parent
-            #     if frame.last_vld > ctrl_grid.pos:
-            #         frame.last_vld = ctrl_grid.pos-1
-            if self.frame_type == 'grid_frame':
-                self.ctrl_grid.parent.set_last_vld(self.ctrl_grid)
-            elif self.frame_type == 'tree_frame':
-                self.tree.parent.set_last_vld(self.tree)
+        if self.frame_type == 'grid_frame':
+            self.ctrl_grid.parent.set_last_vld(self.ctrl_grid)
+            # notify client that parent object is dirty
+            self.session.responder.obj_to_redisplay.append(
+                (self.ctrl_grid.parent.ref, (False, self.ctrl_grid.parent.db_obj.exists)))
+
+        elif self.frame_type == 'tree_frame':
+            self.ctrl_tree.parent.set_last_vld(self.ctrl_tree)
+            # notify client that parent object is dirty
+            self.session.responder.obj_to_redisplay.append(
+                (self.ctrl_tree.parent.ref, (False, self.ctrl_tree.parent.db_obj.exists)))
 
     @log_func
     async def on_got_focus(self, obj):
@@ -1462,9 +1460,9 @@ class Frame:
             log.write(f'CHANGED? {self.ref} {self.db_obj.dirty} {self.temp_data}\n\n')
         return bool(self.db_obj.dirty or self.temp_data)
 
-    async def validate_data(self, pos):
+    async def validate_data(self, validate_up_to):
         if debug:
-            log.write(f'validate frame {self.ref} {self.last_vld+1} to {pos-1}\n\n')
+            log.write(f'validate frame {self.ref} {self.last_vld+1} to {validate_up_to-1}\n\n')
             log.write(f'{", ".join([_.ref for _ in self.obj_list])}\n\n')
 
         if self.frame_type == 'grid_frame':
@@ -1473,16 +1471,18 @@ class Frame:
 
         first_to_validate = self.last_vld + 1
 
-        for i in range(self.last_vld+1, pos):
-            if self.last_vld > i:  # after 'read', last_vld set to 'all'
+        next_to_validate = first_to_validate
+
+        while next_to_validate < validate_up_to:
+            if self.last_vld > next_to_validate:  # after 'read', last_vld set to 'all'
                 break
 
-            obj = self.obj_list[i]
+            obj = self.obj_list[next_to_validate]
 
             if obj.before_input is not None:  # steps to perform before input
                 await ht.form_xml.before_input(obj)
 
-            if first_to_validate < i < pos:  # object 'skipped' by user
+            if first_to_validate < next_to_validate < validate_up_to:  # object 'skipped' by user
                 if obj.readonly:
                     pass  # do not try to calculate dflt_val for a readonly field
                 elif obj.hidden:
@@ -1499,11 +1499,11 @@ class Frame:
                     elif await fld.getval() is None:
                         self.temp_data[obj.ref] = await fld.val_to_str(await fld.get_dflt())
 
-
             try:
-                self.last_vld += 1  # preset, for 'after_input'
-                assert self.last_vld == i, f'Form: last={self.last_vld} i={i}'
-                if isinstance(obj, ht.gui_grid.GuiGrid):
+                self.last_vld = next_to_validate  # preset, for 'after_input'
+                if obj.hidden:  # hidden subtype field
+                    pass
+                elif isinstance(obj, ht.gui_grid.GuiGrid):
                     await obj.validate()
                 elif isinstance(obj, ht.gui_tree.GuiTree):
                     await obj.validate()
@@ -1517,8 +1517,8 @@ class Frame:
                 if err.head is not None:
                     if not isinstance(obj, ht.gui_grid.GuiGrid):  # cell_set_focus already sent
                         while obj.readonly:  # find previous 'input' object
-                            i -= 1
-                            obj = self.obj_list[i]
+                            next_to_validate -= 1
+                            obj = self.obj_list[next_to_validate]
                         self.session.responder.send_set_focus(obj.ref, err_flag=True)
                     print()
                     print('-'*20)
@@ -1527,6 +1527,11 @@ class Frame:
                     print('-'*20)
                     print()
                 raise
+
+            if self.last_vld < next_to_validate:  # last_vld was reset during validation
+                next_to_validate = self.last_vld + 1
+            else:
+                next_to_validate += 1
 
     async def validate_all(self):
         # print('validate all', len(self.form.obj_list))
@@ -1582,16 +1587,10 @@ class Frame:
 
         async with self.db_session.get_connection() as db_mem_conn:
 
-            # if self.ctrl_grid is not None:
-            #     # 'self' can be a formview_frame or a grid_frame
-            #     await self.ctrl_grid.req_save()
-            #     return
-
             if 'before_save' in self.methods:
                 await ht.form_xml.exec_xml(self, self.methods['before_save'])
             if self.frame_type == 'tree_frame':
-                await self.tree.before_save()
-                self.db_session.after_commit.append((self.tree.after_save, ))
+                self.db_session.after_commit.append((self.ctrl_tree.after_save, ))
 
             await ht.form_xml.exec_xml(self, self.methods['do_save'])
 
@@ -1652,10 +1651,14 @@ class Frame:
                     await ht.form_xml.exec_xml(caller, method)
 
         for grid in self.grids:
+            # if grid.auto_start:
+            #     await grid.start_grid()
+            # elif grid.grid_frame is not None:
+            #     await grid.grid_frame.restart_frame(set_focus=False)
             if grid.auto_start:
                 await grid.start_grid()
-            elif grid.grid_frame is not None:
-                await grid.grid_frame.restart_frame(set_focus=False)
+                if grid.grid_frame is not None:
+                    await grid.grid_frame.restart_frame(set_focus=False)
 
         for tree in self.trees:
             if tree.auto_start:
@@ -1667,10 +1670,10 @@ class Frame:
         # notify client that data_obj is now clean - may or may not exist
         self.session.responder.obj_to_redisplay.append((self.ref, (True, set_obj_exists)))
 
-    async def start_grid(self, obj_name, start_col=None, start_val=None, set_focus=False):
+    async def start_grid(self, obj_name, start_col=None, start_val=None):
         grid = self.grid_dict[obj_name]
         await grid.db_obj.close_cursor()
-        await grid.start_grid(start_col=start_col, start_val=start_val, set_focus=set_focus)
+        await grid.start_grid(start_col=start_col, start_val=start_val)
 
     async def init_grid(self, obj_name):
         grid = self.grid_dict[obj_name]
@@ -1690,5 +1693,5 @@ class Frame:
         next_ref = '_'.join(last_split)
         self.session.responder.send_set_focus(next_ref)
 
-    def return_to_tree(self):
-        self.session.responder.send_set_focus(self.tree.ref)
+    def return_to_tree(self):  # called from Tree_Frame
+        self.session.responder.send_set_focus(self.ctrl_tree.ref)
