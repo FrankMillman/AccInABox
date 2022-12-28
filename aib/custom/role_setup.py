@@ -125,18 +125,17 @@ async def dump_table_perms(caller, xml):
 
     col_names = ('sel_ok', 'ins_ok', 'upd_ok', 'del_ok')
 
-    async def data_changed():  # remove clutter from following block
-        for col_name in col_names:
-            if await tbl_view_setup.getval(col_name) != await tbl_orig.getval(col_name):
-                return True
-        return False
-
     all_tbl_views = tbl_view_setup.select_many(where=[], order=[])
     async for _ in all_tbl_views:
         await tbl_orig.init()
         await tbl_orig.setval('table_id', await tbl_view_setup.getval('table_id'))
         if tbl_orig.exists:
-            if await data_changed():
+            changed = False
+            for col_name in col_names:
+                if await tbl_view_setup.getval(col_name) != await tbl_orig.getval(col_name):
+                    changed = True
+                    break
+            if changed:
                 await tbl_perms.init()
                 await tbl_perms.setval('table_id', await tbl_view_setup.getval('table_id'))
                 if (

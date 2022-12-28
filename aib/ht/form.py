@@ -509,12 +509,6 @@ class Form:
 
         session = self.session  # store it now - inaccessible after close_form()
 
-        # remove any obj_to_redisplay relating to this form
-        prefix = self.ref + '_'  # form.ref plus underscore
-        for obj in reversed(session.responder.obj_to_redisplay):
-            if obj[0].startswith(prefix):
-                session.responder.obj_to_redisplay.remove(obj)
-
         session.responder.send_end_form(self)
         await self.close_form()
 
@@ -1488,16 +1482,9 @@ class Frame:
                 elif obj.hidden:
                     pass  # ditto for a hidden field (on a hidden notebook page)
                 elif obj.form_dflt is not None:
-                    if await obj.fld.getval() is None:
-                        dflt_value = await obj.fld.val_to_str(
-                            await get_form_dflt(self, obj, obj.form_dflt))
-                        self.temp_data[obj.ref] = dflt_value
-                elif hasattr(obj, 'fld'):
-                    fld = obj.fld
-                    if fld.must_be_evaluated:
-                        self.temp_data[obj.ref] = await fld.val_to_str(await fld.getval())
-                    elif await fld.getval() is None:
-                        self.temp_data[obj.ref] = await fld.val_to_str(await fld.get_dflt())
+                    dflt_value = await get_form_dflt(self, obj, obj.form_dflt)
+                    if dflt_value is not None:
+                        self.temp_data[obj.ref] = await obj.fld.val_to_str(dflt_value)
 
             try:
                 self.last_vld = next_to_validate  # preset, for 'after_input'
@@ -1541,48 +1528,95 @@ class Frame:
             pos = len(self.obj_list)  # validate all objects
         await self.validate_data(pos)
 
-    async def check_children(self):
-        # check that no child is 'dirty' before saving parent
-        # children are always in a grid
-        # if there is a grid_frame, it could also contain a grid,
-        #   so the check has to be carried out recursively
-        async def check(frame):
-            for grid in frame.grids:
+    @log_func
+    async def check_for_save(self):
+        if debug:
+            log.write(
+                f'SAVE? {self.ref} db_obj={self.db_obj} '
+                f'chg={self.data_changed()}\n\n'
+                )
 
-                if grid.grid_frame is not None:
-                    await check(grid.grid_frame)
+        for grid in self.grids:
+            await grid.check_for_save()
+        for tree in self.trees:
+            await tree.check_for_save()
 
-                if grid.db_obj.dirty:
-                    title = f"Save changes to {grid.db_obj.table_name.split('__')[-1]}?"
-                    descr = await grid.obj_list[0].fld.getval()
-                    if descr is None:
-                        if grid.obj_list[0].ref in grid.temp_data:
-                            descr = grid.temp_data[grid.obj_list[0].ref]
-                    descr = repr(descr)  # enclose in quotes
-                    question = f'Do you want to save the changes to {descr}?'
-                    answers = ['Yes', 'No', 'Cancel']
-                    default = 'No'
-                    escape = 'Cancel'
+        if not self.data_changed():
+            return
 
-                    ans = await self.session.responder.ask_question(
-                        self, title, question, answers, default, escape)
+        if debug:
+            log.write(f'ASK {self.db_obj} {self.db_obj.dirty} {self.temp_data}\n\n')
 
-                    if ans == 'Yes':
-                        await grid.req_save()
-                    elif ans == 'No':
-                        await grid.handle_restore()
-                    else:
-                        raise AibError(head=None, body=None)  # stop processing messages
-        await check(self)
+        title = f"Save changes to {self.db_obj.table_name.split('__')[-1]}?"
+        descr = await self.obj_list[0].fld.getval()
+        if descr is None:
+            if self.obj_list[0].ref in self.temp_data:
+                descr = self.temp_data[self.obj_list[0].ref]
+        question = f'Do you want to save the changes to {descr!r}?'
+        answers = ['Yes', 'No', 'Cancel']
+        default = 'No'
+        escape = 'Cancel'
 
-    async def req_save(self):
+        ans = await self.session.responder.ask_question(
+            self.parent, title, question, answers, default, escape)
+
+        if ans == 'Yes':
+            await self.req_save()
+        elif ans == 'No':
+            await ht.form_xml.exec_xml(self, self.methods['do_restore'])
+        elif ans == 'Cancel':
+            raise AibError(head=None, body=None)  # do not process more messages in this request
+
+    @log_func
+    async def check_for_undo(self):
+        if debug:
+            log.write(
+                f'UNDO? {self.ref} db_obj={self.db_obj} '
+                f'chg={self.data_changed()}\n\n'
+                )
+
+        for grid in self.grids:
+            await grid.check_for_undo()
+        for tree in self.trees:
+            await tree.check_for_undo()
+
+        if  not self.data_changed():
+            return
+
+        if debug:
+            log.write(f'ASK {self.db_obj} {self.db_obj.dirty} {self.temp_data}\n\n')
+
+        title = f"Undo changes to {self.db_obj.table_name.split('__')[-1]}?"
+        descr = await self.obj_list[0].fld.getval()
+        if descr is None:
+            if self.obj_list[0].ref in self.temp_data:
+                descr = self.temp_data[self.obj_list[0].ref]
+        question = f'Ok to undo changes to {descr!r}?'
+        answers = ['Yes', 'No']
+        default = 'No'
+        escape = 'No'
+
+        ans = await self.session.responder.ask_question(
+            self.parent, title, question, answers, default, escape)
+
+        if ans == 'Yes':
+            await ht.form_xml.exec_xml(self, self.methods['do_restore'])
+        raise AibError(head=None, body=None)  # do not process more messages in this request
+
+    async def req_save(self, from_client=False):
+
+        if from_client:  # else already checked
+            for grid in self.grids:
+                await grid.check_for_save()
+            for tree in self.trees:
+                await tree.check_for_save()
+
         await self.validate_all()
-        await self.check_children()
 
         # next 4 lines moved up from below [2017-07-08] - any problem?
         if self.ctrl_grid is not None:
             # 'self' can be a formview_frame or a grid_frame
-            await self.ctrl_grid.req_save()
+            await self.ctrl_grid.req_save(from_client=from_client)
             return
 
         async with self.db_session.get_connection() as db_mem_conn:

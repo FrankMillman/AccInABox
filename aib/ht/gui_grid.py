@@ -449,6 +449,9 @@ class GuiGrid:
     def company(self):
         return self.form.company
 
+    async def _redisplay(self):
+        pass  # in case called from ht.form.set_subtype
+
     def __str__(self):
         return f"Grid: {self.ref} '{self.obj_name}'"
 
@@ -493,7 +496,7 @@ class GuiGrid:
         if self.auto_startrow or self.formview_frame or self.grid_frame:
             await self.start_row(start_row, display=True)
 
-    async def start_grid(self, start_col=None, start_val=None, set_focus=False):
+    async def start_grid(self, start_col=None, start_val=None):
 
         # not sure if next line is necessary, as we call it on start_row() as well [2019-06-29]
         # see db.objects.delete - when deleting children, check if cursor is not None
@@ -637,7 +640,7 @@ class GuiGrid:
                 start_objname, start_colname = start_val[1:-1].split('.')
                 start_obj = self.context.data_objects[start_objname]
                 start_val = await start_obj.getval(start_colname)
-            await self.db_obj.init(display=False, init_vals={start_col: start_val})
+            await self.db_obj.init(display=self.db_obj.exists, init_vals={start_col: start_val})
             if start_col != self.cursor.order[0][0]:
                 # we typically get here if a cursor is sorted by a 'seq' field, but
                 #   the caller supplies an 'alternate key' field
@@ -650,7 +653,7 @@ class GuiGrid:
             focus_row, found = await self.cursor.start()
             first_row = focus_row - (25 if focus_row > 25 else focus_row)
         else:
-            await self.db_obj.init(display=False)
+            await self.db_obj.init(display=self.db_obj.exists)  # set display=True if exists to clear client screen
             focus_row = 0
             first_row = 0
 
@@ -699,7 +702,7 @@ class GuiGrid:
         #         assert self.formview_frame is None
 
         self.session.responder.send_start_grid(self.ref,
-            (self.num_rows, first_row, gui_rows, append_row, focus_row, set_focus))
+            (self.num_rows, first_row, gui_rows, append_row, focus_row))
 
         if self.auto_startrow or self.formview_frame or self.grid_frame:
             await self.start_row(focus_row, display=True)
@@ -915,7 +918,7 @@ class GuiGrid:
             log.write(f'set_last_vld ref={self.ref} pos={obj.pos} last={self.last_vld}\n\n')
         if self.last_vld >= obj.pos:
             self.last_vld = obj.pos-1  # this one needs validating
-            self.parent.set_last_vld(self)
+        self.parent.set_last_vld(self)
 
     @log_func
     async def on_cell_req_focus(self, obj, row, save):
@@ -928,6 +931,8 @@ class GuiGrid:
                 f'curr={self.current_row} save={save}\n\n'
                 )
 
+        # current_row should never be None, as cell_req_focus is preceded by cell_lost_focus, which calls start_row()
+        assert self.current_row is not None
         if row != self.current_row:
             await self.end_current_row(save)
         else:
@@ -991,6 +996,83 @@ class GuiGrid:
         return bool(self.db_obj.dirty or self.temp_data)
 
     @log_func
+    async def check_for_save(self):
+        if debug:
+            log.write(
+                f'SAVE? {self.ref} db_obj={self.db_obj} '
+                f'chg={self.data_changed()}\n\n'
+                )
+
+        if self.grid_frame is not None:
+            for grid in self.grid_frame.grids:
+                await grid.check_for_save()
+            for tree in self.grid_frame.trees:
+                await tree.check_for_save()
+
+        if not self.data_changed():
+            return
+
+        if debug:
+            log.write(f'ASK {self.db_obj} {self.db_obj.dirty} {self.grid_frame.temp_data}\n\n')
+
+        title = f"Save changes to {self.db_obj.table_name.split('__')[-1]}?"
+        descr = await self.obj_list[0].fld.getval()
+        if descr is None:
+            if self.obj_list[0].ref in self.temp_data:
+                descr = self.temp_data[self.obj_list[0].ref]
+        question = f'Do you want to save the changes to {descr!r}?'
+        answers = ['Yes', 'No', 'Cancel']
+        default = 'No'
+        escape = 'Cancel'
+
+        ans = await self.session.responder.ask_question(
+            self.parent, title, question, answers, default, escape)
+
+        if ans == 'Yes':
+            await self.req_save()
+        elif ans == 'No':
+            await ht.form_xml.exec_xml(self.grid_frame, self.grid_frame.methods['do_restore'])
+        elif ans == 'Cancel':
+            raise AibError(head=None, body=None)  # do not process more messages in this request
+
+    @log_func
+    async def check_for_undo(self):
+        if debug:
+            log.write(
+                f'UNDO? {self.ref} db_obj={self.db_obj} '
+                f'chg={self.data_changed()}\n\n'
+                )
+
+        if self.grid_frame is not None:
+            for grid in self.grid_frame.grids:
+                await grid.check_for_undo()
+            for tree in self.grid_frame.trees:
+                await tree.check_for_undo()
+
+        if  not self.data_changed():
+            return
+
+        if debug:
+            log.write(f'ASK {self.db_obj} {self.db_obj.dirty} {self.grid_frame.temp_data}\n\n')
+
+        title = f"Undo changes to {self.db_obj.table_name.split('__')[-1]}?"
+        descr = await self.obj_list[0].fld.getval()
+        if descr is None:
+            if self.obj_list[0].ref in self.temp_data:
+                descr = self.temp_data[self.obj_list[0].ref]
+        question = f'Ok to undo changes to {descr!r}?'
+        answers = ['Yes', 'No']
+        default = 'No'
+        escape = 'No'
+
+        ans = await self.session.responder.ask_question(
+            self.parent, title, question, answers, default, escape)
+
+        if ans == 'Yes':
+             await ht.form_xml.exec_xml(self.grid_frame, self.grid_frame.methods['do_restore'])
+        raise AibError(head=None, body=None)  # do not process more messages in this request
+
+    @log_func
     async def end_current_row(self, save=False):
         if debug:
             log.write(
@@ -999,40 +1081,26 @@ class GuiGrid:
                 f'frame={self.grid_frame is not None}\n\n'
                 )
 
-        # save can be set to True by -
-        #   user amends row, then tabs to next row or presses Enter -
-        #     client sets 'save' = True when sending 'req_cell_focus',
-        #     which filters through to here
-        # not sure if next one applies any more [2016-12-22]
-        # we *always* have a blank bottom row now
-        #   user is on bottom row of 'non-growable' grid, amends row,
-        #     then tabs to next control on frame -
-        #     client sends 'req_save_row', ht.htc calls end_current_row(save=True)
-        if self.grid_frame is not None:
-            # we get here if there is a grid_frame, the user made a change
-            #   to the grid, and then moved to another row
-            if self.grid_frame.data_changed():
-                await self.grid_frame.validate_all()
-                if not self.grid_frame.data_changed():  # row was saved
-                    await self.check_after_commit()
         if not self.data_changed():
             if self.inserted == 1:  # eg start insert, then press down arrow!
                 await self.delete_gui_row(self.current_row)
             self.reset_current_row()
         elif save:  # user requested save
-            await self.req_save()
+            #   user amends row, then tabs to next row or presses Enter -
+            #     client sets 'save' = True when sending 'req_cell_focus',
+            #     which filters through to here
+            await self.req_save(from_client=True)
         else:
 
             if debug:
                 log.write(f'ASK {self.db_obj} {self.db_obj.dirty} {self.temp_data}\n\n')
 
-            title = f'Save changes to {self.db_obj.table_name}?'
+            title = f"Save changes to {self.db_obj.table_name.split('__')[-1]}?"
             descr = await self.obj_list[0].fld.getval()
             if descr is None:
                 if self.obj_list[0].ref in self.temp_data:
                     descr = self.temp_data[self.obj_list[0].ref]
-            descr = repr(descr)  # enclose in quotes
-            question = f'Do you want to save the changes to {descr}?'
+            question = f'Do you want to save the changes to {descr!r}?'
             answers = ['Yes', 'No', 'Cancel']
             default = 'No'
             escape = 'Cancel'
@@ -1041,30 +1109,32 @@ class GuiGrid:
                 self.parent, title, question, answers, default, escape)
 
             if ans == 'Yes':
-                await self.req_save()
+                await self.req_save(from_client=True)
             elif ans == 'No':
-                await self.dont_save()
-            else:
-                await self.cancel_end_row()
-
-    async def cancel_end_row(self):
-        self.session.responder.send_cell_set_focus(self.ref, self.current_row, None)
-        raise AibError(head=None, body=None)  # do not process more messages in this request
+                await self.handle_restore()
+                self.session.responder.check_redisplay()
+                if debug:
+                    log.write('DONT SAVE\n\n')
+                self.reset_current_row()
+            else:  # must be 'Cancel'
+                self.session.responder.send_cell_set_focus(self.ref, self.current_row, None)
+                raise AibError(head=None, body=None)  # do not process more messages in this request
 
     def reset_current_row(self):
         if self.formview_frame is None and self.grid_frame is None:
             self.last_vld = -1
             self.current_row = None
 
-    async def dont_save(self):
-        await self.handle_restore()
-        self.session.responder.check_redisplay()
-        if debug:
-            log.write('DONT SAVE\n\n')
-        self.reset_current_row()
-
     @log_func
-    async def req_save(self):
+    async def req_save(self, from_client=False):
+
+        if from_client:  # else already checked
+            if self.grid_frame is not None:
+                for grid in self.grid_frame.grids:
+                    await grid.check_for_save()
+                for tree in self.grid_frame.trees:
+                    await tree.check_for_save()
+
         if self.formview_frame is not None:
             frame = self.formview_frame
         elif self.grid_frame is not None:
@@ -1072,7 +1142,7 @@ class GuiGrid:
         else:
             frame = None
 
-        await self.validate_all()
+        await self.validate_all()  # will validate grid_frame if not None
 
         async with self.parent.db_session.get_connection() as db_mem_conn:
             if 'before_save' in self.methods:
@@ -1097,6 +1167,8 @@ class GuiGrid:
             if frame is not None and 'after_commit' in frame.methods:
                 self.parent.db_session.after_commit.append((frame.after_commit, ))
             self.parent.db_session.after_commit.append((self.check_after_commit,))
+
+        self.parent.set_last_vld(self)
 
     async def check_after_commit(self):
         # called from gui after row saved *and* any children saved
@@ -1156,45 +1228,33 @@ class GuiGrid:
                 f'validate grid {self.ref} row={self.current_row} chg={self.data_changed()} '
                 f'frame={self.grid_frame is not None}\n\n'
                 )
-        if self.current_row is not None:
-            if self.grid_frame is not None:
-                # just validate up to this point, let grid_frame do the rest
-                if self.data_changed():
-                    await self.validate_data(len(self.obj_list))
-            else:
-                await self.end_current_row()
 
-    async def validate_data(self, pos):
+        if self.current_row is not None:
+            await self.end_current_row()
+
+    async def validate_data(self, validate_up_to):
         if self.readonly:
             return
 
         if debug:
             log.write(
-                f'validate grid data {self.ref} row={self.current_row} {self.last_vld+1} to {pos-1}\n\n'
+                f'validate grid data {self.ref} row={self.current_row} {self.last_vld+1} to {validate_up_to-1}\n\n'
                 )
             log.write(f'{", ".join([_.ref for _ in self.obj_list])}\n\n')
         first_to_validate = self.last_vld + 1
-        for i in range(self.last_vld+1, pos):
-            if self.last_vld > i:  # after 'read', last_vld set to 'all'
+        for next_to_validate in range(first_to_validate, validate_up_to):
+            if self.last_vld > next_to_validate:  # after 'read', last_vld set to 'all'
                 break
 
-            obj = self.obj_list[i]
+            obj = self.obj_list[next_to_validate]
 
-            if first_to_validate < i < pos:  # object 'skipped' by user
+            if first_to_validate < next_to_validate < validate_up_to:  # object 'skipped' by user
                 if obj.readonly:
                     pass  # do not try to calculate dflt_val for a readonly field
                 elif obj.form_dflt is not None:
-                    if await obj.fld.getval() is None:
-                        dflt_value = await obj.fld.val_to_str(
-                            await get_form_dflt(self, obj, obj.form_dflt))
-                        if dflt_value:  # can be '' if dflt is get_prev()
-                            self.temp_data[obj.ref] = dflt_value
-                elif hasattr(obj, 'fld'):
-                    fld = obj.fld
-                    if fld.must_be_evaluated:
-                        self.temp_data[obj.ref] = await fld.val_to_str(await fld.getval())
-                    elif await fld.getval() is None:
-                        self.temp_data[obj.ref] = await fld.val_to_str(await fld.get_dflt())
+                    dflt_value = await get_form_dflt(self, obj, obj.form_dflt)
+                    if dflt_value is not None:
+                        self.temp_data[obj.ref] = await obj.fld.val_to_str(dflt_value)
 
             try:
                 self.last_vld += 1  # preset, for 'after_input'

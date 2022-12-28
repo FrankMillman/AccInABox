@@ -576,7 +576,7 @@ async def tree_select(self, context, table_name, tree_params, level=None,
         start_row=1, filter=None, sort=False, up=False):
 
     company = context.company
-    table_name = '{company}.{table_name}'
+    table_name = f'{company}.{table_name}'
     group, col_names, fixed_levels = tree_params
     code, descr, parent_id, seq = col_names
     if fixed_levels is not None:

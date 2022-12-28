@@ -32,28 +32,17 @@ class GuiTreeCommon:
         self.form = parent.form
         self.session = parent.session
         self.node_inserted = False
-        self.insert_params = {}
         self.auto_start = element.get('auto_start') != 'false'  # default to True
+        self.hidden = False  # for 'subtype' gui objects
+        self.form_dflt = None
         self.before_input = None
 
         ref, pos = parent.form.add_obj(parent, self)
         self.ref = ref
         self.pos = pos
 
-    async def validate(self, save=False):
-        # 2016-07-28 - don't know when this gets called, or if save is ever True
-        # default save to False, monitor
-        # 2021-11-18 - can happen if form has gui_objects *after* tree object - no examples at present
-        if debug:
-            log.write('validate tree {} {}\n\n'.format(
-                self.ref, self.db_obj.dirty))
-        if self.db_obj.dirty:
-            if save:
-                if self.tree_frame is not None:
-                    await self.tree_frame.validate_all()
-                await ht.form_xml.exec_xml(self.parent, self.parent.methods['do_save'])
-            else:
-                print('DBOBJ NOT SAVED!')
+    async def validate(self):
+        await self.check_for_save()
 
     async def on_req_cancel(self):
         await self.parent.on_req_cancel()
@@ -253,12 +242,9 @@ class GuiTreeCommon:
                     tree_params=self.member_tree_params,
                     )
                 sql = (cte +
-                    "SELECT row_id, {}, {}, {}, "
-                    "{}, _level, {} FROM _tree{} "
-                    "ORDER BY {}, {}, seq"
-                    .format(self.member_code, self.member_descr, self.member_group_id,
-                        self.member_parent_id, self.member_seq, member_where,
-                        self.member_group_id, self.member_parent_id)
+                    f'SELECT row_id, {self.member_code}, {self.member_descr}, {self.member_group_id}, '
+                    f'{self.member_parent_id}, _level, {self.member_seq} FROM _tree{member_where} '
+                    f'ORDER BY {self.member_group_id}, {self.member_parent_id}, seq'
                     )
 
                 params = []
@@ -316,10 +302,8 @@ class GuiTreeCommon:
         async with self.form.db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.mem
             sql = (
-                "SELECT row_id, parent_id, "
-                "descr, is_leaf FROM {} "
-                "ORDER BY parent_id, seq"
-                .format(self.db_obj.table_name)
+                'SELECT row_id, parent_id, descr, is_leaf '
+                f'FROM {self.db_obj.table_name} ORDER BY parent_id, seq'
                 )
             tree_data = []
             async for row in await conn.exec_sql(sql):
@@ -369,11 +353,24 @@ class GuiTreeCommon:
 
         return tree_data
 
+    @log_func
+    async def check_for_save(self):
+        assert self.tree_frame is not None
+        await self.tree_frame.check_for_save()
+
+    @log_func
+    async def check_for_undo(self):
+        assert self.tree_frame is not None
+        await self.tree_frame.check_for_undo()
+
 class GuiTree(GuiTreeCommon):
     async def _ainit_(self, parent, gui, element):
         self.obj_name = element.get('data_object')
         self.db_obj = parent.data_objects[self.obj_name]
         await GuiTreeCommon._ainit_(self, parent, gui, element)
+
+        parent, col_names, levels = self.db_obj.db_table.tree_params
+        self.code, self.descr, self.parent_id, self.seq = col_names
 
         gui.append(('tree', {
             'ref': self.ref,
@@ -389,42 +386,22 @@ class GuiTree(GuiTreeCommon):
         # for td in tree_data:
         #     print('{:<10}{!r:<10}{:<24}{}'.format(*td))
 
+        if not tree_data:
+            return
+
         hide_root = False
         self.session.responder.send_tree_data(self.ref, tree_data, hide_root)
 
     async def on_active(self, node_id):
         self.node_inserted = False
-        if self.db_obj.dirty:
 
-            title = self.db_obj.table_name
-            question = f'Do you want to save the changes to {await self.db_obj.getval("descr")}?'
-            answers = ['Yes', 'No']
-            default = 'No'
-            escape = 'No'
+        await self.check_for_save()
 
-            ans = await self.session.responder.ask_question(
-                self.parent, title, question, answers, default, escape)
-
-            if ans == 'Yes':
-                if self.tree_frame is not None:
-                    await self.tree_frame.validate_all()
-                await ht.form_xml.exec_xml(self.parent, self.parent.methods['do_save'])
-                # problem - [2015-09-13]
-                # if 'save' fails, we reset focus on the offending field, but
-                #   we do not reset the tree's active node back to the original
-                # also, there is a case for adding a 'Cancel' option, which would
-                #   also reset the tree's active node back to the original
-
-        # await self.db_obj.init(init_vals={'row_id': node_id})
         await self.db_obj.select_row({'row_id': node_id})
 
-        # for method in self.parent.on_active:
-        #     await ht.form_xml.exec_xml(self, method)
-
-        if 'on_active' in self.parent.methods:  # see setup_roles.xml
-            await ht.form_xml.exec_xml(self, self.parent.methods['on_active'])
-
         if self.tree_frame is not None:
+            if 'on_active' in self.tree_frame.methods:  # see setup_roles.xml
+                await ht.form_xml.exec_xml(self, self.tree_frame.methods['on_active'])
             await self.tree_frame.restart_frame(set_focus=False)
 
     async def on_req_insert_node(self, args):
@@ -432,18 +409,19 @@ class GuiTree(GuiTreeCommon):
         if not parent_id:
             raise AibError(head='Error', body='Cannot create new root')
         self.node_inserted = True
-        self.insert_params = {'parent_id': parent_id, 'seq': seq}
+        init_vals = {'parent_id': parent_id, 'seq': seq}
         if self.levels:
             await self.db_obj.init(display=False, init_vals={'row_id': parent_id})
-            self.insert_params['level'] = await self.db_obj.getval('level') + 1
-        await self.db_obj.init()
+            init_vals['level'] = await self.db_obj.getval('level') + 1
+        await self.db_obj.init(init_vals=init_vals)
         self.session.responder.send_insert_node(self.ref, parent_id, seq, -1)
         if self.tree_frame is not None:
             await self.tree_frame.restart_frame()
 
     async def on_req_delete_node(self, node_id=None):
         if node_id is None:
-            pass  # deleting the node that is being inserted
+            # deleting the node that is being inserted - restore parent
+            await self.db_obj.init(display=False, init_vals={'row_id': await self.db_obj.getval('parent_id')})
         else:
             await self.db_obj.init(display=False, init_vals={'row_id': node_id})
             if not await self.db_obj.getval('parent_id'):
@@ -456,24 +434,21 @@ class GuiTree(GuiTreeCommon):
     async def on_move_node(self, node_id, parent_id, seq):
         pass
 
-    async def before_save(self):  # called from ht.form.save before save
-        for col_name in self.insert_params:
-            await self.db_obj.setval(col_name, self.insert_params[col_name])
-
-    async def after_save(self):  # called from ht.form.save after save
+    async def after_save(self):  # called from ht.form.req_save after save
         # this is called from tree_frame frame_methods
         # could we ever have a tree without a tree_frame
         # if yes, this would not be called
         # on the other hand, how would we trigger a 'save' anyway?
         # leave alone for now [2015-03-02]
+        parent, col_names, levels = self.db_obj.db_table.tree_params
+        code, descr, parent_id, seq = col_names
         self.session.responder.send_update_node(
             self.ref,  # tree_ref
             await self.db_obj.getval('row_id'),  # node_id
-            await self.db_obj.getval('descr'),  # text
+            await self.db_obj.getval(descr),  # text
             await self.db_obj.getval('is_leaf')
             )
         self.node_inserted = False
-        self.insert_params = {}
 
 class GuiTreeCombo(GuiTreeCommon):
     async def _ainit_(self, parent, gui, element):
@@ -520,24 +495,10 @@ class GuiTreeCombo(GuiTreeCommon):
     async def on_active(self, node_id):
         self.node_inserted = False
 
-        if self.tree_frame.db_obj.dirty:
+        await self.check_for_save()
 
-            title = self.tree_frame.db_obj.table_name
-            question = f'Do you want to save the changes to {await self.db_obj.getval("descr")}?'
-            answers = ['Yes', 'No']
-            default = 'No'
-            escape = 'No'
+        await self.db_obj.select_row({'row_id': node_id})
 
-            ans = await self.session.responder.ask_question(
-                self.parent, title, question, answers, default, escape)
-
-            if ans == 'Yes':
-                if self.tree_frame is not None:
-                    await self.tree_frame.validate_all()
-                await ht.form_xml.exec_xml(
-                    self.tree_frame, self.tree_frame.methods['do_save'])
-
-        await self.db_obj.init(display=False, init_vals={'row_id': node_id})
         node_type = await self.db_obj.getval('type')
         data_row_id = await self.db_obj.getval('data_row_id')
 
@@ -557,11 +518,11 @@ class GuiTreeCombo(GuiTreeCommon):
         await self.db_obj.init(display=False, init_vals={'row_id': parent_id})
 
         if await self.db_obj.getval('type') == 'member':
-            self.insert_params = {
+            init_vals = {
                 self.member_group_id: await self.db_obj.getval('data_group_id'),
                 self.member_parent_id: await self.db_obj.getval('data_row_id'),
                 'seq': seq}
-            await self.member.init()
+            await self.member.init(init_vals=init_vals)
             await self.db_obj.init(display=False, init_vals={
                 'type': 'member',
                 'parent_id': parent_id,
@@ -592,9 +553,9 @@ class GuiTreeCombo(GuiTreeCommon):
                 else:
                     raise AibError(head='Insert node', body='Must specify group or member')
             if new_node_type == 'member_root':
-                self.insert_params = {'seq': seq,
+                init_vals = {'seq': seq,
                     self.member_group_id: await self.db_obj.getval('data_row_id')}
-                await self.member.init()
+                await self.member.init(init_vals=init_vals)
                 await self.db_obj.init(display=False, init_vals={
                     'type': 'member',
                     'parent_id': parent_id,
@@ -603,18 +564,16 @@ class GuiTreeCombo(GuiTreeCommon):
                     'seq': seq})
                 self.tree_frame = self.tree_frames['member']
             else:
-                self.insert_params = {'seq': seq}
+                init_vals = {'seq': seq}
                 group_parent, group_col_names, group_levels = self.group_tree_params
                 if group_levels is not None:
                     type_colname, level_types, sublevel_type = group_levels
                     level_types = [x[0] for x in level_types]
                     this_level = await self.db_obj.getval('level')
-                    # this_type = await self.group.getval(type_colname)
-                    # assert this_type == levels[this_level]
-                    self.insert_params[type_colname] = level_types[this_level + 1]
+                    init_vals[type_colname] = level_types[this_level + 1]
                 if self.group_parent_id is not None:  # when can it be None ??
-                    self.insert_params[self.group_parent_id] = await self.db_obj.getval('data_row_id')
-                await self.group.init()
+                    init_vals[self.group_parent_id] = await self.db_obj.getval('data_row_id')
+                await self.group.init(init_vals=init_vals)
                 await self.db_obj.init(display=False, init_vals={
                     'type': 'group',
                     'parent_id': parent_id,
@@ -627,7 +586,10 @@ class GuiTreeCombo(GuiTreeCommon):
         await self.tree_frame.restart_frame()
 
     async def on_req_delete_node(self, node_id=None):
-        if node_id is not None:  # else deleting the node that is being inserted
+        if node_id is None:
+            # deleting the node that is being inserted - restore parent
+            await self.db_obj.init(display=False, init_vals={'row_id': await self.db_obj.getval('parent_id')})
+        else:
             await self.db_obj.init(display=False, init_vals={'row_id': node_id})
             if node_id == 1:
                 raise AibError(head='Error', body='Cannot delete root node')
@@ -648,14 +610,6 @@ class GuiTreeCombo(GuiTreeCommon):
 
     async def on_move_node(self, node_id, parent_id, seq):
         pass  # not implemented yet
-
-    async def before_save(self):  # called from ht.form.save before save
-        if await self.db_obj.getval('type') == 'member':
-            for col_name in self.insert_params:
-                await self.member.setval(col_name, self.insert_params[col_name])
-        else:
-            for col_name in self.insert_params:
-                await self.group.setval(col_name, self.insert_params[col_name])
 
     async def after_save(self):  # called from frame_methods after save
         node_type = await self.db_obj.getval('type')
@@ -690,6 +644,7 @@ class GuiTreeCombo(GuiTreeCommon):
             code = await self.group.getval(self.group_code)
             text = await self.group.getval(self.group_descr)
             is_leaf = False
+
         await self.db_obj.setval('data_row_id', data_row_id)
         await self.db_obj.setval('data_group_id', data_group_id)
         await self.db_obj.setval('data_parent_id', data_parent_id)
@@ -700,7 +655,6 @@ class GuiTreeCombo(GuiTreeCommon):
         node_id = await self.db_obj.getval('row_id')
         self.session.responder.send_update_node(self.ref, node_id, text, is_leaf)
         self.node_inserted = False
-        self.insert_params = {}
 
 class GuiTreeLkup(GuiTreeCommon):
     async def _ainit_(self, parent, gui, element):
@@ -778,7 +732,7 @@ class GuiTreeLkup(GuiTreeCommon):
                 # # await self.group.init(init_vals={'row_id': data_row_id})
                 # await self.group.select_row({'row_id': data_row_id})
                 raise AibError(head='Lookup',
-                    body='Cannot select {} here'.format(self.group.table_name))
+                    body=f'Cannot select {self.group.table_name} here')
             else:  # must be 'member'
                 # await self.member.init(init_vals={'row_id': data_row_id})
                 await self.member.select_row({'row_id': data_row_id})

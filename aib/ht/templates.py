@@ -44,14 +44,14 @@ tool_download = (
 btn_ok = (
     '<button btn_id="btn_ok" btn_label="Ok" btn_enabled="true" '
         'btn_validate="true" btn_default="true" lng="60" action="'
-        '&lt;end_form state=&quot;completed&quot;/&gt;'
+        '&lt;parent_req_close/&gt;'
     '"/>'
     )
 
 btn_can = (
     '<button btn_id="btn_can" btn_label="Cancel" btn_enabled="true" '
         'btn_validate="false" btn_default="false" lng="60" action="'
-        '&lt;end_form state=&quot;cancelled&quot;/&gt;'
+        '&lt;parent_req_cancel/&gt;'
     '"/>'
     )
 
@@ -61,16 +61,6 @@ btn_save = (
         '&lt;req_save/&gt;'
     '"/>'
     )
-# btn_validate changed to "true" [2019-07-03]
-# if user presses 'Enter', check all fields are valid, even if nothing entered
-# if validation fails, user must press 'Esc'
-# reason - 'Enter' always returns 'state=completed'
-#          if nothing entered, we want to return 'state=cancelled'
-# changed back to "false" [2019-11-26]
-# on selecting 'Add new <module>' (template=Setup_Form_Single), showing an error message
-#   when pressing "Enter" on an empty form feels counter-intuitive
-# cannot remember why 'state=cancelled' was important
-# find an example, and try to find a solution for all scenarios
 btn_close = (
     '<button btn_id="btn_close" btn_label="{close_text}" btn_enabled="true" '
         'btn_validate="false" btn_default="true" lng="60" action="'
@@ -79,7 +69,7 @@ btn_close = (
             '&lt;req_save/&gt;'
           '&lt;/has_temp_data&gt;'
           '&lt;btn_has_label btn_id=&quot;btn_close&quot; label=&quot;{close_text}&quot;&gt;'
-            '&lt;{close_action}/&gt;'
+            '&lt;call method=&quot;on_req_close&quot;/&gt;'
           '&lt;/btn_has_label&gt;'
           '&lt;default&gt;'  # label must be 'Cancel' - ask if ok to cancel
             '&lt;call method=&quot;on_req_cancel&quot;/&gt;'
@@ -92,6 +82,9 @@ btn_save_multi = (
     '<button btn_id="btn_save" btn_label="More?" btn_enabled="false" '
         'btn_validate="true" btn_default="true" lng="60" action="'
         '&lt;case&gt;'
+          '&lt;has_temp_data&gt;'  # user changed field and pressed Enter
+            '&lt;req_save/&gt;'
+          '&lt;/has_temp_data&gt;'
           '&lt;btn_has_label btn_id=&quot;btn_save&quot; label=&quot;More?&quot;&gt;'
             '&lt;do_navigate nav_type=&quot;last&quot;/&gt;'
             '&lt;change_button&gt;'
@@ -112,11 +105,8 @@ btn_close_multi = (
     '<button btn_id="btn_close" btn_label="{close_text}" btn_enabled="true" '
         'btn_validate="false" btn_default="false" lng="60" action="'
         '&lt;case&gt;'
-          '&lt;has_temp_data&gt;'  # user changed field and pressed Enter
-            '&lt;req_save/&gt;'
-          '&lt;/has_temp_data&gt;'
           '&lt;btn_has_label btn_id=&quot;btn_close&quot; label=&quot;{close_text}&quot;&gt;'
-            '&lt;{close_action}/&gt;'
+            '&lt;call method=&quot;on_req_close&quot;/&gt;'
           '&lt;/btn_has_label&gt;'
           '&lt;default&gt;'  # label must be 'Cancel' - ask if ok to cancel
             '&lt;call method=&quot;on_req_cancel&quot;/&gt;'
@@ -145,39 +135,29 @@ on_clean = (
 on_clean_multi = (  # change 'Save' to 'More?'
     '<method name="on_clean" obj_name="[obj_name]" action="'
 
+        '&lt;change_button&gt;'
+          '&lt;btn_label btn_id=&quot;btn_save&quot; value=&quot;More?&quot;/&gt;'
+        '&lt;/change_button&gt;'
+        '&lt;change_button&gt;'
+          '&lt;btn_label btn_id=&quot;btn_close&quot; value=&quot;{close_text}&quot;/&gt;'
+        '&lt;/change_button&gt;'
+
         '&lt;case&gt;'
           '&lt;obj_exists obj_name=&quot;[obj_name]&quot;&gt;'
-
-            '&lt;change_button&gt;'
-              '&lt;btn_label btn_id=&quot;btn_save&quot; value=&quot;More?&quot;/&gt;'
-            '&lt;/change_button&gt;'
             '&lt;change_button&gt;'
               '&lt;btn_enabled btn_id=&quot;btn_save&quot; state=&quot;true&quot;/&gt;'
             '&lt;/change_button&gt;'
             '&lt;change_button&gt;'
-              '&lt;btn_label btn_id=&quot;btn_close&quot; value=&quot;{close_text}&quot;/&gt;'
-            '&lt;/change_button&gt;'
-            '&lt;change_button&gt;'
               '&lt;btn_dflt btn_id=&quot;btn_save&quot;/&gt;'
             '&lt;/change_button&gt;'
-
           '&lt;/obj_exists&gt;'
-
           '&lt;default&gt;'
-
             '&lt;change_button&gt;'
-              '&lt;btn_label btn_id=&quot;btn_close&quot; value=&quot;{close_text}&quot;/&gt;'
+              '&lt;btn_enabled btn_id=&quot;btn_save&quot; state=&quot;false&quot;/&gt;'
             '&lt;/change_button&gt;'
             '&lt;change_button&gt;'
               '&lt;btn_dflt btn_id=&quot;btn_close&quot;/&gt;'
             '&lt;/change_button&gt;'
-            '&lt;change_button&gt;'
-              '&lt;btn_label btn_id=&quot;btn_save&quot; value=&quot;More?&quot;/&gt;'
-            '&lt;/change_button&gt;'
-            '&lt;change_button&gt;'
-              '&lt;btn_enabled btn_id=&quot;btn_save&quot; state=&quot;false&quot;/&gt;'
-            '&lt;/change_button&gt;'
-
           '&lt;/default&gt;'
         '&lt;/case&gt;'
 
@@ -212,12 +192,12 @@ on_navigate = (
               '&lt;response ans=&quot;Yes&quot;&gt;'
                 '&lt;req_save/&gt;'
                 '&lt;do_navigate/&gt;'
-                '&lt;call method=&quot;on_clean&quot;/&gt;'
+                '&lt;call method=&quot;reset_buttons&quot;/&gt;'
               '&lt;/response&gt;'
               '&lt;response ans=&quot;No&quot;&gt;'
                 '&lt;handle_restore/&gt;'
                 '&lt;do_navigate/&gt;'
-                '&lt;call method=&quot;on_clean&quot;/&gt;'
+                '&lt;call method=&quot;reset_buttons&quot;/&gt;'
               '&lt;/response&gt;'
               '&lt;response ans=&quot;Cancel&quot;&gt;'
               '&lt;/response&gt;'
@@ -225,54 +205,7 @@ on_navigate = (
           '&lt;/data_changed&gt;'
           '&lt;default&gt;'
             '&lt;do_navigate/&gt;'
-            '&lt;call method=&quot;on_clean&quot;/&gt;'
-          '&lt;/default&gt;'
-        '&lt;/case&gt;'
-    '"/>'
-    )
-
-on_req_cancel = (
-    '<method name="on_req_cancel" action="'  # press Esc or click 'Cancel'
-        '&lt;case&gt;'
-          '&lt;data_changed&gt;'
-            '&lt;ask title=&quot;Cancel?&quot; enter=&quot;No&quot; escape=&quot;No&quot; '
-                'question=&quot;Ok to undo changes to [obj_descr]?&quot;&gt;'
-              '&lt;response ans=&quot;Yes&quot;&gt;'
-                '&lt;handle_restore/&gt;'
-                '{after_restore}'
-              '&lt;/response&gt;'
-              '&lt;response ans=&quot;No&quot;&gt;'
-              '&lt;/response&gt;'
-            '&lt;/ask&gt;'
-          '&lt;/data_changed&gt;'
-          '{check_row_inserted}'
-          '&lt;default&gt;'
-            '{close_action}'
-          '&lt;/default&gt;'
-        '&lt;/case&gt;'
-    '"/>'
-    )
-
-on_req_close = (
-    '<method name="on_req_close" action="'  # click [X] or press Shift+F4
-        '&lt;case&gt;'
-          '&lt;data_changed&gt;'
-            '&lt;ask title=&quot;Save changes?&quot; enter=&quot;No&quot; escape=&quot;Cancel&quot; '
-                'question=&quot;Do you want to save changes to [obj_descr]?&quot;&gt;'
-              '&lt;response ans=&quot;Yes&quot;&gt;'
-                '&lt;req_save/&gt;'
-                '&lt;parent_req_close/&gt;'
-              '&lt;/response&gt;'
-              '&lt;response ans=&quot;No&quot;&gt;'
-                '&lt;handle_restore/&gt;'
-                '&lt;parent_req_close/&gt;'
-              '&lt;/response&gt;'
-              '&lt;response ans=&quot;Cancel&quot;&gt;'
-              '&lt;/response&gt;'
-            '&lt;/ask&gt;'
-          '&lt;/data_changed&gt;'
-          '&lt;default&gt;'
-            '&lt;parent_req_close/&gt;'
+            '&lt;call method=&quot;reset_buttons&quot;/&gt;'
           '&lt;/default&gt;'
         '&lt;/case&gt;'
     '"/>'
@@ -290,6 +223,29 @@ do_restore = (
     '"/>'
     )
 
+reset_buttons = (
+    '<method name="reset_buttons" action="'
+      '&lt;case&gt;'
+        '&lt;obj_exists obj_name=&quot;[obj_name]&quot;&gt;'
+          '&lt;change_button&gt;'
+            '&lt;btn_dflt btn_id=&quot;btn_save&quot;/&gt;'
+          '&lt;/change_button&gt;'
+          '&lt;change_button&gt;'
+            '&lt;btn_enabled btn_id=&quot;btn_save&quot; state=&quot;true&quot;/&gt;'
+          '&lt;/change_button&gt;'
+        '&lt;/obj_exists&gt;'
+        '&lt;default&gt;'
+          '&lt;change_button&gt;'
+            '&lt;btn_dflt btn_id=&quot;btn_close&quot;/&gt;'
+          '&lt;/change_button&gt;'
+          '&lt;change_button&gt;'
+            '&lt;btn_enabled btn_id=&quot;btn_save&quot; state=&quot;false&quot;/&gt;'
+          '&lt;/change_button&gt;'
+        '&lt;/default&gt;'
+      '&lt;/case&gt;'
+      '"/>'
+    )
+
 #----------------------------------------------------------------------------
 
 class Form:  # template for standard forms
@@ -302,14 +258,13 @@ class Form:  # template for standard forms
 
     frame_methods = (
         '<frame_methods>'
-# this is the default, so not required
-#         '<method name="on_req_cancel" action="'  # press Esc or click 'Cancel'
-#             '&lt;parent_req_cancel/&gt;'
-#           '"/>'
-          '<method name="on_req_close" action="'  # click [X] or press Shift+F4
-              '&lt;parent_req_cancel/&gt;'  # why not req_close (and so not required) ?
-                                            # maybe to distinguish 'Ok' from Shift_F4 ??
-            '"/>'
+            # this is the default, so not required
+            # '<method name="on_req_cancel" action="'  # press Esc or click 'Cancel'
+            #   '&lt;parent_req_cancel/&gt;'
+            #   '"/>'
+            '<method name="on_req_close" action="'  # click [X] or press Shift+F4
+              '&lt;parent_req_cancel/&gt;'  # only 'Ok' should return 'completed'
+              '"/>'
         '</frame_methods>'
         )
 
@@ -319,24 +274,25 @@ class Setup_Form_Single:  # template for single setup e.g. params
     button_row = (
         '<button_row>'
         f'{btn_save}'
-        f'{btn_close.format(close_text="Close", close_action="parent_req_close")}'
+        f'{btn_close.format(close_text="Close")}'
         '</button_row>'
         )
 
-    on_req_cancel_args = {
-      'after_restore': '&lt;restart_frame/&gt;',
-      'check_row_inserted': '',
-      'close_action': '&lt;parent_req_cancel/&gt;'
-      }
-
     frame_methods = (
         '<frame_methods>'
-        f'{on_clean.format(close_text="Close")}'
-        f'{on_amend}'
-        f'{on_req_cancel.format(**on_req_cancel_args)}'
-        f'{on_req_close}'
-        f'{do_save}'
-        f'{do_restore}'
+            f'{on_clean.format(close_text="Close")}'
+            f'{on_amend}'
+            '<method name="on_req_cancel" action="'
+              '&lt;check_for_undo/&gt;'
+              '&lt;restart_frame/&gt;'
+              '&lt;parent_req_cancel/&gt;'
+              '"/>'
+            '<method name="on_req_close" action="'
+              '&lt;check_for_save/&gt;'
+              '&lt;parent_req_close/&gt;'
+              '"/>'
+            f'{do_save}'
+            f'{do_restore}'
         '</frame_methods>'
         )
 
@@ -355,45 +311,28 @@ class Setup_Form:  # template for setup-type forms
     button_row = (
         '<button_row>'
         f'{btn_save_multi}'
-        f'{btn_close_multi.format(close_text="Close", close_action="parent_req_close")}'
+        f'{btn_close_multi.format(close_text="Close")}'
         '</button_row>'
         )
 
-    on_req_cancel_args = {
-      'after_restore': '&lt;restart_frame/&gt;',
-      'check_row_inserted': '&lt;row_inserted&gt;&lt;req_delete_row/&gt;&lt;/row_inserted&gt;',
-      'close_action': '&lt;parent_req_cancel/&gt;'
-      }
-
     frame_methods = (
         '<frame_methods>'
-        '<method name="reset_buttons" action="'
-            '&lt;case&gt;'
-              '&lt;obj_exists obj_name=&quot;[obj_name]&quot;&gt;'
-                '&lt;change_button&gt;'
-                  '&lt;btn_dflt btn_id=&quot;btn_save&quot;/&gt;'
-                '&lt;/change_button&gt;'
-                '&lt;change_button&gt;'
-                  '&lt;btn_enabled btn_id=&quot;btn_save&quot; state=&quot;true&quot;/&gt;'
-                '&lt;/change_button&gt;'
-              '&lt;/obj_exists&gt;'
-              '&lt;default&gt;'
-                '&lt;change_button&gt;'
-                  '&lt;btn_dflt btn_id=&quot;btn_close&quot;/&gt;'
-                '&lt;/change_button&gt;'
-                '&lt;change_button&gt;'
-                  '&lt;btn_enabled btn_id=&quot;btn_save&quot; state=&quot;false&quot;/&gt;'
-                '&lt;/change_button&gt;'
-              '&lt;/default&gt;'
-            '&lt;/case&gt;'
-          '"/>'
-        f'{on_clean_multi.format(close_text="Close")}'
-        f'{on_amend}'
-        f'{on_navigate}'
-        f'{on_req_cancel.format(**on_req_cancel_args)}'
-        f'{on_req_close}'
-        f'{do_save}'
-        f'{do_restore}'
+            f'{reset_buttons}'
+            f'{on_clean_multi.format(close_text="Close")}'
+            f'{on_amend}'
+            f'{on_navigate}'
+            '<method name="on_req_cancel" action="'
+              '&lt;check_for_undo/&gt;'
+              '&lt;restart_frame/&gt;'
+              '&lt;row_inserted&gt;&lt;req_delete_row/&gt;&lt;/row_inserted&gt;'
+              '&lt;parent_req_cancel/&gt;'
+              '"/>'
+            '<method name="on_req_close" action="'
+              '&lt;check_for_save/&gt;'
+              '&lt;parent_req_close/&gt;'
+              '"/>'
+            f'{do_save}'
+            f'{do_restore}'
         '</frame_methods>'
         )
 
@@ -411,10 +350,7 @@ class Query_Form:  # template for query-type forms
     # reason - if called from bp.bpm.userTask, process waits until task 'completed'
     button_row = (
         '<button_row>'
-          '<button btn_id="btn_ok" btn_label="Ok" btn_enabled="true" '
-              'btn_validate="true" btn_default="true" lng="60" action="'
-              '&lt;parent_req_close/&gt;'
-            '"/>'
+        f'{btn_ok}'
         '</button_row>'
         )
 
@@ -434,33 +370,37 @@ class Grid:  # template for grids
         '</toolbar>'
         )
 
-    on_req_cancel_args = {
-      'after_restore': '',
-      'check_row_inserted': '&lt;row_inserted&gt;&lt;req_delete_row/&gt;&lt;/row_inserted&gt;',
-      'close_action': '&lt;parent_req_cancel/&gt;'
-      }
-
     grid_methods = (
         '<grid_methods>'
-          '<method name="on_read" obj_name="[obj_name]" action="'
+            '<method name="on_read" obj_name="[obj_name]" action="'
               '&lt;repos_row/&gt;'
-          '"/>'
-          '<method name="on_clean" obj_name="[obj_name]" action="'
+            '"/>'
+            '<method name="on_clean" obj_name="[obj_name]" action="'
               '&lt;notify_obj_clean obj_name=&quot;[obj_name]&quot;/&gt;'
-          '"/>'
-          '<method name="on_amend" obj_name="[obj_name]" action="'
+            '"/>'
+            '<method name="on_amend" obj_name="[obj_name]" action="'
               '&lt;notify_obj_dirty obj_name=&quot;[obj_name]&quot;/&gt;'
-          '"/>'
-          f'{on_req_close}'
-          f'{on_req_cancel.format(**on_req_cancel_args)}'
-          f'{do_save}'
-          f'{do_restore}'
+            '"/>'
+            '<method name="on_req_cancel" action="'
+              '&lt;check_for_undo/&gt;'
+              '&lt;row_inserted&gt;&lt;req_delete_row/&gt;&lt;/row_inserted&gt;'
+              '&lt;parent_req_cancel/&gt;'
+              '"/>'
+            '<method name="on_req_close" action="'
+              '&lt;check_for_save/&gt;'
+              '&lt;parent_req_close/&gt;'
+              '"/>'
+            f'{do_save}'
+            f'{do_restore}'
         '</grid_methods>'
         )
 
     frame_methods = (  # is this needed?
         '<frame_methods>'
-        f'{on_req_close}'
+            '<method name="on_req_close" action="'
+              '&lt;check_for_save/&gt;'
+              '&lt;parent_req_close/&gt;'
+              '"/>'
         '</frame_methods>'
         )
 
@@ -507,25 +447,28 @@ class Grid_Frame:  # template for a grid_frame
     button_row = (
         '<button_row>'
         f'{btn_save}'
-        f'{btn_close.format(close_text="Return", close_action="return_to_grid")}'
+        f'{btn_close.format(close_text="Return")}'
         '</button_row>'
         )
 
-    on_req_cancel_args = {
-      'after_restore': '&lt;restart_frame/&gt;',
-      'check_row_inserted': '&lt;row_inserted&gt;&lt;req_delete_row/&gt;&lt;/row_inserted&gt;',
-      'close_action': '&lt;return_to_grid/&gt;'
-      }
-
     frame_methods = (
         '<frame_methods>'
-        f'{on_clean_multi.format(close_text="Return")}'
-        f'{on_amend}'
-        f'{on_navigate}'
-        f'{on_req_cancel.format(**on_req_cancel_args)}'
-        f'{on_req_close}'  # called if grid_frame is active when user closes form
-        f'{do_save}'
-        f'{do_restore}'
+            f'{reset_buttons}'
+            f'{on_clean.format(close_text="Return")}'
+            f'{on_amend}'
+            f'{on_navigate}'
+            '<method name="on_req_cancel" action="'
+              '&lt;check_for_undo/&gt;'
+              '&lt;restart_frame/&gt;'
+              '&lt;row_inserted&gt;&lt;req_delete_row/&gt;&lt;/row_inserted&gt;'
+              '&lt;return_to_grid/&gt;'
+              '"/>'
+            '<method name="on_req_close" action="'
+              '&lt;check_for_save/&gt;'
+              '&lt;return_to_grid/&gt;'
+              '"/>'
+            f'{do_save}'
+            f'{do_restore}'
         '</frame_methods>'
         )
 
@@ -535,25 +478,28 @@ class Grid_Frame_Grid_RO:  # template for a grid_frame with r/o grid
     button_row = (
         '<button_row>'
         f'{btn_save_multi}'
-        f'{btn_close_multi.format(close_text="Close", close_action="move_off_grid")}'
+        f'{btn_close_multi.format(close_text="Close")}'
         '</button_row>'
         )
 
-    on_req_cancel_args = {
-      'after_restore': '&lt;restart_frame/&gt;',
-      'check_row_inserted': '&lt;row_inserted&gt;&lt;req_delete_row/&gt;&lt;/row_inserted&gt;',
-      'close_action': '&lt;move_off_grid/&gt;'
-      }
-
     frame_methods = (
         '<frame_methods>'
-        f'{on_clean_multi.format(close_text="Close")}'
-        f'{on_amend}'
-        f'{on_navigate}'
-        f'{on_req_cancel.format(**on_req_cancel_args)}'
-        f'{on_req_close}'  # called if grid_frame is active when user closes form
-        f'{do_save}'
-        f'{do_restore}'
+            f'{reset_buttons}'
+            f'{on_clean_multi.format(close_text="Close")}'
+            f'{on_amend}'
+            f'{on_navigate}'
+            '<method name="on_req_cancel" action="'
+              '&lt;check_for_undo/&gt;'
+              '&lt;restart_frame/&gt;'
+              '&lt;row_inserted&gt;&lt;req_delete_row/&gt;&lt;/row_inserted&gt;'
+              '&lt;move_off_grid/&gt;'
+              '"/>'
+            '<method name="on_req_close" action="'
+              '&lt;check_for_save/&gt;'
+              '&lt;move_off_grid/&gt;'
+              '"/>'
+            f'{do_save}'
+            f'{do_restore}'
         '</frame_methods>'
         )
 
@@ -572,9 +518,12 @@ class Grid_Frame_With_Grid:  # template for a grid_frame containing a grid - mus
 
     frame_methods = (
         '<frame_methods>'
-        f'{on_req_close}'  # called if grid_frame is active when user closes form
-        f'{do_save}'
-        f'{do_restore}'
+            '<method name="on_req_close" action="'
+              '&lt;check_for_save/&gt;'
+              '&lt;parent_req_close/&gt;'
+              '"/>'
+            f'{do_save}'
+            f'{do_restore}'
         '</frame_methods>'
         )
 
@@ -584,56 +533,40 @@ class Tree_Frame:  # template for a tree_frame
     button_row = (
         '<button_row>'
         f'{btn_save}'
-        f'{btn_close.format(close_text="Return", close_action="call method=&quot;on_req_return&quot;")}'
+        f'{btn_close.format(close_text="Return")}'
         '</button_row>'
         )
 
-    on_req_cancel_args = {
-      'after_restore': '&lt;restart_frame/&gt;',
-      'check_row_inserted':
-        '&lt;obj_exists obj_name=&quot;[obj_name]&quot;&gt;&lt;return_to_tree/&gt;&lt;/obj_exists&gt;',
-      'close_action': '&lt;delete_node/&gt;&lt;return_to_tree/&gt;'
-      }
-
     frame_methods = (
         '<frame_methods>'
-          '<method name="on_read" obj_name="[obj_name]" action="'
+            '<method name="on_read" obj_name="[obj_name]" action="'
               '&lt;case&gt;'
-
-                  '&lt;node_inserted&gt;'
-                    '&lt;raise_error head=&quot;Error&quot; body=&quot;Already exists&quot;/&gt;'
-                  '&lt;/node_inserted&gt;'
-
+                '&lt;node_inserted&gt;'
+                  '&lt;raise_error head=&quot;Error&quot; body=&quot;Already exists&quot;/&gt;'
+                '&lt;/node_inserted&gt;'
               '&lt;/case&gt;'
-          '"/>'
-          f'{on_clean.format(close_text="Return")}'
-          f'{on_amend}'
-          f'{on_req_cancel.format(**on_req_cancel_args)}'
-          '<method name="on_req_return" action="'  # click 'Return'
+              '"/>'
+            f'{reset_buttons}'
+            f'{on_clean.format(close_text="Return")}'
+            f'{on_amend}'
+            '<method name="on_req_cancel" action="'
+              '&lt;check_for_undo/&gt;'
               '&lt;case&gt;'
-                '&lt;data_changed&gt;'
-                  '&lt;ask title=&quot;Save changes?&quot; enter=&quot;No&quot; escape=&quot;Cancel&quot; '
-                      'question=&quot;Do you want to save changes to [obj_descr]?&quot;&gt;'
-                    '&lt;response ans=&quot;Yes&quot;&gt;'
-                      '&lt;req_save/&gt;'
-                      '&lt;return_to_tree/&gt;'
-                    '&lt;/response&gt;'
-                    '&lt;response ans=&quot;No&quot;&gt;'
-                      '&lt;handle_restore/&gt;'
-                      '&lt;return_to_tree/&gt;'
-                    '&lt;/response&gt;'
-                    '&lt;response ans=&quot;Cancel&quot;&gt;'
-                    '&lt;/response&gt;'
-                  '&lt;/ask&gt;'
-                '&lt;/data_changed&gt;'
+                '&lt;obj_exists obj_name=&quot;[obj_name]&quot;&gt;'
+                '&lt;/obj_exists&gt;'
                 '&lt;default&gt;'
-                  '&lt;return_to_tree/&gt;'
+                  '&lt;delete_node/&gt;'
                 '&lt;/default&gt;'
               '&lt;/case&gt;'
-          '"/>'
-          f'{on_req_close}'
-          f'{do_save}'
-          f'{do_restore}'
+              '&lt;restart_frame set_focus=&quot;false&quot;/&gt;'
+              '&lt;return_to_tree/&gt;'
+              '"/>'
+            '<method name="on_req_close" action="'
+              '&lt;check_for_save/&gt;'
+              '&lt;return_to_tree/&gt;'
+              '"/>'
+            f'{do_save}'
+            f'{do_restore}'
         '</frame_methods>'
         )
 
@@ -643,26 +576,26 @@ class Transaction:  # template for capturing transactions
     button_row = (
         '<button_row>'
           '<button btn_id="btn_close" btn_label="Close" btn_enabled="true" '
-              'btn_validate="true" btn_default="false" lng="60" action="'
-              '&lt;case&gt;'
-                '&lt;has_ctrl_grid&gt;'  # if ctrl grid, restart grid
-                  '&lt;call method=&quot;on_req_cancel&quot;/&gt;'
-                '&lt;/has_ctrl_grid&gt;'
-                '&lt;default&gt;'
+              'btn_validate="false" btn_default="false" lng="60" action="'
+            '&lt;case&gt;'
+              '&lt;has_ctrl_grid&gt;'  # if ctrl grid, restart grid
+                '&lt;call method=&quot;on_req_cancel&quot;/&gt;'
+              '&lt;/has_ctrl_grid&gt;'
+              '&lt;default&gt;'
 
-                  '&lt;ask title=&quot;Saved&quot; enter=&quot;Yes&quot; escape=&quot;No&quot; '
-                      'question=&quot;Capture another?&quot;&gt;'
-                    '&lt;response ans=&quot;Yes&quot;&gt;'
-                      '&lt;init_obj obj_name=&quot;[obj_name]&quot;/&gt;'
-                      '&lt;restart_frame/&gt;'
-                    '&lt;/response&gt;'
-                    '&lt;response ans=&quot;No&quot;&gt;'
-                      '&lt;call method=&quot;on_req_close&quot;/&gt;'
-                    '&lt;/response&gt;'
-                  '&lt;/ask&gt;'
+                '&lt;ask title=&quot;Saved&quot; enter=&quot;Yes&quot; escape=&quot;No&quot; '
+                    'question=&quot;Capture another?&quot;&gt;'
+                  '&lt;response ans=&quot;Yes&quot;&gt;'
+                    '&lt;init_obj obj_name=&quot;[obj_name]&quot;/&gt;'
+                    '&lt;restart_frame/&gt;'
+                  '&lt;/response&gt;'
+                  '&lt;response ans=&quot;No&quot;&gt;'
+                    '&lt;parent_req_close/&gt;'
+                  '&lt;/response&gt;'
+                '&lt;/ask&gt;'
 
-                '&lt;/default&gt;'
-              '&lt;/case&gt;'
+              '&lt;/default&gt;'
+            '&lt;/case&gt;'
             '"/>'
           '<button btn_id="btn_post" btn_label="Post" btn_enabled="true" '
               'btn_validate="true" btn_default="true" lng="60" action="'
@@ -788,7 +721,6 @@ class Transaction_Header:  # template for transaction header
                 '&lt;/obj_exists&gt;'
               '&lt;/case&gt;'
           '"/>'
-        # f'{btn_close.format(close_text="Ok", close_action="parent_req_close")}'
         '<button btn_id="btn_close" btn_label="Close" btn_enabled="true" '
           'btn_validate="false" btn_default="true" lng="60" action="'
               '&lt;case&gt;'
@@ -803,7 +735,7 @@ class Transaction_Header:  # template for transaction header
                 '&lt;/has_temp_data&gt;'
 
                 '&lt;btn_has_label btn_id=&quot;btn_close&quot; label=&quot;Close&quot;&gt;'
-                  '&lt;parent_req_close/&gt;'
+                  '&lt;call method=&quot;on_req_close&quot;/&gt;'
                 '&lt;/btn_has_label&gt;'
 
                 '&lt;default&gt;'  # label must be 'Cancel' - ask if ok to cancel
@@ -814,19 +746,20 @@ class Transaction_Header:  # template for transaction header
         '</button_row>'
         )
 
-    on_req_cancel_args = {
-      'after_restore': '&lt;restart_frame/&gt;',
-      'check_row_inserted': '',
-      'close_action': '&lt;parent_req_cancel/&gt;'
-      }
-
     frame_methods = (
         '<frame_methods>'
-        f'{on_clean.format(close_text="Close")}'
-        f'{on_amend}'
-        f'{on_req_cancel.format(**on_req_cancel_args)}'
-        f'{on_req_close}'
-        f'{do_save}'
-        f'{do_restore}'
+            f'{on_clean.format(close_text="Close")}'
+            f'{on_amend}'
+            '<method name="on_req_cancel" action="'
+              '&lt;check_for_undo/&gt;'
+              '&lt;restart_frame/&gt;'
+              '&lt;parent_req_cancel/&gt;'
+              '"/>'
+            '<method name="on_req_close" action="'
+              '&lt;check_for_save/&gt;'
+              '&lt;parent_req_close/&gt;'
+              '"/>'
+            f'{do_save}'
+            f'{do_restore}'
         '</frame_methods>'
         )

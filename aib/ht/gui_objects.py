@@ -56,13 +56,11 @@ class GuiCtrl:
         self.pos = pos
 
     def __str__(self):
-        return '{} {}.{}'.format(self.ref, self.fld.table_name, self.col_name)
+        return f'{self.ref} {self.fld.table_name}.{self.col_name}'
 
     async def validate(self, temp_data):
         if debug:
-            log.write('validate {} {}\n\n'.format(self.col_name, temp_data))
-        if self.hidden:  # unused subtype fields
-            return
+            log.write(f'validate {self.col_name} {temp_data}\n\n')
         if self.readonly:
             return
 
@@ -199,7 +197,7 @@ class GuiCtrl:
                     alt_tgt = alt_tgt.foreign_key['true_src']
 
                 if alttgt_obj == tgt_obj:  # alttgt_obj is adm_tax_codes, tgt_obj is adm_tax_codes
-                    lkup_filter = 'a.{} = ?'.format(alt_tgt.col_name)
+                    lkup_filter = f'a.{alt_tgt.col_name} = ?'
 
                 else:
                     # e.g. sls_subtran.wh_prod_row_id has this fkey -
@@ -422,7 +420,7 @@ class GuiDisplay:
         self.pos = pos
 
     def __str__(self):
-        return '{} {}.{}'.format(self.ref, self.fld.db_obj.table_name, self.col_name)
+        return f'{self.ref} {self.fld.db_obj.table_name}.{self.col_name}'
 
     async def validate(self, temp_data, tab=False):
         pass
@@ -464,7 +462,7 @@ class GuiDummy:  # dummy field to trigger validation/after_input during form exe
         #     'lng': None, 'help_msg': '', 'value': ''}))
 
     def __str__(self):
-        return '{} dummy'.format(self.ref)
+        return f'{self.ref} dummy'
 
     async def _redisplay(self):
         pass  # could be called from set_subtype
@@ -504,7 +502,7 @@ class GuiButton:
             'readonly':self.readonly, 'enabled':self.enabled, 'default':self.default, 'help_msg':help_msg}))
 
     def __str__(self):
-        return "{} Button: '{}'".format(self.ref, self.label)
+        return f"{self.ref} Button: '{self.label}'"
 
     async def _redisplay(self):
         pass  # could be called from set_subtype
@@ -530,7 +528,7 @@ class GuiTbButton:  # Toolbar button
         self.must_validate = False
 
     def __str__(self):
-        return '{} Tb Button'.format(self.ref)
+        return f'{self.ref} Tb Button'
 
     def validate(self, temp_data):
         pass

@@ -208,7 +208,7 @@ def init(self, mem_id=None):
         cur = conn.cursor()
         cur.execute("pragma read_uncommitted = on")  # http://www.sqlite.org/sharedcache.html
     else:
-        conn = sqlite3.connect('{0}/_base'.format(self.database),
+        conn = sqlite3.connect(f'{self.database}/_base',
             detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
             check_same_thread=False)
         cur = conn.cursor()

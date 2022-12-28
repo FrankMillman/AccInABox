@@ -148,7 +148,8 @@ async def continue_form(caller, xml):
     await caller.form.continue_form()
 
 async def restart_frame(caller, xml):
-    await caller.restart_frame()
+    set_focus = not (xml.get('set_focus') == 'false')
+    await caller.restart_frame(set_focus=set_focus)
 
 """
 async def restart_frame_if_not_grid(caller, xml):
@@ -205,7 +206,7 @@ async def init_grid(caller, xml):
     await caller.init_grid(obj_name)
 
 async def req_save(caller, xml):
-    await caller.req_save()
+    await caller.req_save(from_client=True)
 
 async def save_obj(caller, xml):
     db_obj = caller.data_objects[xml.get('obj_name')]
@@ -697,6 +698,12 @@ async def no_tran_header(caller, xml):
     form_defn = caller.form.form_defn
     tran_header = form_defn.find("inline_form[@name='tran_header']")
     return tran_header is None
+
+async def check_for_save(caller, xml):
+    await caller.check_for_save()
+
+async def check_for_undo(caller, xml):
+    await caller.check_for_undo()
 
 async def obj_exists(caller, xml):
     obj_name = xml.get('obj_name')

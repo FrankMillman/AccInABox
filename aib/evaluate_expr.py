@@ -177,6 +177,7 @@ async def eval_bool(src, chk, tgt, db_obj, fld, value):
         src_val = await eval_elem(src, db_obj, fld, value)
         tgt_val = await eval_elem(tgt, db_obj, fld, value)
         result = CHKS[chk](src_val, tgt_val)
+    # print(f'{src}:{src_val} {chk} {tgt}:{tgt_val} {result}')
     return result
 
 async def eval_bool_expr(expr, db_obj, fld=None, value=None):
@@ -204,16 +205,17 @@ async def eval_bool_expr(expr, db_obj, fld=None, value=None):
         exp = expr[pos]
         if exp[1]:  # not None or ''
             # evaluate expressions in brackets first
-            cnt_lbr = len(exp[1])
+            cnt_lbr = 0
             first = pos
             last = first
-            while cnt_lbr:
+            while True:
+                if expr[last][1]:  # not None or ''
+                    cnt_lbr += len(expr[last][1])
                 if expr[last][5]:  # not None or ''
                     cnt_lbr -= len(expr[last][5])
-                if cnt_lbr > 0:
-                    last += 1
-                else:
+                if cnt_lbr == 0:
                     break
+                last += 1
 
             if expr[pos-1][1] is False and exp[0].lower() == 'and':
                 # no need to evaluate - leave as False

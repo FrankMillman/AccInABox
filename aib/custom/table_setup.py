@@ -15,9 +15,9 @@ async def setup_init_cols(caller, xml):
     table_id = await db_table.getval('row_id')
 
     params = []
-    params.append(('row_id', 'AUTO', 'Row id', 'Row id', 'Row', 'Y', None))
-    params.append(('created_id', 'INT', 'Created id', 'Created row id', 'Created', 'N', '0'))
-    params.append(('deleted_id', 'INT', 'Deleted id', 'Deleted row id', 'Deleted', 'N', '0'))
+    params.append(('row_id', 'AUTO', 'Row id', 'Row id', 'Row', 'Y', 'gen', None))
+    params.append(('created_id', 'INT', 'Created id', 'Created row id', 'Created', 'N', 'gen', '0'))
+    params.append(('deleted_id', 'INT', 'Deleted id', 'Deleted row id', 'Deleted', 'N', 'gen', '0'))
 
     db_column = await db.objects.get_db_object(db_table.context, 'db_columns')
     for param in params:
@@ -30,13 +30,14 @@ async def setup_init_cols(caller, xml):
         await db_column.setval('long_descr', param[3])
         await db_column.setval('col_head', param[4])
         await db_column.setval('key_field', param[5])
-        await db_column.setval('calculated', False)
+        await db_column.setval('data_source', param[6])
+        await db_column.setval('condition', None)
         await db_column.setval('allow_null', False)
         await db_column.setval('allow_amend', False)
         await db_column.setval('max_len', 0)
         await db_column.setval('db_scale', 0)
         await db_column.setval('scale_ptr', None)
-        await db_column.setval('dflt_val', param[6])
+        await db_column.setval('dflt_val', param[7])
         await db_column.setval('col_checks', None)
         await db_column.setval('fkey', None)
         await db_column.setval('choices', None)

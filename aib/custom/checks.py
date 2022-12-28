@@ -11,7 +11,6 @@ async def load_checks(caller, xml):
     else:
         await var.setval('full_name', '{}.{}_checks'.format(
             await var.getval('table_name'), await var.getval('chk_type')))
-    await var.save()  # set to 'clean'
 
     chks = await var.getval('chks')
     if chks is None:
@@ -21,6 +20,8 @@ async def load_checks(caller, xml):
             init_vals={'seq': seq, 'code': code, 'errmsg': errmsg, 'steps': stps}
             await checks.init(display=False, init_vals=init_vals)
             await checks.save()
+
+    await var.save()  # set to 'clean'
 
 async def load_steps(caller, xml):
     # called from checks grid_frame 'on_start_frame'
@@ -34,6 +35,7 @@ async def load_steps(caller, xml):
                 'seq': sub_seq, 'test': test, 'lbr': lbr,
                 'src': src, 'chk': chk, 'tgt': tgt, 'rbr': rbr})
             await steps.save()
+        await checks.save()  # set to 'clean'
 
 async def dump_steps(caller, xml):
     # called from checks grid_frame 'do_save'
