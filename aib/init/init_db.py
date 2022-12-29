@@ -264,6 +264,7 @@ async def setup_other_tables(context, conn):
         'db_actions',
         'db_views',
         'db_view_cols',
+        'db_genno',
         'dir_users',
         'dir_companies',
         'dir_users_companies',

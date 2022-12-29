@@ -191,6 +191,7 @@ async def setup_sys_tables(context, conn):
         'db_actions',
         'db_views',
         'db_view_cols',
+        'db_genno',
         'acc_roles',
         'acc_table_perms',
         'acc_users_roles',
@@ -218,7 +219,6 @@ async def setup_other_tables(context, conn):
     db_cur = await db.objects.get_db_object(context, 'db_cursors')
     db_act = await db.objects.get_db_object(context, 'db_actions')
     tables = [
-        'db_genno',
         'adm_locations',
         'adm_functions',
         'gl_groups',
@@ -622,12 +622,14 @@ async def setup_forms(context, conn):
     await setup_form('cb_cashbook')
     await setup_form('nsls_ledger_new')
     await setup_form('npch_ledger_new')
+    await setup_form('setup_finrpt')
     await setup_form('finrpt_list')
     await setup_form('finrpt_run')
     await setup_form('finrpt_grid')
     await setup_form('finrpt_page')
     await setup_form('tranrpt_grid')
     await setup_form('all_captured')
+    await setup_form('gl_jnl_posted')
     await setup_form('cb_rec_posted')
     await setup_form('cb_pmt_posted')
     await setup_form('cb_tfr_posted')
@@ -677,11 +679,12 @@ async def setup_finrpts(context, conn):
         await db_obj.setval('title', rpt.title)
         await db_obj.setval('table_name', rpt.table_name)
         await db_obj.setval('report_type', rpt.report_type)
-        await db_obj.setval('filters', rpt.filters)
+        await db_obj.setval('date_params', rpt.date_params)
         await db_obj.setval('groups', rpt.groups)
-        await db_obj.setval('columns', rpt.columns)
-        if hasattr(rpt, 'calc_cols'):
-            await db_obj.setval('calc_cols', rpt.calc_cols)
+        await db_obj.setval('filter_by', rpt.filter_by)
+        await db_obj.setval('group_by', rpt.group_by)
+        # if hasattr(rpt, 'calc_cols'):
+        #     await db_obj.setval('calc_cols', rpt.calc_cols)
         if hasattr(rpt, 'include_zeros'):
             await db_obj.setval('include_zeros', rpt.include_zeros)
         if hasattr(rpt, 'expand_subledg'):
@@ -690,35 +693,39 @@ async def setup_finrpts(context, conn):
             await db_obj.setval('allow_select_loc_fun', rpt.allow_select_loc_fun)
         if hasattr(rpt, 'pivot_on'):
             await db_obj.setval('pivot_on', rpt.pivot_on)
-        if hasattr(rpt, 'cashflow_params'):
-            await db_obj.setval('cashflow_params', rpt.cashflow_params)
-        if hasattr(rpt, 'finrpt_defn'):
-            await db_obj.setval('finrpt_defn', rpt.finrpt_defn)
+        # if hasattr(rpt, 'cashflow_params'):
+        #     await db_obj.setval('cashflow_params', rpt.cashflow_params)
+        await db_obj.setval('columns', rpt.columns)
+        if hasattr(rpt, 'finrpt_xml'):
+            if rpt.finrpt_xml is not None:
+                await db_obj.setval('finrpt_xml',
+                    rpt.finrpt_xml.replace('<<', '&lt;').replace('>>', '&gt;'))
         await db_obj.save()
 
     finrpt_names = [
 #       'tb_by_maj',
-#       'tb_by_int',
-#       'tb_by_code',
+        'tb_by_int',
+        'tb_by_code',
 #       'tb_pivot_maj',
+        'inc_stat',
 #       'int_by_loc',
 #       'int_by_loc',
-#       'int_pivot_loc',
-#       'int_pivot_date',
-#       'int_curr_prev',
-#       'int_is_curr_prev',
+        'int_pivot_loc',
+        'int_pivot_date',
+        'int_curr_prev',
+        'int_is_curr_prev',
 #       'cb_cash_flow',
 #       'ar_by_src',
-#       'ar_pivot_src',
-#       'ar_cust_pivot_src',
+        'ar_pivot_src',
+        'ar_cust_pivot_src',
 #       'ar_loc_pivot_src',
 #       'ap_by_src',
-#       'ap_pivot_src',
-#       'ap_supp_pivot_src',
+        'ap_pivot_src',
+        'ap_supp_pivot_src',
 #       'ap_loc_pivot_src',
-#       'cb_pivot_src',
-#       'npch_pivot_date',
-#       'nsls_pivot_date',
+        'cb_pivot_src',
+        'npch_pivot_date',
+        'nsls_pivot_date',
 #       'npch_per',
 #       'nsls_per',
 #       'npch_uex_code_src',
@@ -788,6 +795,7 @@ async def setup_menus(context, conn, company_name):
             ]],
         ['System setup', 'menu', 'sys', [
             ['Form definitions', 'grid', 'sys_form_defns', '_sys.form_list'],
+            # ['Financial reports', 'grid', 'sys_finrpt_defns', 'finrpt_setup'],
             ['Process definitions', 'grid', 'sys_proc_defns', '_sys.proc_list'],
             ['Menu definitions', 'form', '_sys.setup_menu'],
             ]],
@@ -812,9 +820,17 @@ async def setup_menus(context, conn, company_name):
             ['Setup', 'menu', 'gl', [
                 ['G/L parameters', 'form', 'gl_params'],
                 ['G/L codes', 'form', 'setup_gl_codes'],
+                ['Financial reports', 'grid', 'sys_finrpt_defns', 'finrpt_setup'],
                 ]],
+            # ['Gl transactions', 'menu', 'gl', [
+            #     ['Capture journal', 'form', 'gl_jnl'],
+            #     ]],
             ['Gl transactions', 'menu', 'gl', [
-                ['Capture journal', 'form', 'gl_jnl'],
+                ['Journals', 'menu', 'gl', [
+                    ['Capture journal', 'form', 'gl_jnl'],
+                    ['List of journals posted', 'form', 'gl_jnl_posted'],
+                    ['Review unposted journals', 'grid', 'gl_tran_jnl', 'unposted_jnl'],
+                    ]],
                 ]],
             ['Financial reports', 'form', 'finrpt_list'],
             ['Period end procedure', 'form', 'gl_ledger_periods'],
@@ -859,6 +875,7 @@ async def setup_menus(context, conn, company_name):
     cb_menu = ['Cash book', 'menu', 'cb', [
         ['Setup', 'menu', 'cb', [
             ['Cash book parameters', 'form', 'cb_params'],
+            ['Financial reports', 'grid', 'sys_finrpt_defns', 'finrpt_setup'],
             ]],
         ['Cb transactions', 'menu', 'cb', [
             ['Cb receipts', 'menu', 'cb', [
@@ -889,6 +906,7 @@ async def setup_menus(context, conn, company_name):
             ['Ledger parameters', 'form', 'ar_params'],
             ['Customers', 'grid', 'ar_customers', 'cust'],
             ['Terms codes', 'grid', 'ar_terms_codes', 'terms_codes'],
+            ['Financial reports', 'grid', 'sys_finrpt_defns', 'finrpt_setup'],
             ]],
         ['Ar transactions', 'menu', 'ar', [
             ['Invoices', 'menu', 'ar', [
@@ -930,6 +948,7 @@ async def setup_menus(context, conn, company_name):
             ['Ledger parameters', 'form', 'ap_params'],
             ['Suppliers', 'grid', 'ap_suppliers', 'supp'],
             ['Terms codes', 'grid', 'ap_terms_codes', 'terms_codes'],
+            ['Financial reports', 'grid', 'sys_finrpt_defns', 'finrpt_setup'],
             ]],
         ['AP transactions', 'menu', 'ap', [
             ['Invoices', 'menu', 'ap', [
@@ -972,6 +991,7 @@ async def setup_menus(context, conn, company_name):
     in_menu = ['Inventory', 'menu', 'in', [
         ['Warehouse setup', 'menu', 'in', [
             ['Warehouse parameters', 'form', 'in_params'],
+            ['Financial reports', 'grid', 'sys_finrpt_defns', 'finrpt_setup'],
             ]],
         ['Period end procedure', 'form', 'in_ledger_periods'],
         ]]
@@ -980,6 +1000,7 @@ async def setup_menus(context, conn, company_name):
         ['Setup', 'menu', 'nsls', [
             ['Parameters', 'form', 'nsls_params'],
             ['Income codes', 'form', 'setup_nsls_codes'],
+            ['Financial reports', 'grid', 'sys_finrpt_defns', 'finrpt_setup'],
             ]],
         ['Financial reports', 'form', 'finrpt_list'],
         ]]
@@ -988,6 +1009,7 @@ async def setup_menus(context, conn, company_name):
         ['Setup', 'menu', 'npch', [
             ['Parameters', 'form', 'npch_params'],
             ['Expense codes', 'form', 'setup_npch_codes'],
+            ['Financial reports', 'grid', 'sys_finrpt_defns', 'finrpt_setup'],
             ]],
         ['Financial reports', 'form', 'finrpt_list'],
         ]]
