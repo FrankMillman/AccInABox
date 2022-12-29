@@ -778,20 +778,41 @@ class Field:
                                         method = subtran_parent.on_amend_func[caller]
                                         await ht.form_xml.exec_xml(caller, method)
 
-                if not from_sql:
-                    if db_obj.mem_obj:
-                        memobj = db_obj
-                        while memobj.mem_parent is not None:
-                            if not memobj.mem_parent.dirty:
-                                memobj.mem_parent.dirty = True
-                                if display:
-                                    for caller_ref in list(memobj.mem_parent.on_amend_func.keyrefs()):
-                                        caller = caller_ref()
-                                        if caller is not None:
-                                            if not caller.form.closed:
-                                                method = memobj.mem_parent.on_amend_func[caller]
-                                                await ht.form_xml.exec_xml(caller, method)
-                            memobj = memobj.mem_parent
+                # next block removed [2022-11-22]
+                # however, requirement is not clear-cut
+                # this only applies to a mem_obj which has a parent - if the mem_obj
+                #   is changed, this will cause some change on the parent
+                # a mem_obj comes in 2 'flavours' -
+                #   1. a stand-alone record of one or more fields
+                #   2. a collection of records, captured in a grid, usually
+                #        stored in a JSON list on the parent when completed
+                # if a mem_obj of type 1 is changed, the parent should be treated as changed
+                # if a mem_obj of type 2 is changed, the parent should not be treated as
+                #   changed until the mem_obj is saved - if the user cancels the changes,
+                #   there is no change to the parent
+                # at present there is no way to distinguish between type 1 and type 2
+                # when this block was present, 'on_amend' was triggered on the parent on
+                #   any change to the mem_obj, whether type 1 or type 2
+                # with this block removed, on_amend is only triggered on the parent when the
+                #   mem_obj is saved (see changes to insert() and update() in db.objects)
+                # therefore if a type 1 field is changed, in order to trigger 'on_amend' on the parent,
+                #   there must be an 'after' clause to 'save' the mem_obj
+                # not ideal - try to find a better solution
+                #
+                # if not from_sql:
+                #     if db_obj.mem_obj:
+                #         memobj = db_obj
+                #         while memobj.mem_parent is not None:
+                #             if not memobj.mem_parent.dirty:
+                #                 memobj.mem_parent.dirty = True
+                #                if display:
+                #                     for caller_ref in list(memobj.mem_parent.on_amend_func.keyrefs()):
+                #                         caller = caller_ref()
+                #                         if caller is not None:
+                #                             if not caller.form.closed:
+                #                                 method = memobj.mem_parent.on_amend_func[caller]
+                #                                 await ht.form_xml.exec_xml(caller, method)
+                #             memobj = memobj.mem_parent
 
         if display:
             for obj in self.gui_obj:
@@ -1407,8 +1428,8 @@ class Decimal(Field):
             return ''
         if scale is None:
             scale = await self.get_scale()
-        output = f'{{:.{scale}f}}'
-        return output.format(value)
+        fmt = f'.{scale}f'
+        return format(value, fmt)
 
     async def prev_to_str(self, value=blank):
         try:

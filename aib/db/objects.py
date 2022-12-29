@@ -754,6 +754,14 @@ class DbObject:
         fld = await self.getfld(col_name)
         return await fld.get_prev()
 
+    async def get_dflt(self, col_name):
+        fld = await self.getfld(col_name)
+        return await fld.get_dflt()
+
+    async def val_to_str(self, col_name):
+        fld = await self.getfld(col_name)
+        return await fld.val_to_str()
+
     async def get_data(self):
         data = {col_name: await fld.getval() for col_name, fld in self.fields.items()}
         data['_exists'] = self.exists
@@ -1375,6 +1383,20 @@ class DbObject:
             raise AibError(head='Insert {}'.format(self.table_name),
                 body=str(err))
 
+        # added [2022-11-22] - if child mem_obj inserted, set mem_parent to 'dirty'
+        if not from_upd_on_save:
+            if self.mem_obj:
+                if self.mem_parent is not None:
+                    mem_parent = self.mem_parent
+                    if not mem_parent.dirty:
+                        mem_parent.dirty = True
+                        for caller_ref in list(mem_parent.on_amend_func.keyrefs()):
+                            caller = caller_ref()
+                            if caller is not None:
+                                if not caller.form.closed:
+                                    method = mem_parent.on_amend_func[caller]
+                                    await ht.form_xml.exec_xml(caller, method)
+
         self.dirty = False
         for after_insert in self.db_table.actions.after_insert:
             await db.hooks_xml.table_hook(self, after_insert)
@@ -1432,6 +1454,20 @@ class DbObject:
             await conn.update_row(self, cols_to_update, vals_to_update, from_upd_on_save)
         except conn.exception as err:
             raise AibError(head='Update {}'.format(self.table_name), body=str(err))
+
+        # added [2022-11-22] - if child mem_obj updated, set mem_parent to 'dirty'
+        if not from_upd_on_save:
+            if self.mem_obj:
+                if self.mem_parent is not None:
+                    mem_parent = self.mem_parent
+                    if not mem_parent.dirty:
+                        mem_parent.dirty = True
+                        for caller_ref in list(mem_parent.on_amend_func.keyrefs()):
+                            caller = caller_ref()
+                            if caller is not None:
+                                if not caller.form.closed:
+                                    method = mem_parent.on_amend_func[caller]
+                                    await ht.form_xml.exec_xml(caller, method)
 
         self.dirty = False
         for after_update in self.db_table.actions.after_update:
@@ -1871,7 +1907,7 @@ class DbObject:
                 test = 'AND'
             all_tgt = tgt_obj.select_many(where=where, order=[])
             async for _ in all_tgt:
-                await tgt_obj.delete(from_upd_on_save=True)
+                await tgt_obj.delete(from_upd_on_save=True)  # actually delete
 
         if upd_type not in ('inserted', 'updated', 'post'):
             return
@@ -2701,13 +2737,12 @@ class MemObject(DbObject):
         while memobj.mem_parent is not None:
             if not memobj.mem_parent.dirty:
                 memobj.mem_parent.dirty = True
-                if True:  #display:  [TO DO] can we assume 'display' is True?
-                    for caller_ref in list(memobj.mem_parent.on_amend_func.keyrefs()):
-                        caller = caller_ref()
-                        if caller is not None:
-                            if not caller.form.closed:
-                                method = memobj.mem_parent.on_amend_func[caller]
-                                await ht.form_xml.exec_xml(caller, method)
+                for caller_ref in list(memobj.mem_parent.on_amend_func.keyrefs()):
+                    caller = caller_ref()
+                    if caller is not None:
+                        if not caller.form.closed:
+                            method = memobj.mem_parent.on_amend_func[caller]
+                            await ht.form_xml.exec_xml(caller, method)
             memobj = memobj.mem_parent
 
     async def delete_all(self, from_upd_on_save=False):
@@ -2799,7 +2834,7 @@ class DbTable:
                     col.col_checks = loads(col.col_checks)
 
                 if col.dflt_rule is not None:
-                    col.dflt_rule = fromstring(f'<_>{col.dflt_rule}</_>')
+                    col.dflt_rule = fromstring(col.dflt_rule)
 
                 # this can only be done after setup completed, else risk of recursion
                 # if col.fkey is not None:
@@ -3288,14 +3323,14 @@ class MemTable(DbTable):
                 col_defn.get('condition'),
                 col_defn.get('allow_null') == 'true',
                 col_defn.get('allow_amend', 'false'),
-                0 if col_defn.get('max_len') is None else int(col_defn.get('max_len')),
-                0 if col_defn.get('db_scale') is None else int(col_defn.get('db_scale')),
+                0 if (max_len := col_defn.get('max_len')) is None else int(max_len),
+                0 if (db_scale := col_defn.get('db_scale')) is None else int(db_scale),
                 col_defn.get('scale_ptr'),
                 col_defn.get('dflt_val'),
                 col_defn.get('dflt_rule'),
                 col_defn.get('col_checks'),
-                None if col_defn.get('fkey') is None else
-                    col_defn.get('fkey').replace('{company}', context.company),
+                None if (fkey := col_defn.get('fkey')) is None else
+                    fkey.replace('{company}', context.company),
                 col_defn.get('choices'),
                 col_defn.get('sql')
                 )
@@ -3434,11 +3469,7 @@ class MemTable(DbTable):
             col.col_checks = loads(col.col_checks)
 
         if col.dflt_rule is not None:
-            col.dflt_rule = fromstring('<_>{}</_>'.format(col.dflt_rule))
-
-        # this can only be done after setup completed, else risk of recursion
-        # if col.fkey is not None:
-        #     await setup_fkey(self, context, context.company, col)
+            col.dflt_rule = fromstring(col.dflt_rule)
 
         if col.choices is not None:
             col.choices = OD(loads(col.choices))
@@ -3609,6 +3640,8 @@ class DbView:
 
                 if col.choices is not None:
                     col.choices = OD(loads(col.choices))
+
+                await get_dependencies(col)
 
                 # set up primary and alternate keys
                 if col.key_field == 'Y':
@@ -3861,7 +3894,7 @@ class Actions:
         'before_save', 'after_save', 'before_insert', 'after_insert', 'before_update',
         'after_update', 'before_delete', 'after_delete', 'before_post', 'after_commit', 'after_post')
 
-    xml = lambda x: (fromstring(f'<_>{x}</_>'),)  # a one-element tuple
+    xml = lambda x: (fromstring(x),)  # a one-element tuple
 
     iconv = (loads, loads, loads, loads, loads, loads, xml, xml, xml, xml, xml,
         xml, xml, xml, xml, xml, xml, xml, xml, xml, xml)
