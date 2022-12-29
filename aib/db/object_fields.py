@@ -1194,18 +1194,30 @@ class StringXml(Xml):
             return None
         if isinstance(value, etree._Element):
             return value
-        try:
-            return self.from_string(value, from_gui=True)
-        except (etree.XMLSyntaxError, ValueError) as e:
-            raise AibError(head=self.col_defn.short_descr,
-                body=f'Xml error - {e.args[0]}')
+        return await self.str_to_val(value)
 
     async def str_to_val(self, value):
         if value in (None, ''):
             return None
+        elif value == '\f':  # used to join comment and xml_code
+            return None  # gui return blank comment and xml_code
         else:
+            if '\f' in value:
+                comment, xml_code = value.split('\f')
+            else:
+                comment, xml_code = '', value
+            lines = xml_code.split('"')  # split on attributes
+            for pos, line in enumerate(lines):
+                if pos%2:  # every 2nd line is an attribute
+                    lines[pos] = line.replace(
+                        '&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            xml_code = '"'.join(lines)
+            xml_code = f'<_>{xml_code}</_>'
             try:
-                return self.from_string(value, from_gui=True)
+                xml = etree.fromstring(xml_code, parser=self.parser)
+                if comment:
+                    xml.insert(0, etree.Comment(comment))
+                return xml
             except (etree.XMLSyntaxError, ValueError) as e:
                 raise AibError(head=self.col_defn.short_descr,
                     body=f'Xml error - {e.args[0]}')
@@ -1220,63 +1232,9 @@ class StringXml(Xml):
             value = await self.getval()
         if value is None:
             return '\f'  # equivalent to '', ''
-        return self.to_string(value, for_gui=True)
-
-    async def get_val_for_sql(self):
-        if self.must_be_evaluated:
-            self.must_be_evaluated = False
-            await self.recalc()
-        return None if self._value is None else self.to_string(self._value)
-
-    async def get_val_for_xml(self):
-        if self._value is None:
-            return None
-        value = self.to_string(self._value)
-        if value == self.col_defn.dflt_val:
-            return None
-        return value
-
-    async def get_val_from_sql(self, value):
-        return None if value is None else self.from_string(value)
-
-    async def get_val_from_xml(self, value):
-        if value is None:
-            value = self.col_defn.dflt_val
-        return None if value is None else self.from_string(value)
-
-    def concurrency_check(self):
-        if self._curr_val is None:
-            return self._orig is None
-        curr_val = self.from_string(self._curr_val)
-        return self._equal(curr_val, self._orig)
-
-    def from_string(self, string, from_gui=False):
-        if not from_gui:  # from database
-            return etree.fromstring(f'<_>{string}</_>', parser=self.parser)
-        if string == '\f':  # ASCII ff used to join comment and xml_code
-            return None  # gui return blank comment and xml_code
-        if '\f' in string:
-            comment, xml_code = string.split('\f')
-        else:  # not from gui but from init_company
-            comment, xml_code = '', string
-        xml_code = f'<_>{xml_code}</_>'
-        lines = xml_code.split('"')  # split on attributes
-        for pos, line in enumerate(lines):
-            if pos%2:  # every 2nd line is an attribute
-                lines[pos] = line.replace(
-                    '&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        xml_code = '"'.join(lines)
-        xml = etree.fromstring(xml_code, parser=self.parser)
-        if comment:
-            xml.insert(0, etree.Comment(comment))
-        return xml
-
-    def to_string(self, xml, for_gui=False):
-        if not for_gui:  # for storing in database
-            return ''.join(etree.tostring(_, encoding=str) for _ in xml)
         comment = ''  # should only be one comment
         xml_code = ''  # could be > 1 top-level elements
-        for elem in xml:  # top level only
+        for elem in value:  # top level only - process each elem in root, but not root itself
             if isinstance(elem, etree._Comment):
                 comment += elem.text
             else:
@@ -1287,7 +1245,35 @@ class StringXml(Xml):
                         lines[pos] = line.replace(
                             '&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
                 xml_code += '"'.join(lines)
-        return f'{comment}\f{xml_code}'  # ASCII ff used to join comment and xml_code
+        return f'{comment}\f{xml_code}'  # ASCII \f used to join comment and xml_code
+
+    async def get_val_for_sql(self):
+        if self.must_be_evaluated:
+            self.must_be_evaluated = False
+            await self.recalc()
+        return None if self._value is None else etree.tostring(self._value, encoding=str)
+
+    async def get_val_for_xml(self):
+        if self._value is None:
+            return None
+        value = etree.tostring(self._value, encoding=str)
+        if value == self.col_defn.dflt_val:
+            return None
+        return value
+
+    async def get_val_from_sql(self, value):
+        return None if value is None else etree.fromstring(value, parser=self.parser)
+
+    async def get_val_from_xml(self, value):
+        if value is None:
+            value = self.col_defn.dflt_val
+        return None if value is None else etree.fromstring(value, parser=self.parser)
+
+    def concurrency_check(self):
+        if self._curr_val is None:
+            return self._orig is None
+        curr_val = etree.fromstring(self._curr_val, parser=self.parser)
+        return self._equal(curr_val, self._orig)
 
 class Integer(Field):
     async def get_dflt(self, from_init=False):
