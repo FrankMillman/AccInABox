@@ -471,11 +471,11 @@ function create_grid(frame, main_grid, page, json_elem, col_defns) {
     grid.grid_height += 19;  // col_span height (18) + col_span border (1)
 //  main_grid.style.width = grid.offsetWidth + 'px';
 
-if (grid.header_row.length) {
-  grid.appendChild(header_row);
-  header_row.style.height = '20px';
-  grid.grid_height += 20;
-  }
+  if (grid.header_row.length) {
+    grid.appendChild(header_row);
+    header_row.style.height = '20px';
+    grid.grid_height += 20;
+    };
 
 // set up data rows
   grid.grid_rows = [];
@@ -631,7 +631,7 @@ if (grid.header_row.length) {
     grid.appendChild(footer_row);
     footer_row.style.height = '20px';
     grid.grid_height += 20;
-    }
+    };
 
   grid.add_gridframe_indicator = function() {
     var col_span = document.createElement('span');
@@ -875,15 +875,19 @@ if (grid.header_row.length) {
     //  + ' data_rows=' + grid.num_data_rows + ' active=' + grid.active_row
     //  + ' save=' + grid.req_save_row + ' tabbing=' + grid.tabbing);
 
-    if (grid.growable)
-      // it will be = if we are on bottom row
-      // it will be > if we are tabbing off bottom row - create new bottom row
-      if (new_row === grid.num_data_rows)  // if new row is bottom row
-        if (new_row === grid.active_row)  // if already on bottom row
-//          grid.set_amended(true);  // force sending 'cell_lost_focus'
-          ;
-        else  // if moving to bottom row
-          new_col = 0;  // move to first column
+//     if (grid.growable)
+//       // it will be = if we are on bottom row
+//       // it will be > if we are tabbing off bottom row - create new bottom row
+//       if (new_row === grid.num_data_rows)  // if new row is bottom row
+//         if (new_row === grid.active_row)  // if already on bottom row
+// //          grid.set_amended(true);  // force sending 'cell_lost_focus'
+//           ;
+//         else  // if moving to bottom row
+//           new_col = 0;  // move to first column
+
+    if (new_row === grid.num_data_rows)  // new row is bottom row
+      if (new_row !== grid.active_row)  // not currently on bottom row
+        new_col = 0;  // move to first column
 
     grid.focus_from_server = false;  // pre-set
     // next line is ugly! [2017-11-08]
@@ -987,9 +991,6 @@ if (grid.header_row.length) {
     grid.active_row = -1;
     grid.active_col = -1;
     grid.set_amended(false);
-
-    if (set_focus)  // added 2022-09-27 - grid got focus, then server adds rows and restarts grid - reset active_row/col
-      grid.req_cell_focus(grid.focus_row, 0);
 
 //    // when cell gets focus, treat the same as if we had tabbed there
 //    grid.tabbing = true;
@@ -2016,7 +2017,8 @@ if (grid.header_row.length) {
       default: key_handled = false;
       };
     if (key_handled) {
-      e.cancelBubble = true;
+      // e.cancelBubble = true;
+      e.stopPropagation();
       return false;
       };
     var input = grid.obj_list[grid.active_col];

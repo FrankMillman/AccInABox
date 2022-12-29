@@ -12,10 +12,17 @@ function create_tree(container, frame, page, toolbar){
   tree.toolbar = toolbar;
 
   tree.add_tree_data = function(tree_data, hide_root) {
+    tree.node_dict = {};
+    tree.nodes = [];
+    tree.level = 0;
+    tree.active_node = null;
+//    while(tree.firstChild)
+//      tree.removeChild(tree.lastChild);
+    tree.replaceChildren();
     for (var j=0, lng=tree_data.length; j<lng; j++) {
       var arg = tree_data[j];
-      var node_id=arg[0], parent_id=arg[1], text=arg[2], is_leaf=arg[3];
-      tree.add_node(parent_id, node_id, is_leaf, text, (j===0));
+      var node_id=arg[0], parent_id=arg[1], text=arg[2], is_leaf=arg[3], is_root=(j===0);
+      tree.add_node(parent_id, node_id, is_leaf, text, is_root);
       };
     tree.hide_root = hide_root;
     tree.write();
@@ -82,11 +89,11 @@ function create_tree(container, frame, page, toolbar){
     };
   container.appendChild(tree);
 
-  tree.node_dict = {};
-  tree.nodes = [];
+//  tree.node_dict = {};
+//  tree.nodes = [];
   tree.tree = tree;
-  tree.level = 0;
-  tree.active_node = null;
+//  tree.level = 0;
+//  tree.active_node = null;
   tree.has_focus = false;
   tree.allow_edit = false;  // can override
 
@@ -138,8 +145,6 @@ function create_tree(container, frame, page, toolbar){
     this.active_node.text_span.style.color = 'lightcyan';
     this.active_node.text_span.style.background = 'grey';
     };
-//  return tree;
-//  };
 
   tree.edit_label = function(active_node) {
     active_node.text_span.firstChild.style.display = 'none';
@@ -536,8 +541,9 @@ function create_tree(container, frame, page, toolbar){
     node.write = function(tree) {
       tree.appendChild(node);
 
-      while (node.childNodes.length)
-        node.removeChild(node.firstChild);
+      // while (node.childNodes.length)
+      //   node.removeChild(node.firstChild);
+      node.replaceChildren();
 
       var node_span = document.createElement('span');
       node.appendChild(node_span);

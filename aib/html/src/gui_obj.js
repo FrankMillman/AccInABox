@@ -298,7 +298,7 @@ function create_input(frame, page, json_elem, label) {
 
     switch(e.key) {
       case 'Escape':
-        if (input.aib_obj.data_changed(input)) {  //, input.childNodes[0].value)) {
+        if (input.aib_obj.data_changed(input)) {
           if (input.key_pressed) {
             input.value = input.current_value;
             input.key_pressed = false;
@@ -334,7 +334,8 @@ function create_input(frame, page, json_elem, label) {
           };
         break;
       };
-      input.key_pressed = true;
+      if (!e.altKey)  // could be start of Alt+Tab
+        input.key_pressed = true;
       return input.aib_obj.ondownkey(input, e);
     };
 

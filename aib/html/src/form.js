@@ -12,7 +12,7 @@ function setup_form(args) {
   var save_frames = [];
   var save_blocks = [];
   var save_vbox = [];
-  var subtype_name = null;
+  var subtype_names = [];
   var label = null;
   var notebook = null;  // to detect if we are on a notebook page
   var last_parent = null;  // keep track of last parent to decide where to append 'dummy'
@@ -445,7 +445,7 @@ function setup_form(args) {
         if (vbox !== null)
           vbox.appendChild(text)
         else {
-          if (block.childNodes.length && subtype_name === null)
+          if (block.childNodes.length && !subtype_names.length)
             text.style.marginLeft = '10px';
           text.style[cssFloat] = 'left';
           block.appendChild(text);
@@ -457,7 +457,7 @@ function setup_form(args) {
         if (vbox !== null)
           vbox.appendChild(box)
         else {
-          if (block.childNodes.length && subtype_name === null)
+          if (block.childNodes.length && !subtype_names.length)
             box.style.marginLeft = '10px';
           block.appendChild(box);
           box.style[cssFloat] = 'left';
@@ -468,7 +468,7 @@ function setup_form(args) {
         box.appendChild(panel);
         //box.style.textAlign = 'center';
         panel.style.textAlign = 'left';
-        if (subtype_name === null)
+        if (!subtype_names.length)
           box.style.border = '1px solid lightgrey';
         else
           box.style.width = '100%';  // ensure all panels same width [setup_ledg_periods]
@@ -614,8 +614,10 @@ function setup_form(args) {
             this.frame.obj_list[pos].focus();
             };
           };
+        frame.notebook = notebook;
         break;
       case 'nb_page':
+        var notebook = frame.notebook;
         var tab = document.createElement('span');
         tab.style.display = 'inline-block';
         tab.style.height = '20px';
@@ -759,6 +761,7 @@ function setup_form(args) {
 //        notebook.appendChild(nb_page);
         break;
       case 'nb_end':
+        var notebook = frame.notebook;
         // obscure IE8 bug [2015-07-05]
         // if there is a grid, and we add a toolbar, we adjust the size of the grid
         // IE8 does not recalculate grid.offsetWidth immediately, and by the time
@@ -827,9 +830,6 @@ function setup_form(args) {
           nb_page.style.height = max_ht + 'px';
           nb_page.firstChild.style.height = (max_ht - 2) + 'px';
           nb_page.lastChild.style.height = (max_ht - 2) + 'px';
-          //nb_page.childNodes[0].style[cssFloat] = 'left';
-          //nb_page.childNodes[1].style[cssFloat] = 'left';
-          //nb_page.childNodes[2].style[cssFloat] = 'left';
           };
 
         var no_tabs = notebook.tabs.childNodes.length;
@@ -926,7 +926,11 @@ function setup_form(args) {
         frame.ctrl_grid.parentNode.style.border = '1px solid transparent';
         frame.ctrl_grid.add_gridframe_indicator();
 
-        page.kbd_shortcuts = frame.ctrl_grid.kbd_shortcuts  // Ctrl_Ins & Ctrl_Del, if set up
+        // page.kbd_shortcuts = frame.ctrl_grid.kbd_shortcuts  // Ctrl_Ins & Ctrl_Del, if set up
+        if (frame.ctrl_grid.kbd_shortcuts['ctrl']['Insert'] !== undefined)
+          page.kbd_shortcuts['ctrl']['Insert'] = frame.ctrl_grid.kbd_shortcuts['ctrl']['Insert'];
+        if (frame.ctrl_grid.kbd_shortcuts['ctrl']['Delete'] !== undefined)
+          page.kbd_shortcuts['ctrl']['Delete'] = frame.ctrl_grid.kbd_shortcuts['ctrl']['Delete'];
 
         // assume grid_frame will always accept navigation keys
         page.nav = {}
@@ -1041,6 +1045,7 @@ function setup_form(args) {
 
         var tree = create_tree(box, frame, page, elem_args.toolbar);
         tree.ref = elem_args.ref
+        tree.pos = frame.obj_list.length;
         frame.obj_list.push(tree);
         frame.form.obj_dict[tree.ref] = tree;
         if (elem_args.lkup) {
@@ -1188,7 +1193,6 @@ function setup_form(args) {
         break;
       case 'subtype_start':
         save_pages.push(page);
-        save_frames.push(frame);
         save_blocks.push(block);
 
         var subtype_div = document.createElement('span');
@@ -1210,30 +1214,35 @@ function setup_form(args) {
         save_vbox.push(vbox);
         vbox = null;
 
-        subtype_name = elem_args;
+        var subtype_name = elem_args;
         var subtype = {};  //new Object();
         subtype._active_subtype = null;
+        subtype._subtype_div = subtype_div;
         frame.subtypes[subtype_name] = subtype;
+        subtype_names.push(subtype_name);
         break;
       case 'subtype_frame':
+        var subtype = frame.subtypes[subtype_names[subtype_names.length-1]];
+        var subtype_div = subtype._subtype_div;
+        var subtype_id = elem_args.subtype_id, active = elem_args.active;
+
         var page = create_page();
 //        page.style.border = '1px solid darkslategrey';
-        page.style.marginTop = '10px';
+//        page.style.marginTop = '10px';
         subtype_div.appendChild(page)
         page.style[cssFloat] = 'left';
 
-        var subtype = frame.subtypes[subtype_name];
-        var subtype_id = elem_args.subtype_id, active = elem_args.active;
         subtype[subtype_id] = page;
         if (active === true)
           subtype._active_subtype = subtype_id;
         break;
 
       case 'subtype_end':
-        var subtype = frame.subtypes[subtype_name];
+        var subtype = frame.subtypes[subtype_names[subtype_names.length-1]];
+        var subtype_div = subtype._subtype_div;
         var max_subtype_w=0, max_subtype_h=0;
         for (var subtype_id in subtype) {
-          if (subtype_id !== '_active_subtype') {
+          if (subtype_id.substring(0, 1) !== '_') {
             var subtype_page = subtype[subtype_id];
             if (subtype_page.offsetWidth > max_subtype_w)
               max_subtype_w = subtype_page.offsetWidth;
@@ -1245,10 +1254,10 @@ function setup_form(args) {
 //      max_subtype_w -= 2;  // offsetWidth/Height includes borders
 //      max_subtype_h -= 2;  // style.width/height excludes borders
         for (var subtype_id in subtype) {
-          if (subtype_id !== '_active_subtype') {
+          if (subtype_id.substring(0, 1) !== '_') {
             var subtype_page = subtype[subtype_id];
-              subtype_page.style.width = max_subtype_w + 'px';
-              subtype_page.style.height = max_subtype_h + 'px';
+            subtype_page.style.width = max_subtype_w + 'px';
+            subtype_page.style.height = max_subtype_h + 'px';
             subtype_page.style.display = 'none';
             };
           };
@@ -1258,11 +1267,9 @@ function setup_form(args) {
         subtype_div.style.height = max_subtype_h + 'px';
 
         var page = save_pages.pop();
-        var frame = save_frames.pop();
         var block = save_blocks.pop();
         var vbox = save_vbox.pop();
-
-        subtype_name = null;
+        subtype_names.pop();
         break;
 
       case 'finrpt':

@@ -875,8 +875,11 @@ AibBool.prototype.onclick = function(bool) {
 AibBool.prototype.ondownkey = function(bool, e) {
   if (!bool.amendable())
     return;
-  if (e.key === ' ')
+  if (e.key === ' ') {
     this.chkbox_change(bool);
+    e.cancelBubble = true;  // else page can 'shift' [2022-12-07]
+    return false;
+    };
   };
 AibBool.prototype.chkbox_change = function(bool) {
   //bool.value = !bool.value;
@@ -1276,16 +1279,22 @@ AibChoice.prototype.ondownkey = function(choice, e) {
   if (e.key === ' ') {
     choice.on_selection = this.after_selection;
     this.create_dropdown(choice);
+    e.cancelBubble = true;
+    return false;
     }
   else if ((e.key === 'ArrowLeft') || (e.key === 'ArrowUp')) {
     if (choice.ndx > 0) {
       this.after_selection(choice, choice.ndx-1)
       };
+    e.cancelBubble = true;
+    return false;
     }
   else if ((e.key === 'ArrowRight') || (e.key === 'ArrowDown')) {
     if (choice.ndx < (choice.values.length-1)) {
       this.after_selection(choice, choice.ndx+1);
       };
+    e.cancelBubble = true;
+    return false;
     };
   };
 AibChoice.prototype.data_changed = function(choice) {
