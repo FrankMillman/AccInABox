@@ -749,70 +749,74 @@ class Field:
                 sub_colname = self.gui_subtype[caller]
                 await caller.set_subtype(sub_colname, value)
 
-        if not db_obj.dirty:
-            if validate or col_defn.col_type != 'virt':  # added [2018-11-12]
-                # assumptions -
-                #   1. if 'virt' field is changed, do not set db_obj to 'dirty'
-                #   2. unless 'validate' is True, in which case field was probably
-                #        changed by user - do set db_obj to 'dirty'
-                #      e.g. acc.roles.is_leaf
-                #   3. 'probably' is not rigorous - monitor and try to tighten up
-                db_obj.dirty = True
-                if display:
-                    for caller_ref in list(db_obj.on_amend_func.keyrefs()):
-                        caller = caller_ref()
-                        if caller is not None:
-                            if not caller.form.closed:
-                                method = db_obj.on_amend_func[caller]
-                                await ht.form_xml.exec_xml(caller, method)
-
-                if db_obj.subtran_parent is not None:
-                    subtran_parent, return_vals = db_obj.subtran_parent
-                    if not subtran_parent.dirty:
-                        subtran_parent.dirty = True
+        if not from_sql: # added [2022-12-10] - if reverted, must also revert on_row_selected to reset to 'clean'
+            if not db_obj.dirty:
+                if not db_obj.exists and self.sequence:
+                    pass  # don't make dirty just for adding sequence to new obj
+                else:
+                    if validate or col_defn.col_type != 'virt':  # added [2018-11-12]
+                        # assumptions -
+                        #   1. if 'virt' field is changed, do not set db_obj to 'dirty'
+                        #   2. unless 'validate' is True, in which case field was probably
+                        #        changed by user - do set db_obj to 'dirty'
+                        #      e.g. acc.roles.is_leaf
+                        #   3. 'probably' is not rigorous - monitor and try to tighten up
+                        db_obj.dirty = True
                         if display:
-                            for caller_ref in list(subtran_parent.on_amend_func.keyrefs()):
+                            for caller_ref in list(db_obj.on_amend_func.keyrefs()):
                                 caller = caller_ref()
                                 if caller is not None:
                                     if not caller.form.closed:
-                                        method = subtran_parent.on_amend_func[caller]
+                                        method = db_obj.on_amend_func[caller]
                                         await ht.form_xml.exec_xml(caller, method)
 
-                # next block removed [2022-11-22]
-                # however, requirement is not clear-cut
-                # this only applies to a mem_obj which has a parent - if the mem_obj
-                #   is changed, this will cause some change on the parent
-                # a mem_obj comes in 2 'flavours' -
-                #   1. a stand-alone record of one or more fields
-                #   2. a collection of records, captured in a grid, usually
-                #        stored in a JSON list on the parent when completed
-                # if a mem_obj of type 1 is changed, the parent should be treated as changed
-                # if a mem_obj of type 2 is changed, the parent should not be treated as
-                #   changed until the mem_obj is saved - if the user cancels the changes,
-                #   there is no change to the parent
-                # at present there is no way to distinguish between type 1 and type 2
-                # when this block was present, 'on_amend' was triggered on the parent on
-                #   any change to the mem_obj, whether type 1 or type 2
-                # with this block removed, on_amend is only triggered on the parent when the
-                #   mem_obj is saved (see changes to insert() and update() in db.objects)
-                # therefore if a type 1 field is changed, in order to trigger 'on_amend' on the parent,
-                #   there must be an 'after' clause to 'save' the mem_obj
-                # not ideal - try to find a better solution
-                #
-                # if not from_sql:
-                #     if db_obj.mem_obj:
-                #         memobj = db_obj
-                #         while memobj.mem_parent is not None:
-                #             if not memobj.mem_parent.dirty:
-                #                 memobj.mem_parent.dirty = True
-                #                if display:
-                #                     for caller_ref in list(memobj.mem_parent.on_amend_func.keyrefs()):
-                #                         caller = caller_ref()
-                #                         if caller is not None:
-                #                             if not caller.form.closed:
-                #                                 method = memobj.mem_parent.on_amend_func[caller]
-                #                                 await ht.form_xml.exec_xml(caller, method)
-                #             memobj = memobj.mem_parent
+                        if db_obj.subtran_parent is not None:
+                            subtran_parent, return_vals = db_obj.subtran_parent
+                            if not subtran_parent.dirty:
+                                subtran_parent.dirty = True
+                                if display:
+                                    for caller_ref in list(subtran_parent.on_amend_func.keyrefs()):
+                                        caller = caller_ref()
+                                        if caller is not None:
+                                            if not caller.form.closed:
+                                                method = subtran_parent.on_amend_func[caller]
+                                                await ht.form_xml.exec_xml(caller, method)
+
+                        # next block removed [2022-11-22]
+                        # however, requirement is not clear-cut
+                        # this only applies to a mem_obj which has a parent - if the mem_obj
+                        #   is changed, this will cause some change on the parent
+                        # a mem_obj comes in 2 'flavours' -
+                        #   1. a stand-alone record of one or more fields
+                        #   2. a collection of records, captured in a grid, usually
+                        #        stored in a JSON list on the parent when completed
+                        # if a mem_obj of type 1 is changed, the parent should be treated as changed
+                        # if a mem_obj of type 2 is changed, the parent should not be treated as
+                        #   changed until the mem_obj is saved - if the user cancels the changes,
+                        #   there is no change to the parent
+                        # at present there is no way to distinguish between type 1 and type 2
+                        # when this block was present, 'on_amend' was triggered on the parent on
+                        #   any change to the mem_obj, whether type 1 or type 2
+                        # with this block removed, on_amend is only triggered on the parent when the
+                        #   mem_obj is saved (see changes to insert() and update() in db.objects)
+                        # therefore if a type 1 field is changed, in order to trigger 'on_amend' on the parent,
+                        #   there must be an 'after' clause to 'save' the mem_obj
+                        # not ideal - try to find a better solution
+                        #
+                        # if not from_sql:
+                        #     if db_obj.mem_obj:
+                        #         memobj = db_obj
+                        #         while memobj.mem_parent is not None:
+                        #             if not memobj.mem_parent.dirty:
+                        #                 memobj.mem_parent.dirty = True
+                        #                if display:
+                        #                     for caller_ref in list(memobj.mem_parent.on_amend_func.keyrefs()):
+                        #                         caller = caller_ref()
+                        #                         if caller is not None:
+                        #                             if not caller.form.closed:
+                        #                                 method = memobj.mem_parent.on_amend_func[caller]
+                        #                                 await ht.form_xml.exec_xml(caller, method)
+                        #             memobj = memobj.mem_parent
 
         if display:
             for obj in self.gui_obj:

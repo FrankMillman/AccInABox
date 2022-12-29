@@ -1037,6 +1037,8 @@ class DbObject:
 
         self.exists = True
 
+        """
+        # [2022-12-10] changed setval() to not set 'dirty' if from_sql, so this is not needed - monitor
         if self.dirty:
             if display:
                 for caller_ref in list(self.on_clean_func.keyrefs()):
@@ -1045,6 +1047,7 @@ class DbObject:
                         if not caller.form.closed:
                             method = self.on_clean_func[caller]
                             await ht.form_xml.exec_xml(caller, method)
+        """
 
         self.dirty = False
 
