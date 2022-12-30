@@ -10,7 +10,7 @@ table = {
     'tree_params'   : None,
     'roll_params'   : None,
     'indexes'       : None,
-    'ledger_col'    : 'ledger_row_id',
+    'ledger_col'    : 'src_tran_row_id>ledger_row_id',
     'defn_company'  : None,
     'data_company'  : None,
     'read_only'     : False,
@@ -262,7 +262,7 @@ cols.append ({
                 '<literal value="2"/>'
             '</on_unpost>'
             '<default>'
-                '<literal value="2"/>'
+                '<literal value="0"/>'
             '</default>'
         '</case>'
         ),

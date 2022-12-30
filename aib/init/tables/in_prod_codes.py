@@ -213,18 +213,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'any_tax_codes',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Any tax codes?',
-    'long_descr' : 'Any text codes for this prod code?',
-    'col_head'   : '',
-    'sql'        : (
-        "CASE WHEN EXISTS(SELECT * FROM {company}.in_prod_tax_codes b "
-            "WHERE b.prod_row_id = a.row_id AND b.deleted_id = 0) "
-        "THEN $True ELSE $False END"
-        ),
-    })
 
 # cursor definitions
 cursors = []

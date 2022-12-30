@@ -199,7 +199,11 @@ cols.append ({
     'col_name'   : 'chg_eff_date',
     'data_type'  : 'TEXT',
     'short_descr': 'Change effective date?',
-    'long_descr' : 'Allow change of effective date?',
+    'long_descr' : (
+        'Allow change of effective date? '
+        'N.B. This is used as a default at run-time. '
+        'It can be over-ridden with appropriate permissions'
+        ),
     'col_head'   : 'Chg eff?',
     'key_field'  : 'N',
     'data_source': 'dflt_if',
@@ -214,7 +218,7 @@ cols.append ({
     'col_checks' : [
         [
             'denied',
-            'Cannot change effective date',
+            'Cannot change effective date parameter',
             [
                 ['check', '', '$value', '=', '0', ''],
                 ['or', '', 'ledger_row_id>allow_eff_date', 'is', '$True', ''],
@@ -223,7 +227,7 @@ cols.append ({
         ],
     'fkey'       : None,
     'choices'    : [
-            ['0', 'Not allowed'],
+            ['0', 'Transaction date'],
             ['1', '1st of next period'],
             ['2', 'Allow multi periods'],
             ['3', 'Other'],
@@ -330,18 +334,6 @@ cols.append ({
 
 # virtual column definitions
 virt = []
-virt.append ({
-    'col_name'   : 'any_tax_codes',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Any tax codes?',
-    'long_descr' : 'Any text codes for this npch code?',
-    'col_head'   : '',
-    'sql'        : (
-        "CASE WHEN EXISTS(SELECT * FROM {company}.npch_tax_codes b "
-            "WHERE b.npch_code_id = a.row_id AND b.deleted_id = 0) "
-        "THEN $True ELSE $False END"
-        ),
-    })
 
 # cursor definitions
 cursors = []

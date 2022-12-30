@@ -328,7 +328,7 @@ cols.append ({
     'max_len'    : 0,
     'db_scale'   : 2,
     'scale_ptr'  : 'subparent_row_id>currency_id>scale',
-    'dflt_val'   : '{nsls_amount}',
+    'dflt_val'   : '0',
     'dflt_rule'  : None,
     'col_checks' : None,
     'fkey'       : None,
@@ -515,7 +515,6 @@ actions.append([
             'nsls_subtran_tax',
             [  # condition
                 ['where', '', 'tran_type', '!=', "'ar_uea_bf'", ''],
-                ['and', '', 'nsls_code_id>any_tax_codes', 'is', '$True', ''],
                 ],
 
             True,  # split source?

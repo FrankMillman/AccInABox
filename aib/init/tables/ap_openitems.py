@@ -527,7 +527,9 @@ virt.append ({
     'col_head'   : 'Allocs?',
     'sql'        : (
         "CASE WHEN EXISTS(SELECT * FROM {company}.ap_allocations b "
-            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0) "
+            "WHERE b.item_row_id = a.row_id "
+            "AND NOT (b.trantype_row_id = a.trantype_row_id AND b.tran_row_id = a.tran_row_id) "
+            "AND b.deleted_id = 0) "
         "THEN $True ELSE $False END"
         )
     })

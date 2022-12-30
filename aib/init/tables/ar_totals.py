@@ -284,6 +284,14 @@ cols.append ({
 # virtual column definitions
 virt = []
 virt.append ({
+    'col_name'   : 'path_to_code',
+    'data_type'  : 'TEXT',
+    'short_descr': 'Path to code',
+    'long_descr' : 'Path to code - used in financial reports',
+    'col_head'   : 'Code',
+    'dflt_val'   : '{ledger_row_id>ledger_id}',
+    })
+virt.append ({
     'col_name'   : 'balance',
     'data_type'  : '$LCL',
     'short_descr': 'Running balance',

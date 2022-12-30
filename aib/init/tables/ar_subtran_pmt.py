@@ -607,48 +607,11 @@ actions.append([
                     ['due_date', '=', 'tran_date'],
                     ['cust_row_id', '=', 'cust_row_id'],
                     ['tran_date', '=', 'tran_date'],
-                    ['amount_cust', '-', 'pmt_cust'],
-                    ['amount_local', '-', 'pmt_local'],
+                    ['amount_cust', '+', 'pmt_cust'],
+                    ['amount_local', '+', 'pmt_local'],
                     ],
                 [  # return values
                     ['item_row_id', 'row_id'],  # tgt_col, src_col
-                    ],
-                ],
-            [
-                'ar_allocations',
-                [  # condition
-                    ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
-                    ['and', '', '_ctx.tot_alloc_cust', 'pyfunc', 'custom.artrans_funcs.get_tot_alloc', ''],
-                    ],
-                False,  # split source?
-                [  # key fields
-                    ['item_row_id', 'item_row_id'],  # tgt_col, op, src_col
-                    ],
-                [  # on post
-                    ['alloc_cust', '-', '_ctx.tot_alloc_cust'],  # tgt_col, op, src_col
-                    ['alloc_local', '-', '_ctx.tot_alloc_local'],
-                    ],
-                [],  # return values
-                ],
-            [
-                'ar_tran_disc',
-                [  # condition
-                    ['where', '', 'cust_row_id>ledger_row_id>open_items', 'is', '$True', ''],
-                    ['and', '', '_ctx.tot_disc_cust', '!=', '0', ''],
-                    ],
-                False,  # split source?
-                [  # key fields
-                    ['cust_row_id', 'cust_row_id'],  # tgt_col, op, src_col
-                    ],
-                [  # on post
-                    ['tran_date', '=', 'tran_date'],  # tgt_col, op, src_col
-                    ['tran_exch_rate', '=', 'tran_exch_rate'],
-                    ['discount_cust', '=', '_ctx.tot_disc_cust'],
-                    ['discount_local', '=', '_ctx.tot_disc_local'],
-                    ['orig_item_id', '=', 'item_row_id'],
-                    ],
-                [  # return values
-                    ['_ctx.disc_row_id', 'row_id'],  # tgt_col, src_col
                     ],
                 ],
             ],

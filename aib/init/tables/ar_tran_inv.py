@@ -659,6 +659,12 @@ cursors.append({
         ['tran_number', 100, False, True],
         ['cust_row_id>party_row_id>party_id', 80, False, True],
         ['cust_row_id>party_row_id>display_name', 160, True, True],
+        ['cust_row_id>location_row_id>location_id', 60, False, True, [
+            ['if', '', 'cust_row_id>ledger_row_id>valid_loc_ids>is_leaf', 'is', '$False', '']
+            ]],
+        ['cust_row_id>function_row_id>function_id', 60, False, True, [
+            ['if', '', 'cust_row_id>ledger_row_id>valid_fun_ids>is_leaf', 'is', '$False', '']
+            ]],
         ['tran_date', 84, False, True],
         ['currency_id>symbol', 40, False, True, [
             ['if', '', 'cust_row_id>ledger_row_id>currency_id', 'is', '$None', '']
@@ -680,6 +686,12 @@ cursors.append({
         ['tran_number', 100, False, True],
         ['cust_row_id>party_row_id>party_id', 80, False, True],
         ['cust_row_id>party_row_id>display_name', 160, True, True],
+        ['cust_row_id>location_row_id>location_id', 60, False, True, [
+            ['if', '', 'cust_row_id>ledger_row_id>valid_loc_ids>is_leaf', 'is', '$False', '']
+            ]],
+        ['cust_row_id>function_row_id>function_id', 60, False, True, [
+            ['if', '', 'cust_row_id>ledger_row_id>valid_fun_ids>is_leaf', 'is', '$False', '']
+            ]],
         ['tran_date', 84, False, True],
         ['currency_id>symbol', 40, False, True, [
             ['if', '', 'cust_row_id>ledger_row_id>currency_id', 'is', '$None', '']

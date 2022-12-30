@@ -294,18 +294,34 @@ virt.append ({
 # cursor definitions
 cursors = []
 cursors.append({
+    'cursor_name': 'posted_jnl',
+    'title': 'Posted gl journals',
+    'columns': [
+        ['tran_number', 100, False, True],
+        ['tran_date', 80, False, True],
+        ['text', 100, True, True],
+        ],
+    'filter': [
+        ['where', '', 'posted', '=', "'1'", ''],
+        ['and', '', 'tran_date', '>=', '_ctx.start_date', ''],
+        ['and', '', 'tran_date', '<=', '_ctx.end_date', ''],
+        ],
+    'sequence': [['tran_number', False]],
+    'formview_name': 'gl_jnl',
+    })
+cursors.append({
     'cursor_name': 'unposted_jnl',
     'title': 'Unposted gl journals',
     'columns': [
         ['tran_number', 100, False, True],
         ['tran_date', 80, False, True],
-        ['short_descr', 100, True, True],
+        ['text', 100, True, True],
         ],
     'filter': [
         ['where', '', 'posted', '!=', "'1'", ''],
         ],
     'sequence': [['tran_number', False]],
-    'formview_name': None,
+    'formview_name': 'gl_jnl',
     })
 
 # actions

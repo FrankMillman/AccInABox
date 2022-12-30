@@ -126,6 +126,7 @@ cols.append ({
             ['ar_subrec', 'ar_subtran_rec'],
             ['ar_jnl', 'ar_tran_jnl'],
             ['ar_subjnl', 'ar_subtran_jnl'],
+            ['ar_subpmt', 'ar_subtran_pmt'],
             ['ar_disc', 'ar_tran_disc'],
             ]],
         'row_id', None, None, True, None],
@@ -527,7 +528,9 @@ virt.append ({
     'col_head'   : 'Allocs?',
     'sql'        : (
         "CASE WHEN EXISTS(SELECT * FROM {company}.ar_allocations b "
-            "WHERE b.item_row_id = a.row_id AND b.deleted_id = 0) "
+            "WHERE b.item_row_id = a.row_id "
+            "AND NOT (b.trantype_row_id = a.trantype_row_id AND b.tran_row_id = a.tran_row_id) "
+            "AND b.deleted_id = 0) "
         "THEN $True ELSE $False END"
         )
     })

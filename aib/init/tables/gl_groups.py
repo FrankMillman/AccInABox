@@ -162,7 +162,7 @@ cols.append ({
     'scale_ptr'  : None,
     'dflt_val'   : None,
     'dflt_rule'  : None,
-    'col_checks' : None,
+    'col_checks' : None,  # validation reqd - cannot change from 'B/Sheet' group to 'I/Stat' group
     'fkey'       : ['gl_groups', 'row_id', 'parent', 'gl_group', False, None],
     'choices'    : None,
     })

@@ -639,14 +639,50 @@ virt.append ({
 # cursor definitions
 cursors = []
 cursors.append({
+    'cursor_name': 'posted_crn',
+    'title': 'Posted ap credit notes',
+    'columns': [
+        ['tran_number', 100, False, True],
+        ['supp_row_id>party_row_id>party_id', 80, False, True],
+        ['supp_row_id>party_row_id>display_name', 160, True, True],
+        ['supp_row_id>location_row_id>location_id', 60, False, True, [
+            ['if', '', 'supp_row_id>ledger_row_id>valid_loc_ids>is_leaf', 'is', '$False', '']
+            ]],
+        ['supp_row_id>function_row_id>function_id', 60, False, True, [
+            ['if', '', 'supp_row_id>ledger_row_id>valid_fun_ids>is_leaf', 'is', '$False', '']
+            ]],
+        ['tran_date', 84, False, True],
+        ['currency_id>symbol', 40, False, True, [
+            ['if', '', 'supp_row_id>ledger_row_id>currency_id', 'is', '$None', '']
+            ]],
+        ['crn_tot_amt', 100, False, True],
+        ],
+    'filter': [
+        ['where', '', 'posted', '=', "'1'", ''],
+        ['and', '', 'tran_date', '>=', '_ctx.start_date', ''],
+        ['and', '', 'tran_date', '<=', '_ctx.end_date', ''],
+        ],
+    'sequence': [['tran_number', False]],
+    'formview_name': 'ap_crnote',
+    })
+cursors.append({
     'cursor_name': 'unposted_crn',
     'title': 'Unposted ap credit notes',
     'columns': [
         ['tran_number', 100, False, True],
         ['supp_row_id>party_row_id>party_id', 80, False, True],
         ['supp_row_id>party_row_id>display_name', 160, True, True],
+        ['supp_row_id>location_row_id>location_id', 60, False, True, [
+            ['if', '', 'supp_row_id>ledger_row_id>valid_loc_ids>is_leaf', 'is', '$False', '']
+            ]],
+        ['supp_row_id>function_row_id>function_id', 60, False, True, [
+            ['if', '', 'supp_row_id>ledger_row_id>valid_fun_ids>is_leaf', 'is', '$False', '']
+            ]],
         ['tran_date', 80, False, True],
-        ['crn_amount', 100, False, True],
+        ['currency_id>symbol', 40, False, True, [
+            ['if', '', 'supp_row_id>ledger_row_id>currency_id', 'is', '$None', '']
+            ]],
+        ['crn_tot_amt', 100, False, True],
         ],
     'filter': [
         ['where', '', 'posted', '!=', "'1'", ''],

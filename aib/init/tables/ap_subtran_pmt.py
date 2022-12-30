@@ -817,7 +817,7 @@ actions.append([
             [
                 'ap_allocations',
                 [  # condition
-                    ['where', '', 'sql_alloc_supp', '!=', '0', ''],
+                    ['where', '', 'item_row_id', 'is not', '$None', ''],
                     ],
                 [],  # key fields
                 [  # on unpost

@@ -507,6 +507,12 @@ cursors.append({
         ['tran_date', 80, False, True],
         ['supp_row_id>party_row_id>party_id', 80, False, True],
         ['supp_row_id>party_row_id>display_name', 160, True, True],
+        ['supp_row_id>location_row_id>location_id', 60, False, True, [
+            ['if', '', 'supp_row_id>ledger_row_id>valid_loc_ids>is_leaf', 'is', '$False', '']
+            ]],
+        ['supp_row_id>function_row_id>function_id', 60, False, True, [
+            ['if', '', 'supp_row_id>ledger_row_id>valid_fun_ids>is_leaf', 'is', '$False', '']
+            ]],
         ['text', 200, False, True],
         ['amount', 100, False, True],
         ],
@@ -526,6 +532,12 @@ cursors.append({
         ['tran_date', 80, False, True],
         ['supp_row_id>party_row_id>party_id', 80, False, True],
         ['supp_row_id>party_row_id>display_name', 160, True, True],
+        ['supp_row_id>location_row_id>location_id', 60, False, True, [
+            ['if', '', 'supp_row_id>ledger_row_id>valid_loc_ids>is_leaf', 'is', '$False', '']
+            ]],
+        ['supp_row_id>function_row_id>function_id', 60, False, True, [
+            ['if', '', 'supp_row_id>ledger_row_id>valid_fun_ids>is_leaf', 'is', '$False', '']
+            ]],
         ['text', 200, False, True],
         ['amount', 100, False, True],
         ],
