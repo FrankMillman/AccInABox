@@ -227,7 +227,7 @@
       <xs:attribute name="skip" type="xs:boolean"/>
       <xs:attribute name="choice" type="xs:boolean"/>
       <xs:attribute name="lookup" type="xs:boolean"/>
-      <!-- xs:attribute name="reverse" type="xs:boolean"/ -->
+      <xs:attribute name="obj_key"/>
       <xs:attribute name="radio" type="xs:boolean"/>
       <xs:attribute name="label"/>
       <xs:attribute name="before"/>
@@ -381,6 +381,7 @@
       <xs:attribute name="lng" type="xs:integer"/>
       <xs:attribute name="height" type="xs:integer"/>
       <xs:attribute name="toolbar" type="xs:boolean"/>
+      <xs:attribute name="auto_start" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="tree_lkup">

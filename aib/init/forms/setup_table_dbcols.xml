@@ -85,7 +85,7 @@
     <button_row>
       <button btn_id="btn_close" btn_label="Close" btn_enabled="true"
           btn_validate="true" btn_default="true" lng="60" action="
-        <<call method=`on_req_cancel`/>>
+        <<end_form state=`completed`/>>
       "/>
     </button_row>
     <frame_methods>

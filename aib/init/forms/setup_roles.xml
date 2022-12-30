@@ -269,6 +269,9 @@
           <method name="on_start_frame" action="
             <<pyfunc name=`custom.role_setup.load_table_perms`/>>
           "/>
+          <method name="on_active" action="
+            <<pyfunc name=`custom.role_setup.on_active`/>>
+          "/>
           <method name="after_save" action="
             <<pyfunc name=`custom.role_setup.dump_table_perms`/>>
           "/>
@@ -277,10 +280,6 @@
 
     </body>
     <button_row/>
-    <frame_methods>
-      <method name="on_active" action="
-        <<pyfunc name=`custom.role_setup.on_active`/>>
-      "/>
-    </frame_methods>
+    <frame_methods/>
   </frame>
 </form>

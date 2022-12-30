@@ -224,10 +224,9 @@ function cell_set_focus(args) {
 
 function start_frame(args) {
   var frame = get_obj(args[0]);
-  var set_focus = args[1];  // set focus on first available object?
+  var set_focus_ref = args[1];  // obj_ref to set focus on (or null)
   var obj_exists = args[2];  // does object exist?
-  var skip_input = args[3];  // number of objects to skip before setting focus
-  //debug3('start frame ' + frame.ref + ' focus=' + set_focus);
+  //debug3('start frame ' + frame.ref + ' focus=' + set_focus_ref);
   if (frame.combo_type !== undefined) {
     if (frame.combo_type === 'member')
       frame.tree.tree_frames['group'].page.style.display = 'none';
@@ -236,43 +235,8 @@ function start_frame(args) {
     frame.page.style.display = 'block';
     };
   frame.obj_exists = obj_exists;
-  if (set_focus) {
-    frame.form.tabdir = 1;  // in case 'dummy' gets focus
-    for (var i=0, l=frame.obj_list.length; i<l; i++) {
-      var obj = frame.obj_list[i];
-      //if (obj.readonly || obj.display || !obj.offsetHeight)
-      if (obj.display || !obj.offsetHeight || obj.tabIndex === -1)
-        ;  // look for the next obj
-      else if (skip_input)
-        skip_input -= 1;  // skip this one
-      else
-        break;  // set focus on this obj
-      };
-    frame.form.focus_from_server = false;
-    if (frame.form.current_focus === obj) {
-      //obj.aib_obj.onfocus(obj);  // could be a grid - no aib_obj!
-
-      // should we call obj.onfocus() or obj.got_focus()
-      // if an input fld, onfocus() calls aib_obj.onfocus(), which
-      //   hides/shows dsp/inp as appropriate, then calls global got_focus()
-      // if a grid, onfocus() just calls global got_focus()
-      // global got_focus() checks if the object already has focus
-      // if it does not, it calls object.got_focus()
-      // for now, call both!
-
-      // comment above re dsp/inp no longer applies, so this should not be needed
-      //obj.onfocus();
-      obj.got_focus();  // or should we call got_focus(obj) ?? [2016-10-21]
-      }
-    else {
-//      if (frame.form.current_focus !== null)
-// removed next 2 lines [2015-12-10]
-// we *do* want to send focus, as there may be a default value
-//      if (frame.type === 'frame') // don't do this for grid_frame
-//        frame.form.focus_from_server = true;  // do not notify server of 'lost/got_focus'
-      setTimeout(function() {obj.focus()}, 0);
-      };
-    };
+  if (set_focus_ref !== null)
+    set_focus([set_focus_ref, false]);
   };
 
 function start_grid(args) {

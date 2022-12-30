@@ -45,14 +45,14 @@
       <input obj_name="gl_adj" col_name="narrative" lng="200" height="5" readonly="true"/>
 
       <col/>
-	  <button lng="150" btn_id="amd_hdr" btn_label="Amend header"
-		btn_enabled="true" btn_validate="true" action="
-          <<inline_form name=`tran_header`>>
-            <<on_return>>
-              <<return state=`cancelled`/>>
-              <<return state=`completed`/>>
-            <</on_return>>
-          <</inline_form>>
+      <button lng="150" btn_id="amd_hdr" btn_label="Amend header"
+          btn_enabled="true" btn_validate="true" action="
+        <<inline_form name=`tran_header`>>
+          <<on_return>>
+            <<return state=`cancelled`/>>
+            <<return state=`completed`/>>
+          <</on_return>>
+        <</inline_form>>
         "/>
 
       <block/>
@@ -77,7 +77,7 @@
           <panel/>
           <row/>
           <col/>
-          <input obj_name="gl_det" col_name="line_type" radio="false" form_dflt="
+          <input obj_name="gl_det" col_name="line_type" obj_key="line_type" radio="false" form_dflt="
             <<prev_value/>>
             "/>
           <block/>
@@ -92,7 +92,7 @@
     <button_row template="Transaction"/>
     <frame_methods template="Transaction">
       <method name="on_start_frame" action="
-        <<skip_input num=`5`/>>
+        <<on_start_set_focus obj_key=`line_type`/>>
         "/>
     </frame_methods>
   </frame>

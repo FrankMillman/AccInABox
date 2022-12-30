@@ -19,6 +19,7 @@
     <db_obj name="pch" table_name="pch_subtran" parent="cb_pmt_det"/>
     <db_obj name="npch" table_name="npch_subtran" parent="cb_pmt_det"/>
     <db_obj name="ar_jnl" table_name="ar_subtran_jnl" parent="cb_pmt_det"/>
+    <db_obj name="ar_subpmt" table_name="ar_subtran_pmt" parent="cb_pmt_det"/>
     <db_obj name="ap_subpmt" table_name="ap_subtran_pmt" parent="cb_pmt_det"/>
     <db_obj name="gl" table_name="gl_subtran_jnl" parent="cb_pmt_det"/>
     <db_obj name="com" table_name="cb_comments" parent="cb_pmt_det"/>
@@ -94,7 +95,7 @@
           <panel/>
           <row/>
           <col/>
-          <input obj_name="cb_pmt_det" col_name="line_type" radio="false" form_dflt="
+          <input obj_name="cb_pmt_det" col_name="line_type" obj_key="line_type" radio="false" form_dflt="
             <<prev_value/>>
             "/>
           <block/>
@@ -109,7 +110,7 @@
     <button_row template="Transaction"/>
     <frame_methods template="Transaction">
       <method name="on_start_frame" action="
-        <<skip_input num=`5`/>>
+        <<on_start_set_focus obj_key=`line_type`/>>
         "/>
     </frame_methods>
   </frame>

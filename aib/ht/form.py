@@ -110,6 +110,7 @@ class Form:
 
         self.obj_list = []  # list of frames for this form
         self.obj_dict = {}  # dict of objects for this form
+        self.ref_dict = {}  # dict to track selected objects by ref (key provided by input.obj_key)
         self.obj_id = itertools.count()  # seq id for objects for this form
         self.mem_tables = {}  # keep reference to restore when sub-form is closed
 
@@ -509,6 +510,12 @@ class Form:
 
         session = self.session  # store it now - inaccessible after close_form()
 
+        # remove any obj_to_redisplay relating to this form
+        prefix = self.ref + '_'  # form.ref plus underscore
+        for obj in reversed(session.responder.obj_to_redisplay):
+            if obj[0].startswith(prefix):
+                session.responder.obj_to_redisplay.remove(obj)
+
         session.responder.send_end_form(self)
         await self.close_form()
 
@@ -845,6 +852,9 @@ class Frame:
                 await gui_obj._ainit_(self, fld, readonly, skip,
                     choices, lkup, pwd, lng, height, label, action, gui)
                 fld.notify_form(gui_obj)
+
+                if (obj_key := element.get('obj_key')) is not None:
+                    self.form.ref_dict[obj_key] = gui_obj.ref
 
                 before = element.get('before')
                 if before is not None:
@@ -1656,7 +1666,7 @@ class Frame:
             # in on_start_frame we may manually populate an in-memory table
             # if cursor is open, it needs a cursor_row, but we don't have one
             await grid.db_obj.close_cursor()
-        self.skip_input = 0  # can be modified by on_start_frame
+        self.on_start_set_focus = None  # can be modified by on_start_frame
 
         if 'on_start_transaction' in self.methods:
             await ht.form_xml.exec_xml(self, self.methods['on_start_transaction'])
@@ -1685,10 +1695,6 @@ class Frame:
                     await ht.form_xml.exec_xml(caller, method)
 
         for grid in self.grids:
-            # if grid.auto_start:
-            #     await grid.start_grid()
-            # elif grid.grid_frame is not None:
-            #     await grid.grid_frame.restart_frame(set_focus=False)
             if grid.auto_start:
                 await grid.start_grid()
                 if grid.grid_frame is not None:
@@ -1698,9 +1704,16 @@ class Frame:
             if tree.auto_start:
                 await tree.start_tree()
 
+        if self.on_start_set_focus is not None:
+            set_focus_ref = self.on_start_set_focus
+        elif set_focus:
+            set_focus_ref = self.obj_list[0].ref  # monitor - is it *always* the first object?
+        else:
+            set_focus_ref = None
+
         self.session.responder.check_redisplay(redisplay=False)  # send any 'readonly' messages
         # obj_exists is sent twice - messy, but both are needed [2015-11-08]
-        self.session.responder.start_frame(self.ref, set_focus, set_obj_exists, self.skip_input)
+        self.session.responder.start_frame(self.ref, set_focus_ref, set_obj_exists)
         # notify client that data_obj is now clean - may or may not exist
         self.session.responder.obj_to_redisplay.append((self.ref, (True, set_obj_exists)))
 

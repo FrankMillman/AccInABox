@@ -15,16 +15,7 @@
   <col/>
   <label value="Expense code:"/>
   <col/>
-  <input obj_name="npch" col_name="npch_code" lng="80" after="
-    <<case>>
-      <<compare test=`[['if', '', 'npch.npch_code_id>chg_eff_date', '=', '~0~', '']]`>>
-        <<set_readonly target=`npch.eff_date` state=`true`/>>
-      <</compare>>
-      <<default>>
-        <<set_readonly target=`npch.eff_date` state=`false`/>>
-      <</default>>
-    <</case>>
-    "/>
+  <input obj_name="npch" col_name="npch_code" lng="80"/>
   <display obj_name="npch" col_name="npch_code_id>descr" lng="160"/>
 
   <if test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``]]"/>

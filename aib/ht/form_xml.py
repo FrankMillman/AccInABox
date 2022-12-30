@@ -48,8 +48,11 @@ async def case(caller, xml):
                 await globals()[step.tag](caller, step)
             break
 
-async def skip_input(caller, xml):
-    caller.skip_input = int(xml.get('num'))
+async def on_start_set_focus(caller, xml):
+    # called from various 'on_start_frame'
+    obj_key = xml.get('obj_key')
+    obj_ref = caller.form.ref_dict[obj_key]
+    caller.on_start_set_focus = obj_ref
 
 async def repos_row(grid, xml):
     # only required if user enters 'key field' on blank row
@@ -148,18 +151,7 @@ async def continue_form(caller, xml):
     await caller.form.continue_form()
 
 async def restart_frame(caller, xml):
-    set_focus = not (xml.get('set_focus') == 'false')
-    await caller.restart_frame(set_focus=set_focus)
-
-"""
-async def restart_frame_if_not_grid(caller, xml):
-    if caller.ctrl_grid:
-        pass  # restarted from do_navigate
-    elif isinstance(caller.first_input, ht.gui_grid.GuiGrid):
-        pass  # restarted from start_row
-    else:
-        await caller.restart_frame()
-"""
+    await caller.restart_frame()
 
 async def get_op_cl_bal(caller, xml):
     # receive col names for op_bal, cl_bal, tot trans

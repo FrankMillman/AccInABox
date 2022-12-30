@@ -782,23 +782,6 @@ class GuiGrid:
 
             await self.grid_frame.restart_frame(set_focus=set_focus)
 
-            """
-            if the above logic works, delete the following [2018-10-08]
-
-            # # if grid is readonly, set_focus=True, else False
-            # await self.grid_frame.restart_frame(set_focus=self.readonly)
-
-            # # swapped around [2018-05-09]
-            # # needed for ar_invoice - any problems?
-            # # yes there is a problem [2018-08-19]
-            # # setup_currencies has a non-readonly grid and a grid_frame
-            # # this causes focus to be set on the grid_frame, not the grid
-            # # what was the situation with ar_invoice?
-
-            # # # if grid is readonly, set_focus=False, else True
-            # # await self.grid_frame.restart_frame(set_focus=not self.readonly)
-            """
-
     async def on_req_insert_row(self, row):
         if self.inserted:
             return  # already requested
@@ -806,8 +789,6 @@ class GuiGrid:
             await self.start_row(row, display=True, row_inserted=True)
             if self.formview_frame is not None:
                 await self.formview_frame.restart_frame()
-            # elif self.grid_frame is not None:
-            #     await self.grid_frame.restart_frame(set_focus=True)
             self.session.responder.send_insert_row(self.ref, row)
 
     async def on_req_delete_row(self, row):

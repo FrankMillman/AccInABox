@@ -216,7 +216,7 @@
         <<pyfunc name=`custom.artrans_funcs.alloc_ageing` age=`0`/>>
         "/>
       <col/>
-      <input obj_name="bal_vars" col_name="show_tot" after="
+      <input obj_name="bal_vars" col_name="show_tot" obj_key="show_tot" after="
         <<pyfunc name=`custom.artrans_funcs.show_ageing` age=`-1`/>>
         "/>
       <input obj_name="bal_vars" col_name="alloc_tot" validation="
@@ -228,7 +228,7 @@
         "/>
 
       <block/>
-      <grid data_object="mem_items" growable="false" num_grid_rows="5" auto_start="true">
+      <grid data_object="mem_items" growable="false" num_grid_rows="5">
         <toolbar>
           <tool type="nav"/>
         </toolbar>
@@ -285,7 +285,7 @@
         <<assign src=`alloc_header.cust_row_id>currency_id>scale` tgt=`var.scale`/>>
         <<pyfunc name=`custom.artrans_funcs.setup_mem_items`/>>
         <<pyfunc name=`custom.artrans_funcs.get_due_bal`/>>
-        <<skip_input num=`10`/>>
+        <<on_start_set_focus obj_key=`show_tot`/>>
         "/>
       <method name="on_req_cancel" action="
           <<case>>

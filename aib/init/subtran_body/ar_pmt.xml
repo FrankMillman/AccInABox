@@ -1,0 +1,68 @@
+<subtype_body subtype_id="ar_pmt">
+  <block/>
+  <panel/>
+
+  <if test="[[`if`, ``, `ar_subpmt.ledger_id`, `is`, `$None`, ``]]"/>
+  <row/>
+  <col/>
+  <label value="Ledger id:"/>
+  <col/>
+  <input obj_name="ar_subpmt" col_name="ledger_id" lng="84"/>
+  <end_if/>
+
+  <row/>
+  <col/>
+  <label value="Customer Id:"/>
+  <col/>
+  <input obj_name="ar_subpmt" col_name="cust_id" lng="84"/>
+  <display obj_name="ar_subpmt" col_name="cust_row_id>party_row_id>display_name" lng="120"/>
+
+  <row/>
+  <col/>
+  <label value="Payment amount:"/>
+  <col/>
+  <display obj_name="ar_subpmt" col_name="currency_id>symbol" lng="10"/>
+  <input obj_name="ar_subpmt" col_name="pmt_amount" lng="84"/>
+
+  <!-- this does not work well - if > 1 ledger, alt_curr is $None when form is created -->
+  <if test="[[`if`, ``, `ar_subpmt.cust_row_id>ledger_row_id>alt_curr`, `is`, `$True`, ``]]"/>
+
+  <row/>
+  <col/>
+  <label value="@"/>
+  <display obj_name="ar_subpmt" col_name="cust_exch_rate" lng="100"/>
+  <label value="="/>
+  <col/>
+  <display obj_name="ar_subpmt" col_name="cust_row_id>currency_id>symbol" lng="10"/>
+  <input obj_name="ar_subpmt" col_name="ar_pmt_cust" lng="84"/>
+
+  <end_if/>
+
+  <row/>
+  <col/>
+  <col/>
+  <button lng="150" btn_id="alloc" btn_label="Allocate now"
+    btn_enabled="false" btn_validate="true" action="
+      <<req_save/>>
+      <<assign src=`$None` tgt=`_ctx.this_item_rowid`/>>
+      <<sub_form name=`ar_alloc_item`>>
+        <<call_params>>
+          <<call_param name=`alloc_header` type=`data_obj` source=`ar_subpmt`/>>
+          <<call_param name=`amount_to_alloc` type=`data_attr` source=`ar_subpmt.ar_pmt_cust`/>>
+          <<call_param name=`unallocated` type=`data_attr` source=`ar_subpmt.unallocated`/>>
+        <</call_params>>
+        <<return_params>>
+          <<return_param name=`unallocated` type=`data_attr` target=`ar_subpmt.unallocated`/>>
+        <</return_params>>
+        <<on_return>>
+          <<return state=`cancelled`>>
+            <<btn_set_focus btn_id=`btn_save`/>>
+          <</return>>
+          <<return state=`completed`>>
+            <<btn_set_focus btn_id=`btn_save`/>>
+          <</return>>
+        <</on_return>>
+      <</sub_form>>
+    "/>
+
+</subtype_body>

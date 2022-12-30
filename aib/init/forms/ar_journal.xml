@@ -107,7 +107,7 @@
 
           <row/>
           <col/>
-          <input obj_name="ar_jnldet" col_name="line_type" form_dflt="<<prev_value/>>"/>
+          <input obj_name="ar_jnldet" col_name="line_type" obj_key="line_type" form_dflt="<<prev_value/>>"/>
 
           <block/>
           <subtran_frame subtran_obj="ar_jnldet" subtran_col="line_type"/>
@@ -122,7 +122,7 @@
     <button_row template="Transaction"/>
     <frame_methods template="Transaction">
       <method name="on_start_frame" action="
-        <<skip_input num=`7`/>>
+        <<on_start_set_focus obj_key=`line_type`/>>
         "/>
       <method name="do_post" action="
         <<case>>

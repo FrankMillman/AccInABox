@@ -200,7 +200,7 @@
         <<restart_grid obj_name=`ar_items`/>>
         "/>
       <col/>
-      <input obj_name="bal_vars" col_name="show_tot" after="
+      <input obj_name="bal_vars" col_name="show_tot" obj_key="show_tot" after="
         <<pyfunc name=`custom.arcust_funcs.show_ageing` age=`-1`/>>
         <<restart_grid obj_name=`ar_items`/>>
         "/>
@@ -338,7 +338,7 @@
         <<assign src=`ar_cust.row_id` tgt=`_ctx.cust_row_id`/>>
         <<pyfunc name=`custom.arcust_funcs.get_aged_bal`/>>
         <<restart_grid obj_name=`ar_items`/>>
-        <<skip_input num=`6`/>>
+        <<on_start_set_focus obj_key=`show_tot`/>>
         "/>
     </frame_methods>
   </frame>

@@ -54,13 +54,9 @@
     <button_row>
       <button btn_id="btn_rgt" btn_label="Close" btn_enabled="true"
         btn_validate="false" btn_default="true" lng="60" action="
-           <<call method=`on_req_close`/>>
+          <<parent_req_close/>>
         "/>
     </button_row>
-    <frame_methods>
-      <method name="on_req_close" action="
-        <<parent_req_close/>>
-      "/>
-    </frame_methods>
+    <frame_methods/>
   </frame>
 </form>

@@ -53,6 +53,14 @@
       <col/>
       <input obj_name="ar_inv" col_name="tran_date" lng="84" readonly="true"/>
 
+      <if test="[[`if`, ``, `_ledger.valid_loc_ids>is_leaf`, `is`, `$False`, ``]]"/>
+      <col/>
+      <label value="Location Id:"/>
+      <col/>
+      <input obj_name="ar_inv" col_name="location_id" lng="80" readonly="true"/>
+      <display obj_name="ar_inv" col_name="cust_row_id>location_id>descr" lng="160"/>
+      <end_if/>
+
 <!--
       <col/>
       <label value="Terms code:"/>
@@ -69,18 +77,26 @@
       <row/>
       <col/>
       <label value="Text:"/>
-      <col colspan="2"/>
+      <!--col colspan="2"/-->
       <input obj_name="ar_inv" col_name="text" lng="250" readonly="true"/>
 
+      <if test="[[`if`, ``, `_ledger.valid_fun_ids>is_leaf`, `is`, `$False`, ``]]"/>
       <col/>
-	  <button lng="150" btn_id="amd_hdr" btn_label="Amend header"
-		btn_enabled="true" btn_validate="true" action="
-          <<inline_form name=`tran_header`>>
-            <<on_return>>
-              <<return state=`cancelled`/>>
-              <<return state=`completed`/>>
-            <</on_return>>
-          <</inline_form>>
+      <label value="Function Id:"/>
+      <col/>
+      <input obj_name="ar_inv" col_name="function_id" lng="80" readonly="true"/>
+      <display obj_name="ar_inv" col_name="cust_row_id>function_id>descr" lng="160"/>
+      <end_if/>
+
+      <col/>
+      <button lng="150" btn_id="amd_hdr" btn_label="Amend header"
+          btn_enabled="true" btn_validate="true" action="
+        <<inline_form name=`tran_header`>>
+          <<on_return>>
+            <<return state=`cancelled`/>>
+            <<return state=`completed`/>>
+          <</on_return>>
+        <</inline_form>>
         "/>
 
       <block/>
@@ -111,7 +127,7 @@
 
           <row/>
           <col/>
-          <input obj_name="ar_invdet" col_name="line_type" radio="true" form_dflt="
+          <input obj_name="ar_invdet" col_name="line_type" obj_key="line_type" radio="true" form_dflt="
             <<prev_value/>>
             "/>
 
@@ -131,7 +147,7 @@
     <button_row template="Transaction"/>
     <frame_methods template="Transaction">
       <method name="on_start_frame" action="
-        <<skip_input num=`5`/>>
+        <<on_start_set_focus obj_key=`line_type`/>>
         "/>
       <method name="do_post" action="
         <<case>>

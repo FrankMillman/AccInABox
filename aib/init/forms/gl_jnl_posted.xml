@@ -1,0 +1,93 @@
+<form name="gl_jnl_posted" title="List of posted gl journals" before_start_form="
+  <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
+  <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
+  <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
+  ">
+  <db_objects>
+    <db_obj name="gl_jnl" table_name="gl_tran_jnl"/>
+  </db_objects>
+  <mem_objects>
+    <!--mem_obj name="var" descr="Form variables">
+      <mem_col col_name="inv_tot" data_type="$RPTY" short_descr="Invoice total"
+        long_descr="Invoice total" allow_amend="true"
+        db_scale="2" scale_ptr="gl_jnl.cust_row_id>currency_id>scale"/>
+      <mem_col col_name="rev_sign" data_type="BOOL" short_descr="Reverse sign?"
+        long_descr="Reverse sign?" dflt_val="{gl_jnl.rev_sign}"/>
+    </mem_obj-->
+    <mem_obj name="date_range_vars" descr="Variables for date range">
+      <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
+        long_descr="Settings, passed between main form and subform" allow_amend="true"/>
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Date from"
+        long_descr="From which date" allow_amend="true"/>
+      <mem_col col_name="end_date" data_type="DTE" short_descr="Date to"
+        long_descr="To which date" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params/>
+  <output_params/>
+  <frame main_object="gl_jnl">
+    <toolbar/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="From:"/>
+      <col/>
+      <input obj_name="date_range_vars" col_name="start_date" lng="84" readonly="true" skip="true"/>
+      <col/>
+      <label value="To:"/>
+      <col/>
+      <input obj_name="date_range_vars" col_name="end_date" lng="84" readonly="true" skip="true"/>
+      <col/>
+      <button btn_id="change_dates" btn_label="Change" help_msg = "Change dates"
+        btn_enabled="true" btn_validate="true" action="
+          <<sub_form name=`_sys.select_date_range`>>
+            <<call_params>>
+              <<call_param name=`settings` type=`data_attr` source=`date_range_vars.settings`/>>
+            <</call_params>>
+            <<return_params>>
+              <<return_param name=`settings` type=`data_attr` target=`date_range_vars.settings`/>>
+              <<return_param name=`start_date` type=`data_attr` target=`date_range_vars.start_date`/>>
+              <<return_param name=`end_date` type=`data_attr` target=`date_range_vars.end_date`/>>
+            <</return_params>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`>>
+                <<assign src=`date_range_vars.start_date` tgt=`_ctx.start_date`/>>
+                <<assign src=`date_range_vars.end_date` tgt=`_ctx.end_date`/>>
+                <<restart_grid obj_name=`gl_jnl`/>>
+              <</return>>
+            <</on_return>>
+          <</sub_form>>
+        "/>
+      <block/>
+      <!--grid data_object="gl_jnl" growable="false" cursor_name="posted_jnl"
+          footer_row="[`'Total:'`, `...`, `var.inv_tot`]"
+          get_tots="[[`inv_tot_amt`, `var.inv_tot`]]"-->
+      <grid data_object="gl_jnl" growable="false" cursor_name="posted_jnl">
+        <toolbar>
+          <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
+            shortcut="ctrl,Enter" action="
+              <<req_formview/>>
+            "/>
+          <tool type="nav"/>
+          <tool type="btn" label="Unpost" tip="Unpost transaction (Alt+U)"
+            shortcut="alt,KeyU" action="
+              <<start_row/>>
+              <<case>>
+                <<obj_exists obj_name=`gl_jnl`>>
+                  <<unpost_tran/>>
+                  <<restart_grid obj_name=`gl_jnl`/>>
+                <</obj_exists>>
+              <</case>>
+            "/>
+        </toolbar>
+        <grid_methods/>
+      </grid>
+
+    </body>
+    <button_row/>
+    <frame_methods template="Grid"/>
+  </frame>
+</form>

@@ -15,16 +15,7 @@
   <col/>
   <label value="Sales code:"/>
   <col/>
-  <input obj_name="nsls" col_name="nsls_code" lng="80" after="
-    <<case>>
-      <<compare test=`[['if', '', 'nsls.nsls_code_id>chg_eff_date', '=', '~0~', '']]`>>
-        <<set_readonly target=`nsls.eff_date` state=`true`/>>
-      <</compare>>
-      <<default>>
-        <<set_readonly target=`nsls.eff_date` state=`false`/>>
-      <</default>>
-    <</case>>
-    "/>
+  <input obj_name="nsls" col_name="nsls_code" lng="80"/>
   <display obj_name="nsls" col_name="nsls_code_id>descr" lng="160"/>
 
   <if test="[[`if`, ``, `_param.location_row_id`, `is`, `$None`, ``]]"/>
