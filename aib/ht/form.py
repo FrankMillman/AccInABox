@@ -1149,7 +1149,10 @@ class Frame:
             subtype_guiobj = []
             self.subtype_records[sub_colname][1][sub_colval] = subtype_guiobj
 
-            active = ((pos == 0) or (sub_colval == await subtype_fld.getval()))
+            if db_obj.exists:
+                active = (sub_colval == await subtype_fld.getval())
+            else:
+                active = (pos == 0)
             if active:
                 self.subtype_records[sub_colname][0] = sub_colval
 
@@ -1707,7 +1710,11 @@ class Frame:
         if self.on_start_set_focus is not None:
             set_focus_ref = self.on_start_set_focus
         elif set_focus:
-            set_focus_ref = self.obj_list[0].ref  # monitor - is it *always* the first object?
+            for obj in self.obj_list:  # look for first 'active' object
+                if obj.readonly or obj.hidden:
+                    continue
+                set_focus_ref = obj.ref
+                break
         else:
             set_focus_ref = None
 
