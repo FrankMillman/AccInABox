@@ -185,8 +185,8 @@ def date_diff(date_from, date_to):
     # END
 #################################################
 
-# Decimal adapter (store Decimal in database as str - ensure decimal point)
-sqlite3.register_adapter(D, lambda d:str(d) + ('' if '.' in str(d) else '.'))
+# Decimal adapter (store Decimal in database as str) - ensure decimal point ('or 0' because pyodbc changes 0.00000000 to 0E-8)
+sqlite3.register_adapter(D, lambda d:str(d or 0) + ('' if '.' in str(d) else '.'))
 # Decimal converter (convert back to Decimal on return)
 # sqlite3.register_converter('REAL', lambda s: D(s.decode()))
 sqlite3.register_converter('REAL2', lambda s: D(s.decode()).quantize(D('-0.01')) or D('0.00'))
