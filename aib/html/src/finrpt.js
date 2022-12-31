@@ -15,6 +15,7 @@ function setup_finrpt(frame, ref, args) {
   svg.tabIndex = 0;  // enable focus
   svg.style.outline = 'none';  // suppress outline on focus
   svg.active_frame = frame;
+  svg.nb_page = page.nb_page;
 
   for (var i=0, args_length=args.length; i<args_length; i++) {
     var elem = args[i];
