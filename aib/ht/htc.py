@@ -275,9 +275,8 @@ class ResponseHandler:
     def send_gui(self, gui):
         self.reply.append(('setup_form', gui))
 
-    def start_frame(self, frame_ref, set_focus, obj_exists, skip_input):
-        self.reply.append(('start_frame',
-            (frame_ref, set_focus, obj_exists, skip_input)))
+    def start_frame(self, frame_ref, set_focus_ref, obj_exists):
+        self.reply.append(('start_frame', (frame_ref, set_focus_ref, obj_exists)))
 
     def send_start_grid(self, ref, args):
         self.reply.append(('start_grid', (ref, args)))

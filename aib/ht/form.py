@@ -1124,6 +1124,7 @@ class Frame:
     async def setup_subtype(self, element, obj_name, col_name, dflt_lng, gui):
         db_obj = self.data_objects[obj_name]
         subtype_fld = db_obj.fields[col_name]
+        subtype_val = await subtype_fld.getval()
         sub_colname = f'{obj_name}.{col_name}'
         # subtype_fld.gui_subtype = (self, sub_colname)
         subtype_fld.gui_subtype[self] = sub_colname
@@ -1149,8 +1150,8 @@ class Frame:
             subtype_guiobj = []
             self.subtype_records[sub_colname][1][sub_colval] = subtype_guiobj
 
-            if db_obj.exists:
-                active = (sub_colval == await subtype_fld.getval())
+            if subtype_val is not None:
+                active = (sub_colval == subtype_val)
             else:
                 active = (pos == 0)
             if active:
@@ -1715,6 +1716,8 @@ class Frame:
                     continue
                 set_focus_ref = obj.ref
                 break
+            else:  # no active object found - use the first one
+                set_focus_ref = self.obj_list[0].ref
         else:
             set_focus_ref = None
 
