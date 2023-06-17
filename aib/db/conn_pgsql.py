@@ -14,6 +14,7 @@ BYTEA2BYTES = psycopg2.extensions.new_type(
     psycopg2.BINARY.values, 'BYTEA2BYTES', bytea2bytes)
 psycopg2.extensions.register_type(BYTEA2BYTES)
 
+# called from connection.config_connection()
 def customise(constants, DbConn, db_params):
     # add db-specific methods to DbConn class
 
@@ -98,7 +99,6 @@ async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
         f"INSERT INTO {company}.{table_name} ({', '.join(cols)}) "
         f"VALUES ({', '.join([self.constants.param_style]*len(cols))}) RETURNING row_id"
         )
-
     cur = await self.exec_sql(sql, vals)
     data_row_id, = await cur.__anext__()
 
@@ -109,20 +109,16 @@ async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
 
         cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
         vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, 'add']
-
         sql = (
             f"INSERT INTO {company}.{table_name}_audit_xref ({', '.join(cols)}) "
             f"VALUES ({', '.join([self.constants.param_style]*len(cols))}) RETURNING row_id"
             )
-
         cur = await self.exec_sql(sql, vals)
         xref_row_id, = await cur.__anext__()
 
         fld = await db_obj.getfld('created_id')
         fld._value = xref_row_id
-        sql = (
-            f'UPDATE {company}.{table_name} SET created_id = {xref_row_id} WHERE row_id = {data_row_id}'
-            )
+        sql = f'UPDATE {company}.{table_name} SET created_id = {xref_row_id} WHERE row_id = {data_row_id}'
         await self.exec_cmd(sql)
 
 async def update_row(self, db_obj, cols, vals, from_upd_on_save):
@@ -147,8 +143,7 @@ async def update_row(self, db_obj, cols, vals, from_upd_on_save):
         return
 
     data_row_id = await db_obj.getval('row_id')
-    if from_upd_on_save is False:
-        returning_clause = ' RETURNING row_id'
+    if from_upd_on_save is False:  # else it is not True or False - see below
 
         cols = []
         vals = []
@@ -159,27 +154,26 @@ async def update_row(self, db_obj, cols, vals, from_upd_on_save):
 
         sql = (
             f"INSERT INTO {company}.{table_name}_audit ({', '.join(cols)}) "
-            f"VALUES ({', '.join([self.constants.param_style]*len(cols))}){returning_clause}"
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))}) RETURNING row_id"
             )
 
         cur = await self.exec_sql(sql, vals)
         audit_row_id, = await cur.__anext__()
 
-        cols = 'data_row_id, audit_row_id, user_row_id, date_time, type'
+        cols = ['data_row_id', 'audit_row_id', 'user_row_id', 'date_time', 'type']
         vals = (data_row_id, audit_row_id, db_obj.context.user_row_id, self.timestamp, 'chg')
-
         sql = (
-            f"INSERT INTO {company}.{table_name}_audit_xref ({cols}) "
-            f"VALUES ({', '.join([self.constants.param_style]*5)})"
+            f"INSERT INTO {company}.{table_name}_audit_xref ({', '.join(cols)}) "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
             )
         await self.exec_cmd(sql, vals)
 
     else:  # assume from_upd_on_save is 'post' or 'unpost'
-        cols = 'data_row_id, user_row_id, date_time, type'
+        cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
         vals = (data_row_id, db_obj.context.user_row_id, self.timestamp, from_upd_on_save)
         sql = (
-            f"INSERT INTO {company}.{table_name}_audit_xref ({cols}) "
-            f"VALUES ({', '.join([self.constants.param_style]*4)})"
+            f"INSERT INTO {company}.{table_name}_audit_xref ({', '.join(cols)}) "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
             )
         await self.exec_cmd(sql, vals)
 
@@ -189,22 +183,18 @@ async def delete_row(self, db_obj, from_upd_on_save):
 
     if not from_upd_on_save:  # don't actually delete
         data_row_id = await db_obj.getval('row_id')
-        cols = 'data_row_id, user_row_id, date_time, type'
-        vals = (data_row_id, db_obj.context.user_row_id, self.timestamp, 'del')
-        returning_clause = ' RETURNING row_id'
-
+        cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
+        vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, 'del']
         sql = (
-            f"INSERT INTO {company}.{table_name}_audit_xref ({cols}) "
-            f"VALUES ({', '.join([self.constants.param_style]*4)}{returning_clause}"
+            f"INSERT INTO {company}.{table_name}_audit_xref ({', '.join(cols)}) "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))}) RETURNING row_id"
             )
-        cur = await self.exec_sql(sql,
-            (data_row_id, db_obj.context.user_row_id, self.timestamp))
+        cur = await self.exec_sql(sql, vals)
         xref_row_id, = await cur.__anext__()
+
         fld = await db_obj.getfld('deleted_id')
         fld._value = xref_row_id
-        sql = (
-            f'UPDATE {company}.{table_name} SET deleted_id = {xref_row_id} WHERE row_id = {data_row_id}'
-            )
+        sql = f'UPDATE {company}.{table_name} SET deleted_id = {xref_row_id} WHERE row_id = {data_row_id}'
         await self.exec_cmd(sql)
 
     else:  # actually delete

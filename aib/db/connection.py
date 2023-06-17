@@ -16,7 +16,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-from common import log_db, db_log, AibError, find_occurrence
+from common import log_db, db_log, AibError
 import db
 
 #-----------------------------------------------------------------------------
@@ -190,6 +190,9 @@ class DbHandler(threading.Thread):
                         for row in cur:
                             rows.append(row)
                             if len(rows) == 50:
+                                if conn.cancel:  # cancelled by caller
+                                    conn.cancel = False  # reset before returning to pool
+                                    break  # terminate processing
                                 loop.call_soon_threadsafe(
                                     return_queue.put_nowait, rows)
                                 rows = []
@@ -263,6 +266,7 @@ class Conn:
 
         self.request_queue = queue.Queue()
         self.wait_event = asyncio.Event()  # to notify when all requests completed
+        self.cancel = False  # a task can set this to True, and the dbhandler will stop processing
         self.dbh = DbHandler(self)
         self.tablenames = None
         self.joins = {}
@@ -297,13 +301,25 @@ class Conn:
         return rows
 
     async def check_sql_params(self, sql, params, context):
-        sql = sql.replace('$fx_', self.constants.func_prefix)
+        param_style = self.constants.param_style
 
-        # search for occurrences of `...`, replace with sql from specified colummn
-        while '`' in sql:
-            pos_1 = sql.find('`')
-            pos_2 = sql[pos_1+1:].find('`') + pos_1+1
-            computed_col = sql[pos_1+1: pos_2]
+        # look for literal strings in sql and parameterise them
+        if sql[:6].upper() != 'CREATE':  # cannot parameterise strings in CREATE TABLE
+            start_pos = param_pos = 0
+            while (pos1 := sql.find("'", start_pos)) > -1:
+                pos2 = sql.find("'", pos1+1)
+                sub_string = sql[pos1+1:pos2]
+                param_pos += sql.count(param_style, start_pos, pos1)  # calculate where to insert parameter
+                sql = sql[:pos1] + param_style + sql[pos2+1:]
+                params.insert(param_pos, sub_string)
+                param_pos += 1
+                start_pos = pos1 + 1
+
+        # look for occurrences of `...`, replace with sql from specified colummn
+        start_pos = 0
+        while (pos1 := sql.find('`', start_pos)) > -1:
+            pos2 = sql.find('`', pos1+1)
+            computed_col = sql[pos1+1:pos2]
             alias, company, table_name, col_name = computed_col.split('.')
             if company == '{company}':
                 company = context.company
@@ -312,17 +328,21 @@ class Conn:
             col_sql = col_defn.sql
             if alias != 'a':
                 col_sql = col_sql.replace('a.', f'{alias}.')
-            sql = sql[:pos_1] + col_sql + sql[pos_2+1:]
+            sql = sql[:pos1] + col_sql + sql[pos2+1:]
+            # where is this used? let's find out [2023-01-13]
+            print(f'in check_sql_params, change {computed_col=} to {col_sql=}')
+            start_pos = pos1 + 1
 
-        while '{' in sql:
-            pos_1 = sql.find('{')
-            pos_2 = sql.find('}')
-            expr = sql[pos_1+1: pos_2]
+        # look for occurrences of {...}, evaluate and replace
+        start_pos = param_pos = param_start = 0
+        while (pos1 := sql.find('{', start_pos)) > -1:
+            pos2 = sql.find('}', pos1+1)
+            expr = sql[pos1+1:pos2]
             if expr == 'company':
-                sql = sql[:pos_1] + context.company + sql[pos_2+1:]
-            elif not '.' in expr:  # added [2022-11-11] - assume expr is a mem_obj table_name
+                sql = sql[:pos1] + context.company + sql[pos2+1:]
+            elif not '.' in expr:  # added 2022-11-11 - assume expr is a mem_obj table_name
                 db_obj = context.data_objects[expr]  # get full table_name from table alias
-                sql = sql[:pos_1] + db_obj.table_name + sql[pos_2+1:]
+                sql = sql[:pos1] + db_obj.table_name + sql[pos2+1:]
             else:
                 table_name, col_name = expr.split('.')
                 if table_name == '_ctx':
@@ -330,22 +350,19 @@ class Conn:
                 else:
                     db_obj = context.data_objects[table_name]
                     val = await db_obj.getval(col_name)
+                param_pos += sql.count(param_style, param_start, pos1)  # calculate where to insert parameter
+                sql = sql[:pos1] + param_style + sql[pos2+1:]
+                params.insert(param_pos, val)
+                param_pos += 1
+                param_start = pos1 + 1  # starting point for next sql.count(param_style)
+            start_pos = pos1 + 1  # starting point for next sql.find('{')
 
-                # find where to insert val in params
-                occurrence = 0
-                while True:
-                    pos = find_occurrence(sql, self.constants.param_style, occurrence)
-                    if pos == -1:
-                        params.append(val)
-                        break
-                    if pos > pos_1:
-                        params.insert(occurrence, val)
-                        break
-                    occurrence += 1
+        # Sql Server requires special prefix for user-defined functions
+        sql = sql.replace('$fx_', self.constants.func_prefix)
 
-                sql = sql[:pos_1] + self.constants.param_style + sql[pos_2+1:]
+        # check for any customised changes
+        sql, params = await self.convert_sql(sql, params)
 
-        sql, params = await self.convert_sql(sql, params)  # check for any customised changes
         return sql, params
 
     async def simple_select(self, company, table_name, cols,
@@ -611,8 +628,10 @@ class Conn:
                         else:
                             expr = f'{alias}.{col.col_name}'
 
+                # in a LIKE clause, literals '%' and '_' must be escaped with (e.g.) '\'
+                # sqlite3 requires that the escape character be specified
                 # do we still need this? [2020-09-09]
-                if False:  #op.lower() in ('like', 'not like'):
+                if False:  #op.upper() in ('LIKE', 'NOT LIKE'):
                     assert isinstance(expr, str)
                     esc = self.escape_string()
                 else:
@@ -737,11 +756,8 @@ class Conn:
                 col_name = col.col_name
             if build_sum:
                 col_text = f'SUM({as_clause}) AS {col_name}'
-            elif not as_clause.count(' '):  # one-word as_clause - use it as column name
-                if reverse:
-                    col_text = f'0 - {as_clause}'
-                else:
-                    col_text = f'{as_clause}'
+            elif as_clause.startswith("'"):  # literal as_clause - use it as column name
+                col_text = as_clause
                 if alt_name is not None:
                     col_text += f' AS {alt_name}'
             else:

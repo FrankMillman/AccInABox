@@ -1,5 +1,6 @@
 import pyodbc
 
+# called from connection.config_connection()
 def customise(constants, DbConn, db_params):
     # add db-specific methods to DbConn class
 
@@ -104,18 +105,17 @@ async def form_sql(self, columns, tablenames, where_clause='',
         group_clause='', order_clause='', limit=0, offset=0, lock=False, distinct=False):
     if offset:
         sql = f"SELECT{' DISTINCT' if distinct else ''}{columns} FROM ("
-        sql += ('SELECT {}, ROW_NUMBER() OVER ({}) AS _rowno '
-            .format(columns, order_clause))
-        sql += 'FROM {}'.format(tablenames)
+        sql += f'SELECT {columns}, ROW_NUMBER() OVER ({order_clause}) AS _rowno '
+        sql += f'FROM {tablenames}'
         if where_clause:
-            sql += ' {}'.format(where_clause)
+            sql += f' {where_clause}'
         sql += ') AS temp2 '
         if limit == 0:
-            sql += 'WHERE _rowno > {}'.format(offset)
+            sql += f'WHERE _rowno > {offset}'
         elif limit == 1:
-            sql += 'WHERE _rowno = {}'.format(offset+1)
+            sql += f'WHERE _rowno = {offset+1}'
         else:  # [UNTESTED]
-            sql += 'WHERE _rowno > {} AND _rowno < {}'.format(offset, offset+limit+1)
+            sql += f'WHERE _rowno > {offset} AND _rowno < {offset+limit+1}'
     else:
         sql = f"SELECT{' DISTINCT' if distinct else ''}"
         if limit:
@@ -139,7 +139,6 @@ async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
         f"INSERT INTO {company}.{table_name} ({', '.join(cols)}) OUTPUT INSERTED.row_id "
         f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
         )
-
     cur = await self.exec_sql(sql, vals)
     data_row_id, = await cur.__anext__()
 
@@ -150,20 +149,16 @@ async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
 
         cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
         vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, 'add']
-
         sql = (
             f"INSERT INTO {company}.{table_name}_audit_xref ({', '.join(cols)}) OUTPUT INSERTED.row_id "
             f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
             )
-
         cur = await self.exec_sql(sql, vals)
         xref_row_id, = await cur.__anext__()
 
         fld = await db_obj.getfld('created_id')
         fld._value = xref_row_id
-        sql = (
-            f'UPDATE {company}.{table_name} SET created_id = {xref_row_id} WHERE row_id = {data_row_id}'
-            )
+        sql = f'UPDATE {company}.{table_name} SET created_id = {xref_row_id} WHERE row_id = {data_row_id}'
         await self.exec_cmd(sql)
 
 async def update_row(self, db_obj, cols, vals, from_upd_on_save):
@@ -188,8 +183,7 @@ async def update_row(self, db_obj, cols, vals, from_upd_on_save):
         return
 
     data_row_id = await db_obj.getval('row_id')
-    if from_upd_on_save is False:
-        output_clause = ' OUTPUT INSERTED.row_id'
+    if from_upd_on_save is False:  # else it is not True or False - see below
 
         cols = []
         vals = []
@@ -198,72 +192,29 @@ async def update_row(self, db_obj, cols, vals, from_upd_on_save):
                 cols.append(fld.col_name)
                 vals.append(fld._curr_val)
 
-        sql = ('INSERT INTO {0}.{1}_audit ({2}){3} VALUES ({4})'.format(
-            company, table_name, ', '.join(cols),
-            output_clause, ', '.join([self.constants.param_style]*len(cols))))
-
+        sql = (
+            f"INSERT INTO {company}.{table_name}_audit ({', '.join(cols)}) OUTPUT INSERTED.row_id "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+            )
         cur = await self.exec_sql(sql, vals)
         audit_row_id, = await cur.__anext__()
 
-        cols = 'data_row_id, audit_row_id, user_row_id, date_time, type'
-
-        sql = ("INSERT INTO {0}.{1}_audit_xref ({2}) VALUES "
-            "({3}, {3}, {3}, {3}, 'chg')".format(
-            company, table_name, cols, self.constants.param_style))
-        params = (data_row_id, audit_row_id,
-            db_obj.context.user_row_id, self.timestamp)
-        await self.exec_cmd(sql, params)
+        cols = ['data_row_id', 'audit_row_id', 'user_row_id', 'date_time', 'type']
+        vals = [data_row_id, audit_row_id, db_obj.context.user_row_id, self.timestamp, 'chg']
+        sql = (
+            f"INSERT INTO {company}.{table_name}_audit_xref ({', '.join(cols)}) "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+            )
+        await self.exec_cmd(sql, vals)
 
     else:  # assume from_upd_on_save is 'post' or 'unpost'
-        cols = 'data_row_id, user_row_id, date_time, type'
-        sql = ("INSERT INTO {0}.{1}_audit_xref ({2}) VALUES "
-                "({3}, {3}, {3}, {3})".format(
-            company, table_name, cols, self.constants.param_style))
-        params = (data_row_id, db_obj.context.user_row_id,
-            self.timestamp, from_upd_on_save)
-        await self.exec_cmd(sql, params)
-        
-    """
-    if from_upd_on_save == 'post':
-        cols = 'data_row_id, user_row_id, date_time, type'
-        sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
-                "({2}, {2}, {2}, 'post')".format(
-            table_name, cols, self.constants.param_style))
-        params = (data_row_id, db_obj.context.user_row_id, self.timestamp)
-        await self.exec_cmd(sql, params)
-    elif from_upd_on_save == 'unpost':
-        cols = 'data_row_id, user_row_id, date_time, type'
-        sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
-                "({2}, {2}, {2}, 'unpost')".format(
-            table_name, cols, self.constants.param_style))
-        params = (data_row_id, db_obj.context.user_row_id, self.timestamp)
-        await self.exec_cmd(sql, params)
-    else:
-
-        output_clause = ' OUTPUT INSERTED.row_id'
-
-        cols = []
-        vals = []
-        for fld in db_obj.get_flds_to_update(all=True):
-            if fld.col_name != 'row_id':
-                cols.append(fld.col_name)
-                vals.append(fld._curr_val)
-
-        sql = ('INSERT INTO {0}.{1}_audit ({2}){3} VALUES ({4})'.format(
-            company, table_name, ', '.join(cols),
-            output_clause, ', '.join([self.constants.param_style]*len(cols))))
-
-        cur = await self.exec_sql(sql, vals)
-        audit_row_id, = await cur.__anext__()
-
-        cols = 'data_row_id, audit_row_id, user_row_id, date_time, type'
-
-        sql = ("INSERT INTO {0}.{1}_audit_xref ({2}) VALUES "
-            "({3}, {3}, {3}, {3}, 'chg')".format(
-            company, table_name, cols, self.constants.param_style))
-        await self.exec_cmd(sql, (data_row_id, audit_row_id,
-            db_obj.context.user_row_id, self.timestamp))
-    """
+        cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
+        vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, from_upd_on_save]
+        sql = (
+            f"INSERT INTO {company}.{table_name}_audit_xref ({', '.join(cols)}) "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+            )
+        await self.exec_cmd(sql, vals)
 
 async def delete_row(self, db_obj, from_upd_on_save):
     company = db_obj.company
@@ -271,20 +222,19 @@ async def delete_row(self, db_obj, from_upd_on_save):
 
     if not from_upd_on_save:  # don't actually delete
         data_row_id = await db_obj.getval('row_id')
-        cols = 'data_row_id, user_row_id, date_time, type'
-        output_clause = ' OUTPUT INSERTED.row_id'
-        sql = ("INSERT INTO {0}.{1}_audit_xref ({2}){3} VALUES "
-            "({4}, {4}, {4}, 'del')".format(
-            company, table_name, cols,
-            output_clause, self.constants.param_style))
-        cur = await self.exec_sql(sql,
-            (data_row_id, db_obj.context.user_row_id, self.timestamp))
+
+        cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
+        vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, 'del']
+        sql = (
+            f"INSERT INTO {company}.{table_name}_audit_xref ({', '.join(cols)}) OUTPUT INSERTED.row_id "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+            )
+        cur = await self.exec_sql(sql, vals)
         xref_row_id, = await cur.__anext__()
+
         fld = await db_obj.getfld('deleted_id')
         fld._value = xref_row_id
-        sql = (
-            f'UPDATE {company}.{table_name} SET deleted_id = {xref_row_id} WHERE row_id = {data_row_id}'
-            )
+        sql = f'UPDATE {company}.{table_name} SET deleted_id = {xref_row_id} WHERE row_id = {data_row_id}'
         await self.exec_cmd(sql)
 
     else:  # actually delete
@@ -305,8 +255,9 @@ async def convert_sql(self, sql, params=None):
     sql = sql.replace('$True', 'CAST(1 AS BIT)').replace('$False', 'CAST(0 AS BIT)')
 
     # standard sql uses 'LIMIT 1' at end, Sql Server uses 'TOP 1' after SELECT
-    while ' LIMIT ' in sql.upper():
-        pos = sql.upper().find(' LIMIT ')
+#   while ' LIMIT ' in sql.upper():
+#       pos = sql.upper().find(' LIMIT ')
+    while (pos := sql.upper().find(' LIMIT ')) > -1:
         num = ''
         cnt = 7
         for ch in sql[pos+7:]:
@@ -516,7 +467,7 @@ def create_functions(self):
     #       )
 
 async def create_company(self, company):
-    await self.exec_cmd('CREATE SCHEMA {}'.format(company))
+    await self.exec_cmd(f'CREATE SCHEMA {company}')
 
 def create_primary_key(self, pkeys):
     return f", PRIMARY KEY NONCLUSTERED ({', '.join(pkeys)})"
@@ -528,9 +479,10 @@ def create_foreign_key(self, company, fkeys):
             tgt_company, tgt_table = tgt_table.split('.')
         else:
             tgt_company = company
-        foreign_key += ', FOREIGN KEY ({}) REFERENCES {}.{} ({}){}'.format(
-            src_col, tgt_company, tgt_table, tgt_col,
-            ' ON DELETE CASCADE' if del_cascade else '')
+        foreign_key += (
+            f", FOREIGN KEY ({src_col}) REFERENCES {tgt_company}.{tgt_table} ({tgt_col})"
+            f"{' ON DELETE CASCADE' if del_cascade else ''}"
+            )
     return foreign_key
 
 def create_alt_index(self, company, table_name, ndx_cols, a_or_b):

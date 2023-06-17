@@ -8,8 +8,9 @@ import db.cache
 
 attach_lock = asyncio.Lock()  # to ensure that two processes don't try to attach at the same time
 
-def customise(constants, DbConn, db_params):
-    # add db-specific methods to DbConn class
+# called from connection.config_connection()
+def customise(constants, Conn, db_params):  # Conn can be DbConn (if real db) or MemConn (if in-memory db)
+    # add db-specific methods to Conn class
 
     constants.servertype = 'sqlite3'
     constants.param_style = '?'
@@ -28,31 +29,31 @@ def customise(constants, DbConn, db_params):
         "THEN $True ELSE $False END"
         )
 
-    DbConn.init = init
-    # DbConn.add_lock = add_lock
-    DbConn.form_sql = form_sql
-    DbConn.insert_row = insert_row
-    DbConn.update_row = update_row
-    DbConn.delete_row = delete_row
-    DbConn.delete_all = delete_all
-    DbConn.attach_company = attach_company
-    DbConn.convert_sql = convert_sql
-    DbConn.convert_string = convert_string
-    DbConn.convert_dflt = convert_dflt
-    DbConn.create_functions = create_functions
-    DbConn.create_company = create_company
-    DbConn.create_primary_key = create_primary_key
-    DbConn.create_foreign_key = create_foreign_key
-    DbConn.create_alt_index = create_alt_index
-    DbConn.create_index = create_index
-    DbConn.set_read_lock = set_read_lock
-    DbConn.get_lower_colname = get_lower_colname
-    DbConn.tree_select = tree_select
-    DbConn.get_view_names = get_view_names
-    DbConn.escape_string = escape_string
+    Conn.init = init
+    # Conn.add_lock = add_lock
+    Conn.form_sql = form_sql
+    Conn.insert_row = insert_row
+    Conn.update_row = update_row
+    Conn.delete_row = delete_row
+    Conn.delete_all = delete_all
+    Conn.attach_company = attach_company
+    Conn.convert_sql = convert_sql
+    Conn.convert_string = convert_string
+    Conn.convert_dflt = convert_dflt
+    Conn.create_functions = create_functions
+    Conn.create_company = create_company
+    Conn.create_primary_key = create_primary_key
+    Conn.create_foreign_key = create_foreign_key
+    Conn.create_alt_index = create_alt_index
+    Conn.create_index = create_index
+    Conn.set_read_lock = set_read_lock
+    Conn.get_lower_colname = get_lower_colname
+    Conn.tree_select = tree_select
+    Conn.get_view_names = get_view_names
+    Conn.escape_string = escape_string
     # create class attributes from db parameters
-    DbConn.database = db_params['database']
-    DbConn.callback = callback
+    Conn.database = db_params['database']
+    Conn.callback = callback
 
 def substring(string, start, length):
     return string[start-1:start-1+length]
@@ -229,7 +230,7 @@ def init(self, mem_id=None):
 
 # sql_log = open('sql_log.txt', 'w', errors='backslashreplace')
 def callback(self, sql_cmd):
-    sql_log.write('{}: {}: {}\n'.format(self.timestamp, id(self), sql_cmd))
+    sql_log.write(f'{self.timestamp}: {id(self)}: {sql_cmd}\n')
     sql_log.flush()
 
 # async def add_lock(self, sql):
@@ -253,9 +254,9 @@ async def form_sql(self, columns, tablenames, where_clause='',
     if order_clause:
         sql += order_clause
     if limit:
-        sql += ' LIMIT {}'.format(limit)
+        sql += f' LIMIT {limit}'
     if offset:
-        sql += ' OFFSET {}'.format(offset)
+        sql += f' OFFSET {offset}'
     if lock:
         if not self.conn.in_transaction:
             await self.exec_cmd('BEGIN IMMEDIATE')
@@ -279,11 +280,11 @@ async def convert_sql(self, sql, params=None):
     return sql, params
 
 async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
-    table_name = db_obj.table_name
 
+    table_name = db_obj.table_name
     if not db_obj.mem_obj:
         company = db_obj.company
-        table_name = '{}.{}'.format(company, table_name)
+        table_name = f'{company}.{table_name}'
 
     fld = await db_obj.getfld('row_id')
     if fld.col_defn.data_type == 'AUT0':
@@ -298,9 +299,9 @@ async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
         f"INSERT INTO {table_name} ({', '.join(cols)}) "
         f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
         )
-
     await self.exec_cmd(sql, vals)
     data_row_id = self.lastrowid  # automatically returned by sqlite3
+
     fld._value = data_row_id
 
     if not db_obj.mem_obj and not from_upd_on_save:
@@ -310,28 +311,24 @@ async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
         if data_row_id == 0:  # data_type 'AUT0', insert row_id with value of 0
             cols.insert(0, 'row_id')
             vals.insert(0, 0)
-
         sql = (
             f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
             f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
             )
-
         await self.exec_cmd(sql, vals)
         xref_row_id = self.lastrowid
 
         fld = await db_obj.getfld('created_id')
         fld._value = xref_row_id
-        sql = (
-            f'UPDATE {table_name} SET created_id = {xref_row_id} WHERE row_id = {data_row_id}'
-            )
+        sql = f'UPDATE {table_name} SET created_id = {xref_row_id} WHERE row_id = {data_row_id}'
         await self.exec_cmd(sql)
 
 async def update_row(self, db_obj, cols, vals, from_upd_on_save):
-    table_name = db_obj.table_name
 
+    table_name = db_obj.table_name
     if not db_obj.mem_obj:
         company = db_obj.company
-        table_name = '{}.{}'.format(company, table_name)
+        table_name = f'{company}.{table_name}'
 
     key_cols = []
     key_vals = []
@@ -343,7 +340,7 @@ async def update_row(self, db_obj, cols, vals, from_upd_on_save):
     where = ' AND '.join(['='.join((col_name, self.constants.param_style))
         for col_name in key_cols])
     vals.extend(key_vals)
-    sql = "UPDATE {} SET {} WHERE {}".format(table_name, update, where)
+    sql = f'UPDATE {table_name} SET {update} WHERE {where}'
     await self.exec_cmd(sql, vals)
 
     if db_obj.mem_obj:
@@ -352,100 +349,59 @@ async def update_row(self, db_obj, cols, vals, from_upd_on_save):
         return
 
     data_row_id = await db_obj.getval('row_id')
-    if from_upd_on_save is False:
+    if from_upd_on_save is False:  # else it is not True or False - see below
         cols = []
         vals = []
         for fld in db_obj.get_flds_to_update(all=True):
             if fld.col_name != 'row_id':
                 cols.append(fld.col_name)
                 vals.append(fld._curr_val)
-
-        sql = ('INSERT INTO {}_audit ({}) VALUES ({})'.format(
-            table_name, ', '.join(cols),
-            ', '.join([self.constants.param_style]*len(cols))))
-
+        sql = (
+            f"INSERT INTO {table_name}_audit ({', '.join(cols)}) "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+            )
         await self.exec_cmd(sql, vals)
         audit_row_id = self.lastrowid
 
-        cols = 'data_row_id, audit_row_id, user_row_id, date_time, type'
-
-        sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
-            "({2}, {2}, {2}, {2}, 'chg')".format(
-            table_name, cols, self.constants.param_style))
-        params = (data_row_id, audit_row_id,
-            db_obj.context.user_row_id, self.timestamp)
-        await self.exec_cmd(sql, params)
+        cols = ['data_row_id', 'audit_row_id', 'user_row_id', 'date_time', 'type']
+        vals = [data_row_id, audit_row_id, db_obj.context.user_row_id, self.timestamp, 'chg']
+        sql = (
+            f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+            )
+        await self.exec_cmd(sql, vals)
 
     else:  # assume from_upd_on_save is 'post' or 'unpost'
-        cols = 'data_row_id, user_row_id, date_time, type'
-        sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
-                "({2}, {2}, {2}, {2})".format(
-            table_name, cols, self.constants.param_style))
-        params = (data_row_id, db_obj.context.user_row_id,
-            self.timestamp, from_upd_on_save)
-        await self.exec_cmd(sql, params)
-
-    """
-    if from_upd_on_save == 'post':
-        cols = 'data_row_id, user_row_id, date_time, type'
-        sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
-                "({2}, {2}, {2}, 'post')".format(
-            table_name, cols, self.constants.param_style))
-        params = (data_row_id, db_obj.context.user_row_id, self.timestamp)
-        await self.exec_cmd(sql, params)
-    elif from_upd_on_save == 'unpost':
-        cols = 'data_row_id, user_row_id, date_time, type'
-        sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
-                "({2}, {2}, {2}, 'unpost')".format(
-            table_name, cols, self.constants.param_style))
-        params = (data_row_id, db_obj.context.user_row_id, self.timestamp)
-        await self.exec_cmd(sql, params)
-    else:
-        cols = []
-        vals = []
-        for fld in db_obj.get_flds_to_update(all=True):
-            if fld.col_name != 'row_id':
-                cols.append(fld.col_name)
-                vals.append(fld._curr_val)
-
-        sql = ('INSERT INTO {}_audit ({}) VALUES ({})'.format(
-            table_name, ', '.join(cols),
-            ', '.join([self.constants.param_style]*len(cols))))
-
+        cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
+        vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, from_upd_on_save]
+        sql = (
+            f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+            )
         await self.exec_cmd(sql, vals)
-        audit_row_id = self.lastrowid
-
-        cols = 'data_row_id, audit_row_id, user_row_id, date_time, type'
-
-        sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
-            "({2}, {2}, {2}, {2}, 'chg')".format(
-            table_name, cols, self.constants.param_style))
-        params = (data_row_id, audit_row_id, db_obj.context.user_row_id, self.timestamp)
-        await self.exec_cmd(sql, params)
-    """
 
 async def delete_row(self, db_obj, from_upd_on_save):
-    table_name = db_obj.table_name
 
+    table_name = db_obj.table_name
     if not db_obj.mem_obj:
         company = db_obj.company
-        table_name = '{}.{}'.format(company, table_name)
+        table_name = f'{company}.{table_name}'
 
     if not db_obj.mem_obj and not from_upd_on_save:  # don't actually delete
         data_row_id = await db_obj.getval('row_id')
-        cols = 'data_row_id, user_row_id, date_time, type'
 
-        sql = ("INSERT INTO {0}_audit_xref ({1}) VALUES "
-                "({2}, {2}, {2}, 'del')".format(
-            table_name, cols, self.constants.param_style))
-        params = (data_row_id, db_obj.context.user_row_id, self.timestamp)
-        await self.exec_cmd(sql, params)
+        cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
+        vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, 'del']
+        sql = (
+            f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
+            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+            )
+        await self.exec_cmd(sql, vals)
         xref_row_id = self.lastrowid
+
         fld = await db_obj.getfld('deleted_id')
         fld._value = xref_row_id
-        sql = (
-            'UPDATE {} SET deleted_id = {} WHERE row_id = {}'
-            .format(table_name, xref_row_id, data_row_id))
+        sql = f'UPDATE {table_name} SET deleted_id = {xref_row_id} WHERE row_id = {data_row_id}'
         await self.exec_cmd(sql)
 
     else:  # actually delete
@@ -467,7 +423,7 @@ async def delete_all(self, db_obj):
     if not db_obj.mem_obj:
         return  # can only delete all from mem_obj
 
-    sql = "DELETE FROM {}".format(table_name)
+    sql = f'DELETE FROM {table_name}'
     await self.exec_cmd(sql)
 
 def convert_string(self, string, db_scale=None, text_key=False):
@@ -542,9 +498,10 @@ def create_foreign_key(self, company, fkeys):
     foreign_key = ''
     for (src_col, tgt_table, tgt_col, del_cascade) in fkeys:
         if '.' not in tgt_table:  # sqlite3 does not support remote fkeys
-            foreign_key += ', FOREIGN KEY ({}) REFERENCES {} ({}){}'.format(
-                src_col, tgt_table, tgt_col,
-                ' ON DELETE CASCADE' if del_cascade else '')
+            foreign_key += (
+                f", FOREIGN KEY ({src_col}) REFERENCES {tgt_table} ({tgt_col})"
+                f"{' ON DELETE CASCADE' if del_cascade else ''}"
+                )
     return foreign_key
 
 def create_alt_index(self, company, table_name, ndx_cols, a_or_b):
@@ -675,4 +632,4 @@ def get_view_names(self, company, view_names):
 def escape_string(self):
     # in a LIKE clause, literals '%' and '_' must be escaped with (e.g.) '\'
     # sqlite3 requires that the escape character be specified
-    return " ESCAPE '\\'"
+    return "ESCAPE '\\'"
