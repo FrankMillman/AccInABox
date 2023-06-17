@@ -567,7 +567,7 @@ class GuiGrid:
             sub_filter.append((test, '', parent[0], '=', parent_val, ''))
             test = 'AND'  # in case there is another one
 
-        if self.get_tots is not None:
+        if self.get_tots is not None:  # this should be run with read_lock = True - investigate
             # srcs, tgts = zip(*self.get_tots)  # clever but obscure!
             srcs = [_[0] for _ in self.get_tots]  # column names to be summed
             tgts = [_[1] for _ in self.get_tots]  # 'total' col_names to store results
@@ -595,7 +595,7 @@ class GuiGrid:
                 await tgt_obj.setval(col_name, src_val or 0)  # change None to 0 in case no rows exist
             await conn.release()
 
-        if self.assert_tots is not None:
+        if self.assert_tots is not None:  # this should be run with read_lock = True - investigate
             # srcs, tgts = zip(*self.assert_tots)  # clever but obscure!
             srcs = [_[0] for _ in self.assert_tots]  # column names to be summed
             tgts = [_[1] for _ in self.assert_tots]  # 'total' col_names to assert against
@@ -635,7 +635,7 @@ class GuiGrid:
 
         self.inserted = 0  # 0=existing row  -1=appended row  1=inserted row
 
-        if start_val:
+        if start_val is not None:
             if isinstance(start_val, str) and start_val.startswith('{'):
                 start_objname, start_colname = start_val[1:-1].split('.')
                 start_obj = self.context.data_objects[start_objname]
@@ -651,7 +651,10 @@ class GuiGrid:
                         body=f'{start_val} not found')
 
             focus_row, found = await self.cursor.start()
-            first_row = focus_row - (25 if focus_row > 25 else focus_row)
+            # first_row = focus_row - (25 if focus_row > 25 else focus_row)
+            first_row = focus_row
+            if first_row > (self.cursor.num_rows - 50):
+                first_row = (self.cursor.num_rows - 50)
         else:
             await self.db_obj.init(display=self.db_obj.exists)  # set display=True if exists to clear client screen
             focus_row = 0
@@ -1012,7 +1015,7 @@ class GuiGrid:
         if ans == 'Yes':
             await self.req_save()
         elif ans == 'No':
-            await ht.form_xml.exec_xml(self.grid_frame, self.grid_frame.methods['do_restore'])
+            await self.handle_restore()
         elif ans == 'Cancel':
             raise AibError(head=None, body=None)  # do not process more messages in this request
 
@@ -1050,7 +1053,7 @@ class GuiGrid:
             self.parent, title, question, answers, default, escape)
 
         if ans == 'Yes':
-             await ht.form_xml.exec_xml(self.grid_frame, self.grid_frame.methods['do_restore'])
+            await self.handle_restore()
         raise AibError(head=None, body=None)  # do not process more messages in this request
 
     @log_func
@@ -1258,7 +1261,10 @@ class GuiGrid:
             await self.grid_frame.validate_all()
 
     async def handle_restore(self):
-        await ht.form_xml.exec_xml(self, self.methods['do_restore'])
+        if self.grid_frame is not None:
+            await ht.form_xml.exec_xml(self, self.grid_frame.methods['do_restore'])
+        else:
+            await ht.form_xml.exec_xml(self, self.methods['do_restore'])
         if debug:
             log.write(f'RESTORED {self.temp_data}\n\n')
         for obj_ref in self.temp_data:

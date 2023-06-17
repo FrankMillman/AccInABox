@@ -85,8 +85,7 @@ if __name__ == '__main__':
     cfg = get_config()
     db.api.config_connection(cfg['DbParams'])
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(init.init_db.init_database())
+    asyncio.run(init.init_db.init_database())
     db.api.close_all_connections()
 
     from releases import program_version_info, datamodel_version_info

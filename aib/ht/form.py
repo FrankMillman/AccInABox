@@ -963,6 +963,8 @@ class Frame:
                     subtype_guiobj, active = subtype
                     subtype_guiobj.append(grid)
                     grid.hidden = not active
+                if (obj_key := element.get('obj_key')) is not None:
+                    self.form.ref_dict[obj_key] = grid.ref
             elif element.tag == 'grid_frame':
                 grid.grid_frame = Frame()
                 await grid.grid_frame._ainit_(
@@ -1601,7 +1603,10 @@ class Frame:
             log.write(f'ASK {self.db_obj} {self.db_obj.dirty} {self.temp_data}\n\n')
 
         title = f"Undo changes to {self.db_obj.table_name.split('__')[-1]}?"
-        descr = await self.obj_list[0].fld.getval()
+        try:
+            descr = await self.obj_list[0].fld.getval()
+        except AttributeError:  # probably a grid?
+            descr = self.db_obj.table_name.split('__')[-1]  # use table name
         if descr is None:
             if self.obj_list[0].ref in self.temp_data:
                 descr = self.temp_data[self.obj_list[0].ref]
@@ -1716,8 +1721,10 @@ class Frame:
                     continue
                 set_focus_ref = obj.ref
                 break
-            else:  # no active object found - use the first one
-                set_focus_ref = self.obj_list[0].ref
+            else:  # no active object found - use the first one (but not if Display)
+                set_focus_ref = [
+                    x for x in self.obj_list if not isinstance(x, ht.gui_objects.GuiDisplay)
+                    ][0].ref
         else:
             set_focus_ref = None
 
