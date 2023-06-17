@@ -8,15 +8,15 @@ import db.objects
 
 async def create_view(context, conn, company_id, view_name):
     cur = await conn.exec_sql(
-        "SELECT * FROM {}.db_views WHERE view_name = {}"
-        .format(company_id, dbc.param_style), (view_name,))
+        f"SELECT * FROM {company_id}.db_views WHERE view_name = {dbc.param_style}"
+        , [view_name])
     view_defn = await cur.__anext__()
 
     cur = await conn.exec_sql(
-        "SELECT * FROM {}.db_view_cols "
-        "WHERE view_id = {} AND col_type = 'view' AND deleted_id = 0 "
+        f"SELECT * FROM {company_id}.db_view_cols "
+        f"WHERE view_id = {dbc.param_style} AND col_type = 'view' AND deleted_id = 0 "
         "ORDER BY seq"
-        .format(company_id, dbc.param_style), (view_defn[ROW_ID],))
+        , [view_defn[ROW_ID]])
     view_cols = []
     async for row in cur:
         view_cols.append(row)

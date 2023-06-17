@@ -573,8 +573,8 @@ class DbObject:
                 # descr.append('{}={!s};'.format(field.col_name, field._value_))
                 value = field._value_
                 if isinstance(value, D):
-                    fmt = f'{{:.{col_defn.db_scale}f}}'
-                    value = f'D({fmt.format(value)})'
+                    fmt = f'.{col_defn.db_scale}f'
+                    value = f'D({format(value, fmt)})'
                 descr.append(f'{col_defn.col_name}={value};')
         return ' '.join(descr)
 

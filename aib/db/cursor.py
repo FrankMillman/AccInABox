@@ -183,10 +183,12 @@ class Cursor:
 
         from_row, to_row = first_row, last_row
         for row in self.ins_rows:
-            if row >= first_row and row < last_row:
+            # if row >= first_row and row < last_row:
+            if first_row <= row < last_row:
                 to_row -= 1
         for row in self.del_rows:
-            if row >= first_row and row < last_row:
+            # if row >= first_row and row < last_row:
+            if first_row <= row < last_row:
                 to_row += 1
 
         pos = from_row  # no enumerate for async
