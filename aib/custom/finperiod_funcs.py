@@ -5,7 +5,7 @@ db_session = db.api.start_db_session()  # need independent connection for readin
 
 async def get_no_periods(caller, xml):
     # called from after_start_form
-    sql = "SELECT COUNT(*) FROM {}.adm_periods".format(caller.company)
+    sql = f"SELECT COUNT(*) FROM {caller.company}.adm_periods"
     async with db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         cur = await conn.exec_sql(sql)
@@ -18,8 +18,7 @@ async def get_no_periods(caller, xml):
         caller.context.end_year = 0
     else:  # normal situation [could also select 'last row' - should be the same]
         sql = (
-            "SELECT row_id FROM {}.adm_yearends WHERE period_row_id = {}"
-            .format(caller.company, count_per-1)
+            f"SELECT row_id FROM {caller.company}.adm_yearends WHERE period_row_id = {count_per-1}"
             )
         async with db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
@@ -82,11 +81,16 @@ async def load_fin_periods(caller, xml):
         async with db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
             sql = (
-                "SELECT closing_date FROM {}.adm_periods WHERE row_id = {}"
-                .format(caller.company, count_per-1)
+                f"SELECT closing_date FROM {caller.company}.adm_periods WHERE row_id = {count_per-1}"
                 )
             cur = await conn.exec_sql(sql)
             closing_date, = await cur.__anext__()
+        # await fin_period.setval('per_no', 1)
+        # await fin_period.setval('op_date', closing_date + timedelta(1))
+
+        # grid = caller.grid_dict['fin_period']
+        # await grid.start_grid()
+
         await var.setval('start_date', closing_date + timedelta(1))
         await var.setval('ye_date', '    New financial year    ')
         caller.context.ye_per_no = None
@@ -95,17 +99,16 @@ async def load_fin_periods(caller, xml):
             conn = db_mem_conn.db
             sql = (
                 "SELECT a.row_id, "
-                "(SELECT b.closing_date FROM {0}.adm_periods b "
+                f"(SELECT b.closing_date FROM {caller.company}.adm_periods b "
                     "WHERE b.row_id = a.row_id - 1), "
                 "a.closing_date "
-                "FROM {0}.adm_periods a "
+                f"FROM {caller.company}.adm_periods a "
                 "WHERE "
-                    "(SELECT b.row_id FROM {0}.adm_yearends b "
+                    f"(SELECT b.row_id FROM {caller.company}.adm_yearends b "
                         "WHERE b.period_row_id >= a.row_id "
                         "ORDER BY b.row_id LIMIT 1) "
-                    "= {1} "
+                    f"= {curr_year} "
                 "ORDER BY a.row_id"
-                .format(caller.company, curr_year)
                 )
             seq = 0
             async for row_id, prev_cl_date, cl_date in await conn.exec_sql(sql):
@@ -121,7 +124,7 @@ async def load_fin_periods(caller, xml):
         # set last period y/e to True
         await fin_period.setval('year_end', True)
         await fin_period.save()
-        await var.setval('ye_date', f'    Year ended {cl_date}')
+        await var.setval('ye_date', f'    Year ended {cl_date:%d-%m-%Y}')
         caller.context.ye_per_no = seq
 
     # see above comments
@@ -163,7 +166,7 @@ async def ask_save(caller, xml, new_year):
     var = caller.data_objects['var']
     title = 'Save changes?'
     descr = (await var.getval('ye_date')).strip()
-    question = 'Do you want to save the changes to {}?'.format(descr)
+    question = f'Do you want to save the changes to {descr}?'
     answers = ['Yes', 'No', 'Cancel']
     default = 'No'
     escape = 'Cancel'
@@ -195,7 +198,7 @@ async def on_start_row(caller, xml):
             'op_date': await var.getval('start_date')
             })
         # notify client that row has been amended
-        caller.session.responder.obj_to_redisplay.append((caller.ref, False))
+        caller.session.responder.obj_to_redisplay.append((caller.ref, (False, False)))
 
 async def after_save_row(caller, xml):
     # called from grid_method after_save
@@ -217,8 +220,7 @@ async def after_save_row(caller, xml):
             async with caller.parent.db_session.get_connection() as db_mem_conn:
                 conn = db_mem_conn.mem
                 await conn.exec_cmd(
-                    "DELETE FROM {} WHERE per_no > {}"
-                    .format(fin_period.table_name, await fin_period.getval('per_no'))
+                    f"DELETE FROM {fin_period.table_name} WHERE per_no > {await fin_period.getval('per_no')}"
                     )
 
     elif await fin_period.get_orig('year_end'):
@@ -244,7 +246,7 @@ async def after_save_row(caller, xml):
         await fin_period.setval('per_no', per_no)  # will read in orig row
         # await caller.start_grid(start_col='per_no', start_val=per_no+1)
     else:
-        print('after per_no={} prev_per={}'.format(per_no, prev_per))
+        print(f'after {per_no=} {prev_per=}')
         # await caller.start_grid(start_col='per_no', start_val=per_no+1)
 
 async def save_fin_year(caller, xml):
@@ -278,7 +280,7 @@ async def save_fin_year(caller, xml):
     await adm_yend.save()
 
     caller.context.end_year = curr_year
-    await var.setval('ye_date', '    Year ended {}'.format(await fin_period.getval('cl_date')))
+    await var.setval('ye_date', f'    Year ended {await fin_period.getval("cl_date"):%d-%m-%Y}')
 
 async def restore_fin_year(caller, xml):
     # called from 'cancel' button or from goto_prev/next above

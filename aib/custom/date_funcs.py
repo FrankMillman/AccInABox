@@ -265,41 +265,6 @@ async def save_range_settings(caller, xml):
         await var.getval('start_date'),
         await var.getval('end_date'),
         ])
-    
-async def load_ye_per(caller, xml):
-    # called from finrpt_run before_start_form
-
-    context = caller.context
-    fin_periods = await db.cache.get_adm_periods(context.company)
-
-    ye_choices = {(fin_per := fin_periods[ye_per]).year_no: 
-        f'{fin_per.year_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
-            for ye_per in sorted(list({per.year_per_id for per in fin_periods[1:]}))}
-
-    per_choices = {fin_per.period_no:
-        f'{fin_per.year_per_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
-            for fin_per in fin_periods[1:]}
-
-    if context.module_id in ('nsls', 'npch'):
-        mod, ledg = 8, 0  # use 'gl' periods (not thought through!) does not work if no gl integration!
-    else:
-        mod, ledg = context.module_row_id, context.ledger_row_id
-    current_period = await db.cache.get_current_period(context.company, mod, ledg)
-    if current_period is None:
-        raise AibError(head=caller.company, body='Ledger periods not set up')
-
-    var = caller.data_objects['runtime_vars']
-
-    fld = await var.getfld('year_no')
-    fld.col_defn.choices = ye_choices
-    await fld.setval(fin_periods[current_period].year_no)
-
-    fld = await var.getfld('period_no')
-    fld.col_defn.choices = per_choices
-    adjusted_curr_per = current_period
-    if adjusted_curr_per > 1:
-        adjusted_curr_per -= adj_curr_per
-    await fld.setval(adjusted_curr_per)
 
 async def setup_choices(caller, xml):
     # called from sls_report on_start_frame
