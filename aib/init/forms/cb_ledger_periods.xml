@@ -130,7 +130,12 @@
               <<end_form state=`completed`/>>
             "/>
         </button_row>
-        <frame_methods/>
+        <frame_methods>
+          <method name="do_restore" action="
+              <<restore_obj obj_name=`ledg_per`/>>
+              <<restart_grid obj_name=`ledg_per`/>>
+          "/>
+        </frame_methods>
       </grid_frame>
     </body>
     <button_row/>
