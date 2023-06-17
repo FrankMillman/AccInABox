@@ -16,6 +16,7 @@ You stop it by pressing Ctrl+C.
 
 import os
 import sys
+import asyncio
 from configparser import ConfigParser
 
 import logging
@@ -44,7 +45,7 @@ def start():
     check_versions()  # upgrade_datamodel cannot work from here - needs asyncio!
 
     params = cfg['HumanTaskClient']
-    ht.htc.start(params)
+    asyncio.run(ht.htc.main(params))
 
 def check_versions():
 

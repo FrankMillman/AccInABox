@@ -774,57 +774,52 @@ async def check_sessions():
     try:
         while True:
             now = time.time()
-            for session in list(sessions.values()):
+            for session in list(sessions.values()):  # must use 'list' as dict changes size on session.close()
                 if now - session.tick > 15:  # no tick recd in last 15 seconds
                     print('CLOSING', session.session_id)
                     await session.close()
             session = None  # to enable garbage collection
             await asyncio.sleep(15)  # check every 15 seconds
-    except asyncio.CancelledError:  # respond to cancel() in shutdown() below
+    except asyncio.CancelledError:  # user pressed Ctrl+C
         pass  # could run any cleanup here
 
-class DbTest:
-    def __init__(self, id):
-        self.db_session = db.api.start_db_session()
-        self.user_row_id = 1
-        self.sys_admin = True
-        self.id = id
-
-    async def run(self):
-        async with self.db_session.get_connection() as db_mem_conn:
-            conn = db_mem_conn.db
-            start = time.perf_counter()
-            cur = await conn.exec_sql('select * from ccc.ar_trans')
-            tot = 0
+async def db_test(task_id):
+    start = time.perf_counter()
+    db_session = db.api.start_db_session()
+    async with db_session.get_connection() as db_mem_conn:
+        conn = db_mem_conn.db
+        cur = await conn.exec_sql('select * from prop.ap_trans')
+        tot = 0
+        try:
             async for row in cur:
                 tot += 1
-            end = time.perf_counter()
-        return tot, start, end
-
-async def db_test(id):
-    start = time.perf_counter()
-    dbt = DbTest(id)
-    tot, loop_start, loop_end = await dbt.run()
+        except asyncio.CancelledError:  # user pressed Ctrl+C
+            conn.cancel = True  # tell db handler to terminate the current operation
     end = time.perf_counter()
-    return (id, tot, start, end, end-start, loop_start, loop_end)
+    return (task_id, tot, start, end, end-start)
 
-async def run_test():
+async def run_test(no_of_tasks):
     try:
         while True:
             print('start')
-            tasks = [asyncio.ensure_future(db_test(f'{pos:>03}')) for pos in range(25)]
+            tasks = [asyncio.ensure_future(db_test(f'{pos:>03}')) for pos in range(no_of_tasks)]
             await asyncio.wait(tasks)
 
             results = [task.result() for task in tasks]
             from operator import itemgetter
-            for result in sorted(results, key=itemgetter(6)):
-                print('{} tot={} s={:.6f} e={:.6f} t={:.6f} ls={:.6f} le={:.6f}'.format(*result)) 
+            for result in sorted(results, key=itemgetter(3)):
+                # print('{} tot={} s={:.6f} e={:.6f} t={:.6f} ls={:.6f} le={:.6f}'.format(*result)) 
+                print('{} tot={} s={:.2f} e={:.2f} t={:.2f}'.format(*result)) 
 
             print('done')
 
             await asyncio.sleep(10)  # run test every 10 seconds
-    except asyncio.CancelledError:  # respond to cancel() in shutdown() below
-        pass  # could run any cleanup here
+
+    except asyncio.CancelledError:  # user pressed Ctrl+C
+        for task in tasks:
+            task.cancel()
+        await asyncio.wait(tasks)
+        print('run_test cancelled')
 
 async def counter():
     cnt = 0
@@ -834,9 +829,9 @@ async def counter():
             print(cnt)
             await asyncio.sleep(1)
     except asyncio.CancelledError:
-        print('CAN 3')
+        print('counter cancelled')
 
-def start(params):
+async def main(params):
     host = params.get('Host')
     port = params.getint('Port')
     domain = params.get('ssl')
@@ -845,38 +840,32 @@ def start(params):
     ssl_ctx.check_hostname = False
     ssl_ctx.load_cert_chain(f'./ssl/{domain}/aib.crt', f'./ssl/{domain}/aib.key')
 
-    loop = asyncio.get_event_loop()
-    server = loop.run_until_complete(asyncio.start_server(handle_client, host, port, ssl=ssl_ctx))
+    server = await asyncio.start_server(handle_client, host, port, ssl=ssl_ctx)
     logger.info(f'task client listening on port {port}')
-
-    # cnt = asyncio.ensure_future(counter())
-    loop.run_until_complete(db.cache.setup_companies())
-    session_check = asyncio.ensure_future(ht.htc.check_sessions())  # start background task
-    # run_tests = asyncio.ensure_future(run_test())  # start background task
-    run_tests = None
+    await db.cache.setup_companies()
+    session_check = asyncio.create_task(check_sessions())  # start background task
+    # test_run = asyncio.create_task(run_test(25))  # background task to simulate concurrent users
+    test_run = None
+    # cnt = asyncio.create_task(counter())  # background task to display counter - visualise delays if any
+    cnt = None
 
     print('Press Ctrl+C to stop')
     try:
-        loop.run_forever()
-    except KeyboardInterrupt:
+        await server.serve_forever()
+    except asyncio.CancelledError:
         print()
     finally:
         session_check.cancel()  # tell session_check to stop running
-        loop.run_until_complete(asyncio.wait([session_check]))
-        if run_tests is not None:
-            run_tests.cancel()  # tell run_tests to stop running
-            loop.run_until_complete(asyncio.wait([run_tests]))
+        await asyncio.wait([session_check])
+        if cnt is not None:
+            cnt.cancel()  # tell cnt to stop running
+            await asyncio.wait([cnt])
+        if test_run is not None:
+            test_run.cancel()  # tell test_run to stop running
+            await asyncio.wait([test_run])
         for session in list(ht.htc.sessions.values()):
-            loop.run_until_complete(session.close())
+            await session.close()
         server.close()
-        loop.stop()
-        db.api.close_all_connections()
-        if debug:
-            if log != sys.stderr:
-                log.flush()
-                log.close()
-        if log_db:
-            if db_log != sys.stderr:
-                db_log.flush()
-                db_log.close()
-        logger.info('task client stopped')
+
+    db.api.close_all_connections()
+    logger.info('task client stopped')
