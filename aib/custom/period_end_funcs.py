@@ -233,21 +233,30 @@ async def close_period(caller, xml):
 
             if period_to_close == current_period:
 
-                # set next month state to 'current'
-                await ledg_per.init()
-                if context.module_id != 'gl':
-                    await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-                await ledg_per.setval('period_row_id', period_to_close + 1)
-                await ledg_per.setval('state', 'current')
-                await ledg_per.save()
+                try:
 
-                # set following month state to 'open'
-                await ledg_per.init()
-                if context.module_id != 'gl':
-                    await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-                await ledg_per.setval('period_row_id', period_to_close + 2)
-                await ledg_per.setval('state', 'open')
-                await ledg_per.save()
+                    # set next month state to 'current'
+                    await ledg_per.init()
+                    if context.module_id != 'gl':
+                        await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+                    await ledg_per.setval('period_row_id', period_to_close + 1)
+                    await ledg_per.setval('state', 'current')
+                    await ledg_per.save()
+
+                    # set following month state to 'open'
+                    await ledg_per.init()
+                    if context.module_id != 'gl':
+                        await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+                    await ledg_per.setval('period_row_id', period_to_close + 2)
+                    await ledg_per.setval('state', 'open')
+                    await ledg_per.save()
+
+                except AibError:  # reset ledg_per for display - leave status as 'Closing'?
+                    await ledg_per.init()
+                    if context.module_id != 'gl':
+                        await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+                    await ledg_per.setval('period_row_id', period_to_close)
+                    raise
 
     # check that all transactions posted
     async with context.db_session.get_connection() as db_mem_conn:
