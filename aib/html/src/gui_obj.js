@@ -255,6 +255,7 @@ function create_input(frame, page, json_elem, label) {
   input.readonly = json_elem.readonly;  // set in form defn
   input.allow_amend = json_elem.allow_amend;  // set in col defn
   input.amend_ok = json_elem.amend_ok;  // db permissions
+  input.has_focus = false;
 
   // input.form_value is value received from server
   // input.current_value is value entered by user, awaiting validation
@@ -357,6 +358,7 @@ function create_input(frame, page, json_elem, label) {
       if (callbacks.length)
         setTimeout(function() {exec_callbacks()}, 0);
       };
+    input.has_focus = true;
     input.key_pressed = false;  // set to true after first key pressed
     input.aib_obj.after_got_focus(input);
     };
@@ -377,6 +379,7 @@ function create_input(frame, page, json_elem, label) {
     input.aib_obj.after_lost_focus(input);
     if (input.multi_line === true)
       ignore_enter = false;
+    input.has_focus = false;
     return true;
     };
 

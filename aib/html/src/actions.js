@@ -164,7 +164,10 @@ function set_focus(args) {
     // ensure object visible
     if (obj.nb_page.pos !== obj.nb_page.parentNode.current_pos)
       obj.nb_page.parentNode.req_new_page(obj.nb_page.pos, false)
-  obj.focus();
+  if (obj.has_focus)
+    obj.got_focus()
+  else
+    obj.focus();
   };
 
 function set_dflt(args) {
@@ -203,6 +206,8 @@ function cell_set_focus(args) {
     // this forces active_col to the column we are setting focus on
     // any implications?
     grid.active_col = col;
+    if (grid.active_row === -1)  // added 2023-01-06
+      grid.active_row = 0;
     grid.active_cell =
       grid.grid_rows[grid.active_row-grid.first_grid_row].grid_cols[col];
     if (grid.active_row === grid.num_data_rows)
@@ -352,7 +357,7 @@ function append_tasks(args) {
     };
 
 function exception(args) {
-  traceback = args.join('<br>').replace(/ /g, '\xa0');  // replace all ' ' with &nbsp
+  traceback = args.join('').replace(/\n/g, '<br>').replace(/ /g, '\xa0');  // replace all ' ' with &nbsp
   window.open('../error.html');  // it will read 'traceback' and display it
   clearInterval(tick);  // stop sending 'tick' to server
   };

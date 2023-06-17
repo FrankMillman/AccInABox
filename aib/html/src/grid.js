@@ -933,15 +933,21 @@ function create_grid(frame, main_grid, page, json_elem, col_defns) {
     grid.num_data_rows = args[0];
     grid.first_subset_row = args[1];
     grid.subset_data = args[2];
-    if (grid.first_subset_row === 0)
-      grid.first_grid_row = 0;
-    else
-      grid.first_grid_row = grid.first_subset_row+1;  // keep 1st row for prev_data
+    // if (grid.first_subset_row === 0)
+    //   grid.first_grid_row = 0;
+    // else
+    //   grid.first_grid_row = grid.first_subset_row+1;  // keep 1st row for prev_data
 
     if (args[3])  // append_row === true
       grid.append_row();
 
     grid.focus_row = args[4];
+
+    grid.first_grid_row = grid.focus_row - Math.floor(grid.num_grid_rows / 2);
+    if (grid.first_grid_row + grid.num_grid_rows > grid.num_data_rows)
+        grid.first_grid_row = grid.num_data_rows - grid.num_grid_rows;
+    if (grid.first_grid_row < 0)
+        grid.first_grid_row = 0;
 
     var set_focus = args[5];
 
@@ -1035,10 +1041,10 @@ function create_grid(frame, main_grid, page, json_elem, col_defns) {
     if (dflt_val === undefined)
       dflt_val = null;
 
-    //debug3('SET FOCUS ' + grid.ref + ' ' + grid.active_row + '/' + grid.active_col +
-    //  ' -> ' + new_row + '/' + new_col + ' start_in_prog=' + this.start_in_progress +
-    //  ' grid_has_focus=' + grid.has_focus + '  dflt_val=' + dflt_val +
-    //  ' from_server=' + grid.focus_from_server);
+    // debug3('SET FOCUS ' + grid.ref + ' ' + grid.active_row + '/' + grid.active_col +
+    //   ' -> ' + new_row + '/' + new_col + ' start_in_prog=' + this.start_in_progress +
+    //   ' grid_has_focus=' + grid.has_focus + '  dflt_val=' + dflt_val +
+    //   ' from_server=' + grid.focus_from_server);
 
     if (!grid.start_in_progress)
       if (!grid.has_focus)
@@ -1438,15 +1444,15 @@ function create_grid(frame, main_grid, page, json_elem, col_defns) {
     var max = grid.first_subset_row + grid.subset_data.length - grid.num_grid_rows;
     if (max < 0) max = 0;
 
-    if (grid.first_grid_row < min) {
-      var first_req_row = grid.first_grid_row - 31;
+    if (grid.first_grid_row < min) {  // assume page up - get previous 40 rows
+      var first_req_row = grid.first_grid_row - 40 + grid.num_grid_rows;
       if (first_req_row < 0)
         first_req_row = 0;
       grid.request_rows(first_req_row);
       return;  // grid will be drawn when rows received
       }
-    else if (grid.first_grid_row > max) {
-      var first_req_row = grid.first_grid_row - 11;
+    else if (grid.first_grid_row > max) {  // assume page down - get next 40 rows
+      var first_req_row = grid.first_grid_row - 10;
       if (first_req_row > (grid.num_data_rows - 50))
         first_req_row = grid.num_data_rows - 50;
       grid.request_rows(first_req_row);
