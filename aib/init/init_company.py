@@ -728,10 +728,10 @@ async def setup_finrpts(context, conn):
         'nsls_pivot_date',
 #       'npch_per',
 #       'nsls_per',
-#       'npch_uex_code_src',
-#       'npch_uex_pivot_src',
-#       'nsls_uea_code_src',
-#       'nsls_uea_pivot_src',
+        'npch_uex_code_src',
+        'npch_uex_pivot_src',
+        'nsls_uea_code_src',
+        'nsls_uea_pivot_src',
         ]
 
     for name in finrpt_names:
@@ -822,9 +822,6 @@ async def setup_menus(context, conn, company_name):
                 ['G/L codes', 'form', 'setup_gl_codes'],
                 ['Financial reports', 'grid', 'sys_finrpt_defns', 'finrpt_setup'],
                 ]],
-            # ['Gl transactions', 'menu', 'gl', [
-            #     ['Capture journal', 'form', 'gl_jnl'],
-            #     ]],
             ['Gl transactions', 'menu', 'gl', [
                 ['Journals', 'menu', 'gl', [
                     ['Capture journal', 'form', 'gl_jnl'],
@@ -1137,14 +1134,14 @@ async def setup_init_data(context, conn, company_name):
     tran_types.append(('ap_subrec', 'Ap subtran receipt', 'ap', 'ap_subtran_rec'))
     tran_types.append(('ap_subjnl', 'Ap subtran journal', 'ap', 'ap_subtran_jnl'))
     tran_types.append(('ap_uex_bf', 'Ap b/f unexpensed', 'ap', 'ap_uex_bf'))
-    tran_types.append(('sls', 'Sales', 'sls', 'sls_subtran'))
+    tran_types.append(('sls_sub', 'Sales', 'sls', 'sls_subtran'))
     tran_types.append(('sls_tax', 'Sales tax', 'sls', 'sls_subtran_tax'))
-    tran_types.append(('nsls', 'Non-inv sales', 'nsls', 'nsls_subtran'))
+    tran_types.append(('nsls_sub', 'Non-inv sales', 'nsls', 'nsls_subtran'))
     tran_types.append(('nsls_tax', 'Non-inv sales tax', 'nsls', 'nsls_subtran_tax'))
     tran_types.append(('nsls_ear', 'Non-inv sales earned', 'nsls', 'nsls_subtran_uea'))
-    tran_types.append(('pch', 'Purchases', 'pch', 'pch_subtran'))
+    tran_types.append(('pch_sub', 'Purchases', 'pch', 'pch_subtran'))
     tran_types.append(('pch_tax', 'Purchases tax', 'pch', 'pch_subtran_tax'))
-    tran_types.append(('npch', 'Non-inv purchases', 'npch', 'npch_subtran'))
+    tran_types.append(('npch_sub', 'Non-inv purchases', 'npch', 'npch_subtran'))
     tran_types.append(('npch_tax', 'Non-inv purchases tax', 'npch', 'npch_subtran_tax'))
     tran_types.append(('npch_exp', 'Non-inv purchases expensed', 'npch', 'npch_subtran_uex'))
 

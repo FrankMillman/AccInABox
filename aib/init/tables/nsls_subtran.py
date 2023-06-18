@@ -572,7 +572,7 @@ actions.append([
                     ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
                     ['location_row_id', 'location_row_id'],
                     ['function_row_id', 'function_row_id'],
-                    ['src_tran_type', "'nsls'"],
+                    ['src_tran_type', "'nsls_sub'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                     ['tran_date', 'tran_date'],
@@ -592,7 +592,7 @@ actions.append([
                     ['nsls_code_id', 'nsls_code_id'],  # tgt_col, src_col
                     ['location_row_id', 'location_row_id'],
                     ['function_row_id', 'function_row_id'],
-                    ['src_tran_type', "'nsls'"],
+                    ['src_tran_type', "'nsls_sub'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                     ['tran_date', 'tran_date'],
@@ -614,7 +614,7 @@ actions.append([
                     ['cust_row_id', 'subparent_row_id>cust_row_id'],
                     ['location_row_id', 'location_row_id'],
                     ['function_row_id', 'function_row_id'],
-                    ['src_tran_type', "'nsls'"],
+                    ['src_tran_type', "'nsls_sub'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                     ['tran_date', 'tran_date'],
@@ -636,7 +636,7 @@ actions.append([
                     ['cust_row_id', 'subparent_row_id>cust_row_id'],
                     ['location_row_id', 'location_row_id'],
                     ['function_row_id', 'function_row_id'],
-                    ['src_tran_type', "'nsls'"],
+                    ['src_tran_type', "'nsls_sub'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                     ['tran_date', 'tran_date'],
@@ -657,7 +657,7 @@ actions.append([
                     ['gl_code_id', 'nsls_code_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
                     ['location_row_id', 'location_row_id'],
                     ['function_row_id', 'function_row_id'],
-                    ['src_tran_type', "'nsls'"],
+                    ['src_tran_type', "'nsls_sub'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                     ['tran_date', 'tran_date'],
@@ -678,7 +678,7 @@ actions.append([
                     ['gl_code_id', 'nsls_code_id>ledger_row_id>uea_gl_code_id'],  # tgt_col, src_col
                     ['location_row_id', 'location_row_id'],
                     ['function_row_id', 'function_row_id'],
-                    ['src_tran_type', "'nsls'"],
+                    ['src_tran_type', "'nsls_sub'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
                     ['tran_date', 'tran_date'],

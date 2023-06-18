@@ -158,6 +158,13 @@ cols.append ({
                 ['check', '', 'gl_code_id>ctrl_mod_row_id', 'is', '$None', ''],
                 ],
             ],
+        [
+            'ret_earn',
+            'Retained earnings account - no posting allowed',
+            [
+                ['check', '', '$value', '!=', '_ledger.ret_earn_code_id', ''],
+                ],
+            ],
         ],
     'fkey'       : ['gl_codes', 'row_id', 'gl_code', 'gl_code', False, 'gl_codes'],
     'choices'    : None,
