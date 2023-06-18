@@ -33,29 +33,30 @@
       <block x1="15" y1="15" x2="-16" y2="37" border="0">
         <panel>
           <!--string x="c" y="22" value="Blackbird Properties" align="centre" font="Helvetica-Bold 22"/-->
-          <field x="c" y="22" name="_param.company_name" align="centre" font="Helvetica-Bold 22"/>
+          <!--field x="c" y="22" name="_param.company_name" align="centre" font="Helvetica-Bold 22"/-->
+          <field y="22" name="_param.company_name" align="centre" font="Helvetica-Bold 22"/>
         </panel>
       </block>
 
       <block x1="15" y1="40" x2="320" y2="136" border="0.5" font="Courier 10">
         <panel>
-          <field x="10" y="16" name="ar_cust.party_row_id>display_name"/>
+          <field x1="10" y="16" name="ar_cust.party_row_id>display_name"/>
 <!--
-          <field x="10" y="31" name="org_addr.box_no"/>
-          <field x="10" y="46" name="org_addr.post_office"/>
-          <field x="10" y="61" name="org_addr.post_code"/>
+          <field x1="10" y="31" name="org_addr.box_no"/>
+          <field x1="10" y="46" name="org_addr.post_office"/>
+          <field x1="10" y="61" name="org_addr.post_code"/>
 -->
         </panel>
       </block>
       <block x1="325" y1="40" x2="-16" y2="136" border="0.5" font="Courier 10">
         <panel>
-          <string x="c" y="16" value="Statement" align="centre" font="Courier-Bold 12"/>
-          <string x="5" y="38" value="Date:"/>
-          <field x="120" y="38" name="var.end_date"/>
-          <string x="5" y="60" value="Page:"/>
-          <string x="120" y="60" value="{pageno}"/>
-          <string x="5" y="82" value="Account number:"/>
-          <field x="120" y="82" name="ar_cust.cust_id"/>
+          <string y="16" value="Statement" align="centre" font="Courier-Bold 12"/>
+          <string x1="5" y="38" value="Date:"/>
+          <field x1="120" y="38" name="var.end_date"/>
+          <string x1="5" y="60" value="Page:"/>
+          <string x1="120" y="60" value="{pageno}"/>
+          <string x1="5" y="82" value="Account number:"/>
+          <field x1="120" y="82" name="ar_cust.cust_id"/>
         </panel>
       </block>
       <block x1="15" y1="140" x2="-16" y2="-200" border="0.5" font="Courier 10">

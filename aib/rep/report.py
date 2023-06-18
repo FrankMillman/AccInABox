@@ -6,9 +6,7 @@ parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
 from json import loads
 
 from reportlab.pdfgen import canvas
-from reportlab.lib import pagesizes
-# from reportlab.lib.units import inch, mm
-import reportlab.lib.colors as colors
+from reportlab.lib import pagesizes, colors
 
 import logging
 logger = logging.getLogger(__name__)
@@ -170,7 +168,7 @@ class Report:
         report_defn = self.report_defn
         page = report_defn.find('page')
         wd, ht = getattr(pagesizes, page.get('pagesize'))
-        if page.get('landscape') == 'true':  # default to false
+        if page.get('layout') == 'landscape':  # default to portrait
             ht, wd = wd, ht
         coords = (0, 0, wd, ht)
         font = page.get('font', 'Courier 14')
@@ -187,12 +185,12 @@ class Report:
                 blocks.append(block)
 
             # generate report
-            c = canvas.Canvas(pdf_fd, pagesize=(wd, ht))
+            c = canvas.Canvas(pdf_fd, pagesize=(wd, ht), bottomup=False)
             c.setFont(*font)
             c.setTitle(title)
-            c.complete = False  # set to True when last page printed
-            while not c.complete:
-                c.complete = True  # can be reset to False by grid if more rows to print
+            self.complete = False  # set to True when last page printed
+            while not self.complete:
+                self.complete = True  # can be reset to False by grid if more rows to print
                 for block in blocks:
                     await block.gen_pdf(c)
                 c.showPage()
@@ -228,39 +226,64 @@ class Panel:
                     value = str(c._pageNumber)
             elif element.tag == 'field':
                 obj_name, col_name = element.get('name').split('.')
-                db_obj = self.report.data_objects[obj_name]
+                if obj_name == '_param':
+                    db_obj = await db.cache.get_adm_params(self.report.company)
+                else:
+                    db_obj = self.report.data_objects[obj_name]
                 fld = await db_obj.getfld(col_name)
                 value = await fld.val_to_str()
             x1, y1, x2, y2 = self.coords
-            ht = c._pagesize[1]
-            x = element.get('x')
-            if x == 'c':  # 'centre'
-                x = x1 + ((x2 - x1) / 2)
+            new_x1 = element.get('x1', '0')
+            if new_x1.startswith('-'):
+                new_x1 = float(new_x1) + x2
             else:
-                x = float(x)
-                if x < 0:
-                    x += (x2 + 1)
-                else:
-                    x += x1
-            y = float(element.get('y'))
-            if y < 0:
-                y += (y2 + 1)
+                new_x1 = float(new_x1) + x1
+            new_x2 = element.get('x2', '-0')
+            if new_x2.startswith('-'):
+                new_x2 = float(new_x2) + x2
             else:
-                y += y1
-            y = ht - y
+                new_x2 = float(new_x2) + x1
+#           x = element.get('x')
+#           if x == 'c':  # 'centre'
+#               x = x1 + ((x2 - x1) / 2)
+#           else:
+#               x = float(x)
+#               if x < 0:
+#                   x += (x2 + 1)
+#               else:
+#                   x += x1
+            y = element.get('y', '0')
+            if y.startswith('-'):
+                y = float(y) + y2
+            else:
+                y = float(y) + y1
+#           y = float(element.get('y'))
+#           if y < 0:
+#               y += (y2 + 1)
+#           else:
+#               y += y1
 
             c.setFillGray(0, 1)  # black, alpha=1
             font = element.get('font')
             if font is not None:
                 fontname, fontsize = font.split()
                 c.setFont(fontname, int(fontsize))
-            y += (c._fontsize / 4.3)  # offset to get baseline for font
-            if element.get('align') == 'centre':
+            y -= (c._fontsize / 4.3)  # offset to get baseline for font
+            align = element.get('align', 'left')
+            if align == 'centre':
+#               str_wd = c.stringWidth(value)
+#               x = new_x1 + ((new_x2 - new_x1) / 2) - (str_wd / 2)
+                x = new_x1 + ((new_x2 - new_x1) / 2)
                 c.drawCentredString(x, y, value)
-            elif element.get('align') == 'right':
+            elif align == 'right':
+#               str_wd = c.stringWidth(value)
+#               x = new_x2 - str_wd
+                x = new_x2
                 c.drawRightString(x, y, value)
             else:
+                x = new_x1
                 c.drawString(x, y, value)
+#           c.drawString(x, y, value)
             if font is not None:
                 c.setFont(*self.font)  # reset to default
 
@@ -393,19 +416,18 @@ class Grid:
 
     async def get_next_row(self):
         if self.current_row == self.first_subset_row:
-            self.last_subset_row = self.first_subset_row + 50
-            if self.last_subset_row > self.num_rows:
-                self.last_subset_row = self.num_rows
+            last_subset_row = self.first_subset_row + 50
+            if last_subset_row > self.num_rows:
+                last_subset_row = self.num_rows
             self.fetch_rows = self.cursor.fetch_rows(
-                self.first_subset_row, self.last_subset_row)  # async generator
-            self.first_subset_row = self.last_subset_row  # get ready to fetch next subset
+                self.first_subset_row, last_subset_row)  # async generator
+            self.first_subset_row = last_subset_row  # get ready to fetch next subset
 
         self.current_row += 1
         return await self.fetch_rows.__anext__()
 
     def gen_col_head(self, c, col_head):
         x1, y1, x2, y2 = self.coords
-        ht = c._pagesize[1]
         font = col_head.get('font')
         if font is not None:
             fontname, fontsize = font.split()
@@ -416,8 +438,8 @@ class Grid:
             c.setLineWidth(float(vert))
             p = c.beginPath()
             for col in self.col_wds[1:]:
-                p.moveTo(col['start_x']-5, ht-y1)
-                p.lineTo(col['start_x']-5, ht-y2)
+                p.moveTo(col['start_x']-5, y1)
+                p.lineTo(col['start_x']-5, y2)
             c.drawPath(p, stroke=1, fill=0)
 
 
@@ -426,12 +448,12 @@ class Grid:
         ul = col_head.get('ul', '0')
         if ul != '0':
             c.setLineWidth(float(ul))
-            c.line(x1, ht-y1, x2, ht-y1)
+            c.line(x1, y1, x2, y1)
 
         align_centre = col_head.get('align') == 'centre'  # if yes, apply to all headings
         text_obj = c.beginText()
         row_pos = y1 - 5 - (c._fontsize/4.3)  # adjust for bottom margin and baseline
-        text_obj.setTextOrigin(x1+5, ht-row_pos)
+        text_obj.setTextOrigin(x1+5, row_pos)
         for pos, col in enumerate(self.col_wds):
             start_x = col['start_x']
             value = col['col_head']
@@ -460,7 +482,6 @@ class Grid:
 
     async def gen_pdf(self, c):
         x1, y1, _, y2 = self.coords
-        ht = c._pagesize[1]
         col_head = self.element.find('col_head')
         if col_head is not None:
             y1 = self.gen_col_head(c, col_head)
@@ -469,8 +490,8 @@ class Grid:
             c.setLineWidth(float(self.vert))
             p = c.beginPath()
             for col in self.col_wds[1:]:
-                p.moveTo(col['start_x']-5, ht-y1)
-                p.lineTo(col['start_x']-5, ht-y2)
+                p.moveTo(col['start_x']-5, y1)
+                p.lineTo(col['start_x']-5, y2)
             c.drawPath(p, stroke=1, fill=0)
 
         text_obj = c.beginText()
@@ -482,7 +503,7 @@ class Grid:
         first_row = self.element.get('first_row')  # else None
         last_row = self.element.get('last_row')  # else None
         while True:  # for each row, set up report_row for printing
-            if first_row is not None:
+            if not self.current_row and first_row is not None:
                 first_row = loads(first_row)
                 report_row = []
                 for value in first_row:
@@ -502,7 +523,7 @@ class Grid:
                 trunc_row = ['']*len(self.report_cols)
             elif grid_row == max_row:  # no more space
                 c.drawText(text_obj)  # output contents of grid
-                c.complete = False  # tell reportlab to call showPage(), then start next page
+                self.report.complete = False  # tell reportlab to call showPage(), then start next page
                 break
             elif self.current_row == self.num_rows:  # last cursor row has been output
                 if last_row is not None:
@@ -538,7 +559,7 @@ class Grid:
                         report_row.append(value)
 
             # prepare row for printing
-            text_obj.setTextOrigin(x1+5, ht-row_pos)
+            text_obj.setTextOrigin(x1+5, row_pos)
             for pos, value in enumerate(report_row):
                 col = self.col_wds[pos]
                 col_wd = col['end_x'] - col['start_x']
@@ -616,8 +637,7 @@ class Block:
                     c.setStrokeColor(getattr(colors, stroke))
                 stroke = 1
             x1, y1, x2, y2 = self.coords
-            ht = c._pagesize[1]
-            c.rect(x1, ht-y1, x2-x1, y1-y2, stroke=stroke, fill=fill)
+            c.rect(x1, y1, x2-x1, y2-y1, stroke=stroke, fill=fill)
         c.setFont(*self.font)
         for child in self.children:
             await child.gen_pdf(c)
