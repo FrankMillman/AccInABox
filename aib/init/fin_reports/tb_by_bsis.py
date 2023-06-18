@@ -10,7 +10,7 @@ groups['code'] = 'code_bs_is'
 
 # include_zeros = True
 # allow_select_loc_fun = True
-# expand_subledg = True
+expand_subledg = True
 pivot_on = ('code', 'code_bs_is')
 
 columns = [

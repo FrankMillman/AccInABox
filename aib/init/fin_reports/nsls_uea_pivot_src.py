@@ -2,20 +2,30 @@ module_id = 'nsls'
 report_name = 'nsls_uea_pivot_src'
 table_name = 'nsls_uea_totals'
 report_type = 'bf_cf'
+title = 'Non-inv uea sls pivot on source'
 
-filters = {}
+date_params = ['Y', 'A']
 
 groups = {}
-groups['date'] = ['fin_yr', 'a', []]
-groups['src'] = 'src_type'
+groups['code'] = ['code']
+groups['loc'] = ['prop', 'type']
+groups['fun'] = []
+groups['src'] = ['type']
+groups['date'] = ['end_date']
 
-pivot_on = ('src', None)
+group_by = {}
+group_by['date'] = 'end_date'
+group_by['src'] = 'type'
+
+filter_by = {}
+
+pivot_on = True
 
 columns = [
-    ['start_date', 'start_date', 'Start date', 'DTE', 85, None, False],
-    ['end_date', 'end_date', 'End date', 'DTE', 85, None, False],
-    ['op_bal', 'op_bal', 'B/f', 'DEC', 100, '*', False],
-    ['inv', 'cl_bal - op_bal', 'Inv', 'DEC', 80, ('src_type', 'nsls'), False],
-    ['ear', 'cl_bal - op_bal', 'Ear', 'DEC', 80, ('src_type', 'nsls_ear'), False],
-    ['cl_bal', 'cl_bal', 'C/f', 'DEC', 100, '*', False],
+    ['start_date', 'start_date', 'DTE', 'Start', 84, None, None],
+    ['end_date', 'end_date', 'DTE', 'End', 84, None, None],
+    ['op_bal', 'op_bal', '$LCL', 'Op bal', 80, 'N', '*'],
+    ['pivot_vals', '(cl_bal - op_bal)', '$LCL', 'src_type:ltrunc.5', 80, 'N', '2'],
+    ['pivot_tot', '(cl_bal - op_bal)', '$LCL', 'Total', 0, 'N', '*'],
+    ['cl_bal', 'cl_bal', '$LCL', 'Cl bal', 80, 'N', '*'],
     ]

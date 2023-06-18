@@ -1,14 +1,57 @@
-<form name="tranrpt_grid" title="Transaction Report">
+<form name="tranrpt_grid" title="Transaction Report" before_start_form="
+    <<pyfunc name=`rep.tranrpt.get_tranrpt_data`/>>
+    ">
   <db_objects/>
-  <mem_objects/>
-  <input_params/>
+  <mem_objects>
+    <mem_obj name="runtime_vars" descr="Variables used in form">
+      <mem_col col_name="tot_value" data_type="$LCL" short_descr="Total value"
+        long_descr="Total value of transactions" db_scale="2" scale_ptr="_param.local_curr_id>scale"/>
+      <mem_col col_name="finrpt_data" data_type="JSON" short_descr="Report definition data"
+        long_descr="Report definition data"/>
+      <mem_col col_name="start_date" data_type="DTE" short_descr="Date from"
+        long_descr="From which date" allow_amend="true"/>
+      <mem_col col_name="end_date" data_type="DTE" short_descr="Date to"
+        long_descr="To which date" allow_amend="true"/>
+      <mem_col col_name="local_scale" data_type="INT" short_descr="Local scale"
+        long_descr="Scale to use for local currency" dflt_val="{_param.local_curr_id>scale}"/>
+    </mem_obj>
+    <mem_obj name="tranrpt_obj" descr="In-memory object to hold transaction list for display">
+      <mem_col col_name="src_table_name" data_type="TEXT" short_descr="Source table name"
+        long_descr="Source table name" col_head="Table"/>
+      <mem_col col_name="src_row_id" data_type="INT" short_descr="Source row id"
+        long_descr="Source row id" col_head="Row id"/>
+      <mem_col col_name="code" data_type="TEXT" short_descr="Code"
+        long_descr="Code" col_head="Code"/>
+      <mem_col col_name="location_id" data_type="TEXT" short_descr="Location id"
+        long_descr="Location id" col_head="Location"/>
+      <mem_col col_name="function_id" data_type="TEXT" short_descr="Function id"
+        long_descr="Function id" col_head="Function"/>
+      <mem_col col_name="tran_date" data_type="DTE" short_descr="Transaction date"
+        long_descr="Transaction date" col_head="Date"/>
+      <mem_col col_name="tran_type" data_type="TEXT" short_descr="Transaction type"
+        long_descr="Transaction type" col_head="Type"/>
+      <mem_col col_name="tran_number" data_type="TEXT" short_descr="Transaction number"
+        long_descr="Transaction number" col_head="Number"/>
+      <mem_col col_name="party" data_type="TEXT" short_descr="Party"
+        long_descr="Party" col_head="Party"/>
+      <mem_col col_name="text" data_type="TEXT" short_descr="Text"
+        long_descr="Text" col_head="Text"/>
+      <mem_col col_name="value" data_type="$LCL" short_descr="Value"
+        long_descr="Value" col_head="Value" db_scale="2" scale_ptr="runtime_vars.local_scale"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params>
+    <input_param name="finrpt_data" type="data_attr" target="runtime_vars.finrpt_data" required="true"/>
+    <input_param name="start_date" type="data_attr" target="runtime_vars.start_date" required="true"/>
+    <input_param name="end_date" type="data_attr" target="runtime_vars.end_date" required="true"/>
+  </input_params>
   <output_params/>
   <frame main_object="tranrpt_obj">
     <toolbar/>
     <body>
       <block/>
       <grid data_object="tranrpt_obj" num_grid_rows="20" readonly="true"
-          footer_row="[`'Total:'`, `...`, `var.tot_value`]">
+          footer_row="[`'Total:'`, `...`, `runtime_vars.tot_value`]">
         <toolbar template="Grid_Finrpt"/>
         <grid_methods template="Grid"/>
       </grid>
@@ -18,6 +61,10 @@
           <<end_form state=`cancelled`/>>
         "/-->
     </button_row>
-    <frame_methods/>
+    <frame_methods>
+      <!--method name="on_start_frame" action="
+        <<pyfunc name=`rep.tranrpt.get_tranrpt_data`/>>
+        "/-->
+    </frame_methods>
   </frame>
 </form>

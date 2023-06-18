@@ -1,0 +1,838 @@
+<form name="setup_finrpt" title="Setup finrpt definition" after_start_form="
+  <<pyfunc name=`custom.finrpt_funcs.setup_table_ids`/>>
+  <<pyfunc name=`custom.finrpt_funcs.load_date_params`/>>
+  <<case>>
+    <<obj_exists obj_name=`finrpt_defn`>>
+      <<pyfunc name=`custom.finrpt_funcs.setup_groups`/>>
+      <<restart_grid obj_name=`group_info`/>>
+      <<pyfunc name=`custom.finrpt_funcs.setup_columns`/>>
+    <</obj_exists>>
+  <</case>>
+  <<continue_form/>>
+  ">
+  <db_objects>
+    <db_obj name="finrpt_defn" table_name="sys_finrpt_defns" is_formview_obj="true"/>
+  </db_objects>
+  <mem_objects>
+    <mem_obj name="form_vars" descr="Variables used in form">
+      <mem_col col_name="table_id" data_type="INT" short_descr="Table id" long_descr="Table id for finrpt"
+        allow_amend="true" choices="[[null,null]]"/>
+    </mem_obj>
+    <mem_obj name="date_vars" descr="Date param vars" sub_types="[
+        [`date_param`, null,
+          [
+            [`S`, `Single date`, [], []],
+            [`Y`, `Financial year`, [`asc_dsc`], []],
+            [`P`, `Multiple periods`, [`asc_dsc`, `groups`], []],
+            [`D`, `Multiple dates`, [`asc_dsc`, `groups`], []]
+            ]
+          ]
+        ]">
+      <mem_col col_name="date_param" data_type="TEXT" short_descr="Select method"
+        long_descr="Select dates by financial year?" allow_amend="true"/>
+      <mem_col col_name="asc_dsc" data_type="TEXT" short_descr="Sequence"
+        long_descr="Ascending or descending sequence" allow_amend="true"
+        choices = "[[`A`, `Ascending`], [`D`, `Descending`]]"/>
+      <mem_col col_name="groups" data_type="JSON" short_descr="Groups"
+        long_descr="Groups - [size, number, skip]" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="group_info" descr="Groups available for selection">
+      <mem_col col_name="group_type" data_type="TEXT" key_field="A" short_descr="Group type"
+        long_descr="Group type (dimension)" col_head="Groups"/>
+      <mem_col col_name="group_levels" data_type="TEXT" short_descr="Group levels"
+        long_descr="Group levels" col_head="Levels"/>
+    </mem_obj>
+    <mem_obj name="group_by" descr="Variables for group by" sequence="[`seq`, [], null]">
+      <mem_col col_name="group_type" data_type="TEXT" key_field="A" short_descr="Group type"
+        long_descr="Group type (dimension)" col_head="Group by" allow_amend="true"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="group_level" data_type="TEXT" short_descr="Group level"
+        long_descr="Group level" col_head="Level" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="filter_by" descr="Variables for filter by" sequence="[`seq`, [], null]">
+      <mem_col col_name="group_type" data_type="TEXT" key_field="A" short_descr="Group type"
+        long_descr="Group type (dimension)" col_head="Filter by" allow_amend="true"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="filter" data_type="JSON" short_descr="Filter"
+        long_descr="Filter" col_head="Filter" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="filter_steps" descr="Filter steps" sequence="[`seq`, [], null]">
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="test" data_type="TEXT" short_descr="Test"
+        long_descr="where/and/or" col_head="Test" allow_amend="true"/>
+      <mem_col col_name="lbr" data_type="TEXT" short_descr="Left bracket"
+        long_descr="Left bracket (if required)" col_head="("
+        allow_null="true" allow_amend="true" max_len="1"/>
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="Column" allow_amend="true"/>
+      <mem_col col_name="op" data_type="TEXT" short_descr="Operation"
+        long_descr="Operation" col_head="Op" allow_amend="true"/>
+      <mem_col col_name="expr" data_type="TEXT" short_descr="Expression"
+        long_descr="Expression" col_head="Expr" allow_amend="true"/>
+      <mem_col col_name="rbr" data_type="TEXT" short_descr="Right bracket"
+        long_descr="Right bracket (if required)" col_head=")"
+        allow_null="true" allow_amend="true" max_len="1"/>
+    </mem_obj>
+    <mem_obj name="columns" descr="Details of report columns" parent="finrpt_defn">
+      <mem_col col_name="col_name" data_type="TEXT" key_field="A" short_descr="Column name"
+        long_descr="Column name" col_head="col_name"/>
+      <mem_col col_name="col_sql" data_type="TEXT" short_descr="Sql col"
+        long_descr="Sql for column" col_head="col_sql"/>
+      <mem_col col_name="data_type" data_type="TEXT" short_descr="Data type"
+        long_descr="Data type" col_head="Type"/>
+      <mem_col col_name="col_head" data_type="TEXT" short_descr="Column heading"
+        long_descr="Column heading" col_head="Heading" allow_amend="true"/>
+      <mem_col col_name="col_width" data_type="INT" short_descr="Column width"
+        long_descr="Column width (zero means omit column)" col_head="Width" allow_amend="true"/>
+      <mem_col col_name="tots_footer" data_type="TEXT" short_descr="Value for footer row"
+        long_descr="Value for footer row (if text col, text; if value col, Y/N)"
+        col_head="Totals" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="pivot_info" data_type="TEXT" short_descr="Pivot info"
+        long_descr="Pivot info - used at runtime to generate pivot columns"
+        col_head="Pivot" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+    <mem_obj name="finrpt_tree" descr="Variables for report definition" parent="finrpt_defn"
+        sub_types="[
+        [`node_type`, null,
+          [
+            [`block`, `Block`, [`coords`, `border`, `block_font`], []],
+            [`panel`, `Panel`, [`panel_xml`], []],
+            [`body`, `Body`, [`body_xml`], []],
+            [`page`, `Page`, [`pagesize`, `layout`, `page_font`], []]
+            ]
+          ]]"
+        sequence="[`seq`, [`parent_id`], null]"
+        tree_params="[null, [`row_id`, `node_type`, `parent_id`, `seq`], null]">
+      <mem_col col_name="parent_id" data_type="INT" short_descr="Parent id"
+        long_descr="Parent id" col_head="Id" allow_null="true"
+        fkey="[`{mem}.finrpt_tree`, `row_id`, null, null, false, null]"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="node_type" data_type="TEXT" short_descr="Node type"
+        long_descr="Node type - page/block/panel/body" col_head="Node type"
+        col_checks="[[`check_node`, `Invalid node`, [
+          [`check`, `(`, `parent_id`, `is`, `$None`, ``],
+          [`and`, ``, `$value`, `=`, `'page'`, `)`],
+          [`or`, `(`, `parent_id>node_type`, `=`, `'page'`, ``],
+          [`and`, ``, `$value`, `=`, `'block'`, `)`],
+          [`or`, `(`, `parent_id>node_type`, `=`, `'block'`, ``],
+          [`and`, `(`, `$value`, `=`, `'block'`, ``],
+          [`or`, ``, `$value`, `=`, `'panel'`, ``],
+          [`or`, ``, `$value`, `=`, `'body'`, `))`]
+          ]]]"/>
+      <mem_col col_name="is_leaf" col_type="virt" data_type="BOOL"
+        short_descr="Is leaf?" long_descr="Is leaf?" col_head="Is leaf?"
+        sql="SELECT CASE WHEN a.node_type in (`page`, `block`) THEN $False ELSE $True END"/>
+      <mem_col col_name="pagesize" data_type="TEXT" short_descr="Page size"
+        long_descr="Page size" col_head="Page size" allow_amend="true" dflt_val="A4"/>
+      <mem_col col_name="layout" data_type="TEXT" short_descr="Layout"
+        long_descr="Layout - portrait or landscape" col_head="Layout" allow_amend="true" dflt_val="landscape"/>
+      <mem_col col_name="page_font" data_type="TEXT" short_descr="Page font"
+        long_descr="Page font" col_head="Font" allow_amend="true" dflt_val="Courier:::20"/>
+      <mem_col col_name="block_font" data_type="TEXT" short_descr="Block font"
+        long_descr="Block font" col_head="Font" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="coords" data_type="TEXT" short_descr="Coordinates"
+        long_descr="Coordinates" col_head="Coords" allow_amend="true"/>
+      <mem_col col_name="border" data_type="TEXT" short_descr="Border"
+        long_descr="Border" col_head="Border" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="panel_xml" data_type="SXML" short_descr="Contents of 'panel' node"
+        long_descr="Contents of 'panel' node in XML format" col_head="Panel" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="body_xml" data_type="SXML" short_descr="Contents of 'body' node"
+        long_descr="Contents of 'body' node in XML format" col_head="Body" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="panel_defn" descr="Contents of panel definition" parent="finrpt_tree"
+        sub_types="[
+        [`elem_type`, null,
+          [
+            [`string`, `String`, [`value`], []],
+            [`title`, `Title`, [], []],
+            [`field`, `Field`, [`name`], []],
+            [`pageno`, `Page no`, [], []],
+            [`date`, `Date`, [], []],
+            [`time`, `Time`, [], []]
+            ]
+          ]]"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="elem_type" data_type="TEXT" short_descr="Element type"
+        long_descr="Element type" col_head="Type"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="align" data_type="TEXT" short_descr="Align"
+        long_descr="Align - left/centre/right" col_head="Align"
+        allow_amend="true" choices="[[`l`, `Left`], [`c`, `Centre`], [`r`, `Right`]]"/>
+      <mem_col col_name="x1" data_type="TEXT" short_descr="Start position"
+        long_descr="Start position" col_head="Start" allow_amend="true" dflt_val="0"/>
+      <mem_col col_name="x2" data_type="TEXT" short_descr="End position"
+        long_descr="End position" col_head="End" allow_amend="true" dflt_val="-0"/>
+      <mem_col col_name="y" data_type="TEXT" short_descr="Vertical position"
+        long_descr="Vertical position" col_head="Vert" allow_amend="true"/>
+      <mem_col col_name="panel_font" data_type="TEXT" short_descr="Panel font"
+        long_descr="Font - if present, overrride existing font" col_head="Font"
+        allow_null="true" allow_amend="true"/>
+      <mem_col col_name="fill" data_type="TEXT" short_descr="Colour"
+        long_descr="Foreground colour" col_head="Colour" allow_amend="true" dflt_val="black"/>
+      <mem_col col_name="value" data_type="TEXT" short_descr="String value"
+        long_descr="String value" col_head="Value" allow_amend="true"/>
+      <mem_col col_name="name" data_type="TEXT" short_descr="Field name"
+        long_descr="Field name" col_head="Name" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="body_col_vars" descr="Variables for body columns definition" parent="finrpt_tree">
+      <mem_col col_name="header_font" data_type="TEXT" key_field="N" short_descr="Header font"
+        long_descr="Font to use for column headers" col_head="Hdr font" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="body_col_defn" descr="Variables for body column definition" parent="finrpt_tree"
+        sub_types="[
+        [`col_type`, null,
+          [
+            [`col_text`, `Text`, [], []],
+            [`col_data`, `Data`, [`db_col_name`, `scale`, `align`], []],
+            [`col_calc`, `Calc`, [`expr`, `scale`, `align`], []]
+            ]
+          ]]"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="Col name" key_field="A"/>
+      <mem_col col_name="col_type" data_type="TEXT" short_descr="Column type"
+        long_descr="Column type" col_head="Type"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="head" data_type="TEXT" short_descr="Heading"
+        long_descr="Heading" col_head="Heading" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="head_align" data_type="TEXT" short_descr="Head align"
+        long_descr="Heading alignment - left/centre/right" col_head="HAlign"
+        allow_null="true" allow_amend="true"
+        choices="[[`l`, `Left`], [`c`, `Centre`], [`r`, `Right`]]"/>
+      <mem_col col_name="hgap" data_type="DEC" short_descr="Gap before"
+        long_descr="Gap before start of column" col_head="HGap" allow_amend="true"/>
+      <mem_col col_name="width" data_type="DEC" short_descr="Column width"
+        long_descr="Column width" col_head="Width" allow_amend="true"/>
+      <mem_col col_name="bkg" data_type="TEXT" short_descr="Background colour"
+        long_descr="Background colour" col_head="Bkg" allow_amend="true" allow_null="true"/>
+      <mem_col col_name="db_col_name" data_type="TEXT" short_descr="Db column name"
+        long_descr="Db column name" col_head="Col name" allow_amend="true"/>
+      <mem_col col_name="expr" data_type="TEXT" short_descr="Expression"
+        long_descr="Expression to calculate value" col_head="Expr" allow_amend="true"/>
+      <mem_col col_name="scale" data_type="INT" short_descr="Scale"
+        long_descr="Scale factor" col_head="Scale" allow_amend="true"/>
+      <mem_col col_name="align" data_type="TEXT" short_descr="Align"
+        long_descr="Align - left/centre/right" col_head="Align"
+        allow_amend="true" choices="[[`l`, `Left`], [`c`, `Centre`], [`r`, `Right`]]"/>
+    </mem_obj>
+    <mem_obj name="body_row_defn" descr="Variables for body row definition" parent="finrpt_tree"
+        sub_types="[
+        [`row_type`, null,
+          [
+            [`row_data`, `Data`, [`src`], []],
+            [`row_subtot`, `Sub-total`, [`srcs`], []],
+            [`row_space`, `Space`, [`ht`], []],
+            [`row_underline`, `Underline`, [`stroke`], []]
+            ]
+          ]]"
+        sequence="[`seq`, [], null]">
+      <mem_col col_name="row_type" data_type="TEXT" short_descr="Row type"
+        long_descr="Row type" col_head="Type" allow_amend="true"/>
+      <mem_col col_name="seq" data_type="INT" short_descr="Sequence"
+        long_descr="Sequence" col_head="Seq" allow_amend="true"/>
+      <mem_col col_name="row_col_data" data_type="JSON" short_descr="Row col data"
+        long_descr="Col data for this row" col_head="Col" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="src" data_type="TEXT" short_descr="Source"
+        long_descr="Source for data" col_head="Src" allow_amend="true"/>
+      <mem_col col_name="srcs" data_type="TEXT" short_descr="Sources"
+        long_descr="Sources for subtotal" col_head="Srcs" allow_amend="true"/>
+      <mem_col col_name="ht" data_type="INT" short_descr="Height"
+        long_descr="Height" col_head="Ht" allow_amend="true"/>
+      <mem_col col_name="stroke" data_type="TEXT" short_descr="Stroke"
+        long_descr="Underline parameters - width:colour:double" col_head="Ul" allow_amend="true"/>
+    </mem_obj>
+    <mem_obj name="row_col_defn" descr="Variables for row/column definition" parent="body_row_defn">
+      <mem_col col_name="col_name" data_type="TEXT" short_descr="Column name"
+        long_descr="Column name" col_head="Col name" key_field="A"/>
+      <mem_col col_name="col_type" data_type="TEXT" short_descr="Col type"
+        long_descr="Col type" col_head="Type"/>
+      <mem_col col_name="incl_col" data_type="BOOL" short_descr="Include column?"
+        long_descr="Include column for this row?" col_head="Incl?" allow_amend="true" dflt_val="false"/>
+      <mem_col col_name="indent" data_type="INT" short_descr="Indent"
+        long_descr="Indentation - pos=from left, neg=from right" col_head="Ind" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="value" data_type="TEXT" short_descr="Value"
+        long_descr="Value" col_head="Value" allow_null="true" allow_amend="true"/>
+      <mem_col col_name="rev" data_type="BOOL" short_descr="Reverse sign?"
+        long_descr="Reverse sign?" col_head="Rev?" allow_amend="true" dflt_val="false"/>
+      <mem_col col_name="bkg" data_type="TEXT" short_descr="Background colour"
+        long_descr="Background colour" col_head="Bkg col" allow_null="true" allow_amend="true"/>
+    </mem_obj>
+  </mem_objects>
+
+  <input_params/>
+  <output_params/>
+
+  <frame main_object="finrpt_defn">
+    <toolbar template="Setup_Form"/>
+    <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Report name:"/>
+      <col/>
+      <input obj_name="finrpt_defn" col_name="report_name" lng="160" after="
+        <<pyfunc name=`custom.finrpt_funcs.setup_table_ids`/>>
+        <<pyfunc name=`custom.finrpt_funcs.load_date_params`/>>
+        <<case>>
+          <<obj_exists obj_name=`finrpt_defn`>>
+            <<pyfunc name=`custom.finrpt_funcs.setup_groups`/>>
+            <<restart_grid obj_name=`group_info`/>>
+          <</obj_exists>>
+        <</case>>
+        "/>
+      <col/>
+      <label value="Description:"/>
+      <col/>
+      <input obj_name="finrpt_defn" col_name="descr" lng="250"/>
+
+      <block/>
+      <nb_start/>
+
+      <nb_page nb_label="Structure"/>
+
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Title:"/>
+      <col/>
+      <input obj_name="finrpt_defn" col_name="title" lng="150"/>
+      <row/>
+      <col/>
+      <label value="Table name:"/>
+      <col/>
+      <input obj_name="form_vars" col_name="table_id" lng="150" after="
+        <<assign src=`form_vars.table_id` tgt=`finrpt_defn.table_id`/>>
+        "/>
+      <row/>
+      <col/>
+      <label value="Report type:"/>
+      <col/>
+      <input obj_name="finrpt_defn" col_name="report_type" lng="150"/>
+
+      <vbox/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Date params:"/>
+      <col/>
+      <input obj_name="date_vars" col_name="date_param" lng="120"/>
+      <subtype_frame subtype_obj="date_vars" subtype_col="date_param"/>
+      <dummy after="
+        <<pyfunc name=`custom.finrpt_funcs.dump_date_params`/>>
+        "/>
+      <vbox_end/>
+
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Include zeros?"/>
+      <col/>
+      <input obj_name="finrpt_defn" col_name="include_zeros"/>
+      <row/>
+      <col/>
+      <label value="Expand sub-ledgers?"/>
+      <col/>
+      <input obj_name="finrpt_defn" col_name="expand_subledg"/>
+      <row/>
+      <col/>
+      <label value="Select loc/fun?"/>
+      <col/>
+      <input obj_name="finrpt_defn" col_name="allow_select_loc_fun"/>
+      <row/>
+      <col/>
+      <label value="Pivot on last group?"/>
+      <col/>
+      <input obj_name="finrpt_defn" col_name="pivot_on"/>
+
+      <dummy after="
+        <<pyfunc name=`custom.finrpt_funcs.setup_groups`/>>
+        <<restart_grid obj_name=`group_info`/>>
+        "/>
+
+      <block/>
+      <grid data_object="group_info" growable="false" num_grid_rows="5">
+        <toolbar template="Grid" title="Groups:"/>
+        <cur_columns>
+          <cur_col col_name="group_type" lng="80" readonly="true" skip="true"/>
+          <cur_col col_name="group_levels" lng="200" readonly="true" skip="true"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence/>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <grid data_object="group_by" num_grid_rows="5">
+        <toolbar template="Grid" title="Group by:"/>
+        <cur_columns>
+          <cur_col col_name="group_type" lng="80"/>
+          <cur_col col_name="group_level" lng="120"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
+        <grid_methods template="Grid">
+          <method name="on_start_grid" action="
+            <<pyfunc name=`custom.finrpt_funcs.load_group_by`/>>
+            "/>
+        </grid_methods>
+      </grid>
+
+      <dummy after="
+        <<pyfunc name=`custom.finrpt_funcs.dump_group_by`/>>
+        "/>
+
+      <grid data_object="filter_by" num_grid_rows="5">
+        <toolbar template="Grid" title="Filter by:"/>
+        <cur_columns>
+          <cur_col col_name="group_type" lng="80"/>
+          <cur_col col_name="filter" lng="120" before="
+            <<pyfunc name=`custom.finrpt_funcs.load_filter_steps`/>>
+            <<inline_form name=`filter_steps`>>
+              <<on_return>>
+                <<return state=`cancelled`/>>
+                <<return state=`completed`>>
+                  <<pyfunc name=`custom.finrpt_funcs.dump_filter_steps`/>>
+                <</return>>
+              <</on_return>>
+            <</inline_form>>
+            "/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
+        <grid_methods template="Grid">
+          <method name="on_start_grid" action="
+            <<pyfunc name=`custom.finrpt_funcs.load_filter_by`/>>
+            "/>
+        </grid_methods>
+      </grid>
+
+      <dummy after="
+        <<pyfunc name=`custom.finrpt_funcs.dump_filter_by`/>>
+        "/>
+
+      <nb_page nb_label="Columns"/>
+      <block/>
+
+      <dummy after="
+        <<pyfunc name=`custom.finrpt_funcs.setup_columns`/>>
+        <<restart_grid obj_name=`columns` reset_focus=`true`/>>
+        "/>
+
+      <grid data_object="columns" growable="false" num_grid_rows="12">
+        <toolbar template="Grid_Finrpt"/>
+        <cur_columns>
+          <cur_col col_name="col_name" lng="120"/>
+          <cur_col col_name="col_head" lng="120"/>
+          <cur_col col_name="col_width" lng="60"/>
+          <cur_col col_name="tots_footer" lng="80"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence/>
+        <grid_methods template="Grid"/>
+      </grid>
+
+      <dummy after="
+        <<pyfunc name=`custom.finrpt_funcs.dump_columns`/>>
+        "/>
+
+      <nb_page nb_label="Designer"/>
+      <block/>
+      <tree data_object="finrpt_tree" lng="250" height="350" toolbar="true"/>
+      <tree_frame main_object="finrpt_tree">
+        <toolbar/>
+        <body>
+          <!--block/>
+          <panel/>
+          <row/>
+          <col/>
+          <label value="Node type:"/>
+          <col/>
+          <input obj_name="finrpt_tree" col_name="node_type" lng="120"/-->
+          <block/>
+          <subtype_frame subtype_obj="finrpt_tree" subtype_col="node_type" lng="150">
+
+            <subtype_body subtype_id="panel">
+              <block/>
+              <vbox/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Node type:"/>
+              <col/>
+              <display obj_name="finrpt_tree" col_name="node_type" lng="120"/>
+              <grid data_object="panel_defn" growable="true" num_grid_rows="5" auto_start="false">
+                <toolbar template="Grid"/>
+                <cur_columns>
+                  <cur_col col_name="elem_type" lng="80"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+              <vbox_end/>
+
+              <grid_frame main_object="panel_defn">
+                <toolbar/>
+                <body>
+                  <block/>
+                  <panel/>
+                  <row/>
+                  <col/>
+                  <label value="Align:"/>
+                  <col/>
+                  <input obj_name="panel_defn" col_name="align" lng="60" after="
+                    <<case>>
+                      <<compare test=`[['if', '', 'panel_defn.align', '=', '~c~', '']]`>>
+                        <<set_readonly target=`panel_defn.x1` state=`true`/>>
+                        <<set_readonly target=`panel_defn.x2` state=`true`/>>
+                      <</compare>>
+                      <<compare test=`[['if', '', 'panel_defn.align', '=', '~l~', '']]`>>
+                        <<set_readonly target=`panel_defn.x1` state=`false`/>>
+                        <<set_readonly target=`panel_defn.x2` state=`true`/>>
+                      <</compare>>
+                      <<compare test=`[['if', '', 'panel_defn.align', '=', '~r~', '']]`>>
+                        <<set_readonly target=`panel_defn.x1` state=`true`/>>
+                        <<set_readonly target=`panel_defn.x2` state=`false`/>>
+                      <</compare>>
+                    <</case>>
+                    "/>
+                  <label value="X1:"/>
+                  <input obj_name="panel_defn" col_name="x1" lng="20"/>
+                  <label value="X2:"/>
+                  <input obj_name="panel_defn" col_name="x2" lng="20"/>
+                  <row/>
+                  <col/>
+                  <label value="Font:"/>
+                  <col/>
+                  <input obj_name="panel_defn" col_name="panel_font" lng="160"/>
+                  <row/>
+                  <col/>
+                  <label value="Vertical pos:"/>
+                  <col/>
+                  <input obj_name="panel_defn" col_name="y" lng="40"/>
+                  <block/>
+                  <subtype_frame subtype_obj="panel_defn" subtype_col="elem_type"/>
+                </body>
+                <button_row template="Grid_Frame"/>
+                <frame_methods template="Grid_Frame">
+                  <method name="on_start_frame" action="
+                    <<case>>
+                      <<compare test=`[['if', '', 'panel_defn.align', '=', '~c~', '']]`>>
+                        <<set_readonly target=`panel_defn.x1` state=`true`/>>
+                        <<set_readonly target=`panel_defn.x2` state=`true`/>>
+                      <</compare>>
+                      <<compare test=`[['if', '', 'panel_defn.align', '=', '~l~', '']]`>>
+                        <<set_readonly target=`panel_defn.x1` state=`false`/>>
+                        <<set_readonly target=`panel_defn.x2` state=`true`/>>
+                      <</compare>>
+                      <<compare test=`[['if', '', 'panel_defn.align', '=', '~r~', '']]`>>
+                        <<set_readonly target=`panel_defn.x1` state=`true`/>>
+                        <<set_readonly target=`panel_defn.x2` state=`false`/>>
+                      <</compare>>
+                    <</case>>
+                    "/>
+                </frame_methods>
+
+              </grid_frame>
+
+            </subtype_body>
+
+            <subtype_body subtype_id="body">
+              <block/>
+              <!--vbox/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Node type:"/>
+              <col/>
+              <display obj_name="finrpt_tree" col_name="node_type" lng="120"/-->
+              <nb_start/>
+              <nb_page nb_label="Columns"/>
+              <block/>
+              <vbox/>
+              <panel/>
+              <row/>
+              <col/>
+              <label value="Header font:"/>
+              <col/>
+              <input obj_name="body_col_vars" col_name="header_font" lng="120" after="
+                <<save_obj obj_name=`body_col_vars`/>>
+                "/>
+              <grid data_object="body_col_defn" growable="true" num_grid_rows="5" auto_start="false">
+                <toolbar template="Grid"/>
+                <cur_columns>
+                  <cur_col col_name="name" lng="80"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+              <vbox_end/>
+
+              <grid_frame main_object="body_col_defn">
+                <toolbar/>
+                <body>
+                  <block/>
+                  <panel/>
+                  <row/>
+                  <col/>
+                  <label value="Heading:"/>
+                  <col/>
+                  <input obj_name="body_col_defn" col_name="head" lng="120"/>
+                  <col/>
+                  <label value="Head align:"/>
+                  <col/>
+                  <input obj_name="body_col_defn" col_name="head_align" lng="60"/>
+                  <row/>
+                  <col/>
+                  <label value="Gap before:"/>
+                  <col/>
+                  <input obj_name="body_col_defn" col_name="hgap" lng="60"/>
+                  <col/>
+                  <label value="Width:"/>
+                  <col/>
+                  <input obj_name="body_col_defn" col_name="width" lng="60"/>
+                  <row/>
+                  <col/>
+                  <label value="Bkg colour:"/>
+                  <col/>
+                  <input obj_name="body_col_defn" col_name="bkg" lng="60"/>
+                  <col/>
+                  <label value="Col type:"/>
+                  <col/>
+                  <input obj_name="body_col_defn" col_name="col_type" lng="80"/>
+                  <block/>
+                  <subtype_frame subtype_obj="body_col_defn" subtype_col="col_type">
+
+                    <subtype_body subtype_id="col_data">
+                      <block/>
+                      <panel/>
+                      <row/>
+                      <col/>
+                      <label value="Db col name:"/>
+                      <col/>
+                      <input obj_name="body_col_defn" col_name="db_col_name" lng="120"/>
+                      <row/>
+                      <col/>
+                      <label value="Scale:"/>
+                      <input obj_name="body_col_defn" col_name="scale" lng="20"/>
+                      <col/>
+                      <label value="Align:"/>
+                      <input obj_name="body_col_defn" col_name="align" lng="60"/>
+                    </subtype_body>
+
+                    <subtype_body subtype_id="col_calc">
+                      <block/>
+                      <panel/>
+                      <row/>
+                      <col/>
+                      <label value="Expression:"/>
+                      <col/>
+                      <input obj_name="body_col_defn" col_name="expr" lng="120"/>
+                      <row/>
+                      <col/>
+                      <label value="Scale:"/>
+                      <input obj_name="body_col_defn" col_name="scale" lng="20"/>
+                      <col/>
+                      <label value="Align:"/>
+                      <input obj_name="body_col_defn" col_name="align" lng="60"/>
+                    </subtype_body>
+
+                  </subtype_frame>
+
+                </body>
+                <button_row template="Grid_Frame"/>
+                <frame_methods template="Grid_Frame"/>
+
+              </grid_frame>
+
+              <nb_page nb_label="Rows"/>
+              <block/>
+              <grid data_object="body_row_defn" growable="true" num_grid_rows="5" auto_start="false">
+                <toolbar template="Grid"/>
+                <cur_columns>
+                  <cur_col col_name="row_type" lng="80"/>
+                </cur_columns>
+                <cur_filter/>
+                <cur_sequence>
+                  <cur_seq col_name="seq"/>
+                </cur_sequence>
+                <grid_methods template="Grid"/>
+              </grid>
+
+              <grid_frame main_object="body_row_defn">
+                <toolbar/>
+                <body>
+                  <block/>
+                  <subtype_frame subtype_obj="body_row_defn" subtype_col="row_type" lng="250"/>
+                  <block/>
+                    <grid data_object="row_col_defn" growable="false" num_grid_rows="5" auto_start="false">
+                      <toolbar template="Grid" title="Columns:"/>
+                      <cur_columns>
+                        <cur_col col_name="col_name" lng="80"/>
+                        <cur_col col_name="incl_col" lng="40"/>
+                        <cur_col col_name="value" lng="80"/>
+                        <cur_col col_name="indent" lng="40"/>
+                        <cur_col col_name="rev" lng="40"/>
+                        <cur_col col_name="bkg" lng="80"/>
+                      </cur_columns>
+                      <cur_filter/>
+                      <cur_sequence/>
+                      <grid_methods template="Grid"/>
+                    </grid>
+                </body>
+                <button_row template="Grid_Frame"/>
+                <frame_methods template="Grid_Frame">
+                  <method name="on_start_frame" action="
+                    <<pyfunc name=`custom.finrpt_funcs.load_row_cols`/>>
+                    "/>
+                  <method name="before_save" action="
+                    <<pyfunc name=`custom.finrpt_funcs.dump_row_cols`/>>
+                    "/>
+                </frame_methods>
+
+              </grid_frame>
+
+              <nb_end/>
+
+            </subtype_body>
+
+          </subtype_frame>
+
+        </body>
+        <button_row template="Tree_Frame"/>
+        <frame_methods template="Tree_Frame">
+          <method name="on_start_frame" action="
+            <<case>>
+              <<compare test=`[['if', '', 'finrpt_tree.node_type', 'is not', '$None', '']]`>>
+                <<pyfunc name=`custom.finrpt_funcs.load_tree_data`/>>
+              <</compare>>
+              <<default>>
+                <<inline_form name=`get_new_node_type`>>
+                  <<on_return>>
+                    <<return state=`cancelled`>>
+                      <<call method=`on_req_cancel`/>>
+                    <</return>>
+                    <<return state=`completed`>>
+                      <<pyfunc name=`custom.finrpt_funcs.load_tree_data`/>>
+                      <<restart_frame/>>
+                    <</return>>
+                  <</on_return>>
+                <</inline_form>>
+              <</default>>
+            <</case>>
+            "/>
+          <method name="before_save" action="
+            <<pyfunc name=`custom.finrpt_funcs.dump_tree_data`/>>
+            "/>
+          <method name="after_save" action="
+            <<pyfunc name=`custom.finrpt_funcs.dump_finrpt_xml`/>>
+            "/>
+        </frame_methods>
+      </tree_frame>
+
+      <nb_end/>
+
+    </body>
+    <button_row template="Setup_Form">
+      <button btn_id="btn_run" btn_label="Run report"
+          btn_enabled="true" btn_validate="true" btn_default="false" action="
+          <<sub_form name=`finrpt_run`>>
+            <<call_params/>>
+            <<return_params/>>
+            <<on_return>>
+              <<return state=`cancelled`/>>
+              <<return state=`completed`/>>
+            <</on_return>>
+          <</sub_form>>
+        "/>
+    </button_row>
+    <frame_methods template="Setup_Form">
+      <method name="on_start_frame" action="
+        <<pyfunc name=`custom.finrpt_funcs.load_finrpt_xml`/>>
+        "/>
+    </frame_methods>
+  </frame>
+  <inline_form name="filter_steps" title="Filter steps">
+    <frame main_object="filter_steps">
+      <toolbar/>
+      <body>
+      <block/>
+      <grid data_object="filter_steps" growable="true" num_grid_rows="2">
+        <toolbar template="Grid" title="Filter:"/>
+        <cur_columns>
+          <cur_col col_name="test" lng="80"/>
+          <cur_col col_name="lbr" lng="20"/>
+          <cur_col col_name="col_name" lng="120"/>
+          <cur_col col_name="op" lng="60"/>
+          <cur_col col_name="expr" lng="120" expand="true"/>
+          <cur_col col_name="rbr" lng="20"/>
+        </cur_columns>
+        <cur_filter/>
+        <cur_sequence>
+          <cur_seq col_name="seq"/>
+        </cur_sequence>
+        <grid_methods template="Grid"/>
+      </grid>
+      </body>
+      <button_row>
+        <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
+          btn_validate="true" btn_default="true" action="
+            <<end_form state=`completed`/>>
+          "/>
+      </button_row>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<end_form state=`cancelled`/>>
+        "/>
+        <method name="on_req_close" action="
+          <<end_form state=`cancelled`/>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+  <inline_form name="get_new_node_type" title="Node type">
+    <frame main_object="finrpt_tree">
+      <toolbar/>
+      <body>
+      <block/>
+      <panel/>
+      <row/>
+      <col/>
+      <label value="Node type:"/>
+      <col/>
+      <input obj_name="finrpt_tree" col_name="node_type" lng="150"/>
+      </body>
+      <button_row>
+        <button btn_id="btn_ok" btn_label="Ok" lng="60" btn_enabled="true"
+          btn_validate="true" btn_default="true" action="
+            <<end_form state=`completed`/>>
+          "/>
+      </button_row>
+      <frame_methods>
+        <method name="on_req_cancel" action="
+          <<end_form state=`cancelled`/>>
+        "/>
+        <method name="on_req_close" action="
+          <<end_form state=`cancelled`/>>
+        "/>
+      </frame_methods>
+    </frame>
+  </inline_form>
+</form>

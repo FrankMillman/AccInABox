@@ -2,17 +2,35 @@ module_id = 'npch'
 report_name = 'npch_pivot_date'
 table_name = 'npch_totals'
 report_type = 'from_to'
+title = 'Non-inv pch pivot on date'
 
-filters = {}
+date_params = ['Y', 'A']
 
 groups = {}
-groups['code'] = 'code_grp'
-groups['date'] = ['fin_yr', 'a', []]
+groups['code'] = ['code', 'grp', 'ledg']
+groups['loc'] = ['prop', 'type']
+groups['fun'] = []
+groups['src'] = ['type']
+groups['date'] = ['end_date']
 
-allow_select_loc_fun = True
-pivot_on = ('date', 'end_date')
+group_by = {}
+group_by['code'] = 'grp'
+group_by['date'] = 'end_date'
+
+filter_by = {}
+
+include_zeros = True
+expand_subledg = False
+allow_select_loc_fun = False
+pivot_on = True
 
 columns = [
-    ['code_grp', 'code_grp', 'Grp', 'TEXT', 60, None, False],
-    ['end_date', 'tran_tot', '%b %Y', 'DEC', 80, 'end_date', True],
+    ['code_ledg', 'code_ledg', 'TEXT', 'code_ledg', 0, None, None],
+    ['code_ledg_descr', 'code_ledg_descr', 'TEXT', 'code_ledg_descr', 0, None, None],
+    ['code_grp', 'code_grp', 'TEXT', 'code_grp', 80, 'Total', None],
+    ['code_grp_descr', 'code_grp_descr', 'TEXT', 'code_grp_descr', 0, None, None],
+    ['pivot_vals', 'tran_tot', '$LCL', 'end_date:%b %Y', 80, 'Y', '12'],
+    ['pivot_tot', 'tran_tot', '$LCL', 'Total', 0, 'N', '*'],
     ]
+
+finrpt_xml = None

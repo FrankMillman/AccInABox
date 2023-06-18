@@ -1,0 +1,27 @@
+<form name="finrpt_page" title="Financial Report">
+  <db_objects/>
+  <mem_objects>
+    <mem_obj name="var" descr="Form variables">
+      <mem_col col_name="finrpt_data" data_type="JSON" short_descr="Finrpt data" long_descr="Finrpt data"/>
+      <mem_col col_name="row_dict" data_type="JSON" short_descr="Row dict" long_descr="Row dict"/>
+      <mem_col col_name="pivot_dict" data_type="JSON" short_descr="Pivot dict" long_descr="Pivot dict"/>
+      <mem_col col_name="title" data_type="TEXT" short_descr="Title" long_descr="Title"/>
+    </mem_obj>
+  </mem_objects>
+  <input_params>
+    <input_param name="finrpt_data" type="data_attr" target="var.finrpt_data" required="true"/>
+    <input_param name="row_dict" type="data_attr" target="var.row_dict" required="true"/>
+    <input_param name="pivot_dict" type="data_attr" target="var.pivot_dict" required="true"/>
+    <input_param name="title" type="data_attr" target="var.title" required="true"/>
+  </input_params>
+  <output_params/>
+  <frame>
+    <toolbar/>
+    <body>
+      <block/>
+      <finrpt/>
+    </body>
+    <button_row/>
+    <frame_methods/>
+  </frame>
+</form>

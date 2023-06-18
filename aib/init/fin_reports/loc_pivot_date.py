@@ -13,8 +13,8 @@ filters['code'] = [
         ['OR', '', 'code_maj', '=', "'exp'", ')'],
         ]
 filters['src'] = [
-        ['AND', '', 'tran_type', '!=', "'gl_adj'", ''],
-        ['AND', '', 'tran_type', '!=', "'gl_tfr'", ''],
+        ['AND', '', 'src_type', '!=', "'gl_adj'", ''],
+        ['AND', '', 'src_type', '!=', "'gl_tfr'", ''],
         ]
 
 groups = {}

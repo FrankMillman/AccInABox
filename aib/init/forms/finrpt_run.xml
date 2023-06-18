@@ -1,24 +1,15 @@
 <form name="finrpt_run" title="Run financial report" before_start_form="
-  <<init_obj obj_name=`var`/>>
-  <<pyfunc name=`custom.gl_funcs.setup_finrpt_vars`/>>
+  <<pyfunc name=`custom.finrpt_funcs.setup_finrpt_vars`/>>
   <<case>>
-    <<compare test=`[['if', '', 'var.date_param', '=', '~balance_date~', '']]`>>
-      <<pyfunc name=`custom.date_funcs.load_ye_per`/>>
-      <<pyfunc name=`custom.date_funcs.setup_balance_date`/>>
-    <</compare>>
-    <<compare test=`[['if', '', 'var.date_param', '=', '~date_range~', '']]`>>
-      <<pyfunc name=`custom.date_funcs.load_ye_per`/>>
+    <<compare test=`[['if', '', 'runtime_vars.date_type', '=', '~S~', '']]`>>
       <<pyfunc name=`custom.date_funcs.setup_balance_date`/>>
       <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
     <</compare>>
-    <<compare test=`[['if', '', 'var.date_param', '=', '~fin_yr~', '']]`>>
-      <<pyfunc name=`custom.date_funcs.load_ye_per`/>>
+    <<compare test=`[['if', '', 'runtime_vars.date_type', '=', '~Y~', '']]`>>
     <</compare>>
-    <<compare test=`[['if', '', 'var.date_param', '=', '~start_per~', '']]`>>
-      <<pyfunc name=`custom.date_funcs.load_ye_per`/>>
+    <<compare test=`[['if', '', 'runtime_vars.date_type', '=', '~P~', '']]`>>
     <</compare>>
-    <<compare test=`[['if', '', 'var.date_param', '=', '~start_date~', '']]`>>
-      <<pyfunc name=`custom.date_funcs.load_ye_per`/>>
+    <<compare test=`[['if', '', 'runtime_vars.date_type', '=', '~D~', '']]`>>
       <<pyfunc name=`custom.date_funcs.setup_balance_date`/>>
     <</compare>>
   <</case>>
@@ -27,18 +18,19 @@
     <!--db_obj name="finrpt_defn" table_name="grid_obj" is_formview_obj="true"/-->
   </db_objects>
   <mem_objects>
-    <!--mem_obj name="var" descr="Variables used in form" sub_types="[
-        [`date_param`, null,
+    <mem_obj name="runtime_vars" descr="Variables used in form" sub_types="[
+        [`date_type`, null,
           [
-            [`balance_date`, `Balance date`, [], []],
-            [`date_range`, `Date range`, [], []],
-            [`fin_yr`, `Financial year`, [`year_no`], []],
-            [`start_per`, `Starting period`, [`period_no`], []],
-            [`start_date`, `Starting date`, [`starting_date`], []]
+            [`S`, `Date range`, [], []],
+            [`Y`, `Financial year`, [`year_no`], []],
+            [`P`, `Starting period`, [`period_no`], []],
+            [`D`, `Starting date`, [`starting_date`], []]
             ]
           ]
         ]">
-      <mem_col col_name="date_param" data_type="TEXT" short_descr="Date type"
+      <mem_col col_name="finrpt_data" data_type="JSON" short_descr="Report definition"
+        long_descr="Report definition"/>
+      <mem_col col_name="date_type" data_type="TEXT" short_descr="Date type"
         long_descr="Date type" allow_amend="true"/>
       <mem_col col_name="year_no" data_type="INT" short_descr="Year no"
         long_descr="Year no" allow_amend="true" choices = "[]"/>
@@ -74,7 +66,7 @@
         long_descr="From which date" allow_amend="true"/>
       <mem_col col_name="end_date" data_type="DTE" short_descr="Date to"
         long_descr="To which date" allow_amend="true"/>
-    </mem_obj-->
+    </mem_obj>
   </mem_objects>
   <input_params/>
   <output_params/>
@@ -97,39 +89,10 @@
       <col/>
       <label value="Date type:"/>
       <col/>
-      <display obj_name="var" col_name="date_param" lng="200"/>
+      <display obj_name="runtime_vars" col_name="date_type" lng="120"/>
       <block/>
-      <subtype_frame subtype_obj="var" subtype_col="date_param">
-        <subtype_body subtype_id="balance_date">
-            <block/>
-            <panel/>
-            <row/>
-            <col/>
-            <label value="Balance at"/>
-            <col/>
-            <input obj_name="balance_date_vars" col_name="balance_date" lng="84" readonly="true" skip="true"/>
-            <col/>
-            <button btn_id="change_date" btn_label="Change" help_msg = "Change date"
-                btn_enabled="true" btn_validate="true" action="
-                <<sub_form name=`_sys.select_balance_date`>>
-                    <<call_params>>
-                    <<call_param name=`settings` type=`data_attr` source=`balance_date_vars.settings`/>>
-                    <</call_params>>
-                    <<return_params>>
-                    <<return_param name=`settings` type=`data_attr` target=`balance_date_vars.settings`/>>
-                    <<return_param name=`balance_date` type=`data_attr`
-                        target=`balance_date_vars.balance_date`/>>
-                    <</return_params>>
-                    <<on_return>>
-                    <<return state=`cancelled`/>>
-                    <<return state=`completed`>>
-                        <<!--assign src=`balance_date_vars.balance_date` tgt=`var.balance_date`/-->>
-                    <</return>>
-                    <</on_return>>
-                <</sub_form>>
-                "/>
-        </subtype_body>
-        <subtype_body subtype_id="date_range">
+      <subtype_frame subtype_obj="runtime_vars" subtype_col="date_type">
+        <subtype_body subtype_id="S">
           <block/>
           <panel/>
           <row/>
@@ -160,25 +123,25 @@
               <</sub_form>>
             "/>
         </subtype_body>
-        <subtype_body subtype_id="fin_yr">
+        <subtype_body subtype_id="Y">
           <block/>
           <panel/>
           <row/>
           <col/>
           <label value="Year ended:"/>
           <col/>
-          <input obj_name="var" col_name="year_no" lng="120"/>
+          <input obj_name="runtime_vars" col_name="year_no" lng="120"/>
         </subtype_body>
-        <subtype_body subtype_id="start_per">
+        <subtype_body subtype_id="P">
           <block/>
           <panel/>
           <row/>
           <col/>
           <label value="Period no: "/>
           <col/>
-          <input obj_name="var" col_name="period_no" lng="120"/>
+          <input obj_name="runtime_vars" col_name="period_no" lng="120"/>
         </subtype_body>
-        <subtype_body subtype_id="start_date">
+        <subtype_body subtype_id="D">
           <block/>
           <panel/>
           <row/>
@@ -189,20 +152,20 @@
         </subtype_body>
       </subtype_frame>
 
-      <if test="[[`if`, ``, `var.select_location`, `is`, `$True`, ``]]"/>
+      <if test="[[`if`, ``, `runtime_vars.select_location`, `is`, `$True`, ``]]"/>
       <block/>
       <panel/>
       <row/>
       <col/>
       <label value="Single location?"/>
       <col/>
-      <input obj_name="var" col_name="single_location" after="
+      <input obj_name="runtime_vars" col_name="single_location" after="
         <<case>>
-          <<compare test=`[['if', '', 'var.single_location', 'is', '$True', '']]`>>
-            <<set_readonly target=`var.location_id` state=`false`/>>
+          <<compare test=`[['if', '', 'runtime_vars.single_location', 'is', '$True', '']]`>>
+            <<set_readonly target=`runtime_vars.location_id` state=`false`/>>
           <</compare>>
           <<default>>
-            <<set_readonly target=`var.location_id` state=`true`/>>
+            <<set_readonly target=`runtime_vars.location_id` state=`true`/>>
           <</default>>
         <</case>>
         "/>
@@ -210,24 +173,24 @@
       <col/>
       <label value="Location id:"/>
       <col/>
-      <input obj_name="var" col_name="location_id" lng="80" readonly="true"/>
-      <display obj_name="var" col_name="location_id>descr" lng="160"/>
+      <input obj_name="runtime_vars" col_name="location_id" lng="80" readonly="true"/>
+      <display obj_name="runtime_vars" col_name="location_id>descr" lng="160"/>
       <end_if/>
 
-      <if test="[[`if`, ``, `var.select_function`, `is`, `$True`, ``]]"/>
+      <if test="[[`if`, ``, `runtime_vars.select_function`, `is`, `$True`, ``]]"/>
       <block/>
       <panel/>
       <row/>
       <col/>
       <label value="Single function?"/>
       <col/>
-      <input obj_name="var" col_name="single_function" after="
+      <input obj_name="runtime_vars" col_name="single_function" after="
         <<case>>
-          <<compare test=`[['if', '', 'var.single_function', 'is', '$True', '']]`>>
-            <<set_readonly target=`var.function_id` state=`false`/>>
+          <<compare test=`[['if', '', 'runtime_vars.single_function', 'is', '$True', '']]`>>
+            <<set_readonly target=`runtime_vars.function_id` state=`false`/>>
           <</compare>>
           <<default>>
-            <<set_readonly target=`var.function_id` state=`true`/>>
+            <<set_readonly target=`runtime_vars.function_id` state=`true`/>>
           <</default>>
         <</case>>
         "/>
@@ -235,8 +198,8 @@
       <col/>
       <label value="Function id:"/>
       <col/>
-      <input obj_name="var" col_name="function_id" lng="80" readonly="true"/>
-      <display obj_name="var" col_name="function_id>descr" lng="160"/>
+      <input obj_name="runtime_vars" col_name="function_id" lng="80" readonly="true"/>
+      <display obj_name="runtime_vars" col_name="function_id>descr" lng="160"/>
       <end_if/>
 
     </body>
@@ -244,8 +207,9 @@
     <button_row>
       <button btn_id="run_report" btn_label="Run report" btn_enabled="true"
         btn_validate="true" action="
+          <<pyfunc name=`custom.finrpt_funcs.save_finrpt_data`/>>
           <<end_form state=`cancelled`/>>
-          <<pyfunc name=`custom.gl_funcs.run_finrpt`/>>
+          <<pyfunc name=`custom.finrpt_funcs.run_finrpt`/>>
         "/>
     </button_row>
     <frame_methods>
