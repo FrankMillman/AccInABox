@@ -21,6 +21,7 @@ db.api.config_cursor(cfg['DbParams'])
 db_session = db.api.start_db_session()
 
 async def main(incz, exp):
+    await db.cache.setup_companies()
     if incz == 'y' and exp == 'y':
         from incz_y_exp_y import sql, params
     elif incz == 'y' and exp == 'n':
@@ -39,14 +40,8 @@ async def main(incz, exp):
     input()
 
 
-# company = input('Company: ')
-# if company == '':
-#     sys.exit()
-
 incz = input('Include zeros? ')
 exp = input('Expand subledgers? ')
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(db.cache.setup_companies())
-loop.run_until_complete(main(incz, exp))
+asyncio.run(main(incz, exp))
 db.api.close_all_connections()
