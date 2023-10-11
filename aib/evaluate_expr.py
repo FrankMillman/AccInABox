@@ -276,7 +276,7 @@ async def nexist(db_obj, fld, src_val, tgt_val):
     async with db_obj.context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         cur = await conn.exec_sql(sql, params)
-        exists, = await cur.__anext__()
+        exists, = await anext(cur)
     return not exists
 
 CHKS = {

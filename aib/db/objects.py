@@ -73,6 +73,9 @@ tables_open = {}
 ,FK_IS_ALT
 ) = range(7)
 
+"""
+No longer required - anext() is now a builtin
+
 # asynchronous version of next()
 # async def anext(aiter):
 #    return await aiter.__anext__()
@@ -82,7 +85,6 @@ tables_open = {}
 def anext(aiter):
     return aiter.__anext__()
 
-"""
 From Ian Kelly [2016-11-30]
 As a general rule, if the only await in a coroutine is immediately
 prior to the return, then it doesn't need to be a coroutine. Just
@@ -1579,7 +1581,7 @@ class DbObject:
                             "THEN $True ELSE $False END"
                             )
                         cur = await conn.exec_sql(sql)
-                        reference_exists, = await cur.__anext__()
+                        reference_exists, = await anext(cur)
                         if reference_exists:
                             raise AibError(
                                 head=self.table_name,

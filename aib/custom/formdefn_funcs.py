@@ -84,7 +84,7 @@ async def load_form_xml(caller, xml):
                 .format(caller.company, dbobj_elem.get('table_name'))
                 )
             cur = await conn.exec_sql(sql)
-            table_id, descr = await cur.__anext__()
+            table_id, descr = await anext(cur)
             await obj_names.init(init_vals={
                 'name': dbobj_elem.get('name'), 'descr': descr})
             await obj_names.save()
@@ -272,7 +272,7 @@ async def dump_db_obj(caller, xml):
                     .format(caller.company, await dbobj.getval('table_name'))
                     )
                 cur = await conn.exec_sql(sql)
-                table_id, descr = await cur.__anext__()
+                table_id, descr = await anext(cur)
                 await obj_names.init(init_vals={
                     'name': obj_name, 'descr': descr})
                 await obj_names.save()
@@ -719,7 +719,7 @@ async def load_body(caller, xml):
                 .format(caller.company, dbobj.get('table_name'))
                 )
             cur = await conn.exec_sql(sql)
-            table_id, descr = await cur.__anext__()
+            table_id, descr = await anext(cur)
             await obj_names.init(init_vals={
                 'name': dbobj.get('name'), 'descr': descr})
             await obj_names.save()

@@ -65,7 +65,7 @@ async def tax_rate(fld, xml, debug):
         cur = await conn.full_select(tax_rates, col_names,
             where=where, order=order, limit=limit)
         try:
-            rate, = await cur.__anext__()
+            rate, = await anext(cur)
         except StopAsyncIteration:
             raise AibError(head='Tax rate', body='No tax rate found')
 
@@ -93,7 +93,7 @@ async def exch_rate(fld, xml, debug):
         cur = await conn.full_select(curr_rates, col_names,
             where=where, order=order, limit=limit)
         try:
-            rate, = await cur.__anext__()
+            rate, = await anext(cur)
         except StopAsyncIteration:
             raise AibError(head='Exchange rate', body='No exchange rate found')
 
@@ -162,7 +162,7 @@ async def sell_price(fld, xml, debug):
         cur = await conn.full_select(sell_prices, col_names,
             where=where, order=order, limit=limit)
         try:
-            row = await cur.__anext__()
+            row = await anext(cur)
             return row[0]  # selling price
         except StopAsyncIteration:  # no rows selected
             return None  # user input

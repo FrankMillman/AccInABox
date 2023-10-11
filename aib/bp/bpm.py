@@ -201,7 +201,7 @@ class ProcessRoot:
 
             detail_lines = bpm_detail.select_many(where=[], order=[('row_id', False)])
 
-            await detail_lines.__anext__()  # read first row
+            await anext(detail_lines)  # read first row
             line_type = await bpm_detail.getval('line_type')
             assert line_type == 'process'
             element_id = await bpm_detail.getval('element_id')

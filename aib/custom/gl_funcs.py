@@ -98,7 +98,7 @@ async def check_adj_posted(caller, params):
         sql += ') THEN $True ELSE $False END'
 
         cur = await conn.exec_sql(sql, params)
-        exists, = await cur.__anext__()
+        exists, = await anext(cur)
 
     return_params = {'all_posted': not bool(exists)}
     print('check all posted:', return_params)
@@ -269,7 +269,7 @@ async def setup_ctrl(db_obj, xml):
         async with db_obj.context.db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
             cur = await conn.exec_sql(sql, params)
-            exists, = await cur.__anext__()
+            exists, = await anext(cur)
         if exists:
             raise AibError(head='Control Account', body=
                 f"{await gl_codes.getval('gl_code')!r} has transactions - cannot use as control account")

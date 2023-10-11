@@ -1933,7 +1933,7 @@ async def sql_fin_yr(context, date_seq, fin_yr, ledger_row_id):
 #       async with context.db_session.get_connection() as db_mem_conn:
 #           conn = db_mem_conn.db
 #           cur = await conn.exec_sql(' '.join(sql), params)
-#           fin_yr, = await cur.__anext__()
+#           fin_yr, = await anext(cur)
 
     sql = []
     params = []
@@ -1980,7 +1980,7 @@ async def sql_date_range(context, date_seq, sub_args, date_vals, ledger_row_id):
         async with context.db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
             cur = await conn.exec_sql(' '.join(sql), params)
-            start_date, end_date = await cur.__anext__()
+            start_date, end_date = await anext(cur)
 
     sql = []
     params = []
@@ -2076,7 +2076,7 @@ async def sql_last_n_per(context, date_seq, sub_args, date_vals, ledger_row_id):
         async with context.db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
             cur = await conn.exec_sql(' '.join(sql), params)
-            start_from, = await cur.__anext__()
+            start_from, = await anext(cur)
 
     sql = []
     params = []
@@ -2147,7 +2147,7 @@ async def sql_last_n_days(context, date_seq, date_groups, start_date, ledger_row
 #       async with context.db_session.get_connection() as db_mem_conn:
 #           conn = db_mem_conn.db
 #           cur = await conn.exec_sql(' '.join(sql), params)
-#           start_from, = await cur.__anext__()
+#           start_from, = await anext(cur)
 
     sql = []
     params = []

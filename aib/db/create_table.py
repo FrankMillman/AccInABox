@@ -9,14 +9,14 @@ async def create_table(conn, company_id, table_name, return_sql=False):
     cur = await conn.exec_sql(
         f"SELECT * FROM {company_id}.db_tables WHERE table_name = {dbc.param_style}"
         , [table_name])
-    table_defn = await cur.__anext__()
+    table_defn = await anext(cur)
 
     if table_defn[DEFN_COMP] is not None:
         defn_comp = table_defn[DEFN_COMP]
         cur = await conn.exec_sql(
             f"SELECT * FROM {defn_comp}.db_tables WHERE table_name = {dbc.param_style}"
             , (table_name,))
-        table_defn = await cur.__anext__()
+        table_defn = await anext(cur)
     else:
         defn_comp = company_id
 
@@ -75,7 +75,7 @@ async def _create_table(conn, company_id, table_defn, db_columns, return_sql=Fal
                     )
                 cur = await conn.exec_sql(sql)
                 try:
-                    target_company, = await cur.__anext__()
+                    target_company, = await anext(cur)
                 except StopAsyncIteration:
                     print(table_defn[TABLE_NAME], sql)
                     raise

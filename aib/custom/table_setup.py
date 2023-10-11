@@ -66,7 +66,7 @@ async def chk_table_name(ctx, fld, value, xml):
         conn = db_mem_conn.db
         cur = await conn.exec_sql(sql, (value,))
         try:
-            short_descr, = await cur.__anext__()
+            short_descr, = await anext(cur)
         except StopAsyncIteration:
             raise AibError(
                 head='Table name',

@@ -236,7 +236,7 @@ class Cursor:
             # python is 0-based, cursor is 1-based
             cur = await self.conn.exec_sql('fetch absolute {} from _aib'.format(row_no + 1))
         self.cursor_pos = row_no
-        self.row_data = await cur.__anext__()
+        self.row_data = await anext(cur)
         if self.debug:
             print('POS =', self.cursor_pos, ', DATA =', self.row_data)
 

@@ -279,11 +279,8 @@ class Conn:
         # otherwise it will call check_sql_params, which will call convert_sql, which will loop
         if not raw:
             sql, params = await self.check_sql_params(sql, params, context)
-        # async for result in async_cursor(self, sql, params, is_cmd=True):
-        #    self.rowcount, self.lastrowid = result
-        self.rowcount, self.lastrowid = await async_cursor(
-            self, sql, params, is_cmd=True, is_many=is_many
-            ).__anext__()
+        self.rowcount, self.lastrowid = await anext(async_cursor(
+            self, sql, params, is_cmd=True, is_many=is_many))
 
     async def exec_sql(self, sql, params=None, context=None):
         if params is None:

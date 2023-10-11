@@ -16,7 +16,7 @@ async def check_parent_id(db_obj, fld, parent_id):
     async with db_obj.context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         cur = await conn.exec_sql(sql)
-        exists, = await cur.__anext__()
+        exists, = await anext(cur)
 
     if exists:
         if parent_id is None:
@@ -191,7 +191,7 @@ async def check_not_null(db_obj, fld, value):
     async with db_obj.context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         cur = await conn.exec_sql(sql)
-        nulls_exist, = await cur.__anext__()
+        nulls_exist, = await anext(cur)
     if nulls_exist:
         return False
     return True

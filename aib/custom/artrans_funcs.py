@@ -620,7 +620,7 @@ async def posted_check(caller, params):
         sql += ') THEN $True ELSE $False END'
 
         cur = await conn.exec_sql(sql, params)
-        exists, = await cur.__anext__()
+        exists, = await anext(cur)
 
     return_params = {'all_posted': not bool(exists)}
     print('check all posted:', return_params)
@@ -1007,7 +1007,7 @@ async def close_period(caller, xml):
         sql += ') THEN $True ELSE $False END'
 
         cur = await conn.exec_sql(sql, params)
-        exists, = await cur.__anext__()
+        exists, = await anext(cur)
 
         if exists:
            raise AibError(head='Close period', body='There are unposted transactions - cannot close')

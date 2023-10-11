@@ -347,12 +347,12 @@ class Field:
 
             cur = await conn.exec_sql(sql, params, context=self.db_obj.context)
             try:
-                row = await cur.__anext__()
+                row = await anext(cur)
             except StopAsyncIteration:  # no rows selected
                 value = None
             else:
                 try:
-                    next_row = await cur.__anext__()
+                    next_row = await anext(cur)
                 except StopAsyncIteration:  # exactly one row selected
                     value = row[0]
                 else:

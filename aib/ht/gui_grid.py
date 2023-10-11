@@ -586,7 +586,7 @@ class GuiGrid:
             cte = f"WITH {', '.join(cte_sql)} SELECT {', '.join(cte_select)}"
             cur = await conn.exec_sql(cte, cte_params, context=self.context)
             try:
-                row = await cur.__anext__()
+                row = await anext(cur)
             except StopAsyncIteration:  # no rows selected
                 row = [0] * len(srcs)
             for src_val, tgt in zip(row, tgts):
@@ -613,7 +613,7 @@ class GuiGrid:
             cte = f"WITH {', '.join(cte_sql)} SELECT {', '.join(cte_select)}"
             cur = await conn.exec_sql(cte, cte_params, context=self.context)
             try:
-                row = await cur.__anext__()
+                row = await anext(cur)
             except StopAsyncIteration:  # no rows selected
                 row = [0] * len(srcs)
             for src_val, tgt in zip(row, tgts):

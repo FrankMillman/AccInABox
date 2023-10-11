@@ -56,7 +56,7 @@ async def after_setup(caller, xml):
     # async with caller.db_session.get_connection() as db_mem_conn:
     #     conn = db_mem_conn.db
     #     cur = await conn.full_select(invdet, col_names, where=where)
-    #     total, = await cur.__anext__()
+    #     total, = await anext(cur)
     # await var.setval('total_sales', total)
 
 async def get_due_date(src_obj):
@@ -247,7 +247,7 @@ async def get_data(caller, node_id, node_total):
         async with caller.db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
             cur = await conn.exec_sql(sql, params)
-            amount, = await cur.__anext__()
+            amount, = await anext(cur)
 
         return ('0', 'Total', await slsfld.val_to_str(amount), True)  # root, text, amount, expandable
 

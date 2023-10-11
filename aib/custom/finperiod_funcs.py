@@ -9,7 +9,7 @@ async def get_no_periods(caller, xml):
     async with db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         cur = await conn.exec_sql(sql)
-        count_per, = await cur.__anext__()
+        count_per, = await anext(cur)
     caller.context.count_per = count_per
     if count_per == 0:  # nothing set up yet
         pass  # will call inline form to get Opening date
@@ -23,7 +23,7 @@ async def get_no_periods(caller, xml):
         async with db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
             cur = await conn.exec_sql(sql)
-            year_no, = await cur.__anext__()
+            year_no, = await anext(cur)
         caller.context.end_year = year_no
         caller.context.curr_year = year_no
 
@@ -84,7 +84,7 @@ async def load_fin_periods(caller, xml):
                 f"SELECT closing_date FROM {caller.company}.adm_periods WHERE row_id = {count_per-1}"
                 )
             cur = await conn.exec_sql(sql)
-            closing_date, = await cur.__anext__()
+            closing_date, = await anext(cur)
         # await fin_period.setval('per_no', 1)
         # await fin_period.setval('op_date', closing_date + timedelta(1))
 

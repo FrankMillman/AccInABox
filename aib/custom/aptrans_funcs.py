@@ -586,7 +586,7 @@ async def close_period(caller, xml):
         sql += ') THEN $True ELSE $False END'
 
         cur = await conn.exec_sql(sql, params)
-        exists, = await cur.__anext__()
+        exists, = await anext(cur)
 
         if exists:
            raise AibError(head='Close period', body='There are unposted transactions - cannot close')

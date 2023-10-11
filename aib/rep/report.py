@@ -424,7 +424,7 @@ class Grid:
             self.first_subset_row = last_subset_row  # get ready to fetch next subset
 
         self.current_row += 1
-        return await self.fetch_rows.__anext__()
+        return await anext(self.fetch_rows)
 
     def gen_col_head(self, c, col_head):
         x1, y1, x2, y2 = self.coords

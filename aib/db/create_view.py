@@ -10,7 +10,7 @@ async def create_view(context, conn, company_id, view_name):
     cur = await conn.exec_sql(
         f"SELECT * FROM {company_id}.db_views WHERE view_name = {dbc.param_style}"
         , [view_name])
-    view_defn = await cur.__anext__()
+    view_defn = await anext(cur)
 
     cur = await conn.exec_sql(
         f"SELECT * FROM {company_id}.db_view_cols "

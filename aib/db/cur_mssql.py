@@ -15,7 +15,7 @@ async def create_cursor(self, sql, params):
         print('OPEN _aib')
     await self.conn.exec_cmd('OPEN _aib')
     cur = await self.conn.exec_sql('select @@cursor_rows')
-    self.num_rows, = await cur.__anext__()
+    self.num_rows, = await anext(cur)
     if self.debug:
         print('number of rows =', self.num_rows)
 
@@ -35,7 +35,7 @@ async def get_rows(self, from_row, to_row):
         if self.debug:
             print(sql)
         cur = await self.conn.exec_sql(sql)
-        yield await cur.__anext__()
+        yield await anext(cur)
     self.cursor_pos = to_row - 1
 
 async def close(self):

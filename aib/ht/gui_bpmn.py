@@ -16,6 +16,8 @@ class GuiBpmn:
         self.session = parent.session
         self.action = action
         self.must_validate = False
+        self.readonly = False
+        self.hidden = False  # for 'subtype' gui objects
 
         self.ref, self.pos = parent.form.add_obj(parent, self)
         bpmn_vars = self.data_objects['bpmn_vars']

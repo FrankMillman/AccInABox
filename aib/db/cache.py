@@ -307,7 +307,7 @@ async def ledger_inserted(db_obj, xml):
         f"WHERE module_row_id = {module_row_id} AND parent_id IS NULL"
         )
     cur = await conn.exec_sql(sql)
-    tree_start_row, = await cur.__anext__()
+    tree_start_row, = await anext(cur)
 
     # select all rows in template, use them to create new sub_ledger menu
     cte = await conn.tree_select(
