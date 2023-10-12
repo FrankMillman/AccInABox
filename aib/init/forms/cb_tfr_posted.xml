@@ -60,7 +60,7 @@
       <block/>
       <grid data_object="cb_tfr" growable="false" num_grid_rows="15" readonly="true"
           footer_row="[`'Total:'`, `...`, `var.tfr_tot`]"
-          get_tots="[[`tfr_amount`, `var.tfr_tot`]]">
+          gen_tots="[[`tfr_amount`, `var.tfr_tot`]]">
         <toolbar>
           <tool type="nav"/>
           <tool type="btn" label="Unpost" tip="Unpost transaction (Alt+U)"

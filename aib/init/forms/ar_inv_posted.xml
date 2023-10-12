@@ -64,7 +64,7 @@
       <block/>
       <grid data_object="ar_inv" growable="false" cursor_name="posted_inv"
           footer_row="[`'Total:'`, `...`, `var.inv_tot`]"
-          get_tots="[[`inv_tot_amt`, `var.inv_tot`]]">
+          gen_tots="[[`inv_tot_amt`, `var.inv_tot`]]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,Enter" action="

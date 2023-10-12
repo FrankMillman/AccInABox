@@ -3,6 +3,7 @@ from common import log_db, db_log
 def customise(Cursor):  # Cursor could be either a DbCursor or a MemCursor - treatment is identical
     # add db-specific methods to DbCursor or MemCursor class
     Cursor.create_cursor = create_cursor
+    Cursor.gen_tots_sql = gen_tots_sql
     Cursor.insert_row = insert_row
     Cursor.update_row = update_row
     Cursor.delete_row = delete_row
@@ -18,6 +19,22 @@ async def create_cursor(self, sql, params):
     await self.conn.release()
     if log_db:
         db_log.write('{}: END cursor\n\n'.format(id(self.conn)))
+
+async def gen_tots_sql(self, sql, params):
+
+    tots_sql = []
+    tots_sql.append('GROUP BY')
+    tots_sql.append(', '.join(self.db_obj.context.group_by_cols))
+    tots_sql.append('UNION ALL')
+    tots_sql.append('SELECT')
+    tots_sql.append(', '.join(self.db_obj.context.union_cols))
+    tots_sql.append(f'FROM {self.db_obj.context.table_names}')
+    tots_sql.append(self.db_obj.context.where_clause)
+    tots_sql.append('')
+    params.extend(self.db_obj.context.where_params)
+
+    order_pos = sql.find('ORDER BY')
+    return sql[:order_pos] + ' '.join(tots_sql) + sql[order_pos:], params
 
 async def insert_row(self, row_no):
     row_no = await self.find_gap(row_no)  # where to insert new row

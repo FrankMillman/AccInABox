@@ -299,13 +299,9 @@ class GuiGrid:
         else:
             footer_row = loads(footer_row)
 
-        self.get_tots = element.get('get_tots')
-        if self.get_tots is not None:
-            self.get_tots = loads(self.get_tots)
-
-        self.assert_tots = element.get('assert_tots')
-        if self.assert_tots is not None:
-            self.assert_tots = loads(self.assert_tots)
+        self.gen_tots = element.get('gen_tots')
+        if self.gen_tots is not None:
+            self.gen_tots = loads(self.gen_tots)
 
         # defaults for header/footer columns
         readonly = True
@@ -567,66 +563,12 @@ class GuiGrid:
             sub_filter.append((test, '', parent[0], '=', parent_val, ''))
             test = 'AND'  # in case there is another one
 
-        if self.get_tots is not None:  # this should be run with read_lock = True - investigate
-            # srcs, tgts = zip(*self.get_tots)  # clever but obscure!
-            srcs = [_[0] for _ in self.get_tots]  # column names to be summed
-            tgts = [_[1] for _ in self.get_tots]  # 'total' col_names to store results
-            conn = await db.connection._get_connection()
-            where = self.cursor_filter + sub_filter
-            order = []
-            cte_sql = []
-            cte_params = []
-            cte_select = []
-            for src in srcs:
-                sql, params = await conn.build_select(
-                    self.context, self.db_obj.db_table, [src], where, order, incl_col_types=False)
-                cte_sql.append(f'{src} AS ({sql})')
-                cte_params.extend(params)
-                cte_select.append(f'(SELECT SUM({src}) FROM {src})')
-            cte = f"WITH {', '.join(cte_sql)} SELECT {', '.join(cte_select)}"
-            cur = await conn.exec_sql(cte, cte_params, context=self.context)
-            try:
-                row = await anext(cur)
-            except StopAsyncIteration:  # no rows selected
-                row = [0] * len(srcs)
-            for src_val, tgt in zip(row, tgts):
-                obj_name, col_name = tgt.split('.')
-                tgt_obj = self.context.data_objects[obj_name]
-                await tgt_obj.setval(col_name, src_val or 0)  # change None to 0 in case no rows exist
-            await conn.release()
-
-        if self.assert_tots is not None:  # this should be run with read_lock = True - investigate
-            # srcs, tgts = zip(*self.assert_tots)  # clever but obscure!
-            srcs = [_[0] for _ in self.assert_tots]  # column names to be summed
-            tgts = [_[1] for _ in self.assert_tots]  # 'total' col_names to assert against
-            conn = await db.connection._get_connection()
-            where = self.cursor_filter + sub_filter
-            cte_sql = []
-            cte_params = []
-            cte_select = []
-            for src in srcs:
-                sql, params = await conn.build_select(
-                    self.context, self.db_obj.db_table, [src], where, order, incl_col_types=False)
-                cte_sql.append(f'{src} AS ({sql})')
-                cte_params.extend(params)
-                cte_select.append(f'(SELECT SUM({src}) FROM {src})')
-            cte = f"WITH {', '.join(cte_sql)} SELECT {', '.join(cte_select)}"
-            cur = await conn.exec_sql(cte, cte_params, context=self.context)
-            try:
-                row = await anext(cur)
-            except StopAsyncIteration:  # no rows selected
-                row = [0] * len(srcs)
-            for src_val, tgt in zip(row, tgts):
-                obj_name, col_name = tgt.split('.')
-                tgt_obj = self.context.data_objects[obj_name]
-                tgt_val = await tgt_obj.getval(col_name)
-                if tgt_val != (src_val or 0):  # change None to 0 in case no rows exist
-                    raise AibError(head='Assertion Error',
-                        body=f'{tgt}: total = {tgt_val}, s/b {src_val}')
-            await conn.release()
+        if self.gen_tots is not None:
+            self.context.group_by_cols = set()
+            self.context.union_cols = []
 
         await self.cursor.start_cursor(self.col_names, self.cursor_filter+sub_filter,
-            self.cursor_sequence)
+            self.cursor_sequence, self.gen_tots)
 
         if parent is not None:
             if not parent[1].db_obj.exists:

@@ -64,7 +64,7 @@
       <block/>
       <!--grid data_object="gl_jnl" growable="false" cursor_name="posted_jnl"
           footer_row="[`'Total:'`, `...`, `var.inv_tot`]"
-          get_tots="[[`inv_tot_amt`, `var.inv_tot`]]"-->
+          gen_tots="[[`inv_tot_amt`, `var.inv_tot`]]"-->
       <grid data_object="gl_jnl" growable="false" cursor_name="posted_jnl">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"

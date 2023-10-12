@@ -48,7 +48,7 @@ class Cursor:
         self.cursor_pos = -1
         self.num_rows = 0
 
-    async def start_cursor(self, col_names, where, order):
+    async def start_cursor(self, col_names, where, order, gen_tots):
         await self.db_obj.check_perms('select')
         self.col_names = col_names
 
@@ -61,14 +61,26 @@ class Cursor:
         if log_db:
             db_log.write(f'{id(self.conn)}: START cursor\n')
 
-        sql, params = await self.build_sql(where, order)
+        sql, params = await self.build_sql(where, order, gen_tots)
+        if gen_tots is not None:
+            sql, params = await self.gen_tots_sql(sql, params)
         await self.create_cursor(sql, params)
+
+        if gen_tots is not None:
+            await self._fetch_row(0)  # totals are stored in first row  [NULLS FIRST]
+            await self.delete_row(0)
+            for src, tgt in gen_tots:
+                src_pos = self.col_names.index(src)
+                src_val = self.row_data[src_pos]
+                tgt_obj_name, tgt_col_name = tgt.split('.')
+                tgt_obj = self.db_obj.context.data_objects[tgt_obj_name]
+                await tgt_obj.setval(tgt_col_name, src_val)
 
         self.where = where
 
         self.cursor_active = True
 
-    async def build_sql(self, where, order):
+    async def build_sql(self, where, order, gen_tots):
 
         # build list of primary keys  - (position in cursor, col_defn)
         self.key_cols = []
@@ -104,7 +116,7 @@ class Cursor:
         self.no_cols = len(self.col_names)
 
         return await self.conn.build_select(self.db_obj.context, self.db_obj.db_table,
-            self.col_names, where, order)
+            self.col_names, where, order, gen_tots=gen_tots)
 
     async def insert_row(self, row_no):
         row_no = await self.find_gap(row_no)  # where to insert new row

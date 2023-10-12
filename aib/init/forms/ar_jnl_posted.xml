@@ -64,7 +64,7 @@
       <block/>
       <grid data_object="ar_journal" growable="false" cursor_name="posted_jnl"
           footer_row="[`'Total:'`, `...`, `var.jnl_tot`]"
-          get_tots="[[`amount`, `var.jnl_tot`]]">
+          gen_tots="[[`amount`, `var.jnl_tot`]]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,Enter" action="

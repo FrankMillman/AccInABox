@@ -1,0 +1,34 @@
+<form name="flowrpt_grid" title="Flow Report">
+  <db_objects/>
+  <mem_objects/>
+  <input_params/>
+  <output_params/>
+  <frame main_object="flow_data">
+    <toolbar/>
+    <body>
+      <block/>
+      <grid data_object="flow_data" num_grid_rows="20">
+        <toolbar template="Grid_Finrpt"/>
+        <grid_methods template="Grid"/>
+      </grid>
+    </body>
+    <button_row/>
+    <frame_methods/>
+  </frame>
+  <inline_form name="flow_trans_grid" title="Transactions">
+    <frame main_object="flow_trans">
+      <toolbar/>
+      <body>
+        <block/>
+        <grid data_object="flow_trans" num_grid_rows="20" cursor_name="flow_trans"
+            footer_row="[`'Total:'`, `...`, `flow_bals.flow_tran_tot`]"
+            gen_tots="[[`flow_tran`, `flow_bals.flow_tran_tot`]]">
+          <toolbar template="Grid"/>
+          <grid_methods template="Grid"/>
+        </grid>
+      </body>
+      <button_row/>
+      <frame_methods/>
+    </frame>
+  </inline_form>
+</form>

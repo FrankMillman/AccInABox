@@ -64,7 +64,7 @@
       <block/>
       <grid data_object="cb_pmt" growable="false" cursor_name="posted_pmt"
           footer_row="[`'Total:'`, `...`, `var.pmt_tot`]"
-          get_tots="[[`amount`, `var.pmt_tot`]]">
+          gen_tots="[[`amount`, `var.pmt_tot`]]">
         <toolbar>
           <tool type="img" name="formview" tip="Form view (Ctrl+Enter)"
             shortcut="ctrl,Enter" action="

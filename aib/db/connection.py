@@ -411,13 +411,13 @@ class Conn:
             raise
         return cur
 
-    async def full_select(self, db_obj, col_names, where, order=None, group=None, incl_col_types=True,
-            limit=0, offset=0, lock=False, distinct=False, debug=False):
+    async def full_select(self, db_obj, col_names, where, order=None, group=None,
+            limit=0, offset=0, lock=False, distinct=False, gen_tots=None, debug=False):
 
         await db_obj.check_perms('select')
 
         sql, params = await self.build_select(db_obj.context, db_obj.db_table,
-            col_names, where, order, group, incl_col_types, limit, offset, lock, distinct, debug)
+            col_names, where, order, group, limit, offset, lock, distinct, gen_tots, debug)
 
         # print('FULL', sql, params, '\n\n')
 
@@ -432,8 +432,8 @@ class Conn:
             raise
         return cur
 
-    async def build_select(self, context, db_table, col_names, where, order, group=None, incl_col_types=True,
-            limit=0, offset=0, lock=False, distinct=False, debug=False):
+    async def build_select(self, context, db_table, col_names, where, order, group=None,
+            limit=0, offset=0, lock=False, distinct=False, gen_tots=None, debug=False):
 
         if self.tablenames is not None:  # existing build is in progress
             self.save_tablenames.append(self.tablenames)
@@ -506,6 +506,9 @@ class Conn:
             self.join_company = f'{db_table.data_company}.'
         # self.joins = {}
 
+        if gen_tots is not None:
+            tots_to_get = [_[0] for _ in gen_tots]
+
         col_params = []
         columns = []
         for col_name in col_names:
@@ -520,8 +523,22 @@ class Conn:
                 else:
                     columns.append(col_name)
             else:
-                col_text = await self.get_col_text(context, db_table, col_params, col_name)
+                if gen_tots is not None:
+                    if col_name in tots_to_get:
+                        col_name = f'SUM({col_name})'
+                        col_text = await self.get_col_text(context, db_table, col_params, col_name)
+                        context.union_cols.append(col_text)
+                    else:
+                        col_text = await self.get_col_text(context, db_table, col_params, col_name)
+                        context.union_cols.append('NULL')
+                else:
+                    col_text = await self.get_col_text(context, db_table, col_params, col_name)
                 columns.append(col_text)
+                if gen_tots is not None:
+                    for col_part in col_text.split(' '):
+                        if '.' in col_part:
+                            if not col_part.startswith('SUM('):
+                                context.group_by_cols.add(col_part)
 
         columns = ', '.join(columns)
 
@@ -635,6 +652,11 @@ class Conn:
                     esc = ''
 
                 where_clause += f' {test} {lbr}{col_text} {op} {expr}{rbr}{esc}'
+
+        if gen_tots is not None:
+            context.where_clause = where_clause
+            context.where_params = where_params
+            context.table_names = self.tablenames
 
         group_params = []
         group_clause = ''

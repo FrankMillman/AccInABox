@@ -1,23 +1,35 @@
-<form name="finrpt_run" title="Run financial report" before_start_form="
-  <<pyfunc name=`custom.finrpt_funcs.setup_finrpt_vars`/>>
-  <<case>>
-    <<compare test=`[['if', '', 'runtime_vars.date_type', '=', '~S~', '']]`>>
-      <<pyfunc name=`custom.date_funcs.setup_balance_date`/>>
-      <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
-    <</compare>>
-    <<compare test=`[['if', '', 'runtime_vars.date_type', '=', '~Y~', '']]`>>
-    <</compare>>
-    <<compare test=`[['if', '', 'runtime_vars.date_type', '=', '~P~', '']]`>>
-    <</compare>>
-    <<compare test=`[['if', '', 'runtime_vars.date_type', '=', '~D~', '']]`>>
-      <<pyfunc name=`custom.date_funcs.setup_balance_date`/>>
-    <</compare>>
-  <</case>>
+<form name="flowrpt_run" title="Run flow report" before_start_form="
+  <<pyfunc name=`custom.finrpt_funcs.setup_flowrpt_vars`/>>
   ">
   <db_objects>
-    <!--db_obj name="finrpt_defn" table_name="grid_obj" is_formview_obj="true"/-->
   </db_objects>
   <mem_objects>
+    <mem_obj name="form_vars" descr="Variables used in form">
+      <mem_col col_name="module_id" data_type="TEXT" short_descr="Module id" long_descr="Module id"
+        choices="[[`cb`, `Cash book`], [`ar`, `Accounts receivable`], [`ap`, `Accounts payable`],
+        [`in`, `Inventory`], [`nsls`, `Unearned income`], [`npch`, `Unexpensed expenses`]]"/>
+      <mem_col col_name="single_ledger" data_type="BOOL" short_descr="Single ledger?" long_descr="Single ledger?"/>
+      <mem_col col_name="ledger_id" data_type="TEXT" short_descr="Ledger id" long_descr="Ledger id"
+        choices="[[``,``]]"/>
+    </mem_obj>
+    <mem_obj name="date_vars" descr="Date param vars" sub_types="[
+        [`date_param`, null,
+          [
+            [`S`, `Single date`, [], []],
+            [`Y`, `Financial year`, [`asc_dsc`], []],
+            [`P`, `Multiple periods`, [`asc_dsc`, `groups`], []],
+            [`D`, `Multiple dates`, [`asc_dsc`, `groups`], []]
+            ]
+          ]
+        ]">
+      <mem_col col_name="date_param" data_type="TEXT" short_descr="Select method"
+        long_descr="Select dates by financial year?" allow_amend="true"/>
+      <mem_col col_name="asc_dsc" data_type="TEXT" short_descr="Sequence"
+        long_descr="Ascending or descending sequence" allow_amend="true"
+        choices = "[[`A`, `Ascending`], [`D`, `Descending`]]"/>
+      <mem_col col_name="groups" data_type="JSON" short_descr="Groups"
+        long_descr="Groups - [size, number, skip]" allow_amend="true"/>
+    </mem_obj>
     <mem_obj name="runtime_vars" descr="Variables used in form" sub_types="[
         [`date_type`, null,
           [
@@ -28,8 +40,6 @@
             ]
           ]
         ]">
-      <mem_col col_name="finrpt_data" data_type="JSON" short_descr="Report definition"
-        long_descr="Report definition"/>
       <mem_col col_name="date_type" data_type="TEXT" short_descr="Date type"
         long_descr="Date type" allow_amend="true"/>
       <mem_col col_name="year_no" data_type="INT" short_descr="Year no"
@@ -38,20 +48,6 @@
         long_descr="Period no" allow_amend="true" choices = "[]"/>
       <mem_col col_name="starting_date" data_type="DTE" short_descr="Starting date"
         long_descr="Starting date" allow_amend="true"/>
-      <mem_col col_name="select_location" data_type="BOOL" short_descr="Select location?"
-        long_descr="Allow selection of location?" allow_amend="true"/>
-      <mem_col col_name="single_location" data_type="BOOL" short_descr="Single location?"
-        long_descr="Single location or all locations?" allow_amend="true"/>
-      <mem_col col_name="location_row_id" data_type="INT" short_descr="Location row id"
-        long_descr="Location row id" allow_amend="true"
-        fkey="[`adm_locations`, `row_id`, `location_id`, `location_id`, false, null]"/>
-      <mem_col col_name="select_function" data_type="BOOL" short_descr="Select function?"
-        long_descr="Allow selection of function?" allow_amend="true"/>
-      <mem_col col_name="single_function" data_type="BOOL" short_descr="Single function?"
-        long_descr="Single function or all functions?" allow_amend="true"/>
-      <mem_col col_name="function_row_id" data_type="INT" short_descr="Function row id"
-        long_descr="Function row id" allow_amend="true"
-        fkey="[`adm_functions`, `row_id`, `function_id`, `function_id`, false, null]"/>
     </mem_obj>
     <mem_obj name="balance_date_vars" descr="Variables for balance date">
       <mem_col col_name="settings" data_type="JSON" short_descr="Settings"
@@ -70,26 +66,62 @@
   </mem_objects>
   <input_params/>
   <output_params/>
-  <frame main_object="finrpt_defn">
+  <frame main_object="form_vars">
     <toolbar/>
     <body>
       <block/>
       <panel/>
       <row/>
       <col/>
-      <label value="Report name:"/>
+      <label value="Module id:"/>
       <col/>
-      <display obj_name="finrpt_defn" col_name="report_name" lng="200"/>
+      <input obj_name="form_vars" col_name="module_id" lng="200"/>
       <row/>
       <col/>
-      <label value="Report type:"/>
+      <label value="Single ledger?"/>
       <col/>
-      <display obj_name="finrpt_defn" col_name="report_type" lng="200"/>
+      <input obj_name="form_vars" col_name="single_ledger" after="
+        <<case>>
+          <<compare test=`[['if', '', 'form_vars.single_ledger', 'is', '$False', '']]`>>
+            <<set_readonly target=`form_vars.ledger_id` state=`true`/>>
+          <</compare>>
+          <<default>>
+            <<set_readonly target=`form_vars.ledger_id` state=`false`/>>
+          <</default>>
+        <</case>>
+        <<pyfunc name=`custom.finrpt_funcs.setup_ledger_ids`/>>
+        "/>
       <row/>
       <col/>
-      <label value="Date type:"/>
+      <label value="Ledger id:"/>
       <col/>
-      <display obj_name="runtime_vars" col_name="date_type" lng="120"/>
+      <input obj_name="form_vars" col_name="ledger_id" lng="200"/>
+      <row/>
+      <col/>
+      <label value="Date params:"/>
+      <col/>
+      <input obj_name="date_vars" col_name="date_param" lng="120" after="
+        <<assign src=`date_vars.date_param` tgt=`runtime_vars.date_type`/>>
+        "/>
+
+      <block/>
+      <subtype_frame subtype_obj="date_vars" subtype_col="date_param"/>
+      <dummy after="
+        <<case>>
+          <<compare test=`[['if', '', 'runtime_vars.date_type', '=', '~S~', '']]`>>
+            <<pyfunc name=`custom.date_funcs.setup_balance_date`/>>
+            <<pyfunc name=`custom.date_funcs.setup_date_range`/>>
+          <</compare>>
+          <<compare test=`[['if', '', 'runtime_vars.date_type', '=', '~Y~', '']]`>>
+          <</compare>>
+          <<compare test=`[['if', '', 'runtime_vars.date_type', '=', '~P~', '']]`>>
+          <</compare>>
+          <<compare test=`[['if', '', 'runtime_vars.date_type', '=', '~D~', '']]`>>
+            <<pyfunc name=`custom.date_funcs.setup_balance_date`/>>
+          <</compare>>
+        <</case>>
+        "/>
+
       <block/>
       <subtype_frame subtype_obj="runtime_vars" subtype_col="date_type">
         <subtype_body subtype_id="S">
@@ -152,64 +184,14 @@
         </subtype_body>
       </subtype_frame>
 
-      <if test="[[`if`, ``, `runtime_vars.select_location`, `is`, `$True`, ``]]"/>
-      <block/>
-      <panel/>
-      <row/>
-      <col/>
-      <label value="Single location?"/>
-      <col/>
-      <input obj_name="runtime_vars" col_name="single_location" after="
-        <<case>>
-          <<compare test=`[['if', '', 'runtime_vars.single_location', 'is', '$True', '']]`>>
-            <<set_readonly target=`runtime_vars.location_id` state=`false`/>>
-          <</compare>>
-          <<default>>
-            <<set_readonly target=`runtime_vars.location_id` state=`true`/>>
-          <</default>>
-        <</case>>
-        "/>
-      <row/>
-      <col/>
-      <label value="Location id:"/>
-      <col/>
-      <input obj_name="runtime_vars" col_name="location_id" lng="80" readonly="true"/>
-      <display obj_name="runtime_vars" col_name="location_id>descr" lng="160"/>
-      <end_if/>
-
-      <if test="[[`if`, ``, `runtime_vars.select_function`, `is`, `$True`, ``]]"/>
-      <block/>
-      <panel/>
-      <row/>
-      <col/>
-      <label value="Single function?"/>
-      <col/>
-      <input obj_name="runtime_vars" col_name="single_function" after="
-        <<case>>
-          <<compare test=`[['if', '', 'runtime_vars.single_function', 'is', '$True', '']]`>>
-            <<set_readonly target=`runtime_vars.function_id` state=`false`/>>
-          <</compare>>
-          <<default>>
-            <<set_readonly target=`runtime_vars.function_id` state=`true`/>>
-          <</default>>
-        <</case>>
-        "/>
-      <row/>
-      <col/>
-      <label value="Function id:"/>
-      <col/>
-      <input obj_name="runtime_vars" col_name="function_id" lng="80" readonly="true"/>
-      <display obj_name="runtime_vars" col_name="function_id>descr" lng="160"/>
-      <end_if/>
-
     </body>
 
     <button_row>
       <button btn_id="run_report" btn_label="Run report" btn_enabled="true"
         btn_validate="true" action="
-          <<pyfunc name=`custom.finrpt_funcs.save_finrpt_data`/>>
+          <<pyfunc name=`custom.finrpt_funcs.save_flowrpt_data`/>>
           <<end_form state=`cancelled`/>>
-          <<pyfunc name=`custom.finrpt_funcs.run_finrpt`/>>
+          <<pyfunc name=`custom.finrpt_funcs.run_flowrpt`/>>
         "/>
     </button_row>
     <frame_methods>

@@ -3,6 +3,7 @@ from common import log_db, db_log
 def customise(DbCursor):
     # add db-specific methods to DbCursor class
     DbCursor.create_cursor = create_cursor
+    DbCursor.gen_tots_sql = gen_tots_sql
     DbCursor.get_rows = get_rows
     DbCursor.close = close
 
@@ -18,6 +19,16 @@ async def create_cursor(self, sql, params):
     self.num_rows, = await anext(cur)
     if self.debug:
         print('number of rows =', self.num_rows)
+
+async def gen_tots_sql(self, sql, params):
+    tots_sql = []
+    tots_sql.append('GROUP BY GROUPING SETS ((')
+    tots_sql.append(', '.join(self.db_obj.context.group_by_cols))
+    tots_sql.append('), ())')
+    tots_sql.append('')
+
+    order_pos = sql.find('ORDER BY')
+    return sql[:order_pos] + ' '.join(tots_sql) + sql[order_pos:], params
 
 async def get_rows(self, from_row, to_row):
     if self.debug:
