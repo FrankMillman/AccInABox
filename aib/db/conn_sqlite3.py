@@ -290,7 +290,7 @@ async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
     if fld.col_defn.data_type == 'AUT0':
         sql = f"SELECT EXISTS(SELECT * FROM {table_name})"
         cur = await self.exec_sql(sql)
-        exists, = await cur.__anext__()
+        exists, = await anext(cur)
         if not exists:  # if first row, insert row_id with value of 0
             cols.insert(0, 'row_id')
             vals.insert(0, 0)

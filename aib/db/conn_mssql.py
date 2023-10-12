@@ -140,7 +140,7 @@ async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
         f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
         )
     cur = await self.exec_sql(sql, vals)
-    data_row_id, = await cur.__anext__()
+    data_row_id, = await anext(cur)
 
     fld = await db_obj.getfld('row_id')
     fld._value = data_row_id
@@ -154,7 +154,7 @@ async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
             f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
             )
         cur = await self.exec_sql(sql, vals)
-        xref_row_id, = await cur.__anext__()
+        xref_row_id, = await anext(cur)
 
         fld = await db_obj.getfld('created_id')
         fld._value = xref_row_id
@@ -197,7 +197,7 @@ async def update_row(self, db_obj, cols, vals, from_upd_on_save):
             f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
             )
         cur = await self.exec_sql(sql, vals)
-        audit_row_id, = await cur.__anext__()
+        audit_row_id, = await anext(cur)
 
         cols = ['data_row_id', 'audit_row_id', 'user_row_id', 'date_time', 'type']
         vals = [data_row_id, audit_row_id, db_obj.context.user_row_id, self.timestamp, 'chg']
@@ -230,7 +230,7 @@ async def delete_row(self, db_obj, from_upd_on_save):
             f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
             )
         cur = await self.exec_sql(sql, vals)
-        xref_row_id, = await cur.__anext__()
+        xref_row_id, = await anext(cur)
 
         fld = await db_obj.getfld('deleted_id')
         fld._value = xref_row_id

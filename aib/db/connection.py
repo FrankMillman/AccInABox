@@ -438,9 +438,6 @@ class Conn:
         if self.tablenames is not None:  # existing build is in progress
             self.save_tablenames.append(self.tablenames)
 
-        # sqlite3 needs COLTYPES, but only in SELECT, not in WHERE clause or WITH clause
-        self.incl_col_types = (incl_col_types is True and self.constants.servertype == 'sqlite3')
-
         if debug:
             col_names = list(col_names)  # preserve gen expr
             print('BUILD', db_table.table_name, col_names, where, order)
@@ -692,7 +689,23 @@ class Conn:
                     if as_clause.startswith("'"):
                         # a literal cannot be included in an ORDER BY clause
                         as_clause = f'(SELECT {as_clause})'
-                    order_list.append(f'{as_clause}{desc}')
+                    # order_list.append(f'{as_clause}{desc}')
+                    # if there is an as_clause, the column in the SELECT has been
+                    #   given an alias (see next block) - we can just use the alias here
+
+                    if self.constants.servertype == 'sqlite3':  # sqlite3 needs COLTYPES
+                        if (col.data_type == 'DEC' or col.data_type.startswith('$')) and not self.grouping:
+                            # force sqlite3 to return Decimal type
+                            col_name = f'"{col.col_name} AS [REAL{col.db_scale}]"'
+                        elif col.data_type == 'BOOL' and not self.grouping:
+                            # force sqlite3 to return Bool type
+                            col_name = f'"{col.col_name} AS [BOOLTEXT]"'
+                        else:
+                            col_name = col.col_name
+                    else:
+                        col_name = col.col_name
+
+                    order_list.append(f'{col_name}{desc}')
                 elif build_sum:
                     order_list.append(f'SUM({alias}.{col.col_name}){desc}')
                 else:
@@ -757,7 +770,7 @@ class Conn:
         if col is None:
             col_text = f'NULL AS {col_name}'
         elif as_clause is not None:
-            if self.incl_col_types:  # sqlite3 needs COLTYPES
+            if self.constants.servertype == 'sqlite3':  # sqlite3 needs COLTYPES
                 if (col.data_type == 'DEC' or col.data_type.startswith('$')) and not self.grouping:
                     # force sqlite3 to return Decimal type
                     col_name = f'"{col.col_name} AS [REAL{col.db_scale}]"'
