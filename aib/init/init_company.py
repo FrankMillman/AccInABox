@@ -627,6 +627,8 @@ async def setup_forms(context, conn):
     await setup_form('finrpt_run')
     await setup_form('finrpt_grid')
     await setup_form('finrpt_page')
+    await setup_form('flowrpt_run')
+    await setup_form('flowrpt_grid')
     await setup_form('tranrpt_grid')
     await setup_form('all_captured')
     await setup_form('gl_jnl_posted')
@@ -830,6 +832,7 @@ async def setup_menus(context, conn, company_name):
                     ]],
                 ]],
             ['Financial reports', 'form', 'finrpt_list'],
+            ['Flow reports', 'form', 'flowrpt_run'],
             ['Period end procedure', 'form', 'gl_ledger_periods'],
             ['Year end menu', 'menu', 'gl', [
                 ['Capture y/end adjustments', 'form', 'gl_adj'],

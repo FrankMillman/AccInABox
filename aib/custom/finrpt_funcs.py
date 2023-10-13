@@ -1323,3 +1323,392 @@ async def tranrpt_drilldown(caller, xml):
     await tran_obj.setval('row_id', src_row_id)
     print(tran_obj)
     raise AibError(head='Transaction report', body='Drilldown to transaction not yet implemented')
+
+#####################################################
+#
+# these functions are called from formdefn flowrpt_run
+#
+#####################################################
+
+async def setup_ledger_ids(caller, xml):
+    # called from flowrpt_run after entering module_id
+    context = caller.context
+    form_vars = context.data_objects['form_vars']
+    single_ledger = await form_vars.getval('single_ledger')
+    if single_ledger:
+        module_id = await form_vars.getval('module_id')
+        sql = f"SELECT ledger_id, descr FROM {caller.company}.{module_id}_ledger_params WHERE deleted_id = 0 ORDER BY row_id"
+        async with context.db_session.get_connection() as db_mem_conn:
+            conn = db_mem_conn.db
+            ledger_ids = await conn.fetchall(sql)
+    else:
+        ledger_ids = [('', '')]
+    ledger_ids = dict(ledger_ids)
+    ledger_id_fld = await form_vars.getfld('ledger_id')
+    ledger_id_fld.col_defn.choices = ledger_ids
+    obj = [x for x in caller.obj_list if hasattr(x, 'col_name') and x.col_name == 'ledger_id'][0]
+    caller.session.responder.setup_choices(obj.ref, ledger_ids)
+
+async def setup_flowrpt_vars(caller, xml):
+    # called from flowrpt_run before_start_form
+
+    company = caller.company
+    context = caller.context
+    form_vars = context.data_objects['form_vars']
+    runtime_vars = context.data_objects['runtime_vars']
+
+    await runtime_vars.init()
+
+    # load choices and defaults for year_no and period_no
+    fin_periods = await db.cache.get_adm_periods(company)
+
+    ye_choices = {(fin_per := fin_periods[ye_per]).year_no: 
+        f'{fin_per.year_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
+            for ye_per in sorted(list({per.year_per_id for per in fin_periods[1:]}))}
+
+    per_choices = {fin_per.period_no:
+        f'{fin_per.year_per_no:\xa0>2}: {fin_per.closing_date:%d/%m/%Y}'
+            for fin_per in fin_periods[1:]}
+
+    module_id = await form_vars.getval('module_id')
+    ledger_id = await form_vars.getval('ledger_id')
+    if module_id in ('nsls', 'npch'):
+        mod, ledg = 8, 0  # use 'gl' periods
+    elif ledger_id is None:  # 'all' ledgers selected
+        mod, ledg = 8, 0  # use 'gl' periods
+    else:
+        mod, ledg = await get_mod_ledg_id(company, module_id, ledger_id)
+    current_period = await db.cache.get_current_period(company, mod, ledg)
+    if current_period is None:
+        raise AibError(head=company, body='Ledger periods not set up')
+
+    fld = await runtime_vars.getfld('year_no')
+    fld.col_defn.choices = ye_choices
+    await fld.setval(fin_periods[current_period].year_no)
+
+    fld = await runtime_vars.getfld('period_no')
+    fld.col_defn.choices = per_choices
+    await fld.setval(current_period)
+
+async def save_flowrpt_data(caller, xml):
+    # called from flowrpt_run after 'run_report' is clicked
+    # end_form is called next, which removes references to various data_objects
+    # this saves relevant data in 'context', to be used in run_flowrpt() below
+
+    context = caller.context
+    form_vars = context.data_objects['form_vars']
+    date_vars = context.data_objects['date_vars']
+    runtime_vars = context.data_objects['runtime_vars']
+
+    date_type = await date_vars.getval('date_param')
+    match date_type:
+        case 'S':  # single date
+            date_range_vars = context.data_objects['date_range_vars']
+            dates = [(await date_range_vars.getval('start_date'), await date_range_vars.getval('end_date'))]
+        case 'Y':  # financial year
+            periods = await db.cache.get_adm_periods(context.company)
+            fin_yr = await runtime_vars.getval('year_no')
+            date_seq = -1 if await date_vars.getval('asc_dsc') == 'D' else 1
+            dates = [(per.opening_date, per.closing_date) for per in periods if per.year_no == fin_yr][::date_seq]
+        case 'P':  # multiple periods
+            periods = await db.cache.get_adm_periods(context.company)
+            start_period = await runtime_vars.getval('period_no')
+            date_seq = await date_vars.getval('asc_dsc')
+            grp_size, no_of_grps, grps_to_skip = await date_vars.getval('groups')
+            dates = []
+            for grp in range(no_of_grps):
+                closing_date = periods[start_period].closing_date
+                opening_date = periods[start_period - grp_size + 1].opening_date
+                dates.append((opening_date, closing_date))
+                start_period -= (grp_size + (grp_size * grps_to_skip))
+                if start_period < 1:
+                    break
+            if date_seq == 'A':
+                dates = dates[::-1]
+        case 'D':  # multiple dates
+            raise NotImplementedError  # needs a bit of thought
+
+    context.flow_module_id = await form_vars.getval('module_id')
+    context.flow_ledger_id = await form_vars.getval('ledger_id')
+    context.dates = dates
+
+async def run_flowrpt(caller, xml):
+    # called from flowrpt_run after 'run_report' is clicked and end_form is called
+
+    context = caller.context
+    company = caller.company
+
+    module_id = context.flow_module_id
+    ledger_id = context.flow_ledger_id
+    dates = context.dates
+
+    cursor_cols = []
+    expand = True  # set first col to 'expand', then set expand to False
+
+    data_defn = ['<mem_obj name="flow_data">']
+    data_defn.append(
+      '<mem_col col_name="type" data_type="TEXT" short_descr="Type" '
+        'long_descr="Type:- src or tgt" col_head="Type"/>'
+        )
+    cursor_cols.append((
+        'cur_col', 'type', 10, expand,  # type, col_name, width, expand
+        True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
+        None,  # action
+        ))
+    expand = False
+    data_defn.append(
+      '<mem_col col_name="orig_ledg" data_type="TEXT" short_descr="Orig ledger" '
+        'long_descr="Orig ledger" col_head="Orig ledg"/>'
+        )
+    cursor_cols.append((
+        'cur_col', 'orig_ledg', 80, expand,  # type, col_name, width, expand
+        True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
+        None,  # action
+        ))
+    data_defn.append(
+      '<mem_col col_name="orig_tran" data_type="TEXT" short_descr="Orig trantype" '
+        'long_descr="Orig trantype" col_head="Orig tran"/>'
+        )
+    cursor_cols.append((
+        'cur_col', 'orig_tran', 80, expand,  # type, col_name, width, expand
+        True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
+        None,  # action
+        ))
+    data_defn.append(
+      '<mem_col col_name="gl_code" data_type="TEXT" short_descr="Gl code" '
+        'long_descr="Gl code" col_head="Gl code"/>'
+        )
+    cursor_cols.append((
+        'cur_col', 'gl_code', 80, expand,  # type, col_name, width, expand
+        True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
+        None,  # action
+        ))
+    data_defn.append(
+      '<mem_col col_name="src_tran" data_type="TEXT" short_descr="Src trantype" '
+        'long_descr="Src trantype" col_head="Src tran"/>'
+        )
+    cursor_cols.append((
+        'cur_col', 'src_tran', 80, expand,  # type, col_name, width, expand
+        True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
+        None,  # action
+        ))
+    for pos, (op_date, cl_date) in enumerate(dates):
+        data_defn.append(
+          f'<mem_col col_name="tran_tot_{pos}" data_type="$LCL" short_descr="Tran tot {pos}" '
+          f'long_descr="Tran tot {pos} {op_date:%d/%m/%y}-{cl_date:%d/%m/%y}" col_head="{cl_date:%d/%m/%y}" '
+          # 'db_scale="2" scale_ptr="_param.local_curr_id>scale"/>'
+          'db_scale="2"/>'
+            )
+        cursor_cols.append((
+            'cur_col', f'tran_tot_{pos}', 80, expand,  # type, col_name, width, expand
+            True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
+            (  # action
+                '<start_row/>'
+                '<pyfunc name="custom.finrpt_funcs.exec_flow_trans"/>'
+                '<inline_form name="flow_trans_grid">'
+                  '<on_return>'
+                    '<return state="completed"/>'
+                    '<return state="cancelled"/>'
+                  '</on_return>'
+                '</inline_form>'
+                 ),
+            ))
+    data_defn.append('</mem_obj>')
+    flow_data = await db.objects.get_mem_object(context, 'flow_data',
+        table_defn=etree.fromstring(''.join(data_defn)))
+    caller.data_objects['flow_data'] = flow_data
+
+    flow_data.cursor_defn = [
+        cursor_cols,
+        [],  # filter
+        [],  # sequence
+        None,  # formview_name
+        ]
+
+    bals_defn = ['<mem_obj name="flow_bals">']
+    for pos, (op_date, cl_date) in enumerate(dates):
+        bals_defn.append(
+          f'<mem_col col_name="op_bal_{pos}" data_type="$LCL" short_descr="Op bal {pos}" '
+          f'long_descr="Opening bal {pos} {op_date:%d/%m/%y}" col_head="" '
+          'db_scale="2" scale_ptr="_param.local_curr_id>scale"/>'
+            )
+        bals_defn.append(
+          f'<mem_col col_name="cl_bal_{pos}" data_type="$LCL" short_descr="Cl bal {pos}" '
+          f'long_descr="Closing bal {pos} {cl_date:%d/%m/%y}" col_head="" '
+          'db_scale="2" scale_ptr="_param.local_curr_id>scale"/>'
+            )
+        bals_defn.append(
+          f'<mem_col col_name="op_date_{pos}" data_type="DTE" short_descr="Op date {pos}" '
+          f'long_descr="Opening date {pos} {op_date:%d/%m/%y}" col_head=""/>'
+            )
+        bals_defn.append(
+          f'<mem_col col_name="cl_date_{pos}" data_type="DTE" short_descr="Cl date {pos}" '
+          f'long_descr="Closing date {pos} {cl_date:%d/%m/%y}" col_head=""/>'
+            )
+    bals_defn.append(
+      f'<mem_col col_name="flow_tran_tot" data_type="$LCL" short_descr="Flow tran total" '
+      f'long_descr="Flow trans total, for display in flow_tran_grid" col_head="" '
+      'db_scale="2" scale_ptr="_param.local_curr_id>scale"/>'
+        )
+    bals_defn.append('</mem_obj>')
+    flow_bals = await db.objects.get_mem_object(context, 'flow_bals',
+        table_defn=etree.fromstring(''.join(bals_defn)))
+    caller.data_objects['flow_bals'] = flow_bals
+
+    match module_id:
+        case 'npch':
+            gl_code = 'uex_gl_code_id'
+        case 'nsls':
+            gl_code = 'uea_gl_code_id'
+        case _:
+            gl_code = 'gl_code_id'
+    if ledger_id is not None:
+        module_row_id, ledger_row_id = await db.cache.get_mod_ledg_id(company, module_id, ledger_id)
+        sql_ledg = f' AND a.orig_ledger_row_id = {ledger_row_id}'
+    else:
+        module_row_id = await db.cache.get_mod_id(company, module_id)
+        sql_ledg = ''
+
+    sql_code = f'SELECT {gl_code} FROM {company}.{module_id}_ledger_params WHERE deleted_id = 0'
+    if ledger_id is not None:
+        sql_code += f' AND row_id = {ledger_row_id}'
+
+    sql_data = [
+        "SELECT type, CASE "
+        f"WHEN mod.module_id = 'ap' THEN (SELECT ledger_id FROM {company}.ap_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
+        f"WHEN mod.module_id = 'ar' THEN (SELECT ledger_id FROM {company}.ar_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
+        f"WHEN mod.module_id = 'cb' THEN (SELECT ledger_id FROM {company}.cb_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
+        f"WHEN mod.module_id = 'in' THEN (SELECT ledger_id FROM {company}.in_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
+        "WHEN mod.module_id = 'gl' THEN 'gl' "
+        "END AS ledger_id, orig.tran_type, code.gl_code, src.tran_type,"
+        ]
+    for op_date, cl_date in dates:
+        sql_data.append(
+            f"SUM(CASE WHEN tran_date BETWEEN '{op_date}' AND '{cl_date}' THEN tran_day ELSE 0 END) AS \"[REAL2]\","
+            )
+    sql_data[-1] = sql_data[-1][:-1]  # remove trailing comma
+    sql_data.append("FROM (")
+    for op_date, cl_date in dates:
+        sql_data.append(
+            "SELECT "
+                "'src' AS type, orig_ledger_row_id, orig_trantype_row_id, gl_code_id, src_trantype_row_id, "
+                "1 as src_seq, tran_date, 0-tran_day AS tran_day "
+            f"FROM {company}.gl_totals a "
+            f"JOIN {company}.adm_tran_types orig_type ON orig_type.row_id = a.orig_trantype_row_id "
+            "WHERE a.deleted_id = 0 "
+                f"AND a.tran_date BETWEEN '{op_date}' AND '{cl_date}' "
+                f"AND a.gl_code_id NOT IN ({sql_code}) "
+                f"AND (orig_type.module_row_id = {module_row_id}{sql_ledg}) "
+            "UNION ALL "
+            "SELECT "
+                "'tgt' AS type, orig_ledger_row_id, orig_trantype_row_id, gl_code_id, src_trantype_row_id, "
+                "src_type.seq as src_seq, tran_date, tran_day "
+            f"FROM {company}.gl_totals a "
+            f"JOIN {company}.adm_tran_types orig_type ON orig_type.row_id = a.orig_trantype_row_id "
+            f"JOIN {company}.adm_tran_types src_type ON src_type.row_id = a.src_trantype_row_id "
+            "WHERE a.deleted_id = 0 "
+                f"AND a.tran_date BETWEEN '{op_date}' AND '{cl_date}' "
+                f"AND a.gl_code_id IN ({sql_code}) "
+                f"AND NOT (orig_type.module_row_id = {module_row_id}{sql_ledg}) "
+            "UNION ALL"
+            )
+    sql_data[-1] = sql_data[-1][:-9]  # strip final UNION ALL
+    sql_data.append(") dum ")
+    sql_data.append(
+        f"JOIN {company}.adm_tran_types src ON src.row_id = dum.src_trantype_row_id "
+        f"JOIN {company}.adm_tran_types orig ON orig.row_id = dum.orig_trantype_row_id "
+        f"JOIN {company}.gl_codes code ON code.row_id = dum.gl_code_id "
+        f"JOIN {company}.gl_groups int ON int.row_id = code.group_row_id "
+        f"JOIN {company}.gl_groups maj ON maj.row_id = int.parent_id "
+        f"JOIN {company}.gl_groups bs_is ON bs_is.row_id = maj.parent_id "
+        f"JOIN {company}.db_modules mod ON mod.row_id = orig.module_row_id "
+        "GROUP BY type, mod.module_id, code.gl_code, orig.tran_type, dum.orig_ledger_row_id, src.tran_type, "
+            "bs_is.seq, maj.seq, int.seq, code.seq, orig.seq, src_seq "
+        "ORDER BY type, orig_ledger_row_id, orig.seq, bs_is.seq, maj.seq, int.seq, code.seq, src_seq "
+        )
+    sql_data = ' '.join(sql_data)[:-1]
+
+    sql_bals = ["SELECT op_bal AS \"[REAL2]\", cl_bal AS \"[REAL2]\", op_date AS \"DATE]\", cl_date AS \"[DATE]\" FROM (\n"]
+    for op_date, cl_date in dates:
+        sql_bals.append("SELECT")
+        sql_bals.append(f"""
+    (SELECT SUM(b.tran_tot) FROM (
+        SELECT
+            a.tran_tot, ROW_NUMBER() OVER (PARTITION BY a.gl_code_id, a.location_row_id, a.function_row_id,
+            a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id ORDER BY a.tran_date DESC) row_num
+        FROM prop.gl_totals a
+        WHERE a.deleted_id = 0
+            AND a.gl_code_id IN ({sql_code})
+            AND a.tran_date < '{op_date}'
+        ) b
+    WHERE b.row_num = 1) as op_bal,""")
+        sql_bals.append(f"""
+    (SELECT SUM(b.tran_tot) FROM (
+        SELECT
+            a.tran_tot, ROW_NUMBER() OVER (PARTITION BY a.gl_code_id, a.location_row_id, a.function_row_id,
+            a.src_trantype_row_id, a.orig_trantype_row_id, a.orig_ledger_row_id ORDER BY a.tran_date DESC) row_num
+        FROM prop.gl_totals a
+        WHERE a.deleted_id = 0
+            AND a.gl_code_id IN ({sql_code})
+            AND a.tran_date <= '{cl_date}'
+        ) b
+    WHERE b.row_num = 1) as cl_bal,
+    '{op_date}' AS op_date, '{cl_date}' AS cl_date\n""")
+        sql_bals.append("UNION ALL\n")
+    sql_bals[-1] = sql_bals[-1][:-10]  # strip trailing UNION ALL\n
+    sql_bals.append(") dum")
+    sql_bals = ''.join(sql_bals)
+
+    async with caller.db_session.get_connection(read_lock=True) as db_mem_conn:
+        conn = db_mem_conn.db
+
+        tots = [0] * len(dates)
+        cur = await conn.exec_sql(sql_data)
+        async for type, orig_ledg, orig_tran, gl_code, src_tran, *tran_tots in cur:
+            init_vals = {
+                'type': type,
+                'orig_ledg': orig_ledg,
+                'orig_tran': orig_tran,
+                'gl_code': gl_code,
+                'src_tran': src_tran
+                }
+            for pos in range(len(dates)):
+                init_vals[f'tran_tot_{pos}'] = tran_tots[pos]
+                tots[pos] += tran_tots[pos]
+            await flow_data.init(init_vals=init_vals)
+            await flow_data.save()
+
+        cur = await conn.exec_sql(sql_bals)
+        async for row_no, (op_bal, cl_bal, op_date, cl_date) in aenumerate(cur):
+            await flow_bals.setval(f'op_bal_{row_no}', op_bal)
+            await flow_bals.setval(f'cl_bal_{row_no}', cl_bal)
+            await flow_bals.setval(f'op_date_{row_no}', op_date)
+            await flow_bals.setval(f'cl_date_{row_no}', cl_date)
+            assert tots[row_no] == cl_bal - op_bal
+
+    tots_header = [None] * 4 + ["'Balance b/f'"]
+    tots_footer = [None] * 4 + ["'Balance c/f'"]
+    for pos in range(len(dates)):
+        tots_header.append(f'flow_bals.op_bal_{pos}')
+        tots_footer.append(f'flow_bals.cl_bal_{pos}')
+
+    grid_params = ('flow_data', 'Flow report', tots_header, tots_footer)
+
+    form = ht.form.Form()
+    await form._ainit_(context, caller.session, 'flowrpt_grid', grid_params=grid_params)
+
+async def exec_flow_trans(caller, xml):
+    context = caller.context
+    flow_data = caller.data_objects['flow_data']
+    flow_bals = caller.data_objects['flow_bals']
+    context.tran_type = await flow_data.getval('orig_tran')
+    col_name_clicked = caller.obj_clicked.col_name  # tran_tot_{date_pos}
+    context.op_date = await flow_bals.getval(col_name_clicked.replace('tran_tot', 'op_date'))
+    context.cl_date = await flow_bals.getval(col_name_clicked.replace('tran_tot', 'cl_date'))
+
+    tran_types = await db.objects.get_db_object(context, 'adm_tran_types')
+    await tran_types.setval('tran_type', await flow_data.getval('src_tran'))
+    table_name = await tran_types.getval('table_id>table_name')
+
+    flow_trans = await db.objects.get_db_object(context, table_name)
+    caller.data_objects['flow_trans'] = flow_trans

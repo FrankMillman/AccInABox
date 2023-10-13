@@ -471,9 +471,38 @@ virt.append ({
         "WHERE d.tran_type = 'ar_subrec' and b.tran_row_id = a.row_id"
         ),
     })
+virt.append ({
+    'col_name'   : 'flow_tran',
+    'data_type'  : '$LCL',
+    'short_descr': 'Flow transaction amount',
+    'long_descr' : 'Flow transaction amount, for use in flowrpt_grid',
+    'col_head'   : 'Flow tran',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : "a.pmt_local"
+    })
 
 # cursor definitions
 cursors = []
+cursors.append({
+    'cursor_name': 'flow_trans',
+    'title': 'Transactions',
+    'columns': [
+        ['tran_date', 80, False, True],
+        ['trantype_row_id>tran_type', 80, False, True],
+        ['tran_number', 100, False, True],
+        ['cust_row_id>party_row_id>party_id', 80, False, True],
+        ['cust_row_id>party_row_id>display_name', 160, False, True],
+        ['text', 240, True, True],
+        ['flow_tran', 100, False, True],
+        ],
+    'filter': [
+        ['WHERE', '', 'trantype_row_id>tran_type', '=', '_ctx.tran_type', ''],
+        ['AND', '', 'tran_date', '>=', '_ctx.op_date', ''],
+        ['AND', '', 'tran_date', '<=', '_ctx.cl_date', ''],
+        ],
+    'sequence': [['tran_date', False], ['tran_number', False]],
+    })
 
 # actions
 actions = []
