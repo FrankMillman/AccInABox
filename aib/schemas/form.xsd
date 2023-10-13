@@ -282,8 +282,7 @@
       <xs:attribute name="start_val"/>
       <xs:attribute name="header_row"/>
       <xs:attribute name="footer_row"/>
-      <xs:attribute name="get_tots"/>
-      <xs:attribute name="assert_tots"/>
+      <xs:attribute name="gen_tots"/>
       <xs:attribute name="running_balance"/>
       <xs:attribute name="auto_start" type="xs:boolean"/>
       <xs:attribute name="auto_startrow" type="xs:boolean"/>

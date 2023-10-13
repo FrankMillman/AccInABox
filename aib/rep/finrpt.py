@@ -236,12 +236,9 @@ class FinReport:
 
         table_name = finrpt_data['table_name']
         date_params = finrpt_data['date_params']
-        date_vals = finrpt_data['date_vals']
         self.include_zeros = finrpt_data['include_zeros']
         finrpt_data['exclude_ye_tfr'] = False
         pivot_on = finrpt_data['pivot_on']
-        # columns = finrpt_data['columns'][:]  # make a copy
-        # calc_cols = finrpt_data['calc_cols'] or []
         group_by = finrpt_data['group_by']
         filter_by = finrpt_data['filter_by']
         self.ledger_row_id = finrpt_data['ledger_row_id']  # can't use context.ledger_row_id - could be sub-ledger
@@ -267,12 +264,6 @@ class FinReport:
             print('unknown tran_tot')
             breakpoint()
         report_type = finrpt_data['report_type']
-        # if report_type == 'as_at':
-        #     self.tot_col_name = f'tran_tot{suffix}'
-        # elif report_type == 'from_to':
-        #     self.tot_col_name = f'tran_day{suffix}'
-        # elif report_type == 'bf_cf':
-        #     self.tot_col_name = f'tran_tot{suffix}'
         match report_type:
             case 'as_at':
                 self.tot_col_name = f'tran_tot{suffix}'
@@ -281,22 +272,9 @@ class FinReport:
             case 'bf_cf':
                 self.tot_col_name = f'tran_tot{suffix}'
 
-#       if not 'date' in group_by:
-#           dates = None
-#       else:
-#           dates = await self.setup_dates(group_by, pivot_dim, date_vals)
-#           if not dates:
-#               raise AibError(
-#                   head=finrpt_data['report_name'],
-#                   body='No rows found for specified dates.'
-#                   )
-##          if dbc.servertype == 'mssql':
-##              # pyodbc returns a pyodbc.Row object, which can cause problem with pivot
-##              # here we turn each row into a regular tuple
-##              dates = [tuple(row) for row in dates]
+        dates = [Date(*date) for date in finrpt_data['dates']]
 
         if 'date' in group_by:
-            dates = await self.setup_dates(group_by, date_params, date_vals)
             if pivot_dim is None:
                 self.order_by['date'].append(f"end_date{' DESC' if date_seq == 'D' else ''}")
             elif pivot_dim != 'date':
@@ -305,14 +283,9 @@ class FinReport:
                 self.pivot_group_by.append('end_date')
                 self.order_by['date'].append(f"end_date{' DESC' if date_seq == 'D' else ''}")
         else:
-            if date_vals is not None:  # tuple of (start_date, end_date)
-                dates = [date_vals]  # must be a list
-            else:  # no parameters provided - get current period dates
-                dates = await sql_curr_per(self.context)
             if pivot_dim is not None and pivot_dim != 'date':
                 self.pivot_group_by.append('start_date')
                 self.pivot_group_by.append('end_date')
-        dates = [Date(*date) for date in dates]
 
         if 'code' in group_by or 'code' in filter_by:
             await self.setup_code(finrpt_data, pivot_dim, drilldown)
@@ -368,7 +341,6 @@ class FinReport:
                 self.tots_params['ledger'].append(self.ledger_row_id)
 
         columns = [ColumnInfo(*col) for col in finrpt_data['columns']]
-        # calc_cols = finrpt_data['calc_cols'] or []
 
         if pivot_dim is not None:
             if pivot_dim == 'date':
@@ -412,12 +384,6 @@ class FinReport:
             columns[pos:pos+1] = pivot_cols  # replace placeholder col with actual cols
             finrpt_data['columns'] = [list(col) for col in columns]  # make a copy - must exclude 'type' col below
 
-#       if pivot_dim != 'date':
-#           if 'start_date' not in [col[1] for col in columns]:  # should not be necessary to check
-#               columns.append(['start_date', 'start_date', 'Start date', 'DTE', 0, None, False])
-#           if 'end_date' not in [col[1] for col in columns]:  # should not be necessary to check
-#               columns.append(['end_date', 'end_date', 'End date', 'DTE', 0, None, False])
- 
         if self.links_to_subledg:
             # if 'links_to_subledg', we generate multiple SQLs, one for the main ledger
             #   and one for each subledger, joined by UNION ALL
@@ -486,8 +452,6 @@ class FinReport:
         memobj_defn.append(f'<mem_obj name="{memobj_name}">')
 
         translate_table = str.maketrans({'&': '&amp;', '>': '&gt;', '<': '&lt;', '"': '&quot;'})
-        # # for col_name, col_sql, col_head, data_type, lng, pvt, tot in columns:
-        # for col_name, data_type, col_head, col_width, tot in columns:
         for col in columns:
             col_head = col.col_head.translate(translate_table)
             db_scale = ' db_scale="2"' if col.data_type.startswith('$') else ''
@@ -495,18 +459,6 @@ class FinReport:
                 f'<mem_col col_name="{col.col_name}" data_type="{col.data_type}" short_descr="{col.col_head}" '
                 f'long_descr="{col.col_head}" col_head="{col.col_head}"{db_scale}/>'
                 )
-
-        # for col_name, expr, col_head, data_type, col_width, tot in calc_cols:
-        #     if data_type == 'DEC':
-        #         memobj_defn.append(
-        #             f'<mem_col col_name="{col_name}" data_type="{data_type}" short_descr="{col_head}" '
-        #             f'long_descr="{col_head}" col_head="{col_head}" db_scale="2"/>'
-        #             )
-        #     else:
-        #         memobj_defn.append(
-        #             f'<mem_col col_name="{col_name}" data_type="{data_type}" short_descr="{col_head}" '
-        #             f'long_descr="{col_head}" col_head="{col_head}"/>'
-        #             )
 
         memobj_defn.append('</mem_obj>')
         mem_obj = await db.objects.get_mem_object(context,
@@ -516,7 +468,6 @@ class FinReport:
 
         tots_footer = []
         tot_cols = [col.tots_footer for col in columns]
-        # tot_calc = [col[4] for col in calc_cols]
         gen_tots = any(tot == 'Y' for tot in tot_cols)
         if gen_tots:
             tots_dict = {}
@@ -544,20 +495,6 @@ class FinReport:
                 else:
                     tots_footer.append(repr(tot))  # string to appear on footer row
 
-            # for pos, tot in enumerate(tot_calc):
-            #     if tot is True:
-            #         col_name = calc_cols[pos][0]
-            #         tots_defn.append(
-            #             f'<mem_col col_name="{col_name}" data_type="DEC" short_descr="{col_name}" '
-            #             f'long_descr="{col_name}" col_head="{col_name}" '
-            #             'db_scale="2" scale_ptr="_param.local_curr_id>scale"/>'
-            #             )
-            #         tots_footer.append(f'{memtot_name}.{col_name}')
-            #     elif tot is False:
-            #         tots_footer.append(None)
-            #     else:
-            #         tots_footer.append(repr(tot))  # string to appear on footer row
-
             tots_defn.append('</mem_obj>')
             tots_obj = await db.objects.get_mem_object(context,
                 memtot_name, table_defn=etree.fromstring(''.join(tots_defn)))
@@ -581,17 +518,6 @@ class FinReport:
                 action, 
                 ))
             expand = False
-        # for col in calc_cols:
-        #     action = None
-        #     cursor_cols.append((
-        #         'cur_col',  # type
-        #         col[0],  # col_name
-        #         col[4],  # lng
-        #         expand,
-        #         True,  # readonly
-        #         False, None, None, None, None,  # skip, before, form_dflt, validation, after
-        #         action, 
-        #         ))
         mem_obj.cursor_defn = [
             cursor_cols,
             [],  # filter
@@ -607,22 +533,11 @@ class FinReport:
                     await mem_obj.setval(col.col_name, dat)
                     if col.tots_footer == 'Y':  # build total
                         tots_dict[col.col_name] += dat
-
-                # for calc_col in calc_cols:
-                #     col_name = calc_col[0]
-                #     col_val = await eval_elem(calc_col[1], mem_obj)
-                #     await mem_obj.setval(col_name, col_val)
-
                 await mem_obj.save()
 
         if gen_tots:
             for tot_col_name, tot_value in tots_dict.items():
                 await tots_obj.setval(tot_col_name, tot_value)
-
-            # for calc_col in calc_cols:
-            #     col_name = calc_col[0]
-            #     col_val = await eval_elem(calc_col[1], tots_obj)
-            #     await tots_obj.setval(col_name, col_val)
 
         data_inputs = {'finrpt_data':finrpt_data}
         grid_params = (memobj_name, title, tots_footer)
@@ -639,8 +554,6 @@ class FinReport:
         else:
             pivot_dim = None
 
-        # col_names = [col.col_name for col in columns]
-        # rpt_groups = []
         col_names = ['root', 'root_descr'] + [col.col_name for col in columns]
         rpt_groups = ['root']
         for dim in group_by:
@@ -672,8 +585,6 @@ class FinReport:
         # val_col_names = col_names[num_text_cols:]
         val_col_names = [col.col_name for col in columns if col.data_type.startswith('$')]
 
-        # breakpoint()
-
         row_dict = {grp: [] for grp in rpt_groups}
         tots = {grp: [0] * len(val_col_names) for grp in rpt_groups[:-1] }
         DbRow = NT('DbRow', ', '.join(col_names))
@@ -683,7 +594,6 @@ class FinReport:
         async with context.db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
             async for row in await conn.exec_sql(sql, params):
-                # db_row = DbRow(*row)
                 # pyodbc returns a pyodbc.Row object - here we turn it into a regular tuple
                 db_row = DbRow(*('root', 'All codes') + tuple(row))
                 rows.append(db_row)
@@ -717,15 +627,6 @@ class FinReport:
                     #       replace value with None
                     #   for all value cols -
                     #     replace with values from 'tots' for that level
-#                   row_dict[rpt_groups[level]].append(
-#                       DbRow(
-##                          *(getattr(db_row, col_name) for col_name in col_names[:num_text_cols]),
-#                           *(getattr(db_row, col_name) for col_name in col_names[:((level+1)*2)]),
-#                           *((None,) * (num_text_cols - ((level+1)*2))),
-#                           *tots[rpt_groups[level]]
-#                           )
-#                       )
-#                   print(row_dict[rpt_groups[level]][-1])
                     new_row = []
                     num_text_cols2 = len(rpt_groups) * 2
                     for col_name in col_names[:((level+1)*2)]:
@@ -740,8 +641,6 @@ class FinReport:
                         new_row.append(getattr(db_row, 'type'))
                     for tot in tots[rpt_groups[level]]:
                         new_row.append(tot)
-#                   print(new_row)
-#                   print()
                     row_dict[rpt_groups[level]].append(DbRow(*new_row))
                     tots[rpt_groups[level]] = [0] * len(val_col_names)
             return db_row
@@ -756,34 +655,6 @@ class FinReport:
             }
 
         return data_inputs
-
-    async def setup_dates(self, group_by, date_params, date_vals):
-        date_type = date_params[0]
-        if date_type == 'Y':
-            date_seq = date_params[1]
-            fin_yr = date_vals
-            # rows = await sql_fin_yr(
-            rows = await get_fin_yr(
-                self.context, date_seq, fin_yr, self.ledger_row_id)
-#       elif date_type == 'date_range':
-#           rows = await sql_date_range(
-#               self.context, date_seq, sub_args, date_vals, self.ledger_row_id)
-        elif date_type == 'P':
-            date_seq = date_params[1]
-            date_groups = date_params[2]
-            start_period = date_vals
-            # rows = await sql_last_n_per(
-            rows = await get_last_n_per(
-                self.context, date_seq, date_groups, start_period, self.ledger_row_id)
-        elif date_type == 'D':
-            date_seq = date_params[1]
-            date_groups = date_params[2]
-            start_date = date_vals
-            rows = await sql_last_n_days(
-                self.context, date_seq, date_groups, start_date, self.ledger_row_id)
-        if not rows:
-            raise AibError(head=finrpt_data['report_name'],  body='No rows found for specified dates.')
-        return rows
 
     async def setup_code(self, finrpt_data, pivot_dim, drilldown):
         context = self.context

@@ -161,19 +161,41 @@ class Form:
 
         title = title.replace('{comp_name}', db.cache.companies[self.company])
 
-        if grid_params is not None:
-            if len(grid_params) == 2:  # passed in from menu_defn
-                table_name, cursor_name = grid_params
+        # if grid_params is not None:
+        #     if len(grid_params) == 2:  # passed in from menu_defn
+        #         table_name, cursor_name = grid_params
+        #         grid_obj = await db.objects.get_db_object(self.context, table_name)
+        #         self.data_objects['grid_obj'] = grid_obj
+        #         title = await grid_obj.setup_cursor_defn(cursor_name)
+        #     elif len(grid_params) == 3:  # passed in from rep.finrpt
+        #         table_name, title, footer_row = grid_params
+        #         grid_obj = self.data_objects[table_name]
+        #         if footer_row:
+        #             grid = form_defn.find('frame').find('body').find('grid')
+        #             grid.attrib['footer_row'] = dumps(footer_row)
+        #     else:
+        #         print('SHOULD NOT GET HERE')
+        #         breakpoint()
+        match grid_params:
+            case None:
+                pass
+            case table_name, cursor_name:  # passed in from menu_defn
                 grid_obj = await db.objects.get_db_object(self.context, table_name)
                 self.data_objects['grid_obj'] = grid_obj
                 title = await grid_obj.setup_cursor_defn(cursor_name)
-            elif len(grid_params) == 3:  # passed in from rep.finrpt
-                table_name, title, footer_row = grid_params
+            case table_name, title, footer_row:  # passed in from rep.finrpt
                 grid_obj = self.data_objects[table_name]
                 if footer_row:
                     grid = form_defn.find('frame').find('body').find('grid')
                     grid.attrib['footer_row'] = dumps(footer_row)
-            else:
+            case table_name, title, header_row, footer_row:  # passed in from rep.flowrpt
+                grid_obj = self.data_objects[table_name]
+                grid = form_defn.find('frame').find('body').find('grid')
+                if header_row:
+                    grid.attrib['header_row'] = dumps(header_row)
+                if footer_row:
+                    grid.attrib['footer_row'] = dumps(footer_row)
+            case _:
                 print('SHOULD NOT GET HERE')
                 breakpoint()
 
@@ -439,8 +461,7 @@ class Form:
 
         self.session.responder.send_gui(gui)
 
-        # for obj_id in range(len(self.obj_dict)):
-        #     obj = self.obj_dict[obj_id]
+        # for obj_id, obj in self.obj_dict.items():
         #     pos = getattr(obj, 'pos', -1)
         #     print(f'{obj_id:<4}{obj.ref:<9}{pos:>3}  {obj}')
 

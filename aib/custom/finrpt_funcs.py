@@ -4,6 +4,7 @@ from lxml import etree
 import db
 from db.connection import db_constants as dbc
 from common import AibError
+from common import aenumerate
 import rep.finrpt as rep_finrpt
 import rep.tranrpt
 import ht.form
@@ -945,7 +946,6 @@ async def dump_columns(caller, xml):
 #
 #####################################################
 
-
 async def setup_finrpt_vars(caller, xml):
     # called from finrpt_run before_start_form
     # finrpt_run can be called from -
@@ -1000,43 +1000,56 @@ async def setup_finrpt_vars(caller, xml):
 async def save_finrpt_data(caller, xml):
     # called from finrpt_run after 'run_report' is clicked
     # end_form is called next, which removes references to various data_objects
-    # this saves relevant data in 'context', to be used in run_finrpt() below
+    # this sets up finrpt_data and saves it in 'context', to be used in run_finrpt() below
 
     context = caller.context
     runtime_vars = context.data_objects['runtime_vars']
-
-    date_type = await runtime_vars.getval('date_type')
-    if date_type == 'S':
-        date_range_vars = context.data_objects['date_range_vars']
-        date_vals = (await date_range_vars.getval('start_date'), await date_range_vars.getval('end_date'))
-    elif date_type == 'Y':
-        date_vals = await runtime_vars.getval('year_no')
-    elif date_type == 'P':
-        date_vals = await runtime_vars.getval('period_no')
-    elif date_type == 'D':
-        balance_date_vars = context.data_objects['balance_date_vars']
-        date_vals = await balance_date_vars.getval('balance_date')
-
-    context.date_vals = date_vals
-    context.single_location = await runtime_vars.getval('location_id')  # None for all locations
-    context.single_function = await runtime_vars.getval('function_id')  # None for all functions
-
-async def run_finrpt(caller, xml):
-    # called from finrpt_run after 'run_report' is clicked and end_form is called
-    context = caller.context
-
-    finrpt_defn = caller.context.data_objects['finrpt_defn']
+    finrpt_defn = context.data_objects['finrpt_defn']
     finrpt_data = await finrpt_defn.get_data()
+    date_params = finrpt_data['date_params']
 
-    # add the following to finrpt_data - it does not get saved, it is a convenient method to pass additional info
+    match date_params[0]:  # date_type
+        case 'S':  # single date
+            date_range_vars = context.data_objects['date_range_vars']
+            dates = [(await date_range_vars.getval('start_date'), await date_range_vars.getval('end_date'))]
+        case 'Y':  # financial year
+            periods = await db.cache.get_adm_periods(context.company)
+            fin_yr = await runtime_vars.getval('year_no')
+            date_seq = -1 if date_params[1] == 'D' else 1
+            dates = [(per.opening_date, per.closing_date) for per in periods if per.year_no == fin_yr][::date_seq]
+        case 'P':  # multiple periods
+            periods = await db.cache.get_adm_periods(context.company)
+            start_period = await runtime_vars.getval('period_no')
+            date_seq = date_params[1]
+            grp_size, no_of_grps, grps_to_skip = date_params[2]
+            dates = []
+            for grp in range(no_of_grps):
+                closing_date = periods[start_period].closing_date
+                opening_date = periods[start_period - grp_size + 1].opening_date
+                dates.append((opening_date, closing_date))
+                start_period -= (grp_size + (grp_size * grps_to_skip))
+                if start_period < 1:
+                    break
+            if date_seq == 'A':
+                dates = dates[::-1]
+        case 'D':  # multiple dates
+            raise NotImplementedError  # needs a bit of thought
+
+    # add the following to finrpt_data - it does not get saved, but is a convenient method to pass additional info
     finrpt_data['ledger_row_id'] = context.ledger_row_id  # can be over-ridden if drill down to sub-ledger
-    finrpt_data['date_vals'] = context.date_vals
-    finrpt_data['single_location'] = context.single_location
-    finrpt_data['single_function'] = context.single_function
+    finrpt_data['dates'] = dates
+    finrpt_data['single_location'] = await runtime_vars.getval('location_id')  # None = all locations
+    finrpt_data['single_function'] = await runtime_vars.getval('function_id')  # None = all functions
     finrpt_data['drilldown'] = 0
 
+    context.finrpt_data = finrpt_data  # save it in 'context' to be available in run_finrpt() below
+
+async def run_finrpt(caller, xml):
+    # called from finrpt_run when 'run_report' is clicked, after end_form is called
+
     finrpt = rep_finrpt.FinReport()
-    await finrpt._ainit_(caller.form, finrpt_data, caller.session)
+    await finrpt._ainit_(caller.form, caller.context.finrpt_data, caller.session)
+    del caller.context.finrpt_data
 
 async def finrpt_drilldown(caller, xml):
     # retrieve the finrpt_data that was used to create the report
@@ -1111,7 +1124,7 @@ async def finrpt_drilldown(caller, xml):
             elif dim == 'date':
                 pivot_on_date = True
                 pivot_grp, pivot_val = pivot_col[6]
-                finrpt_data['date_vals'] = pivot_val
+                finrpt_data['dates'] = [(pivot_val.start_date, pivot_val.end_date)]
                 new_cols = []
                 for col in columns:
                     if col[6] is None:
@@ -1176,9 +1189,14 @@ async def finrpt_drilldown(caller, xml):
             continue
 
         if hasattr(caller.context, 'db_row'):  # custom finrpt
-            value = getattr(caller.context.db_row, f'{dim}_{level_type}')
+            db_row = caller.context.db_row
             del caller.context.db_row  # ensure it is *not* used on drilldown
         else:  # standard finrpt
+            db_row = None
+
+        if db_row is not None:
+            value = getattr(db_row, f'{dim}_{level_type}')
+        else:
             value = await caller.db_obj.getval(f'{dim}_{level_type}')
 
         if dim == 'code' and type != 'code':
@@ -1208,10 +1226,14 @@ async def finrpt_drilldown(caller, xml):
         if pivot_on_date:  # each column has its own start/end dates
             start_date, end_date = pivot_val
         else:  # each row has its own start/end dates
-            if tots:  # no row selected - all rows share the same start/end date
-                await caller.db_obj.setval('row_id', 1)  # select first row
-            start_date = await caller.db_obj.getval('start_date')
-            end_date = await caller.db_obj.getval('end_date')
+            if db_row is not None:
+                start_date = db_row.start_date
+                end_date = db_row.end_date
+            else:
+                if tots:  # no row selected - all rows share the same start/end date
+                    await caller.db_obj.setval('row_id', 1)  # select first row
+                start_date = await caller.db_obj.getval('start_date')
+                end_date = await caller.db_obj.getval('end_date')
 
         if not tots:  # if single code clicked, check if module is 'gl'
             tots_tablename = finrpt_data['table_name']
