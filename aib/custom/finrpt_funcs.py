@@ -1457,6 +1457,10 @@ async def run_flowrpt(caller, xml):
         ))
     expand = False
     data_defn.append(
+      '<mem_col col_name="orig_ledger_row_id" data_type="INT" short_descr="Orig ledger row id" '
+        'long_descr="Orig ledger row id" col_head="Orig ledg row id"/>'
+        )
+    data_defn.append(
       '<mem_col col_name="orig_ledg" data_type="TEXT" short_descr="Orig ledger" '
         'long_descr="Orig ledger" col_head="Orig ledg"/>'
         )
@@ -1474,6 +1478,10 @@ async def run_flowrpt(caller, xml):
         True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
         None,  # action
         ))
+    data_defn.append(
+      '<mem_col col_name="gl_code_id" data_type="INT" short_descr="Gl code id" '
+        'long_descr="Gl code id" col_head="Gl code id"/>'
+        )
     data_defn.append(
       '<mem_col col_name="gl_code" data_type="TEXT" short_descr="Gl code" '
         'long_descr="Gl code" col_head="Gl code"/>'
@@ -1574,13 +1582,13 @@ async def run_flowrpt(caller, xml):
         sql_code += f' AND row_id = {ledger_row_id}'
 
     sql_data = [
-        "SELECT type, CASE "
+        "SELECT type, orig_ledger_row_id, CASE "
         f"WHEN mod.module_id = 'ap' THEN (SELECT ledger_id FROM {company}.ap_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
         f"WHEN mod.module_id = 'ar' THEN (SELECT ledger_id FROM {company}.ar_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
         f"WHEN mod.module_id = 'cb' THEN (SELECT ledger_id FROM {company}.cb_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
         f"WHEN mod.module_id = 'in' THEN (SELECT ledger_id FROM {company}.in_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
         "WHEN mod.module_id = 'gl' THEN 'gl' "
-        "END AS ledger_id, orig.tran_type, code.gl_code, src.tran_type,"
+        "END AS ledger_id, orig.tran_type, code.row_id, code.gl_code, src.tran_type,"
         ]
     for op_date, cl_date in dates:
         sql_data.append(
@@ -1664,11 +1672,13 @@ async def run_flowrpt(caller, xml):
 
         tots = [0] * len(dates)
         cur = await conn.exec_sql(sql_data)
-        async for type, orig_ledg, orig_tran, gl_code, src_tran, *tran_tots in cur:
+        async for type, orig_ledger_row_id, orig_ledg, orig_tran, gl_code_id, gl_code, src_tran, *tran_tots in cur:
             init_vals = {
                 'type': type,
+                'orig_ledger_row_id': orig_ledger_row_id,
                 'orig_ledg': orig_ledg,
                 'orig_tran': orig_tran,
+                'gl_code_id': gl_code_id,
                 'gl_code': gl_code,
                 'src_tran': src_tran
                 }
@@ -1705,6 +1715,8 @@ async def exec_flow_trans(caller, xml):
     col_name_clicked = caller.obj_clicked.col_name  # tran_tot_{date_pos}
     context.op_date = await flow_bals.getval(col_name_clicked.replace('tran_tot', 'op_date'))
     context.cl_date = await flow_bals.getval(col_name_clicked.replace('tran_tot', 'cl_date'))
+    context.gl_code_id = await flow_data.getval('gl_code_id')
+    context.orig_ledger_row_id = await flow_data.getval('orig_ledger_row_id')
 
     tran_types = await db.objects.get_db_object(context, 'adm_tran_types')
     await tran_types.setval('tran_type', await flow_data.getval('src_tran'))

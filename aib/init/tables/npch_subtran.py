@@ -280,7 +280,7 @@ cols.append ({
             '<fld_val name="eff_date"/>'
           '</compare>'
           '<compare test="[[`where`, ``, `npch_code_id>chg_eff_date`, `=`, `~0~`, ``]]">'
-            '<fld_val name="subparent_row_id>tran_date"/>'
+            '<fld_val name="tran_date"/>'
           '</compare>'
           '<compare test="[[`where`, ``, `npch_code_id>chg_eff_date`, `=`, `~1~`, ``]]">'
             '<first_next_per/>'
@@ -289,11 +289,11 @@ cols.append ({
         ),
     'col_checks' : [
         # ['cannot_change', 'Cannot change effective date', [
-        #     ['check', '', '$value', '=', 'subparent_row_id>tran_date', ''],
+        #     ['check', '', '$value', '=', 'tran_date', ''],
         #     ['or', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
         #     ]],
         ['per_date', 'Period is closed', [
-            ['check', '', '$value', '=', 'subparent_row_id>tran_date', ''],
+            ['check', '', '$value', '=', 'tran_date', ''],
             ['or', '', '$value', 'pyfunc', 'custom.date_funcs.check_tran_date,"gl"', ''],
             ]],
         ],
@@ -391,6 +391,15 @@ virt.append ({
     'col_head'   : 'Posted?',
     'dflt_val'   : '{subparent_row_id>posted}',
     'sql'        : "a.subparent_row_id>posted"
+    })
+virt.append ({
+    'col_name'   : 'tran_date',
+    'data_type'  : 'DTE',
+    'short_descr': 'Transaction date',
+    'long_descr' : 'Transaction date',
+    'col_head'   : 'Tran date',
+    'dflt_val'   : '{subparent_row_id>tran_date}',
+    'sql'        : "a.subparent_row_id>tran_date"
     })
 virt.append ({
     'col_name'   : 'party',
@@ -500,9 +509,42 @@ virt.append ({
         "(a.net_amt + a.tax_amt) / a.subparent_row_id>tran_exch_rate"
         ),
     })
+virt.append ({
+    'col_name'   : 'flow_tran',
+    'data_type'  : '$LCL',
+    'short_descr': 'Flow transaction amount',
+    'long_descr' : 'Flow transaction amount, for use in flowrpt_grid',
+    'col_head'   : 'Flow tran',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : "a.net_local"
+    })
 
 # cursor definitions
 cursors = []
+cursors.append({
+    'cursor_name': 'flow_trans',
+    'title': 'Transactions',
+    'columns': [
+        ['tran_date', 80, False, True],
+        ['trantype_row_id>tran_type', 80, False, True],
+        ['tran_number', 100, False, True],
+        ['party', 160, False, True],
+        ['text', 240, True, True],
+        ['flow_tran', 100, False, True],
+        ],
+    'filter': [
+        ['WHERE', '', 'trantype_row_id>tran_type', '=', '_ctx.tran_type', ''],
+        ['AND', '(', 'tran_date', '=', 'eff_date', ''],
+        ['AND', '', 'npch_code_id>ledger_row_id>gl_code_id', '=', '_ctx.gl_code_id', ''],
+        ['OR', '', 'tran_date', '!=', 'eff_date', ''],
+        ['AND', '', 'npch_code_id>ledger_row_id>uex_gl_code_id', '=', '_ctx.gl_code_id', ')'],
+        ['AND', '', 'subparent_row_id>ledger_row_id', '=', '_ctx.orig_ledger_row_id', ''],
+        ['AND', '', 'tran_date', '>=', '_ctx.op_date', ''],
+        ['AND', '', 'tran_date', '<=', '_ctx.cl_date', ''],
+        ],
+    'sequence': [['tran_date', False], ['tran_number', False]],
+    })
 
 # actions
 actions = []
@@ -535,7 +577,7 @@ actions.append([
             'npch_subtran_uex',
             [  # condition
                 # ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
-                ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                ['where', '', 'eff_date', '!=', 'tran_date', ''],
                 ],
 
             True,  # split source?
@@ -563,7 +605,7 @@ actions.append([
                 'npch_totals',  # table name
                 [  # condition
                     # ['where', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
-                    ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                    ['where', '', 'eff_date', '=', 'tran_date', ''],
                     ],
                 [  # key fields
                     ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
@@ -572,7 +614,7 @@ actions.append([
                     ['src_tran_type', "'npch_sub'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ['tran_date', 'tran_date'],
                     ],
                 [  # aggregation
                     ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
@@ -583,7 +625,7 @@ actions.append([
                 'npch_uex_totals',  # table name
                 [  # condition
                     # ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
-                    ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                    ['where', '', 'eff_date', '!=', 'tran_date', ''],
                     ],
                 [  # key fields
                     ['npch_code_id', 'npch_code_id'],  # tgt_col, src_col
@@ -592,7 +634,7 @@ actions.append([
                     ['src_tran_type', "'npch_sub'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ['tran_date', 'tran_date'],
                     ],
                 [  # aggregation
                     ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
@@ -603,7 +645,7 @@ actions.append([
                 'npch_supp_totals',  # table name
                 [  # condition
                     # ['where', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
-                    ['where', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                    ['where', '', 'eff_date', '=', 'tran_date', ''],
                     ['and', '', 'subparent_row_id>module_id', '=', "'ap'", ''],
                     ],
                 [  # key fields
@@ -614,7 +656,7 @@ actions.append([
                     ['src_tran_type', "'npch_sub'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ['tran_date', 'tran_date'],
                     ],
                 [  # aggregation
                     ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
@@ -625,7 +667,7 @@ actions.append([
                 'npch_supp_uex_totals',  # table name
                 [  # condition
                     # ['where', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
-                    ['where', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                    ['where', '', 'eff_date', '!=', 'tran_date', ''],
                     ['and', '', 'subparent_row_id>module_id', '=', "'ap'", ''],
                     ],
                 [  # key fields
@@ -636,7 +678,7 @@ actions.append([
                     ['src_tran_type', "'npch_sub'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ['tran_date', 'tran_date'],
                     ],
                 [  # aggregation
                     ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
@@ -648,7 +690,7 @@ actions.append([
                 [  # condition
                     ['where', '', '_param.gl_integration', 'is', '$True', ''],
                     # ['and', '', 'npch_code_id>chg_eff_date', '=', "'0'", ''],
-                    ['and', '', 'eff_date', '=', 'subparent_row_id>tran_date', ''],
+                    ['and', '', 'eff_date', '=', 'tran_date', ''],
                     ],
                 [  # key fields
                     ['gl_code_id', 'npch_code_id>ledger_row_id>gl_code_id'],  # tgt_col, src_col
@@ -657,7 +699,7 @@ actions.append([
                     ['src_tran_type', "'npch_sub'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ['tran_date', 'tran_date'],
                     ],
                 [  # aggregation
                     ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col
@@ -669,7 +711,7 @@ actions.append([
                 [  # condition
                     ['where', '', '_param.gl_integration', 'is', '$True', ''],
                     # ['and', '', 'npch_code_id>chg_eff_date', '!=', "'0'", ''],
-                    ['and', '', 'eff_date', '!=', 'subparent_row_id>tran_date', ''],
+                    ['and', '', 'eff_date', '!=', 'tran_date', ''],
                     ],
                 [  # key fields
                     ['gl_code_id', 'npch_code_id>ledger_row_id>uex_gl_code_id'],  # tgt_col, src_col
@@ -678,7 +720,7 @@ actions.append([
                     ['src_tran_type', "'npch_sub'"],
                     ['orig_trantype_row_id', 'trantype_row_id'],
                     ['orig_ledger_row_id', 'subparent_row_id>ledger_row_id'],
-                    ['tran_date', 'subparent_row_id>tran_date'],
+                    ['tran_date', 'tran_date'],
                     ],
                 [  # aggregation
                     ['tran_day', '+', 'net_local'],  # tgt_col, op, src_col

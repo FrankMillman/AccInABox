@@ -531,7 +531,11 @@ cursors.append({
         ],
     'filter': [
         ['WHERE', '', 'trantype_row_id>tran_type', '=', '_ctx.tran_type', ''],
-        ['AND', '', 'tran_date', '!=', 'eff_date', ''],
+        ['AND', '(', 'tran_date', '=', 'eff_date', ''],
+        ['AND', '', 'nsls_code_id>ledger_row_id>gl_code_id', '=', '_ctx.gl_code_id', ''],
+        ['OR', '', 'tran_date', '!=', 'eff_date', ''],
+        ['AND', '', 'nsls_code_id>ledger_row_id>uea_gl_code_id', '=', '_ctx.gl_code_id', ')'],
+        ['AND', '', 'subparent_row_id>ledger_row_id', '=', '_ctx.orig_ledger_row_id', ''],
         ['AND', '', 'tran_date', '>=', '_ctx.op_date', ''],
         ['AND', '', 'tran_date', '<=', '_ctx.cl_date', ''],
         ],

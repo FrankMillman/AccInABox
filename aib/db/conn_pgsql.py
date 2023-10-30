@@ -2,6 +2,9 @@ import psycopg2
 import psycopg2.extensions  # so that strings are returned as unicode
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
 
+# https://luis-sena.medium.com/tuning-your-postgresql-for-high-performance-5580abed193d
+# https://docs.gitlab.com/ee/development/database/understanding_explain_plans.html
+
 # bytea data is usually returned as a 'memoryview'
 # this creates a problem - after a roundtrip to the database, it no
 #   longer compares equal to the original object

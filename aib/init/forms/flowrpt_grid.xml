@@ -23,7 +23,7 @@
         <grid data_object="flow_trans" num_grid_rows="20" cursor_name="flow_trans"
             footer_row="[`'Total:'`, `...`, `flow_bals.flow_tran_tot`]"
             gen_tots="[[`flow_tran`, `flow_bals.flow_tran_tot`]]">
-          <toolbar template="Grid"/>
+          <toolbar template="Grid_Finrpt"/>
           <grid_methods template="Grid"/>
         </grid>
       </body>

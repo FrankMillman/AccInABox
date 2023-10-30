@@ -325,9 +325,36 @@ virt.append ({
     'col_head'   : 'Reverse sign?',
     'dflt_rule'  : '<literal value="$False"/>',
     })
+virt.append ({
+    'col_name'   : 'flow_tran',
+    'data_type'  : '$LCL',
+    'short_descr': 'Flow transaction amount',
+    'long_descr' : 'Flow transaction amount, for use in flowrpt_grid',
+    'col_head'   : 'Flow tran',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : "a.tfr_local"
+    })
 
 # cursor definitions
 cursors = []
+cursors.append({
+    'cursor_name': 'flow_trans',
+    'title': 'Transactions',
+    'columns': [
+        ['tran_date', 80, False, True],
+        ['tran_number', 100, False, True],
+        ['party', 160, False, True],
+        ['text', 240, True, True],
+        ['flow_tran', 100, False, True],
+        ],
+    'filter': [
+        ['WHERE', '', 'ledger_row_id>gl_code_id', '=', '_ctx.gl_code_id', ''],
+        ['AND', '', 'tran_date', '>=', '_ctx.op_date', ''],
+        ['AND', '', 'tran_date', '<=', '_ctx.cl_date', ''],
+        ],
+    'sequence': [['tran_date', False], ['tran_number', False]],
+    })
 
 # actions
 actions = []

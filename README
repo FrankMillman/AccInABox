@@ -12,7 +12,7 @@ cannot do.
 Requirements
 ============
 
-It assumes that you have Python 3.4 or greater installed on your system.
+It assumes that you have Python 3.9 or greater installed on your system.
 
 In order to use it, you need a database. There are three options -
 

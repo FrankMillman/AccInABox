@@ -421,6 +421,7 @@ cursors.append({
         ],
     'filter': [
         ['WHERE', '', 'trantype_row_id>tran_type', '=', '_ctx.tran_type', ''],
+        ['AND', '', 'gl_code_id', '=', '_ctx.gl_code_id', ''],
         ['AND', '', 'tran_date', '>=', '_ctx.op_date', ''],
         ['AND', '', 'tran_date', '<=', '_ctx.cl_date', ''],
         ],
