@@ -223,9 +223,38 @@ virt.append ({
     'col_head'   : 'Tran type row id',
     'sql'        : "SELECT row_id FROM {company}.adm_tran_types WHERE tran_type = 'nsls_ear'",
     })
+virt.append ({
+    'col_name'   : 'flow_tran',
+    'data_type'  : '$LCL',
+    'short_descr': 'Flow transaction amount',
+    'long_descr' : 'Flow transaction amount, for use in flowrpt_grid',
+    'col_head'   : 'Flow tran',
+    'db_scale'   : 2,
+    'scale_ptr'  : '_param.local_curr_id>scale',
+    'sql'        : "a.nsls_earned_loc"
+    })
 
 # cursor definitions
 cursors = []
+cursors.append({
+    'cursor_name': 'flow_trans',
+    'title': 'Transactions',
+    'columns': [
+        ['eff_date', 80, False, True],
+        ['tran_type', 80, False, True],
+        ['tran_number', 100, False, True],
+        ['party', 160, False, True],
+        ['text', 240, True, True],
+        ['flow_tran', 100, False, True],
+        ],
+    'filter': [
+        ['WHERE', '', 'tran_type', '=', '_ctx.tran_type', ''],
+        ['AND', '', 'subtran_row_id>nsls_code_id>ledger_row_id', '=', '_ctx.orig_ledger_row_id', ''],
+        ['AND', '', 'eff_date', '>=', '_ctx.op_date', ''],
+        ['AND', '', 'eff_date', '<=', '_ctx.cl_date', ''],
+        ],
+    'sequence': [['eff_date', False], ['tran_number', False]],
+    })
 
 # actions
 actions = []

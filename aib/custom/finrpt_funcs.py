@@ -1577,7 +1577,7 @@ async def run_flowrpt(caller, xml):
         module_row_id = await db.cache.get_mod_id(company, module_id)
         sql_ledg = ''
 
-    sql_code = f'SELECT {gl_code} FROM {company}.{module_id}_ledger_params WHERE deleted_id = 0'
+    sql_code = f'SELECT {gl_code} FROM {company}.{module_id}_ledger_params WHERE deleted_id = 0 AND {gl_code} IS NOT NULL'
     if ledger_id is not None:
         sql_code += f' AND row_id = {ledger_row_id}'
 
@@ -1587,8 +1587,10 @@ async def run_flowrpt(caller, xml):
         f"WHEN mod.module_id = 'ar' THEN (SELECT ledger_id FROM {company}.ar_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
         f"WHEN mod.module_id = 'cb' THEN (SELECT ledger_id FROM {company}.cb_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
         f"WHEN mod.module_id = 'in' THEN (SELECT ledger_id FROM {company}.in_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
+        f"WHEN mod.module_id = 'nsls' THEN (SELECT ledger_id FROM {company}.nsls_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
+        f"WHEN mod.module_id = 'npch' THEN (SELECT ledger_id FROM {company}.npch_ledger_params WHERE row_id = dum.orig_ledger_row_id) "
         "WHEN mod.module_id = 'gl' THEN 'gl' "
-        "END AS ledger_id, orig.tran_type, code.row_id, code.gl_code, src.tran_type,"
+        "END AS orig_ledg, orig.tran_type, code.row_id, code.gl_code, src.tran_type,"
         ]
     for op_date, cl_date in dates:
         sql_data.append(
