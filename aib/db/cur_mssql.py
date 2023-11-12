@@ -27,7 +27,7 @@ async def gen_tots_sql(self, sql, params):
     tots_sql.append('), ())')
     tots_sql.append('')
 
-    order_pos = sql.find('ORDER BY')
+    order_pos = sql.rfind('ORDER BY')
     return sql[:order_pos] + ' '.join(tots_sql) + sql[order_pos:], params
 
 async def get_rows(self, from_row, to_row):

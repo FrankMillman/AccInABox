@@ -33,7 +33,7 @@ async def gen_tots_sql(self, sql, params):
     tots_sql.append('')
     params.extend(self.db_obj.context.where_params)
 
-    order_pos = sql.find('ORDER BY')
+    order_pos = sql.rfind('ORDER BY')
     return sql[:order_pos] + ' '.join(tots_sql) + sql[order_pos:], params
 
 async def insert_row(self, row_no):

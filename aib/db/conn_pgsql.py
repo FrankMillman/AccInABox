@@ -5,6 +5,7 @@ psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
 # https://luis-sena.medium.com/tuning-your-postgresql-for-high-performance-5580abed193d
 # https://docs.gitlab.com/ee/development/database/understanding_explain_plans.html
 # https://medium.com/@it.works/5-hidden-features-of-postgresql-for-performance-tuning-d0f8d3d148ae
+# https://medium.com/@rasiksuhail/guide-to-postgresql-table-partitioning-c0814b0fbd9b
 
 # bytea data is usually returned as a 'memoryview'
 # this creates a problem - after a roundtrip to the database, it no

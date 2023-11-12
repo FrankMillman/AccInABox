@@ -17,14 +17,14 @@ async def create_cursor(self, sql, params):
     self.num_rows = self.conn.rowcount
     await self.conn.exec_cmd('MOVE ABSOLUTE 0 IN _aib')
 
-async def gen_tots_sql(self, sql, params:
+async def gen_tots_sql(self, sql, params):
     tots_sql = []
     tots_sql.append('GROUP BY GROUPING SETS ((')
     tots_sql.append(', '.join(self.db_obj.context.group_by_cols))
     tots_sql.append('), ())')
     tots_sql.append('')
 
-    order_pos = sql.find('ORDER BY')
+    order_pos = sql.rfind('ORDER BY')
     return sql[:order_pos] + ' '.join(tots_sql) + sql[order_pos:], params
 
 async def get_rows(self, from_row, to_row):
