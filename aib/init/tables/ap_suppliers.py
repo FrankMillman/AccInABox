@@ -493,19 +493,28 @@ virt.append ({
     'db_scale'   : 2,
     'scale_ptr'  : 'currency_id>scale',
     'dflt_val'   : '0',
-    'sql'        : (
-        "COALESCE((SELECT SUM(c.tran_tot_supp) FROM ( "
-            "SELECT b.tran_tot_supp, ROW_NUMBER() OVER (PARTITION BY "
-                "b.supp_row_id, b.location_row_id, b.function_row_id, "
-                "b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id "
-                "ORDER BY b.tran_date DESC) row_num "
-            "FROM {company}.ap_supp_totals b "
-            "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {_ctx.as_at_date} "
-            "AND b.supp_row_id = a.row_id "
-            ") as c "
-            "WHERE c.row_num = 1 "
-            "), 0)"
+#   'sql'        : (
+#       "COALESCE((SELECT SUM(c.tran_tot_supp) FROM ( "
+#           "SELECT b.tran_tot_supp, ROW_NUMBER() OVER (PARTITION BY "
+#               "b.supp_row_id, b.location_row_id, b.function_row_id, "
+#               "b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id "
+#               "ORDER BY b.tran_date DESC) row_num "
+#           "FROM {company}.ap_supp_totals b "
+#           "WHERE b.deleted_id = 0 "
+#           "AND b.tran_date <= {_ctx.as_at_date} "
+#           "AND b.supp_row_id = a.row_id "
+#           ") as c "
+#           "WHERE c.row_num = 1 "
+#           "), 0)"
+#       ),
+    'sql'        : (  # col_name to use in SELECT : join to add to JOINS
+        'ap_bal.bal_sup_as_at'
+        ':'
+        "JOIN (SELECT SUM(c.tran_tot_supp) AS bal_sup_as_at, SUM(c.tran_tot_local) AS bal_loc_as_at, c.supp_row_id FROM ("
+        "SELECT b.tran_tot_supp, b.tran_tot_local, b.supp_row_id, ROW_NUMBER() OVER (PARTITION BY b.supp_row_id, "
+        "b.location_row_id, b.function_row_id, b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id "
+        "ORDER BY b.tran_date DESC) row_num FROM prop.ap_supp_totals b WHERE b.deleted_id = 0 AND b.tran_date <= "
+        "{_ctx.as_at_date}) as c WHERE c.row_num = 1 GROUP BY supp_row_id) AS ap_bal ON ap_bal.supp_row_id = a.row_id"
         ),
     })
 virt.append ({
@@ -517,19 +526,28 @@ virt.append ({
     'db_scale'   : 2,
     'scale_ptr'  : '_param.local_curr_id>scale',
     'dflt_val'   : '0',
-    'sql'        : (
-        "COALESCE((SELECT SUM(c.tran_tot_local) FROM ( "
-            "SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
-                "b.supp_row_id, b.location_row_id, b.function_row_id, "
-                "b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id "
-                "ORDER BY b.tran_date DESC) row_num "
-            "FROM {company}.ap_supp_totals b "
-            "WHERE b.deleted_id = 0 "
-            "AND b.tran_date <= {_ctx.as_at_date} "
-            "AND b.supp_row_id = a.row_id "
-            ") as c "
-            "WHERE c.row_num = 1 "
-            "), 0)"
+#   'sql'        : (
+#       "COALESCE((SELECT SUM(c.tran_tot_local) FROM ( "
+#           "SELECT b.tran_tot_local, ROW_NUMBER() OVER (PARTITION BY "
+#               "b.supp_row_id, b.location_row_id, b.function_row_id, "
+#               "b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id "
+#               "ORDER BY b.tran_date DESC) row_num "
+#           "FROM {company}.ap_supp_totals b "
+#           "WHERE b.deleted_id = 0 "
+#           "AND b.tran_date <= {_ctx.as_at_date} "
+#           "AND b.supp_row_id = a.row_id "
+#           ") as c "
+#           "WHERE c.row_num = 1 "
+#           "), 0)"
+#       ),
+    'sql'        : (  # col_name to use in SELECT : join to add to JOINS
+        'ap_bal.bal_loc_as_at'
+        ':'
+        "JOIN (SELECT SUM(c.tran_tot_supp) AS bal_sup_as_at, SUM(c.tran_tot_local) AS bal_loc_as_at, c.supp_row_id FROM ("
+        "SELECT b.tran_tot_supp, b.tran_tot_local, b.supp_row_id, ROW_NUMBER() OVER (PARTITION BY b.supp_row_id, "
+        "b.location_row_id, b.function_row_id, b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id "
+        "ORDER BY b.tran_date DESC) row_num FROM prop.ap_supp_totals b WHERE b.deleted_id = 0 AND b.tran_date <= "
+        "{_ctx.as_at_date}) as c WHERE c.row_num = 1 GROUP BY supp_row_id) AS ap_bal ON ap_bal.supp_row_id = a.row_id"
         ),
     })
 virt.append ({

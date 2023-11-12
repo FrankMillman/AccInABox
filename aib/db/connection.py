@@ -522,8 +522,7 @@ class Conn:
             else:
                 if gen_tots is not None:
                     if col_name in tots_to_get:
-                        col_name = f'SUM({col_name})'
-                        col_text = await self.get_col_text(context, db_table, col_params, col_name)
+                        col_text = await self.get_col_text(context, db_table, col_params, f'SUM({col_name})')
                         context.union_cols.append(col_text)
                     else:
                         col_text = await self.get_col_text(context, db_table, col_params, col_name)
@@ -532,10 +531,12 @@ class Conn:
                     col_text = await self.get_col_text(context, db_table, col_params, col_name)
                 columns.append(col_text)
                 if gen_tots is not None:
-                    for col_part in col_text.split(' '):
-                        if '.' in col_part:
-                            if not col_part.startswith('SUM('):
-                                context.group_by_cols.add(col_part)
+                    if col_name not in tots_to_get:
+                        for col_part in col_text.split(' '):
+                            if '.' in col_part:
+                                alias, _ = col_part.split('.')
+                                if alias == 'a' or alias in self.joins.values():
+                                    context.group_by_cols.add(col_part)
 
         columns = ', '.join(columns)
 
@@ -714,15 +715,15 @@ class Conn:
             order_clause = f' ORDER BY {", ".join(order_list)}'
 
         table_params = []
-        # {...} represents a run-time value - extract it and add to parameters
-        while '{' in self.tablenames:
-            pos1 = self.tablenames.find('{')
-            pos2 = self.tablenames.find('}')
-            expr = self.tablenames[pos1+1: pos2]
-            val = getattr(context, expr)
-            table_params.append(val)
-            self.tablenames = '{}{}{}'.format(
-                self.tablenames[:pos1], self.constants.param_style, self.tablenames[pos2+1:])
+#       # {...} represents a run-time value - extract it and add to parameters
+#       while '{' in self.tablenames:
+#           pos1 = self.tablenames.find('{')
+#           pos2 = self.tablenames.find('}')
+#           expr = self.tablenames[pos1+1: pos2]
+#           val = getattr(context, expr)
+#           table_params.append(val)
+#           self.tablenames = '{}{}{}'.format(
+#               self.tablenames[:pos1], self.constants.param_style, self.tablenames[pos2+1:])
 
         params = col_params + table_params + where_params + group_params + order_params
 
@@ -873,13 +874,19 @@ class Conn:
         # if not isinstance(db_table, db.objects.MemTable):
         #     sql = sql.replace('{company}', db_table.data_company)
 
-        while sql.startswith('['):
-            end_join = sql.find(']')
-            join = sql[1:end_join].lstrip()
-            sql = sql[end_join+1:].lstrip()
+        # while sql.startswith('['):
+        #     end_join = sql.find(']')
+        #     join = sql[1:end_join].lstrip()
+        #     sql = sql[end_join+1:].lstrip()
+        #     if join not in self.joins:
+        #         self.tablenames += f' {join}'
+        #         self.joins[join] = None
+
+        if ':' in sql:
+            sql, join = sql.split(':')
             if join not in self.joins:
                 self.tablenames += f' {join}'
-                self.joins[join] = None
+                self.joins[join] = sql.split('.')[0]  # join is a sub-select, sql[0] is the alias for the sub-select
 
         # following lines moved to check_sql_params() above
         # # {...} represents a run-time value - extract it and add to parameters
