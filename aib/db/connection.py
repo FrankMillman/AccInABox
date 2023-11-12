@@ -1210,9 +1210,6 @@ class DbSession:
         if not self.num_connections:  # get connection, set up
             timestamp = datetime.now()  # all updates in same transaction use same timestamp
             db_conn = await _get_connection()
-            if read_lock:
-                await db_conn.set_read_lock(True)
-                self.read_lock_set = True
             db_conn.timestamp = timestamp
             if self.mem_id is not None:
                 mem_conn = await _get_mem_connection(self.mem_id)
@@ -1224,6 +1221,12 @@ class DbSession:
                 db_log.write(f'{timestamp}: {id(db_conn)}: START db\n')
                 if self.mem_id is not None:
                     db_log.write(f'{timestamp}: {id(mem_conn)}: START mem\n')
+        if read_lock:
+            if self.num_connections:
+                raise AibError(head='Set read lock',
+                    body='Cannot set read lock - transaction already in progress')
+            await db_conn.set_read_lock(True)
+            self.read_lock_set = True
 
         self.num_connections += 1
         try:
