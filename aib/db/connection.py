@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 from common import log_db, db_log, AibError
-import db
+import db, db.cache
 
 #-----------------------------------------------------------------------------
 
@@ -65,6 +65,16 @@ connection_list = []
 connections_active = []
 mem_conn_dict = {}
 connection_lock = asyncio.Lock()
+
+"""
+This is how psycopg3 connection pool works. We should do the same, not just keep adding connections!
+
+https://www.psycopg.org/psycopg3/docs/advanced/pool.html
+
+The pool manages a certain amount of connections (between min_size and max_size).
+If the pool has a connection ready in its state, it is served immediately to the connection() caller,
+otherwise the caller is put in a queue and is served a connection as soon as it's available.
+"""
 
 async def _get_connection():
     async with connection_lock:
@@ -519,6 +529,12 @@ class Conn:
                     columns.append(f'{col_name} AS {alias}')
                 else:
                     columns.append(col_name)
+            elif col_name.startswith('_param.'):
+                adm_params = await db.cache.get_adm_params(db_table.data_company)
+                col_params.append(await adm_params.getval(col_name[7:]))
+                columns.append(self.constants.param_style)
+                if gen_tots is not None:
+                    context.union_cols.append('NULL')
             else:
                 if gen_tots is not None:
                     if col_name in tots_to_get:
@@ -817,20 +833,9 @@ class Conn:
             current_alias='a', trail=()):
         alias = current_alias
         if '.' in col_name:  # added [2017-08-14] to handle 'scale_ptr' columns
+            print('do we get here (connection.get_col_alias)? col_name = ', col_name)
             obj_name, col_name = col_name.split('.')
-            if obj_name != '_param':
-                if isinstance(db_table, db.objects.MemTable) and context.data_objects[obj_name].mem_obj:
-                    pass  # if both are mem_obj, no problem [2020-05-31]
-                else:
-                    # do we get here? - need to check this [2020-05-22]
-                    # 1. cannot mix db_obj and mem_obj in sql - does this occur?
-                    # 2. if not _param, how to we know to 'join' on 'row_id = 1'?
-                    print('get_col_alias', obj_name, col_name)
-                    input()
-            if obj_name == '_param':
-                db_table = await db.objects.get_db_table(context, db_table.data_company, 'adm_params')
-                table_name = f'{db_table.data_company}.adm_params'
-            elif context.data_objects[obj_name].mem_obj:
+            if context.data_objects[obj_name].mem_obj:
                 db_table = context.data_objects[obj_name].db_table
                 table_name = db_table.table_name
             else:

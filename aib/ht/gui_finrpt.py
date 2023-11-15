@@ -10,6 +10,8 @@ import db.objects
 from common import AibError
 from evaluate_expr import eval_elem
 
+cell_ref_counter = count()  # ref counter
+
 def pt_to_px(pagesize):
     # reportlab stores pagesizes in points (1"/72) - we want pixels (1"/96)
     wd, ht = pagesize
@@ -43,24 +45,14 @@ class GuiFinrpt:
 
         self.ref, self.pos = parent.form.add_obj(parent, self)
         var = self.data_objects['var']
-        self.finrpt_data = await var.getval('finrpt_data')
-        finrpt_xml = self.finrpt_data['finrpt_xml']
+        finrpt_xml = (await var.getval('finrpt_data'))['finrpt_xml']
         self.row_dict = await var.getval('row_dict')
         self.pivot_dict = await var.getval('pivot_dict')
         self.pivot_colhead_map = {k: v.col_head for k, v in self.pivot_dict.items()}
         self.title = await var.getval('title')
         self.report_dtm = dtm.now()
 
-        # group_by = self.finrpt_data['group_by']
-        # for grp in group_by:
-        #     if grp == 'date':
-        #         print(grp, group_by[grp])
-        #     else:
-        #         print(grp, group_by[grp], f'{[x for x in self.finrpt_data[grp + "_level_data"]]}')
-        # print()
-
         self.cell_dict = {}  # references to 'cells' which are clickable
-        self.cell_ref = count()  # ref counter
         self.action = etree.fromstring('<action><pyfunc name="ht.gui_finrpt.onclick"/></action>')
 
         wd, ht = pt_to_px(getattr(pagesizes, finrpt_xml.get('pagesize')))
@@ -376,7 +368,7 @@ class Body:
                                     if rp == '*':
                                         row_path[pos] = getattr(row, rpt_groups[pos])
                                 # row_src = '.'.join(row_path)
-                                cell_ref = next(self.report.cell_ref)
+                                cell_ref = next(cell_ref_counter)
                                 self.report.cell_dict[cell_ref] = (row, db_col, row_path)
                                 text_args['cell_ref'] = cell_ref
 
@@ -421,7 +413,7 @@ class Body:
                         #----------------------------------------------------
                         # if col_defn['type'] == 'col_data':
                         #     db_col_name = col_defn.get('db_col_name')
-                        #     cell_ref = next(self.report.cell_ref)
+                        #     cell_ref = next(cell_ref_counter)
                         #     self.report.cell_dict[cell_ref] = (row, db_col_name, srcs)
                         #     text_args['cell_ref'] = cell_ref
                         svg.append(('text', text_args))

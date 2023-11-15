@@ -289,7 +289,7 @@ async def get_tranrpt_data(caller, xml):
         # readonly, skip, before, form_dflt, validation, after
         cur_col.extend((True, False, None, None, None, None))
         if col_name == 'value':  # financial data
-            cur_col.append('<start_row/><pyfunc name="custom.gl_funcs.tranrpt_drilldown"/>')
+            cur_col.append('<start_row/><pyfunc name="custom.finrpt_funcs.tranrpt_drilldown"/>')
         else:
             cur_col.append(None)
         cursor_cols.append(cur_col)

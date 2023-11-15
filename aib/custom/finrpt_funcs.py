@@ -1442,89 +1442,60 @@ async def run_flowrpt(caller, xml):
     ledger_id = context.flow_ledger_id
     dates = context.dates
 
-    cursor_cols = []
-    expand = True  # set first col to 'expand', then set expand to False
-
     data_defn = ['<mem_obj name="flow_data">']
-    data_defn.append(
-      '<mem_col col_name="type" data_type="TEXT" short_descr="Type" '
-        'long_descr="Type:- src or tgt" col_head="Type"/>'
-        )
-    cursor_cols.append((
-        'cur_col', 'type', 10, expand,  # type, col_name, width, expand
-        True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
-        None,  # action
-        ))
-    expand = False
-    data_defn.append(
-      '<mem_col col_name="orig_ledger_row_id" data_type="INT" short_descr="Orig ledger row id" '
-        'long_descr="Orig ledger row id" col_head="Orig ledg row id"/>'
-        )
-    data_defn.append(
-      '<mem_col col_name="orig_ledg" data_type="TEXT" short_descr="Orig ledger" '
-        'long_descr="Orig ledger" col_head="Orig ledg"/>'
-        )
-    cursor_cols.append((
-        'cur_col', 'orig_ledg', 80, expand,  # type, col_name, width, expand
-        True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
-        None,  # action
-        ))
-    data_defn.append(
-      '<mem_col col_name="orig_tran" data_type="TEXT" short_descr="Orig trantype" '
-        'long_descr="Orig trantype" col_head="Orig tran"/>'
-        )
-    cursor_cols.append((
-        'cur_col', 'orig_tran', 80, expand,  # type, col_name, width, expand
-        True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
-        None,  # action
-        ))
-    data_defn.append(
-      '<mem_col col_name="gl_code_id" data_type="INT" short_descr="Gl code id" '
-        'long_descr="Gl code id" col_head="Gl code id"/>'
-        )
-    data_defn.append(
-      '<mem_col col_name="gl_code" data_type="TEXT" short_descr="Gl code" '
-        'long_descr="Gl code" col_head="Gl code"/>'
-        )
-    cursor_cols.append((
-        'cur_col', 'gl_code', 80, expand,  # type, col_name, width, expand
-        True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
-        None,  # action
-        ))
-    data_defn.append(
-      '<mem_col col_name="src_tran" data_type="TEXT" short_descr="Src trantype" '
-        'long_descr="Src trantype" col_head="Src tran"/>'
-        )
-    cursor_cols.append((
-        'cur_col', 'src_tran', 80, expand,  # type, col_name, width, expand
-        True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
-        None,  # action
-        ))
+    data_defn.append('<mem_col col_name="type" data_type="TEXT" short_descr="Type" '
+        'long_descr="Type:- src or tgt" col_head="Type"/>')
+    data_defn.append('<mem_col col_name="orig_ledger_row_id" data_type="INT" short_descr="Orig ledger row id" '
+        'long_descr="Orig ledger row id" col_head="Orig ledg row id"/>')
+    data_defn.append('<mem_col col_name="orig_ledg" data_type="TEXT" short_descr="Orig ledger" '
+        'long_descr="Orig ledger" col_head="Orig ledg"/>')
+    data_defn.append('<mem_col col_name="orig_tran" data_type="TEXT" short_descr="Orig trantype" '
+        'long_descr="Orig trantype" col_head="Orig tran"/>')
+    data_defn.append('<mem_col col_name="gl_code_id" data_type="INT" short_descr="Gl code id" '
+        'long_descr="Gl code id" col_head="Gl code id"/>')
+    data_defn.append('<mem_col col_name="gl_code" data_type="TEXT" short_descr="Gl code" '
+        'long_descr="Gl code" col_head="Gl code"/>')
+    data_defn.append('<mem_col col_name="src_tran" data_type="TEXT" short_descr="Src trantype" '
+        'long_descr="Src trantype" col_head="Src tran"/>')
     for pos, (op_date, cl_date) in enumerate(dates):
         data_defn.append(
           f'<mem_col col_name="tran_tot_{pos}" data_type="$LCL" short_descr="Tran tot {pos}" '
           f'long_descr="Tran tot {pos} {op_date:%d/%m/%y}-{cl_date:%d/%m/%y}" col_head="{cl_date:%d/%m/%y}" '
-          # 'db_scale="2" scale_ptr="_param.local_curr_id>scale"/>'
-          'db_scale="2"/>'
+          'db_scale="2" scale_ptr="_param.local_curr_id>scale"/>'
             )
-        cursor_cols.append((
-            'cur_col', f'tran_tot_{pos}', 80, expand,  # type, col_name, width, expand
-            True, False, None, None, None, None,  # readonly, skip, before, form_dflt, validation, after
-            (  # action
-                '<start_row/>'
-                '<pyfunc name="custom.finrpt_funcs.exec_flow_trans"/>'
-                '<inline_form name="flow_trans_grid">'
-                  '<on_return>'
-                    '<return state="completed"/>'
-                    '<return state="cancelled"/>'
-                  '</on_return>'
-                '</inline_form>'
-                 ),
-            ))
     data_defn.append('</mem_obj>')
     flow_data = await db.objects.get_mem_object(context, 'flow_data',
         table_defn=etree.fromstring(''.join(data_defn)))
     caller.data_objects['flow_data'] = flow_data
+
+    cursor_cols = []
+    expand = True  # set first col to 'expand', then set expand to False
+    readonly, skip, before, form_dflt, validation, after = True, False, None, None, None, None
+    action = None
+    cursor_cols.append(('cur_col', 'type', 10, expand,
+        readonly, skip, before, form_dflt, validation, after, action))
+    expand = False
+    cursor_cols.append(('cur_col', 'orig_ledg', 80, expand,
+        readonly, skip, before, form_dflt, validation, after, action))
+    cursor_cols.append(('cur_col', 'orig_tran', 80, expand,
+        readonly, skip, before, form_dflt, validation, after, action))
+    cursor_cols.append(('cur_col', 'gl_code', 80, expand,
+        readonly, skip, before, form_dflt, validation, after, action))
+    cursor_cols.append(('cur_col', 'src_tran', 80, expand,
+        readonly, skip, before, form_dflt, validation, after, action))
+    action = (  # for each 'tran' col, set action to be taken on 'click'
+        '<start_row/>'
+        '<pyfunc name="custom.finrpt_funcs.exec_flow_trans"/>'
+        '<inline_form name="flow_trans_grid">'
+          '<on_return>'
+            '<return state="completed"/>'
+            '<return state="cancelled"/>'
+          '</on_return>'
+        '</inline_form>'
+        )
+    for pos in range(len(dates)):
+        cursor_cols.append(('cur_col', f'tran_tot_{pos}', 80, expand,
+            readonly, skip, before, form_dflt, validation, after, action))
 
     flow_data.cursor_defn = [
         cursor_cols,
@@ -1553,7 +1524,7 @@ async def run_flowrpt(caller, xml):
           f'<mem_col col_name="cl_date_{pos}" data_type="DTE" short_descr="Cl date {pos}" '
           f'long_descr="Closing date {pos} {cl_date:%d/%m/%y}" col_head=""/>'
             )
-    bals_defn.append(
+    bals_defn.append(  # used in flowrpt_grid to store transaction total
       f'<mem_col col_name="flow_tran_tot" data_type="$LCL" short_descr="Flow tran total" '
       f'long_descr="Flow trans total, for display in flow_tran_grid" col_head="" '
       'db_scale="2" scale_ptr="_param.local_curr_id>scale"/>'
@@ -1624,6 +1595,7 @@ async def run_flowrpt(caller, xml):
             )
     sql_data[-1] = sql_data[-1][:-9]  # strip final UNION ALL
     sql_data.append(") dum ")
+    # TODO - int/maj/bs_is must not be hard-coded - must be derived from gl_groups levels
     sql_data.append(
         f"JOIN {company}.adm_tran_types src ON src.row_id = dum.src_trantype_row_id "
         f"JOIN {company}.adm_tran_types orig ON orig.row_id = dum.orig_trantype_row_id "

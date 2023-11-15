@@ -1463,8 +1463,7 @@ class Decimal(Field):
         if col_defn.scale_ptr is None:
             scale = col_defn.db_scale
         else:
-            scale_ptr = await self.db_obj.getfld(col_defn.scale_ptr)
-            scale = await scale_ptr.getval()
+            scale = await self.db_obj.getval(col_defn.scale_ptr)
             if scale is None:
                 scale = col_defn.db_scale
         return scale

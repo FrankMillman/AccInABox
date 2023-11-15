@@ -124,6 +124,7 @@ async def set_ye_closed_flag(caller, params):
 
 async def ye_tfr_jnl(caller, params):
 
+    # TODO - int/maj/bs_is must not be hard-coded - must be derived from gl_groups levels
     sql = """
         SELECT b.gl_code_id, b.location_row_id, b.function_row_id, SUM(b.tran_tot)
         FROM (

@@ -12,8 +12,6 @@
         long_descr="From which date" allow_amend="true"/>
       <mem_col col_name="end_date" data_type="DTE" short_descr="Date to"
         long_descr="To which date" allow_amend="true"/>
-      <mem_col col_name="local_scale" data_type="INT" short_descr="Local scale"
-        long_descr="Scale to use for local currency" dflt_val="{_param.local_curr_id>scale}"/>
     </mem_obj>
     <mem_obj name="tranrpt_obj" descr="In-memory object to hold transaction list for display">
       <mem_col col_name="src_table_name" data_type="TEXT" short_descr="Source table name"
@@ -37,7 +35,7 @@
       <mem_col col_name="text" data_type="TEXT" short_descr="Text"
         long_descr="Text" col_head="Text"/>
       <mem_col col_name="value" data_type="$LCL" short_descr="Value"
-        long_descr="Value" col_head="Value" db_scale="2" scale_ptr="runtime_vars.local_scale"/>
+        long_descr="Value" col_head="Value" db_scale="2" scale_ptr="_param.local_curr_id>scale"/>
     </mem_obj>
   </mem_objects>
   <input_params>
