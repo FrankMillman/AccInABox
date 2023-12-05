@@ -1,5 +1,3 @@
-import __main__
-import gzip
 import io
 from lxml import etree
 parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
@@ -86,8 +84,7 @@ class Report:
                 fkey = obj_xml.get('fkey')
                 src_objname, src_colname = fkey.split('.')
                 src_obj = self.data_objects[src_objname]
-                db_obj = await db.objects.get_fkey_object(
-                    self.context, table_name, src_obj, src_colname)
+                db_obj = await db.objects.get_fkey_object(table_name, src_obj, src_colname)
             elif obj_xml.get('view') == 'true':
                 db_obj = await db.objects.get_view_object(
                     self.context, table_name)

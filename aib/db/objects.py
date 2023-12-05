@@ -116,7 +116,7 @@ async def get_db_object(context, table_name, parent=None):
     await db_obj._ainit_(context, db_table.data_company, db_table, parent)
     return db_obj
 
-async def get_fkey_object(context, table_name, src_obj, src_colname):
+async def get_fkey_object(table_name, src_obj, src_colname):
     src_fld = await src_obj.getfld(src_colname)
     fk_object = await src_fld.get_fk_object()
     if fk_object.table_name != table_name:
