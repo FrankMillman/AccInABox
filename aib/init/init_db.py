@@ -1,5 +1,4 @@
 import os
-import __main__
 import importlib
 import gzip
 from json import dumps, loads
@@ -404,11 +403,11 @@ async def setup_fkeys(context):
     await db_col.save()
 
 async def setup_forms(context):
-    schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
+    schema_path = os.path.join(os.path.dirname(__file__), '..', 'schemas')
     parser = etree.XMLParser(
         schema=etree.XMLSchema(file=os.path.join(schema_path, 'form.xsd')),
         attribute_defaults=True, remove_comments=True, remove_blank_text=True)
-    form_path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'forms')
+    form_path = os.path.join(os.path.dirname(__file__), '..', 'init', 'forms')
     form_defn = await db.objects.get_db_object(context, 'sys_form_defns')
     db_table = await db.objects.get_db_object(context, 'db_tables')
 

@@ -3,14 +3,13 @@
 This is the Business Process Management module.
 """
 
-import __main__
 import os
 import asyncio
 import importlib
 import operator
 import itertools
 from lxml import etree
-from json import dumps, loads
+from json import loads
 from datetime import datetime as dtm
 
 import db
@@ -18,7 +17,7 @@ import ht.htm
 from common import AibError
 
 parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
-schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
+schema_path = os.path.join(os.path.dirname(__file__), '..', 'schemas')
 schema=etree.XMLSchema(file=os.path.join(schema_path, 'bpmn20', 'BPMN20.xsd'))
 
 S = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"

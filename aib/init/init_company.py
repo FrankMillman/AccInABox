@@ -1,5 +1,4 @@
 import os
-import __main__
 import importlib
 from json import loads, dumps
 from lxml import etree
@@ -544,11 +543,11 @@ async def setup_view(module, db_view, db_view_col, view_name):
         await db_view_col.save()
 
 async def setup_forms(context, conn):
-    schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
+    schema_path = os.path.join(os.path.dirname(__file__), '..', 'schemas')
     parser = etree.XMLParser(
         schema=etree.XMLSchema(file=os.path.join(schema_path, 'form.xsd')),
         attribute_defaults=True, remove_comments=True, remove_blank_text=True)
-    form_path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'forms')
+    form_path = os.path.join(os.path.dirname(__file__), '..', 'init', 'forms')
     form_defn = await db.objects.get_db_object(context, 'sys_form_defns')
 
     async def setup_form(form_name):
@@ -643,13 +642,13 @@ async def setup_forms(context, conn):
     await setup_form('ap_alloc_posted')
 
 async def setup_reports(context, conn):
-    # schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
+    # schema_path = os.path.join(os.path.dirname(__file__), '..', 'schemas')
     # parser = etree.XMLParser(
     #     schema=etree.XMLSchema(file=os.path.join(schema_path, 'report.xsd')),
     #     attribute_defaults=True, remove_comments=True, remove_blank_text=True)
     parser = etree.XMLParser(
         attribute_defaults=True, remove_comments=True, remove_blank_text=True)
-    report_path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'reports')
+    report_path = os.path.join(os.path.dirname(__file__), '..', 'init', 'reports')
     report_defn = await db.objects.get_db_object(context, 'sys_report_defns')
 
     async def setup_report(report_name):
@@ -741,9 +740,9 @@ async def setup_finrpts(context, conn):
 
 async def setup_processes(context, conn):
     parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
-    schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
+    schema_path = os.path.join(os.path.dirname(__file__), '..', 'schemas')
     schema=etree.XMLSchema(file=os.path.join(schema_path, 'bpmn20', 'BPMN20.xsd'))
-    proc_path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'processes')
+    proc_path = os.path.join(os.path.dirname(__file__), '..', 'init', 'processes')
     proc_defn = await db.objects.get_db_object(context, 'sys_proc_defns')
     S = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
 

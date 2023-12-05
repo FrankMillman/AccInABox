@@ -1,4 +1,3 @@
-import __main__
 import os
 from lxml import etree
 parser = etree.XMLParser(remove_comments=True, remove_blank_text=True)
@@ -1298,7 +1297,7 @@ class Frame:
 
             subtran_gui.append(('subtype_frame', {'subtype_id': sub_colval, 'active': active}))
 
-            path = os.path.join(os.path.dirname(__main__.__file__), 'init', 'subtran_body')
+            path = os.path.join(os.path.dirname(__file__), '..', 'init', 'subtran_body')
             body_defn = open(f'{path}/{sub_colval}.xml').read()
             body_defn = body_defn.replace('`', '&quot;').replace('<<', '&lt;').replace('>>', '&gt;')
             subtran_body = etree.fromstring(body_defn)

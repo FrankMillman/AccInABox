@@ -7,8 +7,7 @@ import db.api
 db_session = db.api.start_db_session()  # need independent connection for reading
 
 import os.path
-import __main__
-schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
+schema_path = os.path.join(os.path.dirname(__file__), '..', 'schemas')
 xsd_parser = etree.XMLParser(
     schema=etree.XMLSchema(file=os.path.join(schema_path, 'form.xsd')),
     attribute_defaults=True, remove_comments=True, remove_blank_text=True)
