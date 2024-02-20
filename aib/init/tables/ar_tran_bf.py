@@ -97,7 +97,7 @@ cols.append ({
     'col_checks' : None,
     'fkey'       : [
         'ar_customers', 'row_id', 'ledger_id, cust_id, location_id, function_id',
-        'ledger_id, cust_id, location_id, function_id', False, None
+        'ledger_id, cust_id, location_id, function_id', False, 'cust'
         ],
     'choices'    : None,
     })
