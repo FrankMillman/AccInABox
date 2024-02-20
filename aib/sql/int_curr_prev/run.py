@@ -15,7 +15,7 @@ cfg.read(os.path.join(os.path.dirname(__file__), '..', '..', cfg_name))
 sys.path.append('../..')
 import db.api
 
-db.api.config_connection(cfg['DbParams'])
+db.api.config_database(cfg['DbParams'])
 db.api.config_cursor(cfg['DbParams'])
 
 db_session = db.api.start_db_session()
@@ -39,9 +39,10 @@ async def main(incz, exp):
 
     input()
 
+if __name__ == '__main__':
 
-incz = input('Include zeros? ')
-exp = input('Expand subledgers? ')
+    incz = input('Include zeros? ')
+    exp = input('Expand subledgers? ')
 
-asyncio.run(main(incz, exp))
-db.api.close_all_connections()
+    asyncio.run(main(incz, exp))
+    db.api.close_all_connections()
