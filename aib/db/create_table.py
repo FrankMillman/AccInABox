@@ -1,47 +1,44 @@
+"""Take a table definition from db_tables/columns and create a database table."""
+
 from json import loads
 
 from common import AibError
-from db.connection import db_constants as dbc
 
 #-----------------------------------------------------------------------------
 
-async def create_table(conn, company_id, table_name, return_sql=False):
+async def create_table(conn, company_id, table_name):
+    param_style = conn.constants.param_style
+
     cur = await conn.exec_sql(
-        f"SELECT * FROM {company_id}.db_tables WHERE table_name = {dbc.param_style}"
+        f"SELECT * FROM {company_id}.db_tables WHERE table_name = {param_style}"
         , [table_name])
     table_defn = await anext(cur)
 
     if table_defn[DEFN_COMP] is not None:
         defn_comp = table_defn[DEFN_COMP]
         cur = await conn.exec_sql(
-            f"SELECT * FROM {defn_comp}.db_tables WHERE table_name = {dbc.param_style}"
+            f"SELECT * FROM {defn_comp}.db_tables WHERE table_name = {param_style}"
             , (table_name,))
         table_defn = await anext(cur)
     else:
         defn_comp = company_id
 
-    cur = await conn.exec_sql(
+    db_columns = await conn.fetchall(
         f"SELECT a.* FROM {defn_comp}.db_columns a, {defn_comp}.db_tables b "
-        f"WHERE b.table_name = {dbc.param_style} "
+        f"WHERE b.table_name = {param_style} "
         "AND a.table_id = b.row_id AND a.col_type != 'virt' "
         "AND a.deleted_id = 0 ORDER BY a.col_type, a.seq"
         , [table_name])
-    db_columns = []
-    async for row in cur:
-        db_columns.append(row)
 
-    sql = await _create_table(conn, company_id, table_defn, db_columns, return_sql)
-
-    if return_sql:
-        return sql
+    await _create_table(conn, company_id, table_defn, db_columns)
 
 # special method to 'bootstrap' creation of db_* tables
 # cannot read db_tables and db_columns as they don't exist yet
 # therefore set up table_defn and db_columns manually and pass as arguments
 async def create_orig_table(conn, company_id, table_defn, db_columns):
-    await _create_table(conn, company_id, table_defn, db_columns)
+    await _create_table(conn, company_id, table_defn, db_columns, orig=True)
 
-async def _create_table(conn, company_id, table_defn, db_columns, return_sql=False):
+async def _create_table(conn, company_id, table_defn, db_columns, orig=False):
     cols = []
     pkeys = []
     pkey_type = None
@@ -59,34 +56,31 @@ async def _create_table(conn, company_id, table_defn, db_columns, return_sql=Fal
                 pkeys.append(column[COL_NAME])
         if column[KEY_FIELD] == 'A':
             alt_keys.append((column[COL_NAME], column[DATA_TYPE]))
-        elif column[KEY_FIELD] == 'B':
-            alt_keys_2.append((column[COL_NAME], column[DATA_TYPE]))
         if column[FKEY] is not None:
             fkey = loads(column[FKEY])
             if fkey[FK_CHILD]:
-                if column[ALLOW_AMEND] != 'false':
+                if column[ALLOW_AMEND] not in (False, 'false'):
                     raise AibError(head=table_defn[TABLE_NAME],
                         body=f'{column[COL_NAME]} is a child column - allow_amend must be false')
             target_table = fkey[FK_TGT_TBL]
             if isinstance(target_table, str):
-                sql = (
-                    f"SELECT data_company FROM {company_id}.db_tables "
-                    f"WHERE table_name = '{target_table}' "
-                    )
-                cur = await conn.exec_sql(sql)
-                try:
+                if orig:  # setting up tables for db module - cannot check db_tables
+                    target_company = None  # target_company will always be None
+                else:
+                    sql = (
+                        f"SELECT data_company FROM {company_id}.db_tables "
+                        f"WHERE table_name = '{target_table}' "
+                        )
+                    cur = await conn.exec_sql(sql)
                     target_company, = await anext(cur)
-                except StopAsyncIteration:
-                    print(table_defn[TABLE_NAME], sql)
-                    raise
-                if target_company is not None:
+                if target_company is not None:  # e.g. _sys.dir_users
                     target_table = f'{target_company}.{target_table}'
                 fkeys.append((column[COL_NAME], target_table, fkey[FK_TGT_COL],
                     fkey[FK_CHILD]))  # if child is True, set del_cascade to True
 
     cols = ', '.join(cols)
     if pkeys:
-        primary_key = conn.create_primary_key(pkeys)
+        primary_key = ", {conn.constants.primary_key} ({', '.join(pkeys)})"
     else:
         primary_key = ''
     if fkeys:
@@ -97,18 +91,10 @@ async def _create_table(conn, company_id, table_defn, db_columns, return_sql=Fal
     create = f'CREATE TABLE {company_id}.{table_defn[TABLE_NAME]}'
     sql = f'{create} ({cols}{primary_key}{foreign_key})'
 
-    if return_sql:
-        return sql
-
     await conn.exec_cmd(sql)
 
     if alt_keys:
-        sql_list = conn.create_alt_index(company_id, table_defn[TABLE_NAME], alt_keys, 'a')
-        for sql in sql_list:
-            await conn.exec_cmd(sql)
-
-    if alt_keys_2:
-        sql_list = conn.create_alt_index(company_id, table_defn[TABLE_NAME], alt_keys_2, 'b')
+        sql_list = conn.create_alt_index(company_id, table_defn[TABLE_NAME], alt_keys)
         for sql in sql_list:
             await conn.exec_cmd(sql)
 

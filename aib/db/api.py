@@ -2,29 +2,31 @@
 This is the public API for the db module.
 """
 
+import configparser
+
 import db.connection
 import db.cursor
 
-def config_connection(db_params):
+def config_database(db_params: configparser.SectionProxy):
     """
     Configure the DbConn class for the active database.
 
     Must be called at the start of the program, with the database parameters
     that were passed in as a command line argument.
 
-    It calls :func:`db.connection.config_connection`, passing in
+    It calls :func:`db.connection.config_database`, passing in
     the database parameters.
     """
-    db.connection.config_connection(db_params)
+    db.connection.config_database(db_params)
 
-def config_cursor(db_params):
+def config_cursor(db_params: configparser.SectionProxy):
     """
     Configure the DbCursor class for the active database.
 
     Must be called at the start of the program, with the database parameters
     that were passed in as a command line argument.
 
-    It calls :func:`db.connection.config_cursor`, passing in
+    It calls :func:`db.cursor.config_cursor`, passing in
     the database parameters.
     """
     db.cursor.config_cursor(db_params)

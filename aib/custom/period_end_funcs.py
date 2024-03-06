@@ -1,7 +1,7 @@
 from datetime import date as dt
 
 import db.objects
-from db.connection import db_constants as dbc
+import db.connection
 from common import AibError
 
 async def set_per_closing_flag(caller, params):
@@ -185,17 +185,19 @@ async def check_subledg(caller, period_to_close):
     module_ids = ['cb', 'ar', 'ap', 'in']
     sql = []
     params = []
+    param_style = db.connection.DbConn.constants.param_style
+
     sql.append('SELECT module_id, ledger_id FROM (')
     for module_id in module_ids:
-        sql.append(f'SELECT {dbc.param_style} AS module_id, b.ledger_id')
+        sql.append(f'SELECT {param_style} AS module_id, b.ledger_id')
         params.append(module_id)
         sql.append(f'FROM {company}.{module_id}_ledger_periods a')
         sql.append(f'JOIN {company}.{module_id}_ledger_params b ON b.row_id = a.ledger_row_id')
-        sql.append(f'WHERE a.period_row_id = {dbc.param_style}')
+        sql.append(f'WHERE a.period_row_id = {param_style}')
         params.append(period_to_close)
-        sql.append(f'AND a.deleted_id = {dbc.param_style}')
+        sql.append(f'AND a.deleted_id = {param_style}')
         params.append(0)
-        sql.append(f'AND a.state != {dbc.param_style}')
+        sql.append(f'AND a.state != {param_style}')
         params.append('closed')
         if module_id != module_ids[-1]:
             sql.append('UNION ALL')

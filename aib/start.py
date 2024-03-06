@@ -18,17 +18,18 @@ import os
 import sys
 import asyncio
 from configparser import ConfigParser
-
 import logging
-format = "%(asctime)s : %(name)-4s: %(levelname)-8s: %(message)s"
-datefmt = '%Y/%m/%d %H:%M:%S'
-#logging.basicConfig(level=logging.DEBUG, format=format, datefmt=datefmt)
-#logging.basicConfig(level=logging.INFO)
-logging.basicConfig(format=format, datefmt=datefmt)
-logger = logging.getLogger(__name__)
 
 import ht.htc
 import db.api
+
+LOG_FORMAT = "%(asctime)s : %(name)-4s: %(levelname)-8s: %(message)s"
+DATE_FORMAT = '%Y/%m/%d %H:%M:%S'
+# logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT, datefmt=DATE_FORMAT)
+# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(format=LOG_FORMAT, datefmt=DATE_FORMAT)
+logger = logging.getLogger(__name__)
+
 
 def start():
     if len(sys.argv) == 2:
@@ -39,7 +40,7 @@ def start():
     cfg = ConfigParser()
     cfg.read(os.path.join(os.path.dirname(__file__), cfg_name))
 
-    db.api.config_connection(cfg['DbParams'])
+    db.api.config_database(cfg['DbParams'])
     db.api.config_cursor(cfg['DbParams'])
 
     check_versions()  # upgrade_datamodel cannot work from here - needs asyncio!
@@ -47,23 +48,21 @@ def start():
     params = cfg['HumanTaskClient']
     asyncio.run(ht.htc.main(params))
 
+
 def check_versions():
-
-    import db.api
-
     from releases import program_version_info, datamodel_version_info
 
     def s_to_t(s):  # convert string '0.1.1' to tuple(0, 1, 1)
-        #return tuple(int(_) for _ in s.split('.'))
+        # return tuple(int(_) for _ in s.split('.'))
         return tuple(map(int, s.split('.')))
 
     def t_to_s(t):  # convert tuple(0, 1, 1) to string '0.1.1'
-        #return '.'.join(str(_) for _ in t)
+        # return '.'.join(str(_) for _ in t)
         return '.'.join(map(str, t))
 
     progver_fn = os.path.join(os.path.dirname(__file__), 'program_version')
     try:
-        with open(progver_fn) as fd:
+        with open(progver_fn, encoding='utf-8') as fd:
             current_program_version = fd.read()
     except FileNotFoundError:
         current_program_version = '0.1.0'
@@ -71,21 +70,19 @@ def check_versions():
 
     dataver_fn = os.path.join(os.path.dirname(__file__), 'datamodel_version')
     try:
-        with open(dataver_fn) as fd:
+        with open(dataver_fn, encoding='utf-8') as fd:
             current_datamodel_version = fd.read()
     except FileNotFoundError:
         current_datamodel_version = '0.1.0'
     current_datamodel_version_info = s_to_t(current_datamodel_version)
 
-    if (
-        program_version_info < current_program_version_info or
-        datamodel_version_info < current_datamodel_version_info
-        ):
+    if (program_version_info < current_program_version_info or
+            datamodel_version_info < current_datamodel_version_info):
         sys.exit('Houston we have a problem!')
 
     if program_version_info > current_program_version_info:
         new_program_version = t_to_s(program_version_info)
-        with open(progver_fn, 'w') as fd:
+        with open(progver_fn, 'w', encoding='utf-8') as fd:
             fd.write(new_program_version)
 
     if datamodel_version_info > current_datamodel_version_info:
@@ -101,8 +98,9 @@ def check_versions():
         from upgrade_datamodel import upgrade_datamodel
         upgrade_datamodel(db_session, current_datamodel_version_info, datamodel_version_info)
         new_datamodel_version = t_to_s(datamodel_version_info)
-        with open(dataver_fn, 'w') as fd:
+        with open(dataver_fn, 'w', encoding='utf-8') as fd:
             fd.write(new_datamodel_version)
+
 
 if __name__ == '__main__':
     start()

@@ -55,8 +55,8 @@ class GuiGrid:
         self.hidden = False  # for 'subtype' gui objects
         self.form_dflt = None
         self.before_input = None
+        self.obj_clicked = None
 
-        self.data_objects = parent.data_objects
         self.obj_name = element.get('data_object')
         self.db_obj = parent.data_objects[self.obj_name]
         await self.db_obj.check_perms('select')
@@ -270,6 +270,7 @@ class GuiGrid:
 
             elif col_defn[0] == 'cur_btn':
                 btn_label, btn_id, lng, action = col_defn[1:]
+                readonly = True
                 enabled = True
                 must_validate = True
                 default = False
@@ -277,13 +278,13 @@ class GuiGrid:
                 action = etree.fromstring(
                     f'<_>{action}</_>', parser=parser)
                 button = ht.gui_objects.GuiButton(self, gui_cols, btn_label,
-                    lng, enabled, must_validate, default, help_msg, action)
+                    lng, readonly, enabled, must_validate, default, help_msg, action)
                 self.btn_dict[btn_id] = button
                 button.grid = self
 
             pos += 1
 
-        num_grid_rows = int(element.get('num_grid_rows', 10))  # default to 10
+        self.num_grid_rows = int(element.get('num_grid_rows', 10))  # default to 10
         self.growable = (element.get('growable') == 'true')
         self.auto_startrow = (element.get('auto_startrow') == 'true')
 
@@ -376,7 +377,7 @@ class GuiGrid:
         gui.append(('grid',
             {'ref':self.ref, 'growable':self.growable,
                 'readonly': self.readonly, 'auto_startrow': self.auto_startrow,
-                'num_grid_rows': num_grid_rows, 'expand_col': expand_col,
+                'num_grid_rows': self.num_grid_rows, 'expand_col': expand_col,
                 'header_row': header_cols, 'footer_row': footer_cols},
             gui_cols))
 
@@ -444,6 +445,10 @@ class GuiGrid:
     @property
     def company(self):
         return self.form.company
+
+    @property
+    def data_objects(self):
+        return self.form.data_objects
 
     async def _redisplay(self):
         pass  # in case called from ht.form.set_subtype
@@ -593,10 +598,18 @@ class GuiGrid:
                         body=f'{start_val} not found')
 
             focus_row, found = await self.cursor.start()
-            # first_row = focus_row - (25 if focus_row > 25 else focus_row)
-            first_row = focus_row
-            if first_row > (self.cursor.num_rows - 50):
-                first_row = (self.cursor.num_rows - 50)
+            # # first_row = focus_row - (25 if focus_row > 25 else focus_row)
+            # first_row = focus_row
+            # if first_row > (self.cursor.num_rows - 50):
+            #     first_row = (self.cursor.num_rows - 50)
+            # neither of the above handled all cases
+            # here is version 3 - monitor [2024-01-05]
+            first_grid_row = focus_row - (self.num_grid_rows // 2)  # focus_row will be the centre row
+            if first_grid_row < 0:
+                first_grid_row = 0
+            first_row = first_grid_row - 10  # allow 'headroom' at top of grid
+            if first_row < 0:
+                first_row = 0
         else:
             await self.db_obj.init(display=self.db_obj.exists)  # set display=True if exists to clear client screen
             focus_row = 0
@@ -806,6 +819,7 @@ class GuiGrid:
     async def on_clicked(self, button, btn_args):
         # if a grid is clicked, the object clicked is not a 'button' but a 'cell' with an 'action'
         # save it for inspection in custom.gl_funcs.finrpt_drilldown()
+        # NB it could be a 'toolbar button' [2024-01-12]
         self.obj_clicked = button
         self.btn_args = btn_args
         await ht.form_xml.on_click(self, button)

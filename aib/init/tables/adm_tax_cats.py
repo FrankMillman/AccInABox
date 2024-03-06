@@ -228,8 +228,7 @@ cols.append ({
             [
                 ['check', '', '_param.gl_integration', 'is', '$False', ''],
                 ['or', '', '$value', '=', 'gl_code_id>valid_loc_ids', ''],
-                ['or', '', '$value', 'pyfunc',
-                    'db.checks.valid_loc_id,"gl_code_id"', ''],
+                ['or', '', '$value', 'pyfunc', 'db.checks.valid_loc_id,"gl_code_id"', ''],
                 ],
             ],
         ],

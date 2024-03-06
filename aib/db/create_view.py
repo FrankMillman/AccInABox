@@ -1,20 +1,21 @@
+"""Take a view definition from db_views/view_cols and create a database view."""
+
 from json import loads
 
 from common import AibError
-from db.connection import db_constants as dbc
 import db.objects
 
 #-----------------------------------------------------------------------------
 
 async def create_view(context, conn, company_id, view_name):
     cur = await conn.exec_sql(
-        f"SELECT * FROM {company_id}.db_views WHERE view_name = {dbc.param_style}"
+        f"SELECT * FROM {company_id}.db_views WHERE view_name = {conn.constants.param_style}"
         , [view_name])
     view_defn = await anext(cur)
 
     cur = await conn.exec_sql(
         f"SELECT * FROM {company_id}.db_view_cols "
-        f"WHERE view_id = {dbc.param_style} AND col_type = 'view' AND deleted_id = 0 "
+        f"WHERE view_id = {conn.constants.param_style} AND col_type = 'view' AND deleted_id = 0 "
         "ORDER BY seq"
         , [view_defn[ROW_ID]])
     view_cols = []

@@ -6,7 +6,6 @@ It starts an https server. Then it listens for client connections over https.
 
 import os
 import sys
-import __main__
 import traceback
 import time
 import asyncio
@@ -117,6 +116,7 @@ class Session:
         if state != 'completed':
             self.responder.send_close_program()
             del self.dir_user
+            # run next line as a task to allow current request to complete
             asyncio.create_task(self.close())  # terminate session
             return
 
@@ -302,8 +302,10 @@ class ResponseHandler:
     async def ask_question(
             self, caller, title, text, answers, default, escape):
         args = (caller.ref, title, text, answers, default, escape)
-        fut = asyncio.Future()
-        asyncio.Task(self.send_question(fut, args))
+        # fut = asyncio.Future()
+        fut = asyncio.get_running_loop().create_future()
+        # asyncio.Task(self.send_question(args))
+        asyncio.create_task(self.send_question(args))
         self.session.questions[caller.ref] = fut
         writer, data = await asyncio.wait_for(fut, timeout=None)
         # at this point, the process is suspended until the reply is received
@@ -314,7 +316,7 @@ class ResponseHandler:
         self.session.responder = self  # replace original after answer recd
         return data
 
-    async def send_question(self, fut, args):
+    async def send_question(self, args):
         reply = dumps([('ask_question', args)])
         response = Response(self.writer, 200)
         response.add_header('Content-type', 'application/json; charset=utf-8')
@@ -385,26 +387,26 @@ class ResponseHandler:
         if opt_type == 'grid':
             form = ht.form.Form()
             context = await db.cache.get_new_context(self.session.user_row_id,
-                self.session.sys_admin, company, id(form),
-                await menu_defns.getval('module_row_id'),
-                await menu_defns.getval('ledger_row_id'))
+                self.session.sys_admin, company, mem_id=id(form),
+                module_row_id=await menu_defns.getval('module_row_id'),
+                ledger_row_id=await menu_defns.getval('ledger_row_id'))
             await form._ainit_(context, self.session, '_sys.setup_grid',
                 grid_params=(await menu_defns.getval('table_name'), await menu_defns.getval('cursor_name')))
         elif opt_type == 'form':
             form = ht.form.Form()
             context = await db.cache.get_new_context(self.session.user_row_id,
-                self.session.sys_admin, company, id(form),
-                await menu_defns.getval('module_row_id'),
-                await menu_defns.getval('ledger_row_id'))
+                self.session.sys_admin, company, mem_id=id(form),
+                module_row_id=await menu_defns.getval('module_row_id'),
+                ledger_row_id=await menu_defns.getval('ledger_row_id'))
             await form._ainit_(context, self.session, await menu_defns.getval('form_name'))
         elif opt_type == 'report':
             pass
         # elif opt_type == 'process':
         #     process = bp.bpm.ProcessRoot(company, await menu_defns.getval('process_id'))
         #     context = await db.cache.get_new_context(self.session.user_row_id,
-        #         self.session.sys_admin, company, id(process),
-        #         await menu_defns.getval('module_row_id'),
-        #         await menu_defns.getval('ledger_row_id'))
+        #         self.session.sys_admin, company, mem_id=id(process),
+        #         module_row_id=await menu_defns.getval('module_row_id'),
+        #         ledger_row_id=await menu_defns.getval('ledger_row_id'))
         #     await process.start_process(context)
 
     async def on_get_prev(self, args):
@@ -597,7 +599,7 @@ async def send_js(srv, path, dev):
     response.add_header('Transfer-Encoding', 'chunked')
     await response.send_headers()
 
-    dname = os.path.join(os.path.dirname(__main__.__file__), 'html')
+    dname = os.path.join(os.path.dirname(__file__), '..', 'html')
     try:
         with open(os.path.join(dname, fname), 'rb') as fd:
             await response.write_file(fd)
@@ -673,7 +675,7 @@ async def handle_client(client_reader, client_writer):
 
     try:
         method, path, version = req_line.rstrip().decode().split(' ')
-    except ValueError:
+    except (ValueError, UnicodeDecodeError):
         print('***', req_line, '***')
         raise
 
@@ -838,7 +840,11 @@ async def main(params):
 
     ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     ssl_ctx.check_hostname = False
-    ssl_ctx.load_cert_chain(f'./ssl/{domain}/aib.crt', f'./ssl/{domain}/aib.key')
+
+    path = os.path.join(os.path.dirname(__file__), '..', 'ssl')
+    ssl_ctx.load_cert_chain(f'{path}/{domain}/aib.crt', f'{path}/{domain}/aib.key')
+
+    ssl_ctx = None  # disable ssl for now [2024-01-02]
 
     server = await asyncio.start_server(handle_client, host, port, ssl=ssl_ctx)
     logger.info(f'task client listening on port {port}')

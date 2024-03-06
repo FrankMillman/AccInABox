@@ -2,12 +2,10 @@
 This is where you initialise the database.
 """
 
-import __main__
 import os
 import sys
 import asyncio
 from configparser import ConfigParser
-from collections import OrderedDict as OD
 
 import db.api
 import init.init_db
@@ -24,18 +22,19 @@ def get_config():
 
     print()
     cfg = ConfigParser()
-    if db_type == 'm':
-        cfg['DbParams'] = get_ms_params()
-    elif db_type == 'p':
-        cfg['DbParams'] = get_pg_params()
-    elif db_type == 's':
-        cfg['DbParams'] = get_sq_params()
+    match db_type:
+        case 'm':
+            cfg['DbParams'] = get_ms_params()
+        case 'p':
+            cfg['DbParams'] = get_pg_params()
+        case 's':
+            cfg['DbParams'] = get_sq_params()
 
     print()
     cfg['HumanTaskClient'] = get_htc_params()
 
     cfg_fname = os.path.join(os.path.dirname(__file__), 'aib.ini')
-    with open(cfg_fname, 'w') as cfg_file:
+    with open(cfg_fname, 'w', encoding='utf-8') as cfg_file:
         cfg.write(cfg_file)
 
     return cfg
@@ -45,12 +44,12 @@ def get_ms_params():
     user_id  = input('Enter user id      : ')
     password = input('Enter password     : ')
 
-    return OD((
-        ('servertype', 'mssql'),
-        ('database', db_name),
-        ('user', user_id),
-        ('pwd', password)
-    ))
+    return {
+        'servertype': 'mssql',
+        'database': db_name,
+        'user': user_id,
+        'pwd': password
+    }
 
 def get_pg_params():
     db_host  = input('Enter database host address [localhost]: ') or 'localhost'
@@ -59,18 +58,18 @@ def get_pg_params():
     user_id  = input('Enter user id: ')
     password = input('Enter password: ')
 
-    return OD((
-        ('servertype', 'pgsql'),
-        ('host', db_host),
-        ('port', db_port),
-        ('database', db_name),
-        ('user', user_id),
-        ('pwd', password)
-    ))
+    return {
+        'servertype': 'pgsql',
+        'host': db_host,
+        'port': db_port,
+        'database': db_name,
+        'user': user_id,
+        'pwd': password
+    }
 
 def get_sq_params():
     db_path  = input('Enter path to database: ')
-    return OD((('servertype', 'sqlite3'), ('database', db_path)))
+    return {'servertype': 'sqlite3', 'database': db_path}
 
 def get_htc_params():
     import socket as s
@@ -78,12 +77,12 @@ def get_htc_params():
     htc_host = input(f'Enter web server host address [{host}]: ') or host
     htc_port = input('Enter web server port number [6543]: ') or '6543'
     domain = input('Enter domain for ssl key/crt: ')
-    return OD((('host', htc_host), ('port', htc_port), ('ssl', domain)))
+    return {'host': htc_host, 'port': htc_port, 'ssl': domain}
 
 if __name__ == '__main__':
 
     cfg = get_config()
-    db.api.config_connection(cfg['DbParams'])
+    db.api.config_database(cfg['DbParams'])
 
     asyncio.run(init.init_db.init_database())
     db.api.close_all_connections()

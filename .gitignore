@@ -19,6 +19,8 @@ aib/schemas/testing
 aib/imports/
 aib/ssl/
 aib/test_reports/
+docs/
+aib/.pylintrc
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -60,12 +60,12 @@ def upgrade_0_1_1(db_session):
     with db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
 
-        # update db_tables.sys_menu_defns with new hooks
+        # update db_tables.sys_menu_defns with new actions
         db_table = db.objects.get_db_object(__main__, '_sys', 'db_tables')
         db_table.setval('table_name', 'sys_menu_defns')
-        db_table.setval('table_hooks', etree.fromstring(
-            '<hooks><hook type="before_save"><increment_seq args="parent_id"/></hook>'
-            '<hook type="after_delete"><decrement_seq args="parent_id"/></hook></hooks>'
+        db_table.setval('table_actions', etree.fromstring(
+            '<actions><action type="before_save"><increment_seq args="parent_id"/></action>'
+            '<action type="after_delete"><decrement_seq args="parent_id"/></action></actions>'
             ))
         db_table.save()
 

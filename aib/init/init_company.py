@@ -1,10 +1,9 @@
 import os
 import importlib
-from json import loads, dumps
+from json import dumps
+from itertools import count, repeat
 from lxml import etree
-from itertools import count
 
-from db.connection import db_constants as dbc
 import db.create_table
 import db.create_view
 import db.objects
@@ -18,7 +17,7 @@ async def init_company(company, company_name):
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         await conn.create_company(company)
-        await setup_db_tables(context, conn, company_name)  # tables to store database metadata
+        await setup_db_tables(context, conn)  # tables to store database metadata
         await setup_dir_tables(context, conn)  # directory tables defined in _sys
         await setup_sys_tables(context, conn)  # common table definitions defined in _sys
         await setup_other_tables(context, conn)  # database tables for company
@@ -36,7 +35,7 @@ async def init_company(company, company_name):
 
     return f'company {company} created'
 
-async def setup_db_tables(context, conn, company_name):
+async def setup_db_tables(context, conn):
     tables = [
         'db_modules',
         'db_tables',
@@ -45,17 +44,18 @@ async def setup_db_tables(context, conn, company_name):
     # create tables first
     for table_name in tables:
         await setup_db_table(conn, table_name, context)
-    await setup_modules(context, conn, company_name)
+    await setup_modules(context, conn)
     # then populate db_tables and db_columns
     for table_name in tables:
         await setup_db_metadata(context, conn, table_name)
 
 async def setup_db_table(conn, table_name, context):
-    module = importlib.import_module(f'.tables.{table_name}', 'init')
+    module = importlib.import_module(f'init.tables.{table_name}')
 
     tbl = module.table
+    assert table_name == tbl['table_name']
     table_defn = [None] * 17
-    table_defn[3] = tbl['table_name']
+    table_defn[3] = table_name
 
     cols = module.cols
     db_columns = []
@@ -69,22 +69,24 @@ async def setup_db_table(conn, table_name, context):
         db_col[16] = col['db_scale']
         db_col[19] = col['dflt_val']
         if col['fkey'] is not None:
-            db_col[21] = dumps(col['fkey'])
+            db_col[22] = dumps(col['fkey'])
         db_columns.append(db_col)
 
     await db.create_table.create_orig_table(conn, context.company, table_defn, db_columns)
 
-async def setup_modules(context, conn, company_name):
+async def setup_modules(context, conn):
+    param_style = conn.constants.param_style
+
     sql_1 = (
-        "INSERT INTO {}.db_modules "
+        f"INSERT INTO {context.company}.db_modules "
         "(created_id, module_id, descr, seq) "
-        "VALUES ({})".format(context.company, ', '.join([dbc.param_style]*4))
+        f"VALUES ({', '.join(repeat(param_style, 4))})"
         )
 
     sql_2 = (
-        "INSERT INTO {}.db_modules_audit_xref "
+        f"INSERT INTO {context.company}.db_modules_audit_xref "
         "(data_row_id, user_row_id, date_time, type) "
-        "VALUES ({})".format(context.company, ', '.join([dbc.param_style]*4))
+        f"VALUES ({', '.join(repeat(param_style, 4))})"
         )
 
     modules = [
@@ -107,19 +109,20 @@ async def setup_modules(context, conn, company_name):
         ('pos', 'Point of sale'),
         ]
 
-    for pos, (module_id, descr) in enumerate(modules, 1):
+    for pos, (module_id, descr) in enumerate(modules, start=1):
         # created_id starts from 1, seq starts from 0
         await conn.exec_cmd(sql_1, (pos, module_id, descr, pos-1))
         await conn.exec_cmd(sql_2, (pos, context.user_row_id, conn.timestamp, 'add'))
 
 async def setup_db_metadata(context, conn, table_name):
-    module = importlib.import_module(f'.tables.{table_name}', 'init')
+    param_style = conn.constants.param_style
+    module = importlib.import_module(f'init.tables.{table_name}')
     tbl = module.table
 
     sql = (
-        "INSERT INTO {}.db_tables "
+        f"INSERT INTO {context.company}.db_tables "
         "(created_id, table_name, module_row_id, seq, short_descr, defn_company, read_only) "
-        "VALUES ({})".format(context.company, ', '.join([dbc.param_style] * 7))
+        f"VALUES ({', '.join(repeat(param_style, 7))})"
         )
 
     table_id = next(next_table_id)
@@ -136,24 +139,25 @@ async def setup_db_metadata(context, conn, table_name):
     await conn.exec_cmd(sql, params)
 
     sql = (
-        "INSERT INTO {}.db_tables_audit_xref "
-        "(data_row_id, user_row_id, date_time, type) VALUES ({})"
-        .format(context.company, ', '.join([dbc.param_style] * 4))
+        f"INSERT INTO {context.company}.db_tables_audit_xref "
+        "(data_row_id, user_row_id, date_time, type) "
+        f"VALUES ({', '.join(repeat(param_style, 4))})"
         )
     params = [table_id, context.user_row_id, conn.timestamp, 'add']
     await conn.exec_cmd(sql, params)
 
 async def setup_dir_tables(context, conn):
+    param_style = conn.constants.param_style
 
     async def setup_dir_table(table_name, seq):
-        module = importlib.import_module(f'.tables.{table_name}', 'init')
+        module = importlib.import_module(f'init.tables.{table_name}')
         tbl = module.table
 
         sql = (
-            "INSERT INTO {}.db_tables "
+            f"INSERT INTO {context.company}.db_tables "
             "(created_id, table_name, module_row_id, seq, short_descr, "
             "defn_company, data_company, read_only) "
-            "VALUES ({})".format(context.company, ', '.join([dbc.param_style] * 8))
+            f"VALUES ({', '.join(repeat(param_style, 8))})"
             )
 
         table_id = next(next_table_id)
@@ -171,9 +175,9 @@ async def setup_dir_tables(context, conn):
         await conn.exec_cmd(sql, params)
 
         sql = (
-            "INSERT INTO {}.db_tables_audit_xref "
-            "(data_row_id, user_row_id, date_time, type) VALUES ({})"
-            .format(context.company, ', '.join([dbc.param_style] * 4))
+            f"INSERT INTO {context.company}.db_tables_audit_xref "
+            "(data_row_id, user_row_id, date_time, type) "
+            f"VALUES ({', '.join(repeat(param_style, 4))})"
             )
         params = [table_id, context.user_row_id, conn.timestamp, 'add']
         await conn.exec_cmd(sql, params)
@@ -201,7 +205,7 @@ async def setup_sys_tables(context, conn):
         ]
 
     for table_name in tables:
-        module = importlib.import_module(f'.tables.{table_name}', 'init')
+        module = importlib.import_module(f'init.tables.{table_name}')
         tbl = module.table
         await db_tbl.init()
         await db_tbl.setval('table_name', table_name)
@@ -369,7 +373,7 @@ async def setup_other_tables(context, conn):
         'in_wh_prod_alloc',
         ]
     for table_name in tables:
-        module = importlib.import_module(f'.tables.{table_name}', 'init')
+        module = importlib.import_module(f'init.tables.{table_name}')
         await setup_table(module, db_tbl, db_col, table_name)
         await db.create_table.create_table(conn, context.company, table_name)
         await setup_cursor(module, db_tbl, db_cur, table_name)
@@ -484,7 +488,7 @@ async def setup_views(context, conn):
         'cb_trans',
         ]
     for view_name in views:
-        module = importlib.import_module(f'.views.{view_name}', 'init')
+        module = importlib.import_module(f'init.views.{view_name}')
         await setup_view(module, db_view, db_view_col, view_name)
         await db.create_view.create_view(context, conn, context.company, view_name)
 
@@ -672,7 +676,7 @@ async def setup_finrpts(context, conn):
     db_obj = await db.objects.get_db_object(context, 'sys_finrpt_defns')
 
     async def setup_finrpt(db_obj, report_name):
-        rpt = importlib.import_module(f'.fin_reports.{report_name}', 'init')
+        rpt = importlib.import_module(f'init.fin_reports.{report_name}')
         await db_obj.init()
         await db_obj.setval('module_id', rpt.module_id)
         await db_obj.setval('report_name', rpt.report_name)

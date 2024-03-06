@@ -60,7 +60,7 @@ async def chk_table_name(ctx, fld, value, xml):
     defn_comp = await db_table.getval('defn_company')
     sql = (
         'SELECT short_descr FROM {}.db_tables WHERE table_name = {}'
-        .format(defn_comp, db_table.db_table.constants.param_style)
+        .format(defn_comp, db_table.constants.param_style)
         )
     async with db_table.context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db

@@ -1,11 +1,10 @@
 import os
 import importlib
-import gzip
-from json import dumps, loads
+from json import dumps
 from lxml import etree
-from collections import OrderedDict as OD
+from itertools import repeat
 
-from db.connection import db_constants as dbc
+import db.connection
 import db.create_table
 import db.objects
 import db.cache
@@ -18,19 +17,21 @@ async def init_database():
     company_name = 'System Administration'
     context = await db.cache.get_new_context(1, True, company)  # user_row_id, sys_admin, company
 
-    # MS-SQL cannot run ALTER TABLE inside transaction, so call create_functions() here
-    conn = db.connection.DbConn()
-    await conn._ainit_(0)
-    conn.create_functions()
-    conn.conn.commit()
-    conn.conn.close()
+    if db.connection.DbConn.constants.servertype == 'mssql':
+        # MS-SQL defaults to READ_COMMITTED, but recommended is READ_COMMITTED_SNAPSHOT
+        conn = db.connection.DbConn()
+        await conn._ainit_(0)  # arg 'pos' req'd to indicate position in pool - not needed here, so just use 0
+        conn.conn.autocommit = True
+        cur = conn.conn.cursor()
+        cur.execute(f'ALTER DATABASE {conn.database} SET ALLOW_SNAPSHOT_ISOLATION ON')
+        cur.execute(f'ALTER DATABASE {conn.database} SET READ_COMMITTED_SNAPSHOT ON')
+        conn.close()
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
+        await conn.create_functions()
         await conn.create_company(company)
-
         await setup_db_tables(conn, company, company_name)  # create tables to store database metadata
-
         await setup_other_tables(context, conn)
         await setup_fkeys(context)
         await setup_forms(context)
@@ -76,22 +77,23 @@ async def setup_db_table(conn, table_name, company):
         db_col[17] = col['db_scale']
         db_col[19] = col['dflt_val']
         if col['fkey'] is not None:
-            db_col[21] = dumps(col['fkey'])
+            db_col[22] = dumps(col['fkey'])
         db_columns.append(db_col)
 
     await db.create_table.create_orig_table(conn, company, table_defn, db_columns)
 
 async def setup_modules(conn, company, company_name):
+    param_style = conn.constants.param_style
     sql_1 = (
-        "INSERT INTO {}.db_modules "
+        f"INSERT INTO {company}.db_modules "
         "(created_id, module_id, descr, seq) "
-        "VALUES ({})".format(company, ', '.join([dbc.param_style]*4))
+        f"VALUES ({', '.join(repeat(param_style, 4))})"
         )
 
     sql_2 = (
-        "INSERT INTO {}.db_modules_audit_xref "
+        f"INSERT INTO {company}.db_modules_audit_xref "
         "(data_row_id, user_row_id, date_time, type) "
-        "VALUES ({})".format(company, ', '.join([dbc.param_style]*4))
+        f"VALUES ({', '.join(repeat(param_style, 4))})"
         )
 
     modules = [
@@ -107,17 +109,17 @@ async def setup_modules(conn, company, company_name):
         await conn.exec_cmd(sql_2, (pos, USER_ROW_ID, conn.timestamp, 'add'))
 
 async def setup_db_metadata(conn, company, seq, table_name, column_id):
+    param_style = conn.constants.param_style
     table_id = seq + 1  # seq starts from 0, table_id starts from 1
 
     module = importlib.import_module(f'.tables.{table_name}', 'init')
     tbl = module.table
 
     sql = (
-        "INSERT INTO {}.db_tables "
-        "(created_id, table_name, module_row_id, seq, short_descr, long_descr, sub_types, "
-        "sub_trans, sequence, tree_params, roll_params, indexes, ledger_col, "
-        "defn_company, data_company, read_only) VALUES ({})"
-        .format(company, ', '.join([dbc.param_style]*16))
+        f"INSERT INTO {company}.db_tables "
+        "(created_id, table_name, module_row_id, seq, short_descr, long_descr, sub_types, sub_trans, "
+        "sequence, tree_params, roll_params, indexes, ledger_col, defn_company, data_company, read_only) "
+        f"VALUES ({', '.join(repeat(param_style, 16))})"
         )
     params = [
         table_id,  # created_id
@@ -140,19 +142,19 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
     await conn.exec_cmd(sql, params)
 
     sql = (
-        "INSERT INTO {}.db_tables_audit_xref "
+        f"INSERT INTO {company}.db_tables_audit_xref "
         "(data_row_id, user_row_id, date_time, type) "
-        "VALUES ({})".format(company, ', '.join([dbc.param_style] * 4))
+        f"VALUES ({', '.join(repeat(param_style, 4))})"
         )
     params = [table_id, USER_ROW_ID, conn.timestamp, 'add']
     await conn.exec_cmd(sql, params)
 
     sql = (
-        "INSERT INTO {}.db_columns "
+        f"INSERT INTO {company}.db_columns "
         "(created_id, table_id, col_name, col_type, seq, data_type, short_descr, "
         "long_descr, col_head, key_field, data_source, condition, allow_null, allow_amend, "
         "max_len, db_scale, scale_ptr, dflt_val, dflt_rule, col_checks, fkey, choices) "
-        "VALUES ({})".format(company, ', '.join([dbc.param_style] * 22))
+        f"VALUES ({', '.join(repeat(param_style, 22))})"
         )
     cols = module.cols
     params = []
@@ -176,8 +178,7 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
             col['db_scale'],
             col['scale_ptr'],
             col['dflt_val'],
-            None if col['dflt_rule'] is None else
-                col['dflt_rule'].replace('`', "'"),
+            None if col['dflt_rule'] is None else col['dflt_rule'].replace('`', "'"),
             None if col['col_checks'] is None else dumps(col['col_checks']),
             None if col['fkey'] is None else dumps(col['fkey']),
             None if col['choices'] is None else dumps(col['choices']),
@@ -186,9 +187,9 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
         await conn.exec_cmd(sql, param)
 
     sql = (
-        "INSERT INTO {}.db_columns_audit_xref "
+        f"INSERT INTO {company}.db_columns_audit_xref "
         "(data_row_id, user_row_id, date_time, type) "
-        "VALUES ({})".format(company, ', '.join([dbc.param_style] * 4))
+        f"VALUES ({', '.join(repeat(param_style, 4))})"
         )
     params = []
     for seq, col in enumerate(cols):
@@ -201,12 +202,12 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
     cols = module.virt
     if cols:
         sql = (
-            "INSERT INTO {}.db_columns "
+            f"INSERT INTO {company}.db_columns "
             "(created_id, table_id, col_name, col_type, seq, data_type, "
             "short_descr, long_descr, col_head, key_field, data_source, condition, "
             "allow_null, allow_amend, max_len, db_scale, scale_ptr, dflt_val, "
             "dflt_rule, col_checks, fkey, choices, sql) "
-            "VALUES ({})".format(company, ', '.join([dbc.param_style] * 23))
+            f"VALUES ({', '.join(repeat(param_style, 23))})"
             )
         params = []
         for seq, col in enumerate(cols):
@@ -240,9 +241,9 @@ async def setup_db_metadata(conn, company, seq, table_name, column_id):
             await conn.exec_cmd(sql, param)
 
         sql = (
-            "INSERT INTO {}.db_columns_audit_xref "
+            f"INSERT INTO {company}.db_columns_audit_xref "
             "(data_row_id, user_row_id, date_time, type) "
-            "VALUES ({})".format(company, ', '.join([dbc.param_style] * 4))
+            f"VALUES ({', '.join(repeat(param_style, 4))})"
             )
         params = []
         for seq, col in enumerate(cols):
@@ -512,25 +513,26 @@ async def setup_menus(context, company_name):
     await parse_menu(menu, None)
 
 async def setup_data(context, conn, company_name):
+    param_style = conn.constants.param_style
 
     # dir_comp = await db.objects.get_db_object(context, 'dir_companies')
     # await dir_comp.setval('company_id', context.company)
     # await dir_comp.setval('company_name', company_name)
     # await dir_comp.save()
 
-    # use SQL instead of above, to avoid table_hook 'create_company'
+    # use SQL instead of above, to avoid table_action 'create_company'
     sql = (
         "INSERT INTO _sys.dir_companies (company_id, company_name) "
-        "VALUES ({0}, {0})"
-        ).format(dbc.param_style)
+        f"VALUES ({', '.join(repeat(param_style, 2))})"
+        )
     params = (context.company, company_name)
     await conn.exec_cmd(sql, params)
 
     sql = (
         "INSERT INTO _sys.dir_companies_audit_xref "
         "(data_row_id, user_row_id, date_time, type) "
-        "VALUES ({0}, {0}, {0}, {0})"
-        ).format(dbc.param_style)
+        f"VALUES ({', '.join(repeat(param_style, 4))})"
+        )
     params = (1, USER_ROW_ID, conn.timestamp, 'add')
     await conn.exec_cmd(sql, params)
 

@@ -1,15 +1,16 @@
+"""Evaluate a dflt_rule from a Column definition and return the result."""
+
 import importlib
 import operator
-from datetime import date as dt, timedelta as td
+from datetime import timedelta as td
 from bisect import bisect_left
 from json import loads
 from lxml import etree
 
-
-import db
-import db.cache
 from evaluate_expr import eval_bool_expr
 from common import AibError
+import db
+import db.cache
 
 # next is global to avoid having to pass as argument to every method
 calc_orig_value = False  # global variable - set to True if required to recalc orig_value

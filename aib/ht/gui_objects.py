@@ -1,7 +1,10 @@
-import ht
-from ht.validation_xml import check_vld
+"""This module contains the class GuiCtrl that represents an instance of a gui control."""
+
 from common import AibError, AibDenied
 from common import log, debug
+import db, db.object_fields
+import ht
+from ht.validation_xml import check_vld
 
 #----------------------------------------------------------------------------
 
@@ -15,12 +18,11 @@ DATE_DISPLAY = '%d-%m-%Y'
 #----------------------------------------------------------------------------
 
 class GuiCtrl:
-    async def _ainit_(self, parent, fld, readonly, action):
+    async def _ainit_(self, parent, fld: db.object_fields.Field, readonly: bool, action):
 
         # self.frame = frame
         # self.form = frame.form
         self.parent = parent
-        self.fld = fld
         # self.root_id = form.root_id
         # self.form_id = form.form_id
         self.readonly = readonly
@@ -261,8 +263,9 @@ class GuiCtrl:
             cursor_name = None
         else:
             form_name = '_sys.grid_lookup'
-            data_inputs['start_col'] = src_fld.foreign_key['tgt_field'].col_name
-            data_inputs['start_val'] = value
+            if value:
+                data_inputs['start_col'] = src_fld.foreign_key['tgt_field'].col_name
+                data_inputs['start_val'] = value
             if tgt_obj.cursor_defn is None:
                 cursor_name = src_fld.col_defn.fkey[5]
                 await tgt_obj.setup_cursor_defn(cursor_name)

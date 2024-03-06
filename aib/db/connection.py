@@ -1,165 +1,209 @@
+"""
+This module contains classes and functions relating to a database connection.
+
+It contains the following classes -
+
+* `BaseConn`  An abstract class representing a database connection.
+* `DbSession`  A context manager which handles a db transaction from start to end.
+* `DbHandler`  Each connection has its own handler, running in a separate thread, to avoid blocking.
+* `ConnectionPool`  A connection pool for database connections and in-memory connections.
+
+It contains the following top-level functions -
+
+* `config_database`  Called at program start - get runtime args, import db-specific module, set up subclass to handle db connections.
+
+"""
+
 import importlib
 import threading
 import queue
 import asyncio
 from datetime import datetime
+from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-
-from types import SimpleNamespace as SN
-db_constants = SN()
-mem_constants = SN()
-
 from collections import namedtuple
-DbMemConn = namedtuple('Conn', 'db mem')
-
+import configparser
 import logging
+
+from common import log_db, db_log, AibError
+import db
+import db.cache
+
+DbMemConn = namedtuple('Conn', ('db', 'mem'))
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-from common import log_db, db_log, AibError
-import db, db.cache
+# ---------------------------------------------------------------------------
 
-#-----------------------------------------------------------------------------
-
-def config_connection(db_params):
+def config_database(db_params: configparser.SectionProxy) -> None:
     """
-    Construct module name from server type, and import module.
+    Called at program start - get runtime args, import db-specific module, set up subclass to handle db connections.
 
-    The DbConn class consists of a number of methods and attributes.
-    Some of these need to be customised for use according to the actual
-    RDBMS in use. The customised versions are stored in their own modules
-    having the name 'conn_<server_type>'.
+    `BaseConn` is an abstract class representing a database connection. It contains constants
+        and methods which are applicable to all databases.
 
-    This function performs the following steps -
+    Each supported database has its own module, with the name 'conn_[servertype]'.
+    They each have a subclass SubConn which inherits from BaseConn. SubConn contains
+        the constants and methods which are specific to that database.
 
-    * extract the following parameters from the command line argument -
+    This function is called at program start. It receives the database parameters, extracts the
+        server type, imports the appropriate module, and saves SubConn as the global attribute DbConn.
 
-      * server type
-      * database name
-      * host
-      * port
-      * user
-      * password
+    DbConn is then used for instantiation whenever a new connection is requested.
 
-    * construct the module name using the server type.
-    
-    * import the module.
-    
-    * add the database-specific methods to DbConn.
-    
-    * create attributes for database name, host, port, user, and password.
+    Args:
+        db_params: The DbParams section of aib.ini, read as a command-line arg on program start.
+
     """
-    real_db = importlib.import_module('db.conn_' + db_params['servertype'])
-    # add the database-specific methods to DbConn
-    real_db.customise(db_constants, DbConn, db_params)
 
-    mem_db = importlib.import_module('db.conn_sqlite3')
-    # add the database-specific methods to MemConn
-    mem_db.customise(mem_constants, MemConn, {'database': ':memory:'})
+    # set up concrete class for a database connection
+    global DbConn  # must be global so that it can be instantiated like a regular class. pylint: disable=global-variable-undefined
+    module = importlib.import_module('db.conn_' + db_params['servertype'])
+    DbConn = module.SubConn  # concrete subclass of BaseConn
+    DbConn.db_params = db_params  # save db_params as class attribute
 
-#-----------------------------------------------------------------------------
+    # set up concrete class for an 'in-memory' database connection  - sqlite3 only
+    global MemConn  # must be global so that it can be instantiated like a regular class. pylint: disable=global-variable-undefined
+    module = importlib.import_module('db.conn_sqlite3')
+    MemConn = module.SubMemConn  # concrete subclass of BaseConn
+    MemConn.db_params = {'servertype': 'sqlite3', 'database': ':memory:'}  # save db_params as class attribute
 
-""" connection pool """
+# ---------------------------------------------------------------------------
 
-connection_list = []
-connections_active = []
-mem_conn_dict = {}
-connection_lock = asyncio.Lock()
+class ConnectionPool:
+    """A connection pool.
 
-"""
-This is how psycopg3 connection pool works. We should do the same, not just keep adding connections!
+    This is how psycopg3 connection pool works. We should do the same, not just keep adding connections!
 
-https://www.psycopg.org/psycopg3/docs/advanced/pool.html
+    https://www.psycopg.org/psycopg3/docs/advanced/pool.html
 
-The pool manages a certain amount of connections (between min_size and max_size).
-If the pool has a connection ready in its state, it is served immediately to the connection() caller,
-otherwise the caller is put in a queue and is served a connection as soon as it's available.
-"""
+    "The pool manages a certain amount of connections (between min_size and max_size).
+    If the pool has a connection ready in its state, it is served immediately to the connection() caller,
+    otherwise the caller is put in a queue and is served a connection as soon as it's available."
 
-async def _get_connection():
-    async with connection_lock:
-        try: # look for an inactive connection
-            pos = connections_active.index(False)
-        except ValueError:   # if not found, create 10 more
-            pos = len(connections_active)
-            await _add_connections(10)
-        conn = connection_list[pos]
-        connections_active[pos] = True
-    return conn
+    """
+    def __init__(self):
+        self.connection_list = []
+        self.connections_active = []
+        self.mem_conn_dict = {}
+        self.connection_lock = asyncio.Lock()
 
-async def _add_connections(n):
-    for _ in range(n):
-        conn = DbConn()
-        await conn._ainit_(len(connection_list))
-        conn.dbh.start()
-        connection_list.append(conn)
-        connections_active.append(False)
+    async def get_connection(self):
+        """Look for inactive connection, else create new one. Return connection."""
+        async with self.connection_lock:
+            try:  # look for an inactive connection
+                pos = self.connections_active.index(False)
+            except ValueError:   # if not found, create 10 more
+                pos = len(self.connections_active)
+                await self.add_connections(10)
+            conn = self.connection_list[pos]
+            self.connections_active[pos] = True
+        return conn
 
-def _release_connection(pos):  # make connection available for reuse
-    connections_active[pos] = False
+    async def add_connections(self, n: int):
+        """Create n new connections, add to connection_list."""
+        for _ in range(n):
+            conn = DbConn()
+            await conn._ainit_(len(self.connection_list))  # pylint: disable=W0212
+            self.connection_list.append(conn)
+            self.connections_active.append(False)
 
-async def _get_mem_connection(mem_id):
-    async with connection_lock:
-        if mem_id not in mem_conn_dict:
-            mem_conn_dict[mem_id] = ([], [])  # conn_list, conn_active
-        mem_conn = mem_conn_dict[mem_id]
-        mem_conn_list = mem_conn[0]
-        mem_conn_active = mem_conn[1]
-        try: # look for an inactive connection
-            pos = mem_conn_active.index(False)
-        except ValueError:   # if not found, create 2 more
-            pos = len(mem_conn_active)
-            await _add_mem_connections(2, mem_id, mem_conn)
-        conn = mem_conn_list[pos]
-        mem_conn_active[pos] = True
-    return conn
+    def release_connection(self, pos):
+        """Make connection available for reuse."""
+        self.connections_active[pos] = False
 
-async def _add_mem_connections(n, mem_id, mem_conn):
-    mem_conn_list = mem_conn[0]
-    mem_conn_active = mem_conn[1]
-    for _ in range(n):
-        conn = MemConn()
-        await conn._ainit_(len(mem_conn_list), mem_id)
-        conn.dbh.start()
-        mem_conn_list.append(conn)
-        mem_conn_active.append(False)
+    async def get_mem_connection(self, mem_id):
+        """Look for inactive in-memory connection, else create new one. Return connection."""
+        async with self.connection_lock:
+            if mem_id not in self.mem_conn_dict:
+                self.mem_conn_dict[mem_id] = ([], [])  # conn_list, conn_active
+            mem_conn_list, mem_conn_active = self.mem_conn_dict[mem_id]
+            try:  # look for an inactive connection
+                pos = mem_conn_active.index(False)
+            except ValueError:   # if not found, create 2 more
+                pos = len(mem_conn_active)
+                await self.add_mem_connections(2, mem_id, mem_conn_list, mem_conn_active)
+            conn = mem_conn_list[pos]
+            mem_conn_active[pos] = True
+        return conn
 
-def _release_mem_conn(mem_id, pos):  # make connection available for reuse
-    mem_conn = mem_conn_dict[mem_id]
-    mem_conn_active = mem_conn[1]
-    mem_conn_active[pos] = False
+    async def add_mem_connections(self, n, mem_id, mem_conn_list, mem_conn_active):
+        """Create n new in-memory connections, add to connection_list."""
+        for _ in range(n):
+            conn = MemConn(mem_id)
+            await conn._ainit_(len(mem_conn_list))  # pylint: disable=W0212
+            mem_conn_list.append(conn)
+            mem_conn_active.append(False)
 
-def _close_mem_connections(mem_id):
-    if mem_id in mem_conn_dict:
-        mem_conn = mem_conn_dict[mem_id]
-        mem_conn_list = mem_conn[0]
-        for conn in mem_conn_list:
-            conn.request_queue.put(None)  # tell dbh thread to stop
-            conn.dbh.join()  # wait until it has stopped
-            conn.conn.close()  # actually close connection, which also removes db from memory
-        del mem_conn_dict[mem_id]
+    def release_mem_conn(self, mem_id: int, pos: int):
+        """Make in-memory connection available for reuse."""
+        # mem_conn = self.mem_conn_dict[mem_id]
+        # mem_conn_active = mem_conn[1]
+        mem_conn_list, mem_conn_active = self.mem_conn_dict[mem_id]  # pylint: disable=W0612
+        mem_conn_active[pos] = False
 
+    def close_mem_connections(self, mem_id: int):
+        """Close all in-memory connections linked to this mem_id."""
+        if mem_id in self.mem_conn_dict:
+            mem_conn = self.mem_conn_dict[mem_id]
+            mem_conn_list = mem_conn[0]
+            for conn in mem_conn_list:
+                conn.close()
+            del self.mem_conn_dict[mem_id]
+
+    def close_all_connections(self):
+        """Close all database connections. Called at program termination."""
+        for conn in self.connection_list:
+            conn.close()
+            # logger.info(f'connection {conn.pos} closed')
+
+        logger.info('database connections closed')
+
+pool = ConnectionPool()
+async def get_connection():
+    return await pool.get_connection()
+async def get_mem_connection(mem_id):
+    return await pool.get_mem_connection(mem_id)
+async def close_mem_connections(mem_id):  # this blocks, so use run_in_executor()
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, pool.close_mem_connections, mem_id)
 def close_all_connections():
-    """
-    Close all database connections.
-    Called at program termination.
-    """
-    for conn in connection_list:
-        conn.request_queue.put(None)  # tell dbh thread to stop
-        conn.dbh.join()  # wait until it has stopped
-        conn.conn.close()  # actually close connection
-        # logger.info(f'connection {conn.pos} closed')
+    pool.close_all_connections()
 
-    logger.info('database connections closed')
-
-#-----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 class DbHandler(threading.Thread):
+    """
+    This is how a `BaseConn` connection object handles a 'blocking' database query.
+
+    Each connection object has the following -
+    * its own DbHandler object, which runs in its own thread
+    * its own queue.Queue object, which is used to pass messages to the DbHandler object
+
+    When the connection object wants to issue a request to the database, it does the following -
+    * create an asyncio.Queue object to be used to return the result
+    * get the running event loop
+    * create a tuple of the loop, the sql, the parameters, the return queue, plus some other arguments
+    * put the tuple on the request queue
+    * await the result
+
+    The DbHandler object handles the request as follows -
+    * get the next message off the request queue
+    * unpack the message into its component parts
+    * execute the query
+    * put the result on the return queue, using loop.call_soon_threadsafe()
+    * if there are more than 50 rows in the result, put multiple chunks of 50 rows at a time
+    """
+
     def __init__(self, conn):
         threading.Thread.__init__(self)
         self.conn = conn
+        """An actual database connection."""
 
     def run(self):
+        """ Start the DbHandler thread running - wait for messages on the request queue."""
+
         conn = self.conn
         request_queue = conn.request_queue
         cur = None
@@ -215,38 +259,37 @@ class DbHandler(threading.Thread):
                     loop.call_soon_threadsafe(return_queue.put_nowait, err)
             request_queue.task_done()
 
-#-----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
-async def async_cursor(conn, sql, params, is_cmd=False, is_many=False, chunk=False):
-    loop = asyncio.get_running_loop()
-    return_queue = asyncio.Queue()
-    conn.request_queue.put((loop, sql, params, return_queue, is_cmd, is_many))
+# async def async_cursor(conn, sql, params, is_cmd=False, is_many=False, chunk=False):
+#     loop = asyncio.get_running_loop()
+#     return_queue = asyncio.Queue()
+#     conn.request_queue.put((loop, sql, params, return_queue, is_cmd, is_many))
 
-    while True:
-        rows = await return_queue.get()
-        if not rows:
-            break
-        if isinstance(rows, Exception):
-            raise rows
-        if chunk:
-            yield rows
-        else:
-            while rows:
-                yield rows.pop(0)
+#     while True:
+#         rows = await return_queue.get()
+#         if not rows:
+#             break
+#         if isinstance(rows, Exception):
+#             raise rows
+#         if chunk:
+#             yield rows
+#         else:
+#             while rows:
+#                 yield rows.pop(0)
 
-#-----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
-class Conn:
+class BaseConn(ABC):
     """
-    This class represents a database connection.
+    This class represents an abstract database connection.
 
-    :func:`~db.api.setup_connection` must be called before
+    :func:`~db.api.setup_database` must be called before
     any instances are created, to ensure that the customised methods
-    and attributes specific to the database in use have been
-    set up.
+    and attributes specific to the database in use have been set up.
 
     Attributes -
-    
+
       .. attribute:: pos
 
       The position in the connection pool. It is passed in when
@@ -254,18 +297,18 @@ class Conn:
       attribute. It is used as an argument when returning the
       connection to the pool, so that the pool knows which
       connection it refers to.
-    
+
       .. attribute:: database
 
       The name of the database to connect to. It is passed in
       as a parameter as a command line argument.
     """
 
-    logger.debug('DbConn in connection.py')
+    logger.debug('BaseConn in connection.py')
 
-    async def _ainit_(self):
+    async def _ainit_(self, pos):
         """
-        Create an instance of DbConn.
+        Create an instance of BaseConn.
 
         :param integer pos: The position in the connection pool. It is stored
                             as an attribute, and used as an argument when
@@ -274,13 +317,36 @@ class Conn:
         :rtype: None
         """
 
+        self.pos = pos
+
+        # set up db connection - this blocks, so use run_in_executor()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self.connect)
+
         self.request_queue = queue.Queue()
         self.wait_event = asyncio.Event()  # to notify when all requests completed
-        self.cancel = False  # a task can set this to True, and the dbhandler will stop processing
+        self.cancel = False  # a task can set this to True, and the dbhandler will stop processing the current request
         self.dbh = DbHandler(self)
         self.tablenames = None
         self.joins = {}
         self.save_tablenames = []
+
+        self.dbh.start()  # start DbHandler thread
+
+    def close(self):
+        self.request_queue.put(None)  # tell dbh thread to stop
+        self.dbh.join()  # wait until it has stopped
+        self.conn.close()  # actually close the connection, and if in-memory, remove db from memory
+
+    async def release(self, rollback=False):  # return connection to connection pool
+        self.wait_event.clear()  # ask to be notified when all requests completed
+        loop = asyncio.get_running_loop()
+        self.request_queue.put((loop, 'rollback' if rollback else 'commit'))
+        await self.wait_event.wait()  # when set, safe to release connection
+        if isinstance(self, MemConn):
+            pool.release_mem_conn(self.mem_id, self.pos)
+        else:
+            pool.release_connection(self.pos)
 
     async def exec_cmd(self, sql, params=None, *, context=None, raw=False, is_many=False):
         if params is None:
@@ -289,23 +355,40 @@ class Conn:
         # otherwise it will call check_sql_params, which will call convert_sql, which will loop
         if not raw:
             sql, params = await self.check_sql_params(sql, params, context)
-        self.rowcount, self.lastrowid = await anext(async_cursor(
-            self, sql, params, is_cmd=True, is_many=is_many))
+        self.rowcount, self.lastrowid = await anext(self.async_cursor(
+            sql, params, is_cmd=True, is_many=is_many))
 
     async def exec_sql(self, sql, params=None, context=None):
         if params is None:
             params = []
         sql, params = await self.check_sql_params(sql, params, context)
-        return async_cursor(self, sql, params)
+        return self.async_cursor(sql, params)
 
     async def fetchall(self, sql, params=None, context=None):
         if params is None:
             params = []
         sql, params = await self.check_sql_params(sql, params, context)
         rows = []
-        async for chunk in async_cursor(self, sql, params, chunk=True):
+        async for chunk in self.async_cursor(sql, params, chunk=True):
             rows += chunk
         return rows
+
+    async def async_cursor(self, sql, params, is_cmd=False, is_many=False, chunk=False):
+        loop = asyncio.get_running_loop()
+        return_queue = asyncio.Queue()
+        self.request_queue.put((loop, sql, params, return_queue, is_cmd, is_many))
+
+        while True:
+            rows = await return_queue.get()
+            if not rows:
+                break
+            if isinstance(rows, Exception):
+                raise rows
+            if chunk:
+                yield rows
+            else:
+                while rows:
+                    yield rows.pop(0)
 
     async def check_sql_params(self, sql, params, context):
         param_style = self.constants.param_style
@@ -347,7 +430,7 @@ class Conn:
             expr = sql[pos1+1:pos2]
             if expr == 'company':
                 sql = sql[:pos1] + context.company + sql[pos2+1:]
-            elif not '.' in expr:  # added 2022-11-11 - assume expr is a mem_obj table_name
+            elif '.' not in expr:  # added 2022-11-11 - assume expr is a mem_obj table_name
                 db_obj = context.data_objects[expr]  # get full table_name from table alias
                 sql = sql[:pos1] + db_obj.table_name + sql[pos2+1:]
             else:
@@ -417,7 +500,7 @@ class Conn:
         try:
             cur = await self.exec_sql(sql, params, context)
         except self.exception as err:
-            logger.debug(f'ERROR {err}')
+            logger.debug('ERROR %s', err)
             raise
         return cur
 
@@ -438,7 +521,7 @@ class Conn:
         try:
             cur = await self.exec_sql(sql, params, context=db_obj.context)
         except self.exception as err:
-            logger.debug(f'ERROR {err}')
+            logger.debug('ERROR %s', err)
             raise
         return cur
 
@@ -568,26 +651,27 @@ class Conn:
                     where_clause += f' {test} {lkup_filter}'
                     continue
 
-                col, alias, as_clause = await self.get_col_alias(context, db_table, where_params, col_name)
-                if as_clause is not None:
-                    # next line is a workaround for PostgreSQL
-                    # if col contains SQL that returns 0/1 or '0'/'1', PostgreSQL cannot compare
-                    #   int/text to bool, unless you cast it to bool first
-                    if col.data_type == 'BOOL':
-                        as_clause = f"CAST({as_clause} AS {self.convert_string('BOOL')})"
-                    # if test is 'WHERE {as_clause} != 0', sqlite3 can return True even if
-                    #   the rounded result evaluates to 0. This fixes it - added [2020-11-09]
-                    elif col.data_type == 'DEC' or col.data_type.startswith('$'):
-                        as_clause = f'ROUND({as_clause}, {col.db_scale})'
-                    col_text = as_clause
-                elif col.data_type == 'TEXT':
-                    # col_text = f'LOWER({alias}.{col.col_name})'
-                    if col.key_field in ('A', 'B'):  # index has been created
-                        col_text = self.get_lower_colname(col.col_name, alias)
-                    else:
-                        col_text = f'LOWER({alias}.{col.col_name})'
+                if col_name.startswith('_param.'):
+                    adm_params = await db.cache.get_adm_params(db_table.data_company)
+                    where_params.append(await adm_params.getval(col_name[7:]))
+                    col_text = self.constants.param_style
                 else:
-                    col_text = f'{alias}.{col.col_name}'
+                    col, alias, as_clause = await self.get_col_alias(context, db_table, where_params, col_name)
+                    if as_clause is not None:
+                        # next line is a workaround for PostgreSQL
+                        # if col contains SQL that returns 0/1 or '0'/'1', PostgreSQL cannot compare
+                        #   int/text to bool, unless you cast it to bool first
+                        if col.data_type == 'BOOL':
+                            as_clause = f"CAST({as_clause} AS {self.convert_string('BOOL')})"
+                        # if test is 'WHERE {as_clause} != 0', sqlite3 can return True even if
+                        #   the rounded result evaluates to 0. This fixes it - added [2020-11-09]
+                        elif col.data_type == 'DEC' or col.data_type.startswith('$'):
+                            as_clause = f'ROUND({as_clause}, {col.db_scale})'
+                        col_text = as_clause
+                    elif col.data_type == 'TEXT':
+                        col_text = f'LOWER({alias}.{col.col_name})'
+                    else:
+                        col_text = f'{alias}.{col.col_name}'
 
                 # next block added [2020-05-30]
                 # psycopg2 and sqlite3 do this automatically, pyodbc does not :-(
@@ -661,7 +745,7 @@ class Conn:
                 # do we still need this? [2020-09-09]
                 if False:  #op.upper() in ('LIKE', 'NOT LIKE'):
                     assert isinstance(expr, str)
-                    esc = self.escape_string()
+                    esc = self.constants.escape_string
                 else:
                     esc = ''
 
@@ -706,23 +790,26 @@ class Conn:
                     if as_clause.startswith("'"):
                         # a literal cannot be included in an ORDER BY clause
                         as_clause = f'(SELECT {as_clause})'
-                    # order_list.append(f'{as_clause}{desc}')
-                    # if there is an as_clause, the column in the SELECT has been
-                    #   given an alias (see next block) - we can just use the alias here
-
-                    if self.constants.servertype == 'sqlite3':  # sqlite3 needs COLTYPES
-                        if (col.data_type == 'DEC' or col.data_type.startswith('$')) and not self.grouping:
-                            # force sqlite3 to return Decimal type
-                            col_name = f'"{col.col_name} AS [REAL{col.db_scale}]"'
-                        elif col.data_type == 'BOOL' and not self.grouping:
-                            # force sqlite3 to return Bool type
-                            col_name = f'"{col.col_name} AS [BOOLTEXT]"'
+                    if col_name not in col_names:  # not included in the SELECT
+                        order_list.append(f'{as_clause}{desc}')
+                    else:
+                        # if in the SELECT, we can just use the column alias
+                        if self.constants.servertype == 'sqlite3':  # sqlite3 needs COLTYPES
+                            if (col.data_type == 'DEC' or col.data_type.startswith('$')) and not self.grouping:
+                                # force sqlite3 to return Decimal type
+                                col_name = f'"{col.col_name} AS [REAL{col.db_scale}]"'
+                            elif col.data_type == 'BOOL' and not self.grouping:
+                                # force sqlite3 to return Bool type
+                                col_name = f'"{col.col_name} AS [BOOLTEXT]"'
+                            elif col.data_type == 'DTE' and not self.grouping:
+                                # force sqlite3 to return Date type
+                                col_name = f'"{col.col_name} AS [DATE]"'
+                            else:
+                                col_name = col.col_name
                         else:
                             col_name = col.col_name
-                    else:
-                        col_name = col.col_name
 
-                    order_list.append(f'{col_name}{desc}')
+                        order_list.append(f'{col_name}{desc}')
                 elif build_sum:
                     order_list.append(f'SUM({alias}.{col.col_name}){desc}')
                 else:
@@ -794,11 +881,9 @@ class Conn:
                 elif col.data_type == 'BOOL' and not self.grouping:
                     # force sqlite3 to return Bool type
                     col_name = f'"{col.col_name} AS [BOOLTEXT]"'
-                # removed [2021-08-19] on the assumption that sqlite3 will return 'yyyy-mm-dd' and
-                #   fld.check_val() will convert it to a datetime.date, so not necessary
-                # elif col.data_type == 'DTE' and not self.grouping:
-                #     # force sqlite3 to return Date type
-                #     col_name = f'"{col.col_name} AS [DATE]"'
+                elif col.data_type == 'DTE' and not self.grouping:
+                    # force sqlite3 to return Date type
+                    col_name = f'"{col.col_name} AS [DATE]"'
                 else:
                     col_name = col.col_name
             else:
@@ -829,8 +914,7 @@ class Conn:
 
         return col_text
 
-    async def get_col_alias(self, context, db_table, params, col_name,
-            current_alias='a', trail=()):
+    async def get_col_alias(self, context, db_table, params, col_name, current_alias='a', trail=()):
         alias = current_alias
         if '.' in col_name:  # added [2017-08-14] to handle 'scale_ptr' columns
             print('do we get here (connection.get_col_alias)? col_name = ', col_name)
@@ -875,9 +959,6 @@ class Conn:
 
     async def check_sql(self, context, db_table, params, col, current_alias, trail):
         sql = col.sql
-        # following lines moved to check_sql_params() above
-        # if not isinstance(db_table, db.objects.MemTable):
-        #     sql = sql.replace('{company}', db_table.data_company)
 
         # while sql.startswith('['):
         #     end_join = sql.find(']')
@@ -892,16 +973,6 @@ class Conn:
             if join not in self.joins:
                 self.tablenames += f' {join}'
                 self.joins[join] = sql.split('.')[0]  # join is a sub-select, sql[0] is the alias for the sub-select
-
-        # following lines moved to check_sql_params() above
-        # # {...} represents a run-time value - extract it and add to parameters
-        # while '{' in sql:
-        #     pos1 = sql.find('{')
-        #     pos2 = sql.find('}')
-        #     expr = sql[pos1+1: pos2]
-        #     val = getattr(context, expr)
-        #     params.append(val)
-        #     sql = f'{sql[:pos1]}{self.constants.param_style}{sql[pos2+1:]}'
 
         valid_surround_chrs = ' ,()-+=|\n'  # any others?
 
@@ -994,7 +1065,7 @@ class Conn:
         # some tables can have multiple parents, so we use a complex fkey
         #   which can lead to a very complex SELECT statement
         # in db.objects.select_row(), we check if the parent has been set up
-        # if it has, we can use a simpler foreign key pointing directly to the parent, 
+        # if it has, we can use a simpler foreign key pointing directly to the parent,
         #   resulting in a simpler SELECT
         # BUT we cannot over-ride the fkey definition in col_defn, as this is
         #   the template for all instances
@@ -1099,7 +1170,7 @@ class Conn:
         else:
             src_alias = current_alias
 
-        trail += (id(src_col), id(tgt_col)),
+        trail += (id(src_col), id(tgt_col))
 
         if trail in self.joins:
             tgt_alias = self.joins[trail]
@@ -1122,66 +1193,21 @@ class Conn:
             alias = d[lng//100] + d[lng%100//10] + d[lng%10]
         return alias
 
-#-----------------------------------------------------------------------------
+    # methods required for all concrete sub-classes
 
-class DbConn(Conn):
-    async def _ainit_(self, pos):
+    @abstractmethod
+    def connect(self) -> None:
         """
-        Create an instance of DbConn.
-
-        :param integer pos: The position in the connection pool. It is stored
-                            as an attribute, and used as an argument when
-                            returning the connection to the pool, so that the
-                            pool knows which connection it refers to.
-        :rtype: None
+        Called when a new connection is requested.
         """
 
-        await Conn._ainit_(self)
-
-        # set up db connection - this blocks, so use run_in_executor()
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self.init)
-
-        self.pos = pos
-        self.constants = db_constants
-
-    async def release(self, rollback=False):  # return connection to connection pool
-        self.wait_event.clear()  # ask to be notified when all requests completed
-        loop = asyncio.get_running_loop()
-        self.request_queue.put((loop, 'rollback' if rollback else 'commit'))
-        await self.wait_event.wait()  # when set, safe to release connection
-        _release_connection(self.pos)
-
-class MemConn(Conn):
-    async def _ainit_(self, pos, mem_id):
+    @abstractmethod
+    async def form_sql(self, columns: list, tablenames: str, where_clause: str = '',
+            order_clause:str = '', limit:int = 0, offset:int = 0, lock:bool = False, distinct:bool = False):
         """
-        Create an instance of DbConn.
-
-        :param integer pos: The position in the connection pool. It is stored
-                            as an attribute, and used as an argument when
-                            returning the connection to the pool, so that the
-                            pool knows which connection it refers to.
-        :rtype: None
         """
 
-        await Conn._ainit_(self)
-
-        # set up db connection - this blocks, so use run_in_executor()
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self.init, mem_id)
-
-        self.pos = pos
-        self.constants = mem_constants
-        self.mem_id = mem_id
-
-    async def release(self, rollback=False):  # return connection to connection pool
-        self.wait_event.clear()  # ask to be notified when all requests completed
-        loop = asyncio.get_running_loop()
-        self.request_queue.put((loop, 'rollback' if rollback else 'commit'))
-        await self.wait_event.wait()  # when set, safe to release connection
-        _release_mem_conn(self.mem_id, self.pos)
-
-#-----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 class DbSession:
     """
@@ -1192,21 +1218,21 @@ class DbSession:
     It is acquired by calling :func:`~db.api.start_db_session`. The function
     creates an instance of this class, and returns it to the caller.
 
-    get_connection() is a context manager function
-    it is called when 'with db_session.get_connection() as db_mem_conn' is executed
+    get_connection() is a context manager function.
+    It is called when 'with db_session.get_connection() as db_mem_conn' is executed.
 
-    code up to the 'yield' is executed when the 'with' block is entered
-    the connection is 'yielded'
-    code after the 'yield' is executed when the 'with' block is exited
+    Code up to the 'yield' is executed when the 'with' block is entered.
+    The connection is 'yielded'.
+    Code after the 'yield' is executed when the 'with' block is exited.
 
-    N.B. exception handling
-    calls to get_connection() can be nested - num_connections is incremented for each call
-    if there is an exception, it is caught, and num_connections is decremented
-    if num_connections == 0 we perform the cleanup
-    the exception is then re-raised
-    if num_connections is > 0, it will be passed to the next level and caught there,
-      else it will be passed to the caller for further handling
-    BTW this is why we do not use 'finally' - it could be done, but awkwardly
+    N.B. exception handling.
+    Calls to get_connection() can be nested - num_connections is incremented for each call.
+    If there is an exception, it is caught, and num_connections is decremented.
+    If num_connections == 0 we perform the cleanup.
+    The exception is then re-raised.
+    If num_connections is > 0, it will be passed to the next level and caught there,
+      else it will be passed to the caller for further handling.
+    BTW this is why we do not use 'finally' - it could be done, but awkwardly.
 
     """
     def __init__(self, mem_id=None):
@@ -1221,10 +1247,10 @@ class DbSession:
     async def get_connection(self, read_lock=False):
         if not self.num_connections:  # get connection, set up
             timestamp = datetime.now()  # all updates in same transaction use same timestamp
-            db_conn = await _get_connection()
+            db_conn = await pool.get_connection()
             db_conn.timestamp = timestamp
             if self.mem_id is not None:
-                mem_conn = await _get_mem_connection(self.mem_id)
+                mem_conn = await pool.get_mem_connection(self.mem_id)
                 mem_conn.timestamp = timestamp
             else:
                 mem_conn = None
@@ -1285,4 +1311,4 @@ class DbSession:
                     db_log.write('\n')
             raise  # re-raise exception
 
-#----------------------------------------------------------------------------
+# --------------------------------------------------------------------------

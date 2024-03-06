@@ -551,60 +551,10 @@ class Form:
             return  # form has already been closed - can happen on AibError
 
         if hasattr(self, 'form_defn'):  # form has been started
-
             on_close_form = self.form_defn.get('on_close_form')
             if on_close_form is not None:
                 action = etree.fromstring(f'<_>{on_close_form}</_>', parser=parser)
                 await ht.form_xml.exec_xml(self, action)
-
-            for frame in self.obj_list:
-
-                # for fld, gui_obj in frame.flds_notified:
-                #     fld.unnotify_form(gui_obj)
-
-                # frame.flds_notified = None  # remove circular reference
-                # frame.obj_list = None  # remove circular reference
-                # frame.btn_dict = None  # remove circular reference
-
-                # for grid in frame.grids:
-                #     for db_obj in grid.on_read_set:
-                #         db_obj.remove_read_func(grid)
-                #     for db_obj in grid.on_clean_set:
-                #         db_obj.remove_clean_func(grid)
-                #     for db_obj in grid.on_amend_set:
-                #         db_obj.remove_amend_func(grid)
-                #     for db_obj in grid.on_delete_set:
-                #         db_obj.remove_delete_func(grid)
-                #     await grid.db_obj.close_cursor()
-
-                # for db_obj in frame.on_read_set:
-                #     db_obj.remove_read_func(frame)
-                # for db_obj in frame.on_clean_set:
-                #     db_obj.remove_clean_func(frame)
-                # for db_obj in frame.on_amend_set:
-                #     db_obj.remove_amend_func(frame)
-                # for db_obj in frame.on_delete_set:
-                #     db_obj.remove_delete_func(frame)
-
-                for subtype in frame.subtype_records:
-                    obj_name, col_name = subtype.split('.')
-                    db_obj = self.data_objects[obj_name]
-                    subtype_fld = db_obj.fields[col_name]
-                    subtype_fld.gui_subtype.clear()
-
-                for grid in frame.grids:
-                    await grid.db_obj.close_cursor()
-                    # del grid.obj_list
-                    # del grid.form  # remove circular reference
-                    # del grid.parent  # remove circular reference
-
-                # del frame.form  # remove circular reference
-                # del frame.parent  # remove circular reference
-
-                # del frame.grids  # remove circular reference
-
-            # self.obj_dict = None
-            # self.first_input = None
 
         del self.root.form_list[-1]
 
@@ -872,7 +822,8 @@ class Frame:
                     choices, lkup, pwd, lng, height, label, action, gui)
                 fld.notify_form(gui_obj)
 
-                if (obj_key := element.get('obj_key')) is not None:
+                obj_key = element.get('obj_key')
+                if obj_key is not None:
                     self.form.ref_dict[obj_key] = gui_obj.ref
 
                 before = element.get('before')
@@ -1598,7 +1549,7 @@ class Frame:
         if ans == 'Yes':
             await self.req_save()
         elif ans == 'No':
-            await ht.form_xml.exec_xml(self, self.methods['do_restore'])
+            await self.handle_restore()
         elif ans == 'Cancel':
             raise AibError(head=None, body=None)  # do not process more messages in this request
 
@@ -1638,7 +1589,7 @@ class Frame:
             self.parent, title, question, answers, default, escape)
 
         if ans == 'Yes':
-            await ht.form_xml.exec_xml(self, self.methods['do_restore'])
+            await self.handle_restore()
         raise AibError(head=None, body=None)  # do not process more messages in this request
 
     async def req_save(self, from_client=False):

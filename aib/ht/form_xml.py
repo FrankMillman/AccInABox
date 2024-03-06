@@ -308,21 +308,22 @@ async def change_button(caller, xml):
     button = caller.btn_dict[change.get('btn_id')]
     if debug:
         log.write(f'CHG BUT {change.attrib} {button.ref} {change.tag}\n\n')
-    if change.tag == 'btn_label':
-        attr_name = 'label'
-        attr_value = change.get('value')
-    if change.tag == 'font_weight':
-        attr_name = 'weight'
-        attr_value = change.get('value')
-    elif change.tag == 'btn_dflt':
-        attr_name = 'default'
-        attr_value = None
-    elif change.tag == 'btn_enabled':
-        attr_name = 'enabled'
-        attr_value = change.get('state') == 'true'
-    elif change.tag == 'btn_show':
-        attr_name = 'show'
-        attr_value = change.get('state') == 'true'
+    match change.tag:
+        case 'btn_label':
+            attr_name = 'label'
+            attr_value = change.get('value')
+        case 'font_weight':
+            attr_name = 'weight'
+            attr_value = change.get('value')
+        case 'btn_dflt':
+            attr_name = 'default'
+            attr_value = None
+        case 'btn_enabled':
+            attr_name = 'enabled'
+            attr_value = change.get('state') == 'true'
+        case 'btn_show':
+            attr_name = 'show'
+            attr_value = change.get('state') == 'true'
     button.change_button(attr_name, attr_value)
 
 """

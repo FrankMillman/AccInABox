@@ -1,39 +1,48 @@
+"""
+This module contains classes and functions relating to a database cursor.
+
+It contains the following class -
+
+* `BaseCursor`  An abstract class representing a database cursor.
+"""
+
 import importlib
+from abc import ABC, abstractmethod
+import configparser
 
 import db.connection
 from common import AibError
 from common import log_db, db_log
 #log_db = False
 
-def config_cursor(db_params):
+def config_cursor(db_params: configparser.SectionProxy):
     """
-    Construct module name from server type, and import module.
+    Get runtime args, import db-specific module, set up subclass to handle db cursors.
 
-    The DbCursor class consists of a number of methods and attributes.
-    Some of these need to be customised for use according to the actual
-    RDBMS in use. The customised versions are stored in their own modules
-    having the name 'cur_<server_type>'.
+    `BaseCursor` is an abstract class representing a database cursor.
+    It contains methods which are applicable to all databases.
 
-    This function performs the following steps -
+    Each supported database has its own module, with the name 'cur_[servertype]'.
+    They each have a subclass SubCursor which inherits from BaseCursor. SubCursor contains
+        the methods which are specific to that database.
 
-    * extract the server type from the command line argument.
+    This function is called at program start. It receives the database parameters, extracts the
+        server type, imports the appropriate module, and saves SubCursor as the global attribute DbCursor.
 
-    * construct the module name using the server type.
-    
-    * import the module.
-    
-    * add the database-specific methods to DbCursor.
+    DbCursor is then used for instantiation whenever a new cursor is requested.
     """
-    real_cur = importlib.import_module(
-        'db.cur_' + db_params.get('ServerType'))
-    # add the database-specific methods to DbCursor
-    real_cur.customise(DbCursor)
 
-    mem_cur = importlib.import_module('db.cur_sqlite3')
-    # add the database-specific methods to MemCursor
-    mem_cur.customise(MemCursor)
+    # set up concrete class for a cursor definition
+    global DbCursor  # must be global so that it can be instantiated like a regular class. pylint: disable=global-variable-undefined
+    module = importlib.import_module('db.cur_' + db_params['servertype'])
+    DbCursor = module.SubCursor  # concrete subclass of BaseCursor
 
-class Cursor:
+    # set up concrete class for an 'in-memory' cursor definition  - sqlite3 only
+    global MemCursor  # must be global so that it can be instantiated like a regular class. pylint: disable=global-variable-undefined
+    module = importlib.import_module('db.cur_sqlite3')
+    MemCursor = module.SubCursor  # concrete subclass of BaseCursor
+
+class BaseCursor(ABC):
     def __init__(self, db_obj):
         self.db_obj = db_obj
         self.cursor_active = False
@@ -54,9 +63,9 @@ class Cursor:
 
         if self.db_obj.mem_obj:
             mem_id = self.db_obj.context.mem_id
-            self.conn = await db.connection._get_mem_connection(mem_id)
+            self.conn = await db.connection.get_mem_connection(mem_id)
         else:
-            self.conn = await db.connection._get_connection()
+            self.conn = await db.connection.get_connection()
 
         if log_db:
             db_log.write(f'{id(self.conn)}: START cursor\n')
@@ -400,9 +409,9 @@ class Cursor:
 
     async def start(self):
         """
-        take search string and perform a binary search through the cursor
-        if found, return the position of the row found
-        if not found, return the position where it would be if it existed
+        Take search string and perform a binary search through the cursor.
+        If found, return the position of the row found.
+        If not found, return the position where it would be if it existed.
         """
 
         LT, EQ, GT = -1, 0, 1
@@ -461,11 +470,3 @@ class Cursor:
                 return GT
             # must be EQ - continue with next sort column
         return EQ  # if we get here, all sort columns compare equal
-
-#-----------------------------------------------------------------------------
-
-class DbCursor(Cursor):
-    pass  # will be customised in config_cursor()
-
-class MemCursor(Cursor):
-    pass  # will be customised in config_cursor()

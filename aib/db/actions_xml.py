@@ -1,3 +1,30 @@
+"""
+Actions can be set up to be executed at various trigger points for each database table.
+
+The trigger points at present are -
+* upd_checks - checks to be carried out before inserting/updating a row
+* del_checks - checks to be carried out before deleting a row
+* post_checks - checks to be carried out before posting a transaction
+* unpost_checks - checks to be carried out before unposting a transaction
+* upd_on_save - steps to be taken to update other tables when a row is inserted/updated/deleted
+* upd_on_post - steps to be taken to update other tables when a transaction is posted/unposted
+* on_setup - steps to be taken when a database object is created
+* after_read - steps to be taken after a database object has been read from the database
+* after_init - steps to be taken after a database object has been initialised
+* after_restore - steps to be taken after a database object has been restored
+* before_save - steps to be taken before a database object is saved (can prevent execution)
+* after_save - steps to be taken after a database object is saved
+* before_insert - steps to be taken before a database object is inserted
+* after_insert - steps to be taken after a database object is inserted
+* before_update - steps to be taken before a database object is updated
+* after_update - steps to be taken after a database object is updated
+* before_delete - steps to be taken before a database object is deleted
+* after_delete - steps to be taken after a database object is deleted
+* before_post - steps to be taken before a database object is posted
+* after_post - steps to be taken after a database object is posted
+* after_commit - steps to be taken after a database transaction is committed
+"""
+
 import asyncio
 import importlib
 import operator
@@ -13,7 +40,7 @@ import db.connection
 from common import AibError
 from evaluate_expr import eval_bool_expr
 
-async def table_hook(db_obj, elem):
+async def table_action(db_obj, elem):
     for xml in elem:
         if isinstance(xml, etree._Comment):
             continue

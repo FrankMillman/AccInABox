@@ -1,71 +1,81 @@
-import os.path
-import __main__
-schema_path = os.path.join(os.path.dirname(__main__.__file__), 'schemas')
+"""
+This module contains the abstract class Field, which represents an instance of a database column.
 
+It also contains concrete subclasses of Field, one for each defined datatype.
+Methods common to all subclasses are defined in Field.
+Methods which need to be over-ridden are defined in Field with a docstring, and decorated with @abstractmethod.
+    Each subclass must implement a concrete definition of the method.
+"""
+
+from abc import ABC, abstractmethod
+import os.path
 from copy import deepcopy
-from lxml import etree
 import gzip
 from decimal import Decimal as D, Context, DecimalException, Inexact
-from datetime import date as dt, datetime as dtm, timedelta as td
+from datetime import date as dt, datetime as dtm
 import weakref
 from json import loads, dumps
 from hashlib import pbkdf2_hmac as kdf
 from secrets import token_bytes
-import operator
-
 import logging
-logger = logging.getLogger(__name__)
+from lxml import etree
+from typing import Any
 
-import db.objects
-import db.cache
-import db.dflt_xml
 import ht
 from ht.validation_xml import check_vld
-
 from evaluate_expr import eval_bool_expr
 from common import AibError, AibDenied
 from common import deserialise
+import db.objects
+import db.cache
+import db.dflt_xml
+
+schema_path = os.path.join(os.path.dirname(__file__), '..', 'schemas')
+logger = logging.getLogger(__name__)
 
 # db_fkeys columns
-(FK_TARGET_TABLE
-,FK_TARGET_COLUMN
-,FK_ALT_SOURCE
-,FK_ALT_TARGET
-,FK_CHILD
-,FK_CURSOR
-,FK_IS_ALT
+(FK_TARGET_TABLE,
+    FK_TARGET_COLUMN,
+    FK_ALT_SOURCE,
+    FK_ALT_TARGET,
+    FK_CHILD,
+    FK_CURSOR,
+    FK_IS_ALT,
 ) = range(7)
 
 blank = object()  # placeholder in value_changed() - None is a valid argument
 
-#-----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+
 
 class ComplexFkey(list):
     """
-    ComplexFkey is a 2-part list
-    The first element is the column name that determines which fkey to use
-    The second element is a dictionary keyed on the possible column values
-    Each 'value' of the dictionary is another dictionary representing the actual fkey
-    If the dictionary is empty, the fkey has not been set up, else it has
+    ComplexFkey is a 2-part list.
+    The first element is the column name that determines which fkey to use.
+    The second element is a dictionary keyed on the possible column values.
+    Each 'value' of the dictionary is another dictionary representing the actual fkey.
+    If the dictionary is empty, the fkey has not been set up, else it has.
     We subclass 'list' and over-ride __bool__() to provide the correct response to
-            if foreign_key:
+        'if foreign_key:'
     """
     def __bool__(self):
-        col_name, vals_fkeys = self
+        _col_name, vals_fkeys = self
         for val in vals_fkeys:
             if vals_fkeys[val]:
                 return True  # at least one foreign_key has been set up
         return False  # no foreign keys have been set up
 
-#-----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
-class Field:
+class Field(ABC):
+    """Abstract class representing an instance of a database column"""
+
     async def _ainit_(self, db_obj, col_defn):
 
         # print(f'init {col_defn.table_name}.{col_defn.col_name}')
 
-        self.db_obj = db_obj
-        self.col_defn = col_defn
+        self.db_obj: db.objects.DbObject = db_obj
+        self.col_defn: db.objects.Column = col_defn
         self.table_id = col_defn.table_id
         self.table_name = col_defn.table_name
         self.col_name = col_defn.col_name
@@ -78,7 +88,6 @@ class Field:
         self.ledger_col = (self.col_name == db_obj.db_table.ledger_col)
         self.must_be_evaluated = False  # if set to True, recalc on getval, then reset to False
         self.must_get_fkey = False  # if set to True, get fkey on first getval, then reset to False
-
         self.children = []  # list of xrefs to child fkey fields
         self.table_keys = []  # populated if this is a key field
         self.constant = None  # can be over-ridden in db.objects after fields set up
@@ -124,8 +133,8 @@ class Field:
 
         [26/03/2013]
         Assume we need to store it in the database.
-        Possible solution - 
-        
+        Possible solution -
+
         CREATE TABLE {table_name}_audit_override
             row_id SERIAL
             data_row_id INT REFERENCES {table_name}
@@ -134,6 +143,12 @@ class Field:
             user_row_id INT
             user_role_id INT (possibly)
             date_time {)
+        """
+
+    @abstractmethod
+    async def check_val(self, value: Any) -> Any:
+        """
+        Check that value is of the correct type, after a bit of type-casting if necessary.
         """
 
     async def setup_foreign_key(self):
@@ -494,7 +509,9 @@ class Field:
             await self.read_row(value, display)
             if db_obj.exists:
                 value = await self.getval()  # to change (eg) 'a001' to 'A001'
-                changed = False
+                # changed = False
+                from_sql = True
+                validate = False
                 if display:  # on_read checks for 'repos' - don't if not 'display'
                     for caller_ref in list(db_obj.on_read_func.keyrefs()):
                         caller = caller_ref()
@@ -560,15 +577,15 @@ class Field:
                     if true_src:  # this is an alt_src
                         altsrc_pos = altsrc_names.index(col_name)
                         if (
-                            altsrc_pos == 0  # this is the first alt_src
-                            or
-                            # if all prior alt_src._value is None, assume their tgt_fields have dflt_vals
-                            # if this fails, it is a programming error - must supply values for alt flds in seq
-                            all(db_obj.fields[_]._value is None for _ in altsrc_names[:altsrc_pos])
-                            ):
-                                await tgt_field.db_obj.init()
-                                if await true_src.getval() is not None:  # if user back-tracks in form
-                                    await true_src.setval(None, validate=False)
+                                altsrc_pos == 0  # this is the first alt_src
+                                or
+                                # if all prior alt_src._value is None, assume their tgt_fields have dflt_vals
+                                # if this fails, it is a programming error - must supply values for alt flds in seq
+                                all(db_obj.fields[_]._value is None for _ in altsrc_names[:altsrc_pos])
+                                ):
+                            await tgt_field.db_obj.init()
+                            if await true_src.getval() is not None:  # if user back-tracks in form
+                                await true_src.setval(None, validate=False)
                         await tgt_field.setval(value, display, validate=False)
                         value = await tgt_field.getval()  # to change (eg) 'a001' to 'A001'
                         if col_name == altsrc_names[-1]:  # if multi-part key, all parts are present
@@ -662,10 +679,9 @@ class Field:
                 if value is not None and value not in col_defn.choices:
                     errmsg = f'{value!r} invalid for {self.table_name}.{col_name}'
                     if col_defn.choices:
-                        choices = ', '.join(repr(_) for _ in col_defn.choices)
-                        errmsg += f' - must be one of {choices}'
+                        errmsg += f' - must be one of {", ".join(repr(_) for _ in col_defn.choices)}'
                     else:
-                        errmsg += f' - no choices set up'
+                        errmsg += ' - no choices set up'
                     raise AibError(head=col_defn.short_descr, body=errmsg)
             # check for col_checks
             for descr, errmsg, col_chk in col_defn.col_checks:
@@ -700,6 +716,11 @@ class Field:
             #      depend on the value of this field, which had not been set yet.
             #      Therefore we run this check again here, after the value has been set.
             await self.read_row(value, display)
+            # next block added 2024-01-13
+            if db_obj.exists:
+                self._value = await self.getval()  # to change (eg) 'a001' to 'A001'
+                from_sql = True
+                validate = False
 
         # if foreign key has changed, re-read foreign object
         if self.foreign_key:
@@ -749,9 +770,10 @@ class Field:
                 sub_colname = self.gui_subtype[caller]
                 await caller.set_subtype(sub_colname, value)
 
-        if not from_sql: # added [2022-12-10] - if reverted, must also revert on_row_selected to reset to 'clean'
+        if not from_sql:  # added [2022-12-10] - if reverted, must also revert on_row_selected to reset to 'clean'
             if not db_obj.dirty:
                 if not db_obj.exists and self.sequence:
+                    # e.g. setup_form.obj_names - init() with init_vals, then save()
                     pass  # don't make dirty just for adding sequence to new obj
                 else:
                     if validate or col_defn.col_type != 'virt':  # added [2018-11-12]
@@ -949,7 +971,7 @@ class Field:
             return True
         return False  # value changed to a different value from ours - not ok
 
-    #-------------------------------------------------------------------------
+    # -----------------------------------------------------------------------
 
     def _get_value(self):
         assert not self.must_be_evaluated, f'{self.table_name}.{self.col_name} must be evaluated'
@@ -964,9 +986,11 @@ class Field:
         self.must_be_evaluated = False
     _value = property(_get_value, _set_value)
 
-#-----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 class Text(Field):
+    """Subclass of the abstract class Field, representing a 'string' datatype."""
+
     async def check_val(self, value):
         if value in (None, ''):
             return None
@@ -1233,7 +1257,7 @@ class StringXml(Xml):
                 comment, xml_code = '', value
             lines = xml_code.split('"')  # split on attributes
             for pos, line in enumerate(lines):
-                if pos%2:  # every 2nd line is an attribute
+                if pos % 2:  # every 2nd line is an attribute
                     lines[pos] = line.replace(
                         '&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
             xml_code = '"'.join(lines)
@@ -1266,7 +1290,7 @@ class StringXml(Xml):
                 elem = etree.tostring(elem, encoding=str, pretty_print=True)
                 lines = elem.split('"')  # split on attributes
                 for pos, line in enumerate(lines):
-                    if pos%2:  # every 2nd line is an attribute
+                    if pos % 2:  # every 2nd line is an attribute
                         lines[pos] = line.replace(
                             '&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
                 xml_code += '"'.join(lines)
@@ -1301,6 +1325,8 @@ class StringXml(Xml):
         return self._equal(curr_val, self._orig)
 
 class Integer(Field):
+    """Subclass of the abstract class Field, representing an 'integer' datatype."""
+
     async def get_dflt(self, from_init=False):
         dflt_val = await Field.get_dflt(self, from_init)
         if dflt_val is None:
@@ -1310,11 +1336,28 @@ class Integer(Field):
     async def check_val(self, value):
         if value is None:
             return None
-        try:
-            return int(value)
-        except ValueError:
+        # try:
+        #     return int(value)
+        # except ValueError:
+        #     errmsg = f'{self.table_name}.{self.col_name} - "{value}" is not an integer'
+        #     raise AibError(head=self.col_defn.short_descr, body=errmsg)
+        if isinstance(value, bool):
             errmsg = f'{self.table_name}.{self.col_name} - "{value}" is not an integer'
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            try:
+                value = float(value)  # convert to float if possible
+            except ValueError as exc:
+                errmsg = f'{self.table_name}.{self.col_name} - "{value}" is not an integer'
+                raise AibError(head=self.col_defn.short_descr, body=errmsg) from exc
+        if isinstance(value, float):
+            if value == (int_val := int(value)):  # if True, decimal portion is 0 - accept as integer
+                return int_val
+        # if we get here, 'value' is either a float with non-zero decimal portion, or something else
+        errmsg = f'{self.table_name}.{self.col_name} - "{value}" is not an integer'
+        raise AibError(head=self.col_defn.short_descr, body=errmsg)
 
     async def str_to_val(self, value):
         if value in (None, ''):
@@ -1371,6 +1414,8 @@ class Integer(Field):
         return self._value
 
 class Decimal(Field):
+    """Subclass of the abstract class Field, representing a 'decimal.Decimal' datatype."""
+
     async def get_dflt(self, from_init=False):
         dflt_val = await Field.get_dflt(self, from_init)
         if dflt_val is None:
@@ -1387,11 +1432,14 @@ class Decimal(Field):
     async def check_val(self, value):
         if value is None:
             return None
-        try:
-            value = D(value)
-        except DecimalException:
+        if isinstance(value, bool):
             errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Decimal type'
             raise AibError(head=self.col_defn.short_descr, body=errmsg)
+        try:
+            value = D(value)
+        except DecimalException as exc:
+            errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Decimal type'
+            raise AibError(head=self.col_defn.short_descr, body=errmsg) from exc
         if value == int(value):  # if value is an integer, no need to check scale
             return value.quantize(0)
         scale = await self.get_scale()
@@ -1406,9 +1454,9 @@ class Decimal(Field):
             return None
         try:
             value = D(value)
-        except DecimalException:
+        except DecimalException as exc:
             errmsg = f'{self.table_name}.{self.col_name} - {value} not a valid Decimal type'
-            raise AibError(head=self.col_defn.short_descr, body=errmsg)
+            raise AibError(head=self.col_defn.short_descr, body=errmsg) from exc
         scale = await self.get_scale()
         quant = D(str(10**-scale))
         try:
@@ -1526,6 +1574,8 @@ class RevDec(Decimal): # reversible decimal
         return output.format(value)
 
 class Date(Field):
+    """Subclass of the abstract class Field, representing a 'datetime.date' datatype."""
+
     async def check_val(self, value):
         if value is None:
             return None
@@ -1533,9 +1583,9 @@ class Date(Field):
             return value
         try:
             return dt.fromisoformat(value)  # assumes value is 'yyyy-mm-dd'
-        except ValueError:
+        except ValueError as exc:
             raise AibError(head=self.col_defn.short_descr,
-                body=f'{self.table_name}.{self.col_name} - "{value}" is not a valid date')
+                body=f'{self.table_name}.{self.col_name} - "{value}" is not a valid date') from exc
 
     async def get_dflt(self, from_init=False):
         dflt_val = await Field.get_dflt(self, from_init)
@@ -1577,6 +1627,8 @@ class Date(Field):
         return None if self._value is None else repr(str(self._value))  # "'yyyy-mm-dd'"
 
 class DateTime(Field):
+    """Subclass of the abstract class Field, representing a 'datetime.datetime' datatype."""
+
     async def get_dflt(self, from_init=False):
         dflt_val = await Field.get_dflt(self, from_init)
         if dflt_val is not None:
@@ -1591,9 +1643,9 @@ class DateTime(Field):
             return value
         try:
             return dtm.strptime(value, '%Y-%m-%d %H:%M:%S')
-        except ValueError:
+        except ValueError as exc:
             raise AibError(head=self.col_defn.short_descr,
-                body='{self.table_name}.{self.col_name} - "{value}" is not a valid datetime')
+                body='{self.table_name}.{self.col_name} - "{value}" is not a valid datetime') from exc
 
     async def str_to_val(self, value):
         if value in (None, ''):
@@ -1628,6 +1680,8 @@ class DateTime(Field):
         raise NotImplementedError
 
 class Boolean(Field):
+    """Subclass of the abstract class Field, representing a 'boolean' datatype."""
+
     async def get_dflt(self, from_init=False):
         dflt_val = await Field.get_dflt(self, from_init)
         if dflt_val is None:
@@ -1705,7 +1759,8 @@ class Boolean(Field):
     def get_val_for_where(self):
         return None if self._value is None else str(int(self._value)) # '1' or '0'
 
-#-----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+
 
 # map of data_types to class definitions
 DATA_TYPES = {

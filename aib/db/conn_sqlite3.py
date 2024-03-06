@@ -1,76 +1,33 @@
+from types import SimpleNamespace
 import sqlite3
-import os
 import asyncio
 from datetime import date, timedelta
 from decimal import Decimal as D
 
 import db.cache
+from db.connection import BaseConn
 
 attach_lock = asyncio.Lock()  # to ensure that two processes don't try to attach at the same time
-
-# called from connection.config_connection()
-def customise(constants, Conn, db_params):  # Conn can be DbConn (if real db) or MemConn (if in-memory db)
-    # add db-specific methods to Conn class
-
-    constants.servertype = 'sqlite3'
-    constants.param_style = '?'
-    constants.func_prefix = ''
-    constants.concat = '||'
-    constants.repeat = 'repeat'
-    constants.date_cast = 'TEXT'
-    constants.table_created = (
-        "SELECT CASE WHEN EXISTS (SELECT * FROM {company}.sqlite_master "
-        "WHERE type = 'table' AND name = a.table_name) "
-        "THEN $True ELSE $False END"
-        )
-    constants.view_created = (
-        "SELECT CASE WHEN EXISTS (SELECT * FROM {company}.sqlite_master "
-        "WHERE type = 'view' AND name = a.view_name) "
-        "THEN $True ELSE $False END"
-        )
-
-    Conn.init = init
-    # Conn.add_lock = add_lock
-    Conn.form_sql = form_sql
-    Conn.insert_row = insert_row
-    Conn.update_row = update_row
-    Conn.delete_row = delete_row
-    Conn.delete_all = delete_all
-    Conn.attach_company = attach_company
-    Conn.convert_sql = convert_sql
-    Conn.convert_string = convert_string
-    Conn.convert_dflt = convert_dflt
-    Conn.create_functions = create_functions
-    Conn.create_company = create_company
-    Conn.create_primary_key = create_primary_key
-    Conn.create_foreign_key = create_foreign_key
-    Conn.create_alt_index = create_alt_index
-    Conn.create_index = create_index
-    Conn.set_read_lock = set_read_lock
-    Conn.get_lower_colname = get_lower_colname
-    Conn.tree_select = tree_select
-    Conn.get_view_names = get_view_names
-    Conn.escape_string = escape_string
-    # create class attributes from db parameters
-    Conn.database = db_params['database']
-    Conn.callback = callback
 
 def substring(string, start, length):
     return string[start-1:start-1+length]
 
 def subfield(string, delim, occurrence):
     """
-    function to extract specified occurence of subfield from string
-      using specified field delimiter
+    Function to extract specified occurence of subfield from string
+      using specified field delimiter.
 
     eg select subfield('abc/123/xyz','/',0) returns 'abc'
+
     eg select subfield('abc/123/xyz','/',1) returns '123'
+
     eg select subfield('abc/123/xyz','/',2) returns 'xyz'
+
     eg select subfield('abc/123/xyz','/',3) returns ''
     """
 
     """
-    # this logic matches the functions written for msql and psql,
+    # this logic matches the functions written for mssql and pgsql,
     #   because they do not have a string method to do this
     ans = ''
     found = 0
@@ -200,436 +157,460 @@ sqlite3.register_adapter(bool, lambda b: str(int(b)))
 # Boolean converter (convert back to bool on return)
 sqlite3.register_converter('BOOLTEXT', lambda s: bool(int(s)))
 
-def init(self, mem_id=None):
-    if self.database == ':memory:':
-        # conn = sqlite3.connect(':memory:',
-        conn = sqlite3.connect(f'file:{mem_id}?mode=memory&cache=shared',
-            detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
-            check_same_thread=False, uri=True)
-        cur = conn.cursor()
-        cur.execute("pragma read_uncommitted = on")  # http://www.sqlite.org/sharedcache.html
-    else:
-        conn = sqlite3.connect(f'{self.database}/_base',
-            detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
-            check_same_thread=False)
-        cur = conn.cursor()
-        cur.execute("pragma foreign_keys = on")  # must be enabled for each connection
-    conn.create_function('substring', 3, substring)
-    conn.create_function('subfield', 3, subfield)
-    conn.create_function('repeat', 2, repeat)
-    conn.create_function('zfill', 2, zfill)
-    conn.create_function('date_add', 2, date_add)
-    conn.create_function('date_diff', 2, date_diff)
-    # conn.create_function('round', 2, round_)
+class SubConn(BaseConn):
 
-    self.conn = conn
-    self.exception = (sqlite3.Error, sqlite3.IntegrityError, sqlite3.OperationalError)
-    self.companies = set()
-
-    # conn.set_trace_callback(self.callback)
-
-# sql_log = open('sql_log.txt', 'w', errors='backslashreplace')
-def callback(self, sql_cmd):
-    sql_log.write(f'{self.timestamp}: {id(self)}: {sql_cmd}\n')
-    sql_log.flush()
-
-# async def add_lock(self, sql):
-#     # removed 2016-11-24
-#     # in python 3.6 (sqlite_version 3.14.2) we get error -
-#     #   'cannot start a transaction within a transaction'
-#     # did not happen in python 3.5 (sqlite_version 3.8.11)
-#     # replaced 2018-08-08
-#     # now using python 3.7.0 - let's see if the problem is still there
-#     if not self.conn.in_transaction:
-#         await self.exec_cmd('BEGIN IMMEDIATE')
-#     return sql
-
-async def form_sql(self, columns, tablenames, where_clause='',
-        group_clause='', order_clause='', limit=0, offset=0, lock=False, distinct=False):
-    sql = f"SELECT{' DISTINCT' if distinct else ''} {columns} FROM {tablenames}"
-    if where_clause:
-        sql += where_clause
-    if group_clause:
-        sql += group_clause
-    if order_clause:
-        sql += order_clause
-    if limit:
-        sql += f' LIMIT {limit}'
-    if offset:
-        sql += f' OFFSET {offset}'
-    if lock:
-        if not self.conn.in_transaction:
-            await self.exec_cmd('BEGIN IMMEDIATE')
-    return sql
-
-async def attach_company(self, company):
-    async with attach_lock:
-        if company not in self.companies:
-            await self.exec_cmd(f"attach '{self.database}/{company}' as {company}", raw=True)
-            self.companies.add(company)
-
-async def convert_sql(self, sql, params=None):
-
-    # casting to BOOLTEXT does not work - Sqlite3 limitation [2021-07-29]
-    sql = sql.replace('$True', '1').replace('$False', '0')
-
-    if self.database != ':memory:':
-        for company in db.cache.companies:
-            if company not in self.companies:
-                await self.attach_company(company)
-    return sql, params
-
-async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
-
-    table_name = db_obj.table_name
-    if not db_obj.mem_obj:
-        company = db_obj.company
-        table_name = f'{company}.{table_name}'
-
-    fld = await db_obj.getfld('row_id')
-    if fld.col_defn.data_type == 'AUT0':
-        sql = f"SELECT EXISTS(SELECT * FROM {table_name})"
-        cur = await self.exec_sql(sql)
-        exists, = await anext(cur)
-        if not exists:  # if first row, insert row_id with value of 0
-            cols.insert(0, 'row_id')
-            vals.insert(0, 0)
-
-    sql = (
-        f"INSERT INTO {table_name} ({', '.join(cols)}) "
-        f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+    # db-specific constants
+    constants = SimpleNamespace(
+        servertype = 'sqlite3',
+        param_style = '?',
+        func_prefix = '',
+        concat = '||',
+        repeat = 'repeat',
+        date_cast = 'TEXT',
+        primary_key = 'PRIMARY KEY',
+        escape_string = "ESCAPE '\\'",
+        table_created = (
+            "SELECT CASE WHEN EXISTS (SELECT name FROM {company}.sqlite_master "
+            "WHERE type = 'table' AND name = a.table_name) "
+            "THEN $True ELSE $False END"
+            ),
+        view_created = (
+            "SELECT CASE WHEN EXISTS (SELECT name FROM {company}.sqlite_master "
+            "WHERE type = 'view' AND name = a.view_name) "
+            "THEN $True ELSE $False END"
+            ),
         )
-    await self.exec_cmd(sql, vals)
-    data_row_id = self.lastrowid  # automatically returned by sqlite3
 
-    fld._value = data_row_id
+    # def connect(self,  mem_id: int | None = None) -> None:
+    def connect(self) -> None:
+        """
+        Called when a new connection is requested.
 
-    if not db_obj.mem_obj and not from_upd_on_save:
+        Args:
+            db_params: read from configuration file at program start.
 
-        cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
-        vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, 'add']
-        if data_row_id == 0:  # data_type 'AUT0', insert row_id with value of 0
-            cols.insert(0, 'row_id')
-            vals.insert(0, 0)
+            mem_id (int): If connecting to an in-memory database, mem_id is used as an identifier.
+                          None if connecting to a 'real' database.
+
+        Returns:
+            None: The method saves conn to self.conn, so it does not have to be 'returned'.
+        """
+
+        self.database = self.db_params['database']
+        if self.database == ':memory:':
+            # see https://www.sqlite.org/inmemorydb.html for setting up 'shared' in-memory database
+            # use of shared-cache is discourage - http://www.sqlite.org/sharedcache.html
+            conn = sqlite3.connect(f'file:{self.mem_id}?mode=memory&cache=shared',
+                detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
+                check_same_thread=False, uri=True)
+            cur = conn.cursor()
+            cur.execute("pragma read_uncommitted = on")  # http://www.sqlite.org/sharedcache.html
+        else:
+            conn = sqlite3.connect(f'{self.database}/_base',
+                detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES,
+                check_same_thread=False)
+            cur = conn.cursor()
+            cur.execute("pragma foreign_keys = on")  # must be enabled for each connection
+        conn.create_function('substring', 3, substring)
+        conn.create_function('subfield', 3, subfield)
+        conn.create_function('repeat', 2, repeat)
+        conn.create_function('zfill', 2, zfill)
+        conn.create_function('date_add', 2, date_add)
+        conn.create_function('date_diff', 2, date_diff)
+        # conn.create_function('round', 2, round_)
+
+        self.conn = conn
+        self.exception = (sqlite3.Error, sqlite3.IntegrityError, sqlite3.OperationalError)
+        self.companies = set()  # company must be 'attached' before use - this keeps track of attachments
+
+        # conn.set_trace_callback(self.callback)
+
+    # sql_log = open('sql_log.txt', 'w', errors='backslashreplace')
+    def callback(self, sql_cmd):
+        sql_log.write(f'{self.timestamp}: {id(self)}: {sql_cmd}\n')
+        sql_log.flush()
+
+    # async def add_lock(self, sql):
+    #     # removed 2016-11-24
+    #     # in python 3.6 (sqlite_version 3.14.2) we get error -
+    #     #   'cannot start a transaction within a transaction'
+    #     # did not happen in python 3.5 (sqlite_version 3.8.11)
+    #     # replaced 2018-08-08
+    #     # now using python 3.7.0 - let's see if the problem is still there
+    #     if not self.conn.in_transaction:
+    #         await self.exec_cmd('BEGIN IMMEDIATE')
+    #     return sql
+
+    async def form_sql(self, columns, tablenames, where_clause='',
+            group_clause='', order_clause='', limit=0, offset=0, lock=False, distinct=False):
+        sql = f"SELECT{' DISTINCT' if distinct else ''} {columns} FROM {tablenames}"
+        if where_clause:
+            sql += where_clause
+        if group_clause:
+            sql += group_clause
+        if order_clause:
+            sql += order_clause
+        if limit:
+            sql += f' LIMIT {limit}'
+        if offset:
+            sql += f' OFFSET {offset}'
+        if lock:
+            if not self.conn.in_transaction:
+                await self.exec_cmd('BEGIN IMMEDIATE')
+        return sql
+
+    async def attach_company(self, company):
+        async with attach_lock:
+            if company not in self.companies:
+                await self.exec_cmd(f"attach '{self.database}/{company}' as {company}", raw=True)
+                self.companies.add(company)
+
+    async def convert_sql(self, sql, params=None):
+        sql = sql.replace('$True', '1').replace('$False', '0')
+
+        # instead of parsing sql to ensure referenced companies are attached, attach all of them
+        if self.database != ':memory:':
+            for company in list(db.cache.companies):  # use list(keys) in case dict changes
+                if company not in self.companies:
+                    await self.attach_company(company)
+        return sql, params
+
+    async def insert_row(self, db_obj, cols, vals, from_upd_on_save):
+
+        table_name = db_obj.table_name
+        if not db_obj.mem_obj:
+            company = db_obj.company
+            table_name = f'{company}.{table_name}'
+
+        fld = await db_obj.getfld('row_id')
+        if fld.col_defn.data_type == 'AUT0':
+            sql = f"SELECT EXISTS(SELECT * FROM {table_name})"
+            cur = await self.exec_sql(sql)
+            exists, = await anext(cur)
+            if not exists:  # if first row, insert row_id with value of 0
+                cols.insert(0, 'row_id')
+                vals.insert(0, 0)
+
         sql = (
-            f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
+            f"INSERT INTO {table_name} ({', '.join(cols)}) "
             f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
             )
         await self.exec_cmd(sql, vals)
-        xref_row_id = self.lastrowid
+        data_row_id = self.lastrowid  # automatically returned by sqlite3
 
-        fld = await db_obj.getfld('created_id')
-        fld._value = xref_row_id
-        sql = f'UPDATE {table_name} SET created_id = {xref_row_id} WHERE row_id = {data_row_id}'
-        await self.exec_cmd(sql)
+        fld._value = data_row_id
 
-async def update_row(self, db_obj, cols, vals, from_upd_on_save):
+        if not db_obj.mem_obj and not from_upd_on_save:
 
-    table_name = db_obj.table_name
-    if not db_obj.mem_obj:
-        company = db_obj.company
-        table_name = f'{company}.{table_name}'
+            cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
+            vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, 'add']
+            if data_row_id == 0:  # data_type 'AUT0', insert row_id with value of 0
+                cols.insert(0, 'row_id')
+                vals.insert(0, 0)
+            sql = (
+                f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
+                f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+                )
+            await self.exec_cmd(sql, vals)
+            xref_row_id = self.lastrowid
 
-    key_cols = []
-    key_vals = []
-    for fld in db_obj.primary_keys:
-        key_cols.append(fld.col_name)
-        key_vals.append(await fld.getval())
+            fld = await db_obj.getfld('created_id')
+            fld._value = xref_row_id
+            sql = f'UPDATE {table_name} SET created_id = {xref_row_id} WHERE row_id = {data_row_id}'
+            await self.exec_cmd(sql)
 
-    update = ', '.join(['='.join((col, self.constants.param_style)) for col in cols])
-    where = ' AND '.join(['='.join((col_name, self.constants.param_style))
-        for col_name in key_cols])
-    vals.extend(key_vals)
-    sql = f'UPDATE {table_name} SET {update} WHERE {where}'
-    await self.exec_cmd(sql, vals)
+    async def update_row(self, db_obj, cols, vals, from_upd_on_save):
 
-    if db_obj.mem_obj:
-        return
-    if from_upd_on_save is True:
-        return
+        table_name = db_obj.table_name
+        if not db_obj.mem_obj:
+            company = db_obj.company
+            table_name = f'{company}.{table_name}'
 
-    data_row_id = await db_obj.getval('row_id')
-    if from_upd_on_save is False:  # else it is not True or False - see below
-        cols = []
-        vals = []
-        for fld in db_obj.get_flds_to_update(all=True):
-            if fld.col_name != 'row_id':
-                cols.append(fld.col_name)
-                vals.append(fld._curr_val)
-        sql = (
-            f"INSERT INTO {table_name}_audit ({', '.join(cols)}) "
-            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
-            )
-        await self.exec_cmd(sql, vals)
-        audit_row_id = self.lastrowid
-
-        cols = ['data_row_id', 'audit_row_id', 'user_row_id', 'date_time', 'type']
-        vals = [data_row_id, audit_row_id, db_obj.context.user_row_id, self.timestamp, 'chg']
-        sql = (
-            f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
-            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
-            )
-        await self.exec_cmd(sql, vals)
-
-    else:  # assume from_upd_on_save is 'post' or 'unpost'
-        cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
-        vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, from_upd_on_save]
-        sql = (
-            f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
-            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
-            )
-        await self.exec_cmd(sql, vals)
-
-async def delete_row(self, db_obj, from_upd_on_save):
-
-    table_name = db_obj.table_name
-    if not db_obj.mem_obj:
-        company = db_obj.company
-        table_name = f'{company}.{table_name}'
-
-    if not db_obj.mem_obj and not from_upd_on_save:  # don't actually delete
-        data_row_id = await db_obj.getval('row_id')
-
-        cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
-        vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, 'del']
-        sql = (
-            f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
-            f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
-            )
-        await self.exec_cmd(sql, vals)
-        xref_row_id = self.lastrowid
-
-        fld = await db_obj.getfld('deleted_id')
-        fld._value = xref_row_id
-        sql = f'UPDATE {table_name} SET deleted_id = {xref_row_id} WHERE row_id = {data_row_id}'
-        await self.exec_cmd(sql)
-
-    else:  # actually delete
         key_cols = []
         key_vals = []
         for fld in db_obj.primary_keys:
             key_cols.append(fld.col_name)
             key_vals.append(await fld.getval())
 
-        where = ' AND '.join([' = '.join((col_name, self.constants.param_style))
+        update = ', '.join(['='.join((col, self.constants.param_style)) for col in cols])
+        where = ' AND '.join(['='.join((col_name, self.constants.param_style))
             for col_name in key_cols])
+        vals.extend(key_vals)
+        sql = f'UPDATE {table_name} SET {update} WHERE {where}'
+        await self.exec_cmd(sql, vals)
 
-        sql = f'DELETE FROM {table_name} WHERE {where}'
-        await self.exec_cmd(sql, key_vals)
+        if db_obj.mem_obj:
+            return
+        if from_upd_on_save is True:
+            return
 
-async def delete_all(self, db_obj):
-    table_name = db_obj.table_name
-
-    if not db_obj.mem_obj:
-        return  # can only delete all from mem_obj
-
-    sql = f'DELETE FROM {table_name}'
-    await self.exec_cmd(sql)
-
-def convert_string(self, string, db_scale=None, text_key=False):
-    return (string
-        .replace('TEXT', 'TEXT COLLATE NOCASE')
-        .replace('PWD', 'TEXT')
-        .replace('DTE', 'DATE')
-        .replace('DTM', 'TIMESTAMP')
-        .replace('DEC', f'REAL{db_scale}')  # to allow correct rounding when reading back
-        .replace('$QTY', f'REAL{db_scale}')
-        .replace('$TRN', f'REAL{db_scale}')
-        .replace('$PTY', f'REAL{db_scale}')
-        .replace('$LCL', f'REAL{db_scale}')
-        .replace('$RQTY', f'REAL{db_scale}')
-        .replace('$RTRN', f'REAL{db_scale}')
-        .replace('$RPTY', f'REAL{db_scale}')
-        .replace('$RLCL', f'REAL{db_scale}')
-        .replace('AUTO', 'INTEGER PRIMARY KEY')
-        .replace('AUT0', 'INTEGER PRIMARY KEY')
-        .replace('JSON', 'TEXT')
-        .replace('FXML', 'BLOB')
-        .replace('RXML', 'BLOB')
-        .replace('PXML', 'BLOB')
-        .replace('SXML', 'TEXT')
-        .replace('BOOL', 'BOOLTEXT')
-        .replace('NOW()', "(DATETIME('NOW'))")
-        )
-
-def convert_dflt(self, string, data_type):
-    if data_type == 'TEXT':
-        return repr(string)  # enclose in quotes
-    elif data_type == 'INT':
-        return string
-    elif data_type == 'DEC':
-        return string
-    elif data_type.startswith('$'):
-        return string
-    elif data_type == 'BOOL':
-        if string.lower() == 'true':
-            return "'1'"
-        elif string.lower() == 'false':
-            return "'0'"
-        else:
-            print(f'invalid dflt_val for BOOL - {string!r}')
-    elif data_type == 'DTE':
-        if string == 'today':
-            return "(DATE('NOW'))"
-    elif data_type == 'JSON':
-        return repr(string)  # enclose in quotes
-    else:
-        print('UNKNOWN', string, data_type)
-
-def create_functions(self):
-    pass
-
-async def create_company(self, company):
-    # if directory does not exist, sqlite3 will create it
-    await self.attach_company(company)
-    # next 2 lines added 2016-11-24
-    # sqlite3 no longer permits 'attaching' while inside a transaction
-    # we do try to attach _sys while creating a new company, so this
-    #   fixes that problem
-    # but it is not a true fix - the problem is sure to raise its head
-    #   again at some point :-(
-    if company != '_sys':
-        await self.attach_company('_sys')
-
-def create_primary_key(self, pkeys):
-    return f", PRIMARY KEY ({', '.join(pkeys)})"
-
-def create_foreign_key(self, company, fkeys):
-    foreign_key = ''
-    for (src_col, tgt_table, tgt_col, del_cascade) in fkeys:
-        if '.' not in tgt_table:  # sqlite3 does not support remote fkeys
-            foreign_key += (
-                f", FOREIGN KEY ({src_col}) REFERENCES {tgt_table} ({tgt_col})"
-                f"{' ON DELETE CASCADE' if del_cascade else ''}"
+        data_row_id = await db_obj.getval('row_id')
+        if from_upd_on_save is False:  # else it is not True or False - see below
+            cols = []
+            vals = []
+            for fld in db_obj.get_flds_to_update(all=True):
+                if fld.col_name != 'row_id':
+                    cols.append(fld.col_name)
+                    vals.append(fld._curr_val)
+            sql = (
+                f"INSERT INTO {table_name}_audit ({', '.join(cols)}) "
+                f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
                 )
-    return foreign_key
+            await self.exec_cmd(sql, vals)
+            audit_row_id = self.lastrowid
 
-def create_alt_index(self, company, table_name, ndx_cols, a_or_b):
-    ndx_cols = [f"{'LOWER(' + col_name + ')' if col_type == 'TEXT' else col_name}"
-        for col_name, col_type in ndx_cols]
-    ndx_cols = ', '.join(ndx_cols)
-    if a_or_b == 'a':
+            cols = ['data_row_id', 'audit_row_id', 'user_row_id', 'date_time', 'type']
+            vals = [data_row_id, audit_row_id, db_obj.context.user_row_id, self.timestamp, 'chg']
+            sql = (
+                f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
+                f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+                )
+            await self.exec_cmd(sql, vals)
+
+        else:  # assume from_upd_on_save is 'post' or 'unpost'
+            cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
+            vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, from_upd_on_save]
+            sql = (
+                f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
+                f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+                )
+            await self.exec_cmd(sql, vals)
+
+    async def delete_row(self, db_obj, from_upd_on_save):
+
+        table_name = db_obj.table_name
+        if not db_obj.mem_obj:
+            company = db_obj.company
+            table_name = f'{company}.{table_name}'
+
+        if not db_obj.mem_obj and not from_upd_on_save:  # don't actually delete
+            data_row_id = await db_obj.getval('row_id')
+
+            cols = ['data_row_id', 'user_row_id', 'date_time', 'type']
+            vals = [data_row_id, db_obj.context.user_row_id, self.timestamp, 'del']
+            sql = (
+                f"INSERT INTO {table_name}_audit_xref ({', '.join(cols)}) "
+                f"VALUES ({', '.join([self.constants.param_style]*len(cols))})"
+                )
+            await self.exec_cmd(sql, vals)
+            xref_row_id = self.lastrowid
+
+            fld = await db_obj.getfld('deleted_id')
+            fld._value = xref_row_id
+            sql = f'UPDATE {table_name} SET deleted_id = {xref_row_id} WHERE row_id = {data_row_id}'
+            await self.exec_cmd(sql)
+
+        else:  # actually delete
+            key_cols = []
+            key_vals = []
+            for fld in db_obj.primary_keys:
+                key_cols.append(fld.col_name)
+                key_vals.append(await fld.getval())
+
+            where = ' AND '.join([' = '.join((col_name, self.constants.param_style))
+                for col_name in key_cols])
+
+            sql = f'DELETE FROM {table_name} WHERE {where}'
+            await self.exec_cmd(sql, key_vals)
+
+    async def delete_all(self, db_obj):
+        table_name = db_obj.table_name
+
+        if not db_obj.mem_obj:
+            return  # can only delete all from mem_obj
+
+        sql = f'DELETE FROM {table_name}'
+        await self.exec_cmd(sql)
+
+    def convert_string(self, string, db_scale=None, text_key=False):
+        return (string
+            .replace('TEXT', 'TEXT COLLATE NOCASE')
+            .replace('PWD', 'TEXT')
+            .replace('DTE', 'DATE')
+            .replace('DTM', 'TIMESTAMP')
+            .replace('DEC', f'REAL{db_scale}')  # to allow correct rounding when reading back
+            .replace('$QTY', f'REAL{db_scale}')
+            .replace('$TRN', f'REAL{db_scale}')
+            .replace('$PTY', f'REAL{db_scale}')
+            .replace('$LCL', f'REAL{db_scale}')
+            .replace('$RQTY', f'REAL{db_scale}')
+            .replace('$RTRN', f'REAL{db_scale}')
+            .replace('$RPTY', f'REAL{db_scale}')
+            .replace('$RLCL', f'REAL{db_scale}')
+            .replace('AUTO', 'INTEGER PRIMARY KEY')
+            .replace('AUT0', 'INTEGER PRIMARY KEY')
+            .replace('JSON', 'TEXT')
+            .replace('FXML', 'BLOB')
+            .replace('RXML', 'BLOB')
+            .replace('PXML', 'BLOB')
+            .replace('SXML', 'TEXT')
+            .replace('BOOL', 'BOOLTEXT')
+            .replace('NOW()', "(DATETIME('NOW'))")
+            )
+
+    def convert_dflt(self, string, data_type):
+        if data_type == 'TEXT':
+            return repr(string)  # enclose in quotes
+        elif data_type == 'INT':
+            return string
+        elif data_type == 'DEC':
+            return string
+        elif data_type.startswith('$'):
+            return string
+        elif data_type == 'BOOL':
+            if string.lower() == 'true':
+                return "'1'"
+            elif string.lower() == 'false':
+                return "'0'"
+            else:
+                print(f'invalid dflt_val for BOOL - {string!r}')
+        elif data_type == 'DTE':
+            if string == 'today':
+                return "(DATE('NOW'))"
+        elif data_type == 'JSON':
+            return repr(string)  # enclose in quotes
+        else:
+            print('UNKNOWN', string, data_type)
+
+    async def create_functions(self):
+        pass
+
+    async def create_company(self, company):
+        # if directory does not exist, sqlite3 will create it
+        await self.attach_company(company)
+
+    def create_foreign_key(self, company, fkeys):
+        foreign_key = ''
+        for (src_col, tgt_table, tgt_col, del_cascade) in fkeys:
+            if '.' not in tgt_table:  # sqlite3 does not support remote fkeys
+                foreign_key += (
+                    f", FOREIGN KEY ({src_col}) REFERENCES {tgt_table} ({tgt_col})"
+                    f"{' ON DELETE CASCADE' if del_cascade else ''}"
+                    )
+        return foreign_key
+
+    def create_alt_index(self, company, table_name, ndx_cols):
+        ndx_cols = [f"{'LOWER(' + col_name + ')' if col_type == 'TEXT' else col_name}"
+            for col_name, col_type in ndx_cols]
+        ndx_cols = ', '.join(ndx_cols)
         ndx_name = f'{company}._{table_name}'
-    else:  # must be 'b'
-        ndx_name = f'{company}._{table_name}_b'
-    filter = 'WHERE deleted_id = 0'
-    return ([
-        f'CREATE UNIQUE INDEX {ndx_name} '
-        f'ON {table_name} ({ndx_cols}) {filter}'
-        ])
-
-def create_index(self, company, table_name, index):
-    ndx_name, ndx_cols, filter, unique = index
-    ndx_cols = ', '.join(f'{col_name}{"" if sort_desc is False else " DESC"}' for col_name, sort_desc in ndx_cols)
-    if filter is None:
         filter = 'WHERE deleted_id = 0'
-    else:
-        filter += ' AND deleted_id = 0'
-    unique = 'UNIQUE ' if unique else ''
-    return (
-        f'CREATE {unique}INDEX {company}.{ndx_name} '
-        f'ON {table_name} ({ndx_cols}) {filter}'
-        )
+        return ([
+            f'CREATE UNIQUE INDEX {ndx_name} '
+            f'ON {table_name} ({ndx_cols}) {filter}'
+            ])
 
-async def set_read_lock(self, enable):
-    if enable:  # set lock
-        await self.exec_cmd('BEGIN IMMEDIATE')
-    else:  # unset lock
-        self.conn.commit()
-
-def get_lower_colname(self, col_name, alias):
-    return f'LOWER({alias}.{col_name})'
-
-async def tree_select(self, context, table_name, tree_params, level=None,
-        start_row=1, filter=None, sort=False, up=False, mem_obj=False):
-
-    company = context.company
-    if not mem_obj:
-        table_name = f'{company}.{table_name}'
-    group, col_names, fixed_levels = tree_params
-    code, descr, parent_id, seq = col_names
-    if fixed_levels is not None:
-        type_colname, level_types, sublevel_type = fixed_levels
-
-    select_1 = "*, 0 AS _level"
-    select_2 = "_tree2.*, _tree._level+1"
-
-    if sort:
-        select_1 += ", row_id AS _path"
-        select_1 += ", '' AS _key"
-        if level is not None:
-            select_2 += (
-                f", CASE WHEN _tree._level < {level} THEN _tree._path||','||_tree2.row_id ELSE _tree._path END"
-                )
-            select_2 += (
-                f", CASE WHEN _tree._level < {level} THEN _tree._key||zfill(_tree2.{seq}, 4) ELSE _tree._key END"
-                )
+    def create_index(self, company, table_name, index):
+        ndx_name, ndx_cols, filter, unique = index
+        ndx_cols = ', '.join(f'{col_name}{"" if sort_desc is False else " DESC"}' for col_name, sort_desc in ndx_cols)
+        if filter is None:
+            filter = 'WHERE deleted_id = 0'
         else:
-            select_2 += ", _tree._path||','||_tree2.row_id"
-            select_2 += f", _tree._key||zfill(_tree2.{seq}, 4)"
+            filter += ' AND deleted_id = 0'
+        unique = 'UNIQUE ' if unique else ''
+        return (
+            f'CREATE {unique}INDEX {company}.{ndx_name} '
+            f'ON {table_name} ({ndx_cols}) {filter}'
+            )
 
-    if fixed_levels is not None:
-        select_1 += f", {code} AS {level_types[0][0]}"
-        select_2 += f", _tree.{level_types[0][0]}"
-        if len(level_types) == 2:
-            select_1 += (
-                f", NULL AS {level_types[1][0]}"
-                )
-            select_2 += (
-                f", CASE WHEN _tree2.{type_colname} = {level_types[1][0]!r} THEN _tree2.{code} "
-                    f"ELSE _tree.{level_types[1][0]} END"
-                )
-        elif len(level_types) == 3:
-            select_1 += (
-                f", NULL AS {level_types[1][0]}"
-                f", NULL AS {level_types[2][0]}"
-                )
-            select_2 += (
-                f", CASE WHEN _tree2.{type_colname} = {level_types[1][0]!r} THEN _tree2.{code} "
-                    f"ELSE _tree.{level_types[1][0]} END"
-                f", CASE WHEN _tree2.{type_colname} = {level_types[2][0]!r} THEN _tree2.{code} "
-                    f"ELSE NULL END"
-                )
+    async def set_read_lock(self, enable):
+        if enable:  # set lock
+            await self.exec_cmd('BEGIN IMMEDIATE')
+        else:  # unset lock
+            self.conn.commit()
 
-    if filter is None:
-        where_1 = ''
-        where_2 = ''
-        test = 'WHERE'
-    else:
-        where_1 = ''
-        where_2 = ''
-        for test, lbr, col_name, op, expr, rbr in filter:
-            if expr is None:
-                expr = 'NULL'
-                if op == '=':
-                    op = 'IS'
-                elif op == '!=':
-                    op = 'IS NOT'
-            where_1 += f' {test} {lbr} {col_name} {op} {expr} {rbr}'
-            where_2 += f' {test} {lbr} _tree2.{col_name} {op} {expr} {rbr}'
-        test = ' AND'
+    async def tree_select(self, context, table_name, tree_params, level=None,
+            start_row=1, filter=None, sort=False, up=False, mem_obj=False):
 
-    if up:
-        where_2 += f"{test} _tree.{parent_id} = _tree2.row_id"
-    else:
-        where_2 += f"{test} _tree.row_id = _tree2.{parent_id}"
+        company = context.company
+        if not mem_obj:
+            table_name = f'{company}.{table_name}'
+        group, col_names, fixed_levels = tree_params
+        code, descr, parent_id, seq = col_names
+        if fixed_levels is not None:
+            type_colname, level_types, sublevel_type = fixed_levels
 
-    where_1 += f"{test} row_id = {start_row}"
+        select_1 = "*, 0 AS _level"
+        select_2 = "_tree2.*, _tree._level+1"
 
-    cte = (
-        "WITH RECURSIVE _tree AS ("
-          f"SELECT {select_1} "
-          f"FROM {table_name} {where_1} "
-          f"UNION ALL "
-          f"SELECT {select_2} "
-          f"FROM _tree, {table_name} AS _tree2 {where_2}) "
-        )
-    return cte
+        if sort:
+            select_1 += ", row_id AS _path"
+            select_1 += ", '' AS _key"
+            if level is not None:
+                select_2 += (
+                    f", CASE WHEN _tree._level < {level} THEN _tree._path||','||_tree2.row_id ELSE _tree._path END"
+                    )
+                select_2 += (
+                    f", CASE WHEN _tree._level < {level} THEN _tree._key||zfill(_tree2.{seq}, 4) ELSE _tree._key END"
+                    )
+            else:
+                select_2 += ", _tree._path||','||_tree2.row_id"
+                select_2 += f", _tree._key||zfill(_tree2.{seq}, 4)"
 
-def get_view_names(self, company, view_names):
-    return view_names.replace(f'{company}.', '')
+        if fixed_levels is not None:
+            select_1 += f", {code} AS {level_types[0][0]}"
+            select_2 += f", _tree.{level_types[0][0]}"
+            if len(level_types) == 2:
+                select_1 += (
+                    f", NULL AS {level_types[1][0]}"
+                    )
+                select_2 += (
+                    f", CASE WHEN _tree2.{type_colname} = {level_types[1][0]!r} THEN _tree2.{code} "
+                        f"ELSE _tree.{level_types[1][0]} END"
+                    )
+            elif len(level_types) == 3:
+                select_1 += (
+                    f", NULL AS {level_types[1][0]}"
+                    f", NULL AS {level_types[2][0]}"
+                    )
+                select_2 += (
+                    f", CASE WHEN _tree2.{type_colname} = {level_types[1][0]!r} THEN _tree2.{code} "
+                        f"ELSE _tree.{level_types[1][0]} END"
+                    f", CASE WHEN _tree2.{type_colname} = {level_types[2][0]!r} THEN _tree2.{code} "
+                        f"ELSE NULL END"
+                    )
 
-def escape_string(self):
-    # in a LIKE clause, literals '%' and '_' must be escaped with (e.g.) '\'
-    # sqlite3 requires that the escape character be specified
-    return "ESCAPE '\\'"
+        if filter is None:
+            where_1 = ''
+            where_2 = ''
+            test = 'WHERE'
+        else:
+            where_1 = ''
+            where_2 = ''
+            for test, lbr, col_name, op, expr, rbr in filter:
+                if expr is None:
+                    expr = 'NULL'
+                    if op == '=':
+                        op = 'IS'
+                    elif op == '!=':
+                        op = 'IS NOT'
+                where_1 += f' {test} {lbr} {col_name} {op} {expr} {rbr}'
+                where_2 += f' {test} {lbr} _tree2.{col_name} {op} {expr} {rbr}'
+            test = ' AND'
+
+        if up:
+            where_2 += f"{test} _tree.{parent_id} = _tree2.row_id"
+        else:
+            where_2 += f"{test} _tree.row_id = _tree2.{parent_id}"
+
+        where_1 += f"{test} row_id = {start_row}"
+
+        cte = (
+            "WITH RECURSIVE _tree AS ("
+              f"SELECT {select_1} "
+              f"FROM {table_name} {where_1} "
+              f"UNION ALL "
+              f"SELECT {select_2} "
+              f"FROM _tree, {table_name} AS _tree2 {where_2}) "
+            )
+        return cte
+
+    def get_view_names(self, company, view_names):
+        return view_names.replace(f'{company}.', '')
+
+class SubMemConn(SubConn):
+    """Subclass of SubConn, to store mem_id for in-memory database."""
+
+    def __init__(self, mem_id):
+        super().__init__()
+        self.mem_id = mem_id

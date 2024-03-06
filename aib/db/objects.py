@@ -1,14 +1,12 @@
 """
 This module contains classes that represent the following database objects -
 
-* :class:`~db.objects.DbObject` - this represents a single database row
-* :class:`~db.objects.MemObject` - a subclass of DbObject that exists only in memory
+* :class:`db.objects.DbObject` - this represents a single database row
+* :class:`db.objects.MemObject` - a subclass of DbObject that exists only in memory
 """
 
 from json import loads, dumps
-import operator
-from lxml.etree import fromstring, tostring
-import weakref
+from lxml.etree import fromstring
 from weakref import WeakKeyDictionary as WKD
 from collections import OrderedDict as OD
 from itertools import zip_longest
@@ -25,9 +23,8 @@ logger = logging.getLogger(__name__)
 import db.object_fields
 import db.cursor
 import db.connection
-import db.hooks_xml
+import db.actions_xml
 import db.dflt_xml
-from db.connection import db_constants, mem_constants
 import db.cache
 import ht
 from evaluate_expr import eval_bool_expr, eval_elem
@@ -473,10 +470,13 @@ class DbObject:
                     await foreign_key['tgt_field'].setval(col_const[field.col_name], validate=False)
                     field.constant = foreign_key['tgt_field']._value
                     field._orig = field._value = field.constant
+                    field.foreign_key = None  # remove reference to foreign_key - we will get value from constant
                     true_src = foreign_key['true_src']
                     true_src.constant = true_src.foreign_key['tgt_field']._value
                     true_src._orig = true_src._value = true_src.constant
+                    true_src.foreign_key = None  # remove reference to foreign_key - we will get value from constant
                 else:
+                    print('DO WE EVER GET HERE? [2024-01-15]')
                     field.constant = col_const[field.col_name]
                     field._orig = field._value = field.constant
 
@@ -564,7 +564,7 @@ class DbObject:
                     await fkey_col.read_row(fkey_col._value, display=False)
 
         for on_setup in self.db_table.actions.on_setup:
-            await db.hooks_xml.table_hook(self, on_setup)
+            await db.actions_xml.table_action(self, on_setup)
 
     def __str__(self):  # normal string method
         descr = ['{} {}:'.format(
@@ -720,7 +720,7 @@ class DbObject:
         else:
             db_obj = self
 
-        if not '>' in col_name:
+        if '>' not in col_name:
             if col_name not in db_obj.fields:
                 await db_obj.add_virtual(col_name)  # it may be a virtual column
             return db_obj.fields[col_name]
@@ -857,10 +857,9 @@ class DbObject:
             where.append((test, '', parent[0], '=', parent_val, ''))
 
         if self.mem_obj:
-            mem_id = self.context.mem_id
-            conn = await db.connection._get_mem_connection(mem_id)
+            conn = await db.connection.get_mem_connection(self.context.mem_id)
         else:
-            conn = await db.connection._get_connection()
+            conn = await db.connection.get_connection()
 
         if log_db:
             db_log.write(f'{id(conn)}: START many\n')
@@ -895,8 +894,7 @@ class DbObject:
                 test = 'AND'  # in case there is another one
             else:
                 if self.context.module_row_id == self.db_table.module_row_id:
-                    where.append((test, '', self.db_table.ledger_col,
-                        '=', self.context.ledger_row_id, ''))
+                    where.append((test, '', self.db_table.ledger_col, '=', self.context.ledger_row_id, ''))
                     test = 'AND'  # in case there is another one
 
         parent = self.parent
@@ -929,8 +927,7 @@ class DbObject:
                 eq = '='
                 if isinstance(value, str):
                     value = repr(value)
-            where.append(
-                (test, '', col_name, eq, value, '') )
+            where.append((test, '', col_name, eq, value, ''))
             test = 'AND'  # in case there is more than one
 
         if not self.mem_obj and not self.view_obj:
@@ -952,7 +949,7 @@ class DbObject:
         # some tables can have multiple parents, so we use a complex fkey
         #   which can lead to a very complex SELECT statement
         # here we check if the parent has been set up
-        # if it has, we can use a simpler foreign key pointing directly to the parent, 
+        # if it has, we can use a simpler foreign key pointing directly to the parent,
         #   resulting in a simpler SELECT
         # BUT we cannot over-ride the fkey definition in col_defn, as this is
         #   the template for all instances
@@ -993,14 +990,17 @@ class DbObject:
             delattr(self.context, context_fkey)
 
     async def on_row_selected(self, row, display):
+        """
+        select_many() iterates through a select statement and calls on_row_selected() for each row
 
-        # select_many() iterates through a select statement and calls on_row_selected() for each row
-        # it is possible for a virtual column to be created while processing a row
-        # it will be added to self.select_cols, but was not included in the original select statement
-        # so we have an entry in self.select_cols, but no corresponding value in row
-        # zip() stops as soon as one of the iterables is exhausted, so the new entry is skipped
-        # to counter this, we use zip_longest instead of zip, and use 'missing' to detect
-        #   missing data, in which case we call getval() to supply it
+        It is possible for a virtual column to be created while processing a row.
+        It will be added to self.select_cols, but was not included in the original select statement.
+        So we have an entry in self.select_cols, but no corresponding value in row.
+        zip() stops as soon as one of the iterables is exhausted, so the new entry is skipped.
+        To counter this, we use zip_longest instead of zip, and use 'missing' to detect
+          missing data, in which case we call getval() to supply it.
+        """
+
         missing = object()
 
         for fld, dat in zip_longest(self.select_cols, row, fillvalue=missing):
@@ -1034,8 +1034,8 @@ class DbObject:
                         await child.read_row(row_id_val, display)
 
 
-        for after_read in self.db_table.actions.after_read:  # table hook
-            await db.hooks_xml.table_hook(self, after_read)  # can raise AibError
+        for after_read in self.db_table.actions.after_read:  # table action
+            await db.actions_xml.table_action(self, after_read)  # can raise AibError
 
         self.exists = True
 
@@ -1074,14 +1074,16 @@ class DbObject:
             # store existing data as 'prev' for data-entry '\' function
             if self.exists:
                 fld._prev = fld._value
-            fld._value = None
             if fld.foreign_key:
                 if fld.fkey_parent is None:
                     foreign_keys = await self.get_foreign_key(fld, all=True)
                     for foreign_key in foreign_keys:
                         if foreign_key['true_src'] is None:  # i.e. this *is* a true source
                             tgt_field = foreign_key['tgt_field']
+                            if not tgt_field.db_obj.exists:
+                                continue
                             await tgt_field.db_obj.init(display=display)
+            fld._value = None
             if fld.col_defn.col_type == 'virt':
                 if fld.col_defn.dflt_rule is not None or fld.col_defn.sql is not None:
                     fld.must_be_evaluated = True
@@ -1148,7 +1150,7 @@ class DbObject:
                         await caller.set_subtype(sub_colname, fld._value)
 
         for after_init in self.db_table.actions.after_init:
-            await db.hooks_xml.table_hook(self, after_init)
+            await db.actions_xml.table_action(self, after_init)
 
         self.dirty = False
 
@@ -1237,14 +1239,14 @@ class DbObject:
             await restore_fld(fld)
 
         if display:
-                for caller_ref in list(self.on_clean_func.keyrefs()):
-                    caller = caller_ref()
-                    if caller is not None:
-                        if not caller.form.closed:
-                            method = self.on_clean_func[caller]
-                            await ht.form_xml.exec_xml(caller, method)
+            for caller_ref in list(self.on_clean_func.keyrefs()):
+                caller = caller_ref()
+                if caller is not None:
+                    if not caller.form.closed:
+                        method = self.on_clean_func[caller]
+                        await ht.form_xml.exec_xml(caller, method)
         for after_restore in self.db_table.actions.after_restore:
-            await db.hooks_xml.table_hook(self, after_restore)
+            await db.actions_xml.table_action(self, after_restore)
         self.dirty = False
 
     async def save(self, from_upd_on_save=False):
@@ -1257,7 +1259,7 @@ class DbObject:
         #   is called after the transaction is started
         # potential source of confusion - think of better terminololgy?
         for before_save in self.db_table.actions.before_save:
-            await db.hooks_xml.table_hook(self, before_save)  # can raise AibError
+            await db.actions_xml.table_action(self, before_save)  # can raise AibError
 
         if self.exists and not self.dirty:  # can be not exists and not dirty if init() with init_vals
             return  # nothing to save
@@ -1314,9 +1316,9 @@ class DbObject:
                 # changed [2022-04-22] - implications?
                 # if not from_upd_on_save:
                 #     for after_save in self.db_table.actions.after_save:
-                #         await db.hooks_xml.table_hook(self, after_save)
+                #         await db.actions_xml.table_action(self, after_save)
                 for after_save in self.db_table.actions.after_save:
-                    await db.hooks_xml.table_hook(self, after_save)
+                    await db.actions_xml.table_action(self, after_save)
 
                 for fld in self.fields.values():
                     fld._orig = await fld.getval()
@@ -1344,7 +1346,7 @@ class DbObject:
 
     async def after_save_committed(self, from_upd_on_save):
         for after_commit in self.db_table.actions.after_commit:
-            await db.hooks_xml.table_hook(self, after_commit)
+            await db.actions_xml.table_action(self, after_commit)
 
         self.init_vals = {}  # to prevent re-use on restore()
 
@@ -1380,7 +1382,7 @@ class DbObject:
             vals.append(await fld.get_val_for_sql())
 
         for before_insert in self.db_table.actions.before_insert:
-            await db.hooks_xml.table_hook(self, before_insert)
+            await db.actions_xml.table_action(self, before_insert)
 
         try:
             await conn.insert_row(self, cols, vals, from_upd_on_save)
@@ -1404,7 +1406,7 @@ class DbObject:
 
         self.dirty = False
         for after_insert in self.db_table.actions.after_insert:
-            await db.hooks_xml.table_hook(self, after_insert)
+            await db.actions_xml.table_action(self, after_insert)
         for upd_on_save in self.db_table.actions.upd_on_save:
             await self.upd_on_save(upd_on_save, conn, 'inserted')
         if self.cursor is not None:
@@ -1453,7 +1455,7 @@ class DbObject:
                             body='Amended by another user')
 
         for before_update in self.db_table.actions.before_update:
-            await db.hooks_xml.table_hook(self, before_update)
+            await db.actions_xml.table_action(self, before_update)
 
         try:
             await conn.update_row(self, cols_to_update, vals_to_update, from_upd_on_save)
@@ -1476,7 +1478,7 @@ class DbObject:
 
         self.dirty = False
         for after_update in self.db_table.actions.after_update:
-            await db.hooks_xml.table_hook(self, after_update)
+            await db.actions_xml.table_action(self, after_update)
         if call_upd_on_save:  # set to False in upd_split_src to avoid looping
             for upd_on_save in self.db_table.actions.upd_on_save:
                 await self.upd_on_save(upd_on_save, conn, 'updated')
@@ -1510,7 +1512,7 @@ class DbObject:
                         body='Children exist - cannot delete')
 
         for before_delete in self.db_table.actions.before_delete:
-            await db.hooks_xml.table_hook(self, before_delete)
+            await db.actions_xml.table_action(self, before_delete)
 
         # moved from inside transaction to outside [2021-11-19] - monitor
         for descr, errmsg, del_chk in self.db_table.actions.del_checks:
@@ -1596,7 +1598,7 @@ class DbObject:
             self.context.db_session.after_commit.append((self.after_delete_committed,))
 
             # for before_delete in self.db_table.actions.before_delete:
-            #     await db.hooks_xml.table_hook(self, before_delete)
+            #     await db.actions_xml.table_action(self, before_delete)
 
             try:
                 await conn.delete_row(self, from_upd_on_save)
@@ -1608,7 +1610,7 @@ class DbObject:
                 await self.decrement_seq(conn)
 
             for after_delete in self.db_table.actions.after_delete:
-                await db.hooks_xml.table_hook(self, after_delete)
+                await db.actions_xml.table_action(self, after_delete)
 
             if self.cursor is not None:
                 await self.cursor.delete_row(self.cursor_row)
@@ -1917,7 +1919,19 @@ class DbObject:
         if upd_type not in ('inserted', 'updated', 'post'):
             return
 
+        # Create empty list of return values and pass to the generator function.
+        # The generator will update the values in return_vals for each iteration.
+        # When complete, we can read the values from return_vals.
         return_vals = [0] * len(return_cols)
+        # There is another way to get return values from a generator [2023-12-19].
+        # If the generator ends with a 'return' statement, anything returned is
+        #   placed in an attribute of the StopIteration exception called 'value'.
+        # However, if we use a 'for loop' to get the indivual values from the
+        #   generator, we never get access to the StopIteration exception.
+        # We would have to rewrite the loop using 'while True', and test for
+        #   StopIteration ourselves.
+        # Worth the effort? Probably not.
+
         totals_to_check = [0] * len(check_totals)
 
         module_name, func_name = func_name.rsplit('.', 1)
@@ -1968,7 +1982,7 @@ class DbObject:
                         head=f'Post {self.table_name}',
                         body='Cannot run before_post inside transaction'
                         )
-                await db.hooks_xml.table_hook(self, before_post)
+                await db.actions_xml.table_action(self, before_post)
 
         if post_type == 'unpost':
             for descr, errmsg, unpost_chk in self.db_table.actions.unpost_checks:
@@ -2038,7 +2052,7 @@ class DbObject:
                     await self.update(conn, from_upd_on_save=True)
                 elif posting_child:  # force 'after_update' even if no update required [ugly!]
                     for after_update in self.db_table.actions.after_update:
-                        await db.hooks_xml.table_hook(self, after_update)
+                        await db.actions_xml.table_action(self, after_update)
 
             async with self.context.db_session.get_connection() as db_mem_conn:
                 if not posting_child:
@@ -2061,7 +2075,7 @@ class DbObject:
                             raise AibError(head='Unpost {}'.format(self.table_name),
                                 body='Cannot unpost child object - can only unpost parent')
                         await self.setval('posted', '2', validate=False)  # do this first - could be relevant
-                    if from_upd_on_save is True:  # called from hooks.do_post/unpost (e.g. ar/ap_tran_disc)
+                    if from_upd_on_save is True:  # called from actions.do_post/unpost (e.g. ar/ap_tran_disc)
                         await self.save(from_upd_on_save=True)  # do not update audit trail
                     else:
                         await self.save(from_upd_on_save=post_type)  # audit trail is updated with post_type
@@ -2118,7 +2132,7 @@ class DbObject:
                         head=f'Post {self.table_name}',
                         body='Cannot run after_post inside transaction'
                         )
-                await db.hooks_xml.table_hook(self, after_post)
+                await db.actions_xml.table_action(self, after_post)
 
     async def unpost(self):
         await self.post(post_type='unpost')
@@ -2777,7 +2791,6 @@ class DbTable:
         self.module_row_id = module_row_id
 
         self.short_descr = short_descr
-        self.constants = db_constants
 
         self.sequence = None if sequence is None else loads(sequence)
         self.tree_params = None if tree_params is None else deserialise(tree_params)
@@ -2790,6 +2803,7 @@ class DbTable:
                                  #   (parent_name, parent_pkey, fkey_colname)
                                  # can have > 1 parent e.g. dir_users_companies
         self.cursor_defns = {}  # set up each defn only when requested
+        self.constants = db.connection.DbConn.constants
 
         # set up data dictionary
         self.col_list = []  # maintain sorted list of col_defns
@@ -2825,8 +2839,6 @@ class DbTable:
                     alt_keys.append(col)
                 elif col.key_field == 'B':
                     alt_keys_2.append(col)
-
-                col.allow_null = bool(col.allow_null)  # sqlite3 returns 0/1
 
                 col.allow_amend = loads(col.allow_amend)
 
@@ -3237,12 +3249,12 @@ class DbTable:
 #-----------------------------------------------------------------------------
 
 class MemTable(DbTable):
+
     async def _ainit_(self, context, table_name, table_defn):
         self.defn_tableid = self.table_name = table_name
         self.data_company = context.company
         self.module_row_id = None  # can be over-ridden by form_defn
         self.short_descr = table_name
-        self.constants = mem_constants
         self.read_only = False
         self.col_list = []  # maintain sorted list of col_defns
         self.col_dict = {}  # maintain dict of col_defns keyed on col_name
@@ -3262,6 +3274,7 @@ class MemTable(DbTable):
         roll_params = table_defn.get('roll_params')
         self.roll_params = None if roll_params is None else loads(roll_params)
         self.ledger_col = None
+        self.constants = db.connection.MemConn.constants
         cursor = table_defn.get('cursor')
         if cursor is None:
             self.cursor_defn = None
@@ -3488,14 +3501,15 @@ class MemTable(DbTable):
 class ClonedTable(MemTable):
     """
     An in-memory table cloned from a database table
+
     """
+
     async def _ainit_(self, context, table_name, clone_from):
         db_table = clone_from.db_table
         self.table_name = table_name
         self.data_company = db_table.data_company
         self.defn_tableid = db_table.defn_tableid
         self.short_descr = db_table.short_descr
-        self.constants = mem_constants
         self.read_only = False
         self.col_list = []  # maintain sorted list of column names
         self.col_dict = {}  # maintain dict of col_defns keyed on col_name
@@ -3511,8 +3525,9 @@ class ClonedTable(MemTable):
         self.roll_params = db_table.roll_params
         self.ledger_col = None
         self.cursor_defn = clone_from.cursor_defn  # always None at this point?
+        self.constants = db.connection.MemConn.constants
 
-        conn = await db.connection._get_mem_connection(context.mem_id)
+        conn = await db.connection.get_mem_connection(context.mem_id)
 
         if log_db:
             db_log.write('{}: create clone {}\n'.format(id(conn), table_name))
@@ -3594,7 +3609,6 @@ class DbView:
         self.table_name = table_name
         self.module_row_id = module_row_id
         self.short_descr = short_descr
-        self.constants = db_constants
         self.read_only = True
 
         self.path_to_row = loads(path_to_row)
@@ -3606,6 +3620,7 @@ class DbView:
         self.parent_params = []  # if fkey has 'child=True', append
                                  #   (parent_name, parent_pkey, fkey_colname)
                                  # can have > 1 parent e.g. dir_users_companies
+        self.constants = db.connection.DbConn.constants
 
         # set up data dictionary
         self.col_list = []  # maintain sorted list of col_defns
@@ -3899,7 +3914,8 @@ class Actions:
         'before_save', 'after_save', 'before_insert', 'after_insert', 'before_update',
         'after_update', 'before_delete', 'after_delete', 'before_post', 'after_commit', 'after_post')
 
-    xml = lambda x: (fromstring(x),)  # a one-element tuple
+    # xml = lambda x: (fromstring(x),)  # a one-element tuple
+    def xml(x): return (fromstring(x),)  # a one-element tuple
 
     iconv = (loads, loads, loads, loads, loads, loads, xml, xml, xml, xml, xml,
         xml, xml, xml, xml, xml, xml, xml, xml, xml, xml)

@@ -15,7 +15,7 @@
         long_descr="Sequence"/>
     </mem_obj>
 
-    <mem_obj name="col_names" descr="Object names used for lookup" parent="obj_names"
+    <mem_obj name="col_names" descr="Column names used for lookup" parent="obj_names"
         sequence="[`seq`, [`obj_id`], null]" cursor="
         [[[`name`, 160], [`descr`, 240]], [], [[`seq`, false]]]">
       <mem_col col_name="obj_id" data_type="INT" short_descr="Object id"

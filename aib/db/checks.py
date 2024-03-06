@@ -1,3 +1,5 @@
+"""Certain 'validation' steps in col_checks are coded in Python, and stored here."""
+
 from common import AibError
 
 async def check_parent_id(db_obj, fld, parent_id):

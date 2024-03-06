@@ -2,7 +2,7 @@ from collections import namedtuple as NT
 from lxml import etree
 
 import db
-from db.connection import db_constants as dbc
+import db.connection
 from common import AibError
 from common import aenumerate
 import rep.finrpt as rep_finrpt
@@ -19,6 +19,7 @@ async def setup_table_ids(caller, xml):
     # called from setup_finrpt after_start_form
     context = caller.context
     company = context.company
+    param_style = db.connection.DbConn.constants.param_style
 
     finrpt = caller.data_objects['finrpt_defn']
     form_vars = caller.data_objects['form_vars']
@@ -27,14 +28,14 @@ async def setup_table_ids(caller, xml):
     if finrpt.exists:  # use existing table_id
         table_ids = {await finrpt.getval('table_id'): await finrpt.getval('table_name')}
     else:  # look for all 'totals' tables for this module
+        sql = (
+            f"SELECT a.row_id, a.table_name FROM {company}.db_tables a "
+            f"JOIN {company}.db_modules b ON b.row_id = a.module_row_id "
+            f"WHERE a.table_name LIKE {param_style} AND b.module_id = {param_style}"
+            )
+        params = ('%totals', await finrpt.getval('module_id'))
         async with context.db_session.get_connection() as db_mem_conn:
             conn = db_mem_conn.db
-            sql = (
-                f"SELECT a.row_id, a.table_name FROM {company}.db_tables a "
-                f"JOIN {company}.db_modules b ON b.row_id = a.module_row_id "
-                f"WHERE a.table_name LIKE {dbc.param_style} AND b.module_id = {dbc.param_style}"
-                )
-            params = ('%totals', await finrpt.getval('module_id'))
             rows = await conn.fetchall(sql, params)
         if not rows:
             raise AibError(head='Finrpt', body='No financial data available for this module')
@@ -844,6 +845,7 @@ async def get_pivot_vals(context, finrpt, pivot_dim, pivot_level):
     # params = [0, 'prop', 'PROP', 'TSK']
     # rows = ['MV', 'CP', 'LC', 'W1', 'W2/9', 'W2/1C', 'RIV', 'ROY']
     company = context.company
+    param_style = db.connection.DbConn.constants.param_style
 
     if pivot_dim == 'src':
         module_row_id = await finrpt.getval('module_row_id')
@@ -854,8 +856,8 @@ async def get_pivot_vals(context, finrpt, pivot_dim, pivot_level):
             "SELECT type.tran_type "
             f"FROM {company}.adm_tran_types type "
             f"JOIN {company}.db_actions action ON action.table_id = type.table_id "
-            f"WHERE type.deleted_id = 0 AND type.module_row_id = {dbc.param_style} "
-            f"AND action.upd_on_post LIKE {dbc.param_style} "
+            f"WHERE type.deleted_id = 0 AND type.module_row_id = {param_style} "
+            f"AND action.upd_on_post LIKE {param_style} "
             "ORDER BY type.seq"
             )
         params = (module_row_id, f'%{table_name}%')
@@ -882,6 +884,7 @@ async def get_pivot_vals(context, finrpt, pivot_dim, pivot_level):
         level_datum = level_data[level]
         if level == pivot_level:
             pivot_sql.append(f'FROM {company}.{level_datum.table_name} {level}_tbl')
+
         else:
             pivot_joins.append(
               f'JOIN {company}.{level_datum.table_name} {level}_tbl '
@@ -890,10 +893,10 @@ async def get_pivot_vals(context, finrpt, pivot_dim, pivot_level):
         order_by.insert(0, f'{level}_tbl.{level_datum.seq_col_name}')
         prev_level = level
 
-    pivot_where.append(f'WHERE {pivot_level}_tbl.deleted_id = {dbc.param_style}')
+    pivot_where.append(f'WHERE {pivot_level}_tbl.deleted_id = {param_style}')
     pivot_params.append(0)
     if level_data[pivot_level].type_col_name is not None:
-        pivot_where.append(f'AND {pivot_level}_tbl.{level_data[pivot_level].type_col_name} = {dbc.param_style}')
+        pivot_where.append(f'AND {pivot_level}_tbl.{level_data[pivot_level].type_col_name} = {param_style}')
         pivot_params.append(pivot_level)
 
     filter_by = await finrpt.getval('filter_by') or {}
@@ -901,7 +904,7 @@ async def get_pivot_vals(context, finrpt, pivot_dim, pivot_level):
         filter = filter_by[pivot_dim]
         for (test, lbr, level, op, expr, rbr) in filter:
             pivot_where.append(
-                f'{test} {lbr}{level}_tbl.{level_data[level].code} {op} {dbc.param_style}{rbr}'
+                f'{test} {lbr}{level}_tbl.{level_data[level].code} {op} {param_style}{rbr}'
                 )
             if expr.startswith("'"):  # literal string
                 expr = expr[1:-1]

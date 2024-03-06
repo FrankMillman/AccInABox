@@ -3,14 +3,14 @@ This module is a cache to store commonly used data objects
 """
 
 import asyncio
-from collections import namedtuple as NT, defaultdict as DD, OrderedDict as OD
+from collections import namedtuple as NT, defaultdict as DD
 from json import loads
 from datetime import date as dt, timedelta as td
 
 import db
 from common import AibError
 
-#----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 from common import delwatcher_set
 class delwatcher:
@@ -22,10 +22,10 @@ class delwatcher:
         # print('***', *self.id, 'deleted ***')
         delwatcher_set.remove(self.id)
 
-#-----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 async def get_new_context(user_row_id, sys_admin, company, mem_id=None,
-        module_row_id=None, ledger_row_id=None):
+                          module_row_id=None, ledger_row_id=None):
     context = Context()
     await context._ainit_(user_row_id, sys_admin, company, mem_id, module_row_id, ledger_row_id)
     return context
@@ -76,12 +76,9 @@ class Context:
 
     async def close(self):  # called from various places when context completed
         if self._mem_id is not None:
-            # close mem_db connections - this blocks, so use run_in_executor()
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None,
-                db.connection._close_mem_connections, self._mem_id)
+            await db.connection.close_mem_connections(self._mem_id)
 
-    # set attributes to read-only - users can add own attributes at will
+    # set attributes to read-only - users can add own r/w attributes at will
     @property
     def user_row_id(self):
         return self._user_row_id
@@ -113,13 +110,14 @@ class Context:
     def mem_tables_open(self):
         return self._mem_tables_open
 
-#-----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
 
 companies = {'_sys': None}  # else sqlite3 cannot 'attach' _sys
 # called from ht.htc.start() - read in all company ids and names up front
 async def setup_companies():
     sql = 'SELECT company_id, company_name FROM _sys.dir_companies'
-    conn = await db.connection._get_connection()
+    conn = await db.connection.get_connection()
     async for comp_id, comp_name in await conn.exec_sql(sql):
         companies[comp_id] = comp_name
     await conn.release()
@@ -128,7 +126,7 @@ async def setup_companies():
 async def company_changed(db_obj, xml):
     companies[await db_obj.getval('company_id')] = await db_obj.getval('company_name')
 
-#-----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 # adm_params data object for each company
 adm_params = {}
@@ -147,7 +145,7 @@ async def param_updated(db_obj, xml):
     if company in adm_params:
         del adm_params[company]
 
-#-----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 # get module_row_id from module_id or module_id from module_row_id
 mod_ids = {}
@@ -160,7 +158,7 @@ async def get_mod_id(company, mod_id):
         if company not in mod_ids:
             mod_ids[company] = {}
             sql = f'SELECT row_id, module_id FROM {company}.db_modules WHERE deleted_id = 0'
-            conn = await db.connection._get_connection()
+            conn = await db.connection.get_connection()
             async for row_id, module_id in await conn.exec_sql(sql):
                 mod_ids[company][row_id] = module_id
                 mod_ids[company][module_id] = row_id
@@ -183,7 +181,7 @@ async def get_mod_ledg_id(company, module_id, ledger_id):
                 f"SELECT row_id, ledger_id FROM {company}.{module_id}_ledger_params "
                 "WHERE deleted_id = 0"
                 )
-            conn = await db.connection._get_connection()
+            conn = await db.connection.get_connection()
             async for ledger_row_id, ledger_id2 in await conn.exec_sql(sql):
                 mod_ledg_ids[company][(module_id, ledger_id2)] = module_row_id, ledger_row_id
             await conn.release()
@@ -299,7 +297,7 @@ async def ledger_inserted(db_obj, xml):
     await menu.save()
     save_parent_id = await menu.getval('row_id')
 
-    conn = await db.connection._get_connection()
+    conn = await db.connection.get_connection()
 
     # find row_id of 'root' of sub_ledger menu 'template'
     sql = (
@@ -313,15 +311,12 @@ async def ledger_inserted(db_obj, xml):
     cte = await conn.tree_select(
         context=db_obj.context,
         table_name='sys_menu_defns',
-        tree_params = [None, ['row_id', 'descr', 'parent_id', 'seq'], None],
+        tree_params=[None, ['row_id', 'descr', 'parent_id', 'seq'], None],
         start_row=tree_start_row,
         sort=True,
         )
-    sql = (cte +
-        "SELECT row_id, parent_id, descr, opt_type, table_name, "
-            "cursor_name, form_name FROM _tree "
-        "ORDER BY _key"
-        )
+    sql = (f"{cte} SELECT row_id, parent_id, descr, opt_type, table_name, "
+           "cursor_name, form_name FROM _tree ORDER BY _key")
     async for row in await conn.exec_sql(sql):
         row_id, parent_id, descr, opt_type, table_name, cursor_name, form_name = row
 
@@ -390,6 +385,7 @@ async def ledger_inserted(db_obj, xml):
 
 # callback to update menu on client if changed
 # called from various {mod}_ledger_new.xml on_close_form
+# shouldn't this be triggered from db layer, not ht layer? [2024-01-23]
 async def menu_updated(caller, xml):
     ledger = caller.context.data_objects['ledger']
     if not ledger.exists:
@@ -397,7 +393,7 @@ async def menu_updated(caller, xml):
     client_menu = await caller.session.setup_menu()
     caller.session.responder.reply.append(('start_menu', client_menu))
 
-#-----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 # adm_periods - dictionary object for each company
 # key is company, value is a list of adm_period objects - one for each period for that company
@@ -407,8 +403,7 @@ async def menu_updated(caller, xml):
 # [TODO] set up callbacks to update list if adm_periods is changed
 
 adm_period = NT('adm_period',
-    'period_no, year_no, year_per_id, year_per_no, opening_date, closing_date'
-    )
+                'period_no, year_no, year_per_id, year_per_no, opening_date, closing_date')
 
 adm_periods = {}
 adm_per_lock = asyncio.Lock()
@@ -460,6 +455,7 @@ async def extend_periods(company, adm_per, periods):
         else:
             month += 2
         return dt(year, month, 1) - td(1)
+
     def fixed_day(prev_date, day):  # parameter 2 - fixed day per month
         month, year = prev_date.month, prev_date.year
         # get date 1 month hence with day = fixed day
@@ -469,6 +465,7 @@ async def extend_periods(company, adm_per, periods):
         else:
             month += 1
         return dt(year, month, day)
+
     def fixed_weekday(prev_date, weekday, min_days):  # parameter 3 - fixed weekday per month
         month, year = prev_date.month, prev_date.year
         # get date 2 months hence with day = 1, then subtract 1 day + min_days
@@ -536,7 +533,7 @@ async def get_due_date(company, tran_date, terms):
         adm_per = await extend_periods(company, adm_per, due_pos)
     return adm_per[due_pos].statement_date
 
-#-----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 """
 'ledger_periods' - a dictionary keyed on 'company' to store financial periods
@@ -593,7 +590,7 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
             module_id = await get_mod_id(company, module_row_id)
 
             # select all periods for module/ledger combination, with their current state
-            conn = await db.connection._get_connection()
+            conn = await db.connection.get_connection()
             col_names = ['period_row_id', 'state']
             if module_id == 'ar':
                 col_names.append('statement_date')
@@ -607,11 +604,11 @@ async def get_ledger_periods(company, module_row_id, ledger_row_id):
             sql.append('SELECT')
             sql.append(', '.join(col_names))
             sql.append(f'FROM {company}.{module_id}_ledger_periods')
-            sql.append(f'WHERE deleted_id = 0')
+            sql.append('WHERE deleted_id = 0')
             if module_id != 'gl':
                 sql.append(f'AND ledger_row_id = {conn.constants.param_style}')
                 params.append(ledger_row_id)
-            sql.append(f'ORDER BY period_row_id')
+            sql.append('ORDER BY period_row_id')
             async for row in await conn.exec_sql(' '.join(sql), params):
                 period_data = PerObj(*row)  # create instance from tuple
                 period_row_id = period_data.period_row_id
@@ -639,7 +636,7 @@ async def ledger_period_updated(db_obj, xml):
                 if ledger_row_id in ledger_periods[company][module_row_id]:
                     del ledger_periods[company][module_row_id][ledger_row_id]
 
-#----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 # get next number from db_genno using specified key
 genno_lock = asyncio.Lock()
@@ -652,7 +649,7 @@ async def get_next(db_obj, key):
         await genno.save(from_upd_on_save=True)  # suppress updating audit trail
     return next_no
 
-#----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 # fkeys per table for each company
 fkeys = {}
@@ -703,7 +700,7 @@ async def get_fkeys(context, company, table_name):
     tgt_fkeys = comp_fkeys[1][table_name]  # returns [] if not found
     return src_fkeys, tgt_fkeys
 
-#----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 # table permissions for user/company
 
@@ -761,10 +758,10 @@ async def get_user_perms(user_row_id, company):
 
                 module_set = set()
                 ledger_set = set()
-                table_dict = dict()
+                table_dict = {}
                 table_perms = [module_set, ledger_set, table_dict]
 
-                conn = await db.connection._get_connection()
+                conn = await db.connection.get_connection()
 
                 role_row_ids = []  # build list of role id's for this user
 
@@ -834,7 +831,7 @@ async def get_user_perms(user_row_id, company):
 
     return user_table_perms[user_row_id][company]
 
-#----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 # get user_id/name from dir_users
 users = None  # cannot 'await' outside function
@@ -853,7 +850,7 @@ async def get_user(user_id):
             await users.select_row({'user_id': user_id})
             return await users.getval('row_id')
 
-#----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 # check/set lock to ensure only one person at a time can amend a transaction
 tran_locks = {}
@@ -882,11 +879,10 @@ async def set_tran_lock(caller, xml):
                     locking_caller.context.user_row_id)
                 raise AibError(
                     head='Transaction locked',
-                    body='{}: transaction is currently in use by {}'.format(
-                        tran_obj.db_table.short_descr, locking_user)
+                    body=f'{tran_obj.db_table.short_descr}: transaction is currently in use by {locking_user}'
                     )
             tran_locks[key] = caller
     elif action == 'unlock':
         if key in tran_locks:
             if tran_locks[key] is caller:
-               del tran_locks[key]
+                del tran_locks[key]

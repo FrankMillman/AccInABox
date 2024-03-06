@@ -40,10 +40,3 @@ async def do_save(caller, xml):
             break
     else:
         await db_act.delete()
-
-async def setup_hook_name(caller, xml):
-    # called from hooks 'on_start_frame'
-    var = caller.data_objects['var']
-    await var.setval('full_name', '{}.{}'.format(
-        await var.getval('table_name'), await var.getval('hook_type')))
-    await var.save()  # set to 'clean'

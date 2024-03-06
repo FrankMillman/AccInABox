@@ -1,11 +1,9 @@
 from types import SimpleNamespace as SN
 from operator import attrgetter
-from itertools import groupby
+from itertools import groupby, zip_longest
 from collections import defaultdict as DD, namedtuple as NT
-from itertools import chain, zip_longest
-from datetime import date as dt, timedelta as td
-from lxml import etree
 from bisect import bisect_left
+from lxml import etree
 
 import logging
 logger = logging.getLogger(__name__)
@@ -13,7 +11,7 @@ logger = logging.getLogger(__name__)
 import db.objects
 import db.cache
 import ht.form
-from db.connection import db_constants as dbc
+import db.connection
 from evaluate_expr import eval_bool_expr, eval_elem
 from common import AibError
 from common import log, debug
@@ -215,7 +213,8 @@ class FinReport:
 
         context = self.context = parent_form.context
         company = context.company
-        param = dbc.param_style
+
+        self.param_style = db.connection.DbConn.constants.param_style
 
         self.pivot_group_by = []
         self.cf_join_bf = []
@@ -307,23 +306,23 @@ class FinReport:
             gl_params = await db.cache.get_ledger_params(company, module_row_id, 0)
             ret_earn_code_id = await gl_params.getval('ret_earn_code_id')
             if ret_earn_code_id is not None:
-                self.base_where['code'].append(f'AND code_code_tbl.row_id != {dbc.param_style}')
+                self.base_where['code'].append(f'AND code_code_tbl.row_id != {self.param_style}')
                 self.base_params['code'].append(ret_earn_code_id)
 
         if finrpt_data['exclude_ye_tfr']:
             self.tots_joins['orig'].append(f'JOIN {company}.adm_tran_types orig_tbl ON orig_tbl.row_id = a.orig_trantype_row_id')
-            self.tots_where['orig'].append(f'AND orig_tbl.tran_type != {dbc.param_style}')
+            self.tots_where['orig'].append(f'AND orig_tbl.tran_type != {self.param_style}')
             self.tots_params['orig'].append('gl_tfr')
 
         if finrpt_data['single_location'] is not None:
             self.tots_joins['loc'].append(f'JOIN {company}.adm_locations loc_tbl ON loc_tbl.row_id = a.location_row_id')
-            self.tots_where['loc'].append(f'AND loc_tbl.location_id = {dbc.param_style}')
+            self.tots_where['loc'].append(f'AND loc_tbl.location_id = {self.param_style}')
             self.tots_params['loc'].append(finrpt_data['single_location'])
             finrpt_data['title'] += f", location = {finrpt_data['single_location']!r}"
 
         if finrpt_data['single_function'] is not None:
             self.tots_joins['fun'].append(f'JOIN {company}.adm_functions fun_tbl ON fun_tbl.row_id = a.function_row_id')
-            self.tots_where['fun'].append(f'AND fun_tbl.function_id = {dbc.param_style}')
+            self.tots_where['fun'].append(f'AND fun_tbl.function_id = {self.param_style}')
             self.tots_params['fun'].append(finrpt_data['single_function'])
             finrpt_data['title'] += f", function = {finrpt_data['single_function']!r}"
 
@@ -334,10 +333,10 @@ class FinReport:
                 self.tots_joins['ledger'].append(
                     f'JOIN {company}.{tgt_table} tgt_tbl ON tgt_tbl.row_id = a.{src}'
                     )
-                self.tots_where['ledger'].append(f'AND tgt_tbl.{tgt} = {dbc.param_style}')
+                self.tots_where['ledger'].append(f'AND tgt_tbl.{tgt} = {self.param_style}')
                 self.tots_params['ledger'].append(self.ledger_row_id)
             else:
-                self.tots_where['ledger'].append(f'AND a.{db_table.ledger_col} = {dbc.param_style}')
+                self.tots_where['ledger'].append(f'AND a.{db_table.ledger_col} = {self.param_style}')
                 self.tots_params['ledger'].append(self.ledger_row_id)
 
         columns = [ColumnInfo(*col) for col in finrpt_data['columns']]
@@ -681,10 +680,10 @@ class FinReport:
             else:
                 self.base_joins[dim].append(f'JOIN {company}.{code_table_name} code_code_tbl ON 1 = 1')
                 test = 'AND'
-            self.base_where[dim].append(f'{test} code_code_tbl.deleted_id = {dbc.param_style}')
+            self.base_where[dim].append(f'{test} code_code_tbl.deleted_id = {self.param_style}')
             self.base_params[dim].append(0)
             if code_table.ledger_col is not None:
-                self.base_where[dim].append(f'AND code_code_tbl.{code_table.ledger_col} = {dbc.param_style}')
+                self.base_where[dim].append(f'AND code_code_tbl.{code_table.ledger_col} = {self.param_style}')
                 self.base_params[dim].append(self.ledger_row_id)
 
         tree_params = code_table.tree_params
@@ -765,13 +764,13 @@ class FinReport:
 
             # filter on 'active' accounts - see ar_customers.cust_bal - needs more thought
 
-            # self.base_where[dim].append(f'AND code_code_tbl.first_tran_date <= {dbc.param_style}')
+            # self.base_where[dim].append(f'AND code_code_tbl.first_tran_date <= {self.param_style}')
             # self.base_params[dim].append(dates[0].end_date)
             # self.base_where[dim].append(f'AND ((SELECT $fx_date_diff(code_code_tbl.last_tran_date, '
-            #     f'{dbc.param_style) < {dbc.param_style}')
+            #     f'{self.param_style) < {self.param_style}')
             # self.base_params[dim].append(dates[0].end_date)
             # self.base_params[dim].append(32)
-            # self.base_where[dim].append(f'OR code_code_tbl.bal_cus_as_at != {dbc.param_style})')
+            # self.base_where[dim].append(f'OR code_code_tbl.bal_cus_as_at != {self.param_style})')
             # self.base_params[dim].append(0)
 
             return
@@ -863,7 +862,7 @@ class FinReport:
             filter = finrpt_data['filter_by'][dim]
             for (test, lbr, level, op, expr, rbr) in filter:
                 self.base_where[dim].append(
-                    f'{test} {lbr}code_{level}_tbl.{level_data[level].code} {op} {dbc.param_style}{rbr}')
+                    f'{test} {lbr}code_{level}_tbl.{level_data[level].code} {op} {self.param_style}{rbr}')
                 if expr.startswith("'"):  # literal string
                     expr = expr[1:-1]
                 self.base_params[dim].append(expr)
@@ -916,7 +915,7 @@ class FinReport:
         else:
             self.base_joins[dim].append(f'JOIN {company}.{table_name} {dim}_{level}_tbl ON 1 = 1')
             test = 'AND'
-        self.base_where[dim].append(f'{test} {dim}_{level}_tbl.deleted_id = {dbc.param_style}')
+        self.base_where[dim].append(f'{test} {dim}_{level}_tbl.deleted_id = {self.param_style}')
         self.base_params[dim].append(0)
 
         # set up joins
@@ -966,7 +965,7 @@ class FinReport:
             for (test, lbr, level, op, expr, rbr) in filter:
                 try:
                     self.base_where[dim].append(
-                        f'{test} {lbr}{dim}_{level}_tbl.{level_data[level].code} {op} {dbc.param_style}{rbr}')
+                        f'{test} {lbr}{dim}_{level}_tbl.{level_data[level].code} {op} {self.param_style}{rbr}')
                 except:
                     breakpoint()
                 if expr.startswith("'"):  # literal string
@@ -984,7 +983,7 @@ class FinReport:
         else:
             self.base_joins[dim].append(f'JOIN {company}.adm_tran_types src_type_tbl ON 1 = 1')
             test = 'AND'
-        self.base_where[dim].append(f'{test} src_type_tbl.deleted_id = {dbc.param_style}')
+        self.base_where[dim].append(f'{test} src_type_tbl.deleted_id = {self.param_style}')
         self.base_params[dim].append(0)
 
         self.base_cols[dim].append(f'src_type_tbl.row_id AS src_type_id')  # used to JOIN totals table
@@ -1015,19 +1014,19 @@ class FinReport:
             self.cf_join_bf.append(f'src_type_seq')
 
         self.base_where[dim].append(
-            f'AND src_type_tbl.module_row_id = {dbc.param_style}')
+            f'AND src_type_tbl.module_row_id = {self.param_style}')
         self.base_params[dim].append(finrpt_data['module_row_id'])
 
         self.base_joins[dim].append(f'JOIN {company}.db_actions act_tbl ON act_tbl.table_id = src_type_tbl.table_id')
         self.base_where[dim].append(
-            f'AND act_tbl.upd_on_post like {dbc.param_style}')
+            f'AND act_tbl.upd_on_post like {self.param_style}')
         self.base_params[dim].append(f"%{finrpt_data['table_name']}%")
 
         if dim in finrpt_data['filter_by']:  # setup filter
             filter = finrpt_data['filter_by'][dim]
             for (test, lbr, level, op, expr, rbr) in filter:
                 self.base_where[dim].append(
-                    f'{test} {lbr}src_type_tbl.tran_type {op} {dbc.param_style}{rbr}')
+                    f'{test} {lbr}src_type_tbl.tran_type {op} {self.param_style}{rbr}')
                 if expr.startswith("'"):  # literal string
                     expr = expr[1:-1]
                 self.base_params[dim].append(expr)
@@ -1175,9 +1174,9 @@ class FinReport:
                     par_descr = await grp_obj.getval('descr')
                     par_seq = await grp_obj.getval(seq_col_name)
                     par_type = f'code_{await grp_obj.getval(type_col_name)}'
-                    cols.append(f'{dbc.param_style} AS {par_type}')
-                    cols.append(f'{dbc.param_style} AS {par_type}_descr')
-                    cols.append(f'{dbc.param_style} AS {par_type}_seq')
+                    cols.append(f'{self.param_style} AS {par_type}')
+                    cols.append(f'{self.param_style} AS {par_type}_descr')
+                    cols.append(f'{self.param_style} AS {par_type}_seq')
                     params.append(par_grp)
                     params.append(par_descr)
                     params.append(par_seq)
@@ -1190,7 +1189,7 @@ class FinReport:
                     bf_cols.append(cols[-1])  # only 'seq'
                     if level == grp_type:  # replace seq col name with actual sequence
                         new_col = cols[-1].split(' ')  # col_name AS col_alias
-                        new_col[0] = dbc.param_style
+                        new_col[0] = self.param_style
                         cols[-1] = ' '.join(new_col)
                         params.append(grp_seq)
                         bf_cols[-1] = cols[-1]
@@ -1199,9 +1198,9 @@ class FinReport:
             link_obj.base_cols.insert(0, f"'{link_module_id}_{link_ledger_row_id}' AS type")
             link_obj.group_cols.insert(0, 'type')
 
-            link_obj.base_where.append(f'WHERE code_code_tbl.deleted_id = {dbc.param_style}')
+            link_obj.base_where.append(f'WHERE code_code_tbl.deleted_id = {self.param_style}')
             link_obj.base_params.append(0)
-            link_obj.base_where.append(f'AND code_code_tbl.ledger_row_id = {dbc.param_style}')
+            link_obj.base_where.append(f'AND code_code_tbl.ledger_row_id = {self.param_style}')
             link_obj.base_params.append(link_ledger_row_id)
 
             link_obj.base_links = (
@@ -1210,9 +1209,9 @@ class FinReport:
                 )
             link_obj.bf_cols.extend([x.replace('gl', link_module_id) for x in self.bf_cols['code']])
 
-            self.base_where['link'].append(f'AND NOT ({parent_col} = {dbc.param_style}')
+            self.base_where['link'].append(f'AND NOT ({parent_col} = {self.param_style}')
             self.base_params['link'].append(grp_parent)
-            self.base_where['link'].append(f'AND {seq_col} = {dbc.param_style})')
+            self.base_where['link'].append(f'AND {seq_col} = {self.param_style})')
             self.base_params['link'].append(grp_seq)
 
         if self.links_to_subledg:  # else none were found
@@ -1236,8 +1235,8 @@ class FinReport:
                 "SELECT type.tran_type "
                 f"FROM {company}.adm_tran_types type "
                 f"JOIN {company}.db_actions action ON action.table_id = type.table_id "
-                f"WHERE type.deleted_id = 0 AND type.module_row_id = {dbc.param_style} "
-                f"AND action.upd_on_post LIKE {dbc.param_style} "
+                f"WHERE type.deleted_id = 0 AND type.module_row_id = {self.param_style} "
+                f"AND action.upd_on_post LIKE {self.param_style} "
                 "ORDER BY type.seq"
                 )
             params = (module_row_id, f'%{table_name}%')
@@ -1272,17 +1271,17 @@ class FinReport:
             order_by.insert(0, f'{level}_tbl.{level_datum.seq_col_name}')
             prev_level = level
 
-        pivot_where.append(f'WHERE {pivot_level}_tbl.deleted_id = {dbc.param_style}')
+        pivot_where.append(f'WHERE {pivot_level}_tbl.deleted_id = {self.param_style}')
         pivot_params.append(0)
         if level_data[pivot_level].type_col_name is not None:
-            pivot_where.append(f'AND {pivot_level}_tbl.{level_data[pivot_level].type_col_name} = {dbc.param_style}')
+            pivot_where.append(f'AND {pivot_level}_tbl.{level_data[pivot_level].type_col_name} = {self.param_style}')
             pivot_params.append(pivot_level)
 
         if pivot_dim in finrpt['filter_by']:  # setup filter
             filter = finrpt['filter_by'][pivot_dim]
             for (test, lbr, level, op, expr, rbr) in filter:
                 pivot_where.append(
-                    f'{test} {lbr}{level}_tbl.{level_data[level].code} {op} {dbc.param_style}{rbr}'
+                    f'{test} {lbr}{level}_tbl.{level_data[level].code} {op} {self.param_style}{rbr}'
                     )
                 if expr.startswith("'"):  # literal string
                     expr = expr[1:-1]
@@ -1336,7 +1335,7 @@ class FinReport:
         is_sql = []
         is_sql_params = []
 
-        self.base_where['bsis'] = [f'AND code_bs_is_tbl.gl_group = {dbc.param_style}']
+        self.base_where['bsis'] = [f'AND code_bs_is_tbl.gl_group = {self.param_style}']
         self.base_params['bsis'] = ['is']
         date_param = (year_start_date, dates[0][1])  # start fin yr to date
         report_type = 'from_to'
@@ -1356,7 +1355,7 @@ class FinReport:
         bs_sql = []
         bs_sql_params = []
 
-        self.base_where['bsis'] = [f'AND code_bs_is_tbl.gl_group = {dbc.param_style}']
+        self.base_where['bsis'] = [f'AND code_bs_is_tbl.gl_group = {self.param_style}']
         self.base_params['bsis'] = ['bs']
         date_param = dates[0]  # assume report is for single period
         report_type = 'as_at'
@@ -1367,7 +1366,7 @@ class FinReport:
         ret_sql = []
         ret_sql_params = []
 
-        ret_sql.append(f"SELECT tot_is.tran_tot, {dbc.param_style} AS start_date, {dbc.param_style} AS end_date")
+        ret_sql.append(f"SELECT tot_is.tran_tot, {self.param_style} AS start_date, {self.param_style} AS end_date")
         ret_sql_params.append(dates[0][0])
         ret_sql_params.append(dates[0][1])
         if expand_subledg:
@@ -1381,7 +1380,7 @@ class FinReport:
 
         ret_sql.append('FROM (')
 
-        self.base_where['bsis'] = [f'AND code_bs_is_tbl.gl_group = {dbc.param_style}']
+        self.base_where['bsis'] = [f'AND code_bs_is_tbl.gl_group = {self.param_style}']
         self.base_params['bsis'] = ['is']
         date_param = (prev_year_end_date, prev_year_end_date)
         report_type = 'as_at'
@@ -1470,7 +1469,7 @@ class FinReport:
 
         part_sql = []
         part_sql.append('COALESCE(SUM(tran_tot), 0) AS tran_tot')
-        part_sql.append(', {0} AS start_date, {0} AS end_date'.format(dbc.param_style))
+        part_sql.append(', {0} AS start_date, {0} AS end_date'.format(self.param_style))
         sql_params.append(start_date)
         sql_params.append(end_date)
 
@@ -1510,7 +1509,7 @@ class FinReport:
             for tots_join in self.tots_joins[dim]:
                 part_sql.append(tots_join)
 
-        part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(dbc.param_style))
+        part_sql.append('WHERE a.deleted_id = {0} AND a.tran_date <= {0}'.format(self.param_style))
         sql_params.append(0)
         sql_params.append(end_date)
 
@@ -1547,7 +1546,7 @@ class FinReport:
 
         part_sql = []
         part_sql.append('COALESCE(SUM(tran_tot), 0) AS tran_tot')
-        part_sql.append(', {0} AS start_date, {0} AS end_date'.format(dbc.param_style))
+        part_sql.append(', {0} AS start_date, {0} AS end_date'.format(self.param_style))
         sql_params.append(start_date)
         sql_params.append(end_date)
 
@@ -1581,7 +1580,7 @@ class FinReport:
                 part_sql.append(tots_join)
 
         part_sql.append(
-            'WHERE a.deleted_id = {0} AND a.tran_date BETWEEN {0} AND {0}'.format(dbc.param_style)
+            'WHERE a.deleted_id = {0} AND a.tran_date BETWEEN {0} AND {0}'.format(self.param_style)
             )
         sql_params.append(0)
         sql_params.append(start_date)
@@ -1648,14 +1647,14 @@ class FinReport:
 
             part_sql.append(
                 'WHERE a.deleted_id = {0} AND a.tran_date {1} {0}'
-                .format(dbc.param_style, op)
+                .format(self.param_style, op)
                 )
             sql_params.append(0)
             sql_params.append(date)
 
 #           if self.db_table.ledger_col is not None:
 #               if not '>' in self.db_table.ledger_col:
-#                   part_sql.append(f'AND a.{self.db_table.ledger_col} = {dbc.param_style}')
+#                   part_sql.append(f'AND a.{self.db_table.ledger_col} = {self.param_style}')
 #                   sql_params.append(self.ledger_row_id)
 
             for dim in self.tots_where:  # if any
@@ -1675,7 +1674,7 @@ class FinReport:
 
         part_sql = []
         part_sql.append('COALESCE(bf.tran_tot, 0) AS op_bal, COALESCE(cf.tran_tot, 0) AS cl_bal')
-        part_sql.append(', {0} AS start_date, {0} AS end_date'.format(dbc.param_style))
+        part_sql.append(', {0} AS start_date, {0} AS end_date'.format(self.param_style))
         sql_params.append(start_date)
         sql_params.append(end_date)
 
@@ -1737,7 +1736,7 @@ class FinReport:
                 elif pivot_grp == 'end_date':
                     pivot_val = pivot_val[1]
                 sql_cols.append(
-                    f'SUM(CASE WHEN {pivot_grp} = {dbc.param_style} '
+                    f'SUM(CASE WHEN {pivot_grp} = {self.param_style} '
                     f'THEN {col.col_sql} ELSE 0 END) AS "{col_head}"'
                     )
                 sql_params.append(pivot_val)
@@ -1783,20 +1782,20 @@ async def get_fin_yr(context, date_seq, fin_yr, ledger_row_id):
 # async def sql_fin_yr(context, date_seq, sub_args, date_vals, ledger_row_id):
 async def sql_fin_yr(context, date_seq, fin_yr, ledger_row_id):
     company = context.company
-    param = dbc.param_style
 
 #   if date_vals is not None:
 #       fin_yr = date_vals
 #   else:
+#       param_style = db.connection.DbConn.constants.param_style
 #       sql = []
 #       params = []
 #       sql.append(f'SELECT row_id FROM {company}.adm_yearends')
 #       sql.append('WHERE period_row_id >=')
 #       sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
-#       sql.append(f'WHERE state = {param}')
+#       sql.append(f'WHERE state = {param_style}')
 #       params.append('current')
 #       if context.module_id != 'gl':
-#           sql.append(f'AND ledger_row_id = {param}')
+#           sql.append(f'AND ledger_row_id = {param_style}')
 #           params.append(ledger_row_id)
 #       sql.append(')')
 #       sql.append('ORDER BY row_id LIMIT 1')
@@ -1808,6 +1807,7 @@ async def sql_fin_yr(context, date_seq, fin_yr, ledger_row_id):
 
     sql = []
     params = []
+    param_style = db.connection.DbConn.constants.param_style
     sql.append('SELECT')
     sql.append('$fx_date_add(b.closing_date, 1) AS "[DATE]",')
     sql.append('a.closing_date')
@@ -1815,25 +1815,26 @@ async def sql_fin_yr(context, date_seq, fin_yr, ledger_row_id):
     sql.append(f'JOIN {company}.adm_periods b ON b.row_id = a.row_id - 1')
     sql.append(f'WHERE (SELECT c.row_id FROM {company}.adm_yearends c')
     sql.append('WHERE c.period_row_id >= a.row_id ORDER BY c.row_id LIMIT 1)')
-    sql.append(f'= {param}')
+    sql.append(f'= {param_style}')
     params.append(fin_yr)
     sql.append(f"ORDER BY a.row_id{' DESC' if date_seq == 'D' else ''}")
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         rows = await conn.fetchall(' '.join(sql), params)
+
     return rows
 
 async def sql_date_range(context, date_seq, sub_args, date_vals, ledger_row_id):
 
     company = context.company
-    param = dbc.param_style
 
     if date_vals is not None:
         start_date, end_date = date_vals
     else:
         sql = []
         params = []
+        param_style = db.connection.DbConn.constants.param_style
         sql.append('SELECT')
         sql.append('$fx_date_add(b.closing_date, 1) AS start_date,')
         sql.append('a.closing_date AS end_date')
@@ -1841,10 +1842,10 @@ async def sql_date_range(context, date_seq, sub_args, date_vals, ledger_row_id):
         sql.append(f'JOIN {company}.adm_periods b ON b.row_id = a.row_id - 1')
         sql.append('WHERE a.row_id =')
         sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
-        sql.append(f'WHERE state = {param}')
+        sql.append(f'WHERE state = {param_style}')
         params.append('current')
         if context.module_id != 'gl':
-            sql.append(f'AND ledger_row_id = {param}')
+            sql.append(f'AND ledger_row_id = {param_style}')
             params.append(ledger_row_id)
         sql.append(')')
 
@@ -1855,8 +1856,9 @@ async def sql_date_range(context, date_seq, sub_args, date_vals, ledger_row_id):
 
     sql = []
     params = []
+    param_style = db.connection.DbConn.constants.param_style
     sql.append('WITH RECURSIVE dates AS (')
-    sql.append(f'SELECT {param}')
+    sql.append(f'SELECT {param_style}')
     params.append(start_date)
     sql.append('AS dte')
     sql.append('UNION ALL SELECT')
@@ -1869,13 +1871,14 @@ async def sql_date_range(context, date_seq, sub_args, date_vals, ledger_row_id):
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         rows = await conn.fetchall(' '.join(sql), params)
+
     return rows
 
 async def sql_curr_per(context):
     company = context.company
-    param = dbc.param_style
     sql = []
     params = []
+    param_style = db.connection.DbConn.constants.param_style
     sql.append('SELECT')
     sql.append('$fx_date_add(b.closing_date, 1) AS "start_date [DATE]",')
     sql.append('a.closing_date AS end_date')
@@ -1883,16 +1886,17 @@ async def sql_curr_per(context):
     sql.append(f'JOIN {company}.adm_periods b ON b.row_id = a.row_id - 1')
     sql.append('WHERE a.row_id =')
     sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
-    sql.append(f'WHERE state = {param}')
+    sql.append(f'WHERE state = {param_style}')
     params.append('current')
     if context.module_id != 'gl':
-        sql.append(f'AND ledger_row_id = {param}')
+        sql.append(f'AND ledger_row_id = {param_style}')
         params.append(ledger_row_id)
     sql.append(')')
 
     async with context.db_session.get_connection() as db_mem_conn:
         conn = db_mem_conn.db
         rows = await conn.fetchall(' '.join(sql), params)
+
     return rows
 
 async def get_last_n_per(context, date_seq, date_groups, start_period, ledger_row_id):
@@ -1930,18 +1934,18 @@ async def sql_last_n_per(context, date_seq, sub_args, date_vals, ledger_row_id):
         grps_to_skip,  # e.g. 11 x p = same period previous year
         ) = sub_args
     company = context.company
-    param = dbc.param_style
 
     if date_vals is not None:
         start_from = date_vals
     else:
         sql = []
         params = []
+        param_style = db.connection.DbConn.constants.param_style
         sql.append(f'SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
-        sql.append(f'WHERE state = {param}')
+        sql.append(f'WHERE state = {param_style}')
         params.append('current')
         if context.module_id != 'gl':
-            sql.append(f'AND ledger_row_id = {param}')
+            sql.append(f'AND ledger_row_id = {param_style}')
             params.append(ledger_row_id)
 
         async with context.db_session.get_connection() as db_mem_conn:
@@ -1951,29 +1955,30 @@ async def sql_last_n_per(context, date_seq, sub_args, date_vals, ledger_row_id):
 
     sql = []
     params = []
+    param_style = db.connection.DbConn.constants.param_style
 
     sql.append('WITH RECURSIVE dates AS (')
     sql.append('SELECT 1 AS cnt, a.row_id,')
     sql.append('$fx_date_add(')
     sql.append(f'(SELECT b.closing_date FROM {company}.adm_periods b')
-    sql.append(f'WHERE b.row_id = a.row_id - {param})')
+    sql.append(f'WHERE b.row_id = a.row_id - {param_style})')
     params.append(grp_size)
     sql.append(', 1) AS start_date,')
     sql.append('a.closing_date AS end_date')
     sql.append(f'FROM {company}.adm_periods a')
-    sql.append(f'WHERE a.row_id = {param} AND a.row_id > {param}')
+    sql.append(f'WHERE a.row_id = {param_style} AND a.row_id > {param_style}')
     params.append(start_from)
     params.append(grp_size-1)
     sql.append('UNION ALL SELECT')
     sql.append('d.cnt+1 AS cnt, a.row_id,')
     sql.append('$fx_date_add(')
     sql.append(f'(SELECT b.closing_date FROM {company}.adm_periods b')
-    sql.append(f'WHERE b.row_id = a.row_id - {param})')
+    sql.append(f'WHERE b.row_id = a.row_id - {param_style})')
     params.append(grp_size)
     sql.append(', 1) AS start_date,')
     sql.append('a.closing_date AS end_date')
     sql.append(f'FROM {company}.adm_periods a, dates d')
-    sql.append(f'WHERE a.row_id = d.row_id - {param} AND d.row_id > {param} AND d.cnt < {param}')
+    sql.append(f'WHERE a.row_id = d.row_id - {param_style} AND d.row_id > {param_style} AND d.cnt < {param_style}')
     params.append(grp_size * (grps_to_skip + 1))
     params.append((grp_size * (grps_to_skip + 1)) + (grp_size-1))
     params.append(no_of_grps)
@@ -1997,21 +2002,21 @@ async def sql_last_n_days(context, date_seq, date_groups, start_date, ledger_row
         grps_to_skip,  # e.g. 51 = same week previous year (if grp_size = 7)
         ) = date_groups
     company = context.company
-    param = dbc.param_style
 
 #   if date_vals is not None:
 #       start_from = date_vals
 #   else:
 #       sql = []
 #       params = []
+#       param_style = db.connection.DbConn.constants.param_style
 #
 #       sql.append(f'SELECT closing_date FROM {company}.adm_periods')
 #       sql.append('WHERE row_id =')
 #       sql.append(f'(SELECT period_row_id FROM {company}.{context.module_id}_ledger_periods')
-#       sql.append(f'WHERE state = {param}')
+#       sql.append(f'WHERE state = {param_style}')
 #       params.append('current')
 #       if context.module_id != 'gl':
-#           sql.append(f'AND ledger_row_id = {param}')
+#           sql.append(f'AND ledger_row_id = {param_style}')
 #           params.append(ledger_row_id)
 #       sql.append(')')
 #
@@ -2022,27 +2027,29 @@ async def sql_last_n_days(context, date_seq, date_groups, start_date, ledger_row
 
     sql = []
     params = []
+    param_style = db.connection.DbConn.constants.param_style
+
     sql.append('WITH RECURSIVE dates AS (')
     sql.append(f'SELECT 1 AS cnt,')
-    sql.append(f'{param} AS end_date,')
+    sql.append(f'{param_style} AS end_date,')
     params.append(start_from)
     if grp_size > 1:
-        sql.append(f'$fx_date_add({param}, {param})')
+        sql.append(f'$fx_date_add({param_style}, {param_style})')
         params.append(start_date)
         params.append(0 - grp_size + 1)
     else:
-        sql.append(f'{param}')
+        sql.append(f'{param_style}')
         params.append(start_date)
     sql.append('AS start_date')
     sql.append('UNION ALL SELECT')
     sql.append('d.cnt+1 AS cnt,')
-    sql.append(f'$fx_date_add(d.start_date, {param}) AS end_date,')
+    sql.append(f'$fx_date_add(d.start_date, {param_style}) AS end_date,')
     params.append(-1 - (grp_size * grps_to_skip))
-    sql.append(f'$fx_date_add(d.start_date, {param})')
+    sql.append(f'$fx_date_add(d.start_date, {param_style})')
     params.append(0 - (grp_size * (grps_to_skip+1)))
     sql.append('AS start_date')
     sql.append('FROM dates d')
-    sql.append(f'WHERE d.cnt < {param}')
+    sql.append(f'WHERE d.cnt < {param_style}')
     params.append(no_of_grps)
     sql.append(')')
     sql.append('SELECT start_date "[DATE]", end_date "[DATE]" FROM dates')

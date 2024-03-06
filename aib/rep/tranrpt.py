@@ -1,5 +1,4 @@
 import db.objects
-from db.connection import db_constants as dbc
 from common import AibError
 
 async def get_tranrpt_data(caller, xml):

@@ -1,5 +1,5 @@
 import db.objects
-from db.connection import db_constants as dbc
+import db.connection
 from common import AibError
 
 """
@@ -10,17 +10,19 @@ async def check_subledg(caller, params):
     module_ids = ['cb', 'ar', 'ap', 'in']
     sql = []
     params = []
+    param_style = db.connection.DbConn.constants.param_style
+
     sql.append('SELECT module_id, ledger_id FROM (')
     for module_id in module_ids:
-        sql.append(f'SELECT {dbc.param_style} AS module_id, b.ledger_id')
+        sql.append(f'SELECT {param_style} AS module_id, b.ledger_id')
         params.append(module_id)
         sql.append(f'FROM {caller.company}.{module_id}_ledger_periods a')
         sql.append(f'JOIN {caller.company}.{module_id}_ledger_params b ON b.row_id = a.ledger_row_id')
-        sql.append(f'WHERE a.period_row_id = {dbc.param_style}')
+        sql.append(f'WHERE a.period_row_id = {param_style}')
         params.append(period_to_close)
-        sql.append(f'AND a.deleted_id = {dbc.param_style}')
+        sql.append(f'AND a.deleted_id = {param_style}')
         params.append(0)
-        sql.append(f'AND a.state != {dbc.param_style}')
+        sql.append(f'AND a.state != {param_style}')
         params.append('closed')
         if module_id != module_ids[-1]:
             sql.append('UNION ALL')
@@ -261,9 +263,10 @@ async def setup_ctrl(db_obj, xml):
         if await gl_codes.getval('ctrl_mod_row_id') is not None:
             raise AibError(head='Control Account', body=
                 f"{await gl_codes.getval('gl_code')!r} is already a control a/c")
+        param_style = db.connection.DbConn.constants.param_style
         sql = (
             'SELECT CASE WHEN EXISTS ('
-            f'SELECT * FROM {db_obj.company}.gl_totals WHERE gl_code_id = {dbc.param_style}'
+            f'SELECT * FROM {db_obj.company}.gl_totals WHERE gl_code_id = {param_style}'
             ') THEN $True ELSE $False END'
             )
         params = (await gl_codes.getval('row_id'),)
