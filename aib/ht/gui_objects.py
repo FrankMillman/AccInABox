@@ -23,6 +23,7 @@ class GuiCtrl:
         # self.frame = frame
         # self.form = frame.form
         self.parent = parent
+        self.fld = fld
         # self.root_id = form.root_id
         # self.form_id = form.form_id
         self.readonly = readonly
