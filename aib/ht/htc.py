@@ -307,7 +307,7 @@ class ResponseHandler:
         # asyncio.Task(self.send_question(args))
         asyncio.create_task(self.send_question(args))
         self.session.questions[caller.ref] = fut
-        writer, data = await asyncio.wait_for(fut, timeout=None)
+        writer, data = await fut
         # at this point, the process is suspended until the reply is received
         # when received, on_answer passes back the reply, plus the
         #   client_writer associated with the reply, which we use
