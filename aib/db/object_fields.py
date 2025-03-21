@@ -335,12 +335,13 @@ class Field(ABC):
             pos = sql.find(col)
             value = await fld.get_val_for_sql()
             if value is None:
+                sql = sql.replace(col, 'NULL', 1)
                 if sql[pos-2] == '=':  # assumes exactly one space - s/b ok, but no guarantee
                     if sql[pos-3] == '!':
-                        sql = sql[:pos-3] + 'IS NOT NULL' + sql[pos+len(col):]
+                        sql = sql[:pos-3] + 'IS NOT ' + sql[pos:]
                     else:
-                        sql = sql[:pos-2] + 'IS NULL' + sql[pos+len(col):]
-                    continue
+                        sql = sql[:pos-2] + 'IS ' + sql[pos:]
+                continue
             sql = sql.replace(col, param_style, 1)
             pos_to_insert = len([x for x in param_pos if x < pos])  # can use 'bisect' here
             params.insert(pos_to_insert, value)
