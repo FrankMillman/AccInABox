@@ -74,9 +74,9 @@ def config_database(db_params: configparser.SectionProxy) -> None:
 class ConnectionPool:
     """A connection pool.
 
-    This is how psycopg3 connection pool works. We should do the same, not just keep adding connections!
+    This is how psycopg connection pool works. We should do the same, not just keep adding connections!
 
-    https://www.psycopg.org/psycopg3/docs/advanced/pool.html
+    https://www.psycopg.org/psycopg/docs/advanced/pool.html
 
     "The pool manages a certain amount of connections (between min_size and max_size).
     If the pool has a connection ready in its state, it is served immediately to the connection() caller,
@@ -234,7 +234,7 @@ class DbHandler(threading.Thread):
                     else:
                         cur.execute(sql, params)
                     if is_cmd:
-                        rowcount = cur.rowcount
+                        rowcount = cur.rowcount  # only used for cur_pgsql MOVE FORWARD ALL
                         # sqlite3 returns 'lastrowid' after an INSERT
                         lastrowid = getattr(cur, 'lastrowid', None)
                         loop.call_soon_threadsafe(
@@ -406,6 +406,17 @@ class BaseConn(ABC):
                 start_pos = pos1 + 1
 
         # look for occurrences of `...`, replace with sql from specified colummn
+        """
+        e.g. in test_db7.py -
+            `a.{0}.ar_totals.balance`
+        becomes
+            (SELECT SUM(c.tran_tot) FROM
+                (SELECT b.tran_tot, ROW_NUMBER() OVER (PARTITION BY b.ledger_row_id, b.location_row_id,
+                b.function_row_id, b.src_trantype_row_id, b.orig_trantype_row_id, b.orig_ledger_row_id
+                ORDER BY b.tran_date DESC) row_num
+                FROM {company}.ar_totals b WHERE b.deleted_id = 0 AND b.ledger_row_id = a.ledger_row_id) as c
+            WHERE c.row_num = 1)
+        """
         start_pos = 0
         while (pos1 := sql.find('`', start_pos)) > -1:
             pos2 = sql.find('`', pos1+1)
@@ -419,8 +430,6 @@ class BaseConn(ABC):
             if alias != 'a':
                 col_sql = col_sql.replace('a.', f'{alias}.')
             sql = sql[:pos1] + col_sql + sql[pos2+1:]
-            # where is this used? let's find out [2023-01-13]
-            print(f'in check_sql_params, change {computed_col=} to {col_sql=}')
             start_pos = pos1 + 1
 
         # look for occurrences of {...}, evaluate and replace
@@ -674,7 +683,7 @@ class BaseConn(ABC):
                         col_text = f'{alias}.{col.col_name}'
 
                 # next block added [2020-05-30]
-                # psycopg2 and sqlite3 do this automatically, pyodbc does not :-(
+                # psycopg and sqlite3 do this automatically, pyodbc does not :-(
                 if expr is not None:
                     if op.lower() == 'is':
                         op = '='
