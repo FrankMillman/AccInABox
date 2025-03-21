@@ -56,9 +56,10 @@ async def parse_bpmn(caller, bpmn_xml):
         for shape in plane.findall('bpmndi:BPMNShape', bpmn_xml.nsmap):
             bpmn_elem = bpmn_xml.find(".//*[@id='{}']".format(shape.get('bpmnElement')))
             args = {'elem_id': bpmn_elem.get('id'), 'name': bpmn_elem.get('name')}
-            if etree.QName(bpmn_elem).localname.endswith('Event'):
+            localname = bpmn_elem.tag.rsplit('}')[1]
+            if localname.endswith('Event'):
                 elem_type = 'event'
-                event_type = etree.QName(bpmn_elem).localname
+                event_type = localname
                 if bpmn_elem.find('semantic:messageEventDefinition', bpmn_xml.nsmap) is not None:
                     if event_type in ('endEvent', 'intermediateThrowEvent'):
                         event_defn = 'throw_message'
@@ -70,21 +71,21 @@ async def parse_bpmn(caller, bpmn_xml):
                     event_defn = None
                 args['event_type'] = event_type
                 args['event_defn'] = event_defn
-            elif etree.QName(bpmn_elem).localname.endswith('Gateway'):
+            elif localname.endswith('Gateway'):
                 elem_type = 'gateway'
-                gateway_type = etree.QName(bpmn_elem).localname[:-7]
+                gateway_type = localname[:-7]
                 if gateway_type == 'exclusive':
                     if shape.get('isMarkerVisible') != 'true':
                         gateway_type = None  # no marker required
                 args['gateway_type'] = gateway_type
-            elif etree.QName(bpmn_elem).localname.lower().endswith('task'):
+            elif localname.lower().endswith('task'):
                 elem_type = 'task'
-                task_type = etree.QName(bpmn_elem).localname[:-4] or None
+                task_type = localname[:-4] or None
                 args['task_type'] = task_type
-            elif etree.QName(bpmn_elem).localname == 'subProcess':
+            elif localname == 'subProcess':
                 elem_type = 'sub_proc'
             else:
-                print(etree.QName(bpmn_elem).localname)
+                print(localname)
                 continue
 
             bounds = shape.find('dc:Bounds', bpmn_xml.nsmap)
@@ -107,14 +108,14 @@ async def parse_bpmn(caller, bpmn_xml):
 
         for edge in plane.findall('bpmndi:BPMNEdge', bpmn_xml.nsmap):
             bpmn_elem = bpmn_xml.find(".//*[@id='{}']".format(edge.get('bpmnElement')))
-            if etree.QName(bpmn_elem).localname == 'sequenceFlow':
+            if bpmn_elem.tag.rsplit('}')[1] == 'sequenceFlow':
                 args = {'elem_id': bpmn_elem.get('id'), 'edge_id': edge.get('id'),
                     'name': bpmn_elem.get('name')}
                 # NB edge can have 'default' or 'condition' marker
                 #    but no condition marker if edge is from Gateway (spec page 441)
                 points = []
                 for child in edge:
-                    if etree.QName(child).localname == 'waypoint':
+                    if child.tag.rsplit('}')[1] == 'waypoint':
                         points.append((float(child.get('x')), float(child.get('y'))))
                 args['points'] = points
                 edges.append(('edge', args))
@@ -407,7 +408,7 @@ async def setup_connector(caller, xml, bpmn_xml, args):
     outgoing.text = new_id
     # must insert after any 'incomings', before anything not 'outgoing'
     for pos, child in enumerate(source_elem.iterchildren()):
-        if etree.QName(child).localname == 'incoming':
+        if child.tag.rsplit('}')[1] == 'incoming':
             continue
         source_elem.insert(pos, outgoing)
         break
@@ -508,7 +509,7 @@ async def handle_delete(caller, xml, elem_id, args):
     bpmn_xml = await bpmn_defn.getval('bpmn_xml')
     bpmn_elem = bpmn_xml.find(f".//*[@id='{elem_id}']")
 
-    if etree.QName(bpmn_elem).localname == 'BPMNEdge':
+    if bpmn_elem.rsplit('}')[1] == 'BPMNEdge':
         flow_id = bpmn_elem.get('bpmnElement')
         flow_elem = bpmn_xml.find(f".//*[@id='{flow_id}']")
         source_id = flow_elem.get('sourceRef')
@@ -567,19 +568,20 @@ async def handle_edit(caller, xml, elem_id, args):
     bpmn_xml = await bpmn_defn.getval('bpmn_xml')
     bpmn_elem = bpmn_xml.find(f".//*[@id='{elem_id}']")
 
-    if etree.QName(bpmn_elem).localname.lower().endswith('task'):
+    localname = bpmn_elem.tag.rsplit('}')[1]
+    if localname.lower().endswith('task'):
         await edit_task(caller, xml, elem_id, args, bpmn_xml, bpmn_elem)
-    elif etree.QName(bpmn_elem).localname.endswith('Event'):
+    elif localname.endswith('Event'):
         await edit_event(caller, xml, elem_id, args, bpmn_xml, bpmn_elem)
-    elif etree.QName(bpmn_elem).localname.endswith('Gateway'):
+    elif localname.endswith('Gateway'):
         await edit_gateway(caller, xml, elem_id, args, bpmn_xml, bpmn_elem)
-    elif etree.QName(bpmn_elem).localname == 'BPMNEdge':
+    elif localname == 'BPMNEdge':
         await edit_connector(caller, xml, elem_id, args, bpmn_xml, bpmn_elem)
 
 async def edit_task(caller, xml, elem_id, args, bpmn_xml, task_elem):
     task_vars = caller.data_objects['task_vars']
     init_vals = {
-        'task_type': etree.QName(task_elem).localname,
+        'task_type': task_elem.tag.rsplit('}')[1],
         'elem_id': task_elem.get('id'),
         'descr': task_elem.get('name'),
         }
@@ -638,7 +640,7 @@ async def after_edit_task(caller, state, output_params, xml):
     task_elem.set('name', await task_vars.getval('descr'))
 
     for child in task_elem.iterchildren():
-        if etree.QName(child).localname not in ('incoming', 'outgoing'):
+        if child.tag.rsplit('}')[1] not in ('incoming', 'outgoing'):
             task_elem.remove(child)
 
     input_params = caller.data_objects['input_params']
@@ -694,10 +696,11 @@ async def after_edit_task(caller, state, output_params, xml):
 
 async def edit_event(caller, xml, elem_id, args, bpmn_xml, event_elem):
     event_vars = caller.data_objects['event_vars']
-    event_type = etree.QName(event_elem).localname
+    event_type = event_elem.tag.rsplit('}')[1]
     for child in event_elem.iterchildren():
-        if etree.QName(child).localname.endswith('EventDefinition'):
-            event_defn = etree.QName(child).localname[:-15]
+        localname = child.tag.rsplit('}')[1]
+        if localname.endswith('EventDefinition'):
+            event_defn = localname[:-15]
             break
     else:
         event_defn = 'none'
@@ -711,7 +714,7 @@ async def edit_event(caller, xml, elem_id, args, bpmn_xml, event_elem):
         init_vals['cancel_activity'] = (event_elem.get('cancelActivity') == 'true')
         init_vals['attached_to_ref'] = event_elem.get('attachedToRef')
     if event_defn == 'timer':
-        init_vals['timer_type'] = etree.QName(child[0]).localname
+        init_vals['timer_type'] = child[0].tag.rsplit('}')[1]
         init_vals['timer_value'] = child[0].text
     await event_vars.init(init_vals=init_vals)
     await event_vars.save()
@@ -738,7 +741,7 @@ async def after_edit_event(caller, state, output_params, xml):
         event_elem.set('attachedToRef', await event_vars.getval('attached_to_ref'))
 
     for child in event_elem.iterchildren():
-        if etree.QName(child).localname not in ('incoming', 'outgoing'):
+        if child.tag.rsplit('}')[1] not in ('incoming', 'outgoing'):
             event_elem.remove(child)
 
     if event_defn == 'timer':
@@ -759,7 +762,7 @@ async def after_edit_event(caller, state, output_params, xml):
 
 async def edit_gateway(caller, xml, elem_id, args, bpmn_xml, gateway_elem):
     gateway_vars = caller.data_objects['gateway_vars']
-    gateway_type = etree.QName(gateway_elem).localname
+    gateway_type = gateway_elem.tag.rsplit('}')[1]
 
     init_vals = {
         'gateway_type': gateway_type,
@@ -1038,7 +1041,7 @@ async def after_new_subprocess(caller, state, output_params, xml, args):
     await bpmn_defn.setval('bpmn_xml', bpmn_xml)
     await refresh_bpmn(caller)
 
-      # print(etree.tostring(bpmn_xml, encoding=str, pretty_print=True))
+    # print(etree.tostring(bpmn_xml, encoding=str, pretty_print=True))
 
 async def handle_addspace(caller, xml, elem_id, args):
     # move selected elements to add/remove required space
