@@ -1,22 +1,9 @@
+import datetime
 from types import SimpleNamespace
 
-import psycopg2
-import psycopg2.extensions  # so that strings are returned as unicode
+import psycopg as pg
 
 from db.connection import BaseConn
-
-# bytea data is usually returned as a 'memoryview'
-# this creates a problem - after a roundtrip to the database, it no
-#   longer compares equal to the original object
-# the following extension forces it to return 'bytes' instead
-def bytea2bytes(value, cur):
-    m = psycopg2.BINARY(value, cur)
-    if m is not None:
-        return m.tobytes()
-BYTEA2BYTES = psycopg2.extensions.new_type(
-    psycopg2.BINARY.values, 'BYTEA2BYTES', bytea2bytes)
-psycopg2.extensions.register_type(BYTEA2BYTES)
-psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
 
 class SubConn(BaseConn):
 
@@ -53,13 +40,10 @@ class SubConn(BaseConn):
             None: The method saves conn to self.conn, so it does not have to be 'returned'.
         """
 
-        # conn = psycopg2.connect(database=self.database, host=self.host,
-        #     port=self.port, user=self.user, password=self.pwd)
-        conn = psycopg2.connect(
-            database=self.db_params['database'], user=self.db_params['user'], password=self.db_params['pwd'])
-        conn.set_client_encoding('UNICODE')
+        conn = pg.connect(
+            f"dbname={self.db_params['database']} user={self.db_params['user']} password={self.db_params['pwd']}")
         self.conn = conn
-        self.exception = (psycopg2.ProgrammingError, psycopg2.IntegrityError, psycopg2.InternalError)
+        self.exception = (pg.ProgrammingError, pg.IntegrityError, pg.InternalError)
 
     # async def add_lock(self, sql):
     #     return sql + ' FOR UPDATE'
@@ -202,6 +186,20 @@ class SubConn(BaseConn):
 
     async def convert_sql(self, sql, params=None):
         sql = sql.replace('$True', 'true').replace('$False', 'false')
+
+        # look for occurrences of '%s IS ', add type cast - PostgreSQL cannot determine data type
+        while (pos := sql.upper().find('%s IS ')) > -1:
+            param_pos = sql[:pos].count('%s')
+            param = params[param_pos]
+            if isinstance(param, str):
+                pg_type = 'text'
+            elif isinstance(param, int):
+                pg_type = 'int'
+            elif isinstance(param, datetime.date):
+                pg_type = 'date'
+            else:
+                breakpoint()  # unhandled type - investigate, add handler
+            sql = sql[:pos+2] + f'::{pg_type}' + sql[pos+2:]
 
         # PostgreSQL sorts NULLs last, sqlite3 and Sql Server sort them first
         # this adds NULLS FIRST to each PostgreSQL ORDER BY clause for compatibility
