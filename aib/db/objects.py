@@ -471,10 +471,12 @@ class DbObject:
                     field.constant = foreign_key['tgt_field']._value
                     field._orig = field._value = field.constant
                     field.foreign_key = None  # remove reference to foreign_key - we will get value from constant
+                    field.must_get_fkey = False
                     true_src = foreign_key['true_src']
                     true_src.constant = true_src.foreign_key['tgt_field']._value
                     true_src._orig = true_src._value = true_src.constant
                     true_src.foreign_key = None  # remove reference to foreign_key - we will get value from constant
+                    true_src.must_get_fkey = False
                 else:
                     print('DO WE EVER GET HERE? [2024-01-15]')
                     field.constant = col_const[field.col_name]
@@ -1097,13 +1099,20 @@ class DbObject:
                 # if from_parent_init, fkey parent will have a value but it is bogus,
                 #   because the parent will be init'd next
                 init_value = fld.fkey_parent._value
-                validate=False
+                validate = False
             elif fld.col_name in self.init_vals:
                 init_value = self.init_vals[fld.col_name]
-                validate=True
+                validate = True
+            elif fld.constant is not None:
+                init_value = fld.constant
+                validate = False
+                if fld.col_defn.fkey is not None:
+                    alt_src = fld.col_defn.fkey[FK_ALT_SOURCE]
+                    if alt_src is not None:
+                        self.fields[alt_src]._value = self.fields[alt_src].constant
             else:  # 'from_init=True' means check dflt_val, but not dflt_rule
                 init_value = await fld.get_dflt(from_init=True)  # if no dflt, will return None
-                validate=False
+                validate = False
             await fld.setval(init_value, display=display, validate=validate, from_init=True)
 
             if self.exists:  # key_field in init_vals
