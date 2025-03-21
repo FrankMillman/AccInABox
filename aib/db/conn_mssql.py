@@ -39,13 +39,11 @@ class SubConn(BaseConn):
             None: The method saves conn to self.conn, so it does not have to be 'returned'.
         """
 
-        # C:\sqlcmd -S localhost
-        # conn = pyodbc.connect(driver='sql server', server=r'localhost\sqlexpress',
-        #     database=self.database, user=self.user, password=self.pwd, trusted_connection=True)
+        # C:>sqlcmd -S .\sqlexpress -E
         # refer to https://github.com/mkleehammer/pyodbc/issues/658 for info on odbc connection
-#       self.database = self.db_params['database']
-        self.conn = pyodbc.connect(driver='ODBC Driver 17 for Sql Server', server='localhost',
-            database=self.db_params['database'], trusted_connection='Yes')
+        self.database = self.db_params['database']
+        self.conn = pyodbc.connect(driver='ODBC Driver 17 for Sql Server',
+            server='localhost\\sqlexpress', database=self.database, trusted_connection='Yes')
         self.exception = (pyodbc.Error, pyodbc.DatabaseError, pyodbc.IntegrityError)
 
     # async def add_lock(self, sql):
