@@ -216,7 +216,10 @@ async def get_tranrpt_data(caller, xml):
             raise AibError(head=tots_tablename, body='No transactions available')
 
         sql = ' UNION ALL '.join(all_sql)
-        sql += ' ORDER BY tran_date, tran_type, tran_number'
+        if conn.constants.servertype == 'sqlite3':  # sqlite3 needs COLTYPES
+            sql += ' ORDER BY "tran_date AS [DATE]", tran_type, tran_number'
+        else:
+            sql += ' ORDER BY tran_date, tran_type, tran_number'
         # print(sql, all_params)
         # input()
 
