@@ -1,11 +1,18 @@
 from types import SimpleNamespace
 import sqlite3
 import asyncio
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal as D
 
 import db.cache
 from db.connection import BaseConn
+
+"""
+To view a table definition from the sql interactive prompt -
+.header on
+.mode column
+PRAGMA TABLE_INFO (`table_name`)
+"""
 
 attach_lock = asyncio.Lock()  # to ensure that two processes don't try to attach at the same time
 
@@ -151,6 +158,12 @@ sqlite3.register_converter('REAL2', lambda s: D(s.decode()).quantize(D('-0.01'))
 sqlite3.register_converter('REAL4', lambda s: D(s.decode()).quantize(D('-0.0001')) or D('0.0000'))
 sqlite3.register_converter('REAL6', lambda s: D(s.decode()).quantize(D('-0.000001')) or D('0.000000'))
 sqlite3.register_converter('REAL8', lambda s: D(s.decode()).quantize(D('-0.00000001')) or D('0.00000000'))
+
+# adapter/converter for date and datetime types
+sqlite3.register_adapter(date, lambda dt: date.isoformat(dt))
+sqlite3.register_converter('DATE', lambda dt: date.fromisoformat(dt.decode()))
+sqlite3.register_adapter(datetime, lambda dtm: datetime.isoformat(dtm))
+sqlite3.register_converter('TIMESTAMP', lambda dtm: datetime.fromisoformat(dtm.decode()))
 
 # Boolean adapter (store bool in database as '1'/'0')
 sqlite3.register_adapter(bool, lambda b: str(int(b)))
