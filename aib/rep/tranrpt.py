@@ -186,7 +186,10 @@ async def get_tranrpt_data(caller, xml):
                     elif tgt == 'tran_date':
                         where.append(['AND', '', src, '>=', start_date, ''])
                         where.append(['AND', '', src, '<=', end_date, ''])
-                        col_names.append(f'{src}|tran_date')
+                        if conn.constants.servertype == 'sqlite3':  # sqlite3 needs COLTYPES
+                            col_names.append(f'{src}|"tran_date AS [DATE]"')
+                        else:
+                            col_names.append(f'{src}|tran_date')
 
                 col_names.append('tran_type|tran_type')
                 col_names.append('tran_number|tran_number')
