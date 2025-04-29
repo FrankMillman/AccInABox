@@ -977,11 +977,11 @@ class BaseConn(ABC):
         #         self.tablenames += f' {join}'
         #         self.joins[join] = None
 
-        if ':' in sql:
-            sql, join = sql.split(':')
-            if join not in self.joins:
-                self.tablenames += f' {join}'
-                self.joins[join] = sql.split('.')[0]  # join is a sub-select, sql[0] is the alias for the sub-select
+        # if ':' in sql:
+        #     sql, join = sql.split(':')
+        #     if join not in self.joins:
+        #         self.tablenames += f' {join}'
+        #         self.joins[join] = sql.split('.')[0]  # join is a sub-select, sql[0] is the alias for the sub-select
 
         valid_surround_chrs = ' ,()-+=|\n'  # any others?
 
