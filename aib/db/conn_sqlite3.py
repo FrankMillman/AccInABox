@@ -236,12 +236,12 @@ class SubConn(BaseConn):
         self.exception = (sqlite3.Error, sqlite3.IntegrityError, sqlite3.OperationalError)
         self.companies = set()  # company must be 'attached' before use - this keeps track of attachments
 
+        # self.sql_log = open('sql_log.txt', 'w', errors='backslashreplace')
         # conn.set_trace_callback(self.callback)
 
-    # sql_log = open('sql_log.txt', 'w', errors='backslashreplace')
     def callback(self, sql_cmd):
-        sql_log.write(f'{self.timestamp}: {id(self)}: {sql_cmd}\n')
-        sql_log.flush()
+        self.sql_log.write(f'{self.timestamp}: {id(self)}: {sql_cmd}\n')
+        self.sql_log.flush()
 
     # async def add_lock(self, sql):
     #     # removed 2016-11-24
