@@ -178,19 +178,6 @@ virt.append ({
         "WHERE b.period_row_id >= a.period_row_id ORDER BY b.row_id LIMIT 1) "
         )
     })
-virt.append ({
-    'col_name'   : 'is_year_end',
-    'data_type'  : 'BOOL',
-    'short_descr': 'Year end?',
-    'long_descr' : 'Is this the last period of the financial year?',
-    'col_head'   : 'Year end?',
-    'sql'        : (
-        "SELECT CASE WHEN a.period_row_id = "
-        "(SELECT b.period_row_id FROM {company}.adm_yearends b WHERE b.period_row_id >= a.period_row_id "
-        "ORDER BY b.row_id limit 1)"
-        "THEN $True ELSE $False END"
-        ),
-    })
 
 # cursor definitions
 cursors = []

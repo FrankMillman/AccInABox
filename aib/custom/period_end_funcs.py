@@ -34,7 +34,7 @@ async def set_per_closing_flag(caller, params):
         await ledg_per.save()
 
         if period_to_close == current_period:
-            # set next month state to 'current'
+            # set next period state to 'current'
             await ledg_per.init()
             if module_id != 'gl':
                 await ledg_per.setval('ledger_row_id', context.ledger_row_id)
@@ -42,7 +42,7 @@ async def set_per_closing_flag(caller, params):
             await ledg_per.setval('state', 'current')
             await ledg_per.save()
 
-            # set following month state to 'open'
+            # set following period state to 'open'
             await ledg_per.init()
             if module_id != 'gl':
                 await ledg_per.setval('ledger_row_id', context.ledger_row_id)
@@ -124,7 +124,8 @@ async def set_per_closed_flag(caller, params):
         await ledg_per.save()
 
         if module_id == 'gl':
-            if await ledg_per.getval('is_year_end'):
+            fin_periods = await db.cache.get_adm_periods(context.company)
+            if fin_periods[period_to_close].year_per_id == period_to_close:  # this is a year-end
                 gl_ye = await db.objects.get_db_object(context, 'gl_yearends')
                 await gl_ye.setval('yearend_row_id', await ledg_per.getval('year_no'))
                 await gl_ye.setval('state', 'open')
@@ -213,6 +214,8 @@ async def close_period(caller, xml):
     # called from various ledger_periods.xml
     context = caller.context
 
+    fin_periods = await db.cache.get_adm_periods(context.company)
+
     ledg_per = context.data_objects['ledg_per']
     if await ledg_per.getval('state') == 'closed':
         raise AibError(head='Close period', body='Period is closed')
@@ -227,38 +230,39 @@ async def close_period(caller, xml):
         # start a transaction
         async with context.db_session.get_connection() as db_mem_conn:
 
-            await ledg_per.setval('state', 'closing')
-            await ledg_per.save()
-
             current_period = await db.cache.get_current_period(
                 context.company, context.module_row_id, context.ledger_row_id)
 
             if period_to_close == current_period:
-
+                # check that periods current+1 and current+2 are available in fin_periods
                 try:
+                    fin_periods[current_period+2]
+                except IndexError:
+                    raise AibError(head='Period end', body='Following periods not set up - must do this first')
 
-                    # set next month state to 'current'
-                    await ledg_per.init()
-                    if context.module_id != 'gl':
-                        await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-                    await ledg_per.setval('period_row_id', period_to_close + 1)
-                    await ledg_per.setval('state', 'current')
-                    await ledg_per.save()
+                # set next period state to 'current'
+                await ledg_per.init()
+                if context.module_id != 'gl':
+                    await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+                await ledg_per.setval('period_row_id', current_period + 1)
+                await ledg_per.setval('state', 'current')
+                await ledg_per.save()
 
-                    # set following month state to 'open'
-                    await ledg_per.init()
-                    if context.module_id != 'gl':
-                        await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-                    await ledg_per.setval('period_row_id', period_to_close + 2)
-                    await ledg_per.setval('state', 'open')
-                    await ledg_per.save()
+                # set following period state to 'open'
+                await ledg_per.init()
+                if context.module_id != 'gl':
+                    await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+                    await ledg_per.setval('period_row_id', current_period + 2)
+                await ledg_per.setval('state', 'open')
+                await ledg_per.save()
 
-                except AibError:  # reset ledg_per for display - leave status as 'Closing'?
-                    await ledg_per.init()
-                    if context.module_id != 'gl':
-                        await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-                    await ledg_per.setval('period_row_id', period_to_close)
-                    raise
+            # set current period state to 'closing'
+            await ledg_per.init()
+            if context.module_id != 'gl':
+                await ledg_per.setval('ledger_row_id', context.ledger_row_id)
+                await ledg_per.setval('period_row_id', period_to_close)
+            await ledg_per.setval('state', 'closing')
+            await ledg_per.save()
 
     # check that all transactions posted
     async with context.db_session.get_connection() as db_mem_conn:
@@ -306,7 +310,7 @@ async def close_period(caller, xml):
         await ledg_per.save()
 
         if context.module_id == 'gl':
-            if await ledg_per.getval('is_year_end'):
+            if fin_periods[period_to_close].year_per_id == period_to_close:  # this is a year-end
                 gl_ye = await db.objects.get_db_object(context, 'gl_yearends')
                 await gl_ye.setval('yearend_row_id', await ledg_per.getval('year_no'))
                 await gl_ye.setval('state', 'open')
