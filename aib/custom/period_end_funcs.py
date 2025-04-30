@@ -252,7 +252,7 @@ async def close_period(caller, xml):
                 await ledg_per.init()
                 if context.module_id != 'gl':
                     await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-                    await ledg_per.setval('period_row_id', current_period + 2)
+                await ledg_per.setval('period_row_id', current_period + 2)
                 await ledg_per.setval('state', 'open')
                 await ledg_per.save()
 
@@ -260,7 +260,7 @@ async def close_period(caller, xml):
             await ledg_per.init()
             if context.module_id != 'gl':
                 await ledg_per.setval('ledger_row_id', context.ledger_row_id)
-                await ledg_per.setval('period_row_id', period_to_close)
+            await ledg_per.setval('period_row_id', period_to_close)
             await ledg_per.setval('state', 'closing')
             await ledg_per.save()
 
