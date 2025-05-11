@@ -214,17 +214,16 @@ async def alloc_all(db_obj, xml):
                 await ar_tran_alloc_tot.setval('item_row_id', row_id)
                 await ar_tran_alloc_tot.setval('tran_date', tran_date)
                 await ar_tran_alloc_tot.save()
-            init_vals = {
-                'tran_row_id': await ar_tran_alloc_tot.getval('row_id'),
-                'item_row_id': row_id,
-                'alloc_cust': 0 - balance_cust,
-#               'alloc_local': balance_local,
-                }
-            await ar_allocations.init(init_vals=init_vals)
+            await ar_allocations.init()
+            await ar_allocations.setval('tran_row_id', await ar_tran_alloc_tot.getval('row_id'))
+            await ar_allocations.setval('item_row_id', row_id)
+            await ar_allocations.setval('alloc_cust', 0 - balance_cust)
+            await ar_allocations.setval('alloc_local', 0 - balance_local, validate=False)
             await ar_allocations.save()
         if ar_tran_alloc_tot.exists:
             await ar_tran_alloc_tot.setval('posted', '1', validate=False)
             await ar_tran_alloc_tot.save()
+            await ar_tran_alloc_tot.init()  # in case there is another one
 
 async def get_allocations(db_obj, conn, return_vals):
     # called from ar_subtran_rec/ar_tran_alloc upd_on_post:ar_allocations:split_src

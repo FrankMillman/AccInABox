@@ -145,6 +145,16 @@ cols.append ({
 
 # virtual column definitions
 virt = []
+virt.append ({
+    'col_name'   : 'tran_exch_rate',
+    'data_type'  : 'DEC',
+    'short_descr': 'Transaction exchange rate',
+    'long_descr' : 'Exchange rate from transaction currency to local',
+    'col_head'   : 'Rate tran',
+    'db_scale'   : 8,
+    'scale_ptr'  : None,
+    'sql'        : '1',
+    })
 
 # cursor definitions
 cursors = []
