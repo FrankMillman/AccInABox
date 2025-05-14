@@ -188,7 +188,7 @@ class SubConn(BaseConn):
         sql = sql.replace('$True', 'true').replace('$False', 'false')
 
         # look for occurrences of '%s IS ', add type cast - PostgreSQL cannot determine data type
-        while (pos := sql.upper().find('%s IS ')) > -1:
+        while (pos := sql.lower().find('%s is ')) > -1:
             param_pos = sql[:pos].count('%s')
             param = params[param_pos]
             if isinstance(param, str):
